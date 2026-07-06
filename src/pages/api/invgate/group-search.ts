@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { invgateGet } from "@lib/invgateClient";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
-import type { InvgateHelpdesk } from "@/types/invgate";
+import type { InvgateGroup } from "@/types/invgate";
 import { normalizeSearchValue } from "@lib/clientSearch";
 
 export const GET: APIRoute = async ({ url }) => {
@@ -12,31 +12,31 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   try {
-    const result = await invgateGet<InvgateHelpdesk[]>("helpdesks");
+    const result = await invgateGet<InvgateGroup[]>("groups");
 
     if (!result.ok) {
       return jsonResponse({ error: result.message }, result.status);
     }
 
-    const helpdesks = Array.isArray(result.data) ? result.data : [];
+    const groups = Array.isArray(result.data) ? result.data : [];
     const normalizedQuery = normalizeSearchValue(q);
 
-    const filtered = helpdesks
-      .filter((hd) => normalizeSearchValue(hd.name).includes(normalizedQuery))
+    const filtered = groups
+      .filter((g) => normalizeSearchValue(g.name).includes(normalizedQuery))
       .slice(0, 10)
-      .map((hd) => ({
-        id: hd.id,
-        name: hd.name,
-        totalMembers: hd.total_members,
+      .map((g) => ({
+        id: g.id,
+        name: g.name,
+        totalMembers: g.total,
       }));
 
     return jsonResponse(
-      { helpdesks: filtered },
+      { groups: filtered },
       200,
       "private, max-age=60",
     );
   } catch (error: any) {
-    console.error("[InvGate Helpdesk Search] Error:", error);
+    console.error("[InvGate Group Search] Error:", error);
     return jsonResponse({ error: sanitizeError(error) }, 500);
   }
 };
