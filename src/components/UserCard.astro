@@ -122,15 +122,17 @@ import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
             class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
             >Ubicación</span
           >
-          <CopyButton
-            value=""
-            variant="value"
-            size="xs"
-            appearance="surface"
-            monospace={true}
-            fullWidth={true}
-            class="user-card-sucursal-btn w-full justify-between"
-          />
+          <div class="flex flex-wrap gap-1.5 user-card-sucursal-wrap">
+            <CopyButton
+              value=""
+              variant="value"
+              size="xs"
+              appearance="surface"
+              monospace={true}
+              fullWidth={false}
+              class="user-card-sucursal-btn"
+            />
+          </div>
         </div>
       </div>
 
