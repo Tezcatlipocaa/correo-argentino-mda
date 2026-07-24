@@ -1,8 +1,9 @@
 import { db } from "../../db/index";
-import { employees, offices } from "../../db/schema";
+import { employees, offices, employeeOffices } from "../../db/schema";
 import { invgateGet } from "../invgateClient";
 import { sql } from "drizzle-orm";
 import { parseInvgateLocationName } from "./locationMatcher";
+import { extractUsersArray } from "./normalizeUsers";
 
 export async function syncInvgateLocations(): Promise<void> {
   console.log("[SyncInvGate] Iniciando sincronización de ubicaciones...");
@@ -45,11 +46,11 @@ export async function syncInvgateLocations(): Promise<void> {
     await Promise.all(
       chunk.map(async (loc: any) => {
         const locUsersResult = await invgateGet<any[]>(`locations.users?id=${loc.id}`);
-        if (!locUsersResult.ok || !Array.isArray(locUsersResult.data)) {
-          return;
-        }
+        if (!locUsersResult.ok) return;
         
-        const locUsers = locUsersResult.data;
+        const locUsers = extractUsersArray(
+          "data" in locUsersResult ? locUsersResult.data : null,
+        );
         if (locUsers.length === 0) return;
 
         // Extraer NIS
@@ -62,16 +63,21 @@ export async function syncInvgateLocations(): Promise<void> {
         // Actualizar empleados
         for (const user of locUsers) {
           if (user.username) {
-            const baseUsername = user.username.split("@")[0];
+            const baseUsername = user.username.split("@")[0].toLowerCase();
             try {
               const res = await db
                 .update(employees)
                 .set({ sucursal: sucursalToSave })
                 .where(sql`lower(${employees.username}) = lower(${baseUsername})`);
-              
+             
               if (res.changes > 0) {
                 totalUsersUpdated += res.changes;
               }
+
+              await db
+                .insert(employeeOffices)
+                .values({ username: baseUsername, sucursal: sucursalToSave })
+                .onConflictDoNothing();
             } catch (e) {
               // ignorar si falla
             }
