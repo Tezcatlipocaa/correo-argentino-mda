@@ -7,6 +7,21 @@ import { inArray, sql } from "drizzle-orm";
 
 const CHUNK_SIZE = 500;
 
+async function flushPositions(
+  usernames: string[],
+  positionMap: Map<string, string | null>,
+) {
+  for (const username of usernames) {
+    const pos = positionMap.get(username);
+    if (pos) {
+      await db
+        .update(employees)
+        .set({ position: pos })
+        .where(sql`lower(${employees.username}) = ${username}`);
+    }
+  }
+}
+
 export interface SyncResult {
   ok: boolean;
   totalSynced: number;
@@ -44,11 +59,15 @@ export async function fullInvgateSync(): Promise<SyncResult> {
   // Extraer usernames y marcar en BD por chunks de CHUNK_SIZE
   let totalSynced = 0;
   const chunk: string[] = [];
+  const positionMap = new Map<string, string | null>();
   
   for (const user of activeUsers) {
     if (user.username) {
       const localPart = user.username.split("@")[0].toLowerCase();
       chunk.push(localPart);
+      if (user.position) {
+        positionMap.set(localPart, user.position);
+      }
     }
     
     if (chunk.length >= CHUNK_SIZE) {
@@ -56,6 +75,7 @@ export async function fullInvgateSync(): Promise<SyncResult> {
         .update(employees)
         .set({ invgateExists: true })
         .where(inArray(sql`lower(${employees.username})`, chunk));
+      await flushPositions(chunk, positionMap);
       totalSynced += chunk.length;
       chunk.length = 0;
     }
@@ -66,6 +86,7 @@ export async function fullInvgateSync(): Promise<SyncResult> {
       .update(employees)
       .set({ invgateExists: true })
       .where(inArray(sql`lower(${employees.username})`, chunk));
+    await flushPositions(chunk, positionMap);
     totalSynced += chunk.length;
   }
 
