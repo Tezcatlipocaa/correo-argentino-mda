@@ -23,6 +23,7 @@ export interface InvgateUser {
   is_disabled: boolean;
   is_deleted: boolean;
   is_external: boolean;
+  position: string | null;
   role_name: string | null;
   manager_id: number | null;
 }
