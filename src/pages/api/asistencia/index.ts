@@ -82,6 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           asistencia,
           ausencia,
           entradaReal,
+          horarioEstipulado,
           cumplimiento,
           cumplimientoForzado,
           motivoLoguin,
@@ -110,6 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (asistencia !== undefined) updateData.asistencia = asistencia;
           if (ausencia !== undefined) updateData.ausencia = ausencia;
           if (entradaReal !== undefined) updateData.entradaReal = entradaReal;
+          if (horarioEstipulado !== undefined) updateData.horarioEstipulado = horarioEstipulado;
           if (cumplimiento !== undefined) updateData.cumplimiento = cumplimiento;
           if (cumplimientoForzado !== undefined) updateData.cumplimientoForzado = !!cumplimientoForzado;
           if (motivoLoguin !== undefined) updateData.motivoLoguin = motivoLoguin;
@@ -130,6 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             asistencia: asistencia || "",
             ausencia: ausencia || "",
             entradaReal: entradaReal || "",
+            horarioEstipulado: horarioEstipulado || "",
             cumplimiento: cumplimiento || "",
             cumplimientoForzado: !!cumplimientoForzado,
             motivoLoguin: motivoLoguin || "",

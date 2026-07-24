@@ -673,6 +673,7 @@ export const operatorAttendance = sqliteTable("operator_attendance", {
   ausencia: text("ausencia"),
   entradaReal: text("entrada_real"),
   salidaReal: text("salida_real"),
+  horarioEstipulado: text("horario_estipulado"),
   cumplimiento: text("cumplimiento"),
   cumplimientoForzado: integer("cumplimiento_forzado", { mode: "boolean" }).default(false),
   motivoLoguin: text("motivo_loguin"),

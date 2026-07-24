@@ -33,6 +33,35 @@ export const dom = {
       inputEntrada.value = record.entradaReal;
     }
 
+    // 3.5 Horario Estipulado - actualizar span e input
+    const horarioWrapper = row.querySelector('.horario-wrapper');
+    if (horarioWrapper) {
+      const span = horarioWrapper.querySelector('.horario-display') as HTMLElement;
+      const input = horarioWrapper.querySelector('.horario-edit') as HTMLInputElement;
+      if (span) {
+        if (span.textContent !== (record.horarioEstipulado || "Franco")) {
+          span.textContent = record.horarioEstipulado || "Franco";
+        }
+        const clean = (record.horarioEstipulado || "").replace(/\s+/g, "");
+        const isValid = /^(\d{1,2})(?::(\d{2}))?(?:-|a)(\d{1,2})(?::(\d{2}))?$/.test(clean);
+        const isInvalid = !isValid && record.horarioEstipulado !== '';
+        span.classList.toggle('bg-error/15', isInvalid);
+        span.classList.toggle('text-error', isInvalid);
+        span.classList.toggle('border-error/30', isInvalid);
+        span.classList.toggle('bg-base-200', !isInvalid);
+        span.classList.toggle('text-base-content/75', !isInvalid);
+        span.classList.toggle('border-base-300', !isInvalid);
+      }
+      if (input && input.value !== (record.horarioEstipulado || "")) {
+        input.value = record.horarioEstipulado || "";
+      }
+    } else {
+      const lockedSpan = row.querySelector('.horario-locked-display') as HTMLElement;
+      if (lockedSpan && lockedSpan.textContent !== (record.horarioEstipulado || "Franco")) {
+        lockedSpan.textContent = record.horarioEstipulado || "Franco";
+      }
+    }
+
     // 4. Cumplimiento Badge and Select
     const badge = document.getElementById(`badge-cump-${rowId}`);
     if (badge) {

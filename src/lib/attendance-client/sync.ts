@@ -26,6 +26,7 @@ export function startSync(date: string, intervalMs = 5000) {
           "asistencia",
           "ausencia",
           "entradaReal",
+          "horarioEstipulado",
           "cumplimiento",
           "cumplimientoForzado",
           "motivoLoguin",
