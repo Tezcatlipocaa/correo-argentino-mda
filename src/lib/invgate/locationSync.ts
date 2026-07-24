@@ -8,9 +8,10 @@ import { extractUsersArray } from "./normalizeUsers";
 export async function syncInvgateLocations(): Promise<void> {
   console.log("[SyncInvGate] Iniciando sincronización de ubicaciones...");
 
-  // 1. Limpieza previa: setear sucursal a NULL para todos los empleados
+  // 1. Limpieza previa: setear sucursal a NULL y vaciar junction table
   console.log("[SyncInvGate] Limpiando sucursales previas...");
   await db.update(employees).set({ sucursal: null });
+  await db.delete(employeeOffices);
 
   // 2. Cargar todas las oficinas (NIS y Nombre)
   console.log("[SyncInvGate] Cargando diccionario de oficinas...");
