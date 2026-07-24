@@ -658,12 +658,9 @@ const userRole = Astro.locals.user?.role || "";
       if (!sucursalBtn || !wrap) {
         // fallback for any structural issue
       } else if (sucursales.length > 1) {
-        for (let i = 0; i < sucursales.length; i++) {
-          const s = sucursales[i];
+        for (const s of sucursales) {
           const text = s.name ? `${s.code} — ${s.name}` : s.code;
-
-          const btn = i === 0 ? sucursalBtn : sucursalBtn.cloneNode(true);
-
+          const btn = sucursalBtn.cloneNode(true);
           btn.setAttribute("data-copy-value", s.code);
           btn.setAttribute("data-copy-label-default", text);
           btn.setAttribute("aria-label", `Copiar NIS ${s.code}`);
