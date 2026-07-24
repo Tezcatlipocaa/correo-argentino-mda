@@ -25,8 +25,24 @@ export const employees = sqliteTable("employees", {
   telefono: text("telefono"),
   sucursal: text("sucursal"),
   invgateExists: integer("invgate_exists", { mode: "boolean" }).default(false),
+  position: text("position"),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
+
+export const employeeOffices = sqliteTable(
+  "employee_offices",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    username: text("username").notNull(),
+    sucursal: text("sucursal").notNull(),
+  },
+  (table) => ({
+    uniqueUsernameSucursal: uniqueIndex("employee_offices_username_sucursal_idx").on(
+      table.username,
+      table.sucursal,
+    ),
+  }),
+);
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
