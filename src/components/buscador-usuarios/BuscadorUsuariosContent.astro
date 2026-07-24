@@ -648,17 +648,51 @@ const userRole = Astro.locals.user?.role || "";
       updateCardCopyButton(".user-card-telefono-btn", user.telefono);
       updateCardCopyButton(".user-card-email-btn", user.email, query);
 
-      // Ubicación
+      // Ubicación — multi-office support
+      const sucursales = user.sucursales || [];
       const sucursal = user.sucursal;
-      if (sucursal) {
-        const sucursalNombre = user.sucursalNombre;
+      const sucursalNombre = user.sucursalNombre;
+
+      const sucursalBtn = clone.querySelector(".user-card-sucursal-btn");
+      const wrap = clone.querySelector(".user-card-sucursal-wrap");
+      if (!sucursalBtn || !wrap) {
+        // fallback for any structural issue
+      } else if (sucursales.length > 1) {
+        for (let i = 0; i < sucursales.length; i++) {
+          const s = sucursales[i];
+          const text = s.name ? `${s.code} — ${s.name}` : s.code;
+
+          const btn = i === 0 ? sucursalBtn : sucursalBtn.cloneNode(true);
+
+          btn.setAttribute("data-copy-value", s.code);
+          btn.setAttribute("data-copy-label-default", text);
+          btn.setAttribute("aria-label", `Copiar NIS ${s.code}`);
+          const label = btn.querySelector("[data-copy-label]");
+          if (label) label.textContent = text;
+          wrap.appendChild(btn);
+        }
+        sucursalBtn.remove();
+      } else if (sucursales.length === 1) {
+        const s = sucursales[0];
+        const text = s.name ? `${s.code} — ${s.name}` : s.code;
+        sucursalBtn.setAttribute("data-copy-value", s.code);
+        sucursalBtn.setAttribute("data-copy-label-default", text);
+        sucursalBtn.setAttribute("aria-label", `Copiar NIS ${s.code}`);
+        sucursalBtn.classList.add("w-full", "max-w-full", "justify-between");
+        const label = sucursalBtn.querySelector("[data-copy-label]");
+        if (label) label.textContent = text;
+      } else if (sucursal) {
         const valorCompleto = sucursalNombre
           ? `${sucursal} — ${sucursalNombre}`
           : sucursal;
-        updateCardCopyButton(".user-card-sucursal-btn", valorCompleto);
+        sucursalBtn.setAttribute("data-copy-value", valorCompleto);
+        sucursalBtn.setAttribute("data-copy-label-default", valorCompleto);
+        sucursalBtn.setAttribute("aria-label", `Copiar: ${valorCompleto}`);
+        sucursalBtn.classList.add("w-full", "max-w-full", "justify-between");
+        const label = sucursalBtn.querySelector("[data-copy-label]");
+        if (label) label.textContent = valorCompleto;
       } else {
-        const sucursalBtn = clone.querySelector(".user-card-sucursal-btn");
-        const parentRow = sucursalBtn?.closest(".flex.flex-col");
+        const parentRow = sucursalBtn.closest(".flex.flex-col");
         if (parentRow) parentRow.classList.add("hidden");
       }
 
@@ -823,6 +857,7 @@ Correo corporativo: ${user.usuario.toLowerCase()}@correoargentino.com.ar`;
           email: u.username ? `${u.username}@correoargentino.com.ar` : null,
           sucursal: u.sucursal,
           sucursalNombre: u.sucursalNombre,
+          sucursales: u.sucursales ?? [],
           invgateExists: u.invgateExists ?? false,
         }));
 
