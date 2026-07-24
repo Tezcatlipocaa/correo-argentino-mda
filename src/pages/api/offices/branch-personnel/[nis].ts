@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { db } from "@db/index";
-import { employees, employeeOffices, offices } from "@db/schema";
+import { employees, employeeOffices } from "@db/schema";
 import { eq, sql } from "drizzle-orm";
 import { jsonResponse, jsonError } from "@lib/apiResponse";
 
@@ -20,7 +20,9 @@ function isSupervisory(position: string | null): boolean {
   return SUPERVISORY_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
+  if (!locals.user) return jsonError("No autorizado", 401);
+
   try {
     const nis = params.nis;
     if (!nis) return jsonError("NIS requerido", 400);
