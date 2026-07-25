@@ -4,20 +4,15 @@ import { employees, employeeOffices } from "@db/schema";
 import { eq, sql } from "drizzle-orm";
 import { jsonResponse, jsonError } from "@lib/apiResponse";
 
-const SUPERVISORY_KEYWORDS = [
-  "jefe zonal",
-  "jefe suc",
-  "jefe cdd",
-  "jefe de suc",
-  "jefe de cdd",
-  "supervisor",
-  "jefe",
+const SENIOR_KEYWORDS = [
+  "jefe", "supervisor", "gerente", "director", "coordinador",
+  "subgerente", "responsable", "lider", "líder",
 ];
 
-function isSupervisory(position: string | null): boolean {
+function isSenior(position: string | null): boolean {
   if (!position) return false;
   const lower = position.toLowerCase();
-  return SUPERVISORY_KEYWORDS.some((kw) => lower.includes(kw));
+  return SENIOR_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
 export const GET: APIRoute = async ({ params, locals }) => {
@@ -70,13 +65,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
       results = fallback;
     }
 
-    const supervisory = results.filter((r) => isSupervisory(r.position));
-    const others = results.filter((r) => !isSupervisory(r.position));
+    if (results.length > 5) {
+      results = results.filter((r) => isSenior(r.position));
+    }
 
-    const sorted = [
-      ...supervisory.sort((a, b) => (a.fullname ?? "").localeCompare(b.fullname ?? "")),
-      ...others.sort((a, b) => (a.fullname ?? "").localeCompare(b.fullname ?? "")),
-    ];
+    const sorted = [...results].sort((a, b) =>
+      (a.fullname ?? "").localeCompare(b.fullname ?? ""),
+    );
 
     const display = sorted.slice(0, 10);
 

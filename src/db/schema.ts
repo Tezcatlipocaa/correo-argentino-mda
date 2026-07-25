@@ -209,6 +209,7 @@ export const officeInvgateLinks = sqliteTable("office_invgate_links", {
   invgateCc: text("invgate_cc"),
   invgateAddress: text("invgate_address"),
   invgateDuplicateCount: integer("invgate_duplicate_count").default(0),
+  invgateUserTotal: integer("invgate_user_total").default(0),
   lastSyncedAt: text("last_synced_at").notNull().default(sql`(datetime('now'))`),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });

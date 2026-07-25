@@ -1,7 +1,7 @@
 import { db } from "../../db/index";
-import { employees, offices, employeeOffices } from "../../db/schema";
+import { employees, offices, employeeOffices, officeInvgateLinks } from "../../db/schema";
 import { invgateGet } from "../invgateClient";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { parseInvgateLocationName } from "./locationMatcher";
 import { extractUsersArray } from "./normalizeUsers";
 
@@ -83,6 +83,16 @@ export async function syncInvgateLocations(): Promise<void> {
               // ignorar si falla
             }
           }
+        }
+
+        // Actualizar total de usuarios en el vínculo InvGate
+        try {
+          await db
+            .update(officeInvgateLinks)
+            .set({ invgateUserTotal: loc.total })
+            .where(eq(officeInvgateLinks.invgateLocationId, loc.id));
+        } catch (e) {
+          // ignorar si no hay vínculo
         }
       })
     );
