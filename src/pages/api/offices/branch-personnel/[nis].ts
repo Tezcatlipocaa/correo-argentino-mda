@@ -69,9 +69,14 @@ export const GET: APIRoute = async ({ params, locals }) => {
       results = results.filter((r) => isSenior(r.position));
     }
 
-    const sorted = [...results].sort((a, b) =>
-      (a.fullname ?? "").localeCompare(b.fullname ?? ""),
-    );
+    const senior = results
+      .filter((r) => isSenior(r.position))
+      .sort((a, b) => (a.fullname ?? "").localeCompare(b.fullname ?? ""));
+    const others = results
+      .filter((r) => !isSenior(r.position))
+      .sort((a, b) => (a.fullname ?? "").localeCompare(b.fullname ?? ""));
+
+    const sorted = [...senior, ...others];
 
     const display = sorted.slice(0, 10);
 
