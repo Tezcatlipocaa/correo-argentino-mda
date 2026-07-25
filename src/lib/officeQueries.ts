@@ -345,6 +345,7 @@ export async function getOffices(params: GetOfficesParams) {
       invgateAddress: office.invgateLink?.invgateAddress ?? null,
       invgateParentName: office.invgateLink?.invgateParentName ?? null,
       invgateDuplicateCount: office.invgateLink?.invgateDuplicateCount ?? 0,
+      invgateUserTotal: office.invgateLink?.invgateUserTotal ?? 0,
       terminals: (office.terminals ?? [])
         .filter((t) => {
           if (!t.hostname) return true;
