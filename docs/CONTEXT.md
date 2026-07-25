@@ -45,12 +45,18 @@ de operaciones logisticas y postales.
 ### Variables de entorno requeridas
 
 ```
-SESSION_SECRET          — 64-char hex para firmar cookies de sesion
-ENCRYPTION_KEY          — 32-char hex para AES-256-GCM de credenciales
-INVGATE_API_KEY         — API key de InvGate Service Management
-INVGATE_BASE_URL        — URL base de InvGate API
-INVGATE_API_USERNAME    — Usuario para autenticacion InvGate
-EXTERNAL_STORAGE_DIR    — Directorio raiz para archivos subidos (apps, iconos, PDFs)
+SESSION_SECRET              — 64-char hex para firmar cookies de sesion
+ENCRYPTION_KEY              — 32-char hex para AES-256-GCM de credenciales
+INVGATE_API_KEY             — API key de InvGate Service Management
+INVGATE_BASE_URL            — URL base de InvGate API
+INVGATE_API_USERNAME        — Usuario para autenticacion InvGate
+INVGATE_QA_API_KEY          — API key de InvGate QA (test environment)
+INVGATE_QA_BASE_URL         — URL base de InvGate QA (servidor separado)
+INVGATE_QA_API_USERNAME     — Usuario para autenticacion InvGate QA
+WISE_CX_API_KEY             — API key de Wise CX
+WISE_CX_BASE_URL            — URL base de Wise CX API
+WISE_CX_API_USER            — Usuario para autenticacion Wise CX
+EXTERNAL_STORAGE_DIR        — Directorio raiz para archivos subidos (apps, iconos, PDFs)
 ```
 
 Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
@@ -240,8 +246,8 @@ BaseLayout (flex flex-col min-h-screen)
 | - | --------------------------- | -------------------------------------------------------- |
 | 1 | `/`                         | Dashboard principal con acceso rapido por rol            |
 | 2 | `/titulos`                  | Tipificacion de tickets con copia rapida                 |
-| 3 | `/soportes`                 | Matriz de derivacion por tema y area de soporte          |
-| 4 | `/usuarios`                 | Busqueda de personal y validacion de usuarios            |
+| 3 | `/mesas-de-ayuda`           | Matriz de derivacion por tema y area de soporte          |
+| 4 | `/buscador-usuarios`        | Busqueda de personal y validacion de usuarios            |
 | 5 | `/generador-firmas`         | Creador de firmas institucionales                        |
 | 6 | `/contactos`                | Directorio de numeros y correos utiles                   |
 | 7 | `/recursos`                 | Hub de accesos a recursos externos e internos            |
@@ -329,7 +335,6 @@ BaseLayout (flex flex-col min-h-screen)
 | `sync-legacy-inventory.ts`          | Worker PM2 de sincronizacion de inventario           |
 | `sync-users.ts`                     | Sincronizacion de empleados via MidPoint             |
 | `toggle-mode.ts`                    | Script de alternancia de tema light/dark             |
-| `migrate-users-mysql-to-sqlite.ts`  | Migracion one-shot MySQL → SQLite                    |
 
 ### Base de datos
 
@@ -340,8 +345,6 @@ BaseLayout (flex flex-col min-h-screen)
 - Conexion: `src/db/index.ts` via `better-sqlite3`
 - Despues de cambios de schema, ejecutar `npm run db:push`
 - Para explorar datos: `npm run db:studio`
-- Si hay desajuste de migraciones: `npx tsx scripts/fix-drizzle-mismatch.ts`
-
 ---
 
 ## Estado del proyecto
