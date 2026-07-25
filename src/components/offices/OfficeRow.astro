@@ -342,6 +342,16 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                           </span>
                         </p>
                       )}
+                      {office.invgateLinked && (
+                        <p class="flex items-center gap-3 text-sm">
+                          <span class="inline-block shrink-0 text-xs font-semibold text-base-content/60">
+                            Usuarios
+                          </span>
+                          <span class="text-sm text-base-content/90" data-invgate-user-count data-nis={office.code}>
+                            -
+                          </span>
+                        </p>
+                      )}
                       {!office.invgateCp &&
                         !office.invgateCc &&
                         !office.invgateAddress &&
@@ -354,6 +364,28 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                     </div>
                   </section>
                 )}
+
+                {/* Personal de la sucursal */}
+                <section class="space-y-3" data-branch-personnel data-nis={office.code}>
+                  <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
+                    <Icon
+                      name="boxicons:group-filled"
+                      size={16}
+                      class="text-secondary"
+                      aria-hidden="true"
+                    />
+                    Personal
+                  </h2>
+                  <div
+                    data-branch-personnel-content
+                    class="rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
+                  >
+                    <div class="flex items-center gap-2 text-xs text-base-content/50">
+                      <span class="loading loading-spinner loading-xs"></span>
+                      <span>Cargando personal...</span>
+                    </div>
+                  </div>
+                </section>
 
                 {hasInfo && (
                   <section class="space-y-3">
@@ -568,28 +600,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
           }
         </div>
       </div>
-
-      {/* Personal de la sucursal */}
-      <section class="space-y-3" data-branch-personnel data-nis={office.code}>
-        <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
-          <Icon
-            name="boxicons:group-filled"
-            size={16}
-            class="text-secondary"
-            aria-hidden="true"
-          />
-          Personal
-        </h2>
-        <div
-          data-branch-personnel-content
-          class="rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
-        >
-          <div class="flex items-center gap-2 text-xs text-base-content/50">
-            <span class="loading loading-spinner loading-xs"></span>
-            <span>Cargando personal...</span>
-          </div>
-        </div>
-      </section>
     </div>
   </div>
 </article>
@@ -616,11 +626,11 @@ const officeDirectoryRowGridClass = isAllowedAdmin
           const html = data.personnel
             .map(
               (p) => `
-              <div class="flex items-center justify-between gap-3 py-2 border-b border-base-200 last:border-b-0">
-                <div class="min-w-0">
-                  <p class="text-sm font-semibold text-base-content truncate">${escapeHTML(p.fullname ?? "Sin nombre")}</p>
-                  <p class="text-xs text-base-content/50">${escapeHTML(p.position ?? "Sin cargo")}</p>
-                </div>
+               <div class="flex items-center justify-between gap-3 py-2 border-b border-base-200 last:border-b-0">
+                 <div class="min-w-0">
+                   <p class="text-xs font-semibold text-base-content truncate">${escapeHTML(p.fullname ?? "Sin nombre")}</p>
+                   <span class="badge badge-soft badge-secondary text-xxs">${escapeHTML(p.position ?? "Sin cargo")}</span>
+                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   ${p.telefono ? `
                     <button
@@ -676,6 +686,28 @@ const officeDirectoryRowGridClass = isAllowedAdmin
     }).catch(() => {});
   }
 
+  function initInvGateUserCount() {
+    const spans = document.querySelectorAll("[data-invgate-user-count]");
+    spans.forEach((span) => {
+      const nis = span.getAttribute("data-nis");
+      if (!nis) return;
+      fetch(`/api/offices/invgate-user-count/${encodeURIComponent(nis)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.ok && data.total > 0) {
+            span.textContent = String(data.total);
+          } else {
+            span.textContent = "-";
+          }
+        })
+        .catch(() => {
+          span.textContent = "-";
+        });
+    });
+  }
+
   document.addEventListener("astro:page-load", initBranchPersonnel);
+  document.addEventListener("astro:page-load", initInvGateUserCount);
   initBranchPersonnel();
+  initInvGateUserCount();
 </script>
