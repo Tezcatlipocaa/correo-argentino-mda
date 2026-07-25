@@ -53,9 +53,20 @@ export interface GetOfficesParams {
   paqar?: string;
   hasParent?: boolean;
   isHeadquarter?: boolean;
+  noAddress?: boolean;
   sortBy?: OfficeSortKey;
   sortOrder?: SortOrder;
+  status?: "all" | "active" | "closed";
 }
+
+export async function hasClosedOffices(): Promise<boolean> {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(offices)
+    .where(eq(offices.active, false));
+  return count > 0;
+}
+
 
 export async function getOffices(params: GetOfficesParams) {
   const page = params.page ?? 1;
@@ -211,6 +222,24 @@ export async function getOffices(params: GetOfficesParams) {
   if (params.isHeadquarter === true) {
     whereConditions.push(like(offices.code, "_0000"));
   }
+
+  // No address filter
+  if (params.noAddress === true) {
+    whereConditions.push(
+      or(
+        sql`${offices.address} IS NULL`,
+        sql`${offices.address} = ''`,
+      ),
+    );
+  }
+
+  // Status filter (active/closed)
+  if (params.status === "closed") {
+    whereConditions.push(eq(offices.active, false));
+  } else if (params.status === "active") {
+    whereConditions.push(eq(offices.active, true));
+  }
+
 
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
