@@ -378,6 +378,13 @@ const userRole = Astro.locals.user?.role || "";
     setTimeout(() => resultsGrid?.classList.remove("opacity-0"), 50);
     displayResults([]);
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get("q");
+    if (q && searchInput) {
+      searchInput.value = q;
+      handleSearch();
+    }
+
     fetchSyncStatus();
   }
 
@@ -831,8 +838,15 @@ Correo corporativo: ${user.usuario.toLowerCase()}@correoargentino.com.ar`;
     if (query === "") {
       displayResults([]);
       if (statusText) statusText.textContent = `Listo para buscar.`;
+      const url = new URL(window.location.href);
+      url.searchParams.delete("q");
+      window.history.replaceState({}, "", url.toString());
       return;
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("q", query);
+    window.history.replaceState({}, "", url.toString());
 
     window.clearTimeout(searchTimeout);
     loadingIndicator?.classList.remove("hidden");
