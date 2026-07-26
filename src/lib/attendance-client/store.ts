@@ -65,12 +65,13 @@ class AttendanceStore {
     (edit as any)[field] = value;
 
     // Recalculate compliance if needed
-    if (field === "entradaReal" || field === "cumplimiento") {
+    if (field === "entradaReal" || field === "cumplimiento" || field === "horarioEstipulado") {
       const curEntrada = edit.entradaReal !== undefined ? edit.entradaReal : record.entradaReal;
+      const curHorarioEstipulado = edit.horarioEstipulado !== undefined ? edit.horarioEstipulado : record.horarioEstipulado;
       if (field === "cumplimiento") {
         if (value === "") {
           edit.cumplimientoForzado = false;
-          edit.cumplimiento = calculateCompliance(curEntrada, record.horarioEstipulado);
+          edit.cumplimiento = calculateCompliance(curEntrada, curHorarioEstipulado);
         } else {
           edit.cumplimientoForzado = true;
           edit.cumplimiento = value;
@@ -78,7 +79,7 @@ class AttendanceStore {
       } else {
         const curForced = edit.cumplimientoForzado !== undefined ? edit.cumplimientoForzado : record.cumplimientoForzado;
         if (!curForced) {
-          edit.cumplimiento = calculateCompliance(curEntrada, record.horarioEstipulado);
+          edit.cumplimiento = calculateCompliance(curEntrada, curHorarioEstipulado);
         }
       }
     }
@@ -90,6 +91,7 @@ class AttendanceStore {
       "asistencia",
       "ausencia",
       "entradaReal",
+      "horarioEstipulado",
       "cumplimiento",
       "cumplimientoForzado",
       "motivoLoguin",

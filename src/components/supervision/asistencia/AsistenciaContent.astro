@@ -718,9 +718,20 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
             </td>
 
             <td class="py-3 px-3 text-center">
-              <span class="px-2.5 py-1 bg-base-200 text-base-content/75 rounded-md font-mono text-xxs border border-base-300 font-semibold select-none whitespace-nowrap">
-                ${op.horarioEstipulado || "Franco"}
-              </span>
+              ${isLocked ? `
+                <span class="horario-locked-display px-2.5 py-1 bg-base-200 text-base-content/75 rounded-md font-mono text-xs border border-base-300 font-semibold select-none whitespace-nowrap">
+                  ${op.horarioEstipulado || "Franco"}
+                </span>
+              ` : `
+                <div class="horario-wrapper inline-flex items-center">
+                  <span class="horario-display cursor-pointer px-2.5 py-1 bg-base-200 text-base-content/75 rounded-md font-mono text-xs border border-base-300 font-semibold whitespace-nowrap">
+                    ${op.horarioEstipulado || "Franco"}
+                  </span>
+                  <input type="text" maxlength="13" placeholder="Franco"
+                    class="horario-edit hidden input input-bordered input-sm rounded-xl bg-base-100 text-center text-xs w-[115px] max-w-full font-mono"
+                    value="${op.horarioEstipulado || ""}" data-field="horarioEstipulado" />
+                </div>
+              `}
             </td>
 
             <td class="py-3 px-3 text-center">
@@ -828,6 +839,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
         if (
           target.closest("select") ||
           target.closest("input") ||
+          target.closest(".horario-display") ||
           target.closest("button") ||
           target.closest(".avatar")
         ) {
@@ -863,24 +875,114 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
         handleEdit("detalle", target.value);
       });
 
-      const formatTimeInput = (input: HTMLInputElement, field: string) => {
-        let val = input.value.replace(/[^0-9]/g, "");
+      const horarioDisplay = htmlRow.querySelector('.horario-display') as HTMLElement;
+      const horarioEdit = htmlRow.querySelector('.horario-edit') as HTMLInputElement;
+
+      if (horarioDisplay && horarioEdit) {
+        horarioDisplay.addEventListener('click', (e) => {
+          e.stopPropagation();
+          horarioDisplay.classList.add('hidden');
+          horarioEdit.classList.remove('hidden');
+          horarioEdit.focus();
+        });
+
+        horarioEdit.addEventListener('input', () => {
+          const clean = horarioEdit.value.replace(/\s+/g, "");
+          const isValid = /^(\d{1,2})(?::(\d{2}))?(?:-|a)(\d{1,2})(?::(\d{2}))?$/.test(clean);
+          horarioEdit.classList.toggle('input-error', !isValid && horarioEdit.value.trim() !== '');
+        });
+
+        horarioEdit.addEventListener('blur', () => {
+          const formatted = autoFormatHorario(horarioEdit.value);
+          if (formatted !== horarioEdit.value) {
+            horarioEdit.value = formatted;
+          }
+          handleEdit("horarioEstipulado", formatted);
+          horarioDisplay.textContent = formatted || "Franco";
+
+          const clean = formatted.replace(/\s+/g, "");
+          const isValid = /^(\d{1,2})(?::(\d{2}))?(?:-|a)(\d{1,2})(?::(\d{2}))?$/.test(clean);
+          const isInvalid = !isValid && formatted !== '';
+          horarioDisplay.classList.toggle('bg-error/15', isInvalid);
+          horarioDisplay.classList.toggle('text-error', isInvalid);
+          horarioDisplay.classList.toggle('border-error/30', isInvalid);
+          horarioDisplay.classList.toggle('bg-base-200', !isInvalid);
+          horarioDisplay.classList.toggle('text-base-content/75', !isInvalid);
+          horarioDisplay.classList.toggle('border-base-300', !isInvalid);
+          horarioDisplay.classList.toggle('font-bold', true);
+
+          horarioEdit.classList.add('hidden');
+          horarioDisplay.classList.remove('hidden');
+        });
+
+        horarioEdit.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            horarioEdit.blur();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            const original = store.getRecord(rowId)?.horarioEstipulado || "";
+            horarioEdit.value = original;
+            horarioEdit.blur();
+          }
+        });
+
+        // Aplicar estilo de error si el valor cargado ya es inválido
+        const initClean = (horarioEdit.value || "").replace(/\s+/g, "");
+        const initValid = /^(\d{1,2})(?::(\d{2}))?(?:-|a)(\d{1,2})(?::(\d{2}))?$/.test(initClean);
+        const initFranco = initClean.toLowerCase() === "franco";
+        const initBad = !initValid && initClean !== '' && !initFranco;
+        if (initBad) {
+          horarioDisplay.classList.add('bg-error/15', 'text-error', 'border-error/30');
+          horarioDisplay.classList.remove('bg-base-200', 'text-base-content/75', 'border-base-300');
+        }
+      }
+
+      inputEntrada.addEventListener("input", (e) => {
+        const target = e.target as HTMLInputElement;
+        let val = target.value.replace(/[^0-9]/g, "");
         if (val.length >= 2) {
           val = val.slice(0, 2) + ":" + val.slice(2, 4);
         }
-        input.value = val;
-        handleEdit(field, val);
-      };
-
-      inputEntrada.addEventListener("input", () =>
-        formatTimeInput(inputEntrada, "entradaReal"),
-      );
+        target.value = val;
+        handleEdit("entradaReal", val);
+      });
 
       selectCumplimiento.addEventListener("change", (e) => {
         const target = e.target as HTMLSelectElement;
         handleEdit("cumplimiento", target.value);
       });
     });
+
+    document.querySelectorAll('.horario-locked-display').forEach((span) => {
+      const txt = (span.textContent || "").trim();
+      const clean = txt.replace(/\s+/g, "");
+      const valid = /^(\d{1,2})(?::(\d{2}))?(?:-|a)(\d{1,2})(?::(\d{2}))?$/.test(clean);
+      const isFranco = clean.toLowerCase() === "franco";
+      const bad = !valid && clean !== '' && !isFranco;
+      if (bad) {
+        span.classList.add('bg-error/15', 'text-error', 'border-error/30');
+        span.classList.remove('bg-base-200', 'text-base-content/75', 'border-base-300');
+      }
+    });
+  }
+
+  function autoFormatHorario(raw: string): string {
+    const s = raw.trim();
+    if (!s) return "";
+
+    const digits = s.match(
+      /(\d{1,2})\s*[.:]?\s*(\d{0,2})\D+(\d{1,2})\s*[.:]?\s*(\d{0,2})/
+    );
+    if (!digits) return s;
+
+    const pad = (n: string) => n.padStart(2, "0");
+    const sh = pad(digits[1]);
+    const sm = digits[2] && digits[2].length <= 2 ? pad(digits[2]) : "00";
+    const eh = pad(digits[3]);
+    const em = digits[4] && digits[4].length <= 2 ? pad(digits[4]) : "00";
+
+    return `${sh}:${sm} - ${eh}:${em}`;
   }
 
   function formatToDDMMYYYY(dateStr: string): string {

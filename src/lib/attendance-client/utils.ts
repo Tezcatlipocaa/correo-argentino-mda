@@ -16,7 +16,7 @@ export function calculateCompliance(entrada: string | null | undefined, estipula
   if (!estipulado) return "Cumplió";
 
   const times = parseTimeRange(estipulado);
-  if (!times) return "Cumplió";
+  if (!times) return "Sin Registro";
 
   let late = false;
 
