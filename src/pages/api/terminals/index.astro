@@ -16,8 +16,10 @@ const status = searchParams.get("status") || "all";
 const model = searchParams.get("model") || "all";
 const sortBy = (searchParams.get("sortBy") || undefined) as TerminalSortKey | undefined;
 const sortOrder = (searchParams.get("sortOrder") || undefined) as SortOrder | undefined;
+const isMediterranea = searchParams.get("isMediterranea") === "true";
+const mediterraneaType = searchParams.get("mediterraneaType") || "all";
 
-const { data: terminals, hasMore } = await getTerminals({
+const { data: terminals, count, hasMore } = await getTerminals({
   page,
   limit,
   search,
@@ -30,8 +32,11 @@ const { data: terminals, hasMore } = await getTerminals({
   model,
   sortBy,
   sortOrder,
+  isMediterranea,
+  mediterraneaType,
 });
 
+Astro.response.headers.set("X-Total-Count", count.toString());
 Astro.response.headers.set("X-Has-More", hasMore ? "true" : "false");
 Astro.response.headers.set("Cache-Control", "private, max-age=300");
 ---

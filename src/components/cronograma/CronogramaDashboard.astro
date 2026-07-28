@@ -131,7 +131,7 @@ const { userRole = "agent" } = Astro.props;
               </div>
 
               <!-- Center: Search & Sort inputs -->
-              <div class="flex-1 max-w-md w-full mx-0 lg:mx-4 flex gap-2">
+              <div class="flex-1 max-w-xs w-full mx-0 lg:mx-4 flex gap-2">
                 <SearchBar id="daily-search" />
                 <SortDropdown id="daily-sort" current="alphabetical" />
               </div>
@@ -252,11 +252,11 @@ const { userRole = "agent" } = Astro.props;
               <FilterButtonBar
                 id="filter-daily-status"
                 options={[
-                  { value: "Presencial Monte Grande", label: "Presencial MG", color: "primary", dotColor: "bg-amber-500" },
-                  { value: "Presencial Parque Patricios", label: "Presencial PP", color: "primary", dotColor: "bg-purple-500" },
+                  { value: "Presencial Monte Grande", label: "MG", color: "primary", dotColor: "bg-amber-500" },
+                  { value: "Presencial Parque Patricios", label: "PP", color: "primary", dotColor: "bg-purple-500" },
                   { value: "Home Office", label: "HO", color: "secondary", dotColor: "bg-secondary" },
-                  { value: "Licencia", label: "Licencia", color: "error", dotColor: "bg-error" },
-                  { value: "Vacaciones", label: "Vacaciones", color: "success", dotColor: "bg-success" },
+                  { value: "Licencia", label: "Lic", color: "error", dotColor: "bg-error" },
+                  { value: "Vacaciones", label: "Vac", color: "success", dotColor: "bg-success" },
                 ]}
                 prefix="Estado:"
                 allLabel="Todos"
@@ -268,8 +268,8 @@ const { userRole = "agent" } = Astro.props;
               <FilterButtonBar
                 id="filter-daily-location"
                 options={[
-                  { value: "Monte Grande", label: "Monte Grande" },
-                  { value: "Parque Patricios", label: "Parque Patricios" },
+                  { value: "Monte Grande", label: "MG" },
+                  { value: "Parque Patricios", label: "PP" },
                 ]}
                 prefix="Sede:"
                 allLabel="Todas"
@@ -288,9 +288,9 @@ const { userRole = "agent" } = Astro.props;
         <div
           class="bg-base-100 rounded-2xl border border-base-300 shadow-md h-full flex flex-col overflow-hidden"
         >
-          <div class="relative z-60 bg-base-200 border-b border-base-300">
+          <div class="relative z-60 bg-base-200 border-b border-base-300 shrink-0">
             <div
-              class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 py-3.5 px-6"
+              class="flex flex-col lg:flex-row lg:items-center justify-between gap-2 py-2 px-4"
             >
               <!-- Left: Title, Navigation & Maximize button -->
               <div class="flex items-center gap-3 shrink-0 flex-wrap">
@@ -318,10 +318,10 @@ const { userRole = "agent" } = Astro.props;
                 </div>
 
                 <!-- Agregar nuevo mes -->
-                <ActionButton id="add-month-btn" icon="boxicons:calendar-plus" label="Agregar nuevo mes" title="Agregar nuevo mes" class="ml-2" />
+                <ActionButton id="add-month-btn" icon="boxicons:calendar-plus" label="Agregar nuevo mes" title="Agregar nuevo mes" class="ml-2 [&_span]:hidden xl:[&_span]:inline" />
 
                 <!-- Borrar mes actual -->
-                <ActionButton id="delete-month-btn" icon="boxicons:calendar-minus" label="Borrar mes actual" title="Borrar mes actual" color="btn-error" class="ml-2" />
+                <ActionButton id="delete-month-btn" icon="boxicons:calendar-minus" label="Borrar mes actual" title="Borrar mes actual" color="btn-error" class="ml-2 [&_span]:hidden xl:[&_span]:inline" />
               </div>
 
               <!-- Center: Search & Sort inputs -->
@@ -340,7 +340,7 @@ const { userRole = "agent" } = Astro.props;
               </div>
             </div>
           </div>
-          <div class="p-3 flex-1 min-h-0 flex flex-col">
+          <div class="p-1.5 flex-1 min-h-0 flex flex-col">
             <div
               class="overflow-x-auto flex-1 min-h-0 overflow-y-auto scrollbar-thin rounded-xl border border-base-200 bg-base-100"
             >
@@ -372,18 +372,18 @@ const { userRole = "agent" } = Astro.props;
             </div>
           </div>
           <div
-            class="bg-base-200/40 border-t border-base-300 px-6 py-3 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4 no-print"
+            class="bg-base-200/40 border-t border-base-300 px-6 py-3 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 no-print shrink-0"
           >
             <div class="flex flex-wrap items-center gap-4">
               <!-- Status Filters Container -->
               <FilterButtonBar
                 id="filter-monthly-status"
                 options={[
-                  { value: "Presencial Monte Grande", label: "Presencial MG", color: "primary", dotColor: "bg-amber-500" },
-                  { value: "Presencial Parque Patricios", label: "Presencial PP", color: "primary", dotColor: "bg-purple-500" },
+                  { value: "Presencial Monte Grande", label: "MG", color: "primary", dotColor: "bg-amber-500" },
+                  { value: "Presencial Parque Patricios", label: "PP", color: "primary", dotColor: "bg-purple-500" },
                   { value: "Home Office", label: "HO", color: "secondary", dotColor: "bg-secondary" },
-                  { value: "Licencia", label: "Licencia", color: "error", dotColor: "bg-error" },
-                  { value: "Vacaciones", label: "Vacaciones", color: "success", dotColor: "bg-success" },
+                  { value: "Licencia", label: "Lic", color: "error", dotColor: "bg-error" },
+                  { value: "Vacaciones", label: "Vac", color: "success", dotColor: "bg-success" },
                 ]}
                 prefix="Estado:"
                 allLabel="Todos"
@@ -395,8 +395,8 @@ const { userRole = "agent" } = Astro.props;
               <FilterButtonBar
                 id="filter-monthly-location"
                 options={[
-                  { value: "Monte Grande", label: "Monte Grande" },
-                  { value: "Parque Patricios", label: "Parque Patricios" },
+                  { value: "Monte Grande", label: "MG" },
+                  { value: "Parque Patricios", label: "PP" },
                 ]}
                 prefix="Sede:"
                 allLabel="Todas"
@@ -404,7 +404,7 @@ const { userRole = "agent" } = Astro.props;
               />
             </div>
             <div
-              class="flex flex-wrap gap-2 justify-start xl:justify-end shrink-0"
+              class="flex flex-wrap gap-2 justify-start lg:justify-end shrink-0"
             >
               <div class="relative">
                 <input
@@ -413,10 +413,10 @@ const { userRole = "agent" } = Astro.props;
                   accept=".csv"
                   class="hidden"
                 />
-                <ActionButton id="import-csv-btn" icon="boxicons:folder-up-arrow" label="Importar CSV" />
+                <ActionButton id="import-csv-btn" icon="boxicons:folder-up-arrow" label="Importar CSV" shortLabel="I.CSV" title="Importar CSV" />
               </div>
-              <ActionButton id="export-csv-btn" icon="boxicons:file" label="Exportar CSV" />
-              <ActionButton id="export-image-btn" icon="boxicons:image" label="Exportar Imagen (PNG)" color="btn-primary" />
+              <ActionButton id="export-csv-btn" icon="boxicons:file" label="Exportar CSV" shortLabel="E.CSV" title="Exportar CSV" />
+              <ActionButton id="export-image-btn" icon="boxicons:image" label="Exportar Imagen (PNG)" shortLabel="PNG" title="Exportar Imagen (PNG)" color="btn-primary" />
             </div>
           </div>
         </div>
@@ -621,6 +621,7 @@ const { userRole = "agent" } = Astro.props;
           <!-- Visual timeline grid -->
           <div class="space-y-2">
             <div
+              id="rotation-timeline-wrapper"
               class="overflow-x-auto rounded-xl border border-base-300 bg-base-200/30"
             >
               <table
@@ -707,7 +708,7 @@ const { userRole = "agent" } = Astro.props;
               Horas Extras – Fin de Semana
             </h2>
             <p class="text-small text-base-content/50">
-              Sábado 13:00 hs hasta el fin del Domingo
+              Sábado y Domingo — 24 hs
             </p>
           </div>
         </div>
@@ -715,71 +716,63 @@ const { userRole = "agent" } = Astro.props;
 
       <!-- Weekend selector + referente config -->
       <div
-        class="flex flex-col lg:flex-row lg:items-end gap-4 p-4 bg-base-200/50 rounded-xl border border-base-300/60"
+        class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 p-4 bg-base-200/50 rounded-xl border border-base-300/60"
       >
-        <div class="flex flex-col gap-1.5 shrink-0">
-          <label
-            class="label-xxs text-base-content/40"
-            >Sábado del Fin de Semana</label
-          >
-          <div
-            id="overtime-weekend-date-wrapper"
-            class="relative flex h-8 min-w-44 items-center gap-2 bg-base-100 px-3 py-1.5 rounded-lg border border-base-300 shadow-sm hover:border-warning/40 transition-colors duration-200 focus-within:ring-2 focus-within:ring-warning/20 cursor-pointer"
-          >
-            <Icon
-              name="boxicons:calendar"
-              size={14}
-              class="text-base-content/40 pointer-events-none"
-            />
-            <span
-              id="overtime-weekend-date-display"
-              class="text-xs font-semibold tabular-nums text-base-content pointer-events-none"
-              >Seleccionar sábado...</span
+        <div class="flex flex-col sm:flex-row items-start sm:items-end gap-3 flex-1">
+          <div class="flex flex-col gap-1.5 shrink-0">
+            <label class="label-xxs text-base-content/40">Fin de Semana</label>
+            <button
+              type="button"
+              id="preview-month-btn"
+              class="btn btn-sm bg-base-100 hover:bg-base-200 border-base-300 text-base-content justify-between w-56 font-bold shadow-sm"
+              title="Seleccionar fin de semana..."
             >
-            <input
-              type="date"
-              id="overtime-weekend-date"
-              class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none border-0 opacity-0"
-            />
+              <span class="flex items-center gap-2 min-w-0">
+                <Icon name="boxicons:calendar" size={14} class="text-warning shrink-0" />
+                <span id="overtime-weekend-date-display" class="tabular-nums truncate text-xs">Seleccionar fin de semana...</span>
+              </span>
+              <Icon name="boxicons:chevron-down" size={14} class="text-base-content/40 shrink-0" />
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-1.5 min-w-40">
+            <label
+              class="label-xxs text-base-content/40"
+              >Referente</label
+            >
+            <select
+              id="overtime-referente-select"
+              class="select select-sm select-bordered font-bold cursor-pointer text-base-content w-full"
+            >
+              <option value="">Sin asignar</option>
+            </select>
+            <span
+              id="overtime-referente-text"
+              class="text-xs font-bold text-base-content px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 hidden min-h-9 flex items-center"
+            ></span>
           </div>
         </div>
 
-        <div class="flex flex-col gap-1.5 flex-1 max-w-xs">
-          <label
-            class="label-xxs text-base-content/40"
-            >Referente del Weekend</label
+        <div class="flex items-end gap-2 shrink-0">
+          <button
+            type="button"
+            id="copy-overtime-image-btn"
+            class="btn btn-sm btn-ghost shrink-0 gap-1.5 font-bold no-export cursor-pointer"
+            title="Copiar horas extras al portapapeles como imagen"
           >
-          <select
-            id="overtime-referente-select"
-            class="select select-sm select-bordered font-bold cursor-pointer text-base-content"
+            <Icon name="boxicons:clipboard" size={14} />
+            Copiar Tabla
+          </button>
+
+          <button
+            type="button"
+            id="save-overtime-referente-btn"
+            class="btn btn-sm btn-warning shrink-0 gap-1.5 font-bold no-export"
           >
-            <option value="">Sin asignar</option>
-          </select>
-          <span
-            id="overtime-referente-text"
-            class="text-xs font-bold text-base-content px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 hidden min-h-9 flex items-center"
-          ></span>
+            <Icon name="boxicons:save" size={14} />
+            Guardar Configuración
+          </button>
         </div>
-
-        <button
-          type="button"
-          id="save-overtime-referente-btn"
-          class="btn btn-sm btn-warning shrink-0 gap-1.5 uppercase font-bold text-xxs no-export"
-        >
-          <Icon name="boxicons:save" size={14} />
-          Guardar Config.
-        </button>
-
-        <!-- New Copy to Clipboard Button for Overtime -->
-        <button
-          type="button"
-          id="copy-overtime-image-btn"
-          class="btn btn-sm btn-outline btn-warning shrink-0 gap-1.5 uppercase font-bold text-xxs no-export cursor-pointer"
-          title="Copiar horas extras al portapapeles como imagen"
-        >
-          <Icon name="boxicons:clipboard" size={14} />
-          Copiar Tabla
-        </button>
       </div>
 
       <!-- Visual timeline -->
@@ -790,6 +783,7 @@ const { userRole = "agent" } = Astro.props;
           Línea de Tiempo del Fin de Semana
         </p>
         <div
+          id="overtime-timeline-wrapper"
           class="relative overflow-x-auto rounded-xl border border-base-300 bg-base-200/30 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           <!-- Time header labels row -->
@@ -822,99 +816,66 @@ const { userRole = "agent" } = Astro.props;
         </div>
       </div>
 
-      <!-- Add shift form -->
-      <div class="space-y-3 no-export" id="overtime-add-shift-section">
-        <p
-          class="label-xxs text-base-content/40"
-        >
-          Agregar Turno de Hora Extra
-        </p>
-        <form
-          id="overtime-shift-form"
-          class="flex flex-col md:flex-row md:items-end gap-3 p-4 bg-base-200/40 rounded-xl border border-base-300/60"
-        >
-          <div class="flex flex-col gap-1.5 flex-1 max-w-xs">
-            <label
-              class="label-xxs text-base-content/40"
-              >Operador</label
-            >
-            <select
-              id="overtime-shift-agent"
-              class="select select-sm select-bordered font-bold cursor-pointer text-base-content"
-              required
-            >
-              <option value="">Seleccionar operador...</option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1.5 shrink-0">
-            <label
-              class="label-xxs text-base-content/40"
-              >Día</label
-            >
-            <select
-              id="overtime-shift-day"
-              class="select select-sm select-bordered font-bold cursor-pointer text-base-content"
-              required
-            >
-              <option value="saturday">Sábado (tarde)</option>
-              <option value="sunday">Domingo</option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1.5 shrink-0">
-            <label
-              class="label-xxs text-base-content/40"
-              >Inicio</label
-            >
-            <input
-              type="time"
-              id="overtime-shift-start"
-              class="input input-sm input-bordered w-28 font-mono font-bold"
-              required
-            />
-          </div>
-          <div class="flex flex-col gap-1.5 shrink-0">
-            <label
-              class="label-xxs text-base-content/40"
-              >Fin</label
-            >
-            <input
-              type="time"
-              id="overtime-shift-end"
-              class="input input-sm input-bordered w-28 font-mono font-bold"
-              required
-            />
-          </div>
-          <input type="hidden" id="overtime-shift-edit-id" value="" />
-          <button
-            type="submit"
-            id="overtime-shift-submit-btn"
-            class="btn btn-sm btn-warning gap-1.5 uppercase font-bold text-xxs shrink-0"
-          >
-            <Icon name="boxicons:plus-circle" size={14} />
-            Agregar Turno
-          </button>
-          <button
-            type="button"
-            id="overtime-shift-cancel-btn"
-            class="btn btn-sm btn-ghost gap-1.5 uppercase font-bold text-xxs shrink-0 hidden"
-          >
-            Cancelar
-          </button>
-        </form>
-      </div>
+      <!-- Gestión de Turnos (form + lista side-by-side) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 no-export">
+        <!-- Columna 1: Formulario -->
+        <div class="bg-base-200/40 rounded-xl border border-base-300/60 p-4 space-y-4 self-start">
+          <p class="text-xxs font-black uppercase tracking-wider text-base-content/50 pb-2 border-b border-base-300/50">
+            Gestión de Turnos
+          </p>
+          <form id="overtime-shift-form" class="flex flex-col gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label class="label-xxs text-base-content/40">Operador</label>
+              <select id="overtime-shift-agent" class="select select-sm select-bordered font-bold cursor-pointer text-base-content" required>
+                <option value="">Seleccionar operador...</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="label-xxs text-base-content/40">Día</label>
+              <select id="overtime-shift-day" class="select select-sm select-bordered font-bold cursor-pointer text-base-content" required>
+                <option value="saturday">Sábado</option>
+                <option value="sunday">Domingo</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex flex-col gap-1.5">
+                <label class="label-xxs text-base-content/40">Inicio</label>
+                <input type="time" id="overtime-shift-start" class="input input-sm input-bordered font-mono font-bold" required />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="label-xxs text-base-content/40">Fin</label>
+                <input type="time" id="overtime-shift-end" class="input input-sm input-bordered font-mono font-bold" required />
+              </div>
+            </div>
+            <input type="hidden" id="overtime-shift-edit-id" value="" />
+            <div class="flex justify-between items-center mt-2">
+              <button type="button" id="overtime-shift-cancel-btn" class="btn btn-xs btn-ghost font-bold hidden">
+                Cancelar
+              </button>
+              <div class="flex gap-2 ml-auto">
+                <button type="button" id="overtime-shift-delete-btn" class="btn btn-xs btn-ghost text-error gap-1 font-bold hidden">
+                  <Icon name="boxicons:trash" size={12} />
+                  Eliminar
+                </button>
+                <button type="submit" id="overtime-shift-submit-btn" class="btn btn-sm btn-warning gap-1.5 font-bold">
+                  <Icon name="boxicons:plus-circle" size={14} />
+                  Agregar Turno
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
 
-      <!-- Saved shifts list -->
-      <div class="space-y-2 no-export">
-        <p
-          class="label-xxs text-base-content/40"
-        >
-          Turnos Guardados
-        </p>
-        <div id="overtime-shifts-list">
-          <div
-            class="text-xs text-base-content/30 text-center py-6 font-bold uppercase tracking-wider"
-          >
-            No hay turnos guardados para este fin de semana
+        <!-- Columna 2+3: Lista compacta -->
+        <div class="lg:col-span-2 bg-base-200/40 rounded-xl border border-base-300/60 p-4 space-y-3">
+          <p class="text-xxs font-black uppercase tracking-wider text-base-content/50 pb-2 border-b border-base-300/50">
+            Turnos Guardados
+          </p>
+          <div id="overtime-shifts-list">
+            <div class="flex flex-col items-center justify-center py-10 text-base-content/20 gap-2">
+              <Icon name="boxicons:briefcase-alt-2" size={32} />
+              <p class="text-xs font-bold uppercase tracking-wider">No hay turnos guardados</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1326,6 +1287,11 @@ const { userRole = "agent" } = Astro.props;
 </div>
 
 <style is:global>
+  #monthly-view, #daily-view {
+    content-visibility: auto;
+    contain-intrinsic-size: 1000px;
+  }
+
   #edit-mode-toolbar {
     scrollbar-width: none;
   }
@@ -1337,11 +1303,90 @@ const { userRole = "agent" } = Astro.props;
   .mx-auto.max-w-7xl {
     max-width: 98% !important;
     width: 98% !important;
-    margin-top: 1.5rem !important;
   }
 
   #cronograma-container {
-    padding-bottom: 2rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .tooltip::before {
+    white-space: pre-line !important;
+  }
+
+  .overtime-custom-tooltip {
+    position: fixed;
+    z-index: 9999;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border-radius: 6px;
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  /* Flecha abajo (tooltip arriba de la barra) */
+  .overtime-custom-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--color-neutral);
+  }
+
+  /* Flecha arriba (tooltip abajo de la barra - near top) */
+  .overtime-custom-tooltip.tooltip-below::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--color-neutral);
+  }
+
+  /* Barra seleccionada: anillo secondary */
+  .overtime-timeline-bar.selected > div {
+    box-shadow: 0 0 0 2px var(--color-secondary), 0 0 0 4px color-mix(in srgb, var(--color-secondary) 25%, transparent);
+  }
+
+  .overtime-custom-tooltip {
+    position: fixed;
+    z-index: 9999;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border-radius: 6px;
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  /* Flecha abajo (tooltip arriba de la barra) */
+  .overtime-custom-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--color-neutral);
+  }
+
+  /* Flecha arriba (tooltip abajo de la barra - near top) */
+  .overtime-custom-tooltip.tooltip-below::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: var(--color-neutral);
+  }
+
+  /* Barra seleccionada: anillo secondary */
+  .overtime-timeline-bar.selected > div {
+    box-shadow: 0 0 0 2px var(--color-secondary), 0 0 0 4px color-mix(in srgb, var(--color-secondary) 25%, transparent);
   }
 
   #date-picker-container {
@@ -1561,15 +1606,15 @@ const { userRole = "agent" } = Astro.props;
   tr.highlighted-row td {
     background-color: color-mix(
       in oklab,
-      var(--color-secondary) 8%,
-      transparent
+      var(--color-secondary) 10%,
+      var(--color-base-100)
     ) !important;
   }
   tr.highlighted-row:hover td {
     background-color: color-mix(
       in oklab,
-      var(--color-secondary) 14%,
-      transparent
+      var(--color-secondary) 16%,
+      var(--color-base-100)
     ) !important;
   }
   tr.highlighted-row .op-row-dot {
@@ -1913,6 +1958,8 @@ const { userRole = "agent" } = Astro.props;
     padding-bottom: 2.5rem !important;
   }
 </style>
+
+<script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
 <script>
   import "./lib/dashboard-client";

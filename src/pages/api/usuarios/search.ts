@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { db } from "@db/index";
-import { employees } from "@db/schema";
-import { or, and, sql } from "drizzle-orm";
+import { employees, offices, employeeOffices } from "@db/schema";
+import { or, and, eq, sql, getTableColumns, inArray } from "drizzle-orm";
 import { jsonResponse, jsonError } from "@lib/apiResponse";
 
 const ACCENT_FOLD: Record<string, string> = {
@@ -49,11 +49,37 @@ export const GET: APIRoute = async ({ request }) => {
     const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
 
     const results = await db
-      .select()
+      .select({
+        ...getTableColumns(employees),
+        officeName: offices.name,
+      })
       .from(employees)
+      .leftJoin(offices, eq(employees.sucursal, offices.code))
       .where(whereClause)
       .orderBy(employees.fullname)
       .limit(50);
+
+    const usernames = results
+      .map((r) => (r.username?.split("@")[0] ?? "").toLowerCase())
+      .filter(Boolean);
+    const officesMap = new Map<string, { code: string; name: string | null }[]>();
+    if (usernames.length > 0) {
+      const rows = await db
+        .select({
+          username: employeeOffices.username,
+          code: employeeOffices.sucursal,
+          name: offices.name,
+        })
+        .from(employeeOffices)
+        .leftJoin(offices, eq(employeeOffices.sucursal, offices.code))
+        .where(inArray(employeeOffices.username, usernames));
+
+      for (const row of rows) {
+        const list = officesMap.get(row.username) ?? [];
+        list.push({ code: row.code, name: row.name ?? null });
+        officesMap.set(row.username, list);
+      }
+    }
 
     return jsonResponse({
       results: results.map((e) => ({
@@ -63,6 +89,10 @@ export const GET: APIRoute = async ({ request }) => {
         interno: e.interno,
         telefono: e.telefono,
         sucursal: e.sucursal,
+        sucursalNombre: e.officeName || null,
+        sucursales: officesMap.get(
+          (e.username?.split("@")[0] ?? "").toLowerCase(),
+        ) ?? [],
         invgateExists: e.invgateExists ?? false,
       })),
       total: results.length,

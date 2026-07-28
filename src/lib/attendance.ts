@@ -55,7 +55,7 @@ export function calculateCompliance(
   if (!horarioEstipulado) return "Cumplió";
   
   const times = parseTimeRange(horarioEstipulado);
-  if (!times) return "Cumplió";
+  if (!times) return "Sin Registro";
   
   let late = false;
   
@@ -161,6 +161,7 @@ export async function getAttendanceData(startDate: string, endDate: string) {
         rotationOrder: "A,B,C,D",
         startDate: "2026-06-06",
         startGroup: "A",
+        disabledGroups: "",
       };
       config = {
         id: baseConfig.id,
@@ -168,6 +169,7 @@ export async function getAttendanceData(startDate: string, endDate: string) {
         rotationOrder: baseConfig.rotationOrder,
         startDate: baseConfig.startDate,
         startGroup: baseConfig.startGroup,
+        disabledGroups: baseConfig.disabledGroups || "",
       };
     }
     rotationConfigsByMonth[m] = config;
@@ -311,6 +313,10 @@ export async function getAttendanceData(startDate: string, endDate: string) {
           (a) => a.agentId === agent.id && a.date === dateStr && a.shiftType === "normal"
         );
 
+        if (actualNormal?.horarioEstipulado) {
+          horarioEstipulado = actualNormal.horarioEstipulado;
+        }
+
         let defaultAsistencia = "";
         if (modalidadPlanificada === "Home Office") {
           defaultAsistencia = "HOME OFFICE";
@@ -357,7 +363,11 @@ export async function getAttendanceData(startDate: string, endDate: string) {
           (a) => a.agentId === agent.id && a.date === dateStr && a.shiftType === "overtime"
         );
 
-        const heHorario = `${overtimeShift.startTime} - ${overtimeShift.endTime}`;
+        let heHorario = `${overtimeShift.startTime} - ${overtimeShift.endTime}`;
+        if (actualOvertime?.horarioEstipulado) {
+          heHorario = actualOvertime.horarioEstipulado;
+        }
+        
         const asistencia = actualOvertime?.asistencia || "HORAS EXTRAS";
         const ausencia = actualOvertime?.ausencia ?? "";
         const entradaReal = actualOvertime?.entradaReal ?? "";

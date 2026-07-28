@@ -23,6 +23,7 @@ export interface InvgateUser {
   is_disabled: boolean;
   is_deleted: boolean;
   is_external: boolean;
+  position: string | null;
   role_name: string | null;
   manager_id: number | null;
 }
@@ -116,6 +117,17 @@ export interface InvgateHelpdesk {
   status_id: number;
   engine_id: number;
   total_members: number;
+}
+
+export interface InvgateHelpdeskAndLevel {
+  id: number;
+  name?: string;
+  parent_id: number | null;
+  members_ids: number[];
+  level_order?: number;
+  total_members: number;
+  status_id: number;
+  engine_id: number;
 }
 
 export interface InvgateKbSearchResponse {

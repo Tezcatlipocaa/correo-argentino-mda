@@ -25,15 +25,16 @@ export interface RoutePermission {
 export const routePermissions: RoutePermission[] = [
   { path: "/admin/usuarios", roles: ["admin"] },
   { path: "/admin/auditoria", roles: ["admin"] },
-  { path: "/admin/invgate/ubicaciones", roles: ["admin"] },
+  { path: "/admin/invgate/ubicaciones", roles: ["admin", "supervisor", "team_leader"] },
   { path: "/admin", roles: ["admin", "supervisor", "team_leader"] },
   { path: "/supervision/asistencia", roles: ["admin", "supervisor", "team_leader"] },
   { path: "/supervision/cronograma", roles: ["admin", "supervisor", "team_leader", "referent", "agent"] },
   { path: "/supervision/calidad-operadores", roles: ["admin", "supervisor", "team_leader", "referent", "agent"] },
   { path: "/supervision/asignacion-autogestiones", roles: ["admin", "supervisor", "team_leader", "referent", "agent"] },
   { path: "/supervision", roles: ["admin", "supervisor", "team_leader", "referent", "agent"] },
-  { path: "/soportes/create", roles: ["admin", "supervisor"] },
-  { path: "/soportes/edit", roles: ["admin", "supervisor"] },
+  { path: "/mesas-de-ayuda/create", roles: ["admin", "supervisor"] },
+  { path: "/mesas-de-ayuda/edit", roles: ["admin", "supervisor"] },
+  { path: "/mesas-de-ayuda/asignar", roles: ["admin", "supervisor"] },
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
   { path: "/inventario-terminales/cubics/create", roles: ["admin", "supervisor"] },
@@ -43,7 +44,7 @@ export const routePermissions: RoutePermission[] = [
 export function hasPermission(path: string, userRole: string): boolean {
   const role = normalizeRole(userRole);
   const normalizedPath = path.toLowerCase();
-  
+
   const matchedRoute = routePermissions
     .filter(route => normalizedPath.startsWith(route.path.toLowerCase()))
     .sort((a, b) => b.path.length - a.path.length)[0];
@@ -106,9 +107,11 @@ export function getModulePermissions(moduleName: string, userRole: string): Modu
     // Leen/escriben: admin, supervisor, team_leader
     perm.canRead = rank >= ROLE_HIERARCHY.team_leader;
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
+  } else if (moduleName === "titulos") {
+    // Leen: todos / Escriben: admin, supervisor, team_leader
+    perm.canRead = true;
+    perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
   }
 
   return perm;
 }
-
-

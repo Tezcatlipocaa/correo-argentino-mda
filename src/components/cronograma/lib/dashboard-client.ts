@@ -250,12 +250,13 @@ async function init(): Promise<void> {
   try {
     const dateInput = document.getElementById('date-input') as HTMLInputElement | null;
     const todayStr = formatYMD(new Date());
-    let initialMonth = dateInput?.value ? dateInput.value.slice(0, 7) : todayStr.slice(0, 7);
 
-    const payload = await fetchCronogramaFullData(initialMonth);
+    const payload = await fetchCronogramaFullData();
     state.cronoData = payload.operators;
     state.overtimeConfigs = payload.weekendOvertimeConfigs;
     state.availableMonths = payload.availableMonths || [];
+
+    const activeMonth = payload.activeMonth || (dateInput?.value ? dateInput.value.slice(0, 7) : todayStr.slice(0, 7));
 
     try {
       const feriadosRes = await fetch('/api/cronograma/feriados');
@@ -266,15 +267,14 @@ async function init(): Promise<void> {
       console.warn("Failed to load holidays:", err);
     }
 
-    await loadRotationConfig(initialMonth);
+    await loadRotationConfig(activeMonth);
 
-    const hasDataForToday = state.cronoData.some(op => op.asistencia[todayStr]);
-    const initialDate = hasDataForToday ? todayStr : (state.uniqueDates[state.uniqueDates.length - 1] || todayStr);
+    const hasDataForToday = activeMonth === todayStr.slice(0, 7) && state.cronoData.some(op => op.asistencia[todayStr]);
+    const initialDate = hasDataForToday ? todayStr : (state.uniqueDates[state.uniqueDates.length - 1] || `${activeMonth}-01`);
 
     if (dateInput) {
       dateInput.value = initialDate;
       updateDateInputDisplay();
-      updateMonthDisplay();
       if (state.uniqueDates.length > 0) {
         dateInput.min = state.uniqueDates[0];
         dateInput.max = state.uniqueDates[state.uniqueDates.length - 1];
@@ -284,6 +284,7 @@ async function init(): Promise<void> {
     renderDaily();
     renderMonthly();
     renderMonthSelect();
+    updateMonthDisplay();
     setupEventListeners();
   } catch (err: unknown) {
     console.error("Error loading data:", err);
@@ -474,10 +475,10 @@ function showMonthlyView(): void {
   if (pasivaView) pasivaView.classList.add('hidden');
 
   if (datePickerContainer) {
-    datePickerContainer.classList.remove('hidden');
+    datePickerContainer.classList.add('is-faded');
     setTimeout(() => {
-      datePickerContainer.classList.remove('is-faded');
-    }, 50);
+      datePickerContainer.classList.add('hidden');
+    }, 300);
   }
 }
 
@@ -527,8 +528,14 @@ export async function renderGroupsView(): Promise<void> {
     }
     if (startGroupSelect && config.startGroup) startGroupSelect.value = config.startGroup;
     if (orderInput && config.rotationOrder) orderInput.value = config.rotationOrder;
+    
+    const disabledGroupsList = (config.disabledGroups || "").split(",").map((g: string) => g.trim()).filter(Boolean);
+    ['A', 'B', 'C', 'D'].forEach(g => {
+      const toggle = document.querySelector(`[data-group-toggle="${g}"]`) as HTMLInputElement | null;
+      if (toggle) toggle.checked = !disabledGroupsList.includes(g);
+    });
 
-    setActiveRotationConfig({ startDate: config.startDate, startGroup: config.startGroup, rotationOrder: config.rotationOrder });
+    setActiveRotationConfig({ startDate: config.startDate, startGroup: config.startGroup, rotationOrder: config.rotationOrder, disabledGroups: config.disabledGroups || "" });
     ['A', 'B', 'C', 'D'].forEach(group => {
       const dateEl = document.getElementById(`group-${group}-next-date`);
       if (dateEl) {
@@ -880,7 +887,7 @@ function setupEventListeners(): void {
     if (trigger) applyBrushToCell(trigger);
   });
 
-  document.addEventListener('mouseup', () => { isDragging = false; });
+  document.addEventListener('mouseup', () => { isDragging = false; }); // [PERF] minimal — single assignment
   
   monthlyBody?.addEventListener('click', async (event) => {
     // Click on edit operator button
@@ -1207,9 +1214,9 @@ function setupEventListeners(): void {
     }
   });
 
-  const newMonthModal = document.getElementById('new-month-modal') as HTMLDialogElement & { showModal: () => void } | null;
+  const newMonthModal = document.getElementById('new-month-modal') as HTMLElement | null;
   document.getElementById('add-month-btn')?.addEventListener('click', () => {
-    newMonthModal?.showModal();
+    newMonthModal?.classList.add('modal-open');
   });
 
   // --- Import Handler ---
@@ -1384,7 +1391,8 @@ function setupEventListeners(): void {
       saturdayCard.classList.add('exporting-image');
 
       const { exportAsClipboardImage } = await import('./exporters');
-      await exportAsClipboardImage(saturdayCard);
+      const targetEl = document.getElementById('rotation-timeline-wrapper') || saturdayCard;
+      await exportAsClipboardImage(targetEl);
 
       copyBtn.classList.remove('btn-secondary');
       copyBtn.classList.add('btn-success');
@@ -1435,10 +1443,10 @@ function setupEventListeners(): void {
       overtimeCard.classList.add('exporting-image');
 
       const { exportAsClipboardImage } = await import('./exporters');
-      await exportAsClipboardImage(overtimeCard);
+      const targetEl = document.getElementById('overtime-timeline-wrapper') || overtimeCard;
+      await exportAsClipboardImage(targetEl);
 
-      copyBtn.classList.remove('btn-outline');
-      copyBtn.classList.remove('btn-warning');
+      copyBtn.classList.remove('btn-ghost');
       copyBtn.classList.add('btn-success');
       copyBtn.innerHTML = `
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1450,8 +1458,7 @@ function setupEventListeners(): void {
 
       setTimeout(() => {
         copyBtn.classList.remove('btn-success');
-        copyBtn.classList.add('btn-outline');
-        copyBtn.classList.add('btn-warning');
+        copyBtn.classList.add('btn-ghost');
         copyBtn.disabled = false;
         copyBtn.innerHTML = originalBtnText;
       }, 2500);
@@ -1640,6 +1647,13 @@ function setupEventListeners(): void {
     const startDate = (document.getElementById('rotation-start-date') as HTMLInputElement).value;
     const startGroup = (document.getElementById('rotation-start-group') as HTMLSelectElement).value;
     const rotationOrder = (document.getElementById('rotation-order') as HTMLInputElement).value;
+    
+    const disabledGroups = ['A', 'B', 'C', 'D']
+      .filter(g => {
+        const t = document.querySelector(`[data-group-toggle="${g}"]`) as HTMLInputElement | null;
+        return t && !t.checked;
+      })
+      .join(',');
 
     const dateObj = new Date(startDate + "T12:00:00");
     if (dateObj.getDay() !== 6) {
@@ -1661,10 +1675,10 @@ function setupEventListeners(): void {
       const res = await fetch('/api/cronograma/rotation-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month, startDate, startGroup, rotationOrder })
+        body: JSON.stringify({ month, startDate, startGroup, rotationOrder, disabledGroups })
       });
       if (!res.ok) throw new Error("Error al guardar la configuración");
-      setActiveRotationConfig({ startDate, startGroup, rotationOrder });
+      setActiveRotationConfig({ startDate, startGroup, rotationOrder, disabledGroups });
       
       await reloadDataForActiveMonth(month);
       renderGroupsView();
@@ -1678,6 +1692,36 @@ function setupEventListeners(): void {
         saveBtn.innerHTML = originalText;
       }
     }
+  });
+
+  document.querySelectorAll('[data-group-toggle]').forEach(el => {
+    el.addEventListener('change', async () => {
+      const startDate = (document.getElementById('rotation-start-date') as HTMLInputElement)?.value || '';
+      const startGroup = (document.getElementById('rotation-start-group') as HTMLSelectElement)?.value || '';
+      const rotationOrder = (document.getElementById('rotation-order') as HTMLInputElement)?.value || '';
+      const dateInput = document.getElementById('date-input') as HTMLInputElement | null;
+      const month = dateInput?.value?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+
+      const disabledGroups = ['A', 'B', 'C', 'D']
+        .filter(g => {
+          const t = document.querySelector(`[data-group-toggle="${g}"]`) as HTMLInputElement | null;
+          return t && !t.checked;
+        })
+        .join(',');
+
+      try {
+        const res = await fetch('/api/cronograma/rotation-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month, startDate, startGroup, rotationOrder, disabledGroups })
+        });
+        if (!res.ok) throw new Error();
+        setActiveRotationConfig({ startDate, startGroup, rotationOrder, disabledGroups });
+        await reloadDataForActiveMonth(month);
+      } catch {
+        showToast('Error al cambiar estado del grupo', 'error');
+      }
+    });
   });
 
   ['A', 'B', 'C', 'D'].forEach(g => {
@@ -1852,6 +1896,12 @@ function setupEventListeners(): void {
       overtimeSetupDone = true;
     }
     showOvertimeView();
+  });
+
+  // Lazy-load overtime-preview on "Ver Mes" click
+  document.getElementById('preview-month-btn')?.addEventListener('click', async () => {
+    const { openOvertimePreview } = await import('./overtime-preview');
+    openOvertimePreview();
   });
 
   // Lazy-load pasiva-view on first tab click

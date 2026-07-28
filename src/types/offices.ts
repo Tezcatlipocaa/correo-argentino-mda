@@ -1,6 +1,6 @@
 export type OfficeType = string;
 
-export type OfficeAssetType = "server" | "printer" | "desktop" | "client";
+export type OfficeAssetType = "server" | "printer" | "desktop" | "client" | "backup";
 
 export interface OfficeContact {
   name: string;
@@ -40,4 +40,14 @@ export interface OfficeDirectoryItem {
   contacts: OfficeContact[];
   assets: OfficeAsset[];
   terminals: OfficeTerminal[];
+  invgateLinked?: boolean;
+  invgateDisplayName?: string | null;
+  invgateCp?: string | null;
+  invgateCc?: string | null;
+  invgateAddress?: string | null;
+  invgateParentName?: string | null;
+  invgateDuplicateCount?: number;
+  invgateUserTotal?: number;
+  active?: boolean;
+  closedReason?: string | null;
 }

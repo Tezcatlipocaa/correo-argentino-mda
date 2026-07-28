@@ -72,7 +72,28 @@ export function renderOvertimeView(): void {
 export async function refreshOvertimeForWeekend(weekendDate: string): Promise<void> {
   state.overtimeSelectedWeekend = weekendDate;
 
-  const existingConfig = state.overtimeConfigs.find(c => c.weekendStartDate === weekendDate);
+  const displayEl = document.getElementById('overtime-weekend-date-display');
+  if (displayEl) {
+    displayEl.textContent = formatToDDMMYY(weekendDate);
+  }
+
+  let existingConfig = state.overtimeConfigs.find(c => c.weekendStartDate === weekendDate);
+  if (!existingConfig) {
+    try {
+      const res = await fetch(`/api/cronograma/overtime/config?weekendStartDate=${weekendDate}`);
+      if (res.ok) {
+        const remote = await res.json();
+        if (remote && remote.referente) {
+          existingConfig = {
+            id: remote.id || 0,
+            weekendStartDate: weekendDate,
+            referente: remote.referente
+          };
+          state.overtimeConfigs.push(existingConfig);
+        }
+      }
+    } catch { /* ignore */ }
+  }
   const referenteSelect = document.getElementById('overtime-referente-select') as HTMLSelectElement | null;
   if (referenteSelect) {
     referenteSelect.value = existingConfig ? existingConfig.referente : '';
@@ -109,32 +130,31 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
   if (!hoursContainer || !bodyContainer) return;
   if (placeholder) placeholder.classList.add('hidden');
 
-  // Timeline: Sat 13:00 → Sun 23:59 = 35h = 2100 min
-  const TIMELINE_START_MIN = 13 * 60;
-  const TOTAL_MINUTES = 11 * 60 + 24 * 60;
+  // Timeline: Sat 00:00 → Sun 23:59 = 48h = 2880 min
+  const TIMELINE_START_MIN = 0;
+  const TOTAL_MINUTES = 24 * 60 + 24 * 60;
 
-  const hours: string[] = [];
-  for (let h = 13; h < 24; h++) hours.push(`${String(h).padStart(2, '0')}:00`);
-  for (let h = 0; h < 24; h++) hours.push(`${String(h).padStart(2, '0')}:00`);
+  const hours: { label: string; isMidnight: boolean }[] = [];
+  for (let h = 0; h < 24; h += 2) hours.push({ label: `${String(h).padStart(2, '0')}:00`, isMidnight: false });
+  for (let h = 0; h < 24; h += 2) hours.push({ label: `${String(h).padStart(2, '0')}:00`, isMidnight: h === 0 });
 
   const sundayDateObj = new Date(weekendDate + 'T12:00:00');
   sundayDateObj.setDate(sundayDateObj.getDate() + 1);
   const sundayDate = `${sundayDateObj.getFullYear()}-${String(sundayDateObj.getMonth()+1).padStart(2,'0')}-${String(sundayDateObj.getDate()).padStart(2,'0')}`;
 
-  const satWidthPct = (11 * 60 / TOTAL_MINUTES) * 100;
+  const satWidthPct = (24 * 60 / TOTAL_MINUTES) * 100;
   const sunWidthPct = 100 - satWidthPct;
 
   hoursContainer.innerHTML = `
     <div class="flex flex-col flex-1">
       <div class="flex border-b border-base-300/60">
-        <div style="width: ${satWidthPct.toFixed(2)}%" class="text-micro font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 border-r border-base-300/50 py-1 px-2 bg-warning/5">Sábado (tarde)</div>
+        <div style="width: ${satWidthPct.toFixed(2)}%" class="text-micro font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 border-r border-base-300/50 py-1 px-2 bg-warning/5">Sábado</div>
         <div style="width: ${sunWidthPct.toFixed(2)}%" class="text-micro font-black uppercase tracking-wider text-info py-1 px-2 bg-info/5">Domingo</div>
       </div>
       <div class="flex">
-        ${hours.map((h, i) => {
-          const wp = (60 / TOTAL_MINUTES) * 100;
-          const isMidnight = h === '00:00' && i > 0;
-          return `<div style="width:${wp.toFixed(2)}%" class="text-micro font-bold text-base-content/40 border-r border-base-300/30 py-1 px-1 shrink-0 ${isMidnight ? 'bg-info/5 text-info/60 font-black border-info/30' : ''}">${h}</div>`;
+        ${hours.map((h) => {
+          const wp = (120 / TOTAL_MINUTES) * 100;
+          return `<div style="width:${wp.toFixed(2)}%" class="text-micro font-bold text-base-content/40 border-r border-base-300/[0.12] py-1 px-1 shrink-0 ${h.isMidnight ? 'bg-info/5 text-info/60 font-black border-info/30' : ''}">${h.label}</div>`;
         }).join('')}
       </div>
     </div>
@@ -143,7 +163,7 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
   const toMinSinceStart = (dateStr: string, timeStr: string): number => {
     const [h, m] = timeStr.split(':').map(Number);
     const mins = h * 60 + m;
-    return dateStr === weekendDate ? mins - TIMELINE_START_MIN : 11 * 60 + mins;
+    return dateStr === weekendDate ? mins : 24 * 60 + mins;
   };
 
   const getShiftStartAndEnd = (s: WeekendOvertimeShift) => {
@@ -156,7 +176,7 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
       } else {
         // Ends on Monday (next day after Sunday)
         const [eh, em] = s.endTime.split(':').map(Number);
-        endMin = 11 * 60 + 24 * 60 + (eh * 60 + em);
+        endMin = 24 * 60 + 24 * 60 + (eh * 60 + em);
       }
     }
     return { startMin, endMin };
@@ -198,11 +218,12 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
       const cappedEndMin = Math.min(endMin, TOTAL_MINUTES);
       const lp = (startMin / TOTAL_MINUTES) * 100;
       const wp = ((cappedEndMin - startMin) / TOTAL_MINUTES) * 100;
-      return `<div class="absolute top-1 bottom-1 rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden cursor-pointer hover:bg-warning/95 overtime-timeline-bar" style="left:${lp.toFixed(2)}%;width:${wp.toFixed(2)}%;min-width:4px;" title="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><span class="text-xxs font-black text-warning-content truncate px-1">${s.startTime}-${s.endTime}</span></div>`;
+      const dur = calcDuration(s.startTime, s.endTime);
+      return `<div class="absolute top-[3px] bottom-[3px] overflow-visible cursor-pointer overtime-timeline-bar" style="left:${lp.toFixed(2)}%;width:${wp.toFixed(2)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xxs font-black text-warning-content truncate px-1">${dur}h</span></div></div>`;
     }).join('');
     return `
-      <div class="flex items-stretch min-h-[40px] border-b border-base-300/30 last:border-0">
-        <div class="w-36 shrink-0 px-3 py-2 border-r border-base-300/40 flex items-center gap-2">
+      <div class="flex items-stretch min-h-[32px] border-b border-base-300/[0.12] last:border-0">
+        <div class="w-36 shrink-0 px-2 py-1 border-r border-base-300/40 flex items-center gap-2">
           <div class="w-6 h-6 rounded-full bg-base-300/50 flex items-center justify-center text-tiny font-black shrink-0">${initials}</div>
           <span class="truncate text-xxs font-bold text-base-content">${escapeHtml(op.nombre)}</span>
         </div>
@@ -213,7 +234,48 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
   }).join('');
 
   bodyContainer.querySelectorAll('.overtime-timeline-bar').forEach(bar => {
+    bar.addEventListener('mouseenter', (e) => {
+      document.getElementById('overtime-custom-tooltip')?.remove();
+      const target = e.currentTarget as HTMLElement;
+      const tipText = target.dataset.tip;
+      if (!tipText) return;
+
+      const rect = target.getBoundingClientRect();
+      const tip = document.createElement('div');
+      tip.id = 'overtime-custom-tooltip';
+      tip.className = 'overtime-custom-tooltip';
+      tip.textContent = tipText;
+      document.body.appendChild(tip);
+
+      const tipRect = tip.getBoundingClientRect();
+      let top = rect.top - tipRect.height - 8;
+      let isBelow = false;
+
+      if (top < 8) {
+        top = rect.bottom + 8;
+        isBelow = true;
+        tip.classList.add('tooltip-below');
+      }
+
+      let left = rect.left + rect.width / 2;
+      const halfWidth = tipRect.width / 2;
+      if (left - halfWidth < 8) left = halfWidth + 8;
+      if (left + halfWidth > window.innerWidth - 8) left = window.innerWidth - halfWidth - 8;
+
+      tip.style.top = `${top}px`;
+      tip.style.left = `${left}px`;
+      tip.style.transform = 'translateX(-50%)';
+    });
+
+    bar.addEventListener('mouseleave', () => {
+      document.getElementById('overtime-custom-tooltip')?.remove();
+    });
+
     bar.addEventListener('click', (e) => {
+      document.getElementById('overtime-custom-tooltip')?.remove();
+      document.querySelectorAll('.overtime-timeline-bar.selected')
+        .forEach(b => b.classList.remove('selected'));
+      (e.currentTarget as HTMLElement).classList.add('selected');
       const dataset = (e.currentTarget as HTMLElement).dataset;
       loadShiftIntoForm({
         id: Number(dataset.shiftId),
@@ -234,6 +296,7 @@ export function loadShiftIntoForm(shift: { id: number; agentId: number; date: st
   const editIdInput = document.getElementById('overtime-shift-edit-id') as HTMLInputElement | null;
   const submitBtn = document.getElementById('overtime-shift-submit-btn');
   const cancelBtn = document.getElementById('overtime-shift-cancel-btn');
+  const deleteBtn = document.getElementById('overtime-shift-delete-btn');
 
   if (agentSelect) agentSelect.value = String(shift.agentId);
   if (daySelect) daySelect.value = shift.date === weekendDate ? 'saturday' : 'sunday';
@@ -243,6 +306,17 @@ export function loadShiftIntoForm(shift: { id: number; agentId: number; date: st
 
   if (submitBtn) submitBtn.textContent = 'Actualizar Turno';
   if (cancelBtn) cancelBtn.classList.remove('hidden');
+  if (deleteBtn) {
+    deleteBtn.classList.remove('hidden');
+    deleteBtn.dataset.shiftId = String(shift.id);
+  }
+}
+function calcDuration(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) mins += 1440;
+  return Math.round((mins / 60) * 10) / 10;
 }
 
 export function renderOvertimeShiftsList(weekendDate: string, shifts: WeekendOvertimeShift[]): void {
@@ -250,45 +324,56 @@ export function renderOvertimeShiftsList(weekendDate: string, shifts: WeekendOve
   if (!container) return;
 
   if (shifts.length === 0) {
-    container.innerHTML = `<div class="text-xs text-base-content/30 text-center py-6 font-bold uppercase tracking-wider">No hay turnos guardados para este fin de semana</div>`;
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-10 text-base-content/20 gap-2">
+        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/></svg>
+        <p class="text-xs font-bold uppercase tracking-wider">No hay turnos guardados</p>
+      </div>`;
     return;
   }
 
-  const sortedShifts = [...shifts].sort((a, b) => {
-    if (a.date !== b.date) {
-      return a.date.localeCompare(b.date);
-    }
-    const startCompare = a.startTime.localeCompare(b.startTime);
-    if (startCompare !== 0) return startCompare;
-    return a.endTime.localeCompare(b.endTime);
+  const sorted = [...shifts].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    const sc = a.startTime.localeCompare(b.startTime);
+    return sc !== 0 ? sc : a.endTime.localeCompare(b.endTime);
   });
 
-  container.innerHTML = sortedShifts.map(s => {
+  const sats = sorted.filter(s => s.date === weekendDate);
+  const suns = sorted.filter(s => s.date !== weekendDate);
+
+  function renderRow(s: WeekendOvertimeShift): string {
     const op = state.cronoData.find(o => o.id === s.agentId);
-    const dayLabel = s.date === weekendDate ? 'Sábado' : 'Domingo';
-    const dayBadgeClass = s.date === weekendDate ? 'badge-warning' : 'badge-info';
+    const initials = op?.nombre?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '??';
+    const dur = calcDuration(s.startTime, s.endTime);
     return `
-      <div class="flex items-center gap-3 p-3 bg-base-200/40 rounded-xl border border-base-300/60 group hover:bg-base-200/70 transition-all cursor-pointer overtime-shift-card" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}">
-        <span class="badge badge-sm ${dayBadgeClass} font-black shrink-0">${dayLabel}</span>
-        <span class="font-bold text-xs text-base-content flex-1 truncate">${escapeHtml(op?.nombre || 'Operador #' + s.agentId)}</span>
-        <span class="font-mono text-xs text-base-content/70 shrink-0">${s.startTime} – ${s.endTime}</span>
-        <button type="button" class="btn btn-xs btn-ghost text-error opacity-0 group-hover:opacity-100 transition-opacity overtime-delete-shift-btn" data-shift-id="${s.id}" aria-label="Eliminar turno">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-base-100/50 border border-base-300/40 group hover:bg-base-100 transition-all cursor-pointer overtime-shift-card" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}">
+        <div class="w-5 h-5 rounded-full bg-base-300/60 flex items-center justify-center text-tiny font-black shrink-0">${initials}</div>
+        <span class="text-xs font-semibold text-base-content truncate flex-1">${escapeHtml(op?.nombre || '#' + s.agentId)}</span>
+        <span class="font-mono text-xxs font-bold text-base-content/40 shrink-0">${s.startTime}–${s.endTime}</span>
+        <span class="text-xxs font-bold text-warning shrink-0">${dur}h</span>
+        <button type="button" class="btn btn-xs btn-ghost text-error opacity-0 group-hover:opacity-100 transition-opacity overtime-delete-shift-btn p-1 min-h-0 h-auto" data-shift-id="${s.id}" aria-label="Eliminar">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>`;
-  }).join('');
+  }
+
+  container.innerHTML = `
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="space-y-2">
+        <p class="text-xxs font-black uppercase tracking-wider text-warning pb-1.5 border-b border-warning/30">Sábado</p>
+        ${sats.length ? sats.map(renderRow).join('') : '<p class="text-xxs text-base-content/30 text-center py-4">Sin turnos</p>'}
+      </div>
+      <div class="space-y-2">
+        <p class="text-xxs font-black uppercase tracking-wider text-info pb-1.5 border-b border-info/30">Domingo</p>
+        ${suns.length ? suns.map(renderRow).join('') : '<p class="text-xxs text-base-content/30 text-center py-4">Sin turnos</p>'}
+      </div>
+    </div>`;
 
   container.querySelectorAll('.overtime-shift-card').forEach(card => {
     card.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('.overtime-delete-shift-btn')) return;
-      const dataset = (e.currentTarget as HTMLElement).dataset;
-      loadShiftIntoForm({
-        id: Number(dataset.shiftId),
-        agentId: Number(dataset.agentId),
-        date: String(dataset.date),
-        startTime: String(dataset.start),
-        endTime: String(dataset.end)
-      }, weekendDate);
+      const ds = (e.currentTarget as HTMLElement).dataset;
+      loadShiftIntoForm({ id: Number(ds.shiftId), agentId: Number(ds.agentId), date: String(ds.date), startTime: String(ds.start), endTime: String(ds.end) }, weekendDate);
     });
   });
 
@@ -296,16 +381,20 @@ export function renderOvertimeShiftsList(weekendDate: string, shifts: WeekendOve
     btn.addEventListener('click', async (e) => {
       const shiftId = (e.currentTarget as HTMLElement).dataset.shiftId;
       if (!shiftId || !state.overtimeSelectedWeekend) return;
-      const confirmed = await showConfirm('¿Eliminar este turno de hora extra?');
-      if (!confirmed) return;
+      if (!await showConfirm('¿Eliminar este turno de hora extra?')) return;
       try {
         const res = await fetch(`/api/cronograma/overtime/shifts?id=${shiftId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Error al eliminar');
+        if (!res.ok) throw new Error();
         showToast('Turno eliminado', 'success');
+        const form = document.getElementById('overtime-shift-form') as HTMLFormElement | null;
+        if (form) form.reset();
+        (document.getElementById('overtime-shift-edit-id') as HTMLInputElement).value = '';
+        document.getElementById('overtime-shift-cancel-btn')?.classList.add('hidden');
+        document.getElementById('overtime-shift-delete-btn')?.classList.add('hidden');
+        const submitBtn = document.getElementById('overtime-shift-submit-btn');
+        if (submitBtn) submitBtn.textContent = 'Agregar Turno';
         await refreshOvertimeForWeekend(state.overtimeSelectedWeekend);
-      } catch {
-        showToast('Error al eliminar turno', 'error');
-      }
+      } catch { showToast('Error al eliminar turno', 'error'); }
     });
   });
 }
@@ -315,27 +404,7 @@ export function setupOvertimeEventListeners(): void {
     showOvertimeView();
   });
 
-  const overtimeWeekendWrapper = document.getElementById('overtime-weekend-date-wrapper');
-  const overtimeWeekendInput = document.getElementById('overtime-weekend-date') as HTMLInputElement | null;
-  if (overtimeWeekendWrapper && overtimeWeekendInput) {
-    overtimeWeekendWrapper.addEventListener('click', () => {
-      overtimeWeekendInput.showPicker();
-    });
-    overtimeWeekendInput.addEventListener('change', async (e) => {
-      e.stopPropagation();
-      const val = overtimeWeekendInput.value;
-      if (!val) return;
-      const dateObj = new Date(val + 'T12:00:00');
-      if (dateObj.getDay() !== 6) {
-        showToast('Por favor seleccioná un sábado', 'error');
-        overtimeWeekendInput.value = '';
-        return;
-      }
-      const displayEl = document.getElementById('overtime-weekend-date-display');
-      if (displayEl) displayEl.textContent = formatToDDMMYY(val);
-      await refreshOvertimeForWeekend(val);
-    });
-  }
+
 
   document.getElementById('save-overtime-referente-btn')?.addEventListener('click', async () => {
     if (!state.overtimeSelectedWeekend) {
@@ -355,11 +424,16 @@ export function setupOvertimeEventListeners(): void {
       const idx = state.overtimeConfigs.findIndex(c => c.weekendStartDate === saved.weekendStartDate);
       if (idx >= 0) state.overtimeConfigs[idx] = saved;
       else state.overtimeConfigs.push(saved);
+      if (referenteSelect) referenteSelect.value = saved.referente;
       showToast('Configuración guardada', 'success');
     } catch {
       showToast('Error al guardar la configuración', 'error');
     }
   });
+
+  const removeTip = () => document.getElementById('overtime-custom-tooltip')?.remove();
+  window.addEventListener('scroll', removeTip, { passive: true });
+  window.addEventListener('resize', removeTip, { passive: true });
 
   const overtimeShiftForm = document.getElementById('overtime-shift-form') as HTMLFormElement | null;
   if (overtimeShiftForm) {
@@ -385,11 +459,6 @@ export function setupOvertimeEventListeners(): void {
       const sundayDate = `${sundayDateObj.getFullYear()}-${String(sundayDateObj.getMonth()+1).padStart(2,'0')}-${String(sundayDateObj.getDate()).padStart(2,'0')}`;
       const shiftDate = dayVal === 'saturday' ? state.overtimeSelectedWeekend : sundayDate;
 
-      if (dayVal === 'saturday' && startTime < '13:00') {
-        showToast('Los turnos del sábado deben iniciar desde las 13:00 hs', 'error');
-        return;
-      }
-
       const submitBtn = document.getElementById('overtime-shift-submit-btn') as HTMLButtonElement | null;
       const origHtml = submitBtn?.innerHTML || '';
       if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="loading loading-spinner loading-xs mr-1"></span> Guardando...'; }
@@ -412,9 +481,11 @@ export function setupOvertimeEventListeners(): void {
         if (!res.ok) throw new Error('Error al guardar turno');
 
         showToast(editId ? 'Turno actualizado' : 'Turno agregado', 'success');
+        document.querySelectorAll('.overtime-timeline-bar.selected').forEach(b => b.classList.remove('selected'));
         overtimeShiftForm.reset();
         (document.getElementById('overtime-shift-edit-id') as HTMLInputElement).value = '';
         document.getElementById('overtime-shift-cancel-btn')?.classList.add('hidden');
+        document.getElementById('overtime-shift-delete-btn')?.classList.add('hidden');
         await refreshOvertimeForWeekend(state.overtimeSelectedWeekend);
       } catch {
         showToast('Error al guardar el turno', 'error');
@@ -425,11 +496,36 @@ export function setupOvertimeEventListeners(): void {
   }
 
   document.getElementById('overtime-shift-cancel-btn')?.addEventListener('click', () => {
+    document.querySelectorAll('.overtime-timeline-bar.selected').forEach(b => b.classList.remove('selected'));
     const form = document.getElementById('overtime-shift-form') as HTMLFormElement | null;
     if (form) form.reset();
     (document.getElementById('overtime-shift-edit-id') as HTMLInputElement).value = '';
     document.getElementById('overtime-shift-cancel-btn')?.classList.add('hidden');
+    document.getElementById('overtime-shift-delete-btn')?.classList.add('hidden');
     const submitBtn = document.getElementById('overtime-shift-submit-btn');
     if (submitBtn) submitBtn.textContent = 'Agregar Turno';
+  });
+
+  document.getElementById('overtime-shift-delete-btn')?.addEventListener('click', async () => {
+    const shiftId = (document.getElementById('overtime-shift-delete-btn') as HTMLElement).dataset.shiftId;
+    if (!shiftId || !state.overtimeSelectedWeekend) return;
+    const confirmed = await showConfirm('¿Eliminar este turno de hora extra?');
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/cronograma/overtime/shifts?id=${shiftId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar');
+      showToast('Turno eliminado', 'success');
+      document.querySelectorAll('.overtime-timeline-bar.selected').forEach(b => b.classList.remove('selected'));
+      const form = document.getElementById('overtime-shift-form') as HTMLFormElement | null;
+      if (form) form.reset();
+      (document.getElementById('overtime-shift-edit-id') as HTMLInputElement).value = '';
+      document.getElementById('overtime-shift-cancel-btn')?.classList.add('hidden');
+      document.getElementById('overtime-shift-delete-btn')?.classList.add('hidden');
+      const submitBtn = document.getElementById('overtime-shift-submit-btn');
+      if (submitBtn) submitBtn.textContent = 'Agregar Turno';
+      await refreshOvertimeForWeekend(state.overtimeSelectedWeekend);
+    } catch {
+      showToast('Error al eliminar turno', 'error');
+    }
   });
 }

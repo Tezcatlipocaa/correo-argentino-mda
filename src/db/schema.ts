@@ -25,8 +25,24 @@ export const employees = sqliteTable("employees", {
   telefono: text("telefono"),
   sucursal: text("sucursal"),
   invgateExists: integer("invgate_exists", { mode: "boolean" }).default(false),
+  position: text("position"),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
+
+export const employeeOffices = sqliteTable(
+  "employee_offices",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    username: text("username").notNull(),
+    sucursal: text("sucursal").notNull(),
+  },
+  (table) => ({
+    uniqueUsernameSucursal: uniqueIndex("employee_offices_username_sucursal_idx").on(
+      table.username,
+      table.sucursal,
+    ),
+  }),
+);
 
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
@@ -94,6 +110,8 @@ export const offices = sqliteTable("offices", {
   posAutoAuto2: text("pos_auto_auto_2"),
   posSapTerminal: text("pos_sap_terminal"),
   searchableText: text("searchable_text"),
+  active: integer("active", { mode: "boolean" }).default(true),
+  closedReason: text("closed_reason"),
 }, (table) => ({
   nameIdx: index("name_idx").on(table.name),
   localityIdx: index("locality_idx").on(table.locality),
@@ -171,7 +189,30 @@ export const officesRelations = relations(offices, ({ one, many }) => ({
   contacts: many(officeContacts),
   assets: many(officeAssets),
   terminals: many(terminals),
+  invgateLink: one(officeInvgateLinks, {
+    fields: [offices.id],
+    references: [officeInvgateLinks.officeId],
+  }),
 }));
+
+export const officeInvgateLinks = sqliteTable("office_invgate_links", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  officeId: integer("office_id")
+    .notNull()
+    .unique()
+    .references(() => offices.id, { onDelete: "cascade" }),
+  invgateLocationId: integer("invgate_location_id").notNull(),
+  invgateParentId: integer("invgate_parent_id"),
+  invgateParentName: text("invgate_parent_name"),
+  invgateDisplayName: text("invgate_display_name"),
+  invgateCp: text("invgate_cp"),
+  invgateCc: text("invgate_cc"),
+  invgateAddress: text("invgate_address"),
+  invgateDuplicateCount: integer("invgate_duplicate_count").default(0),
+  invgateUserTotal: integer("invgate_user_total").default(0),
+  lastSyncedAt: text("last_synced_at").notNull().default(sql`(datetime('now'))`),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});
 
 export const officeContactsRelations = relations(officeContacts, ({ one }) => ({
   office: one(offices, {
@@ -620,9 +661,9 @@ export const terminalsRelations = relations(terminals, ({ one }) => ({
 
 export const supportGuides = sqliteTable("support_guides", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  helpDeskName: text("help_desk_name").notNull(),
+  invgate_id: integer("invgate_id"),
+  categories: text("categories"),
   legacyName: text("legacy_name"),
-  invgateName: text("invgate_name"),
   route: text("route"),
   topics: text("topics"),
   contacts: text("contacts"),
@@ -649,6 +690,7 @@ export const operatorAttendance = sqliteTable("operator_attendance", {
   ausencia: text("ausencia"),
   entradaReal: text("entrada_real"),
   salidaReal: text("salida_real"),
+  horarioEstipulado: text("horario_estipulado"),
   cumplimiento: text("cumplimiento"),
   cumplimientoForzado: integer("cumplimiento_forzado", { mode: "boolean" }).default(false),
   motivoLoguin: text("motivo_loguin"),
@@ -675,6 +717,7 @@ export const saturdayRotationConfig = sqliteTable("saturday_rotation_config", {
   rotationOrder: text("rotation_order").notNull().default("A,B,C,D"),
   startDate: text("start_date").notNull().default("2026-06-06"),
   startGroup: text("start_group").notNull().default("A"),
+  disabledGroups: text("disabled_groups").notNull().default(""),
 });
 
 export const agentSaturdayGroups = sqliteTable("agent_saturday_groups", {
@@ -807,3 +850,28 @@ export const assignmentLock = sqliteTable("assignment_lock", {
   lastActivityAt: integer("last_activity_at").notNull(),
   releaseRequested: integer("release_requested").notNull().default(0),
 });
+
+export const titleCategory = sqliteTable("title_category", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  icon: text("icon").notNull(),
+  tone: text("tone").notNull(),
+})
+
+export const titles = sqliteTable("titles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => titleCategory.id),
+  route: text("route"),
+  description: text("description"),
+  articleOnKdb: text("article_on_kdb"),
+  deprecated: integer("deprecated", {
+    mode: "boolean",
+  }).default(false),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$onUpdateFn(() => new Date()),
+})
