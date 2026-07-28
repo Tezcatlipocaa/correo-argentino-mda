@@ -11,6 +11,7 @@ import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
 import { getOffices, hasClosedOffices } from "@lib/officeQueries";
+import { getUnassignedEmployeesCount } from "@lib/employeeQueries";
 import OfficeRow from "@components/offices/OfficeRow.astro";
 import Modal from "@components/ui/Modal.astro";
 import {
@@ -32,6 +33,11 @@ const isAllowedAdmin = user
   : false;
 const canViewInvgateStats = user ? can(user.role, "team_leader") : false;
 const canExport = user ? can(user.role, "team_leader") : false;
+
+let unassignedUsersCount = 0;
+if (isAllowedAdmin) {
+  unassignedUsersCount = await getUnassignedEmployeesCount();
+}
 
 const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 
@@ -236,6 +242,26 @@ const mainTabs = [
   <!-- Contenedor de Directorio -->
   <div id="main-view-directory" class="space-y-6">
     <div id="provinces-data" data-provinces={JSON.stringify(provincesByRegion)} class="hidden"></div>
+    {
+      isAllowedAdmin && unassignedUsersCount > 0 && (
+        <div class="alert alert-warning shadow-sm flex items-center justify-between" id="unassigned-users-banner">
+          <div class="flex items-center gap-2">
+            <Icon name="boxicons:info-circle" class="size-5 shrink-0" />
+            <span class="text-sm font-medium">
+              Se detectaron {unassignedUsersCount} usuario{unassignedUsersCount !== 1 ? "s" : ""} sin ubicación asignada.
+            </span>
+          </div>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/usuarios-sin-ubicacion`}
+            class="btn btn-sm btn-ghost gap-1.5"
+            aria-label="Ver usuarios sin ubicación"
+          >
+            Ver usuarios
+            <Icon name="boxicons:chevron-right" class="size-4" />
+          </a>
+        </div>
+      )
+    }
     <form
       method="GET"
       class="flex flex-col gap-4 rounded-box border border-base-300 bg-base-100 p-4 shadow-md"
