@@ -3,6 +3,10 @@ import CopyButton from "@components/ui/CopyButton.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionInvGateButton from "@components/ui/ActionInvGateButton.astro";
 import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
+import { Icon } from "astro-icon/components";
+
+const userRole = Astro.locals.user?.role || "";
+const isAdmin = userRole === "admin";
 ---
 
 <template id="user-card-template">
@@ -10,7 +14,6 @@ import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
     class="card bg-base-100 border border-base-300 shadow-md hover:border-base-content/20 transition-all duration-300"
   >
     <div class="card-body p-4 gap-4">
-      {/* Cabecera: Avatar y Nombre */}
       <div class="flex items-center gap-4 min-w-0">
         <div class="avatar placeholder shrink-0">
           <div
@@ -35,7 +38,6 @@ import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
       </div>
 
       <div class="flex flex-col grow gap-4">
-        {/* Grid de 2 columnas para Usuario, DNI, Interno y Teléfono */}
         <div class="grid grid-cols-2 gap-4 py-3 border-y border-base-200">
           <div class="flex flex-col gap-1">
             <span
@@ -99,7 +101,6 @@ import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
           </div>
         </div>
 
-        {/* Email */}
         <div class="flex flex-col gap-1">
           <span
             class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
@@ -116,7 +117,6 @@ import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
           />
         </div>
 
-        {/* Ubicación */}
         <div class="flex flex-col gap-1">
           <span
             class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
@@ -136,16 +136,19 @@ import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
         </div>
       </div>
 
-      {/* Barra de Acciones (CTAs) */}
       <div
         class="card-actions justify-end mt-2 pt-3 border-t border-base-200 w-full flex items-center gap-2"
       >
         <ActionNetUserButton data-net-user-btn ariaLabel="Ver grupos de red" />
         <ActionEditButton data-edit-user-btn ariaLabel="Editar contacto" />
-        <ActionInvGateButton
-          data-invgate-copy-btn
-          ariaLabel="Agregar a InvGate"
-        />
+        {
+          isAdmin && (
+            <ActionInvGateButton
+              data-invgate-create-ticket-btn
+              ariaLabel="Crear solicitud en InvGate"
+            />
+          )
+        }
       </div>
     </div>
   </div>
