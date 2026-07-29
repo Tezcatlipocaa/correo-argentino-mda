@@ -9,7 +9,14 @@ function getEnv(key: string): string {
   return process.env[key] || "";
 }
 
-export async function invgateGet<T>(endpoint: string, timeoutMs = 15000): Promise<InvgateResult<T>> {
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+async function invgateRequest<T>(
+  method: HttpMethod,
+  endpoint: string,
+  body?: unknown,
+  timeoutMs = 15000,
+): Promise<InvgateResult<T>> {
   const apiKey = getEnv("INVGATE_API_KEY");
   const baseUrl = getEnv("INVGATE_BASE_URL");
   const rawUsername = getEnv("INVGATE_API_USERNAME");
@@ -26,7 +33,7 @@ export async function invgateGet<T>(endpoint: string, timeoutMs = 15000): Promis
 
   const credentials = btoa(apiUsername + ":" + apiKey);
 
-  const headers = {
+  const headers: Record<string, string> = {
     "Authorization": `Basic ${credentials}`,
     "Content-Type": "application/json",
   };
@@ -38,11 +45,17 @@ export async function invgateGet<T>(endpoint: string, timeoutMs = 15000): Promis
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
+    const init: RequestInit = {
+      method,
       headers,
       signal: controller.signal,
-    });
+    };
+
+    if (body !== undefined && method !== "GET") {
+      init.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(url, init);
 
     lastStatus = response.status;
 
@@ -71,4 +84,20 @@ export async function invgateGet<T>(endpoint: string, timeoutMs = 15000): Promis
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function invgateGet<T>(endpoint: string, timeoutMs?: number): Promise<InvgateResult<T>> {
+  return invgateRequest<T>("GET", endpoint, undefined, timeoutMs);
+}
+
+export async function invgatePost<T>(endpoint: string, body: unknown, timeoutMs?: number): Promise<InvgateResult<T>> {
+  return invgateRequest<T>("POST", endpoint, body, timeoutMs);
+}
+
+export async function invgatePut<T>(endpoint: string, body: unknown, timeoutMs?: number): Promise<InvgateResult<T>> {
+  return invgateRequest<T>("PUT", endpoint, body, timeoutMs);
+}
+
+export async function invgateDelete<T>(endpoint: string, timeoutMs?: number): Promise<InvgateResult<T>> {
+  return invgateRequest<T>("DELETE", endpoint, undefined, timeoutMs);
 }
