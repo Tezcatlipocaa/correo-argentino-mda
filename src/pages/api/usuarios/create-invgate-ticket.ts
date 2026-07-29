@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await logAdminAction(username, `Creó ticket de InvGate QA para alta de grupo de ${nombreCompleto} (${usuario})`);
 
     const id = res.data?.request_id || res.data?.id;
-    const invgateBaseUrl = process.env.INVGATE_QA_BASE_URL || "";
+    const invgateBaseUrl = import.meta.env.INVGATE_QA_BASE_URL || process.env.INVGATE_QA_BASE_URL || "";
     const cleanBaseUrl = invgateBaseUrl.replace(/\/api\/v1\/?$/, "");
     const ticketUrl = id ? `${cleanBaseUrl}/incident/show/index/id/${id}` : null;
 

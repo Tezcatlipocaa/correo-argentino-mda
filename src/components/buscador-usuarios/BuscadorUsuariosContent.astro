@@ -935,18 +935,19 @@ const userRole = Astro.locals.user?.role || "";
       const data = await response.json();
 
       if (response.ok && data.success) {
-        showToast("Ticket creado con éxito.", "alert-success");
         ticketModal?.close();
         if (data.ticketUrl) {
           showToast(
-            "Hacé clic acá para abrir el ticket recién creado.",
-            "alert-info",
+            "Ticket creado con éxito. Hacé clic acá para abrirlo.",
+            "alert-success",
             6000,
             {
               onClick: () => window.open(data.ticketUrl, "_blank"),
               cursor: "pointer",
             }
           );
+        } else {
+          showToast("Ticket creado con éxito.", "alert-success");
         }
       } else {
         showToast(data.error || "Error al crear el ticket.", "alert-error");
