@@ -25,6 +25,7 @@ export const employees = sqliteTable("employees", {
   telefono: text("telefono"),
   sucursal: text("sucursal"),
   invgateExists: integer("invgate_exists", { mode: "boolean" }).default(false),
+  invgateId: integer("invgate_id"),
   position: text("position"),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
 });

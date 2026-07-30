@@ -370,8 +370,8 @@ const tooltipClasses = [
     return fallbackCopyToClipboard(value);
   };
 
-  if (!document._copyButtonHandlerAttached) {
-    document._copyButtonHandlerAttached = true;
+  if (!(document as any)._copyButtonHandlerAttached) {
+    (document as any)._copyButtonHandlerAttached = true;
 
     const copyTimers = new WeakMap<HTMLElement, number>();
 

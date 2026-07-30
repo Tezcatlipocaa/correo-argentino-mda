@@ -7,16 +7,16 @@ import { inArray, sql } from "drizzle-orm";
 
 const CHUNK_SIZE = 500;
 
-async function flushPositions(
+async function flushUserData(
   usernames: string[],
-  positionMap: Map<string, string | null>,
+  userDataMap: Map<string, { position: string | null; invgateId: number }>,
 ) {
   for (const username of usernames) {
-    const pos = positionMap.get(username);
-    if (pos) {
+    const data = userDataMap.get(username);
+    if (data) {
       await db
         .update(employees)
-        .set({ position: pos })
+        .set({ position: data.position, invgateId: data.invgateId })
         .where(sql`lower(${employees.username}) = ${username}`);
     }
   }
@@ -59,15 +59,16 @@ export async function fullInvgateSync(): Promise<SyncResult> {
   // Extraer usernames y marcar en BD por chunks de CHUNK_SIZE
   let totalSynced = 0;
   const chunk: string[] = [];
-  const positionMap = new Map<string, string | null>();
+  const userDataMap = new Map<string, { position: string | null; invgateId: number }>();
   
   for (const user of activeUsers) {
     if (user.username) {
       const localPart = user.username.split("@")[0].toLowerCase();
       chunk.push(localPart);
-      if (user.position) {
-        positionMap.set(localPart, user.position);
-      }
+      userDataMap.set(localPart, {
+        position: user.position || null,
+        invgateId: user.id
+      });
     }
     
     if (chunk.length >= CHUNK_SIZE) {
@@ -75,9 +76,10 @@ export async function fullInvgateSync(): Promise<SyncResult> {
         .update(employees)
         .set({ invgateExists: true })
         .where(inArray(sql`lower(${employees.username})`, chunk));
-      await flushPositions(chunk, positionMap);
+      await flushUserData(chunk, userDataMap);
       totalSynced += chunk.length;
       chunk.length = 0;
+      userDataMap.clear();
     }
   }
   
@@ -86,7 +88,7 @@ export async function fullInvgateSync(): Promise<SyncResult> {
       .update(employees)
       .set({ invgateExists: true })
       .where(inArray(sql`lower(${employees.username})`, chunk));
-    await flushPositions(chunk, positionMap);
+    await flushUserData(chunk, userDataMap);
     totalSynced += chunk.length;
   }
 
