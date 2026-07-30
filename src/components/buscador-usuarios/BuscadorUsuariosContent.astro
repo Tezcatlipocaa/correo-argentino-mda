@@ -699,7 +699,7 @@ const userRole = Astro.locals.user?.role || "";
       } else if (sucursales.length > 1) {
         for (const s of sucursales) {
           const text = s.name ? `${s.code} — ${s.name}` : s.code;
-          const btn = sucursalBtn.cloneNode(true);
+          const btn = sucursalBtn.cloneNode(true) as HTMLElement;
           btn.setAttribute("data-copy-value", s.code);
           btn.setAttribute("data-copy-label-default", text);
           btn.setAttribute("aria-label", `Copiar NIS ${s.code}`);
@@ -937,14 +937,11 @@ const userRole = Astro.locals.user?.role || "";
       if (response.ok && data.success) {
         ticketModal?.close();
         if (data.ticketUrl) {
+          window.open(data.ticketUrl, "_blank");
           showToast(
-            "Ticket creado con éxito. Hacé clic acá para abrirlo.",
+            "Ticket creado con éxito y abierto en una nueva pestaña.",
             "alert-success",
-            6000,
-            {
-              onClick: () => window.open(data.ticketUrl, "_blank"),
-              cursor: "pointer",
-            }
+            6000
           );
         } else {
           showToast("Ticket creado con éxito.", "alert-success");
