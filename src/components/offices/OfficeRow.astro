@@ -366,7 +366,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 )}
 
                 {/* Personal de la sucursal */}
-                <section class="space-y-3" data-branch-personnel data-nis={office.code}>
+                <section class="space-y-3 hidden" data-branch-personnel data-nis={office.code}>
                   <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
                     <Icon
                       name="boxicons:group-filled"
@@ -620,6 +620,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
           return;
         }
 
+        section.classList.remove("hidden");
         const html = data.personnel
           .map(
             (p) => `
@@ -672,6 +673,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
         content.innerHTML = html;
       })
       .catch(() => {
+        section.classList.remove("hidden");
         content.innerHTML =
           '<p class="text-xs text-error">Error al cargar personal</p>';
       });
