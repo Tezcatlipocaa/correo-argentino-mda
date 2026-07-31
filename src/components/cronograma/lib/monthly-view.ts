@@ -94,6 +94,14 @@ export function updateNavigationButtons(): void {
   }
 }
 
+export function updatePasivaActiveMonthBadge(): void {
+  const dateInput = document.getElementById('date-input') as HTMLInputElement | null;
+  const pasivaSelect = document.getElementById('pasiva-month-selector') as HTMLSelectElement | null;
+  if (pasivaSelect && dateInput && dateInput.value) {
+    pasivaSelect.value = dateInput.value.slice(0, 7) + "-01";
+  }
+}
+
 export function updateGroupsActiveMonthBadge(): void {
   const dateInput = document.getElementById('date-input') as HTMLInputElement | null;
   const groupsSelect = document.getElementById('groups-month-selector') as HTMLSelectElement | null;
@@ -105,18 +113,20 @@ export function updateGroupsActiveMonthBadge(): void {
 export function updateMonthDisplay(): void {
   const dateInput = document.getElementById('date-input') as HTMLInputElement | null;
   const mainSelect = document.getElementById('month-selector') as HTMLSelectElement | null;
-  if (!dateInput || !mainSelect) return;
+  if (!dateInput) return;
 
   const value = dateInput.value;
-  if (!value || !value.includes('-')) {
-    mainSelect.value = "";
-    return;
+  if (mainSelect) {
+    if (!value || !value.includes('-')) {
+      mainSelect.value = "";
+    } else {
+      mainSelect.value = value.slice(0, 7) + "-01";
+    }
   }
-
-  mainSelect.value = value.slice(0, 7) + "-01";
 
   updateNavigationButtons();
   updateGroupsActiveMonthBadge();
+  updatePasivaActiveMonthBadge();
 }
 
 const MESES_ES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
@@ -125,7 +135,8 @@ const T_MONTH = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1)
 export function renderMonthSelect(): void {
   const mainSelect = document.getElementById('month-selector') as HTMLSelectElement | null;
   const groupsSelect = document.getElementById('groups-month-selector') as HTMLSelectElement | null;
-  if (!mainSelect && !groupsSelect) return;
+  const pasivaSelect = document.getElementById('pasiva-month-selector') as HTMLSelectElement | null;
+  if (!mainSelect && !groupsSelect && !pasivaSelect) return;
 
   const html = state.uniqueMonths.map(ymStr => {
     const [, monthStr] = ymStr.split('-');
@@ -138,6 +149,7 @@ export function renderMonthSelect(): void {
 
   if (mainSelect) mainSelect.innerHTML = html;
   if (groupsSelect) groupsSelect.innerHTML = html;
+  if (pasivaSelect) pasivaSelect.innerHTML = html;
 }
 
 export function changeMonth(offset: number): void {
