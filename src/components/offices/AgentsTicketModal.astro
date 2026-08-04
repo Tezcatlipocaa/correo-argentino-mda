@@ -1,5 +1,4 @@
 ---
-import { Icon } from "astro-icon/components";
 import Modal from "@components/ui/Modal.astro";
 
 interface Props {
@@ -94,6 +93,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
 </Modal>
 
 <script>
+  import { escapeHtml } from "@lib/sanitize";
   import { showToast } from "@lib/toastClient";
 
   interface TelegrafiaAgent {
@@ -144,18 +144,9 @@ const { id = "agents-ticket-modal" } = Astro.props;
       agents
         .map(
           (a) =>
-            `<option value="${a.id}" data-name="${escapeHTML(a.name)}">${escapeHTML(a.name)}</option>`,
+            `<option value="${a.id}" data-name="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`,
         )
         .join("");
-  }
-
-  function escapeHTML(str: string): string {
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
   }
 
   function openAgentsTicketModal(officeName: string, officeCode: string) {
@@ -208,7 +199,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+      })
       .then((result) => {
         if (result.success) {
           modal?.close();
