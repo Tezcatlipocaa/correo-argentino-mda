@@ -288,528 +288,562 @@ function getInitials(name: string): string {
     />
   </div>
 
+  <!-- Tabs Navigation Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="role-tabs tabs tabs-box bg-base-200/60 p-1.5 rounded-2xl inline-flex gap-1 border border-base-300">
+      <button
+        type="button"
+        id="tab-btn-asignacion"
+        data-tab-target="panel-asignacion"
+        class="tab tab-active font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2"
+      >
+        <Icon name="boxicons:user-check" size={18} />
+        Asignación Operativa
+      </button>
+      <button
+        type="button"
+        id="tab-btn-monitoreo"
+        data-tab-target="panel-monitoreo"
+        class="tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2"
+      >
+        <Icon name="boxicons:group" size={18} />
+        Monitoreo de Operadores
+      </button>
+    </div>
+  </div>
 
-
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-    <!-- Columna Izquierda: KPIs + Filtros + Tabla (70%) -->
-    <div class="lg:col-span-8 flex flex-col gap-6">
-      
-      <!-- Top KPIs (Disponibilidad + Fuera de Servicio) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Card Disponibles -->
-        <div
-          class="card bg-base-100 border border-base-300 shadow-md overflow-hidden group hover:border-success/30 transition-colors duration-300"
-        >
-          <div
-            class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"
-          >
-            <Icon name="boxicons:user-check" size={128} />
-          </div>
-          <div class="card-body p-6">
-            <div class="flex items-center gap-3 mb-2">
-              <div class="p-2 bg-success/10 rounded-lg text-success">
-                <Icon name="boxicons:user-check" size={24} />
-              </div>
-              <h3
-                class="font-bold text-xs uppercase tracking-widest text-base-content/50"
-              >
-                Disponibilidad Actual
-              </h3>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span
-                class="text-5xl font-black text-success tracking-tight"
-                id="stat-disponibles-count">{disponiblesCount}</span
-              >
-              <span
-                class="text-base-content/40 font-bold uppercase text-xs tracking-wider"
-                >operadores activos</span
-              >
-            </div>
-            <div class="mt-6 flex flex-col gap-2">
-              <div
-                class="flex justify-between text-xs font-bold uppercase tracking-wider px-0.5"
-              >
-                <span class="text-base-content/40">Tasa de disponibilidad</span>
-                <span class="text-success font-mono font-black" id="stat-percentage"
-                  >{
-                    allOperators.length > 0
-                      ? Math.round((disponiblesCount / allOperators.length) * 100)
-                      : 0
-                  }%</span
-                >
-              </div>
-              <progress
-                class="progress progress-success w-full h-2.5 bg-base-200"
-                value={disponiblesCount}
-                max={allOperators.length || 1}
-                id="stat-progress"></progress>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card No Disponibles -->
-        <div
-          class="card bg-base-100 border border-base-300 shadow-md overflow-hidden group hover:border-base-content/20 transition-colors duration-300"
-        >
-          <div
-            class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"
-          >
-            <Icon name="boxicons:user-x" size={128} />
-          </div>
-          <div class="card-body p-6">
-            <div class="flex items-center gap-3 mb-2">
-              <div class="p-2 bg-base-content/5 rounded-lg text-base-content/50">
-                <Icon name="boxicons:user-x" size={24} />
-              </div>
-              <h3
-                class="font-bold text-xs uppercase tracking-widest text-base-content/50"
-              >
-                Fuera de Servicio
-              </h3>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <span
-                class="text-5xl font-black text-base-content/80 tracking-tight"
-                id="stat-no-disponibles-count">{noDisponiblesCount}</span
-              >
-              <span
-                class="text-base-content/40 font-bold uppercase text-xs tracking-wider"
-                >en estados especiales</span
-              >
-            </div>
-
-            <div class="mt-4 grid grid-cols-2 gap-2">
-              {
-                Object.entries(breakdown).map(([estado, count]) => (
-                  <div
-                    class="flex items-center justify-between p-2 rounded-lg bg-base-200/50 border border-transparent hover:border-base-300 transition-colors duration-200 data-[count='0']:opacity-40"
-                    data-breakdown-container
-                    data-count={count}
-                  >
-                    <div class="flex items-center gap-2 min-w-0">
-                      <span
-                        class={`size-2 rounded-full shrink-0 ${breakdownBadge(estado)}`}
-                      />
-                      <span class="text-xs font-bold truncate text-base-content/60 uppercase tracking-tight">
-                        {STATUS_LABELS[estado] ?? estado}
-                      </span>
-                    </div>
-                    <span
-                      class="text-xs font-mono font-bold text-base-content/90"
-                      data-breakdown-count={estado}
-                    >
-                      {count}
-                    </span>
-                  </div>
-                ))
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Control Bar: Toggle + Status + Refresh + Undo -->
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <!-- Left: Toggle -->
-        <label class="label cursor-pointer justify-start gap-3 bg-base-200/40 hover:bg-base-200/80 px-4 py-2.5 rounded-xl border border-base-300/45 transition-colors duration-250">
-          <input type="checkbox" id="toggle-disponibles" class="toggle toggle-primary toggle-sm" />
-          <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/70">
-            Solo disponibles
-          </span>
-        </label>
-
-        <!-- Right: Status + Actions -->
-        <div class="flex items-center gap-4">
-          <!-- Lock indicator -->
-          {role !== "agent" && (
-            <>
-              <div id="lock-indicator"
-                   data-user-id={user?.id}
-                   data-user-username={user?.username}
-                   data-lock-timeout={10 * 60 * 1000}
-                   class="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs font-semibold text-base-content/70">
-              </div>
-              <div class="w-px h-5 bg-base-300/60"></div>
-            </>
-          )}
-
-          <!-- Sync + Refresh -->
-          <div class="flex items-center gap-1">
-            <span id="sync-indicator" class="text-xs text-base-content/50 font-semibold w-[180px]">
-              Actualizado hace unos instantes
-            </span>
-            <button id="btn-refresh" class="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content" title="Actualizar ahora">
-              <Icon name="boxicons:refresh-ccw-filled" size={18} id="refresh-icon" />
+  <!-- TAB 1: ASIGNACIÓN OPERATIVA -->
+  <div id="panel-asignacion" class="flex flex-col gap-6">
+    <!-- Hero Action Card -->
+    <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4 w-full md:w-auto">
+        {!isReadOnly && (
+          <div class="w-full md:w-auto">
+            <button id="btn-assign-cyclic" type="button" class="btn btn-primary btn-md w-full md:w-auto shadow-lg shadow-primary/20 flex items-center justify-center gap-2 font-bold uppercase tracking-wider px-6">
+              <Icon name="boxicons:user-check" size={20} aria-hidden="true" />
+              Asignar Siguiente
             </button>
           </div>
-
-          {!isReadOnly && (
-            <>
-              <div class="w-px h-5 bg-base-300/60"></div>
-              <button id="btn-undo" type="button" class="btn btn-secondary btn-outline btn-sm shadow-sm" disabled>
-                <Icon name="boxicons:undo" size={18} aria-hidden="true" />
-                <span id="btn-undo-text">Deshacer</span>
-              </button>
-            </>
-          )}
-        </div>
+        )}
+        {nextSuggestedOperators.length > 0 && (
+          <p class="text-xs text-base-content/70 font-medium">
+            Siguiente operador: <strong class="text-base-content font-black">{nextSuggestedOperators[0].nombre}</strong>
+          </p>
+        )}
       </div>
 
-      <!-- Tabla de Operadores -->
-      <DataTable
-        ariaLabel="Lista de operadores para asignación de autogestiones"
-        headerGridClass={isReadOnly ? "grid-cols-[1.8fr_1.5fr_1.2fr] gap-2 md:gap-4" : "grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] gap-2 md:gap-4"}
-        rowGridClass={isReadOnly ? "grid grid-cols-[1.8fr_1.5fr_1.2fr] items-center gap-2 md:gap-4" : "grid grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] items-center gap-2 md:gap-4"}
-      >
-        <Fragment slot="header">
-          <DataTableHeaderCell sortKey="nombre">Operador</DataTableHeaderCell>
-          <DataTableHeaderCell>Horario / Modo</DataTableHeaderCell>
-          <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
-          {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
-        </Fragment>
-
-        {
-          allOperators.map((op) => {
-            const isHighlighted = op.agentId === maxAssignedOperatorId;
-            const isExceptional = !!op.estadoExcepcional;
-
-            let rowClasses =
-              "group border-b border-base-300 px-4 py-2.5 transition-colors duration-300 hover:bg-base-200/50";
-            if (isExceptional) {
-              rowClasses += " bg-secondary/10 border-l-4 border-l-secondary";
-            } else if (isHighlighted) {
-              rowClasses += " bg-primary/10 border-l-4 border-l-primary";
-            }
-            if (!op.disponible && !isExceptional) {
-              rowClasses += " opacity-50 grayscale-[30%]";
-            }
-
-            return (
-              <div
-                class={rowClasses}
-                data-table-row
-                data-op-id={op.agentId}
-                data-op-estado={
-                  op.disponible ? "disponible" : op.motivo || "offline"
-                }
-                data-sort-nombre={op.nombre}
-                data-sort-estado={
-                  op.disponible ? "disponible" : op.motivo || "offline"
-                }
-              >
-                {/* Nombre + Last Assigned */}
-                <div class="flex min-w-0 flex-col">
-                  <span class="truncate text-xs font-bold text-base-content">
-                    {op.nombre}
-                  </span>
-                  <div data-op-last-assigned-container>
-                    {op.lastAutogestionAssignedAt ? (
-                      <span
-                        class="text-tiny text-base-content/75 bg-base-300/50 rounded px-1.5 py-0.5 inline-block font-semibold mt-0.5"
-                        data-last-assigned={op.lastAutogestionAssignedAt}
-                      >
-                        Asignado:{" "}
-                        {new Date(op.lastAutogestionAssignedAt).toLocaleTimeString(
-                          "es-AR",
-                          { hour: "2-digit", minute: "2-digit" },
-                        )}
-                      </span>
-                    ) : (
-                      <span class="text-tiny text-base-content/40 bg-base-200/40 rounded px-1.5 py-0.5 inline-block italic mt-0.5">
-                        Nunca asignado
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Horario y Modo */}
-                <div class="flex flex-col gap-1 min-w-0">
-                  <div data-op-horario>
-                    {op.horarioHoy ? (
-                      <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
-                        <span class="flex items-center gap-1 font-semibold">
-                          <Icon
-                            name="boxicons:clock-dashed-half-filled"
-                            size={14}
-                            class="opacity-60 shrink-0"
-                          />
-                          {op.horarioHoy}
-                        </span>
-                        {op.breakInicioHoy && op.breakFinHoy && (
-                          <span class="flex items-center gap-1 opacity-70">
-                            <Icon
-                              name="boxicons:cup-hot"
-                              size={14}
-                              class="opacity-60 shrink-0"
-                            />
-                            {op.breakInicioHoy} - {op.breakFinHoy}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span class="text-base-content/40 italic">Sin horario</span>
-                    )}
-                  </div>
-
-                  <div data-op-modalidad>
-                    {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
-                      <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
-                        {op.modalidadHoy === "Home Office" ? "Home" : "Presencial"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Badge estado */}
-                <div
-                  data-op-status-cell={op.agentId}
-                  class="flex flex-col items-start gap-1"
-                >
-                  {op.estadoExcepcional ? (
-                    <div
-                      class="tooltip tooltip-bottom before:text-xxs before:px-2 before:py-1"
-                      data-tip={`${op.estadoExcepcionalMotivo || "Sin comentario"} — marcado a las ${op.estadoExcepcionalAt ? new Date(op.estadoExcepcionalAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}`}
-                    >
-                      <span
-                        data-op-status-badge={op.agentId}
-                        class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2 cursor-help`}
-                      >
-                        {getExcepcionalShortLabel(op.estadoExcepcional)}
-                        {op.estadoExcepcional === "break_extendido" &&
-                        op.retornoEstimado
-                          ? op.retornoEstimado === "Manual"
-                            ? " (Manual)"
-                            : ` - vuelve ${op.retornoEstimado}`
-                          : ""}
-                      </span>
-                    </div>
-                  ) : (
-                    <span
-                      data-op-status-badge={op.agentId}
-                      class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
-                    >
-                      {op.disponible && (
-                        <span class="size-1.5 rounded-full bg-success-content animate-ping" />
-                      )}
-                      {!op.disponible && op.motivo === "En break" && (
-                        <span class="size-1.5 rounded-full bg-warning-content/75 animate-pulse" />
-                      )}
-                      {op.disponible
-                        ? "Disponible"
-                        : op.motivo === "En break"
-                          ? `En break - vuelve ${op.retornoEstimado || ""}`
-                          : op.motivo || "Franco"}
-                    </span>
-                  )}
-                  {op.estadoExcepcional && op.estadoExcepcionalMotivo && (
-                    <div
-                      data-op-exception-comment={op.agentId}
-                      class="text-small text-base-content/50 italic font-medium max-w-[150px] truncate mt-0.5"
-                      title={op.estadoExcepcionalMotivo}
-                    >
-                      "{op.estadoExcepcionalMotivo}"
-                    </div>
-                  )}
-                </div>
-
-                {/* Botones de acción */}
-                {!isReadOnly && (
-                  <div
-                    class="flex items-center justify-end gap-2"
-                    data-op-actions={op.agentId}
-                  >
-                    <>
-                      <div class="m-0">
-                        <button
-                          type="button"
-                          class="btn btn-secondary btn-xs btn-soft font-bold uppercase tracking-wider"
-                          data-op-assign-btn={op.agentId}
-                          title={`Asignar autogestión a ${op.nombre}`}
-                          disabled={!op.disponible}
-                        >
-                          Asignar
-                        </button>
-                      </div>
-
-                      <div data-op-exception-container={op.agentId} class="relative">
-                        {op.estadoExcepcional ? (
-                          <button
-                            type="button"
-                            class="btn btn-error btn-xs btn-outline font-bold uppercase tracking-wider"
-                            data-action-lift-exception={op.agentId}
-                            title="Levantar estado excepcional"
-                          >
-                            Levantar
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            class="btn btn-ghost btn-xs text-base-content/60 hover:text-secondary hover:bg-secondary/10 px-1"
-                            data-action-open-exception-modal={op.agentId}
-                            data-op-nombre={op.nombre}
-                            title="Marcar estado excepcional"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              class="size-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              stroke-width="2"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        }
-      </DataTable>
-    </div>
-
-    <!-- Columna Derecha: Sidebar Operativo (30%) -->
-    <aside class="lg:col-span-4 flex flex-col gap-4 lg:sticky lg:top-6">
-      
-      <!-- Card Botón Maestro de Asignación -->
-      {!isReadOnly && (
-        <div class="card bg-base-100 border border-base-300 shadow-md p-4">
-          <button id="btn-assign-cyclic" type="button" class="btn btn-primary btn-md w-full shadow-lg shadow-primary/20 flex items-center justify-center gap-2 font-bold uppercase tracking-wider">
-            <Icon name="boxicons:user-check" size={20} aria-hidden="true" />
-            Asignar Siguiente
-          </button>
-          {nextSuggestedOperators.length > 0 && (
-            <p class="text-xxs text-center text-base-content/60 mt-2 font-medium">
-              Asignará a <strong class="text-base-content font-black">{nextSuggestedOperators[0].nombre}</strong>
-            </p>
-          )}
+      <!-- Lock indicator -->
+      {role !== "agent" && (
+        <div id="lock-indicator"
+             data-user-id={user?.id}
+             data-user-username={user?.username}
+             data-lock-timeout={10 * 60 * 1000}
+             class="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs font-semibold text-base-content/70">
         </div>
       )}
+    </div>
 
-      <!-- Card Tickets Sin Asignar -->
-      <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-3">
-        <div class="flex items-center justify-between">
+    <!-- 50/50 Operative Split Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <!-- Left: Sin Asignar (Mesa 2510) -->
+      <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-base-200 pb-3">
           <div class="flex items-center gap-2">
-            <div class="p-1.5 bg-warning text-warning-content rounded-lg font-bold">
-              <Icon name="boxicons:inbox" size={20} />
+            <div class="p-2 bg-warning/10 text-warning rounded-lg font-bold">
+              <Icon name="boxicons:inbox" size={22} />
             </div>
-            <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/60">
-              Sin Asignar
-            </h3>
+            <div>
+              <h3 class="font-bold text-sm uppercase tracking-wider text-base-content">
+                Sin Asignar (Mesa 2510)
+              </h3>
+              <p class="text-xxs text-base-content/50">Tickets pendientes de asignación en InvGate</p>
+            </div>
           </div>
-          <span class={`badge ${unassignedCount > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`} id="stat-unassigned-count">
+          <span class={`badge ${unassignedCount > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs px-2.5 py-1`} id="stat-unassigned-count">
             {unassignedCount}
           </span>
         </div>
 
-        <div id="unassigned-tickets-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+        <div id="unassigned-tickets-list" class="space-y-2.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
           {unassignedTickets.length > 0 ? (
             unassignedTickets.map((t) => (
-              <div class="p-2.5 rounded-xl bg-base-200/60 border border-base-300/60 hover:bg-base-200 hover:border-warning/50 hover:shadow-xs transition-all duration-200 flex flex-col gap-1.5 text-xs group cursor-default">
+              <div class="p-3 rounded-xl bg-base-200/50 border border-base-300/60 hover:bg-base-200 hover:border-warning/50 hover:shadow-xs transition-all duration-200 flex flex-col gap-2 text-xs group cursor-default">
                 <div class="flex items-center justify-between gap-2">
                   <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs">{t.pretty_id || `#${t.id}`}</span>
                   <span class="text-xs text-base-content/60 font-mono font-semibold">
                     {t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}
                   </span>
                 </div>
-                <div class="font-semibold text-base-content truncate" title={t.title}>
+                <div class="font-semibold text-base-content leading-snug" title={t.title}>
                   {t.title}
                 </div>
               </div>
             ))
           ) : (
-            <div class="text-xs text-base-content/40 italic py-2 text-center">No hay tickets sin asignar</div>
+            <div class="text-xs text-base-content/40 italic py-8 text-center">No hay tickets sin asignar</div>
           )}
         </div>
       </div>
 
-      <!-- Card Próximos en Cola -->
-      <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-3">
-        <div class="flex items-center gap-2">
-          <div class="p-1.5 bg-primary text-primary-content rounded-lg">
-            <Icon name="boxicons:sparkles" size={20} />
+      <!-- Right: Próximos en Cola + Última Asignación -->
+      <div class="flex flex-col gap-6">
+        <!-- Card Próximos en Cola -->
+        <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-4">
+          <div class="flex items-center gap-2 border-b border-base-200 pb-3">
+            <div class="p-2 bg-primary/10 text-primary rounded-lg">
+              <Icon name="boxicons:sparkles" size={22} />
+            </div>
+            <div>
+              <h3 class="font-bold text-sm uppercase tracking-wider text-base-content">
+                Próximos en Cola
+              </h3>
+              <p class="text-xxs text-base-content/50">Orden de recepción para la siguiente asignación</p>
+            </div>
           </div>
-          <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/60">
-            Próximos en Cola
-          </h3>
+
+          <div id="queue-container" class="space-y-2.5">
+            {nextSuggestedOperators.length > 0 ? (
+              nextSuggestedOperators.map((op, idx) => (
+                <div
+                  data-agent-id={op.agentId}
+                  class={`flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-base-200/70 hover:border-base-300 hover:shadow-xs cursor-default ${
+                    idx === 0
+                      ? "bg-primary/10 border border-primary/40 shadow-xs"
+                      : "bg-base-200/40 border border-transparent"
+                  }`}
+                >
+                  <div class={`avatar placeholder size-9 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
+                    idx === 0 ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70"
+                  }`}>
+                    {getInitials(op.nombre)}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class={`truncate font-bold text-xs ${idx === 0 ? "text-base-content font-black" : "text-base-content/80"}`}>
+                      {op.nombre}
+                    </div>
+                    <div class="text-xxs text-base-content/50 uppercase font-semibold">
+                      {op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}
+                    </div>
+                  </div>
+                  {idx === 0 && (
+                    <span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny px-2 py-1">Siguiente</span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div class="text-xs text-base-content/40 italic py-4 text-center" id="stat-suggested-name-empty">
+                No hay operadores disponibles
+              </div>
+            )}
+          </div>
         </div>
 
-        <div id="queue-container" class="space-y-2">
-          {nextSuggestedOperators.length > 0 ? (
-            nextSuggestedOperators.map((op, idx) => (
-              <div
-                data-agent-id={op.agentId}
-                class={`flex items-center gap-3 p-2.5 rounded-xl transition-all hover:bg-base-200/70 hover:border-base-300 hover:shadow-xs cursor-default ${
-                  idx === 0
-                    ? "bg-primary/10 border border-primary/40 shadow-xs"
-                    : "bg-base-200/40 border border-transparent"
-                }`}
+        <!-- Card Última Asignación -->
+        <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-3">
+          <div class="flex items-center gap-2 border-b border-base-200 pb-3">
+            <div class="p-2 bg-info/10 text-info rounded-lg">
+              <Icon name="boxicons:history" size={22} />
+            </div>
+            <div>
+              <h3 class="font-bold text-sm uppercase tracking-wider text-base-content">
+                Última Asignación
+              </h3>
+              <p class="text-xxs text-base-content/50">Asignación más reciente realizada hoy</p>
+            </div>
+          </div>
+
+          <div id="stat-last-assigned-container">
+            {lastAssignedOperator ? (
+              <div class="text-xs space-y-1.5 bg-base-200/40 p-3 rounded-xl border border-base-300/50">
+                <div class="text-base-content/70">
+                  Realizado por: <strong class="text-info font-bold" id="stat-last-assigned-by">{lastAssignedOperator.lastAutogestionAssignedBy || "Sistema"}</strong>
+                </div>
+                <div class="text-base-content/70">
+                  Asignado a: <strong class="text-base-content font-bold" id="stat-last-assigned-to">{lastAssignedOperator.nombre}</strong>
+                </div>
+                <div class="text-xxs text-base-content/50 font-mono pt-1 border-t border-base-300/40 mt-1" id="stat-last-assigned-time">
+                  Hora: {new Date(lastAssignedOperator.lastAutogestionAssignedAt!).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              </div>
+            ) : (
+              <div class="text-xs text-base-content/40 italic py-2">Sin asignaciones hoy</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: MONITOREO DE OPERADORES -->
+  <div id="panel-monitoreo" class="flex flex-col gap-6 hidden">
+    <!-- Top KPIs (Disponibilidad + Fuera de Servicio) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Card Disponibles -->
+      <div
+        class="card bg-base-100 border border-base-300 shadow-md overflow-hidden group hover:border-success/30 transition-colors duration-300"
+      >
+        <div
+          class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"
+        >
+          <Icon name="boxicons:user-check" size={128} />
+        </div>
+        <div class="card-body p-6">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 bg-success/10 rounded-lg text-success">
+              <Icon name="boxicons:user-check" size={24} />
+            </div>
+            <h3
+              class="font-bold text-xs uppercase tracking-widest text-base-content/50"
+            >
+              Disponibilidad Actual
+            </h3>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span
+              class="text-5xl font-black text-success tracking-tight"
+              id="stat-disponibles-count">{disponiblesCount}</span
+            >
+            <span
+              class="text-base-content/40 font-bold uppercase text-xs tracking-wider"
+              >operadores activos</span
+            >
+          </div>
+          <div class="mt-6 flex flex-col gap-2">
+            <div
+              class="flex justify-between text-xs font-bold uppercase tracking-wider px-0.5"
+            >
+              <span class="text-base-content/40">Tasa de disponibilidad</span>
+              <span class="text-success font-mono font-black" id="stat-percentage"
+                >{
+                  allOperators.length > 0
+                    ? Math.round((disponiblesCount / allOperators.length) * 100)
+                    : 0
+                }%</span
               >
-                <div class={`avatar placeholder size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
-                  idx === 0 ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70"
-                }`}>
-                  {getInitials(op.nombre)}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class={`truncate font-bold text-xs ${idx === 0 ? "text-base-content font-black" : "text-base-content/80"}`}>
-                    {op.nombre}
+            </div>
+            <progress
+              class="progress progress-success w-full h-2.5 bg-base-200"
+              value={disponiblesCount}
+              max={allOperators.length || 1}
+              id="stat-progress"></progress>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card No Disponibles -->
+      <div
+        class="card bg-base-100 border border-base-300 shadow-md overflow-hidden group hover:border-base-content/20 transition-colors duration-300"
+      >
+        <div
+          class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"
+        >
+          <Icon name="boxicons:user-x" size={128} />
+        </div>
+        <div class="card-body p-6">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 bg-base-content/5 rounded-lg text-base-content/50">
+              <Icon name="boxicons:user-x" size={24} />
+            </div>
+            <h3
+              class="font-bold text-xs uppercase tracking-widest text-base-content/50"
+            >
+              Fuera de Servicio
+            </h3>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span
+              class="text-5xl font-black text-base-content/80 tracking-tight"
+              id="stat-no-disponibles-count">{noDisponiblesCount}</span
+            >
+            <span
+              class="text-base-content/40 font-bold uppercase text-xs tracking-wider"
+              >en estados especiales</span
+            >
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            {
+              Object.entries(breakdown).map(([estado, count]) => (
+                <div
+                  class="flex items-center justify-between p-2 rounded-lg bg-base-200/50 border border-transparent hover:border-base-300 transition-colors duration-200 data-[count='0']:opacity-40"
+                  data-breakdown-container
+                  data-count={count}
+                >
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span
+                      class={`size-2 rounded-full shrink-0 ${breakdownBadge(estado)}`}
+                    />
+                    <span class="text-xs font-bold truncate text-base-content/60 uppercase tracking-tight">
+                      {STATUS_LABELS[estado] ?? estado}
+                    </span>
                   </div>
-                  <div class="text-xxs text-base-content/40 uppercase font-semibold">
-                    {op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}
-                  </div>
+                  <span
+                    class="text-xs font-mono font-bold text-base-content/90"
+                    data-breakdown-count={estado}
+                  >
+                    {count}
+                  </span>
                 </div>
-                {idx === 0 && (
-                  <span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny">Siguiente</span>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Control Bar: Toggle + Status + Refresh + Undo -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <!-- Left: Toggle -->
+      <label class="label cursor-pointer justify-start gap-3 bg-base-200/40 hover:bg-base-200/80 px-4 py-2.5 rounded-xl border border-base-300/45 transition-colors duration-250">
+        <input type="checkbox" id="toggle-disponibles" class="toggle toggle-primary toggle-sm" />
+        <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/70">
+          Solo disponibles
+        </span>
+      </label>
+
+      <!-- Right: Status + Actions -->
+      <div class="flex items-center gap-4">
+        <!-- Sync + Refresh -->
+        <div class="flex items-center gap-1">
+          <span id="sync-indicator" class="text-xs text-base-content/50 font-semibold w-[180px]">
+            Actualizado hace unos instantes
+          </span>
+          <button id="btn-refresh" class="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content" title="Actualizar ahora">
+            <Icon name="boxicons:refresh-ccw-filled" size={18} id="refresh-icon" />
+          </button>
+        </div>
+
+        {!isReadOnly && (
+          <>
+            <div class="w-px h-5 bg-base-300/60"></div>
+            <button id="btn-undo" type="button" class="btn btn-secondary btn-outline btn-sm shadow-sm" disabled>
+              <Icon name="boxicons:undo" size={18} aria-hidden="true" />
+              <span id="btn-undo-text">Deshacer</span>
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+
+    <!-- Tabla de Operadores -->
+    <DataTable
+      ariaLabel="Lista de operadores para asignación de autogestiones"
+      headerGridClass={isReadOnly ? "grid-cols-[1.8fr_1.5fr_1.2fr] gap-2 md:gap-4" : "grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] gap-2 md:gap-4"}
+      rowGridClass={isReadOnly ? "grid grid-cols-[1.8fr_1.5fr_1.2fr] items-center gap-2 md:gap-4" : "grid grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] items-center gap-2 md:gap-4"}
+    >
+      <Fragment slot="header">
+        <DataTableHeaderCell sortKey="nombre">Operador</DataTableHeaderCell>
+        <DataTableHeaderCell>Horario / Modo</DataTableHeaderCell>
+        <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
+        {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
+      </Fragment>
+
+      {
+        allOperators.map((op) => {
+          const isHighlighted = op.agentId === maxAssignedOperatorId;
+          const isExceptional = !!op.estadoExcepcional;
+
+          let rowClasses =
+            "group border-b border-base-300 px-4 py-2.5 transition-colors duration-300 hover:bg-base-200/50";
+          if (isExceptional) {
+            rowClasses += " bg-secondary/10 border-l-4 border-l-secondary";
+          } else if (isHighlighted) {
+            rowClasses += " bg-primary/10 border-l-4 border-l-primary";
+          }
+          if (!op.disponible && !isExceptional) {
+            rowClasses += " opacity-50 grayscale-[30%]";
+          }
+
+          return (
+            <div
+              class={rowClasses}
+              data-table-row
+              data-op-id={op.agentId}
+              data-op-estado={
+                op.disponible ? "disponible" : op.motivo || "offline"
+              }
+              data-sort-nombre={op.nombre}
+              data-sort-estado={
+                op.disponible ? "disponible" : op.motivo || "offline"
+              }
+            >
+              {/* Nombre + Last Assigned */}
+              <div class="flex min-w-0 flex-col">
+                <span class="truncate text-xs font-bold text-base-content">
+                  {op.nombre}
+                </span>
+                <div data-op-last-assigned-container>
+                  {op.lastAutogestionAssignedAt ? (
+                    <span
+                      class="text-tiny text-base-content/75 bg-base-300/50 rounded px-1.5 py-0.5 inline-block font-semibold mt-0.5"
+                      data-last-assigned={op.lastAutogestionAssignedAt}
+                    >
+                      Asignado:{" "}
+                      {new Date(op.lastAutogestionAssignedAt).toLocaleTimeString(
+                        "es-AR",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </span>
+                  ) : (
+                    <span class="text-tiny text-base-content/40 bg-base-200/40 rounded px-1.5 py-0.5 inline-block italic mt-0.5">
+                      Nunca asignado
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Horario y Modo */}
+              <div class="flex flex-col gap-1 min-w-0">
+                <div data-op-horario>
+                  {op.horarioHoy ? (
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
+                      <span class="flex items-center gap-1 font-semibold">
+                        <Icon
+                          name="boxicons:clock-dashed-half-filled"
+                          size={14}
+                          class="opacity-60 shrink-0"
+                        />
+                        {op.horarioHoy}
+                      </span>
+                      {op.breakInicioHoy && op.breakFinHoy && (
+                        <span class="flex items-center gap-1 opacity-70">
+                          <Icon
+                            name="boxicons:cup-hot"
+                            size={14}
+                            class="opacity-60 shrink-0"
+                          />
+                          {op.breakInicioHoy} - {op.breakFinHoy}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span class="text-base-content/40 italic">Sin horario</span>
+                  )}
+                </div>
+
+                <div data-op-modalidad>
+                  {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
+                    <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
+                      {op.modalidadHoy === "Home Office" ? "Home" : "Presencial"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Badge estado */}
+              <div
+                data-op-status-cell={op.agentId}
+                class="flex flex-col items-start gap-1"
+              >
+                {op.estadoExcepcional ? (
+                  <div
+                    class="tooltip tooltip-bottom before:text-xxs before:px-2 before:py-1"
+                    data-tip={`${op.estadoExcepcionalMotivo || "Sin comentario"} — marcado a las ${op.estadoExcepcionalAt ? new Date(op.estadoExcepcionalAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}`}
+                  >
+                    <span
+                      data-op-status-badge={op.agentId}
+                      class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2 cursor-help`}
+                    >
+                      {getExcepcionalShortLabel(op.estadoExcepcional)}
+                      {op.estadoExcepcional === "break_extendido" &&
+                      op.retornoEstimado
+                        ? op.retornoEstimado === "Manual"
+                          ? " (Manual)"
+                          : ` - vuelve ${op.retornoEstimado}`
+                        : ""}
+                    </span>
+                  </div>
+                ) : (
+                  <span
+                    data-op-status-badge={op.agentId}
+                    class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
+                  >
+                    {op.disponible && (
+                      <span class="size-1.5 rounded-full bg-success-content animate-ping" />
+                    )}
+                    {!op.disponible && op.motivo === "En break" && (
+                      <span class="size-1.5 rounded-full bg-warning-content/75 animate-pulse" />
+                    )}
+                    {op.disponible
+                      ? "Disponible"
+                      : op.motivo === "En break"
+                        ? `En break - vuelve ${op.retornoEstimado || ""}`
+                        : op.motivo || "Franco"}
+                  </span>
+                )}
+                {op.estadoExcepcional && op.estadoExcepcionalMotivo && (
+                  <div
+                    data-op-exception-comment={op.agentId}
+                    class="text-small text-base-content/50 italic font-medium max-w-[150px] truncate mt-0.5"
+                    title={op.estadoExcepcionalMotivo}
+                  >
+                    "{op.estadoExcepcionalMotivo}"
+                  </div>
                 )}
               </div>
-            ))
-          ) : (
-            <div class="text-xs text-base-content/40 italic py-2 text-center" id="stat-suggested-name-empty">
-              No hay operadores disponibles
-            </div>
-          )}
-        </div>
-      </div>
 
-      <!-- Card Última Asignación -->
-      <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-2">
-        <div class="flex items-center gap-2 mb-1">
-          <div class="p-1.5 bg-info/10 rounded-lg text-info">
-            <Icon name="boxicons:history" size={20} />
-          </div>
-          <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/60">
-            Última Asignación
-          </h3>
-        </div>
+              {/* Botones de acción */}
+              {!isReadOnly && (
+                <div
+                  class="flex items-center justify-end gap-2"
+                  data-op-actions={op.agentId}
+                >
+                  <>
+                    <div class="m-0">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-xs btn-soft font-bold uppercase tracking-wider"
+                        data-op-assign-btn={op.agentId}
+                        title={`Asignar autogestión a ${op.nombre}`}
+                        disabled={!op.disponible}
+                      >
+                        Asignar
+                      </button>
+                    </div>
 
-        <div id="stat-last-assigned-container">
-          {lastAssignedOperator ? (
-            <div class="text-xs space-y-1">
-              <div class="text-base-content/70">
-                De: <strong class="text-info" id="stat-last-assigned-by">{lastAssignedOperator.lastAutogestionAssignedBy || "Sistema"}</strong>
-              </div>
-              <div class="text-base-content/70">
-                Para: <strong class="text-base-content" id="stat-last-assigned-to">{lastAssignedOperator.nombre}</strong>
-              </div>
-              <div class="text-xxs text-base-content/40 font-mono pt-1" id="stat-last-assigned-time">
-                Hora: {new Date(lastAssignedOperator.lastAutogestionAssignedAt!).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-              </div>
+                    <div data-op-exception-container={op.agentId} class="relative">
+                      {op.estadoExcepcional ? (
+                        <button
+                          type="button"
+                          class="btn btn-error btn-xs btn-outline font-bold uppercase tracking-wider"
+                          data-action-lift-exception={op.agentId}
+                          title="Levantar estado excepcional"
+                        >
+                          Levantar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/60 hover:text-secondary hover:bg-secondary/10 px-1"
+                          data-action-open-exception-modal={op.agentId}
+                          data-op-nombre={op.nombre}
+                          title="Marcar estado excepcional"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="size-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                </div>
+              )}
             </div>
-          ) : (
-            <div class="text-xs text-base-content/40 italic py-1">Sin asignaciones hoy</div>
-          )}
-        </div>
-      </div>
-    </aside>
+          );
+        })
+      }
+    </DataTable>
   </div>
 </PageContainer>
 
@@ -828,6 +862,31 @@ function getInitials(name: string): string {
       "toggle-disponibles",
     ) as HTMLInputElement | null;
     if (!toggle) return false;
+
+    // Tab switching handler
+    const tabBtns = document.querySelectorAll("[data-tab-target]");
+    tabBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-tab-target");
+        tabBtns.forEach((b) => b.classList.remove("tab-active"));
+        btn.classList.add("tab-active");
+
+        document.getElementById("panel-asignacion")?.classList.toggle("hidden", targetId !== "panel-asignacion");
+        document.getElementById("panel-monitoreo")?.classList.toggle("hidden", targetId !== "panel-monitoreo");
+
+        if (targetId) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("tab", targetId === "panel-monitoreo" ? "monitoreo" : "asignacion");
+          window.history.replaceState({}, "", url.toString());
+        }
+      });
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("tab") === "monitoreo") {
+      const btnMonitoreo = document.getElementById("tab-btn-monitoreo");
+      if (btnMonitoreo) btnMonitoreo.click();
+    }
 
     const syncIndicator = document.getElementById("sync-indicator");
     const refreshIcon = document.getElementById("refresh-icon");
