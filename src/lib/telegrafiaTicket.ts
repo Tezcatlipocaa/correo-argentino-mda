@@ -1,3 +1,5 @@
+import { escapeHtml } from "@lib/sanitize";
+
 // ============================================================
 // TOGGLE: true = QA (crear tickets de prueba en entorno QA)
 //         false = PROD (crear tickets reales en entorno productivo)
@@ -44,11 +46,3 @@ export function buildTicketDescription(
   return `Se comunican desde OPT y reportan problemas con los agentes.<br><br><table style="width:100%;max-width:600px;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#334155;"><tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;width:180px;background-color:#f1f5f9;border:1px solid #e2e8f0;">OFICINA AFECTADA</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(officeName)}</td></tr><tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;background-color:#f1f5f9;border:1px solid #e2e8f0;">NIS</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(officeCode)}</td></tr>${noteSection}</table>`;
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
