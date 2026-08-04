@@ -1,0 +1,285 @@
+---
+import { Icon } from "astro-icon/components";
+import Modal from "@components/ui/Modal.astro";
+
+interface Props {
+  id?: string;
+}
+
+const { id = "agents-ticket-modal" } = Astro.props;
+---
+
+<Modal
+  {id}
+  title="Crear Ticket — Agentes Caídos"
+  icon="boxicons:error-circle"
+  size="lg"
+>
+  <Fragment slot="content">
+    <div class="space-y-4">
+      <!-- Office info (set dynamically by JS) -->
+      <div class="rounded-lg border border-base-300 bg-base-200/50 p-3">
+        <p class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2">
+          Oficina afectada
+        </p>
+        <p class="text-sm font-semibold text-base-content" id="ticket-office-name">
+          &mdash;
+        </p>
+        <p class="font-mono text-xs text-base-content/70 mt-1" id="ticket-office-code">
+          &mdash;
+        </p>
+      </div>
+
+      <!-- Agent selector -->
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend font-bold tracking-wider uppercase text-xs">
+          Agente de mesa de ayuda
+          <span class="text-error">*</span>
+        </legend>
+        <select
+          id="ticket-agent-select"
+          class="select select-bordered w-full"
+          required
+        >
+          <option value="" disabled selected>Cargando agentes...</option>
+        </select>
+        <p class="fieldset-label text-xs text-base-content/50">
+          El ticket se creará a nombre de este agente como cliente
+        </p>
+      </fieldset>
+
+      <!-- Notes -->
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend font-bold tracking-wider uppercase text-xs">
+          Notas adicionales
+          <span class="text-base-content/50 font-normal">(opcional)</span>
+        </legend>
+        <textarea
+          id="ticket-notes"
+          class="textarea textarea-bordered w-full"
+          rows="3"
+          placeholder="Detalles adicionales sobre la caída de agentes..."
+        ></textarea>
+      </fieldset>
+
+      <!-- Loading / error states -->
+      <div id="ticket-modal-loading" class="flex items-center gap-2 text-sm text-base-content/60">
+        <span class="loading loading-spinner loading-xs"></span>
+        Cargando agentes de la mesa de ayuda...
+      </div>
+      <div id="ticket-modal-error" class="hidden text-sm text-error">
+        Error al cargar los agentes. Intentá de nuevo.
+      </div>
+    </div>
+  </Fragment>
+  <Fragment slot="actions">
+    <div class="flex justify-end gap-2 mt-6">
+      <form method="dialog">
+        <button
+          type="button"
+          class="btn btn-ghost border border-base-300 hover:bg-base-200 cursor-pointer"
+          onclick="this.closest('dialog')?.close()"
+        >
+          Cancelar
+        </button>
+      </form>
+      <button
+        id="confirm-agents-ticket-btn"
+        class="btn btn-primary cursor-pointer shadow-md"
+      >
+        Crear Ticket
+      </button>
+    </div>
+  </Fragment>
+</Modal>
+
+<script>
+  import { showToast } from "@lib/toastClient";
+
+  interface TelegrafiaAgent {
+    id: number;
+    name: string;
+    username: string;
+  }
+
+  let agentsCache: TelegrafiaAgent[] | null = null;
+  let currentOfficeName = "";
+  let currentOfficeCode = "";
+  let pendingCreateData: {
+    officeCode: string;
+    officeName: string;
+    customerId: number;
+    customerName: string;
+    notes?: string;
+  } | null = null;
+
+  const modal = document.getElementById("agents-ticket-modal") as HTMLDialogElement | null;
+  const agentSelect = document.getElementById("ticket-agent-select") as HTMLSelectElement | null;
+  const notesTextarea = document.getElementById("ticket-notes") as HTMLTextAreaElement | null;
+  const confirmBtn = document.getElementById("confirm-agents-ticket-btn") as HTMLButtonElement | null;
+  const loadingEl = document.getElementById("ticket-modal-loading");
+  const errorEl = document.getElementById("ticket-modal-error");
+  const officeNameEl = document.getElementById("ticket-office-name");
+  const officeCodeEl = document.getElementById("ticket-office-code");
+
+  async function loadAgents(): Promise<TelegrafiaAgent[]> {
+    if (agentsCache) return agentsCache;
+
+    const res = await fetch("/api/invgate/telegrafia-agents");
+    if (!res.ok) throw new Error("Failed to load agents");
+
+    const data = (await res.json()) as { agents: TelegrafiaAgent[] };
+    if (!data.agents || !Array.isArray(data.agents)) {
+      throw new Error("Invalid response");
+    }
+
+    agentsCache = data.agents;
+    return agentsCache;
+  }
+
+  function populateAgentSelect(agents: TelegrafiaAgent[]) {
+    if (!agentSelect) return;
+    agentSelect.innerHTML =
+      '<option value="" disabled selected>Seleccionar agente...</option>' +
+      agents
+        .map(
+          (a) =>
+            `<option value="${a.id}" data-name="${escapeHTML(a.name)}">${escapeHTML(a.name)}</option>`,
+        )
+        .join("");
+  }
+
+  function escapeHTML(str: string): string {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function openAgentsTicketModal(officeName: string, officeCode: string) {
+    if (!modal) return;
+
+    currentOfficeName = officeName;
+    currentOfficeCode = officeCode;
+
+    if (officeNameEl) officeNameEl.textContent = officeName;
+    if (officeCodeEl) officeCodeEl.textContent = officeCode;
+
+    if (loadingEl) loadingEl.classList.remove("hidden");
+    if (errorEl) errorEl.classList.add("hidden");
+    if (agentSelect) {
+      agentSelect.innerHTML =
+        '<option value="" disabled selected>Cargando agentes...</option>';
+    }
+    if (notesTextarea) notesTextarea.value = "";
+    if (confirmBtn) confirmBtn.disabled = false;
+
+    modal.showModal();
+
+    loadAgents()
+      .then((agents) => {
+        populateAgentSelect(agents);
+        if (loadingEl) loadingEl.classList.add("hidden");
+      })
+      .catch(() => {
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (errorEl) errorEl.classList.remove("hidden");
+        if (agentSelect) {
+          agentSelect.innerHTML =
+            '<option value="" disabled selected>Error al cargar</option>';
+        }
+      });
+  }
+
+  (window as any).openAgentsTicketModal = openAgentsTicketModal;
+
+  function executeCreate(data: typeof pendingCreateData) {
+    if (!confirmBtn || !data) return;
+
+    const originalHTML = confirmBtn.innerHTML;
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML =
+      '<span class="loading loading-spinner loading-xs"></span> Creando...';
+
+    fetch("/api/offices/create-agents-ticket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) {
+          modal?.close();
+          if (result.ticketUrl) {
+            window.open(result.ticketUrl, "_blank");
+            showToast(
+              "Ticket creado con éxito y abierto en nueva pestaña.",
+              "alert-success",
+              6000,
+            );
+          } else {
+            showToast("Ticket creado con éxito.", "alert-success");
+          }
+        } else {
+          showToast(
+            result.error || "Error al crear el ticket.",
+            "alert-error",
+          );
+        }
+      })
+      .catch((err: any) => {
+        console.error(err);
+        showToast("Error de conexión al crear el ticket.", "alert-error");
+      })
+      .finally(() => {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalHTML;
+      });
+  }
+
+  confirmBtn?.addEventListener("click", () => {
+    if (!agentSelect || !agentSelect.value) {
+      showToast("Debe seleccionar un agente de mesa de ayuda.", "alert-warning");
+      return;
+    }
+
+    const selectedOption = agentSelect.selectedOptions[0];
+    const customerId = Number(agentSelect.value);
+    const customerName = selectedOption?.getAttribute("data-name") || "";
+
+    if (!customerId || !customerName) {
+      showToast("Selección de agente inválida.", "alert-warning");
+      return;
+    }
+
+    const notes = notesTextarea?.value?.trim() || undefined;
+
+    pendingCreateData = {
+      officeCode: currentOfficeCode,
+      officeName: currentOfficeName,
+      customerId,
+      customerName,
+      notes,
+    };
+
+    const confirmed = confirm(
+      "¿Estás seguro de crear el ticket?\n\n" +
+      "Oficina: " + currentOfficeName + " (" + currentOfficeCode + ")\n" +
+      "Agente: " + customerName +
+      (notes ? "\nNotas: " + notes : "")
+    );
+
+    if (confirmed) {
+      executeCreate(pendingCreateData);
+    } else {
+      showToast("Creación de ticket cancelada.", "alert-info", 3000);
+    }
+  });
+
+  // Clear cache on page load so fresh agents are fetched
+  document.addEventListener("astro:page-load", () => {
+    agentsCache = null;
+  });
+</script>
