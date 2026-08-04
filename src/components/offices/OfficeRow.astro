@@ -51,7 +51,9 @@ const hasDetails = hasInfoSection || hasAssetsSection || hasInvgateDetail;
 const activeSectionsCount =
   (hasInfoSection ? 1 : 0) + (hasAssetsSection ? 1 : 0);
 
-const officeDirectoryRowGridClass = isAllowedAdmin
+const showActionsColumn = isAllowedAdmin || (office.type === "TELEGRAFIA" && office.invgateLinked === true);
+
+const officeDirectoryRowGridClass = showActionsColumn
   ? "grid grid-cols-[48px_80px_1.2fr_90px_1.8fr_110px_120px] items-center gap-4"
   : "grid grid-cols-[48px_80px_1.2fr_90px_1.8fr_110px] items-center gap-4";
 ---
@@ -229,20 +231,46 @@ const officeDirectoryRowGridClass = isAllowedAdmin
     </div>
 
     {
-      isAllowedAdmin && (
+      showActionsColumn && (
         <div class="min-w-0 flex items-center justify-end gap-2 action-buttons">
-          <ActionEditButton
-            href={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}`}
-            ariaLabel={`Editar oficina ${office.name}`}
-          />
-          <form
-            method="POST"
-            action={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}/eliminar`}
-            class="inline"
-            onsubmit={`return confirm('¿Estás seguro de que deseas eliminar la oficina \`${office.name}\` (${office.code})?');`}
-          >
-            <ActionDeleteButton ariaLabel={`Eliminar oficina ${office.name}`} />
-          </form>
+          {
+            isAllowedAdmin && (
+              <>
+                <ActionEditButton
+                  href={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}`}
+                  ariaLabel={`Editar oficina ${office.name}`}
+                />
+                <form
+                  method="POST"
+                  action={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}/eliminar`}
+                  class="inline"
+                  onsubmit={`return confirm('¿Estás seguro de que deseas eliminar la oficina \`${office.name}\` (${office.code})?');`}
+                >
+                  <ActionDeleteButton ariaLabel={`Eliminar oficina ${office.name}`} />
+                </form>
+              </>
+            )
+          }
+          {
+            office.type === "TELEGRAFIA" && office.invgateLinked === true && (
+              <div class="tooltip tooltip-top tooltip-neutral" data-tip="Reportar agentes caídos">
+                <button
+                  type="button"
+                  class="btn btn-xs md:btn-sm btn-soft btn-success gap-2 cursor-pointer"
+                  data-agents-ticket-trigger
+                  data-office-name={office.name}
+                  data-office-code={office.code}
+                  aria-label="Crear ticket por agentes caídos"
+                >
+                  <Icon
+                    name="boxicons:error-circle"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            )
+          }
         </div>
       )
     }
