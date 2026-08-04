@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { requireWriteAccess } from "@lib/rbac-middleware";
 import { jsonResponse, sanitizeError, jsonError } from "@lib/apiResponse";
 import { invgatePost, invgateGet } from "@lib/invgateClient";
-import { invgateQaPost, invgateQaGet } from "@lib/invgate-qa-client";
+import { invgateQaPost } from "@lib/invgate-qa-client";
 import { logAdminAction } from "@lib/auditLogger";
 import {
   USE_QA_INVGATE,
