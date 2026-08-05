@@ -21,7 +21,7 @@ test.beforeEach(async ({ context }) => {
   await setSessionCookie(context, adminUser.signedSessionId);
 });
 
-test('La barra de busqueda tiene grow prioritario y placeholder visible', async ({ page }) => {
+test('La barra de busqueda y las acciones ocupan la segunda fila', async ({ page }) => {
   await page.goto('/mesas-de-ayuda');
 
   const searchInput = page.locator('#soportes-search');
@@ -34,29 +34,32 @@ test('La barra de busqueda tiene grow prioritario y placeholder visible', async 
   const searchBar = page.locator('label[for="soportes-search"]');
   const searchBox = await searchBar.boundingBox();
   const statusBox = await page.locator('#filter-status').boundingBox();
+  const clearBox = await page.locator('#clear-filters').boundingBox();
   expect(searchBox).not.toBeNull();
   expect(statusBox).not.toBeNull();
-  expect(searchBox!.width).toBeGreaterThanOrEqual(350);
-  expect(searchBox!.width).toBeGreaterThan(statusBox!.width);
+  expect(clearBox).not.toBeNull();
 
-  const flexWrap = await page
-    .locator('#soportes-filters')
-    .evaluate((el) => getComputedStyle(el).flexWrap);
-  expect(flexWrap).toBe('wrap');
+  expect(searchBox!.width).toBeGreaterThanOrEqual(350);
+  expect(searchBox!.y).toBeGreaterThan(statusBox!.y);
+  expect(Math.abs(searchBox!.y - clearBox!.y)).toBeLessThanOrEqual(10);
 });
 
-test('El select de mesas padre tambien crece junto a la barra', async ({ page }) => {
+test('Los selects de filtro permanecen en la fila superior', async ({ page }) => {
   await page.goto('/mesas-de-ayuda');
   await expect(page.locator('#soportes-search')).toBeVisible();
 
+  const statusBox = await page.locator('#filter-status').boundingBox();
+  const sortBox = await page.locator('#sort-by').boundingBox();
+  expect(statusBox).not.toBeNull();
+  expect(sortBox).not.toBeNull();
+  expect(Math.abs(statusBox!.y - sortBox!.y)).toBeLessThanOrEqual(10);
+
   const parentSelect = page.locator('#filter-parent');
-  if ((await parentSelect.count()) === 0) {
-    test.skip();
-    return;
+  if ((await parentSelect.count()) > 0) {
+    const parentBox = await parentSelect.boundingBox();
+    expect(parentBox).not.toBeNull();
+    expect(Math.abs(statusBox!.y - parentBox!.y)).toBeLessThanOrEqual(10);
   }
-  const parentBox = await parentSelect.boundingBox();
-  expect(parentBox).not.toBeNull();
-  expect(parentBox!.width).toBeGreaterThanOrEqual(160);
 });
 
 test('En pantallas angostas el placeholder sigue visible', async ({ page }) => {
