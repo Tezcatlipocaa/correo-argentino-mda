@@ -112,14 +112,31 @@ const totalMembers = visibleHelpdesks.reduce(
     totalMembers={totalMembers}
   />
 
-  <div class="flex flex-nowrap items-center gap-2 md:gap-3 w-full">
-    <div class="flex-1 min-w-0">
+  <div
+    id="soportes-filters"
+    class="flex flex-wrap items-center gap-2 md:gap-3 w-full"
+  >
+    <div class="flex-1 min-w-96">
       <SearchBar
         id="soportes-search"
         placeholder="Buscar por nombre SM, Invgate, topico..."
         class="w-full"
       />
     </div>
+
+    {
+      uniqueParentNames.length > 0 && (
+        <select
+          id="filter-parent"
+          class="select select-bordered flex-1 min-w-40 select-sm md:select-md"
+        >
+          <option value="all">Todas las mesas padre</option>
+          {uniqueParentNames.map((name) => (
+            <option value={name}>{name}</option>
+          ))}
+        </select>
+      )
+    }
 
     <select
       id="filter-status"
@@ -129,20 +146,6 @@ const totalMembers = visibleHelpdesks.reduce(
       <option value="active">Activos</option>
       <option value="inactive">Inactivos</option>
     </select>
-
-    {
-      uniqueParentNames.length > 0 && (
-        <select
-          id="filter-parent"
-          class="select select-bordered shrink-0 select-sm md:select-md"
-        >
-          <option value="all">Todas las mesas padre</option>
-          {uniqueParentNames.map((name) => (
-            <option value={name}>{name}</option>
-          ))}
-        </select>
-      )
-    }
 
     <select
       id="sort-by"
