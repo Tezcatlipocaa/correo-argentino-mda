@@ -23,6 +23,11 @@ import { normalizeRole } from "@lib/rbac";
 
 const cleanBase = getCleanBase();
 
+const invgateApiBase = import.meta.env.INVGATE_BASE_URL || "";
+const invgateWebBase = invgateApiBase
+  ? invgateApiBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
+  : "";
+
 const user = Astro.locals.user;
 const role = normalizeRole(user.role);
 
@@ -126,6 +131,14 @@ const STATUS_LABELS: Record<string, string> = {
   Licencia: "Licencia",
   Vacaciones: "Vacaciones",
   Excepción: "Excepción",
+};
+
+const PRIORITY_LABELS: Record<number, { label: string; badgeClass: string }> = {
+  1: { label: "Baja", badgeClass: "badge-neutral opacity-60" },
+  2: { label: "Media", badgeClass: "badge-info/20 text-info" },
+  3: { label: "Alta", badgeClass: "badge-warning/20 text-warning font-semibold" },
+  4: { label: "Urgente", badgeClass: "badge-warning text-warning-content font-bold" },
+  5: { label: "Crítica", badgeClass: "badge-error text-error-content font-bold" },
 };
 
 const breakdown: Record<string, number> = {
@@ -402,12 +415,17 @@ function getInitials(name: string): string {
           <div id="unassigned-tickets-list" class="divide-y divide-base-200/80 max-h-[calc(100vh-320px)] overflow-y-auto">
             {unassignedTickets.length > 0 ? (
               unassignedTickets.map((t: any) => (
-                <div class="p-3.5 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-1.5 cursor-default group">
+                <div data-ticket-id={t.id} class="p-3.5 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-1.5 cursor-pointer group">
                   <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                      <span class="font-mono font-bold text-primary-content bg-primary px-2.5 py-0.5 rounded-md text-xs shrink-0">{t.pretty_id || `#${t.id}`}</span>
+                    <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                      <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs shrink-0">{t.pretty_id || `#${t.id}`}</span>
+                      {t.priority_id && (
+                        <span class={`badge badge-xs font-bold text-tiny tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-neutral'}`}>
+                          {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
+                        </span>
+                      )}
                       {t.category_last_name && (
-                        <span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[170px] truncate shrink-0" title={t.category_name || t.category_last_name}>
+                        <span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[130px] truncate shrink-0" title={t.category_name || t.category_last_name}>
                           {t.category_last_name}
                         </span>
                       )}
@@ -419,6 +437,17 @@ function getInitials(name: string): string {
                   <div class="font-semibold text-base-content text-xs group-hover:text-primary transition-colors" title={t.title}>
                     {t.title}
                   </div>
+                  {(t.creator_name || t.customer_name) && (
+                    <div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate">
+                      <Icon name="boxicons:user" size={13} class="opacity-60 shrink-0" />
+                      <span class="truncate">
+                        Generado por: <strong class="text-base-content/80 font-bold">{t.creator_name || t.customer_name}</strong>
+                        {t.customer_name && t.creator_name && t.customer_name !== t.creator_name && (
+                          <span class="opacity-75"> • Cliente: <strong class="text-base-content/80 font-semibold">{t.customer_name}</strong></span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -443,27 +472,50 @@ function getInitials(name: string): string {
                 nextSuggestedOperators.map((op, idx) => (
                   <div
                     data-agent-id={op.agentId}
-                    class={`flex items-center gap-3 p-3.5 transition-colors hover:bg-base-200/60 cursor-default ${
+                    class={`flex items-center justify-between gap-3 p-3.5 transition-colors hover:bg-base-200/60 cursor-default ${
                       idx === 0
                         ? "bg-primary/5"
                         : ""
                     }`}
                   >
-                    <div class={`avatar placeholder size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
-                      idx === 0 ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70"
-                    }`}>
-                      {getInitials(op.nombre)}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class={`truncate font-bold text-xs ${idx === 0 ? "text-base-content font-black" : "text-base-content/80"}`}>
-                        {op.nombre}
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <div class={`avatar placeholder size-9 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
+                        idx === 0 ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70"
+                      }`}>
+                        {getInitials(op.nombre)}
                       </div>
-                      <div class="text-xxs text-base-content/40 uppercase font-semibold">
-                        {op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}
+                      <div class="min-w-0 flex-1 flex flex-col gap-0.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class={`truncate font-bold text-xs ${idx === 0 ? "text-base-content font-black" : "text-base-content/80"}`}>
+                            {op.nombre}
+                          </span>
+                          {idx === 0 && (
+                            <span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny shrink-0">Siguiente</span>
+                          )}
+                          <span class="badge badge-success/15 text-success border border-success/30 badge-xs font-bold text-tiny shrink-0">
+                            {op.disponible ? "Disponible" : (op.motivo || "No disponible")}
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-tiny text-base-content/50 font-medium flex-wrap">
+                          <span class="uppercase font-semibold text-xxs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}</span>
+                          {op.breakInicioHoy && op.breakFinHoy && (
+                            <span class="flex items-center gap-1 font-mono text-base-content/70">
+                              <Icon name="boxicons:cup-hot" size={12} class="opacity-60 shrink-0 text-warning" />
+                              <span>Break: {op.breakInicioHoy} - {op.breakFinHoy}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {idx === 0 && (
-                      <span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny">Siguiente</span>
+
+                    {unassignedTickets[idx] && (
+                      <div
+                        class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-tiny px-2 py-1 flex items-center gap-1 shrink-0 cursor-help"
+                        title={`Si se asigna en orden, recibirá: ${unassignedTickets[idx].title}`}
+                      >
+                        <span class="text-warning font-sans font-bold">↳</span>
+                        <span>{unassignedTickets[idx].pretty_id || `#${unassignedTickets[idx].id}`}</span>
+                      </div>
                     )}
                   </div>
                 ))
@@ -863,6 +915,102 @@ function getInitials(name: string): string {
       }
     </DataTable>
   </div>
+
+  <!-- Modal Detalle de Ticket Sin Asignar -->
+  <dialog id="modal-ticket-detail" class="modal" data-invgate-web-base={invgateWebBase}>
+    <div class="modal-box w-11/12 max-w-2xl border border-base-300 bg-base-100 p-0 overflow-hidden shadow-2xl">
+      <!-- Modal Header -->
+      <div class="p-5 bg-base-200/50 border-b border-base-300 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="ticket-modal-id" class="font-mono font-bold text-primary-content bg-primary px-2.5 py-1 rounded-lg text-sm shrink-0">#0</span>
+          <span id="ticket-modal-prio" class="badge badge-sm font-bold tracking-wider uppercase shrink-0"></span>
+          <span id="ticket-modal-cat" class="badge badge-neutral badge-sm font-semibold truncate shrink-0 max-w-[200px]"></span>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content" aria-label="Cerrar modal">✕</button>
+        </form>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
+        <!-- Título -->
+        <div>
+          <label class="text-xxs font-bold text-base-content/40 uppercase tracking-widest block mb-1">Título de la solicitud</label>
+          <h3 id="ticket-modal-title" class="text-base font-bold text-base-content leading-snug"></h3>
+        </div>
+
+        <!-- Grid de Metadatos -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-base-200/30 p-4 rounded-xl border border-base-300/60">
+          <div>
+            <span class="text-tiny font-medium text-base-content/50 block">Creado por</span>
+            <span id="ticket-modal-creator" class="text-xs font-bold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-tiny font-medium text-base-content/50 block">Usuario afectado (Cliente)</span>
+            <span id="ticket-modal-customer" class="text-xs font-bold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-tiny font-medium text-base-content/50 block">Ubicación / Sede</span>
+            <span id="ticket-modal-location" class="text-xs font-semibold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-tiny font-medium text-base-content/50 block">Fecha y Hora de Creación</span>
+            <span id="ticket-modal-created" class="text-xs font-mono font-semibold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-tiny font-medium text-base-content/50 block">Tiempo en cola</span>
+            <span id="ticket-modal-wait" class="text-xs font-mono font-bold"></span>
+          </div>
+          <div>
+            <span class="text-tiny font-medium text-base-content/50 block">SLA de Respuesta</span>
+            <span id="ticket-modal-sla" class="text-xs font-mono font-semibold text-info"></span>
+          </div>
+        </div>
+
+        <!-- Categoría Completa -->
+        <div id="ticket-modal-cat-full-container" class="hidden">
+          <label class="text-xxs font-bold text-base-content/40 uppercase tracking-widest block mb-1">Ruta de Categoría</label>
+          <span id="ticket-modal-cat-full" class="text-xs font-mono bg-base-200/70 px-3 py-1.5 rounded-lg block text-base-content/80"></span>
+        </div>
+
+        <!-- Descripción Completa -->
+        <div>
+          <label class="text-xxs font-bold text-base-content/40 uppercase tracking-widest block mb-1">Descripción del ticket</label>
+          <div id="ticket-modal-description" class="text-xs text-base-content/80 whitespace-pre-wrap bg-base-200/40 p-4 rounded-xl border border-base-300/40 font-sans max-h-60 overflow-y-auto leading-relaxed">
+            Sin descripción disponible.
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-base-200/50 border-t border-base-300 flex items-center justify-between gap-3">
+        <span class="text-tiny text-base-content/50">Mesa de Ayuda #36</span>
+        <div class="flex items-center gap-2">
+          <button
+            id="ticket-modal-assign-btn"
+            type="button"
+            class="btn btn-success text-success-content btn-sm font-bold gap-1.5 shadow-sm hidden"
+          >
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+            <span id="ticket-modal-assign-btn-text">Asignar a operador</span>
+          </button>
+          <a
+            id="ticket-modal-invgate-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-primary btn-sm font-semibold gap-1.5 shadow-sm"
+          >
+            <span>Abrir en InvGate</span>
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
+          <form method="dialog">
+            <button class="btn btn-ghost btn-sm">Cerrar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </dialog>
 </PageContainer>
 
 <script>
@@ -940,6 +1088,8 @@ function getInitials(name: string): string {
     let lockExpiresAt = 0;
     let lockTimeoutMs = 300000;
     let currentLockStatus: any = null;
+    let latestUnassignedTickets: any[] = [];
+    let latestDisponibilidadData: any[] = [];
 
     const formatCountdown = (ms: number): string => {
       if (ms <= 0) return "0:00";
@@ -1018,6 +1168,7 @@ function getInitials(name: string): string {
 
     // Dynamic UI Update from API Response
     const updateUI = (data: any[]) => {
+      latestDisponibilidadData = data || [];
       // Update Undo button state
       const opWithUndo = data.find(op => op.lastAutogestionUndo !== null && op.lastAutogestionUndo !== undefined);
       const btnUndo = document.getElementById("btn-undo") as HTMLButtonElement | null;
@@ -1158,8 +1309,10 @@ function getInitials(name: string): string {
         }
       }
 
-      const queueContainer = document.getElementById("queue-container");
-      if (queueContainer) {
+      const updateQueueUI = (data: any[]) => {
+        const queueContainer = document.getElementById("queue-container");
+        if (!queueContainer) return;
+
         const available = data.filter((op) => op.disponible);
         const sortedQueue = [...available].sort((a, b) => {
           const tA = a.lastAutogestionAssignedAt ?? 0;
@@ -1183,20 +1336,39 @@ function getInitials(name: string): string {
             const containerClass = isFirst ? "bg-primary/5" : "";
             const titleClass = isFirst ? "text-base-content font-black" : "text-base-content/80";
 
+            const projTicket = latestUnassignedTickets[idx];
+            const projBadge = projTicket
+              ? `<div class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-tiny px-2 py-1 flex items-center gap-1 shrink-0 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="text-warning font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
+              : "";
+
+            const statusText = op.disponible ? "Disponible" : (op.motivo || "No disponible");
+            const statusBadgeClass = op.disponible ? "badge-success/15 text-success border border-success/30" : "badge-neutral opacity-70";
+
+            const breakStr = op.breakInicioHoy && op.breakFinHoy
+              ? `<span class="flex items-center gap-1 font-mono text-base-content/70"><svg class="size-3 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`
+              : "";
+
             return `
-              <div data-agent-id="${op.agentId}" class="flex items-center gap-3 p-3.5 transition-colors hover:bg-base-200/60 cursor-default ${containerClass}">
-                <div class="avatar placeholder size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarBg}">
-                  ${escapeHtml(getInitialsJs(op.nombre))}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="truncate font-bold text-xs ${titleClass}">
-                    ${escapeHtml(op.nombre)}
+              <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3 p-3.5 transition-colors hover:bg-base-200/60 cursor-default ${containerClass}">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                  <div class="avatar placeholder size-9 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarBg}">
+                    ${escapeHtml(getInitialsJs(op.nombre))}
                   </div>
-                  <div class="text-xxs text-base-content/40 uppercase font-semibold">
-                    ${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}
+                  <div class="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="truncate font-bold text-xs ${titleClass}">
+                        ${escapeHtml(op.nombre)}
+                      </span>
+                      ${isFirst ? '<span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny shrink-0">Siguiente</span>' : ''}
+                      <span class="badge ${statusBadgeClass} badge-xs font-bold text-tiny shrink-0">${escapeHtml(statusText)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-tiny text-base-content/50 font-medium flex-wrap">
+                      <span class="uppercase font-semibold text-xxs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
+                      ${breakStr}
+                    </div>
                   </div>
                 </div>
-                ${isFirst ? '<span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny">Siguiente</span>' : ''}
+                ${projBadge}
               </div>
             `;
           }).join("");
@@ -1214,7 +1386,9 @@ function getInitials(name: string): string {
             nextAssignedInfo.textContent = sortedQueue[0].nombre;
           }
         }
-      }
+      };
+
+      updateQueueUI(data);
 
       // 4. Update each table row
       data.forEach((op) => {
@@ -1458,9 +1632,172 @@ function getInitials(name: string): string {
       showToast(message, type === "success" ? "alert-success" : "alert-error");
     };
 
-    // Event delegation for exceptional states and assignments
+    // Event delegation for exceptional states, assignments, and ticket details
     document.addEventListener("click", async (e) => {
       const target = e.target as HTMLElement;
+
+      // -1. Open unassigned ticket detail modal
+      const ticketCard = target.closest("[data-ticket-id]");
+      if (ticketCard) {
+        const ticketId = Number(ticketCard.getAttribute("data-ticket-id"));
+        const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
+        const modal = document.getElementById("modal-ticket-detail") as HTMLDialogElement | null;
+
+        if (ticket && modal) {
+          const webBase = modal.getAttribute("data-invgate-web-base") || "";
+
+          const elId = document.getElementById("ticket-modal-id");
+          const elTitle = document.getElementById("ticket-modal-title");
+          const elPrio = document.getElementById("ticket-modal-prio");
+          const elCat = document.getElementById("ticket-modal-cat");
+          const elCatFull = document.getElementById("ticket-modal-cat-full");
+          const elCatFullContainer = document.getElementById("ticket-modal-cat-full-container");
+          const elCreator = document.getElementById("ticket-modal-creator");
+          const elCustomer = document.getElementById("ticket-modal-customer");
+          const elLocation = document.getElementById("ticket-modal-location");
+          const elCreated = document.getElementById("ticket-modal-created");
+          const elWait = document.getElementById("ticket-modal-wait");
+          const elSla = document.getElementById("ticket-modal-sla");
+          const elDescription = document.getElementById("ticket-modal-description");
+          const elLink = document.getElementById("ticket-modal-invgate-link") as HTMLAnchorElement | null;
+
+          const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
+            1: { label: "Baja", badgeClass: "badge-neutral opacity-60" },
+            2: { label: "Media", badgeClass: "badge-info/20 text-info" },
+            3: { label: "Alta", badgeClass: "badge-warning/20 text-warning font-semibold" },
+            4: { label: "Urgente", badgeClass: "badge-warning text-warning-content font-bold" },
+            5: { label: "Crítica", badgeClass: "badge-error text-error-content font-bold" },
+          };
+
+          if (elId) elId.textContent = ticket.pretty_id || `#${ticket.id}`;
+          if (elTitle) elTitle.textContent = ticket.title || "Sin título";
+          
+          if (elPrio) {
+            const prio = PRIORITY_MAP[ticket.priority_id];
+            if (prio) {
+              elPrio.textContent = prio.label;
+              elPrio.className = `badge badge-sm font-bold tracking-wider uppercase shrink-0 ${prio.badgeClass}`;
+              elPrio.classList.remove("hidden");
+            } else {
+              elPrio.classList.add("hidden");
+            }
+          }
+
+          if (elCat) {
+            if (ticket.category_last_name) {
+              elCat.textContent = ticket.category_last_name;
+              elCat.classList.remove("hidden");
+            } else {
+              elCat.classList.add("hidden");
+            }
+          }
+
+          if (elCatFullContainer && elCatFull) {
+            if (ticket.category_name) {
+              elCatFull.textContent = ticket.category_name;
+              elCatFullContainer.classList.remove("hidden");
+            } else {
+              elCatFullContainer.classList.add("hidden");
+            }
+          }
+
+          // Match creator with available operators
+          const creatorUsername = (ticket.creator_username || "").toLowerCase().trim();
+          const creatorNameNorm = (ticket.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+          const matchingAvailableOp = latestDisponibilidadData.find((op) => {
+            if (!op.disponible) return false;
+            if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+            if (op.nombre && creatorNameNorm) {
+              const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+              if (opNameNorm === creatorNameNorm) return true;
+              const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+              if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+            }
+            return false;
+          });
+
+          if (elCreator) {
+            if (matchingAvailableOp) {
+              elCreator.innerHTML = `<span class="text-success font-bold">${escapeHtml(ticket.creator_name || "Creador")} <span class="text-xxs font-semibold opacity-90">(Disponible)</span></span>`;
+            } else {
+              elCreator.textContent = ticket.creator_name || "Sin especificar";
+            }
+          }
+          
+          if (elCustomer) elCustomer.textContent = ticket.customer_name || "Mismo creador";
+          if (elLocation) elLocation.textContent = ticket.location_name || "No especificada";
+
+          const btnAssignModal = document.getElementById("ticket-modal-assign-btn") as HTMLButtonElement | null;
+          const btnAssignModalText = document.getElementById("ticket-modal-assign-btn-text");
+
+          if (btnAssignModal) {
+            if (matchingAvailableOp) {
+              btnAssignModal.setAttribute("data-op-assign-btn", String(matchingAvailableOp.agentId));
+              if (btnAssignModalText) {
+                btnAssignModalText.textContent = `Asignar a ${matchingAvailableOp.nombre}`;
+              }
+              btnAssignModal.classList.remove("hidden");
+            } else {
+              btnAssignModal.removeAttribute("data-op-assign-btn");
+              btnAssignModal.classList.add("hidden");
+            }
+          }
+
+          if (elCreated) {
+            elCreated.textContent = ticket.created_at
+              ? new Date(ticket.created_at * 1000).toLocaleString("es-AR", {
+                  dateStyle: "short",
+                  timeStyle: "medium",
+                })
+              : "Desconocida";
+          }
+
+          if (elWait) {
+            if (ticket.created_at) {
+              const elapsedMin = Math.floor((Date.now() - ticket.created_at * 1000) / 60000);
+              const formatWait = elapsedMin >= 60 
+                ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
+                : `${elapsedMin}m`;
+              elWait.textContent = formatWait;
+              elWait.className = `text-xs font-mono font-bold ${
+                elapsedMin >= 60 ? "text-error" : elapsedMin >= 30 ? "text-warning" : "text-base-content/80"
+              }`;
+            } else {
+              elWait.textContent = "-";
+            }
+          }
+
+          if (elSla) elSla.textContent = ticket.sla_incident_first_reply || "No configurado";
+
+          if (elDescription) {
+            const rawDesc = ticket.description && ticket.description.trim().length > 0
+              ? ticket.description
+              : "Sin descripción provista.";
+            
+            // Render safe HTML parsing for formatted ticket descriptions (tables, paragraphs, breaks)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(rawDesc, "text/html");
+            
+            // Remove any script or iframe tags if present
+            doc.querySelectorAll("script, iframe, object, embed").forEach((node) => node.remove());
+            
+            elDescription.innerHTML = doc.body.innerHTML;
+          }
+
+          if (elLink) {
+            if (webBase) {
+              elLink.href = `${webBase}/requests/show/index/id/${ticket.id}`;
+              elLink.classList.remove("hidden");
+            } else {
+              elLink.classList.add("hidden");
+            }
+          }
+
+          modal.showModal();
+        }
+        return;
+      }
 
       // 0. Open exception modal
       const openModalBtn = target.closest("[data-action-open-exception-modal]");
@@ -1707,6 +2044,10 @@ function getInitials(name: string): string {
               return;
             }
             if (res.ok && data.success) {
+              const modalTicket = document.getElementById("modal-ticket-detail") as HTMLDialogElement | null;
+              if (modalTicket && modalTicket.open) {
+                modalTicket.close();
+              }
               showAlert("success", `Autogestión asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
               await fetchDisponibilidad();
             } else {
@@ -1729,6 +2070,7 @@ function getInitials(name: string): string {
         const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=36");
         if (!res.ok) return;
         const data = await res.json();
+        latestUnassignedTickets = data.tickets || [];
         const countEl = document.getElementById("stat-unassigned-count");
         const listEl = document.getElementById("unassigned-tickets-list");
         if (countEl) {
@@ -1737,21 +2079,112 @@ function getInitials(name: string): string {
         }
         if (listEl) {
           if (data.tickets && data.tickets.length > 0) {
+            const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
+              1: { label: "Baja", badgeClass: "badge-neutral opacity-60" },
+              2: { label: "Media", badgeClass: "badge-info/20 text-info" },
+              3: { label: "Alta", badgeClass: "badge-warning/20 text-warning font-semibold" },
+              4: { label: "Urgente", badgeClass: "badge-warning text-warning-content font-bold" },
+              5: { label: "Crítica", badgeClass: "badge-error text-error-content font-bold" },
+            };
+
             listEl.innerHTML = data.tickets.map((t: any) => {
               const timeStr = t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : "";
-              const catBadge = t.category_last_name
-                ? `<span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[170px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
+              
+              // Calculate elapsed waiting time
+              let waitingBadge = "";
+              if (t.created_at) {
+                const elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
+                let colorClass = "badge-neutral/70 text-base-content/70";
+                if (elapsedMin >= 60) {
+                  colorClass = "badge-error text-error-content font-bold";
+                } else if (elapsedMin >= 30) {
+                  colorClass = "badge-warning text-warning-content font-semibold";
+                }
+                const formatWait = elapsedMin >= 60 
+                  ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
+                  : `${elapsedMin}m`;
+                waitingBadge = `<span class="badge badge-xs font-mono text-tiny px-1.5 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
+              }
+
+              // SLA first reply badge
+              let slaBadge = "";
+              if (t.sla_incident_first_reply) {
+                slaBadge = `<span class="badge badge-outline badge-info badge-xs font-mono text-tiny shrink-0" title="SLA de respuesta">SLA: ${escapeHtml(t.sla_incident_first_reply)}</span>`;
+              }
+
+              const prioInfo = PRIORITY_MAP[t.priority_id] || (t.priority_id ? { label: `P${t.priority_id}`, badgeClass: "badge-neutral" } : null);
+              const prioBadge = prioInfo
+                ? `<span class="badge badge-xs font-bold text-tiny tracking-wider uppercase shrink-0 ${prioInfo.badgeClass}">${escapeHtml(prioInfo.label)}</span>`
                 : "";
+              const catBadge = t.category_last_name
+                ? `<span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[130px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
+                : "";
+
+              // Check if creator matches any available operator
+              const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+              const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+              const matchingAvailableOp = latestDisponibilidadData.find((op) => {
+                if (!op.disponible) return false;
+                if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+                if (op.nombre && creatorNameNorm) {
+                  const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+                  if (opNameNorm === creatorNameNorm) return true;
+                  const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+                  if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+                }
+                return false;
+              });
+
+              const creatorStr = t.creator_name || t.customer_name || "";
+              const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
+
+              let userRow = "";
+              if (creatorStr) {
+                if (matchingAvailableOp) {
+                  userRow = `
+                    <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate">
+                      <div class="flex items-center gap-1 min-w-0 truncate text-base-content/70">
+                        <svg class="size-3 text-success shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span class="truncate">
+                          Generado por: <strong class="text-success font-bold">${escapeHtml(creatorStr)}</strong> <span class="text-success text-xxs font-semibold">(Disponible)</span>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0"
+                        data-op-assign-btn="${matchingAvailableOp.agentId}"
+                        title="Asignar a ${escapeHtml(matchingAvailableOp.nombre)}"
+                        onclick="event.stopPropagation();"
+                      >
+                        ⚡ Asignar
+                      </button>
+                    </div>
+                  `;
+                } else {
+                  userRow = `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate"><svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate">Generado por: <strong class="text-base-content/80 font-bold">${escapeHtml(creatorStr)}</strong>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}</span></div>`;
+                }
+              }
+
+              const locationRow = t.location_name
+                ? `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate"><svg class="size-3 text-info opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/80 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
+                : "";
+
               return `
-                <div class="p-3.5 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-1.5 cursor-default group">
+                <div data-ticket-id="${t.id}" class="p-3.5 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-1.5 cursor-pointer group">
                   <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                      <span class="font-mono font-bold text-primary-content bg-primary px-2.5 py-0.5 rounded-md text-xs shrink-0">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
+                    <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                      <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs shrink-0">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
+                      ${waitingBadge}
+                      ${prioBadge}
                       ${catBadge}
+                      ${slaBadge}
                     </div>
                     <span class="text-xs text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
                   </div>
                   <div class="font-semibold text-base-content text-xs group-hover:text-primary transition-colors" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+                  ${userRow}
+                  ${locationRow}
                 </div>
               `;
             }).join("");

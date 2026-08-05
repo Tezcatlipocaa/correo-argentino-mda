@@ -1,6 +1,7 @@
 import { db } from "@db/index";
 import { agents, schedules, assignmentLock } from "@db/schema";
 import { eq, and } from "drizzle-orm";
+import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
 
@@ -47,8 +48,21 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
   const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
   const dayName = dayNames[now.getDay()];
 
+  // Obtener miembros de la Mesa 36 de InvGate
+  const helpdesk36Members = await getHelpdeskMembers(36);
+  const helpdesk36Usernames = new Set(
+    helpdesk36Members
+      .map((m) => (m.username ? m.username.split("@")[0].toLowerCase().trim() : ""))
+      .filter(Boolean)
+  );
+  const helpdesk36FullNames = new Set(
+    helpdesk36Members
+      .map((m) => m.fullName.toLowerCase().replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+  );
+
   // 1. Fetch all agents
-  const dbAgents = await db.select({
+  const dbAgentsAll = await db.select({
     id: agents.id, name: agents.name, username: agents.username, location: agents.location,
     horarioDefault: agents.horarioDefault,
     esquemaSemanal: agents.esquemaSemanal, esquemaHorario: agents.esquemaHorario,
@@ -61,6 +75,37 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     estadoExcepcionalAt: agents.estadoExcepcionalAt,
     estadoExcepcionalMinutos: agents.estadoExcepcionalMinutos,
   }).from(agents);
+
+  // Filtrar solo operadores que pertenecen a la Mesa 36 de InvGate
+  const dbAgents = dbAgentsAll.filter((agent) => {
+    if (helpdesk36Members.length === 0) return true; // Fallback por seguridad si falla InvGate
+    
+    // Check 1: Match por username
+    if (agent.username) {
+      const cleanUser = agent.username.split("@")[0].toLowerCase().trim();
+      if (helpdesk36Usernames.has(cleanUser)) return true;
+    }
+    
+    // Check 2: Match por nombre completo o cruzado (Apellido / Nombre)
+    if (agent.name) {
+      const cleanName = agent.name.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+      const tokens = cleanName.split(" ").filter((t) => t.length > 2);
+
+      for (const member of helpdesk36Members) {
+        const memberClean = member.fullName.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        // Exact match normalized
+        if (cleanName === memberClean) return true;
+
+        // Si los tokens principales del nombre están incluidos
+        if (tokens.length >= 2) {
+          const matchesAllTokens = tokens.every((tok) => memberClean.includes(tok));
+          if (matchesAllTokens) return true;
+        }
+      }
+    }
+
+    return false;
+  });
 
   // 2. Fetch today's persistent schedule overrides
   const dbSchedules = await db
