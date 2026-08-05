@@ -1,18 +1,19 @@
 import { invgateGet } from "@lib/invgateClient";
 import type { InvgateIncident, InvgateByStatusResponse } from "@/types/invgate";
+import { getCategoryMap, getLastCategoryName } from "./categoryCache";
 
 export interface UnassignedTicketsResult {
   ok: boolean;
   helpdeskId: number;
-  tickets: InvgateIncident[];
+  tickets: Array<InvgateIncident & { category_name?: string; category_last_name?: string }>;
   error?: string;
 }
 
 /**
- * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 2510).
+ * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 36).
  */
 export async function getUnassignedTicketsByHelpdesk(
-  helpdeskId: number = 2510
+  helpdeskId: number = 36
 ): Promise<UnassignedTicketsResult> {
   try {
     // 1. Obtener IDs de incidentes abiertos de la mesa de ayuda
@@ -62,10 +63,22 @@ export async function getUnassignedTicketsByHelpdesk(
     // Ordenar por fecha de creación (más antiguos primero)
     allUnassigned.sort((a, b) => a.created_at - b.created_at);
 
+    // Resolver nombres de categorías
+    const catMap = await getCategoryMap();
+    const enrichedTickets = allUnassigned.map((t) => {
+      const catFullName = t.category_id ? catMap.get(t.category_id) || "" : "";
+      const lastCatName = getLastCategoryName(catFullName);
+      return {
+        ...t,
+        category_name: catFullName,
+        category_last_name: lastCatName || catFullName,
+      };
+    });
+
     return {
       ok: true,
       helpdeskId,
-      tickets: allUnassigned,
+      tickets: enrichedTickets,
     };
   } catch (err: any) {
     return {

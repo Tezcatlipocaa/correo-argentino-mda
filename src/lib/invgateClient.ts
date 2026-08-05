@@ -17,16 +17,16 @@ async function invgateRequest<T>(
   body?: unknown,
   timeoutMs = 15000,
 ): Promise<InvgateResult<T>> {
-  const apiKey = getEnv("INVGATE_API_KEY");
-  const baseUrl = getEnv("INVGATE_BASE_URL");
-  const rawUsername = getEnv("INVGATE_API_USERNAME");
+  const apiKey = getEnv("INVGATE_QA_API_KEY") || getEnv("INVGATE_API_KEY");
+  const baseUrl = getEnv("INVGATE_QA_BASE_URL") || getEnv("INVGATE_BASE_URL");
+  const rawUsername = getEnv("INVGATE_QA_API_USERNAME") || getEnv("INVGATE_API_USERNAME");
 
   if (!apiKey) {
-    throw new Error("[InvGate] Variable de entorno INVGATE_API_KEY no definida.");
+    throw new Error("[InvGate] Variable de entorno INVGATE_API_KEY (o INVGATE_QA_API_KEY) no definida.");
   }
 
   if (!baseUrl) {
-    throw new Error("[InvGate] Variable de entorno INVGATE_BASE_URL no definida.");
+    throw new Error("[InvGate] Variable de entorno INVGATE_BASE_URL (o INVGATE_QA_BASE_URL) no definida.");
   }
 
   const apiUsername = rawUsername || "portalmda";
