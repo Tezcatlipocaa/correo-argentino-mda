@@ -25,6 +25,7 @@ export const employees = sqliteTable("employees", {
   telefono: text("telefono"),
   sucursal: text("sucursal"),
   invgateExists: integer("invgate_exists", { mode: "boolean" }).default(false),
+  invgateId: integer("invgate_id"),
   position: text("position"),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -786,7 +787,8 @@ export const weeklyGuardiaPasivaAssignments = sqliteTable("weekly_guardia_pasiva
   endDate: text("end_date").notNull(),             // Domingo de la semana "YYYY-MM-DD"
   supervisorName: text("supervisor_name").notNull(),// Nombre de texto libre
   referenteId: integer("referente_id")
-    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  operatorId: integer("operator_id")
     .references(() => agents.id, { onDelete: "cascade" }),
 });
 
@@ -805,6 +807,10 @@ export const weeklyGuardiaPasivaAssignmentsRelations = relations(
   ({ one }) => ({
     referente: one(agents, {
       fields: [weeklyGuardiaPasivaAssignments.referenteId],
+      references: [agents.id],
+    }),
+    operator: one(agents, {
+      fields: [weeklyGuardiaPasivaAssignments.operatorId],
       references: [agents.id],
     }),
   })

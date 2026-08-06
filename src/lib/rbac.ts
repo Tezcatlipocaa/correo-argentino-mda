@@ -23,6 +23,7 @@ export interface RoutePermission {
 }
 
 export const routePermissions: RoutePermission[] = [
+  { path: "/admin/usuarios-sin-ubicacion", roles: ["admin"] },
   { path: "/admin/usuarios", roles: ["admin"] },
   { path: "/admin/auditoria", roles: ["admin"] },
   { path: "/admin/invgate/ubicaciones", roles: ["admin", "supervisor", "team_leader"] },
@@ -111,6 +112,10 @@ export function getModulePermissions(moduleName: string, userRole: string): Modu
     // Leen: todos / Escriben: admin, supervisor, team_leader
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
+  } else if (moduleName === "usuarios") {
+    // Solo lectura por defecto, escritura solo para admin
+    perm.canRead = true;
+    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   }
 
   return perm;

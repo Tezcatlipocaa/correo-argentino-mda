@@ -14,7 +14,12 @@ const TEMPLATE_MAP: Record<ToastType, string> = {
   'alert-info': 'template-info'
 };
 
-export function showToast(message: string, type: ToastType = 'alert-info', durationMs: number = 3000) {
+export function showToast(
+  message: string,
+  type: ToastType = 'alert-info',
+  durationMs: number = 3000,
+  options?: { onClick?: () => void; cursor?: string }
+) {
   const container = document.getElementById('global-toast-container');
   if (!container) return;
 
@@ -23,6 +28,11 @@ export function showToast(message: string, type: ToastType = 'alert-info', durat
 
   const toastDiv = document.createElement('div');
   toastDiv.className = `alert ${CLASS_MAP[resolvedType]} shadow-xl rounded-2xl border border-base-content/5 flex items-center gap-3 text-sm font-semibold slide-in-right`;
+
+  if (options?.onClick) {
+    toastDiv.addEventListener('click', options.onClick);
+    toastDiv.style.cursor = options.cursor || 'pointer';
+  }
 
   const templateId = TEMPLATE_MAP[resolvedType];
   const templateContainer = document.getElementById(templateId);

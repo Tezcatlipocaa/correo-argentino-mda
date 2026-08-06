@@ -112,70 +112,74 @@ const totalMembers = visibleHelpdesks.reduce(
     totalMembers={totalMembers}
   />
 
-  <div class="flex flex-nowrap items-center gap-2 md:gap-3 w-full">
-    <div class="flex-1 min-w-0">
-      <SearchBar
-        id="soportes-search"
-        placeholder="Buscar por nombre SM, Invgate, topico..."
-        class="w-full"
-      />
+  <div id="soportes-filters" class="flex flex-col gap-2 md:gap-3 w-full">
+    <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">
+      {
+        uniqueParentNames.length > 0 && (
+          <select
+            id="filter-parent"
+            class="select grow select-bordered shrink-0 select-sm md:select-md"
+          >
+            <option value="all">Todas las mesas padre</option>
+            {uniqueParentNames.map((name) => (
+              <option value={name}>{name}</option>
+            ))}
+          </select>
+        )
+      }
+
+      <select
+        id="filter-status"
+        class="select select-bordered shrink-0 select-sm md:select-md"
+      >
+        <option value="all">Todos los estados</option>
+        <option value="active">Activos</option>
+        <option value="inactive">Inactivos</option>
+      </select>
+
+      <select
+        id="sort-by"
+        class="select select-bordered shrink-0 select-sm md:select-md"
+      >
+        <option value="name-asc">Nombre A-Z</option>
+        <option value="name-desc">Nombre Z-A</option>
+        <option value="members-desc">Más miembros</option>
+        <option value="members-asc">Menos miembros</option>
+        <option value="topics-desc">Más tópicos</option>
+        <option value="topics-asc">Menos tópicos</option>
+      </select>
     </div>
 
-    <select
-      id="filter-status"
-      class="select select-bordered shrink-0 select-sm md:select-md"
-    >
-      <option value="all">Todos los estados</option>
-      <option value="active">Activos</option>
-      <option value="inactive">Inactivos</option>
-    </select>
-
-    {
-      uniqueParentNames.length > 0 && (
-        <select
-          id="filter-parent"
-          class="select select-bordered shrink-0 select-sm md:select-md"
-        >
-          <option value="all">Todas las mesas padre</option>
-          {uniqueParentNames.map((name) => (
-            <option value={name}>{name}</option>
-          ))}
-        </select>
-      )
-    }
-
-    <select
-      id="sort-by"
-      class="select select-bordered shrink-0 select-sm md:select-md"
-    >
-      <option value="name-asc">Nombre A-Z</option>
-      <option value="name-desc">Nombre Z-A</option>
-      <option value="members-desc">Más miembros</option>
-      <option value="members-asc">Menos miembros</option>
-      <option value="topics-desc">Más tópicos</option>
-      <option value="topics-asc">Menos tópicos</option>
-    </select>
-
-    <button
-      id="clear-filters"
-      class="btn btn-outline btn-error font-semibold gap-2 shrink-0 btn-sm md:btn-md"
-      aria-label="Limpiar todos los filtros"
-      title="Limpiar todos los filtros"
-    >
-      <Icon name="boxicons:trash" class="size-4" aria-hidden="true" />
-      <span class="hidden lg:inline">Limpiar filtros</span>
-    </button>
-    {
-      canExport && (
-        <ExportCsvButton
-          id="export-csv"
-          title="Exportar como CSV"
-          label="CSV"
-          shortLabel="CSV"
-          iconSize={16}
+    <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">
+      <div class="flex-1 min-w-96">
+        <SearchBar
+          id="soportes-search"
+          placeholder="Buscar por nombre SM, Invgate, topico..."
+          class="w-full"
         />
-      )
-    }
+      </div>
+
+      <button
+        id="clear-filters"
+        class="btn btn-outline btn-error font-semibold gap-2 shrink-0 btn-sm md:btn-md"
+        aria-label="Limpiar todos los filtros"
+        title="Limpiar todos los filtros"
+      >
+        <Icon name="boxicons:trash" class="size-4" aria-hidden="true" />
+        <span class="hidden lg:inline">Limpiar filtros</span>
+      </button>
+      {
+        canExport && (
+          <ExportCsvButton
+            id="export-csv"
+            title="Exportar como CSV"
+            label="Exportar CSV"
+            shortLabel="CSV"
+            iconSize={16}
+          />
+        )
+      }
+    </div>
   </div>
 
   <div

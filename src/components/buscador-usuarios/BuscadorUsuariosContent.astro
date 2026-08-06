@@ -10,6 +10,7 @@ import HeroSearchBar from "@components/ui/HeroSearchBar.astro";
 import ChromeExtensionBanner from "./ChromeExtensionBanner.astro";
 import EditUserModal from "./EditUserModal.astro";
 import TerminalModal from "./TerminalModal.astro";
+import Modal from "@components/ui/Modal.astro";
 import SkeletonCard from "@components/ui/skeletons/SkeletonCard.astro";
 const cleanBase = getCleanBase();
 const userRole = Astro.locals.user?.role || "";
@@ -138,11 +139,42 @@ const userRole = Astro.locals.user?.role || "";
 <!-- Modal de Consola Terminal (Grupos AD) -->
 <TerminalModal />
 
+<!-- Modal de Confirmación de Ticket InvGate -->
+<Modal
+  id="invgate-ticket-modal"
+  title="Crear Ticket en InvGate"
+  icon="boxicons:user-plus-filled"
+  size="md"
+>
+  <Fragment slot="content">
+    <p class="text-sm text-base-content/80">
+      ¿Estás seguro que deseas crear un ticket solicitando acceso a InvGate para
+      el usuario <strong id="modal-user-name"></strong>?
+    </p>
+  </Fragment>
+  <Fragment slot="actions">
+    <div class="flex justify-end gap-2 mt-6">
+      <form method="dialog">
+        <button
+          class="btn btn-ghost border border-base-300 hover:bg-base-200 cursor-pointer"
+          >Cancelar</button
+        >
+      </form>
+      <button
+        id="confirm-create-ticket-btn"
+        class="btn btn-primary cursor-pointer shadow-md">Crear Ticket</button
+      >
+    </div>
+  </Fragment>
+</Modal>
+
 <script is:inline define:vars={{ userRole }}>
   window.__userRole = userRole;
 </script>
 
 <script>
+  import { showToast } from "@lib/toastClient";
+
   let isLoaded = false;
   let currentUsers: any[] = [];
 
@@ -667,7 +699,7 @@ const userRole = Astro.locals.user?.role || "";
       } else if (sucursales.length > 1) {
         for (const s of sucursales) {
           const text = s.name ? `${s.code} — ${s.name}` : s.code;
-          const btn = sucursalBtn.cloneNode(true);
+          const btn = sucursalBtn.cloneNode(true) as HTMLElement;
           btn.setAttribute("data-copy-value", s.code);
           btn.setAttribute("data-copy-label-default", text);
           btn.setAttribute("aria-label", `Copiar NIS ${s.code}`);
@@ -758,43 +790,19 @@ const userRole = Astro.locals.user?.role || "";
         netUserBtn.classList.add("hidden");
       }
 
-      const invgateBtn = clone.querySelector(
-        "[data-invgate-copy-btn]",
-      ) as HTMLElement | null;
-      if (invgateBtn && user.usuario && !user.invgateExists) {
-        invgateBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const ticketBody = `Se solicita asignar al usuario en el grupo InvGate Service Management | Usuarios y grupos.
 
-Usuario de red: ${user.usuario}
-Nombre completo: ${user.nombre}
-DNI: ${user.dni}
-Correo corporativo: ${user.usuario.toLowerCase()}@correoargentino.com.ar`;
-          copyText(ticketBody).then((ok) => {
-            if (!ok) return;
-            const tooltip = (invgateBtn as Element).closest(
-              ".tooltip",
-            ) as HTMLElement | null;
-            const originalTip = tooltip?.getAttribute("data-tip");
-            if (tooltip) {
-              tooltip.setAttribute(
-                "data-tip",
-                "Descripción del ticket copiada",
-              );
-              tooltip.classList.replace("tooltip-neutral", "tooltip-success");
-              tooltip.classList.add("tooltip-open");
-            }
-            setTimeout(() => {
-              if (tooltip) {
-                tooltip.setAttribute("data-tip", originalTip || "");
-                tooltip.classList.replace("tooltip-success", "tooltip-neutral");
-                tooltip.classList.remove("tooltip-open");
-              }
-            }, 2000);
+      const createTicketBtn = clone.querySelector(
+        "[data-invgate-create-ticket-btn]",
+      ) as HTMLElement | null;
+      if (createTicketBtn) {
+        if (user.invgateExists) {
+          createTicketBtn.classList.add("hidden");
+        } else {
+          createTicketBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openTicketModal(user);
           });
-        });
-      } else if (invgateBtn) {
-        invgateBtn.closest(".tooltip")?.classList.add("hidden");
+        }
       }
 
       fragment.appendChild(clone);
@@ -887,6 +895,68 @@ Correo corporativo: ${user.usuario.toLowerCase()}@correoargentino.com.ar`;
       }
     }, 300);
   }
+
+  // Funciones del modal de ticket InvGate
+  let selectedUserForTicket: any = null;
+  const ticketModal = document.getElementById("invgate-ticket-modal") as any;
+  const modalUserName = document.getElementById("modal-user-name");
+  const confirmCreateTicketBtn = document.getElementById(
+    "confirm-create-ticket-btn",
+  ) as HTMLButtonElement | null;
+
+  function openTicketModal(user: any) {
+    if (!ticketModal || !modalUserName) return;
+    selectedUserForTicket = user;
+    modalUserName.textContent = user.nombre || "Usuario";
+    ticketModal.showModal();
+  }
+
+  confirmCreateTicketBtn?.addEventListener("click", async () => {
+    if (!selectedUserForTicket || !confirmCreateTicketBtn) return;
+
+    const originalText = confirmCreateTicketBtn.innerHTML;
+    confirmCreateTicketBtn.disabled = true;
+    confirmCreateTicketBtn.innerHTML =
+      '<span class="loading loading-spinner loading-xs"></span> Creando...';
+
+    try {
+      const response = await fetch("/api/usuarios/create-invgate-ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          usuario: selectedUserForTicket.usuario,
+          nombreCompleto: selectedUserForTicket.nombre,
+          dni: selectedUserForTicket.dni,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        ticketModal?.close();
+        if (data.ticketUrl) {
+          window.open(data.ticketUrl, "_blank");
+          showToast(
+            "Ticket creado con éxito y abierto en una nueva pestaña.",
+            "alert-success",
+            6000
+          );
+        } else {
+          showToast("Ticket creado con éxito.", "alert-success");
+        }
+      } else {
+        showToast(data.error || "Error al crear el ticket.", "alert-error");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast("Error de conexión al crear el ticket.", "alert-error");
+    } finally {
+      confirmCreateTicketBtn.disabled = false;
+      confirmCreateTicketBtn.innerHTML = originalText;
+    }
+  });
 
   // Funciones del modal de edición
   function openEditModal(user: any) {

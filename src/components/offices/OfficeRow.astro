@@ -260,7 +260,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
             hasInfoSection && (
               <div
                 class:list={[
-                  "space-y-5",
+                  "flex flex-col gap-5",
                   hasAssetsSection ? "lg:w-2/5" : "w-full",
                 ]}
               >
@@ -366,7 +366,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 )}
 
                 {/* Personal de la sucursal */}
-                <section class="space-y-3" data-branch-personnel data-nis={office.code}>
+                <section class="space-y-3 hidden" data-branch-personnel data-nis={office.code}>
                   <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
                     <Icon
                       name="boxicons:group-filled"
@@ -620,6 +620,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
           return;
         }
 
+        section.classList.remove("hidden");
         const html = data.personnel
           .map(
             (p) => `
@@ -672,6 +673,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
         content.innerHTML = html;
       })
       .catch(() => {
+        section.classList.remove("hidden");
         content.innerHTML =
           '<p class="text-xs text-error">Error al cargar personal</p>';
       });
@@ -714,24 +716,53 @@ const officeDirectoryRowGridClass = isAllowedAdmin
     }, 2500);
   }
 
+  let globalObserver = null;
+
   function observePersonnelSections() {
-    const sections = document.querySelectorAll("[data-branch-personnel]");
-    sections.forEach((section) => {
-      const detailRow = section.closest("[data-office-detail-row]");
-      if (!detailRow) return;
+    if (globalObserver) {
+      globalObserver.disconnect();
+    }
 
-      if (!detailRow.classList.contains("hidden")) {
-        loadPersonnel(section);
-        return;
-      }
-
-      const observer = new MutationObserver(() => {
-        if (!detailRow.classList.contains("hidden")) {
-          loadPersonnel(section);
-          observer.disconnect();
+    globalObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "attributes" && mutation.attributeName === "class") {
+          const target = mutation.target;
+          if (target.hasAttribute("data-office-detail-row") && !target.classList.contains("hidden")) {
+            const section = target.querySelector("[data-branch-personnel]");
+            if (section) {
+              loadPersonnel(section);
+            }
+          }
+        } else if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const el = node;
+              if (el.hasAttribute("data-office-detail-row") && !el.classList.contains("hidden")) {
+                const section = el.querySelector("[data-branch-personnel]");
+                if (section) loadPersonnel(section);
+              }
+              const expandedDetails = el.querySelectorAll("[data-office-detail-row]:not(.hidden)");
+              expandedDetails.forEach((detail) => {
+                const section = detail.querySelector("[data-branch-personnel]");
+                if (section) loadPersonnel(section);
+              });
+            }
+          });
         }
       });
-      observer.observe(detailRow, { attributes: true, attributeFilter: ["class"] });
+    });
+
+    globalObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+      childList: true,
+      subtree: true,
+    });
+
+    const visibleDetails = document.querySelectorAll("[data-office-detail-row]:not(.hidden)");
+    visibleDetails.forEach((detail) => {
+      const section = detail.querySelector("[data-branch-personnel]");
+      if (section) loadPersonnel(section);
     });
   }
 

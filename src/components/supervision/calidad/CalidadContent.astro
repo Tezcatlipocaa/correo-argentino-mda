@@ -375,7 +375,6 @@ const cleanBase = getCleanBase();
           <div class="flex flex-col gap-2">
             <SearchBar
               id="operator-search"
-              label="Buscar operador"
               placeholder="Buscar por nombre o legajo..."
             />
             <div class="flex gap-2">
@@ -590,9 +589,7 @@ const cleanBase = getCleanBase();
             </div>
           </div>
 
-          <!-- Header del Detalle -->
           {isAgent ? (
-            <!-- Vista de Agente (Fila única original con métricas en el medio) -->
             <div
               class="bg-base-100 border-l-4 border-l-secondary rounded-2xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 shadow-md border-y border-r border-base-200 mt-2"
             >
@@ -661,7 +658,7 @@ const cleanBase = getCleanBase();
 
               <!-- Score Card -->
               <div
-                class="sm:text-right bg-base-200/50 p-4 rounded-2xl border border-base-200 shrink-0 w-full sm:w-fit sm:min-w-[140px]"
+                class="sm:text-right bg-base-200/50 p-4 rounded-2xl border border-base-200 shrink-0 w-full sm:w-fit sm:min-w-35"
               >
                 <div
                   class="text-xs font-bold uppercase tracking-widest text-base-content/50 mb-1"
@@ -677,7 +674,6 @@ const cleanBase = getCleanBase();
               </div>
             </div>
           ) : (
-            <!-- Vista de Supervisor/Admin/Referente (Bloque de métricas abajo) -->
             <div
               class="bg-base-100 border-l-4 border-l-secondary rounded-2xl p-6 sm:p-8 flex flex-col gap-6 shadow-md border-y border-r border-base-200 mt-2"
             >
@@ -728,7 +724,7 @@ const cleanBase = getCleanBase();
 
                 <!-- Score Card -->
                 <div
-                  class="sm:text-right bg-base-200/50 p-4 rounded-2xl border border-base-200 shrink-0 w-full sm:w-fit sm:min-w-[140px]"
+                  class="sm:text-right bg-base-200/50 p-4 rounded-2xl border border-base-200 shrink-0 w-full sm:w-fit sm:min-w-35"
                 >
                   <div
                     class="text-xs font-bold uppercase tracking-widest text-base-content/50 mb-1"
@@ -746,19 +742,19 @@ const cleanBase = getCleanBase();
 
               <!-- Bottom section: Stats block -->
               <div class="flex items-center gap-3 sm:gap-4 flex-wrap bg-base-200/20 p-3 sm:p-4 rounded-2xl border border-base-200 shadow-sm w-full">
-                <div class="flex-1 min-w-[120px] flex flex-col px-2 sm:px-3 border-r border-base-200">
+                <div class="flex-1 min-w-30 flex flex-col px-2 sm:px-3 border-r border-base-200">
                   <span class="text-xxs font-bold uppercase tracking-wider text-base-content/40">Score vs Mes Ant.</span>
                   <span id="detail-stat-diff" class="text-lg sm:text-xl font-black text-base-content">--</span>
                 </div>
-                <div class="flex-1 min-w-[120px] flex flex-col px-2 sm:px-3 border-r border-base-200">
+                <div class="flex-1 min-w-30 flex flex-col px-2 sm:px-3 border-r border-base-200">
                   <span class="text-xxs font-bold uppercase tracking-wider text-base-content/40">Duración Promedio</span>
                   <span id="detail-stat-aht" class="text-lg sm:text-xl font-black text-base-content">--</span>
                 </div>
-                <div class="flex-1 min-w-[120px] flex flex-col px-2 sm:px-3 border-r border-base-200">
+                <div class="flex-1 min-w-30 flex flex-col px-2 sm:px-3 border-r border-base-200">
                   <span class="text-xxs font-bold uppercase tracking-wider text-base-content/40">Interacción</span>
                   <span id="detail-stat-interaction" class="text-lg sm:text-xl font-black text-base-content">--</span>
                 </div>
-                <div class="flex-1 min-w-[120px] flex flex-col px-2 sm:px-3">
+                <div class="flex-1 min-w-30 flex flex-col px-2 sm:px-3">
                   <span class="text-xxs font-bold uppercase tracking-wider text-base-content/40">Gestión</span>
                   <span id="detail-stat-management" class="text-lg sm:text-xl font-black text-base-content">--</span>
                 </div>
@@ -1128,7 +1124,7 @@ const cleanBase = getCleanBase();
   </Fragment>
 </Modal>
 
-<Modal id="parameters-modal" title="Configuración de Parámetros de Calidad" icon="boxicons:cog" titleClass="font-black text-lg uppercase tracking-tight" size="2xl" zIndex="z-200" class="flex flex-col h-[80vh] sm:h-[600px] w-11/12">
+<Modal id="parameters-modal" title="Configuración de Parámetros de Calidad" icon="boxicons:cog" titleClass="font-black text-lg uppercase tracking-tight" size="2xl" zIndex="z-200" class="flex flex-col h-[80vh] sm:h-150 w-11/12">
   <Fragment slot="content">
     <!-- Tabs Header -->
     <div class="tabs tabs-boxed mb-4 shrink-0 bg-base-200/50 p-1 rounded-xl">

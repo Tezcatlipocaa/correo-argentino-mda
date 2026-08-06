@@ -437,8 +437,7 @@ if (office?.type === "SUCURSAL") {
             Sin equipos registrados.
           </p>
         )}
-      </div>
-    </section>
+      </SectionCard>
 
     {/* ── Personal a cargo ── */}
       <SectionCard id="section-contacts" class="shadow-md flex-1">
@@ -512,8 +511,7 @@ if (office?.type === "SUCURSAL") {
             Sin personal vinculado.
           </p>
         )}
-      </div>
-    </section>
+      </SectionCard>
   </div>
   
   {/* ── Acciones ── */}
@@ -765,8 +763,8 @@ if (office?.type === "SUCURSAL") {
   function initTypeToggle() {
     console.log("initTypeToggle: starting initialization");
     const typeSelect = document.getElementById("select-type") as HTMLSelectElement;
-    const assetsSection = document.getElementById("section-assets");
-    const contactsSection = document.getElementById("section-contacts");
+    const assetsSection = document.getElementById("section-assets") as HTMLElement;
+    const contactsSection = document.getElementById("section-contacts") as HTMLElement;
     
     if (!typeSelect || !assetsSection || !contactsSection) {
       console.warn("initTypeToggle: required elements not found");
@@ -798,8 +796,8 @@ if (office?.type === "SUCURSAL") {
     textInputs.forEach(el => {
       if (el.name !== 'email' && el.dataset.formatBound !== "true") {
         el.dataset.formatBound = "true";
-        el.addEventListener('input', function() {
-          this.value = this.value.toUpperCase();
+        el.addEventListener('input', () => {
+          el.value = el.value.toUpperCase();
         });
       }
     });
@@ -808,8 +806,8 @@ if (office?.type === "SUCURSAL") {
     emailInputs.forEach(el => {
       if (el.dataset.formatBound !== "true") {
         el.dataset.formatBound = "true";
-        el.addEventListener('input', function() {
-          this.value = this.value.toLowerCase();
+        el.addEventListener('input', () => {
+          el.value = el.value.toLowerCase();
         });
       }
     });
@@ -818,7 +816,7 @@ if (office?.type === "SUCURSAL") {
   function initActiveToggle() {
     console.log("initActiveToggle: starting initialization");
     const activeToggle = document.getElementById("toggle-active") as HTMLInputElement;
-    const closedReasonContainer = document.getElementById("closed-reason-container");
+    const closedReasonContainer = document.getElementById("closed-reason-container") as HTMLElement;
     if (!activeToggle || !closedReasonContainer) {
       console.warn("initActiveToggle: activeToggle or closedReasonContainer not found");
       return;

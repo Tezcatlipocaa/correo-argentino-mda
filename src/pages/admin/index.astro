@@ -9,8 +9,10 @@ import AdminInvGateQAStatusCard from "@components/ui/AdminInvGateQAStatusCard.as
 import AdminWiseCxStatusCard from "@components/ui/AdminWiseCxStatusCard.astro";
 import { resolveUrl } from "@lib/url";
 import { can } from "@lib/roleConfig";
+import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
 
 const user = Astro.locals.user;
+const unassignedFeedbackCount = await getUnassignedFeedbackCount();
 
 interface AdminModule {
   title: string;
@@ -53,12 +55,6 @@ const modulesGroup2: AdminModule[] = [
     iconTone: "text-error",
     href: "/admin/operadores",
     active: true,
-  },
-  {
-    title: "Títulos",
-    icon: "boxicons:list-ul-filled",
-    iconTone: "text-base-content/30",
-    active: false,
   },
   {
     title: "Recursos",
@@ -132,8 +128,13 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0 transition-colors", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content">
+                <span class="flex-1 text-base md:text-lg font-semibold text-base-content flex flex-wrap items-center gap-2">
                   {mod.title}
+                  {mod.href === "/admin/feedback" && unassignedFeedbackCount > 0 && (
+                    <span class="badge badge-error badge-sm font-semibold text-xs py-0.5 px-2 rounded-md">
+                      {unassignedFeedbackCount} solicitudes sin asignar
+                    </span>
+                  )}
                 </span>
                 <Icon
                   name="boxicons:arrow-right-stroke-circle-filled"
