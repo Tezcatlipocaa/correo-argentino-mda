@@ -12,6 +12,7 @@ import {
   type NavItem,
 } from "@lib/navigation";
 import { normalizeRole, hasPermission } from "@lib/rbac";
+import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
 
 // Components
 import { Navbar, DrawerContent } from "./_components";
@@ -74,6 +75,11 @@ const isActiveRoute = (href: string) =>
 
 const user = Astro.locals.user;
 const normalizedUserRole = normalizeRole(user.role);
+
+let unassignedFeedbackCount = 0;
+if (normalizedUserRole === "admin") {
+  unassignedFeedbackCount = await getUnassignedFeedbackCount();
+}
 
 const isRouteLocked = (href: string): boolean => {
   const lowerHref = href.toLowerCase();
@@ -196,6 +202,7 @@ const globalFontFaceCss = `
         visibleNavSections={visibleNavSections}
         isActiveRoute={isActiveRoute}
         isRouteLocked={isRouteLocked}
+        unassignedFeedbackCount={unassignedFeedbackCount}
       />
     </div>
   </body>
