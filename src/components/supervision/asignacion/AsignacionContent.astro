@@ -134,11 +134,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const PRIORITY_LABELS: Record<number, { label: string; badgeClass: string }> = {
-  1: { label: "Baja", badgeClass: "badge-neutral opacity-60" },
-  2: { label: "Media", badgeClass: "badge-info/20 text-info" },
-  3: { label: "Alta", badgeClass: "badge-warning/20 text-warning font-semibold" },
-  4: { label: "Urgente", badgeClass: "badge-warning text-warning-content font-bold" },
-  5: { label: "Crítica", badgeClass: "badge-error text-error-content font-bold" },
+  1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
+  2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
+  3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
+  4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
+  5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
 };
 
 const breakdown: Record<string, number> = {
@@ -396,10 +396,10 @@ function getInitials(name: string): string {
         </button>
       </div>
 
-      <!-- Grid de Paneles Divididos (40% / 60%) -->
+      <!-- Grid de Paneles Divididos (60% Tickets / 40% Cola) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 min-h-[540px]">
-        <!-- Panel Izquierdo (40%): Tickets en Espera -->
-        <div class="lg:col-span-5 flex flex-col border-b lg:border-b-0 lg:border-r border-base-300 bg-base-100">
+        <!-- Panel Izquierdo (60%): Tickets en Espera -->
+        <div class="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-base-300 bg-base-100">
           <div class="p-4 border-b border-base-300 bg-base-200/30 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <Icon name="boxicons:inbox" size={20} class="text-warning" />
@@ -438,7 +438,7 @@ function getInitials(name: string): string {
                     {t.title}
                   </div>
                   {(t.creator_name || t.customer_name) && (
-                    <div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate">
+                    <div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate mt-1">
                       <Icon name="boxicons:user" size={13} class="opacity-60 shrink-0" />
                       <span class="truncate">
                         Generado por: <strong class="text-base-content/80 font-bold">{t.creator_name || t.customer_name}</strong>
@@ -456,8 +456,8 @@ function getInitials(name: string): string {
           </div>
         </div>
 
-        <!-- Panel Derecho (60%): Gestión y Cola -->
-        <div class="lg:col-span-7 flex flex-col divide-y divide-base-300 bg-base-100">
+        <!-- Panel Derecho (40%): Gestión y Cola -->
+        <div class="lg:col-span-5 flex flex-col divide-y divide-base-300 bg-base-100">
           <!-- Sección: Próximos en Cola -->
           <div class="flex-1 flex flex-col">
             <div class="p-4 bg-base-200/30 border-b border-base-300 flex items-center gap-2">
@@ -991,7 +991,7 @@ function getInitials(name: string): string {
             type="button"
             class="btn btn-success text-success-content btn-sm font-bold gap-1.5 shadow-sm hidden"
           >
-            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+            <Icon name="boxicons:bolt" class="size-4 shrink-0" />
             <span id="ticket-modal-assign-btn-text">Asignar a operador</span>
           </button>
           <a
@@ -1662,11 +1662,11 @@ function getInitials(name: string): string {
           const elLink = document.getElementById("ticket-modal-invgate-link") as HTMLAnchorElement | null;
 
           const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
-            1: { label: "Baja", badgeClass: "badge-neutral opacity-60" },
-            2: { label: "Media", badgeClass: "badge-info/20 text-info" },
-            3: { label: "Alta", badgeClass: "badge-warning/20 text-warning font-semibold" },
-            4: { label: "Urgente", badgeClass: "badge-warning text-warning-content font-bold" },
-            5: { label: "Crítica", badgeClass: "badge-error text-error-content font-bold" },
+            1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
+            2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
+            3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
+            4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
+            5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
           };
 
           if (elId) elId.textContent = ticket.pretty_id || `#${ticket.id}`;
@@ -2080,11 +2080,11 @@ function getInitials(name: string): string {
         if (listEl) {
           if (data.tickets && data.tickets.length > 0) {
             const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
-              1: { label: "Baja", badgeClass: "badge-neutral opacity-60" },
-              2: { label: "Media", badgeClass: "badge-info/20 text-info" },
-              3: { label: "Alta", badgeClass: "badge-warning/20 text-warning font-semibold" },
-              4: { label: "Urgente", badgeClass: "badge-warning text-warning-content font-bold" },
-              5: { label: "Crítica", badgeClass: "badge-error text-error-content font-bold" },
+              1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
+              2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
+              3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
+              4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
+              5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
             };
 
             listEl.innerHTML = data.tickets.map((t: any) => {
@@ -2094,11 +2094,11 @@ function getInitials(name: string): string {
               let waitingBadge = "";
               if (t.created_at) {
                 const elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
-                let colorClass = "badge-neutral/70 text-base-content/70";
+                let colorClass = "bg-base-200 text-base-content/70 border-none";
                 if (elapsedMin >= 60) {
-                  colorClass = "badge-error text-error-content font-bold";
+                  colorClass = "bg-error/15 text-error border-none font-bold";
                 } else if (elapsedMin >= 30) {
-                  colorClass = "badge-warning text-warning-content font-semibold";
+                  colorClass = "bg-warning/15 text-warning border-none font-semibold";
                 }
                 const formatWait = elapsedMin >= 60 
                   ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
@@ -2143,7 +2143,7 @@ function getInitials(name: string): string {
               if (creatorStr) {
                 if (matchingAvailableOp) {
                   userRow = `
-                    <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate">
+                    <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate mt-1">
                       <div class="flex items-center gap-1 min-w-0 truncate text-base-content/70">
                         <svg class="size-3 text-success shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <span class="truncate">
@@ -2152,17 +2152,18 @@ function getInitials(name: string): string {
                       </div>
                       <button
                         type="button"
-                        class="btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0"
+                        class="btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1"
                         data-op-assign-btn="${matchingAvailableOp.agentId}"
                         title="Asignar a ${escapeHtml(matchingAvailableOp.nombre)}"
                         onclick="event.stopPropagation();"
                       >
-                        ⚡ Asignar
+                        <svg class="size-3 text-success fill-current" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
+                        <span>Asignar</span>
                       </button>
                     </div>
                   `;
                 } else {
-                  userRow = `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate"><svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate">Generado por: <strong class="text-base-content/80 font-bold">${escapeHtml(creatorStr)}</strong>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}</span></div>`;
+                  userRow = `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate mt-1"><svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate">Generado por: <strong class="text-base-content/80 font-bold">${escapeHtml(creatorStr)}</strong>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}</span></div>`;
                 }
               }
 
