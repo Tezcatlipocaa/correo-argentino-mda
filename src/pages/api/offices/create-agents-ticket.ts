@@ -10,8 +10,8 @@ import {
   AGENTS_TICKET_PRIORITY_ID,
   QA_CUSTOMER_ID,
   QA_CREATOR_ID,
-  AGENTS_TICKET_TITLE,
   buildTicketDescription,
+  buildAgentsTicketTitle,
 } from "@lib/telegrafiaTicket";
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -110,7 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const payload = {
       type_id: 2,
       category_id: AGENTS_TICKET_CATEGORY_ID,
-      title: AGENTS_TICKET_TITLE,
+      title: buildAgentsTicketTitle(officeCode.trim()),
       priority_id: AGENTS_TICKET_PRIORITY_ID,
       customer_id: customerId,
       creator_id: creatorId,
