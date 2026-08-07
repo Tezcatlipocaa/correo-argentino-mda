@@ -12,6 +12,7 @@ import {
   QA_CREATOR_ID,
   buildTicketDescription,
   buildAgentsTicketTitle,
+  getInvgateLocationId,
 } from "@lib/telegrafiaTicket";
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -101,6 +102,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    const invgateLocationId = getInvgateLocationId(officeCode.trim());
+
     const description = buildTicketDescription(
       officeName.trim(),
       officeCode.trim(),
@@ -115,6 +118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       customer_id: customerId,
       creator_id: creatorId,
       description,
+      location_id: invgateLocationId ?? undefined,
     };
 
     const postFn = USE_QA_INVGATE ? invgateQaPost : invgatePost;
