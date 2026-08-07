@@ -31,10 +31,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
       </div>
 
       <!-- Duplicate warning (hidden by default) -->
-      <div id="ticket-duplicate-warning" class="hidden rounded-lg border border-warning/40 bg-warning/10 p-4">
+      <div id="ticket-duplicate-warning" role="alert" class="hidden rounded-lg border border-warning/40 bg-warning/10 p-4">
         <div class="flex items-start gap-3">
-          <span class="text-warning text-xl mt-0.5">
-            <Icon name="boxicons:error-circle" />
+          <span class="text-warning mt-0.5">
+            <Icon name="boxicons:error-circle" size={24} />
           </span>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-warning mb-1">
@@ -207,7 +207,11 @@ const { id = "agents-ticket-modal" } = Astro.props;
         '<option value="" disabled selected>Cargando agentes...</option>';
     }
     if (notesTextarea) notesTextarea.value = "";
-    if (confirmBtn) confirmBtn.disabled = false;
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = "Crear Ticket";
+    }
+    pendingCreateData = null;
     hideDuplicateWarning();
 
     modal.showModal();
@@ -341,6 +345,8 @@ const { id = "agents-ticket-modal" } = Astro.props;
       notes,
     };
 
+    const clickedOfficeCode = currentOfficeCode;
+
     if (confirmBtn) {
       confirmBtn.disabled = true;
       confirmBtn.innerHTML =
@@ -348,6 +354,8 @@ const { id = "agents-ticket-modal" } = Astro.props;
     }
 
     const duplicate = await checkDuplicateTicket();
+
+    if (currentOfficeCode !== clickedOfficeCode) return;
 
     if (confirmBtn) {
       confirmBtn.disabled = false;
