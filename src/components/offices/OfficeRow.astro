@@ -257,7 +257,7 @@ const officeDirectoryRowGridClass = showActionsColumn
               office.type === "TELEGRAFIA" &&
               office.invgateLinked === true && (
                 <div
-                  class="tooltip tooltip-top tooltip-neutral"
+                  class="tooltip tooltip-top tooltip-neutral z-50 agents-ticket-tooltip"
                   data-tip="Reportar agentes caídos"
                 >
                   <button
@@ -803,3 +803,11 @@ const officeDirectoryRowGridClass = showActionsColumn
   document.addEventListener("astro:page-load", observePersonnelSections);
   observePersonnelSections();
 </script>
+
+<style>
+  .agents-ticket-tooltip[data-tip]:before {
+    left: auto;
+    right: 0;
+    transform: translateX(0);
+  }
+</style>
