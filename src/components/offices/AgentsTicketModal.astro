@@ -1,5 +1,6 @@
 ---
 import Modal from "@components/ui/Modal.astro";
+import { Icon } from "astro-icon/components";
 
 interface Props {
   id?: string;
@@ -27,6 +28,47 @@ const { id = "agents-ticket-modal" } = Astro.props;
         <p class="font-mono text-xs text-base-content/70 mt-1" id="ticket-office-code">
           &mdash;
         </p>
+      </div>
+
+      <!-- Duplicate warning (hidden by default) -->
+      <div id="ticket-duplicate-warning" class="hidden rounded-lg border border-warning/40 bg-warning/10 p-4">
+        <div class="flex items-start gap-3">
+          <span class="text-warning text-xl mt-0.5">
+            <Icon name="boxicons:error-circle" />
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-warning mb-1">
+              Ya existe un ticket abierto por este motivo
+            </p>
+            <p class="text-xs text-base-content/70 mb-2">
+              Ticket <strong id="dup-ticket-id" class="font-mono">#&mdash;</strong>:
+              <span id="dup-ticket-title" class="italic">&mdash;</span>
+            </p>
+            <a
+              id="dup-ticket-link"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-xs text-primary underline hover:no-underline inline-block mb-3"
+            >
+              Ver ticket en InvGate
+            </a>
+            <div class="flex justify-end gap-2 mt-2">
+              <button
+                id="dup-cancel-btn"
+                class="btn btn-ghost btn-sm border border-base-300 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                id="dup-continue-btn"
+                class="btn btn-warning btn-sm cursor-pointer"
+              >
+                Crear de todos modos
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Agent selector -->
@@ -166,6 +208,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
     }
     if (notesTextarea) notesTextarea.value = "";
     if (confirmBtn) confirmBtn.disabled = false;
+    hideDuplicateWarning();
 
     modal.showModal();
 
@@ -233,7 +276,47 @@ const { id = "agents-ticket-modal" } = Astro.props;
       });
   }
 
-  confirmBtn?.addEventListener("click", () => {
+  async function checkDuplicateTicket(): Promise<{
+    exists: boolean;
+    ticketId?: number;
+    ticketTitle?: string;
+    ticketUrl?: string;
+    reason?: string;
+  } | null> {
+    try {
+      const res = await fetch(
+        `/api/offices/check-agents-ticket?officeCode=${encodeURIComponent(currentOfficeCode)}`,
+      );
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  function showDuplicateWarning(ticketId: number, ticketTitle: string, ticketUrl: string) {
+    const warningEl = document.getElementById("ticket-duplicate-warning");
+    const dupIdEl = document.getElementById("dup-ticket-id");
+    const dupTitleEl = document.getElementById("dup-ticket-title");
+    const dupLinkEl = document.getElementById("dup-ticket-link") as HTMLAnchorElement | null;
+
+    if (!warningEl) return;
+    warningEl.classList.remove("hidden");
+
+    if (dupIdEl) dupIdEl.textContent = `#${ticketId}`;
+    if (dupTitleEl) dupTitleEl.textContent = ticketTitle;
+    if (dupLinkEl) {
+      dupLinkEl.href = ticketUrl;
+      dupLinkEl.textContent = "Ver ticket en InvGate";
+    }
+  }
+
+  function hideDuplicateWarning() {
+    const warningEl = document.getElementById("ticket-duplicate-warning");
+    if (warningEl) warningEl.classList.add("hidden");
+  }
+
+  confirmBtn?.addEventListener("click", async () => {
     if (!agentSelect || !agentSelect.value) {
       showToast("Debe seleccionar un agente de mesa de ayuda.", "alert-warning");
       return;
@@ -258,11 +341,41 @@ const { id = "agents-ticket-modal" } = Astro.props;
       notes,
     };
 
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML =
+        '<span class="loading loading-spinner loading-xs"></span> Verificando...';
+    }
+
+    const duplicate = await checkDuplicateTicket();
+
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = "Crear Ticket";
+    }
+
+    if (duplicate === null) {
+      showToast("No se pudo verificar si ya existe un ticket. Intente de nuevo.", "alert-error");
+      return;
+    }
+
+    if (duplicate.exists) {
+      showDuplicateWarning(
+        duplicate.ticketId!,
+        duplicate.ticketTitle!,
+        duplicate.ticketUrl!,
+      );
+      showToast("Ya existe un ticket abierto por este motivo. Revise la alerta.", "alert-warning", 5000);
+      return;
+    }
+
+    hideDuplicateWarning();
+
     const confirmed = confirm(
       "¿Estás seguro de crear el ticket?\n\n" +
       "Oficina: " + currentOfficeName + " (" + currentOfficeCode + ")\n" +
       "Agente: " + customerName +
-      (notes ? "\nNotas: " + notes : "")
+      (notes ? "\nNotas: " + notes : ""),
     );
 
     if (confirmed) {
@@ -270,6 +383,18 @@ const { id = "agents-ticket-modal" } = Astro.props;
     } else {
       showToast("Creación de ticket cancelada.", "alert-info", 3000);
     }
+  });
+
+  document.getElementById("dup-continue-btn")?.addEventListener("click", () => {
+    hideDuplicateWarning();
+    if (pendingCreateData) {
+      executeCreate(pendingCreateData);
+    }
+  });
+
+  document.getElementById("dup-cancel-btn")?.addEventListener("click", () => {
+    hideDuplicateWarning();
+    showToast("Creación de ticket cancelada.", "alert-info", 3000);
   });
 
   // Clear cache on page load so fresh agents are fetched
