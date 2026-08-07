@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { invgateGet } from "@lib/invgateClient";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
+import { requireWriteAccess } from "@lib/rbac-middleware";
 import type { InvgateHelpdeskAndLevel, InvgateUser } from "@/types/invgate";
 import { TELEGRAFIA_HELPDESK_ID } from "@lib/telegrafiaTicket";
 
@@ -10,7 +11,10 @@ export interface TelegrafiaAgent {
   username: string;
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ locals }) => {
+  const denied = requireWriteAccess(locals, "usuarios");
+  if (denied) return denied;
+
   try {
     const helpdesksRes = await invgateGet<InvgateHelpdeskAndLevel[]>(
       "helpdesksandlevels",
