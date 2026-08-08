@@ -84,3 +84,36 @@ test("returns empty array for query shorter than 3 chars", async ({ page }) => {
   const data = await response.json();
   expect(data).toEqual([]);
 });
+
+test("selecting existing address shows same-building preview below input", async ({ page }) => {
+  await loginAsAdmin(page);
+
+  const officeRows = await db
+    .select({ id: offices.id, provinceCode: offices.provinceCode })
+    .from(offices)
+    .limit(1);
+  test.skip(officeRows.length === 0, "No offices in current DB");
+  const officeId = officeRows[0].id;
+  const officeProvince = officeRows[0].provinceCode ?? "";
+
+  const suggestionsResponse = await page.request.get(
+    `/api/offices/search-address?q=santa&excludeId=${officeId}&provinceCode=${officeProvince}`,
+  );
+  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
+  const withOffices = suggestions.find((s) => s.offices.length > 0);
+  test.skip(!withOffices, "No shared-address offices in current DB");
+
+  await page.goto(`/oficinas/edit/${officeId}`);
+
+  const input = page.locator("#input-address");
+  const query = withOffices!.address.trim();
+  await input.fill(query);
+
+  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
+  await expect(option).toBeVisible();
+  await option.click();
+
+  await expect(page.locator("#address-building-preview")).toBeVisible();
+  await expect(page.locator("#address-building-confirmed")).toBeVisible();
+  await expect(page.locator("#address-building-preview [data-sibling-office]").first()).toBeVisible();
+});

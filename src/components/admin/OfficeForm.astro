@@ -113,6 +113,7 @@ if (office?.type === "SUCURSAL") {
 <form
   method="POST"
   id="office-form"
+  data-office-id={office?.id}
   onsubmit="return confirm('¿Estás seguro de que deseas guardar estas modificaciones?');"
   class="space-y-4"
 >
@@ -221,15 +222,24 @@ if (office?.type === "SUCURSAL") {
             <FormLegend class="normal-case tracking-normal">Dirección *</FormLegend>
             <div class="relative w-full">
               <input
+                id="input-address"
                 type="text"
                 name="address"
                 required
                 value={office?.address ?? ""}
-                placeholder="ej: Santa Fe 101"
+                placeholder="ej: SANTA FE 101"
                 autocomplete="off"
+                aria-controls="address-suggestions"
+                aria-expanded="false"
                 class="input input-sm input-bordered w-full"
               />
-              <ul id="address-suggestions" class="menu bg-base-100 w-full rounded-box absolute top-full mt-1 z-50 shadow-lg hidden max-h-60 overflow-y-auto"></ul>
+              <ul
+                id="address-suggestions"
+                role="listbox"
+                class="menu bg-base-100 w-full rounded-box absolute top-full z-50 mt-1 hidden max-h-60 overflow-y-auto shadow-lg"
+              ></ul>
+              <div id="address-building-preview" class="mt-2 hidden" role="alert"></div>
+              <p id="address-autocomplete-error" class="mt-1 hidden text-sm text-error"></p>
             </div>
           </fieldset>
 
@@ -614,6 +624,8 @@ if (office?.type === "SUCURSAL") {
 </template>
 
 <script>
+  import { getCleanBase } from "@lib/baseUrl";
+
   console.log("OfficeForm: client script module loaded");
 
   function initDynamicRows() {
@@ -668,96 +680,151 @@ if (office?.type === "SUCURSAL") {
   }
 
   function initAddressAutocomplete() {
-    console.log("initAddressAutocomplete: starting initialization");
-    const input = document.querySelector('input[name="address"]') as HTMLInputElement;
-    if (!input) {
-      console.warn("initAddressAutocomplete: input[name='address'] not found");
-      return;
-    }
-
-    if (input.dataset.autocompleteBound === "true") {
-      console.log("initAddressAutocomplete: already bound, skipping");
-      return;
-    }
+    const input = document.querySelector<HTMLInputElement>("#input-address");
+    const list = document.querySelector<HTMLUListElement>("#address-suggestions");
+    const preview = document.querySelector<HTMLDivElement>("#address-building-preview");
+    const error = document.querySelector<HTMLParagraphElement>("#address-autocomplete-error");
+    const form = document.querySelector<HTMLFormElement>("#office-form");
+    if (!input || !list || !preview || !error || !form) return;
+    if (input.dataset.autocompleteBound === "true") return;
     input.dataset.autocompleteBound = "true";
 
-    const container = input.closest('.relative');
-    if (!container) {
-      console.warn("initAddressAutocomplete: .relative wrapper not found for input");
-      return;
-    }
-    
-    const ul = document.getElementById("address-suggestions") as HTMLUListElement;
-    if (!ul) {
-      console.warn("initAddressAutocomplete: #address-suggestions ul not found");
-      return;
-    }
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let controller: AbortController | undefined;
+    let hasBuildingMatches = false;
 
-    console.log("initAddressAutocomplete: binding input and click listeners");
-    let timeout: ReturnType<typeof setTimeout>;
+    const clearPreview = () => {
+      hasBuildingMatches = false;
+      preview.replaceChildren();
+      preview.classList.add("hidden");
+      input.removeAttribute("aria-describedby");
+    };
+
+    const renderPreview = (offices: { code: string; name: string }[]) => {
+      if (offices.length === 0) {
+        clearPreview();
+        return;
+      }
+
+      hasBuildingMatches = true;
+
+      const alertBox = document.createElement("div");
+      alertBox.className = "alert alert-warning items-start gap-3";
+
+      const content = document.createElement("div");
+      content.className = "min-w-0";
+
+      const title = document.createElement("p");
+      title.className = "font-semibold";
+      title.textContent = `Oficinas en el mismo edificio (${offices.length})`;
+
+      const subtitle = document.createElement("p");
+      subtitle.className = "text-sm";
+      subtitle.textContent = "Confirmá que comparten sitio antes de guardar.";
+
+      const ul = document.createElement("ul");
+      ul.className = "mt-2 space-y-1 text-sm";
+      for (const office of offices) {
+        const li = document.createElement("li");
+        li.setAttribute("data-sibling-office", "");
+        const codeSpan = document.createElement("span");
+        codeSpan.className = "font-mono";
+        codeSpan.textContent = office.code;
+        li.append(codeSpan, document.createTextNode(" · "), document.createTextNode(office.name));
+        ul.appendChild(li);
+      }
+
+      const label = document.createElement("label");
+      label.className = "mt-3 flex cursor-pointer items-center gap-2 text-sm";
+      const checkbox = document.createElement("input");
+      checkbox.id = "address-building-confirmed";
+      checkbox.name = "sameBuildingConfirmed";
+      checkbox.type = "checkbox";
+      checkbox.className = "checkbox checkbox-sm checkbox-warning";
+      const labelText = document.createTextNode("Confirmo que comparten sitio");
+      label.append(checkbox, labelText);
+
+      content.append(title, subtitle, ul, label);
+      alertBox.appendChild(content);
+      preview.replaceChildren(alertBox);
+      preview.classList.remove("hidden");
+      input.setAttribute("aria-describedby", "address-building-preview");
+    };
+
+    const renderSuggestions = (items: { address: string; offices: { code: string; name: string }[] }[]) => {
+      list.replaceChildren();
+      for (const item of items) {
+        const option = document.createElement("li");
+        option.setAttribute("role", "option");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = `${item.address} (${item.offices.length} oficina${item.offices.length === 1 ? "" : "s"})`;
+        button.addEventListener("click", () => {
+          input.value = item.address;
+          list.replaceChildren();
+          list.classList.add("hidden");
+          input.setAttribute("aria-expanded", "false");
+          renderPreview(item.offices.map(({ code, name }) => ({ code, name })));
+          input.focus();
+        });
+        option.appendChild(button);
+        list.appendChild(option);
+      }
+      const visible = items.length > 0;
+      list.classList.toggle("hidden", !visible);
+      input.setAttribute("aria-expanded", String(visible));
+    };
 
     input.addEventListener("input", () => {
       clearTimeout(timeout);
-      const val = input.value.trim();
-      console.log("initAddressAutocomplete input value changed:", val);
-      
-      if (val.length < 3) {
-        ul.classList.add("hidden");
-        ul.innerHTML = "";
+      controller?.abort();
+      clearPreview();
+      error.classList.add("hidden");
+      const query = input.value.trim();
+      if (query.length < 3) {
+        list.replaceChildren();
+        list.classList.add("hidden");
+        input.setAttribute("aria-expanded", "false");
         return;
       }
 
       timeout = setTimeout(async () => {
+        controller = new AbortController();
         try {
-          const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
-          const url = `${baseUrl}/api/offices/search-address?q=${encodeURIComponent(val)}`;
-          console.log("initAddressAutocomplete: fetching", url);
-          
-          const res = await fetch(url);
-          console.log("initAddressAutocomplete: response status is", res.status);
-          
-          if (!res.ok) {
-            const errText = await res.text();
-            console.error("API error response body:", errText);
-            throw new Error("API error: " + res.status);
-          }
-          
-          const data: { address: string; nis: string }[] = await res.json();
-          console.log("initAddressAutocomplete: received data:", data);
-          
-          ul.innerHTML = "";
-          if (data.length > 0) {
-            data.forEach(item => {
-              const li = document.createElement("li");
-              const a = document.createElement("a");
-              a.textContent = `${item.address} (NIS: ${item.nis})`;
-              a.addEventListener("click", (e) => {
-                e.preventDefault();
-                console.log("initAddressAutocomplete: suggestion clicked:", item.address);
-                input.value = item.address || "";
-                ul.classList.add("hidden");
-                ul.innerHTML = "";
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-              });
-              li.appendChild(a);
-              ul.appendChild(li);
-            });
-            ul.classList.remove("hidden");
-          } else {
-            ul.classList.add("hidden");
-          }
-        } catch (error) {
-          console.error("Error fetching addresses:", error);
+          const base = getCleanBase();
+          const params = new URLSearchParams({ q: query });
+          const officeId = form.dataset.officeId;
+          if (officeId) params.set("excludeId", officeId);
+          const province = form.querySelector<HTMLSelectElement>("[name=provinceCode]")?.value;
+          if (province) params.set("provinceCode", province);
+          const response = await fetch(`${base}api/offices/search-address?${params}`, { signal: controller.signal });
+          if (!response.ok) throw new Error(`Address suggestions failed: ${response.status}`);
+          renderSuggestions(await response.json());
+        } catch (cause) {
+          if ((cause as DOMException).name === "AbortError") return;
+          list.replaceChildren();
+          list.classList.add("hidden");
+          error.textContent = "No se pudieron cargar sugerencias. Podés ingresar el domicilio manualmente.";
+          error.classList.remove("hidden");
         }
       }, 300);
     });
 
-    document.addEventListener("click", (e) => {
-      if (!container.contains(e.target as Node)) {
-        ul.classList.add("hidden");
-      }
+    form.addEventListener("submit", (event) => {
+      if (!hasBuildingMatches) return;
+      const confirmation = form.querySelector<HTMLInputElement>("#address-building-confirmed");
+      if (confirmation?.checked) return;
+      event.preventDefault();
+      confirmation?.focus();
+      (window as any).showToast?.("Confirmá si las oficinas comparten sitio.", "warning");
     });
-    console.log("initAddressAutocomplete: completed successfully");
+
+    document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Node) || input.closest(".relative")?.contains(event.target)) return;
+      list.replaceChildren();
+      list.classList.add("hidden");
+      input.setAttribute("aria-expanded", "false");
+    });
   }
 
   function initTypeToggle() {
