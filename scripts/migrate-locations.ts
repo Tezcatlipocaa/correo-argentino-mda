@@ -1,7 +1,7 @@
 // scripts/migrate-locations.ts
 import "dotenv/config";
 import { invgateGet } from "../src/lib/invgateClient";
-import { invgateQaPost } from "../src/lib/invgate-qa-client";
+import { invgateQaGet, invgateQaPost } from "../src/lib/invgate-qa-client";
 import type { InvgateLocation } from "../src/types/invgate";
 
 interface LocationNode {
@@ -13,6 +13,7 @@ interface LocationNode {
 
 interface MigrationResult {
   created: number;
+  reused: number;
   skipped: number;
   errors: { name: string; reason: string }[];
   idMap: Map<number, number>;
@@ -66,7 +67,7 @@ function flattenTopological(roots: LocationNode[]): LocationNode[] {
 
 async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
   const idMap = new Map<number, number>();
-  const result: MigrationResult = { created: 0, skipped: 0, errors: [], idMap, wouldCreate: 0, total: 0 };
+  const result: MigrationResult = { created: 0, reused: 0, skipped: 0, errors: [], idMap, wouldCreate: 0, total: 0 };
 
   console.log("[MigrateLocations] Fetching locations from PROD...");
   const prodResponse = await invgateGet<InvgateLocation[]>("locations");
@@ -85,6 +86,34 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
 
   const prodIdSet = new Set(flatList.map((l) => l.id));
 
+  console.log("[MigrateLocations] Fetching existing locations from QA for resume matching...");
+  const qaResponse = await invgateQaGet<InvgateLocation[]>("locations");
+
+  if (!qaResponse.ok) {
+    throw new Error(`Failed to fetch QA locations: ${qaResponse.message}`);
+  }
+
+  const qaList = Array.isArray(qaResponse.data) ? qaResponse.data : [];
+  const qaByNameParent = new Map<string, number>();
+  for (const loc of qaList) {
+    const key = `${loc.name}|${loc.parent_id ?? "null"}`;
+    if (!qaByNameParent.has(key)) {
+      qaByNameParent.set(key, loc.id);
+    }
+  }
+
+  const qaIdSet = new Set(qaList.map((l) => l.id));
+  const qaTopByName = new Map<string, number>();
+  for (const loc of qaList) {
+    const isTopLevel = loc.parent_id === null || !qaIdSet.has(loc.parent_id);
+    if (isTopLevel && !qaTopByName.has(loc.name)) {
+      qaTopByName.set(loc.name, loc.id);
+    }
+  }
+  console.log(
+    `[MigrateLocations] Found ${qaList.length} existing locations in QA (${qaByNameParent.size} unique name+parent keys, ${qaTopByName.size} top-level).`,
+  );
+
   const roots = buildTree(flatList);
   const ordered = flattenTopological(roots);
 
@@ -93,35 +122,58 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
   if (dryRun) {
     console.log("[MigrateLocations] DRY RUN — no locations will be created.");
     const simulatedIds = new Set<number>();
+    const simulatedQaIds = new Map<number, number>();
     let wouldCreate = 0;
+    let wouldReuse = 0;
     for (const node of ordered) {
       const indent = getDepth(node, flatList);
       const prefix = "  ".repeat(indent);
-      const willSkip =
-        node.prodParentId !== null &&
-        prodIdSet.has(node.prodParentId) &&
-        !simulatedIds.has(node.prodParentId);
+      const parentIsReal = node.prodParentId !== null && prodIdSet.has(node.prodParentId);
+      const willSkip = parentIsReal && node.prodParentId !== null && !simulatedIds.has(node.prodParentId);
       if (willSkip) {
         console.log(`${prefix}[SKIP] ${node.name} (parent missing)`);
-      } else {
-        simulatedIds.add(node.prodId);
-        wouldCreate++;
-        const parentInfo = node.prodParentId !== null
-          ? ` (parent: prod#${node.prodParentId})`
-          : "";
-        console.log(`${prefix}- ${node.name}${parentInfo}`);
+        continue;
       }
+
+      let existingQaId: number | undefined;
+      if (parentIsReal && node.prodParentId !== null) {
+        const parentQaId = simulatedQaIds.get(node.prodParentId);
+        if (parentQaId !== undefined) {
+          existingQaId = qaByNameParent.get(`${node.name}|${parentQaId}`);
+        }
+      } else {
+        existingQaId = qaByNameParent.get(`${node.name}|null`) ?? qaTopByName.get(node.name);
+      }
+
+      if (existingQaId !== undefined) {
+        simulatedQaIds.set(node.prodId, existingQaId);
+        simulatedIds.add(node.prodId);
+        wouldReuse++;
+        console.log(`${prefix}[REUSE] ${node.name} (exists as QA#${existingQaId})`);
+        continue;
+      }
+
+      simulatedIds.add(node.prodId);
+      wouldCreate++;
+      const parentInfo = node.prodParentId !== null
+        ? ` (parent: prod#${node.prodParentId})`
+        : "";
+      console.log(`${prefix}- ${node.name}${parentInfo}`);
     }
     result.wouldCreate = wouldCreate;
+    result.reused = wouldReuse;
     result.total = ordered.length;
     console.log(`[MigrateLocations] DRY RUN would create: ${wouldCreate} of ${ordered.length}`);
+    console.log(`[MigrateLocations] DRY RUN would reuse: ${wouldReuse}`);
     return result;
   }
 
   for (const node of ordered) {
     const body: { name: string; parent_id?: number } = { name: node.name };
+    let parentQaId: number | null = null;
 
-    if (node.prodParentId !== null && prodIdSet.has(node.prodParentId)) {
+    const parentIsReal = node.prodParentId !== null && prodIdSet.has(node.prodParentId);
+    if (parentIsReal && node.prodParentId !== null) {
       const qaParentId = idMap.get(node.prodParentId);
       if (qaParentId === undefined) {
         result.errors.push({
@@ -132,6 +184,21 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
         continue;
       }
       body.parent_id = qaParentId;
+      parentQaId = qaParentId;
+    }
+
+    let existingQaId: number | undefined;
+    if (parentIsReal) {
+      existingQaId = qaByNameParent.get(`${node.name}|${parentQaId}`);
+    } else {
+      existingQaId = qaByNameParent.get(`${node.name}|null`) ?? qaTopByName.get(node.name);
+    }
+
+    if (existingQaId !== undefined) {
+      idMap.set(node.prodId, existingQaId);
+      result.reused++;
+      console.log(`[MigrateLocations] Reused ${node.name} as QA#${existingQaId}`);
+      continue;
     }
 
     console.log(`[MigrateLocations] Creating: ${node.name}${body.parent_id ? ` (parent: QA#${body.parent_id})` : ""}`);
@@ -182,6 +249,11 @@ Flags:
   --dry-run   Fetch locations from PROD and print the tree without creating anything in QA.
   --help      Show this help message.
 
+Resume/idempotency:
+  Before migrating, the script fetches existing QA locations and matches them by the
+  (name, parent) pair. Locations already present in QA are reused (their QA id is mapped)
+  instead of being POSTed again, so an interrupted migration can be resumed safely.
+
 Environment:
   INVGATE_API_KEY          API key for PROD InvGate
   INVGATE_BASE_URL         Base URL for PROD InvGate (must end with /api/v1/)
@@ -211,8 +283,10 @@ async function main(): Promise<void> {
     console.log(`\n[MigrateLocations] Done in ${elapsed}s.`);
     if (dryRun) {
       console.log(`  Would create: ${result.wouldCreate} of ${result.total}`);
+      console.log(`  Would reuse: ${result.reused}`);
     } else {
       console.log(`  Created: ${result.created}`);
+      console.log(`  Reused: ${result.reused}`);
       console.log(`  Skipped: ${result.skipped}`);
     }
     console.log(`  Errors:  ${result.errors.length}`);
