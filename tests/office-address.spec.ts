@@ -38,17 +38,28 @@ async function loginAsAdmin(page: Page) {
 test("address suggestions return unique canonical addresses", async ({ page }) => {
   await loginAsAdmin(page);
 
-  const officeRows = await db.select({ id: offices.id }).from(offices).limit(1);
+  const officeRows = await db
+    .select({ id: offices.id, address: offices.address })
+    .from(offices)
+    .limit(1);
   test.skip(officeRows.length === 0, "No offices in current DB");
   const officeId = officeRows[0].id;
+  const officeAddress = officeRows[0].address;
+  test.skip(!officeAddress, "No office with address in current DB");
+
+  const trimmed = officeAddress!.trim();
+  const firstWord = trimmed.split(/\s+/)[0];
+  const query = firstWord.length >= 3 ? firstWord : trimmed;
+  test.skip(query.length < 3, "Address too short for query");
 
   const response = await page.request.get(
-    `/api/offices/search-address?q=santa&excludeId=${officeId}`,
+    `/api/offices/search-address?q=${encodeURIComponent(query)}&excludeId=${officeId}`,
   );
   expect(response.ok()).toBeTruthy();
 
   const data = await response.json();
   expect(Array.isArray(data)).toBeTruthy();
+  expect(data.length).toBeGreaterThan(0);
   for (const suggestion of data) {
     expect(suggestion.address).toBe(suggestion.address.toUpperCase());
     expect(Array.isArray(suggestion.offices)).toBeTruthy();
