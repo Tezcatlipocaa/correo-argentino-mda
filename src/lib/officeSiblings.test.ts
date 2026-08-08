@@ -5,6 +5,7 @@ import { buildSiblingMap, siblingKey } from "./officeSiblings";
 type Mini = {
   code: string;
   name: string;
+  type: string;
   address: string;
   region: string;
   provinceCode: string;
@@ -13,10 +14,11 @@ type Mini = {
 const make = (
   code: string,
   name: string,
+  type: string,
   address: string,
   region: string,
   provinceCode: string,
-): Mini => ({ code, name, address, region, provinceCode });
+): Mini => ({ code, name, type, address, region, provinceCode });
 
 test("siblingKey normalizes and joins address|region|province", () => {
   assert.equal(siblingKey("  2430 ", "Centro", "s"), "2430|centro|S");
@@ -35,10 +37,10 @@ test("siblingKey treats null address as blank but null region/province keep the 
 
 test("buildSiblingMap groups offices sharing address+region+province", () => {
   const items: Mini[] = [
-    make("S0000", "Santa Fe", "2430", "Centro", "S"),
-    make("O7906", "CDD 1 Santa Fe", "2430", "Centro", "S"),
-    make("I5135", "Tel Santa Fe 1", "2430", "Centro", "S"),
-    make("X9999", "Otra oficina", "Otra 12", "Centro", "S"),
+    make("S0000", "Santa Fe", "SUCURSAL_AUTOMATIZADA", "2430", "Centro", "S"),
+    make("O7906", "CDD 1 Santa Fe", "CDD", "2430", "Centro", "S"),
+    make("I5135", "Tel Santa Fe 1", "TELEGRAFIA", "2430", "Centro", "S"),
+    make("X9999", "Otra oficina", "ESTAFETA", "Otra 12", "Centro", "S"),
   ];
   const map = buildSiblingMap(items);
   assert.equal(map.get("S0000")?.length, 2);
@@ -48,13 +50,17 @@ test("buildSiblingMap groups offices sharing address+region+province", () => {
     map.get("S0000")?.map((s) => s.code).sort(),
     ["I5135", "O7906"],
   );
+  assert.deepEqual(
+    map.get("O7906")?.map((s) => s.type).sort(),
+    ["SUCURSAL_AUTOMATIZADA", "TELEGRAFIA"],
+  );
   assert.equal(map.has("X9999"), false);
 });
 
 test("different province breaks grouping despite identical address", () => {
   const items: Mini[] = [
-    make("A1", "A", "2430", "Centro", "S"),
-    make("B1", "B", "2430", "Centro", "B"),
+    make("A1", "A", "CDD", "2430", "Centro", "S"),
+    make("B1", "B", "CDD", "2430", "Centro", "B"),
   ];
   const map = buildSiblingMap(items);
   assert.equal(map.size, 0);
@@ -62,15 +68,15 @@ test("different province breaks grouping despite identical address", () => {
 
 test("different region breaks grouping despite identical address", () => {
   const items: Mini[] = [
-    make("A1", "A", "2430", "Centro", "S"),
-    make("B1", "B", "2430", "Otro", "S"),
+    make("A1", "A", "CDD", "2430", "Centro", "S"),
+    make("B1", "B", "CDD", "2430", "Otro", "S"),
   ];
   const map = buildSiblingMap(items);
   assert.equal(map.size, 0);
 });
 
 test("an office with no sibling is omitted from the map", () => {
-  const items: Mini[] = [make("SOLO", "Unica", "123", "Centro", "S")];
+  const items: Mini[] = [make("SOLO", "Unica", "CDD", "123", "Centro", "S")];
   const map = buildSiblingMap(items);
   assert.equal(map.has("SOLO"), false);
 });

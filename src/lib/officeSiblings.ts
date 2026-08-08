@@ -14,7 +14,7 @@ export function siblingKey(
 
 type Groupable = Pick<
   OfficeDirectoryItem,
-  "code" | "name" | "address" | "region" | "provinceCode"
+  "code" | "name" | "type" | "address" | "region" | "provinceCode"
 >;
 
 export function buildSiblingMap(
@@ -37,7 +37,7 @@ export function buildSiblingMap(
     for (const item of group) {
       const siblings = group
         .filter((o) => o.code !== item.code)
-        .map((o) => ({ code: o.code, name: o.name }));
+        .map((o) => ({ code: o.code, name: o.name, type: o.type }));
       result.set(item.code, siblings);
     }
   }

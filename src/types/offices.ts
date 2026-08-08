@@ -23,6 +23,7 @@ export interface OfficeTerminal {
 export interface SiblingOffice {
   code: string;
   name: string;
+  type: string;
 }
 
 export interface OfficeDirectoryItem {

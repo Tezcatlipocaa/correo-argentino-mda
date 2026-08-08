@@ -8,6 +8,7 @@ import type { OfficeDirectoryItem } from "@types/offices";
 import {
   officeTypeLabelByType,
   officeTypeChipClassByType,
+  defaultChipClass,
   assetColorByType,
   assetIconByType,
   assetLabelByType,
@@ -48,6 +49,7 @@ const totalAssets =
 const hasAssetsSection = totalAssets > 0;
 const siblings = office.siblings ?? [];
 const hasSiblings = siblings.length > 0;
+const hasLeftColumn = hasInfoSection || hasSiblings;
 const hasDetails = hasInfoSection || hasAssetsSection || hasInvgateDetail || hasSiblings;
 
 const activeSectionsCount =
@@ -259,7 +261,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
       <div class="bg-base-100 border border-base-300 rounded-box p-4">
         <div class="flex flex-col lg:flex-row gap-6">
           {
-            hasInfoSection && (
+            hasLeftColumn && (
               <div
                 class:list={[
                   "flex flex-col gap-5",
@@ -385,6 +387,52 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                     </div>
                 </section>
 
+                {hasSiblings && (
+                  <section class="space-y-3">
+                    <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
+                      <Icon
+                        name="boxicons:building-filled"
+                        size={16}
+                        class="text-secondary"
+                        aria-hidden="true"
+                      />
+                      Oficinas en el mismo edificio ({siblings.length})
+                    </h2>
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      {siblings.map((sib) => (
+                        <div
+                          data-sibling-office
+                          data-sibling-code={sib.code}
+                          data-sibling-type={sib.type}
+                          class="flex items-center justify-between gap-3 rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
+                        >
+                          <div class="min-w-0">
+                            <p
+                              class="truncate text-sm font-semibold text-base-content"
+                              title={sib.name}
+                            >
+                              {sib.name}
+                            </p>
+                            <p class="text-xxs tracking-wide text-base-content/50">
+                              {officeTypeLabelByType[sib.type] || sib.type}
+                            </p>
+                          </div>
+                          <CopyButton
+                            value={sib.code}
+                            variant="value"
+                            feedbackOnly={true}
+                            monospace={true}
+                            size="xs"
+                            appearance="ghost"
+                            copiedLabel={`NIS ${sib.code} copiado al portapapeles`}
+                            class={`shrink-0 font-semibold ${officeTypeChipClassByType[sib.type] || defaultChipClass}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 {hasInfo && (
                   <section class="space-y-3">
                     <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
@@ -476,59 +524,12 @@ const officeDirectoryRowGridClass = isAllowedAdmin
             )
           }
 
-          {hasSiblings && (
-            <div class="flex flex-col gap-5 lg:w-auto lg:max-w-md">
-              <section class="space-y-3">
-                <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
-                  <Icon
-                    name="boxicons:building-filled"
-                    size={16}
-                    class="text-secondary"
-                    aria-hidden="true"
-                  />
-                  Oficinas en el mismo edificio ({siblings.length})
-                </h2>
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                  {siblings.map((sib) => (
-                    <div
-                      data-sibling-office
-                      data-sibling-code={sib.code}
-                      class="flex items-center justify-between gap-3 rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
-                    >
-                      <div class="min-w-0">
-                        <p
-                          class="truncate text-sm font-semibold text-base-content"
-                          title={sib.name}
-                        >
-                          {sib.name}
-                        </p>
-                        <p class="text-xxs uppercase tracking-wide text-base-content/50">
-                          Mismo edificio
-                        </p>
-                      </div>
-                      <CopyButton
-                        value={sib.code}
-                        variant="value"
-                        feedbackOnly={true}
-                        monospace={true}
-                        size="xs"
-                        appearance="surface"
-                        copiedLabel={`NIS ${sib.code} copiado al portapapeles`}
-                        class="shrink-0"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          )}
-
           {
             hasAssetsSection && (
               <div
                 class:list={[
                   "flex flex-col min-w-0",
-                  hasInfoSection ? "lg:w-3/5" : "w-full",
+                  hasLeftColumn ? "lg:w-3/5" : "w-full",
                 ]}
               >
                 <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70 mb-3">
@@ -544,7 +545,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   <div
                     class:list={[
                       "grid gap-3 p-1",
-                      hasInfoSection
+                      hasLeftColumn
                         ? "grid-cols-1 xl:grid-cols-2"
                         : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
                     ]}

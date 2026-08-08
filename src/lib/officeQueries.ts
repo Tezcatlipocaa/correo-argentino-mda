@@ -74,6 +74,8 @@ async function loadSiblingMap(): Promise<Map<string, SiblingOffice[]>> {
     .select({
       code: offices.code,
       name: offices.name,
+      type: offices.type,
+      officeType: offices.officeType,
       address: offices.address,
       provinceCode: offices.provinceCode,
       region: regions.name,
@@ -83,13 +85,23 @@ async function loadSiblingMap(): Promise<Map<string, SiblingOffice[]>> {
     .leftJoin(regions, eq(provinces.regionId, regions.id));
 
   return buildSiblingMap(
-    rows.map((r) => ({
-      code: r.code,
-      name: r.name,
-      address: r.address ?? "",
-      region: r.region ?? "",
-      provinceCode: r.provinceCode,
-    })),
+    rows.map((r) => {
+      let mappedType = r.type;
+      if (r.type === "SUCURSAL") {
+        mappedType =
+          r.officeType === "AUTOMATIZADA"
+            ? "SUCURSAL_AUTOMATIZADA"
+            : "SUCURSAL_NO_AUTOMATIZADA";
+      }
+      return {
+        code: r.code,
+        name: r.name,
+        type: mappedType,
+        address: r.address ?? "",
+        region: r.region ?? "",
+        provinceCode: r.provinceCode,
+      };
+    }),
   );
 }
 
