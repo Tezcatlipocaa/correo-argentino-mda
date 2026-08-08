@@ -144,11 +144,7 @@ function getDepth(node: LocationNode, flatList: InvgateLocation[]): number {
     const parent = flatList.find((l) => l.id === current!.prodParentId);
     if (!parent) break;
     depth++;
-    current = flatList.find((l) => l.id === parent.parent_id) as any;
-    if (!current) {
-      const parentNode = { prodId: parent.id, name: parent.name, prodParentId: parent.parent_id, children: [] };
-      current = parentNode;
-    }
+    current = { prodId: parent.id, name: parent.name, prodParentId: parent.parent_id, children: [] };
   }
   return depth;
 }
