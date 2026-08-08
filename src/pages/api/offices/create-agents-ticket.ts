@@ -12,8 +12,8 @@ import {
   QA_CREATOR_ID,
   buildTicketDescription,
   buildAgentsTicketTitle,
-  getInvgateLocationId,
 } from "@lib/telegrafiaTicket";
+import { resolveInvgateLocationId } from "@lib/invgate/resolveOfficeLocation";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = requireWriteAccess(locals, "usuarios");
@@ -28,7 +28,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const officeCode = body?.officeCode;
     const officeName = body?.officeName;
-    const notes = typeof body?.notes === "string" ? body.notes : undefined;
+    const observaciones =
+      typeof body?.observaciones === "string"
+        ? body.observaciones
+        : undefined;
 
     if (
       typeof officeCode !== "string" ||
@@ -102,12 +105,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    const invgateLocationId = getInvgateLocationId(officeCode.trim());
+    const invgateLocationId = await resolveInvgateLocationId(
+      officeCode.trim(),
+    );
 
     const description = buildTicketDescription(
       officeName.trim(),
       officeCode.trim(),
-      notes,
+      observaciones,
     );
 
     const payload = {
@@ -124,12 +129,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const postFn = USE_QA_INVGATE ? invgateQaPost : invgatePost;
 
     const res = await postFn<{
-      request_id: number;
-      id: number;
+      status?: string;
+      info?: string;
+      error?: string;
+      code?: number;
+      request_id?: number | string;
+      id?: number;
     }>("incident", payload);
 
     if (!res.ok) {
       return jsonError(res.message, 500);
+    }
+
+    // InvGate reports real failures as HTTP 200 with status:"ERROR" in the body
+    if (res.data?.status && res.data.status !== "OK") {
+      const reason = res.data.error || res.data.info || "Error desconocido";
+      return jsonError(`InvGate rechazó el ticket: ${reason}`, 500);
     }
 
     const username = locals.user?.username || "Sistema";

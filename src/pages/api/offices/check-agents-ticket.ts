@@ -7,9 +7,11 @@ import { invgateQaGet } from "@lib/invgate-qa-client";
 import {
   USE_QA_INVGATE,
   AGENTS_TICKET_CATEGORY_ID,
-  TELEGRAFIA_HELPDESK_ID,
-  getInvgateLocationId,
 } from "@lib/telegrafiaTicket";
+import { resolveInvgateLocationId } from "@lib/invgate/resolveOfficeLocation";
+
+// Status de ticket abiertos (excluye Cerrado, Rechazado, Cancelado)
+const OPEN_STATUS_IDS = [1, 2, 3, 4, 5];
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const denied = requireWriteAccess(locals, "usuarios");
@@ -23,7 +25,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const invgateLocationId = getInvgateLocationId(officeCode.trim());
+    const invgateLocationId = await resolveInvgateLocationId(
+      officeCode.trim(),
+    );
 
     if (invgateLocationId === null) {
       return jsonResponse({
@@ -34,19 +38,33 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const getFn = USE_QA_INVGATE ? invgateQaGet : invgateGet;
 
-    // Step 1: Get all open ticket IDs for telegrafia helpdesk
-    const helpdeskRes = await getFn<InvgateByStatusResponse>(
-      `incidents.by.helpdesk?helpdesk_id=${TELEGRAFIA_HELPDESK_ID}&limit=200`,
+    // Step 1: Get all open ticket IDs (status 1-5), paginating
+    const statusQuery = OPEN_STATUS_IDS.map((s) => `status_ids[]=${s}`).join(
+      "&",
     );
+    const requestIds: number[] = [];
+    let offset = 0;
+    let total = 1;
+    let pages = 0;
+    const MAX_PAGES = 10;
 
-    if (!helpdeskRes.ok || !helpdeskRes.data?.requestIds) {
-      return jsonResponse({
-        exists: false,
-        reason: "No se pudieron consultar los tickets del helpdesk.",
-      });
+    while (offset < total && pages < MAX_PAGES) {
+      const pageRes = await getFn<InvgateByStatusResponse>(
+        `incidents.by.status?${statusQuery}&limit=200&offset=${offset}`,
+      );
+
+      if (!pageRes.ok || !pageRes.data?.requestIds) {
+        return jsonResponse({
+          exists: false,
+          reason: "No se pudieron consultar los tickets abiertos.",
+        });
+      }
+
+      requestIds.push(...pageRes.data.requestIds);
+      total = pageRes.data.total ?? requestIds.length;
+      offset += pageRes.data.requestIds.length;
+      pages++;
     }
-
-    const requestIds = helpdeskRes.data.requestIds;
 
     if (requestIds.length === 0) {
       return jsonResponse({ exists: false });

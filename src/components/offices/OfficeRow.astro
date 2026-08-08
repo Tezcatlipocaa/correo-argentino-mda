@@ -3,6 +3,7 @@ import { Icon } from "astro-icon/components";
 import CopyButton from "@components/ui/CopyButton.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
+import ActionAgentsTicketButton from "@components/ui/ActionAgentsTicketButton.astro";
 import { isAllowed } from "@lib/rolesMatrix";
 import type { OfficeDirectoryItem } from "@/types/offices";
 import {
@@ -259,25 +260,10 @@ const officeDirectoryRowGridClass = showActionsColumn
           {isStrictAdmin &&
             office.type === "TELEGRAFIA" &&
             office.invgateLinked === true && (
-              <div
-                class="tooltip tooltip-top tooltip-neutral z-50 agents-ticket-tooltip"
-                data-tip="Reportar agentes caídos"
-              >
-                <button
-                  type="button"
-                  class="btn btn-soft btn-success gap-2"
-                  data-agents-ticket-trigger
-                  data-office-name={office.name}
-                  data-office-code={office.code}
-                  aria-label="Crear ticket por agentes caídos"
-                >
-                  <Icon
-                    name="boxicons:alert-triangle-filled"
-                    size={18}
-                    aria-hidden="true"
-                  />
-                </button>
-              </div>
+              <ActionAgentsTicketButton
+                officeName={office.name}
+                officeCode={office.code}
+              />
             )}
         </div>
       )
@@ -806,7 +792,9 @@ const officeDirectoryRowGridClass = showActionsColumn
             target.hasAttribute("data-office-detail-row") &&
             !target.classList.contains("hidden")
           ) {
-            const section = target.querySelector("[data-branch-personnel]") as HTMLElement | null;
+            const section = target.querySelector(
+              "[data-branch-personnel]",
+            ) as HTMLElement | null;
             if (section) {
               loadPersonnel(section);
             }
@@ -819,14 +807,18 @@ const officeDirectoryRowGridClass = showActionsColumn
                 el.hasAttribute("data-office-detail-row") &&
                 !el.classList.contains("hidden")
               ) {
-                const section = el.querySelector("[data-branch-personnel]") as HTMLElement | null;
+                const section = el.querySelector(
+                  "[data-branch-personnel]",
+                ) as HTMLElement | null;
                 if (section) loadPersonnel(section);
               }
               const expandedDetails = el.querySelectorAll(
                 "[data-office-detail-row]:not(.hidden)",
               );
               expandedDetails.forEach((detail: Element) => {
-                const section = detail.querySelector("[data-branch-personnel]") as HTMLElement | null;
+                const section = detail.querySelector(
+                  "[data-branch-personnel]",
+                ) as HTMLElement | null;
                 if (section) loadPersonnel(section);
               });
             }
@@ -856,11 +848,3 @@ const officeDirectoryRowGridClass = showActionsColumn
   document.addEventListener("astro:page-load", observePersonnelSections);
   observePersonnelSections();
 </script>
-
-<style>
-  .agents-ticket-tooltip[data-tip]:before {
-    left: auto;
-    right: 0;
-    transform: translateX(0);
-  }
-</style>
