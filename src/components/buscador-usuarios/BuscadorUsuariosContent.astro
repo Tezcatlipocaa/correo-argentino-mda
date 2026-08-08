@@ -334,6 +334,39 @@ const userRole = Astro.locals.user?.role || "";
   let currentSelectedCategory = "all";
   let currentViewMode = "grid";
 
+  const netUserCache = new Map<string, string>();
+  const pendingLegajoFetches = new Set<string>();
+
+  function fetchLegajoForUser(username: string) {
+    const key = (username || "").toLowerCase();
+    if (!key || netUserCache.has(key) || pendingLegajoFetches.has(key)) return;
+    pendingLegajoFetches.add(key);
+
+    fetch(`/api/usuarios/net-user?username=${encodeURIComponent(key)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        pendingLegajoFetches.delete(key);
+        const legajoVal = data.status === "success" && data.employee_number ? data.employee_number : "-";
+        netUserCache.set(key, legajoVal);
+
+        const card = resultsGrid?.querySelector(`[data-user-card-username="${CSS.escape(key)}"]`);
+        if (card) {
+          const btn = card.querySelector(".user-card-legajo-btn") as HTMLElement | null;
+          if (btn) {
+            btn.setAttribute("data-copy-value", legajoVal);
+            btn.setAttribute("data-copy-label-default", legajoVal);
+            btn.setAttribute("aria-label", `Copiar: ${legajoVal}`);
+            const labelSpan = btn.querySelector("[data-copy-label]");
+            if (labelSpan) labelSpan.textContent = legajoVal;
+          }
+        }
+      })
+      .catch(() => {
+        pendingLegajoFetches.delete(key);
+        netUserCache.set(key, "-");
+      });
+  }
+
   const avatarColors = [
     "bg-blue-500 text-white",
     "bg-purple-500 text-white",
@@ -681,11 +714,28 @@ const userRole = Astro.locals.user?.role || "";
         }
       };
 
+      const cardEl = clone.querySelector(".card") as HTMLElement | null;
+      const usernameKey = (user.usuario || "").toLowerCase();
+      if (cardEl && usernameKey) {
+        cardEl.setAttribute("data-user-card-username", usernameKey);
+      }
+
       updateCardCopyButton(".user-card-username-btn", user.usuario, query);
       updateCardCopyButton(".user-card-dni-btn", user.dni, query);
       updateCardCopyButton(".user-card-interno-btn", user.interno);
       updateCardCopyButton(".user-card-telefono-btn", user.telefono);
       updateCardCopyButton(".user-card-email-btn", user.email, query);
+
+      if (usernameKey) {
+        if (netUserCache.has(usernameKey)) {
+          updateCardCopyButton(".user-card-legajo-btn", netUserCache.get(usernameKey) || "-");
+        } else {
+          updateCardCopyButton(".user-card-legajo-btn", "...");
+          fetchLegajoForUser(usernameKey);
+        }
+      } else {
+        updateCardCopyButton(".user-card-legajo-btn", "-");
+      }
 
       // Ubicación — multi-office support
       const sucursales = user.sucursales || [];
@@ -1136,6 +1186,9 @@ const userRole = Astro.locals.user?.role || "";
       const result = await response.json();
 
       if (result.status === "success") {
+        if (result.employee_number) {
+          netUserCache.set(username.toLowerCase(), result.employee_number);
+        }
         terminalOutput.textContent = result.output;
 
         // Cargar datos estructurados
@@ -1356,10 +1409,10 @@ const userRole = Astro.locals.user?.role || "";
     // Aplicar el diseño según la vista seleccionada
     if (currentViewMode === "grid") {
       terminalGroupsList.className =
-        "flex-1 bg-base-200/30 border border-base-300 p-3.5 rounded-lg overflow-y-auto max-h-[380px] min-h-[380px] scrollbar-thin transition-all grid grid-cols-2 gap-2";
+        "flex-1 bg-base-200/30 border border-base-300 p-3.5 rounded-lg overflow-y-auto max-h-[380px] min-h-[380px] scrollbar-thin transition-all grid grid-cols-2 gap-2 content-start auto-rows-max";
     } else {
       terminalGroupsList.className =
-        "flex-1 bg-base-200/30 border border-base-300 p-3.5 rounded-lg overflow-y-auto max-h-[380px] min-h-[380px] scrollbar-thin transition-all flex flex-col gap-2";
+        "flex-1 bg-base-200/30 border border-base-300 p-3.5 rounded-lg overflow-y-auto max-h-[380px] min-h-[380px] scrollbar-thin transition-all flex flex-col gap-2 content-start";
     }
 
     const filtered = groupsList.filter((group) => {

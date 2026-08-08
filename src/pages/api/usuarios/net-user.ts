@@ -11,13 +11,24 @@ if (!LDAP_USER || !LDAP_PASS) {
   throw new Error("LDAP_USER and LDAP_PASS must be set in .env");
 }
 
+const TIMEZONE_AR = "America/Argentina/Buenos_Aires";
+
 function convertFiletime(filetime: number): string | null {
-  if (!filetime || filetime === 0) return null;
+  if (!filetime || filetime === 0 || filetime >= 9223372036854770000) return null;
   // Windows Filetime is 100-nanosecond intervals since 1601-01-01
   const epoch = 11644473600000; // difference between 1601 and 1970 in ms
   const adjusted = Math.floor(filetime / 10000) - epoch;
-  if (adjusted <= 0) return null;
-  return new Date(adjusted).toISOString().replace("T", " ").substring(0, 19);
+  if (adjusted <= 0 || adjusted >= 253402300799000) return null;
+  return new Date(adjusted).toLocaleString("sv-SE", { timeZone: TIMEZONE_AR });
+}
+
+function parseGeneralizedTime(gt: string | undefined | null): string | null {
+  if (!gt || typeof gt !== "string") return null;
+  const match = gt.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+  if (!match) return gt;
+  const [, year, month, day, hour, min, sec] = match;
+  const date = new Date(Date.UTC(+year, +month - 1, +day, +hour, +min, +sec));
+  return date.toLocaleString("sv-SE", { timeZone: TIMEZONE_AR });
 }
 
 function formatOutput(data: {
@@ -99,7 +110,7 @@ export const GET: APIRoute = async ({ request }) => {
       scope: "sub" as const,
       attributes: [
         "dn", "cn", "sAMAccountName", "displayName", "title", "mail",
-        "employeeNumber", "physicalDeliveryOfficeName", "telephoneNumber",
+        "employeeNumber", "employeeType", "physicalDeliveryOfficeName", "telephoneNumber",
         "manager", "department", "description", "memberOf",
         "pwdLastSet", "lastLogon", "lastLogonTimestamp", "whenCreated",
         "accountExpires", "badPwdCount", "lockoutTime",
@@ -113,6 +124,7 @@ export const GET: APIRoute = async ({ request }) => {
       title?: string;
       mail?: string;
       employeeNumber?: string;
+      employeeType?: string;
       physicalDeliveryOfficeName?: string;
       telephoneNumber?: string;
       manager?: string;
@@ -203,7 +215,7 @@ export const GET: APIRoute = async ({ request }) => {
       fullname: String(adUser.displayName || ""),
       title: String(adUser.title || ""),
       mail: String(adUser.mail || ""),
-      employee_number: String(adUser.employeeNumber || ""),
+      employee_number: String(adUser.employeeType || ""),
       physical_office: String(adUser.physicalDeliveryOfficeName || ""),
       telephone_number: String(adUser.telephoneNumber || ""),
       manager_name: managerName || "",
@@ -211,8 +223,8 @@ export const GET: APIRoute = async ({ request }) => {
       description: String(adUser.description || ""),
       pwd_last_set: convertFiletime(Number(adUser.pwdLastSet)) || "",
       last_logon: convertFiletime(Number(adUser.lastLogon || adUser.lastLogonTimestamp)) || "",
-      when_created: String(adUser.whenCreated || ""),
-      account_expires: convertFiletime(Number(adUser.accountExpires)) || "",
+      when_created: parseGeneralizedTime(adUser.whenCreated) || "",
+      account_expires: convertFiletime(Number(adUser.accountExpires)) || "Nunca",
       bad_pwd_count: String(adUser.badPwdCount || "0"),
       lockout_time: convertFiletime(Number(adUser.lockoutTime)),
       groups,
