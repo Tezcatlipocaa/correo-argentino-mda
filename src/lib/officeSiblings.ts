@@ -1,15 +1,17 @@
 import type { OfficeDirectoryItem, SiblingOffice } from "@/types/offices";
+import { getOfficeAddressKey } from "@lib/officeAddress";
 
 export function siblingKey(
   address: string | null | undefined,
   region: string | null | undefined,
   provinceCode: string | null | undefined,
 ): string {
-  const normAddr = (address ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-  const normRegion = (region ?? "").trim().toLowerCase();
-  const normProv = (provinceCode ?? "").trim().toUpperCase();
-  if (!normAddr) return "";
-  return `${normAddr}|${normRegion}|${normProv}`;
+  const normalizedAddress = getOfficeAddressKey(address);
+  const normalizedRegion = (region ?? "").trim().toLocaleLowerCase("es-AR");
+  const normalizedProvince = (provinceCode ?? "").trim().toUpperCase();
+
+  if (!normalizedAddress) return "";
+  return `${normalizedAddress}|${normalizedRegion}|${normalizedProvince}`;
 }
 
 type Groupable = Pick<

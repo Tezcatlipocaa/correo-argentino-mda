@@ -22,7 +22,7 @@ const make = (
 
 test("siblingKey normalizes and joins address|region|province", () => {
   assert.equal(siblingKey("  2430 ", "Centro", "s"), "2430|centro|S");
-  assert.equal(siblingKey("Calle 2430", "Centro", "S"), "calle 2430|centro|S");
+  assert.equal(siblingKey("Calle 2430", "Centro", "S"), "CALLE 2430|centro|S");
 });
 
 test("siblingKey returns empty string when address is blank", () => {
@@ -73,6 +73,18 @@ test("different region breaks grouping despite identical address", () => {
   ];
   const map = buildSiblingMap(items);
   assert.equal(map.size, 0);
+});
+
+test("buildSiblingMap groups addresses after shared canonicalization", () => {
+  const items: Mini[] = [
+    make("A1", "Principal", "CDD", "  Av. Santa Fé   101 ", "Centro", "S"),
+    make("B1", "Anexo", "CDD", "AV. SANTA FÉ 101", "Centro", "S"),
+  ];
+
+  const map = buildSiblingMap(items);
+
+  assert.deepEqual(map.get("A1")?.map((office) => office.code), ["B1"]);
+  assert.deepEqual(map.get("B1")?.map((office) => office.code), ["A1"]);
 });
 
 test("an office with no sibling is omitted from the map", () => {
