@@ -28,6 +28,11 @@ test("siblingKey returns empty string when address is blank", () => {
   assert.equal(siblingKey("   ", "Centro", "S"), "");
 });
 
+test("siblingKey treats null address as blank but null region/province keep the key", () => {
+  assert.equal(siblingKey(null, "Centro", "S"), "");
+  assert.equal(siblingKey("2430", null, null), "2430||");
+});
+
 test("buildSiblingMap groups offices sharing address+region+province", () => {
   const items: Mini[] = [
     make("S0000", "Santa Fe", "2430", "Centro", "S"),
@@ -50,6 +55,15 @@ test("different province breaks grouping despite identical address", () => {
   const items: Mini[] = [
     make("A1", "A", "2430", "Centro", "S"),
     make("B1", "B", "2430", "Centro", "B"),
+  ];
+  const map = buildSiblingMap(items);
+  assert.equal(map.size, 0);
+});
+
+test("different region breaks grouping despite identical address", () => {
+  const items: Mini[] = [
+    make("A1", "A", "2430", "Centro", "S"),
+    make("B1", "B", "2430", "Otro", "S"),
   ];
   const map = buildSiblingMap(items);
   assert.equal(map.size, 0);
