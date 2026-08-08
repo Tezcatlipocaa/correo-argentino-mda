@@ -19,8 +19,9 @@ import { redirectWithToast } from "@lib/api/redirectWithToast";
 import OfficeForm from "@components/admin/OfficeForm.astro";
 import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
-import { normalizeOfficeAddress } from "@lib/officeAddress";
+import { normalizeOfficeAddress, getOfficeAddressKey, isSameBuildingConfirmed } from "@lib/officeAddress";
 import { findOfficeAddressMatches } from "@lib/officeQueries";
+import type { ToastType } from "@lib/toastClient";
 
 const cleanBase = getCleanBase();
 
@@ -28,7 +29,7 @@ const { id } = Astro.params;
 const isNew = false;
 let successMsg = "";
 let errorMsg = "";
-let toastType: string = "alert-error";
+let toastType: ToastType = "alert-error";
 
 if (!id || isNaN(Number(id))) {
   return Astro.redirect(`${cleanBase}oficinas`);
@@ -120,16 +121,19 @@ if (Astro.request.method === "POST") {
           })
         : [];
 
-      if (addressMatches.length > 0 && fd.get("sameBuildingConfirmed") !== "on") {
-        errorMsg = "Confirmá si la oficina comparte sitio con las oficinas listadas.";
-        toastType = "alert-warning";
-      } else {
       const [existing] = await db
-        .select({ name: offices.name })
+        .select({ name: offices.name, address: offices.address })
         .from(offices)
         .where(eq(offices.id, officeId));
       const oldName = existing?.name || "";
 
+      const addressChanged =
+        getOfficeAddressKey(existing?.address) !== getOfficeAddressKey(officeData.address);
+
+      if (addressChanged && addressMatches.length > 0 && !isSameBuildingConfirmed(fd.get("sameBuildingConfirmed")?.toString())) {
+        errorMsg = "Confirmá si la oficina comparte sitio con las oficinas listadas.";
+        toastType = "alert-warning";
+      } else {
       const activeCostCenter = [
         officeData.cctAdminOffice,
         officeData.ccCommercial,

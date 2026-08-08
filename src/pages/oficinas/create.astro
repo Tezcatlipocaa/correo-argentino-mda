@@ -19,15 +19,16 @@ import { redirectWithToast } from "@lib/api/redirectWithToast";
 import OfficeForm from "@components/admin/OfficeForm.astro";
 import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
-import { normalizeOfficeAddress } from "@lib/officeAddress";
+import { normalizeOfficeAddress, isSameBuildingConfirmed } from "@lib/officeAddress";
 import { findOfficeAddressMatches } from "@lib/officeQueries";
+import type { ToastType } from "@lib/toastClient";
 
 const cleanBase = getCleanBase();
 
 const isNew = true;
 let successMsg = "";
 let errorMsg = "";
-let toastType: string = "alert-error";
+let toastType: ToastType = "alert-error";
 
 if (Astro.request.method === "POST") {
   try {
@@ -114,7 +115,7 @@ if (Astro.request.method === "POST") {
           })
         : [];
 
-      if (addressMatches.length > 0 && fd.get("sameBuildingConfirmed") !== "on") {
+      if (addressMatches.length > 0 && !isSameBuildingConfirmed(fd.get("sameBuildingConfirmed")?.toString())) {
         errorMsg = "Confirmá si la nueva oficina comparte sitio con las oficinas listadas.";
         toastType = "alert-warning";
       } else {

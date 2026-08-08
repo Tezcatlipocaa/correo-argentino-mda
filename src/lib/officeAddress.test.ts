@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   getOfficeAddressKey,
   normalizeOfficeAddress,
+  isSameBuildingConfirmed,
 } from "./officeAddress";
 
 test("normaliza uppercase y espacios sin eliminar tildes", () => {
@@ -38,9 +39,10 @@ test("clave separada permite agregar equivalencias futuras", () => {
   );
 });
 
-test("confirmation field accepts only explicit checked value", () => {
-  const formValue = (v: string | null) => v;
-  assert.equal((formValue("on") ?? "") === "on", true);
-  assert.equal((formValue(null) ?? "") === "on", false);
-  assert.equal((formValue("false") ?? "") === "on", false);
+test("isSameBuildingConfirmed accepts only explicit 'on'", () => {
+  assert.equal(isSameBuildingConfirmed("on"), true);
+  assert.equal(isSameBuildingConfirmed(null), false);
+  assert.equal(isSameBuildingConfirmed(undefined), false);
+  assert.equal(isSameBuildingConfirmed("false"), false);
+  assert.equal(isSameBuildingConfirmed(""), false);
 });

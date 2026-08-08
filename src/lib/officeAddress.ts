@@ -15,3 +15,7 @@ export function getOfficeAddressKey(
 ): string {
   return normalizeOfficeAddress(value) ?? "";
 }
+
+export function isSameBuildingConfirmed(value: string | null | undefined): boolean {
+  return value === "on";
+}
