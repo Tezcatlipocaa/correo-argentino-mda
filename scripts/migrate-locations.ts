@@ -16,7 +16,11 @@ interface MigrationResult {
   skipped: number;
   errors: { name: string; reason: string }[];
   idMap: Map<number, number>;
+  wouldCreate: number;
+  total: number;
 }
+
+const CREATE_DELAY_MS = 200; // rate-limit between QA POSTs to avoid throttling
 
 function buildTree(flatList: InvgateLocation[]): LocationNode[] {
   const nodeMap = new Map<number, LocationNode>();
@@ -62,7 +66,7 @@ function flattenTopological(roots: LocationNode[]): LocationNode[] {
 
 async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
   const idMap = new Map<number, number>();
-  const result: MigrationResult = { created: 0, skipped: 0, errors: [], idMap };
+  const result: MigrationResult = { created: 0, skipped: 0, errors: [], idMap, wouldCreate: 0, total: 0 };
 
   console.log("[MigrateLocations] Fetching locations from PROD...");
   const prodResponse = await invgateGet<InvgateLocation[]>("locations");
@@ -86,14 +90,26 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
 
   if (dryRun) {
     console.log("[MigrateLocations] DRY RUN — no locations will be created.");
+    const simulatedIds = new Set<number>();
+    let wouldCreate = 0;
     for (const node of ordered) {
       const indent = getDepth(node, flatList);
       const prefix = "  ".repeat(indent);
-      const parentInfo = node.prodParentId !== null
-        ? ` (parent: prod#${node.prodParentId})`
-        : "";
-      console.log(`${prefix}- ${node.name}${parentInfo}`);
+      const willSkip = node.prodParentId !== null && !simulatedIds.has(node.prodParentId);
+      if (willSkip) {
+        console.log(`${prefix}[SKIP] ${node.name} (parent missing)`);
+      } else {
+        simulatedIds.add(node.prodId);
+        wouldCreate++;
+        const parentInfo = node.prodParentId !== null
+          ? ` (parent: prod#${node.prodParentId})`
+          : "";
+        console.log(`${prefix}- ${node.name}${parentInfo}`);
+      }
     }
+    result.wouldCreate = wouldCreate;
+    result.total = ordered.length;
+    console.log(`[MigrateLocations] DRY RUN would create: ${wouldCreate} of ${ordered.length}`);
     return result;
   }
 
@@ -131,7 +147,7 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
     result.created++;
     console.log(`[MigrateLocations] Created ${node.name} as QA#${newId}`);
 
-    await sleep(200);
+    await sleep(CREATE_DELAY_MS);
   }
 
   return result;
@@ -166,8 +182,12 @@ async function main(): Promise<void> {
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`\n[MigrateLocations] Done in ${elapsed}s.`);
-    console.log(`  Created: ${result.created}`);
-    console.log(`  Skipped: ${result.skipped}`);
+    if (dryRun) {
+      console.log(`  Would create: ${result.wouldCreate} of ${result.total}`);
+    } else {
+      console.log(`  Created: ${result.created}`);
+      console.log(`  Skipped: ${result.skipped}`);
+    }
     console.log(`  Errors:  ${result.errors.length}`);
 
     if (result.errors.length > 0) {
@@ -175,6 +195,7 @@ async function main(): Promise<void> {
       for (const err of result.errors) {
         console.log(`  - ${err.name}: ${err.reason}`);
       }
+      process.exit(1);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
