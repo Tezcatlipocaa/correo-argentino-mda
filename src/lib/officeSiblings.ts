@@ -1,9 +1,4 @@
-import type { OfficeDirectoryItem } from "@/types/offices";
-
-export interface SiblingOffice {
-  code: string;
-  name: string;
-}
+import type { OfficeDirectoryItem, SiblingOffice } from "@/types/offices";
 
 export function siblingKey(
   address: string | null | undefined,
