@@ -174,7 +174,29 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function printHelp(): void {
+  console.log(`
+Usage: npx tsx scripts/migrate-locations.ts [--dry-run] [--help]
+
+Flags:
+  --dry-run   Fetch locations from PROD and print the tree without creating anything in QA.
+  --help      Show this help message.
+
+Environment:
+  INVGATE_API_KEY          API key for PROD InvGate
+  INVGATE_BASE_URL         Base URL for PROD InvGate (must end with /api/v1/)
+  INVGATE_API_USERNAME     Username for PROD InvGate (default: portalmda)
+  INVGATE_QA_API_KEY       API key for QA InvGate
+  INVGATE_QA_BASE_URL      Base URL for QA InvGate (must end with /api/v1/)
+  INVGATE_QA_API_USERNAME  Username for QA InvGate (default: portalmda)
+`);
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes("--help")) {
+    printHelp();
+    return;
+  }
   const dryRun = process.argv.includes("--dry-run");
 
   console.log("[MigrateLocations] Starting migration...");
