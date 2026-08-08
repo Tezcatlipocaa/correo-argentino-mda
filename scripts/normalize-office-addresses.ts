@@ -1,12 +1,19 @@
 import Database from "better-sqlite3";
+import { existsSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { fileURLToPath } from "node:url";
 import { normalizeOfficeAddress } from "../src/lib/officeAddress";
 
 type OfficeRow = { id: number; code: string; address: string | null };
 
 const dryRun = process.argv.includes("--dry-run");
-const sqlite = new Database("database/mda.db");
+const dbPath = fileURLToPath(new URL("../database/mda.db", import.meta.url));
+if (!existsSync(dbPath)) {
+  console.error(`No se encontró la base de datos: ${dbPath}`);
+  process.exit(1);
+}
+const sqlite = new Database(dbPath);
 const rows = sqlite
   .prepare("SELECT id, code, address FROM offices WHERE address IS NOT NULL AND trim(address) != ''")
   .all() as OfficeRow[];
