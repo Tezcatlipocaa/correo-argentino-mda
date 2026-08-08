@@ -83,6 +83,8 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
 
   console.log(`[MigrateLocations] Fetched ${flatList.length} locations from PROD.`);
 
+  const prodIdSet = new Set(flatList.map((l) => l.id));
+
   const roots = buildTree(flatList);
   const ordered = flattenTopological(roots);
 
@@ -95,7 +97,10 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
     for (const node of ordered) {
       const indent = getDepth(node, flatList);
       const prefix = "  ".repeat(indent);
-      const willSkip = node.prodParentId !== null && !simulatedIds.has(node.prodParentId);
+      const willSkip =
+        node.prodParentId !== null &&
+        prodIdSet.has(node.prodParentId) &&
+        !simulatedIds.has(node.prodParentId);
       if (willSkip) {
         console.log(`${prefix}[SKIP] ${node.name} (parent missing)`);
       } else {
@@ -116,12 +121,12 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
   for (const node of ordered) {
     const body: { name: string; parent_id?: number } = { name: node.name };
 
-    if (node.prodParentId !== null) {
+    if (node.prodParentId !== null && prodIdSet.has(node.prodParentId)) {
       const qaParentId = idMap.get(node.prodParentId);
       if (qaParentId === undefined) {
         result.errors.push({
           name: node.name,
-          reason: `Parent prod#${node.prodParentId} not found in ID map. Skipping.`,
+          reason: `Parent prod#${node.prodParentId} failed or not created yet. Skipping.`,
         });
         result.skipped++;
         continue;
