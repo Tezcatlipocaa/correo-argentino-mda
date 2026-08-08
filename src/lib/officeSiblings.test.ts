@@ -92,3 +92,13 @@ test("an office with no sibling is omitted from the map", () => {
   const map = buildSiblingMap(items);
   assert.equal(map.has("SOLO"), false);
 });
+
+test("same address does not cross province or region boundary", () => {
+  const map = buildSiblingMap([
+    make("A1", "A", "CDD", "AV. SANTA FÉ 101", "Centro", "S"),
+    make("B1", "B", "CDD", "av. santa fé 101", "Centro", "B"),
+    make("C1", "C", "CDD", "av. santa fé 101", "Sur", "S"),
+  ]);
+
+  assert.equal(map.size, 0);
+});

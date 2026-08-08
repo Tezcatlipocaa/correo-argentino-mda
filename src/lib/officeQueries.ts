@@ -9,6 +9,7 @@ import type {
 } from "@/types/offices";
 import { normalizeSearchValue } from "@lib/clientSearch";
 import { buildSiblingMap } from "@lib/officeSiblings";
+import { getOfficeAddressKey, normalizeOfficeAddress } from "@lib/officeAddress";
 
 let manualHostnamesCache: Set<string> | null = null;
 let manualHostnamesCacheTime = 0;
@@ -43,6 +44,16 @@ const officeSortColumns = {
     '—'
   )`,
 } as const;
+
+export interface OfficeAddressMatch {
+  id: number;
+  code: string;
+  name: string;
+  address: string;
+  provinceCode: string;
+  provinceName: string;
+  regionName: string;
+}
 
 export interface GetOfficesParams {
   page?: number;
@@ -103,6 +114,55 @@ async function loadSiblingMap(): Promise<Map<string, SiblingOffice[]>> {
       };
     }),
   );
+}
+
+export async function findOfficeAddressMatches({
+  address,
+  provinceCode,
+  excludeId,
+  partial = false,
+}: {
+  address: string;
+  provinceCode?: string;
+  excludeId?: number;
+  partial?: boolean;
+}): Promise<OfficeAddressMatch[]> {
+  const normalizedAddress = normalizeOfficeAddress(address);
+  if (!normalizedAddress) return [];
+
+  const rows = await db
+    .select({
+      id: offices.id,
+      code: offices.code,
+      name: offices.name,
+      address: offices.address,
+      provinceCode: offices.provinceCode,
+      provinceName: provinces.name,
+      regionName: regions.name,
+    })
+    .from(offices)
+    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
+    .leftJoin(regions, eq(provinces.regionId, regions.id));
+
+  return rows
+    .filter((row) => row.id !== excludeId)
+    .filter((row) => {
+      const rowKey = getOfficeAddressKey(row.address);
+      return partial
+        ? rowKey.includes(normalizedAddress)
+        : rowKey === normalizedAddress;
+    })
+    .filter((row) => !provinceCode || row.provinceCode === provinceCode)
+    .map((row) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      address: normalizeOfficeAddress(row.address) ?? normalizedAddress,
+      provinceCode: row.provinceCode,
+      provinceName: row.provinceName ?? "",
+      regionName: row.regionName ?? "",
+    }))
+    .sort((a, b) => a.code.localeCompare(b.code, "es-AR"));
 }
 
 export async function getOffices(params: GetOfficesParams) {
