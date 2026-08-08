@@ -114,7 +114,6 @@ if (office?.type === "SUCURSAL") {
   method="POST"
   id="office-form"
   data-office-id={office?.id}
-  onsubmit="return confirm('¿Estás seguro de que deseas guardar estas modificaciones?');"
   class="space-y-4"
 >
   {/* ── Top: Datos básicos ── */}
@@ -225,6 +224,8 @@ if (office?.type === "SUCURSAL") {
                 id="input-address"
                 type="text"
                 name="address"
+                role="combobox"
+                aria-autocomplete="list"
                 required
                 value={office?.address ?? ""}
                 placeholder="ej: SANTA FE 101"
@@ -238,7 +239,7 @@ if (office?.type === "SUCURSAL") {
                 role="listbox"
                 class="menu bg-base-100 w-full rounded-box absolute top-full z-50 mt-1 hidden max-h-60 overflow-y-auto shadow-lg"
               ></ul>
-              <div id="address-building-preview" class="mt-2 hidden" role="alert"></div>
+              <div id="address-building-preview" class="mt-2 hidden"></div>
               <p id="address-autocomplete-error" class="mt-1 hidden text-sm text-error"></p>
             </div>
           </fieldset>
@@ -692,12 +693,40 @@ if (office?.type === "SUCURSAL") {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let controller: AbortController | undefined;
     let hasBuildingMatches = false;
+    let activeIndex = -1;
 
     const clearPreview = () => {
       hasBuildingMatches = false;
       preview.replaceChildren();
       preview.classList.add("hidden");
       input.removeAttribute("aria-describedby");
+    };
+
+    const getOptions = () => list.querySelectorAll<HTMLButtonElement>('button[role="option"]');
+
+    const clearActiveOption = () => {
+      activeIndex = -1;
+      input.removeAttribute("aria-activedescendant");
+      getOptions().forEach((opt) => opt.setAttribute("aria-selected", "false"));
+    };
+
+    const setActiveOption = (index: number) => {
+      const options = getOptions();
+      if (options.length === 0) return;
+      activeIndex = (index + options.length) % options.length;
+      options.forEach((opt, i) => opt.setAttribute("aria-selected", String(i === activeIndex)));
+      input.setAttribute("aria-activedescendant", options[activeIndex].id);
+      options[activeIndex].scrollIntoView({ block: "nearest" });
+    };
+
+    const chooseAddress = (address: string, offices: { code: string; name: string }[]) => {
+      input.value = address;
+      list.replaceChildren();
+      list.classList.add("hidden");
+      input.setAttribute("aria-expanded", "false");
+      clearActiveOption();
+      renderPreview(offices);
+      input.focus();
     };
 
     const renderPreview = (offices: { code: string; name: string }[]) => {
@@ -713,6 +742,9 @@ if (office?.type === "SUCURSAL") {
 
       const content = document.createElement("div");
       content.className = "min-w-0";
+
+      const liveRegion = document.createElement("div");
+      liveRegion.setAttribute("role", "alert");
 
       const title = document.createElement("p");
       title.className = "font-semibold";
@@ -734,6 +766,8 @@ if (office?.type === "SUCURSAL") {
         ul.appendChild(li);
       }
 
+      liveRegion.append(title, subtitle, ul);
+
       const label = document.createElement("label");
       label.className = "mt-3 flex cursor-pointer items-center gap-2 text-sm";
       const checkbox = document.createElement("input");
@@ -744,35 +778,60 @@ if (office?.type === "SUCURSAL") {
       const labelText = document.createTextNode("Confirmo que comparten sitio");
       label.append(checkbox, labelText);
 
-      content.append(title, subtitle, ul, label);
+      content.append(liveRegion, label);
       alertBox.appendChild(content);
       preview.replaceChildren(alertBox);
       preview.classList.remove("hidden");
       input.setAttribute("aria-describedby", "address-building-preview");
     };
 
+    const runSearch = async (query: string) => {
+      controller?.abort();
+      controller = new AbortController();
+      try {
+        const base = getCleanBase();
+        const params = new URLSearchParams({ q: query });
+        const officeId = form.dataset.officeId;
+        if (officeId) params.set("excludeId", officeId);
+        const province = form.querySelector<HTMLSelectElement>("[name=provinceCode]")?.value;
+        if (province) params.set("provinceCode", province);
+        const response = await fetch(`${base}api/offices/search-address?${params}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Address suggestions failed: ${response.status}`);
+        renderSuggestions(await response.json());
+      } catch (cause) {
+        if ((cause as DOMException).name === "AbortError") return;
+        list.replaceChildren();
+        list.classList.add("hidden");
+        input.setAttribute("aria-expanded", "false");
+        clearActiveOption();
+        error.textContent = "No se pudieron cargar sugerencias. Podés ingresar el domicilio manualmente.";
+        error.classList.remove("hidden");
+      }
+    };
+
     const renderSuggestions = (items: { address: string; offices: { code: string; name: string }[] }[]) => {
       list.replaceChildren();
-      for (const item of items) {
-        const option = document.createElement("li");
-        option.setAttribute("role", "option");
+      clearActiveOption();
+      items.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.setAttribute("role", "none");
         const button = document.createElement("button");
         button.type = "button";
+        button.setAttribute("role", "option");
+        button.id = `address-suggestion-${index}`;
+        button.dataset.address = item.address;
+        button.setAttribute("aria-selected", "false");
         button.textContent = `${item.address} (${item.offices.length} oficina${item.offices.length === 1 ? "" : "s"})`;
         button.addEventListener("click", () => {
-          input.value = item.address;
-          list.replaceChildren();
-          list.classList.add("hidden");
-          input.setAttribute("aria-expanded", "false");
-          renderPreview(item.offices.map(({ code, name }) => ({ code, name })));
-          input.focus();
+          chooseAddress(item.address, item.offices.map(({ code, name }) => ({ code, name })));
         });
-        option.appendChild(button);
-        list.appendChild(option);
-      }
+        li.appendChild(button);
+        list.appendChild(li);
+      });
       const visible = items.length > 0;
       list.classList.toggle("hidden", !visible);
       input.setAttribute("aria-expanded", String(visible));
+      if (!visible) clearActiveOption();
     };
 
     input.addEventListener("input", () => {
@@ -785,38 +844,76 @@ if (office?.type === "SUCURSAL") {
         list.replaceChildren();
         list.classList.add("hidden");
         input.setAttribute("aria-expanded", "false");
+        clearActiveOption();
         return;
       }
 
-      timeout = setTimeout(async () => {
-        controller = new AbortController();
-        try {
-          const base = getCleanBase();
-          const params = new URLSearchParams({ q: query });
-          const officeId = form.dataset.officeId;
-          if (officeId) params.set("excludeId", officeId);
-          const province = form.querySelector<HTMLSelectElement>("[name=provinceCode]")?.value;
-          if (province) params.set("provinceCode", province);
-          const response = await fetch(`${base}api/offices/search-address?${params}`, { signal: controller.signal });
-          if (!response.ok) throw new Error(`Address suggestions failed: ${response.status}`);
-          renderSuggestions(await response.json());
-        } catch (cause) {
-          if ((cause as DOMException).name === "AbortError") return;
-          list.replaceChildren();
-          list.classList.add("hidden");
-          error.textContent = "No se pudieron cargar sugerencias. Podés ingresar el domicilio manualmente.";
-          error.classList.remove("hidden");
-        }
-      }, 300);
+      timeout = setTimeout(() => runSearch(query), 300);
+    });
+
+    input.addEventListener("keydown", (event) => {
+      const options = getOptions();
+      const isOpen = !list.classList.contains("hidden");
+      switch (event.key) {
+        case "ArrowDown":
+          if (!isOpen) break;
+          event.preventDefault();
+          setActiveOption(activeIndex + 1);
+          break;
+        case "ArrowUp":
+          if (!isOpen) break;
+          event.preventDefault();
+          setActiveOption(activeIndex - 1);
+          break;
+        case "Enter":
+          if (isOpen && activeIndex >= 0 && options[activeIndex]) {
+            event.preventDefault();
+            options[activeIndex].click();
+          }
+          break;
+        case "Escape":
+          if (isOpen) {
+            event.preventDefault();
+            list.replaceChildren();
+            list.classList.add("hidden");
+            input.setAttribute("aria-expanded", "false");
+            clearActiveOption();
+          }
+          break;
+        case "Tab":
+          if (isOpen) {
+            list.replaceChildren();
+            list.classList.add("hidden");
+            input.setAttribute("aria-expanded", "false");
+            clearActiveOption();
+          }
+          break;
+      }
+    });
+
+    const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
+    provinceSelect?.addEventListener("change", () => {
+      clearPreview();
+      error.classList.add("hidden");
+      const query = input.value.trim();
+      if (query.length < 3) return;
+      clearTimeout(timeout);
+      runSearch(query);
     });
 
     form.addEventListener("submit", (event) => {
-      if (!hasBuildingMatches) return;
-      const confirmation = form.querySelector<HTMLInputElement>("#address-building-confirmed");
-      if (confirmation?.checked) return;
-      event.preventDefault();
-      confirmation?.focus();
-      (window as any).showToast?.("Confirmá si las oficinas comparten sitio.", "warning");
+      if (hasBuildingMatches) {
+        const confirmation = form.querySelector<HTMLInputElement>("#address-building-confirmed");
+        if (!confirmation?.checked) {
+          event.preventDefault();
+          confirmation?.focus();
+          (window as any).showToast?.("Confirmá si las oficinas comparten sitio.", "alert-warning");
+          return;
+        }
+      }
+      if (!window.confirm("¿Estás seguro de que deseas guardar estas modificaciones?")) {
+        event.preventDefault();
+      }
     });
 
     document.addEventListener("click", (event) => {
@@ -824,6 +921,7 @@ if (office?.type === "SUCURSAL") {
       list.replaceChildren();
       list.classList.add("hidden");
       input.setAttribute("aria-expanded", "false");
+      clearActiveOption();
     });
   }
 
