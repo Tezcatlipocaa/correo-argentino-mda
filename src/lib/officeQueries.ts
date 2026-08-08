@@ -5,8 +5,10 @@ import type {
   OfficeDirectoryItem,
   OfficeAssetType,
   OfficeType,
+  SiblingOffice,
 } from "@/types/offices";
 import { normalizeSearchValue } from "@lib/clientSearch";
+import { buildSiblingMap } from "@lib/officeSiblings";
 
 let manualHostnamesCache: Set<string> | null = null;
 let manualHostnamesCacheTime = 0;
@@ -67,6 +69,29 @@ export async function hasClosedOffices(): Promise<boolean> {
   return count > 0;
 }
 
+async function loadSiblingMap(): Promise<Map<string, SiblingOffice[]>> {
+  const rows = await db
+    .select({
+      code: offices.code,
+      name: offices.name,
+      address: offices.address,
+      provinceCode: offices.provinceCode,
+      region: regions.name,
+    })
+    .from(offices)
+    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
+    .leftJoin(regions, eq(provinces.regionId, regions.id));
+
+  return buildSiblingMap(
+    rows.map((r) => ({
+      code: r.code,
+      name: r.name,
+      address: r.address ?? "",
+      region: r.region ?? "",
+      provinceCode: r.provinceCode,
+    })),
+  );
+}
 
 export async function getOffices(params: GetOfficesParams) {
   const page = params.page ?? 1;
@@ -287,6 +312,8 @@ export async function getOffices(params: GetOfficesParams) {
   }
   const manualHostnames = manualHostnamesCache;
 
+  const siblingMap = await loadSiblingMap();
+
   const officeDirectoryItems: OfficeDirectoryItem[] = dbOffices.map((office) => {
     let mappedType = office.type;
     if (office.type === "SUCURSAL") {
@@ -358,6 +385,7 @@ export async function getOffices(params: GetOfficesParams) {
         })),
       active: office.active ?? true,
       closedReason: office.closedReason,
+      siblings: siblingMap.get(office.code) ?? [],
     };
   });
 
