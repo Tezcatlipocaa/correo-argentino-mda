@@ -112,13 +112,14 @@ const totalMembers = visibleHelpdesks.reduce(
     totalMembers={totalMembers}
   />
 
-  <div id="soportes-filters" class="flex flex-col gap-2 md:gap-3 w-full">
+  <div id="soportes-filters" class="bg-base-100 border border-base-300 rounded-xl p-3.5 shadow-xs flex flex-col gap-3 w-full">
     <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">
       {
         uniqueParentNames.length > 0 && (
           <select
             id="filter-parent"
             class="select grow select-bordered shrink-0 select-sm md:select-md"
+            aria-label="Filtrar por mesa padre"
           >
             <option value="all">Todas las mesas padre</option>
             {uniqueParentNames.map((name) => (
@@ -131,6 +132,7 @@ const totalMembers = visibleHelpdesks.reduce(
       <select
         id="filter-status"
         class="select select-bordered shrink-0 select-sm md:select-md"
+        aria-label="Filtrar por estado"
       >
         <option value="all">Todos los estados</option>
         <option value="active">Activos</option>
@@ -140,6 +142,7 @@ const totalMembers = visibleHelpdesks.reduce(
       <select
         id="sort-by"
         class="select select-bordered shrink-0 select-sm md:select-md"
+        aria-label="Ordenar resultados"
       >
         <option value="name-asc">Nombre A-Z</option>
         <option value="name-desc">Nombre Z-A</option>
@@ -151,10 +154,10 @@ const totalMembers = visibleHelpdesks.reduce(
     </div>
 
     <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">
-      <div class="flex-1 min-w-96">
+      <div class="flex-1 min-w-72 sm:min-w-96">
         <SearchBar
           id="soportes-search"
-          placeholder="Buscar por nombre SM, Invgate, topico..."
+          placeholder="Buscar por nombre SM, Invgate, tópico…"
           class="w-full"
         />
       </div>
@@ -165,7 +168,7 @@ const totalMembers = visibleHelpdesks.reduce(
         aria-label="Limpiar todos los filtros"
         title="Limpiar todos los filtros"
       >
-        <Icon name="boxicons:trash" class="size-4" aria-hidden="true" />
+        <Icon name="boxicons:trash" size={16} aria-hidden="true" />
         <span class="hidden lg:inline">Limpiar filtros</span>
       </button>
       {
@@ -208,7 +211,7 @@ const totalMembers = visibleHelpdesks.reduce(
         <div class="col-span-full flex flex-col items-center gap-3 py-16 text-base-content/50">
           <div class="rounded-full bg-base-200 p-4">
             <Icon
-              name="boxicons:group-alt-filled"
+              name="boxicons:headphone-mic"
               size={32}
               class="opacity-30"
               aria-hidden="true"

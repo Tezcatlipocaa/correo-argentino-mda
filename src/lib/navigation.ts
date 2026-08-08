@@ -88,7 +88,7 @@ export const navSections: NavSection[] = [
       {
         href: "/mesas-de-ayuda",
         label: "Mesas de Ayuda",
-        icon: "boxicons:group-alt-filled",
+        icon: "boxicons:headphone-mic",
       },
     ],
   },
