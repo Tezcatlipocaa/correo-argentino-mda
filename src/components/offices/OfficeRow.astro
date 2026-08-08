@@ -46,7 +46,8 @@ const hasInfoSection = hasContacts || hasInfo || hasInvgateDetail;
 const totalAssets =
   (office.assets?.length || 0) + (office.terminals?.length || 0);
 const hasAssetsSection = totalAssets > 0;
-const hasDetails = hasInfoSection || hasAssetsSection || hasInvgateDetail;
+const hasSiblings = (office.siblings?.length ?? 0) > 0;
+const hasDetails = hasInfoSection || hasAssetsSection || hasInvgateDetail || hasSiblings;
 
 const activeSectionsCount =
   (hasInfoSection ? 1 : 0) + (hasAssetsSection ? 1 : 0);
@@ -473,6 +474,52 @@ const officeDirectoryRowGridClass = isAllowedAdmin
               </div>
             )
           }
+
+          {hasSiblings && (
+            <div class="flex flex-col gap-5">
+              <section class="space-y-3">
+                <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
+                  <Icon
+                    name="boxicons:building-filled"
+                    size={16}
+                    class="text-secondary"
+                    aria-hidden="true"
+                  />
+                  Oficinas en el mismo edificio ({office.siblings!.length})
+                </h2>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  {office.siblings!.map((sib) => (
+                    <div
+                      data-sibling-office
+                      data-sibling-code={sib.code}
+                      class="flex items-center justify-between gap-3 rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
+                    >
+                      <div class="min-w-0">
+                        <p
+                          class="truncate text-sm font-semibold text-base-content"
+                          title={sib.name}
+                        >
+                          {sib.name}
+                        </p>
+                        <p class="text-xxs uppercase tracking-wide text-base-content/50">
+                          Mismo edificio
+                        </p>
+                      </div>
+                      <CopyButton
+                        value={sib.code}
+                        variant="value"
+                        monospace={true}
+                        size="xs"
+                        appearance="surface"
+                        copiedLabel={`NIS ${sib.code} copiado al portapapeles`}
+                        class="shrink-0"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
 
           {
             hasAssetsSection && (
