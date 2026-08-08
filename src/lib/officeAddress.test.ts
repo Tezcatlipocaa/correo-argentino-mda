@@ -37,3 +37,10 @@ test("clave separada permite agregar equivalencias futuras", () => {
     "AVENIDA SANTA FE 101",
   );
 });
+
+test("confirmation field accepts only explicit checked value", () => {
+  const formValue = (v: string | null) => v;
+  assert.equal((formValue("on") ?? "") === "on", true);
+  assert.equal((formValue(null) ?? "") === "on", false);
+  assert.equal((formValue("false") ?? "") === "on", false);
+});

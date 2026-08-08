@@ -19,6 +19,8 @@ import { redirectWithToast } from "@lib/api/redirectWithToast";
 import OfficeForm from "@components/admin/OfficeForm.astro";
 import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
+import { normalizeOfficeAddress } from "@lib/officeAddress";
+import { findOfficeAddressMatches } from "@lib/officeQueries";
 
 const cleanBase = getCleanBase();
 
@@ -26,6 +28,7 @@ const { id } = Astro.params;
 const isNew = false;
 let successMsg = "";
 let errorMsg = "";
+let toastType: string = "alert-error";
 
 if (!id || isNaN(Number(id))) {
   return Astro.redirect(`${cleanBase}oficinas`);
@@ -60,7 +63,7 @@ if (Astro.request.method === "POST") {
       type: type,
       officeType: officeType,
       provinceCode: valStr("provinceCode") ?? "",
-      address: valStr("address"),
+      address: normalizeOfficeAddress(valStr("address")),
       locality: valStr("locality"),
       county: valStr("county"),
       zone: valStr("zone"),
@@ -109,6 +112,18 @@ if (Astro.request.method === "POST") {
     } else {
       const officeData = parsed.data;
 
+      const addressMatches = officeData.address
+        ? await findOfficeAddressMatches({
+            address: officeData.address,
+            provinceCode: officeData.provinceCode,
+            excludeId: officeId,
+          })
+        : [];
+
+      if (addressMatches.length > 0 && fd.get("sameBuildingConfirmed") !== "on") {
+        errorMsg = "Confirmá si la oficina comparte sitio con las oficinas listadas.";
+        toastType = "alert-warning";
+      } else {
       const [existing] = await db
         .select({ name: offices.name })
         .from(offices)
@@ -235,6 +250,7 @@ if (Astro.request.method === "POST") {
         await logAdminFromAstro(Astro.locals, `Actualizó la oficina "${officeData.name}" (NIS ${officeData.code})`);
       }
       return redirectWithToast("/oficinas", "Oficina actualizada con éxito.");
+      }
     }
   } catch (e: any) {
     console.error("[EditOffice] Error actualizando la oficina:", e);
@@ -363,8 +379,8 @@ const pageTitle = `Editar: ${office.name}`;
 
     {
       errorMsg && (
-        <script is:inline define:vars={{ errorMsg }}>
-          window.addEventListener('load', () => window.showToast?.(errorMsg, "alert-error"));
+        <script is:inline define:vars={{ errorMsg, toastType }}>
+          window.addEventListener('load', () => window.showToast?.(errorMsg, toastType));
         </script>
       )
     }
