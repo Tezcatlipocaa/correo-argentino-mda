@@ -62,7 +62,7 @@ test.describe("Oficinas en el mismo edificio", () => {
     expect(clipboard).toBe(code);
   });
 
-  test("sibling cards remain available after canonical address selection", async ({
+  test("directory renders data-sibling-code on sibling cards", async ({
     page,
   }) => {
     await page.goto("/oficinas");

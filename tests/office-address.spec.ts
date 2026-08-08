@@ -21,6 +21,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  if (!testUserId) return;
   await db.delete(sessions).where(eq(sessions.userId, testUserId));
   await db.delete(users).where(eq(users.id, testUserId));
 });
@@ -33,6 +34,37 @@ async function loginAsAdmin(page: Page) {
   expect(response.status()).toBe(200);
   const cookies = await page.context().cookies();
   expect(cookies.some((c) => c.name === "session_id")).toBeTruthy();
+}
+
+async function selectSharedAddressSuggestion(page: Page): Promise<number> {
+  const officeRows = await db.select({ id: offices.id }).from(offices).limit(1);
+  test.skip(officeRows.length === 0, "No offices in current DB");
+  const officeId = officeRows[0].id;
+
+  const office = await db
+    .select({ address: offices.address, provinceCode: offices.provinceCode })
+    .from(offices)
+    .where(eq(offices.id, officeId));
+  const address = office[0]?.address;
+  test.skip(!address, "First office has no address in current DB");
+
+  const token = address!.trim().split(/\s+/)[0];
+  const query = token.length >= 3 ? token : address!;
+  const suggestionsResponse = await page.request.get(
+    `/api/offices/search-address?q=${encodeURIComponent(query)}&provinceCode=${encodeURIComponent(office[0]?.provinceCode ?? "")}&excludeId=${officeId}`,
+  );
+  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
+  const withOffices = suggestions.find((s) => s.offices.length > 0);
+  test.skip(!withOffices, "No shared-address offices in current DB");
+
+  await page.goto(`/oficinas/edit/${officeId}`);
+  const input = page.locator("#input-address");
+  await input.fill(query);
+  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
+  await expect(option).toBeVisible();
+  await option.click();
+
+  return officeId;
 }
 
 test("address suggestions return unique canonical addresses", async ({ page }) => {
@@ -87,31 +119,7 @@ test("returns empty array for query shorter than 3 chars", async ({ page }) => {
 
 test("selecting existing address shows same-building preview below input", async ({ page }) => {
   await loginAsAdmin(page);
-
-  const officeRows = await db
-    .select({ id: offices.id, provinceCode: offices.provinceCode })
-    .from(offices)
-    .limit(1);
-  test.skip(officeRows.length === 0, "No offices in current DB");
-  const officeId = officeRows[0].id;
-  const officeProvince = officeRows[0].provinceCode ?? "";
-
-  const suggestionsResponse = await page.request.get(
-    `/api/offices/search-address?q=santa&excludeId=${officeId}&provinceCode=${officeProvince}`,
-  );
-  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
-  const withOffices = suggestions.find((s) => s.offices.length > 0);
-  test.skip(!withOffices, "No shared-address offices in current DB");
-
-  await page.goto(`/oficinas/edit/${officeId}`);
-
-  const input = page.locator("#input-address");
-  const query = withOffices!.address.trim();
-  await input.fill(query);
-
-  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
-  await expect(option).toBeVisible();
-  await option.click();
+  await selectSharedAddressSuggestion(page);
 
   await expect(page.locator("#address-building-preview")).toBeVisible();
   await expect(page.locator("#address-building-confirmed")).toBeVisible();
@@ -120,36 +128,7 @@ test("selecting existing address shows same-building preview below input", async
 
 test("blocks save until shared-site confirmation is checked", async ({ page }) => {
   await loginAsAdmin(page);
-
-  const officeRows = await db
-    .select({ id: offices.id, address: offices.address, provinceCode: offices.provinceCode })
-    .from(offices)
-    .limit(1);
-  test.skip(officeRows.length === 0, "No offices in current DB");
-  const officeId = officeRows[0].id;
-  const officeAddress = officeRows[0].address;
-  const officeProvince = officeRows[0].provinceCode ?? "";
-  test.skip(!officeAddress, "No office with address in current DB");
-
-  const trimmed = officeAddress!.trim();
-  const firstWord = trimmed.split(/\s+/)[0];
-  const query = firstWord.length >= 3 ? firstWord : trimmed;
-  test.skip(query.length < 3, "Address too short for query");
-
-  const suggestionsResponse = await page.request.get(
-    `/api/offices/search-address?q=${encodeURIComponent(query)}&excludeId=${officeId}&provinceCode=${officeProvince}`,
-  );
-  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
-  const withOffices = suggestions.find((s) => s.offices.length > 0);
-  test.skip(!withOffices, "No shared-address offices in current DB");
-
-  await page.goto(`/oficinas/edit/${officeId}`);
-  const input = page.locator("#input-address");
-  await input.fill(withOffices!.address);
-
-  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
-  await expect(option).toBeVisible();
-  await option.click();
+  const officeId = await selectSharedAddressSuggestion(page);
 
   await expect(page.locator("#address-building-preview")).toBeVisible();
   await page.locator("#office-form button[type=submit]").first().click();
@@ -163,13 +142,11 @@ test("blocks save until shared-site confirmation is checked", async ({ page }) =
 
 test("changing to unmatched address hides shared-site preview", async ({ page }) => {
   await loginAsAdmin(page);
-  const officeRows = await db.select({ id: offices.id }).from(offices).limit(1);
-  test.skip(officeRows.length === 0, "No offices in current DB");
-  const officeId = officeRows[0].id;
+  await selectSharedAddressSuggestion(page);
 
-  await page.goto(`/oficinas/edit/${officeId}`);
+  await expect(page.locator("#address-building-preview")).toBeVisible();
+
   const input = page.locator("#input-address");
   await input.fill("DOMICILIO INEXISTENTE 999999");
-  await page.waitForTimeout(600);
   await expect(page.locator("#address-building-preview")).toBeHidden();
 });
