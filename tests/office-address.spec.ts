@@ -117,3 +117,59 @@ test("selecting existing address shows same-building preview below input", async
   await expect(page.locator("#address-building-confirmed")).toBeVisible();
   await expect(page.locator("#address-building-preview [data-sibling-office]").first()).toBeVisible();
 });
+
+test("blocks save until shared-site confirmation is checked", async ({ page }) => {
+  await loginAsAdmin(page);
+
+  const officeRows = await db
+    .select({ id: offices.id, address: offices.address, provinceCode: offices.provinceCode })
+    .from(offices)
+    .limit(1);
+  test.skip(officeRows.length === 0, "No offices in current DB");
+  const officeId = officeRows[0].id;
+  const officeAddress = officeRows[0].address;
+  const officeProvince = officeRows[0].provinceCode ?? "";
+  test.skip(!officeAddress, "No office with address in current DB");
+
+  const trimmed = officeAddress!.trim();
+  const firstWord = trimmed.split(/\s+/)[0];
+  const query = firstWord.length >= 3 ? firstWord : trimmed;
+  test.skip(query.length < 3, "Address too short for query");
+
+  const suggestionsResponse = await page.request.get(
+    `/api/offices/search-address?q=${encodeURIComponent(query)}&excludeId=${officeId}&provinceCode=${officeProvince}`,
+  );
+  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
+  const withOffices = suggestions.find((s) => s.offices.length > 0);
+  test.skip(!withOffices, "No shared-address offices in current DB");
+
+  await page.goto(`/oficinas/edit/${officeId}`);
+  const input = page.locator("#input-address");
+  await input.fill(withOffices!.address);
+
+  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
+  await expect(option).toBeVisible();
+  await option.click();
+
+  await expect(page.locator("#address-building-preview")).toBeVisible();
+  await page.locator("#office-form button[type=submit]").first().click();
+
+  await expect(page.locator("#address-building-confirmed")).not.toBeChecked();
+  await expect(page).toHaveURL(new RegExp(`/oficinas/edit/${officeId}$`));
+  await expect(page.locator("#global-toast-container")).toContainText(
+    "Confirmá si las oficinas comparten sitio.",
+  );
+});
+
+test("changing to unmatched address hides shared-site preview", async ({ page }) => {
+  await loginAsAdmin(page);
+  const officeRows = await db.select({ id: offices.id }).from(offices).limit(1);
+  test.skip(officeRows.length === 0, "No offices in current DB");
+  const officeId = officeRows[0].id;
+
+  await page.goto(`/oficinas/edit/${officeId}`);
+  const input = page.locator("#input-address");
+  await input.fill("DOMICILIO INEXISTENTE 999999");
+  await page.waitForTimeout(600);
+  await expect(page.locator("#address-building-preview")).toBeHidden();
+});

@@ -61,4 +61,15 @@ test.describe("Oficinas en el mismo edificio", () => {
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboard).toBe(code);
   });
+
+  test("sibling cards remain available after canonical address selection", async ({
+    page,
+  }) => {
+    await page.goto("/oficinas");
+    await page.waitForSelector("[data-office-id]", { timeout: 15000 });
+
+    const sibling = page.locator("[data-sibling-office]").first();
+    test.skip((await sibling.count()) === 0, "No shared-address offices in the current DB");
+    await expect(sibling).toHaveAttribute("data-sibling-code", /.+/);
+  });
 });
