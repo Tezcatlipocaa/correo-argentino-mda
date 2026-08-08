@@ -10,6 +10,7 @@ let testUserId: number;
 const username = `test_addr_${Date.now()}`;
 const password = "TestPass1234";
 let hashedPassword: string;
+let createdOfficeCode: string | undefined;
 
 test.beforeAll(async () => {
   hashedPassword = await bcrypt.hash(password, 4);
@@ -21,6 +22,9 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  if (createdOfficeCode) {
+    await db.delete(offices).where(eq(offices.code, createdOfficeCode)).catch(() => {});
+  }
   if (!testUserId) return;
   await db.delete(sessions).where(eq(sessions.userId, testUserId));
   await db.delete(users).where(eq(users.id, testUserId));
@@ -29,7 +33,6 @@ test.afterAll(async () => {
 async function loginAsAdmin(page: Page) {
   const response = await page.request.post("/login", {
     form: { username, password },
-    redirect: "manual",
   });
   expect(response.status()).toBe(200);
   const cookies = await page.context().cookies();
@@ -149,4 +152,61 @@ test("changing to unmatched address hides shared-site preview", async ({ page })
   const input = page.locator("#input-address");
   await input.fill("DOMICILIO INEXISTENTE 999999");
   await expect(page.locator("#address-building-preview")).toBeHidden();
+});
+
+test("confirmed same-building save proceeds on create", async ({ page }) => {
+  await loginAsAdmin(page);
+
+  const officeRows = await db.select({ id: offices.id, provinceCode: offices.provinceCode }).from(offices).limit(1);
+  test.skip(officeRows.length === 0, "No offices in current DB");
+  const officeId = officeRows[0].id;
+  const province = officeRows[0].provinceCode;
+
+  const office = await db
+    .select({ address: offices.address })
+    .from(offices)
+    .where(eq(offices.id, officeId));
+  const address = office[0]?.address;
+  test.skip(!address, "First office has no address in current DB");
+
+  const token = address!.trim().split(/\s+/)[0];
+  const query = token.length >= 3 ? token : address!;
+  const suggestionsResponse = await page.request.get(
+    `/api/offices/search-address?q=${encodeURIComponent(query)}&provinceCode=${encodeURIComponent(province)}`,
+  );
+  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
+  const withOffices = suggestions.find((s) => s.offices.length > 0);
+  test.skip(!withOffices, "No shared-address offices in current DB");
+
+  const code = `TEST${Date.now()}`;
+  createdOfficeCode = code;
+
+  await page.goto("/oficinas/create");
+  await page.locator("#input-code").fill(code);
+  await page.locator("#input-name").fill("TEST OFICINA");
+  await page.locator("#select-provinceCode").selectOption({ value: province });
+
+  const input = page.locator("#input-address");
+  await input.fill(query);
+  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
+  await expect(option).toBeVisible();
+  await option.click();
+
+  await expect(page.locator("#address-building-confirmed")).toBeVisible();
+  await page.locator("#address-building-confirmed").check();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#office-form button[type=submit]").first().click();
+
+  await expect(page).toHaveURL(/\/oficinas$/);
+  await expect(page.locator("#global-toast-container")).toContainText("Oficina creada con éxito.");
+});
+
+test("API failure shows non-blocking message and keeps manual entry", async ({ page }) => {
+  await loginAsAdmin(page);
+  await page.route("**/api/offices/search-address*", (route) => route.fulfill({ status: 500, body: "{}" }));
+  await page.goto("/oficinas/create");
+  await page.locator("#input-address").fill("SANTA");
+  await expect(page.locator("#address-autocomplete-error")).toBeVisible();
+  const input = page.locator("#input-address");
+  await expect(input).toBeEnabled();
 });

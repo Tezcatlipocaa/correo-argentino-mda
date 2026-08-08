@@ -113,14 +113,6 @@ if (Astro.request.method === "POST") {
     } else {
       const officeData = parsed.data;
 
-      const addressMatches = officeData.address
-        ? await findOfficeAddressMatches({
-            address: officeData.address,
-            provinceCode: officeData.provinceCode,
-            excludeId: officeId,
-          })
-        : [];
-
       const [existing] = await db
         .select({ name: offices.name, address: offices.address })
         .from(offices)
@@ -129,6 +121,15 @@ if (Astro.request.method === "POST") {
 
       const addressChanged =
         getOfficeAddressKey(existing?.address) !== getOfficeAddressKey(officeData.address);
+
+      const addressMatches =
+        addressChanged && officeData.address
+          ? await findOfficeAddressMatches({
+              address: officeData.address,
+              provinceCode: officeData.provinceCode,
+              excludeId: officeId,
+            })
+          : [];
 
       if (addressChanged && addressMatches.length > 0 && !isSameBuildingConfirmed(fd.get("sameBuildingConfirmed")?.toString())) {
         errorMsg = "Confirmá si la oficina comparte sitio con las oficinas listadas.";

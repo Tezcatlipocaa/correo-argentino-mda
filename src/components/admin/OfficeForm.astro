@@ -838,6 +838,8 @@ if (office?.type === "SUCURSAL") {
       clearTimeout(timeout);
       controller?.abort();
       clearPreview();
+      list.classList.add("hidden");
+      clearActiveOption();
       error.classList.add("hidden");
       const query = input.value.trim();
       if (query.length < 3) {
