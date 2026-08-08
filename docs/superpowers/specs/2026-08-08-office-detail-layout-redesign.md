@@ -49,6 +49,10 @@ Implementación: un helper en frontmatter que devuelve las clases de cada column
 
 ## Rediseño de card de Equipos
 
+El rediseño es **condicional**: aplica únicamente cuando existe la columna central (layout de 3 columnas, es decir `hasCenter === true`). Si solo hay 2 columnas (sin centro), se mantiene **el diseño actual** sin cambios.
+
+### Layout de 3 columnas (`hasCenter === true`)
+
 Cada equipo (terminal o activo manual) pasa de card horizontal a card vertical compacta:
 
 ```
@@ -64,11 +68,18 @@ Cada equipo (terminal o activo manual) pasa de card horizontal a card vertical c
 - Línea 2: hostname (`font-mono text-xs font-semibold`, truncate).
 - Línea 3: componente IP (`CopyButton`) — **debajo del hostname**, manteniendo dimensiones actuales (`size="xs"`, `appearance="surface"`, `monospace`).
 - **Impresoras** (activos con `type === "printer"`): NO se muestra ni se reserva fila de hostname; el IP va directo debajo del label de tipo.
-- Cards más angostas → el grid de la derecha usa `grid-cols-1 xl:grid-cols-2` cuando hay columnas laterales, y `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3` a full width (patrón actual).
+- Cards más angostas → grid de la derecha usa `grid-cols-1 xl:grid-cols-2`.
+
+### Layout de 2 columnas o 1 (`hasCenter === false`)
+
+Diseño **actual sin cambios**:
+- Card horizontal: `[icono] | (label de tipo, hostname) | IP copiable a la derecha`.
+- Grid `grid-cols-1 xl:grid-cols-2` cuando hay columna izquierda, `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3` a full width (patrón actual).
 
 ## Scroll / altura
 
-- La sección **Equipos** obtiene `max-height` (≈420px) con `overflow-y-auto` para que el desplegable nunca sea interminable cuando hay muchos equipos (ej. 78 en Santa Fe).
+- En el layout de **3 columnas** (cards compactas), la sección **Equipos** obtiene `max-height` (≈420px) con `overflow-y-auto` para que el desplegable nunca sea interminable cuando hay muchos equipos (ej. 78 en Santa Fe).
+- En el layout de **2 columnas / 1**, se mantiene el comportamiento actual sin scroll (la altura queda acotada por la columna más alta, como hoy).
 - La altura total del desplegable queda acotada por la columna más alta.
 
 ## Edge cases
@@ -81,6 +92,8 @@ Cada equipo (terminal o activo manual) pasa de card horizontal a card vertical c
 | Sin siblings Y contactos ≤5 | Centro no existe; 2 columnas izq+der con proporción 2/3 |
 | Oficina con Información | Información va primero (arriba de InvGate) |
 | Oficina con `hasSiblings` y contactos >5 | Centro muestra siblings + Contactos; izquierda sin Contactos |
+| Oficina con centro (3 cols) | Equipos en cards verticales compactas (IP debajo) + max-height scroll |
+| Oficina sin centro (2 cols) | Equipos con diseño actual (IP a la derecha, 2 cards/fila), sin scroll |
 
 ## Alcance (fuera de scope)
 
