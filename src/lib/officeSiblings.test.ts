@@ -87,6 +87,34 @@ test("buildSiblingMap groups addresses after shared canonicalization", () => {
   assert.deepEqual(map.get("B1")?.map((office) => office.code), ["A1"]);
 });
 
+test("buildSiblingMap sorts siblings by type then NIS", () => {
+  const items: Mini[] = [
+    make("S0000", "Santa Fe", "SUCURSAL_AUTOMATIZADA", "2430", "Centro", "S"),
+    make("I5135", "Tel 1", "TELEGRAFIA", "2430", "Centro", "S"),
+    make("O7906", "CDD 1", "CDD", "2430", "Centro", "S"),
+    make("O5005", "Adm", "ADMINISTRACION", "2430", "Centro", "S"),
+    make("O6511", "CDP", "CDP", "2430", "Centro", "S"),
+  ];
+  const map = buildSiblingMap(items);
+  assert.deepEqual(
+    map.get("S0000")?.map((s) => s.code),
+    ["O5005", "O7906", "O6511", "I5135"],
+  );
+});
+
+test("buildSiblingMap sorts same-type siblings by NIS", () => {
+  const items: Mini[] = [
+    make("S0000", "Santa Fe", "SUCURSAL_AUTOMATIZADA", "2430", "Centro", "S"),
+    make("I2988", "Tel A", "TELEGRAFIA", "2430", "Centro", "S"),
+    make("I5135", "Tel B", "TELEGRAFIA", "2430", "Centro", "S"),
+  ];
+  const map = buildSiblingMap(items);
+  assert.deepEqual(
+    map.get("I2988")?.map((s) => s.code),
+    ["S0000", "I5135"],
+  );
+});
+
 test("an office with no sibling is omitted from the map", () => {
   const items: Mini[] = [make("SOLO", "Unica", "CDD", "123", "Centro", "S")];
   const map = buildSiblingMap(items);

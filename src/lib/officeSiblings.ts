@@ -39,7 +39,12 @@ export function buildSiblingMap(
     for (const item of group) {
       const siblings = group
         .filter((o) => o.code !== item.code)
-        .map((o) => ({ code: o.code, name: o.name, type: o.type }));
+        .map((o) => ({ code: o.code, name: o.name, type: o.type }))
+        .sort(
+          (a, b) =>
+            a.type.localeCompare(b.type) ||
+            a.code.localeCompare(b.code),
+        );
       result.set(item.code, siblings);
     }
   }
