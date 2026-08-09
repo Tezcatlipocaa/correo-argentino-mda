@@ -238,11 +238,11 @@ const formatDateTime = (date: Date) => {
                 <span class="text-xxs font-black uppercase tracking-wider text-base-content/50">TIPO:</span>
                 <span id="detail-type-badge" class="badge badge-sm font-bold uppercase tracking-wide"></span>
               </div>
-              <div id="detail-category-container" class="flex items-center justify-between hidden">
+              <div id="detail-category-container" class="items-center justify-between hidden [&:not(.hidden)]:flex">
                 <span class="text-xxs font-black uppercase tracking-wider text-base-content/50">CATEGORÍA:</span>
                 <span id="detail-category" class="badge badge-sm font-semibold"></span>
               </div>
-              <div id="detail-severity-container" class="flex items-center justify-between hidden">
+              <div id="detail-severity-container" class="items-center justify-between hidden [&:not(.hidden)]:flex">
                 <span class="text-xxs font-black uppercase tracking-wider text-base-content/50">GRAVEDAD:</span>
                 <span id="detail-severity" class="badge badge-sm font-semibold uppercase"></span>
               </div>
