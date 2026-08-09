@@ -97,12 +97,14 @@ test("address suggestions return unique canonical addresses", async ({ page }) =
   expect(data.length).toBeGreaterThan(0);
   for (const suggestion of data) {
     expect(suggestion.address).toBe(suggestion.address.toUpperCase());
+    expect(typeof suggestion.provinceCode).toBe("string");
+    expect(typeof suggestion.provinceName).toBe("string");
+    expect(typeof suggestion.regionName).toBe("string");
     expect(Array.isArray(suggestion.offices)).toBeTruthy();
     for (const office of suggestion.offices) {
       expect(typeof office.code).toBe("string");
       expect(typeof office.name).toBe("string");
-      expect(typeof office.provinceName).toBe("string");
-      expect(typeof office.regionName).toBe("string");
+      expect(office.provinceName).toBeUndefined();
     }
   }
 });

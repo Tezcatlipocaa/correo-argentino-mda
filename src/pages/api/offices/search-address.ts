@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { findOfficeAddressMatches } from "@lib/officeQueries";
 import { normalizeOfficeAddress } from "@lib/officeAddress";
+import { buildAddressSuggestions } from "@lib/officeAddressSuggestions";
 import { jsonResponse } from "@lib/apiResponse";
 
 const MAX_SUGGESTIONS = 6;
@@ -25,31 +26,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       partial: true,
     });
     const normalizedQuery = normalizeOfficeAddress(query) ?? "";
-    const grouped = new Map<string, { address: string; offices: typeof matches }>();
-
-    for (const match of matches) {
-      const item = grouped.get(match.address) ?? { address: match.address, offices: [] };
-      item.offices.push(match);
-      grouped.set(match.address, item);
-    }
-
-    const result = [...grouped.values()]
-      .sort((a, b) => {
-        const aStarts = a.address.startsWith(normalizedQuery) ? 0 : 1;
-        const bStarts = b.address.startsWith(normalizedQuery) ? 0 : 1;
-        return aStarts - bStarts || a.address.localeCompare(b.address, "es-AR");
-      })
-      .slice(0, MAX_SUGGESTIONS)
-      .map(({ address, offices }) => ({
-        address,
-        offices: offices.map(({ code, name, provinceName, regionName }) => ({
-          code,
-          name,
-          provinceName,
-          regionName,
-        })),
-      }));
-
+    const result = buildAddressSuggestions(matches, normalizedQuery).slice(0, MAX_SUGGESTIONS);
     return jsonResponse(result);
   } catch (error) {
     console.error("Error en search-address API:", error);
