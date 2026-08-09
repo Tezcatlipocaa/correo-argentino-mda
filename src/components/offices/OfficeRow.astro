@@ -514,7 +514,8 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   />
                   Equipos ({totalAssets})
                 </h2>
-                <div class="office-assets-scroll flex-1 overflow-y-auto pr-1 min-h-0 lg:max-h-[480px]">
+                <div class="relative flex-1 min-h-0 lg:max-h-[480px]">
+                  <div class="office-assets-scroll h-full overflow-y-auto pr-1">
                   <div
                     data-assets-compact={
                       layout.compactAssets ? "true" : undefined
@@ -558,19 +559,20 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                         />
                       ))}
                   </div>
+                  </div>
+                  {layout.compactAssets && (
+                    <>
+                      <div
+                        class="office-assets-fade-top pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-base-100 to-transparent transition-opacity duration-200 opacity-0"
+                        aria-hidden="true"
+                      />
+                      <div
+                        class="office-assets-fade pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent transition-opacity duration-200"
+                        aria-hidden="true"
+                      />
+                    </>
+                  )}
                 </div>
-                {layout.compactAssets && (
-                  <>
-                    <div
-                      class="office-assets-fade-top pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-base-100 to-transparent transition-opacity duration-200 opacity-0"
-                      aria-hidden="true"
-                    />
-                    <div
-                      class="office-assets-fade pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent transition-opacity duration-200"
-                      aria-hidden="true"
-                    />
-                  </>
-                )}
               </div>
             )
           }
