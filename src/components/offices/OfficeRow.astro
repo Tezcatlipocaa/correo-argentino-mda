@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import CopyButton from "@components/ui/CopyButton.astro";
 import OfficeContactsSection from "@components/offices/OfficeContactsSection.astro";
+import OfficeEquipmentCard from "@components/offices/OfficeEquipmentCard.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { isAllowed } from "@lib/rolesMatrix";
@@ -10,16 +11,9 @@ import {
   officeTypeLabelByType,
   officeTypeChipClassByType,
   defaultChipClass,
-  assetColorByType,
-  assetIconByType,
-  assetLabelByType,
   assetOrderByType,
 } from "@lib/officeHelpers";
 import { getDetailColumnLayout } from "@lib/officeLayout";
-import {
-  getTerminalColorClass,
-  getTerminalTypeLabel,
-} from "@lib/terminalHelpers";
 
 interface Props {
   office: OfficeDirectoryItem;
@@ -468,7 +462,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                       />
                       Oficinas en el mismo edificio ({siblings.length})
                     </h2>
-                    <div class="grid gap-3">
+                    <div class="grid grid-cols-1 gap-3">
                       {siblings.map((sib) => (
                         <div
                           data-sibling-office
@@ -530,8 +524,14 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   />
                   Equipos ({totalAssets})
                 </h2>
-                <div class="flex-1 overflow-y-auto pr-1 min-h-0">
+                <div
+                  class:list={[
+                    "flex-1 overflow-y-auto pr-1 min-h-0",
+                    layout.compactAssets && "lg:max-h-[420px]",
+                  ]}
+                >
                   <div
+                    data-assets-compact={layout.compactAssets ? "true" : undefined}
                     class:list={[
                       "grid gap-3 p-1",
                       layout.compactAssets || layout.hasLeft
@@ -551,38 +551,11 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                         );
                       })
                       .map((terminal) => (
-                        <div class="flex items-center gap-3 p-3 bg-base-100 rounded-lg border border-base-300 shadow-sm hover:shadow-md transition-shadow min-w-0">
-                          <span
-                            class:list={[
-                              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border",
-                              getTerminalColorClass(
-                                terminal.operatingSystem,
-                                office.type === "TELEGRAFIA",
-                              ),
-                            ]}
-                            aria-hidden="true"
-                          >
-                            <Icon name="boxicons:desktop-filled" size={18} />
-                          </span>
-                          <div class="min-w-0 flex-1">
-                            <p class="text-xxs font-medium text-base-content/60 truncate">
-                              {getTerminalTypeLabel(terminal.operatingSystem)}
-                            </p>
-                            <p class="truncate font-mono text-xs font-semibold text-base-content">
-                              {terminal.hostname}
-                            </p>
-                          </div>
-                          <div class="text-right shrink-0">
-                            <CopyButton
-                              value={terminal.ipAddress}
-                              variant="value"
-                              monospace={true}
-                              size="xs"
-                              appearance="surface"
-                              class="text-xxs font-medium"
-                            />
-                          </div>
-                        </div>
+                        <OfficeEquipmentCard
+                          terminal={terminal}
+                          compact={layout.compactAssets}
+                          isTelegrafia={office.type === "TELEGRAFIA"}
+                        />
                       ))}
 
                     {/* Activos manuales */}
@@ -592,41 +565,10 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                           assetOrderByType[a.type] - assetOrderByType[b.type],
                       )
                       .map((asset) => (
-                        <div class="flex items-center gap-3 p-3 bg-base-100 rounded-lg border border-base-300 shadow-sm hover:shadow-md transition-shadow min-w-0">
-                          <span
-                            class:list={[
-                              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg border",
-                              assetColorByType[asset.type],
-                            ]}
-                            aria-hidden="true"
-                          >
-                            <Icon
-                              name={
-                                assetIconByType[asset.type] ||
-                                "boxicons:info-circle"
-                              }
-                              size={18}
-                            />
-                          </span>
-                          <div class="min-w-0 flex-1">
-                            <p class="text-xxs font-medium text-base-content/60 truncate">
-                              {assetLabelByType[asset.type]}
-                            </p>
-                            <p class="truncate font-mono text-xs font-semibold text-base-content">
-                              {asset.hostname}
-                            </p>
-                          </div>
-                          <div class="text-right shrink-0">
-                            <CopyButton
-                              value={asset.ip}
-                              variant="value"
-                              monospace={true}
-                              size="xs"
-                              appearance="surface"
-                              class="text-xxs font-medium"
-                            />
-                          </div>
-                        </div>
+                        <OfficeEquipmentCard
+                          asset={asset}
+                          compact={layout.compactAssets}
+                        />
                       ))}
                   </div>
                 </div>
