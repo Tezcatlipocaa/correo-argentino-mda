@@ -241,6 +241,7 @@ if (office?.type === "SUCURSAL") {
               ></ul>
               <div id="address-building-preview" class="mt-2 hidden"></div>
               <p id="address-autocomplete-error" class="mt-1 hidden text-sm text-error"></p>
+              <p id="address-no-results" class="mt-1 hidden text-sm text-warning" role="status"></p>
             </div>
           </fieldset>
 
@@ -685,8 +686,9 @@ if (office?.type === "SUCURSAL") {
     const list = document.querySelector<HTMLUListElement>("#address-suggestions");
     const preview = document.querySelector<HTMLDivElement>("#address-building-preview");
     const error = document.querySelector<HTMLParagraphElement>("#address-autocomplete-error");
+    const noResults = document.querySelector<HTMLParagraphElement>("#address-no-results");
     const form = document.querySelector<HTMLFormElement>("#office-form");
-    if (!input || !list || !preview || !error || !form) return;
+    if (!input || !list || !preview || !error || !noResults || !form) return;
     if (input.dataset.autocompleteBound === "true") return;
     input.dataset.autocompleteBound = "true";
 
@@ -700,6 +702,19 @@ if (office?.type === "SUCURSAL") {
       preview.replaceChildren();
       preview.classList.add("hidden");
       input.removeAttribute("aria-describedby");
+    };
+
+    const hideNoResults = () => {
+      noResults.classList.add("hidden");
+      noResults.replaceChildren();
+    };
+
+    const showNoResults = () => {
+      const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
+      noResults.textContent = provinceSelect?.value
+        ? "No se encontraron oficinas con esta dirección en la región/provincia seleccionada. Si es la correcta, podés agregarla; o cambiá región/provincia."
+        : "No se encontraron oficinas con esta dirección. Si es la correcta, podés agregarla.";
+      noResults.classList.remove("hidden");
     };
 
     const getOptions = () => list.querySelectorAll<HTMLButtonElement>('button[role="option"]');
@@ -717,16 +732,6 @@ if (office?.type === "SUCURSAL") {
       options.forEach((opt, i) => opt.setAttribute("aria-selected", String(i === activeIndex)));
       input.setAttribute("aria-activedescendant", options[activeIndex].id);
       options[activeIndex].scrollIntoView({ block: "nearest" });
-    };
-
-    const chooseAddress = (address: string, offices: { code: string; name: string }[]) => {
-      input.value = address;
-      list.replaceChildren();
-      list.classList.add("hidden");
-      input.setAttribute("aria-expanded", "false");
-      clearActiveOption();
-      renderPreview(offices);
-      input.focus();
     };
 
     const renderPreview = (offices: { code: string; name: string }[]) => {
@@ -797,7 +802,14 @@ if (office?.type === "SUCURSAL") {
         if (province) params.set("provinceCode", province);
         const response = await fetch(`${base}api/offices/search-address?${params}`, { signal: controller.signal });
         if (!response.ok) throw new Error(`Address suggestions failed: ${response.status}`);
-        renderSuggestions(await response.json());
+        const suggestions = await response.json();
+        if (suggestions.length === 0) {
+          renderSuggestions([]);
+          showNoResults();
+        } else {
+          hideNoResults();
+          renderSuggestions(suggestions);
+        }
       } catch (cause) {
         if ((cause as DOMException).name === "AbortError") return;
         list.replaceChildren();
@@ -809,7 +821,7 @@ if (office?.type === "SUCURSAL") {
       }
     };
 
-    const renderSuggestions = (items: { address: string; offices: { code: string; name: string }[] }[]) => {
+    const renderSuggestions = (items: { address: string; provinceCode: string; provinceName: string; offices: { code: string; name: string }[] }[]) => {
       list.replaceChildren();
       clearActiveOption();
       items.forEach((item, index) => {
@@ -821,9 +833,24 @@ if (office?.type === "SUCURSAL") {
         button.id = `address-suggestion-${index}`;
         button.dataset.address = item.address;
         button.setAttribute("aria-selected", "false");
-        button.textContent = `${item.address} (${item.offices.length} oficina${item.offices.length === 1 ? "" : "s"})`;
+        const officeCount = item.offices.length;
+        const label =
+          officeCount === 1
+            ? `${item.address} · ${item.provinceName} (${item.offices[0].code} · ${item.offices[0].name})`
+            : `${item.address} · ${item.provinceName} (${officeCount} oficinas)`;
+        button.textContent = label;
         button.addEventListener("click", () => {
-          chooseAddress(item.address, item.offices.map(({ code, name }) => ({ code, name })));
+          input.value = item.address;
+          const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
+          if (provinceSelect && provinceSelect.value !== item.provinceCode) {
+            provinceSelect.value = item.provinceCode;
+          }
+          hideNoResults();
+          list.replaceChildren();
+          list.classList.add("hidden");
+          input.setAttribute("aria-expanded", "false");
+          renderPreview(item.offices.map(({ code, name }) => ({ code, name })));
+          input.focus();
         });
         li.appendChild(button);
         list.appendChild(li);
@@ -841,6 +868,7 @@ if (office?.type === "SUCURSAL") {
       list.classList.add("hidden");
       clearActiveOption();
       error.classList.add("hidden");
+      hideNoResults();
       const query = input.value.trim();
       if (query.length < 3) {
         list.replaceChildren();
