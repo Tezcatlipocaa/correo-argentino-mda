@@ -26,6 +26,20 @@ test.describe("Office detail dropdown dynamic layout", () => {
       compactCount === 0,
       "No expanded office with assets alongside siblings",
     );
-    await expect(compactAssets.first()).toBeVisible();
+    await expect(compactAssets.first()).toHaveAttribute(
+      "data-assets-compact",
+      "true",
+    );
+
+    // Compact cards are vertical: a font-mono hostname line precedes the
+    // IP copy control inside the same card.
+    const firstCompactCard = compactAssets
+      .first()
+      .locator("> div")
+      .first();
+    await expect(
+      firstCompactCard.locator("p.font-mono:not([data-copy-control])").first(),
+    ).toBeVisible();
+    await expect(firstCompactCard.locator("[data-copy-control]").first()).toBeVisible();
   });
 });
