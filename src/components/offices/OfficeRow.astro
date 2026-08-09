@@ -6,7 +6,7 @@ import OfficeEquipmentCard from "@components/offices/OfficeEquipmentCard.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { isAllowed } from "@lib/rolesMatrix";
-import type { OfficeDirectoryItem } from "@types/offices";
+import type { OfficeDirectoryItem } from "@/types/offices";
 import {
   officeTypeLabelByType,
   officeTypeChipClassByType,
@@ -516,49 +516,49 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 </h2>
                 <div class="relative flex-1 min-h-0 lg:max-h-[480px]">
                   <div class="office-assets-scroll h-full overflow-y-auto pr-1">
-                  <div
-                    data-assets-compact={
-                      layout.compactAssets ? "true" : undefined
-                    }
-                    class:list={[
-                      "grid gap-3 p-1",
-                      layout.compactAssets || layout.hasLeft
-                        ? "grid-cols-1 xl:grid-cols-2"
-                        : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
-                    ]}
-                  >
-                    {/* Terminales sincronizadas */}
-                    {[...office.terminals]
-                      .sort((a, b) => {
-                        const osCompare = (
-                          a.operatingSystem || ""
-                        ).localeCompare(b.operatingSystem || "");
-                        if (osCompare !== 0) return osCompare;
-                        return (a.hostname || "").localeCompare(
-                          b.hostname || "",
-                        );
-                      })
-                      .map((terminal) => (
-                        <OfficeEquipmentCard
-                          terminal={terminal}
-                          compact={layout.compactAssets}
-                          isTelegrafia={office.type === "TELEGRAFIA"}
-                        />
-                      ))}
+                    <div
+                      data-assets-compact={
+                        layout.compactAssets ? "true" : undefined
+                      }
+                      class:list={[
+                        "grid gap-3 p-1",
+                        layout.compactAssets || layout.hasLeft
+                          ? "grid-cols-1 xl:grid-cols-2"
+                          : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
+                      ]}
+                    >
+                      {/* Terminales sincronizadas */}
+                      {[...office.terminals]
+                        .sort((a, b) => {
+                          const osCompare = (
+                            a.operatingSystem || ""
+                          ).localeCompare(b.operatingSystem || "");
+                          if (osCompare !== 0) return osCompare;
+                          return (a.hostname || "").localeCompare(
+                            b.hostname || "",
+                          );
+                        })
+                        .map((terminal) => (
+                          <OfficeEquipmentCard
+                            terminal={terminal}
+                            compact={layout.compactAssets}
+                            isTelegrafia={office.type === "TELEGRAFIA"}
+                          />
+                        ))}
 
-                    {/* Activos manuales */}
-                    {[...office.assets]
-                      .sort(
-                        (a, b) =>
-                          assetOrderByType[a.type] - assetOrderByType[b.type],
-                      )
-                      .map((asset) => (
-                        <OfficeEquipmentCard
-                          asset={asset}
-                          compact={layout.compactAssets}
-                        />
-                      ))}
-                  </div>
+                      {/* Activos manuales */}
+                      {[...office.assets]
+                        .sort(
+                          (a, b) =>
+                            assetOrderByType[a.type] - assetOrderByType[b.type],
+                        )
+                        .map((asset) => (
+                          <OfficeEquipmentCard
+                            asset={asset}
+                            compact={layout.compactAssets}
+                          />
+                        ))}
+                    </div>
                   </div>
                   {layout.compactAssets && (
                     <>
@@ -737,9 +737,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
     const atTop = scrollEl.scrollTop <= 4;
     fades.forEach((fade) => {
       const isTop = fade.classList.contains("office-assets-fade-top");
-      const hidden = isTop
-        ? !hasOverflow || atTop
-        : !hasOverflow || atBottom;
+      const hidden = isTop ? !hasOverflow || atTop : !hasOverflow || atBottom;
       fade.classList.toggle("opacity-0", hidden);
     });
   }
