@@ -81,7 +81,7 @@ Diseño **actual sin cambios**:
 ## Scroll / altura
 
 - El listado de **Equipos** tiene un **`max-height` fijo de `480px`** (`lg:max-h-[480px]` sobre `.office-assets-scroll`, con `overflow-y-auto`) — **no depende de la altura del desplegable**. Independientemente de cuántos equipos tenga una oficina, el área scrollea internamente y el desplegable nunca es interminable.
-- Se agrega un **degradado inferior** (`bg-gradient-to-t from-base-100 to-transparent`, token DaisyUI → tema-aware) al final del área de equipos compacta para que la información no se corte de forma abrupta.
+- Se agregan **degradados** (`bg-gradient-to-t from-base-100 to-transparent` inferior y `bg-gradient-to-b` superior, tokens DaisyUI → tema-aware) en el área de equipos compacta: el inferior se oculta al llegar al final de la lista (o sin overflow) y el superior se muestra solo cuando no estamos en el top (mismo mecanismo, vía scroll listener con capture).
 - La **barra de desplazamiento** del área de equipos se oculta (`scrollbar-width: none` + `::-webkit-scrollbar { display: none }`) manteniendo el scroll.
 - En el layout de **3 columnas**, los números de **IP** de las cards compactas se renderizan a **10px** (via `:global([data-copy-label])`) para que no desborden la columna.
 
