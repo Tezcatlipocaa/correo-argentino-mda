@@ -25,13 +25,13 @@ Reorganizar el desplegable de detalle de cada oficina en el directorio `/oficina
 
 | Columnas presentes           | Proporciones              |
 |------------------------------|---------------------------|
-| Izquierda + Centro + Derecha | `1.5fr / 2fr / 2fr`       |
+| Izquierda + Centro + Derecha | `1.75fr / 2fr / 2.25fr`   |
 | Izquierda + Derecha          | `2fr / 3fr` (comportamiento actual) |
 | Izquierda + Centro           | `3fr / 2fr`               |
 | Centro + Derecha             | `2fr / 3fr`               |
 | Solo una columna             | `full width`              |
 
-En el layout de 3 columnas, la columna izquierda (Información, Datos InvGate, Referentes del sitio) recibe **menos espacio** (`flex-[1.5]`) y la columna central (oficinas en el mismo edificio) recibe **más espacio** (`flex-[2]`).
+En el layout de 3 columnas, la columna izquierda (Información, Datos InvGate, Referentes del sitio) recibe **menos espacio** (`flex-[1.75]`), la columna central (oficinas en el mismo edificio) recibe **más espacio** (`flex-[2]`) y la columna de equipos el mayor ancho (`flex-[2.25]`).
 
 Implementación: un helper en frontmatter que devuelve las clases de cada columna (p.ej. `lg:flex-[2]`, `lg:flex-[1]`, `lg:flex-[3]`, `w-full`) según los flags de presencia.
 
@@ -80,10 +80,11 @@ Diseño **actual sin cambios**:
 
 ## Scroll / altura
 
-- El listado de **Equipos** (compacto, layout de 3 columnas) llena la **altura total del desplegable** (la de su contenedor padre): la columna estira al alto de la fila y el área scrolleable usa `flex-1 min-h-0 overflow-y-auto` — sin `max-height` fijo. Si otra columna es más alta, equipos ocupa ese alto y scrollea internamente; si equipos es la columna más alta, el desplegable crece con ella.
+- El listado de **Equipos** termina a la **misma altura que la sección más alta de las otras columnas** (no define la altura del desplegable). Un script en `OfficeRow.astro` (`syncAssetsMaxHeight`) mide la altura natural de las columnas no-equipos al expandir (y tras cargar Personal / resize) y fija el `max-height` del área scrolleable a ese valor. Así, si Contactos o Personal hacen alto el desplegable, equipos llega hasta ese alto y **scrollea internamente** — nunca lo hace interminable.
 - Se agrega un **degradado inferior** (`bg-gradient-to-t from-base-100 to-transparent`, token DaisyUI → tema-aware) al final del área de equipos compacta para que la información no se corte de forma abrupta.
 - La **barra de desplazamiento** del área de equipos se oculta (`scrollbar-width: none` + `::-webkit-scrollbar { display: none }`) manteniendo el scroll.
-- En el layout de **2 columnas / 1**, se mantiene el comportamiento actual.
+- En el layout de **3 columnas**, los números de **IP** de las cards compactas se renderizan a **10px** (via `:global([data-copy-label])`) para que no desborden la columna.
+- En el layout de **2 columnas / 1**, se mantiene el comportamiento actual (el cap por sección más alta aplica igualmente cuando hay otra columna).
 
 ## Edge cases
 
