@@ -608,39 +608,21 @@ const officeDirectoryRowGridClass = isAllowedAdmin
             (p) => `
              <div class="flex items-center justify-between gap-3 py-2 border-b border-base-200 last:border-b-0">
                  <div class="min-w-0">
-                 <p class="flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-base-content">
-                   ${escapeHTML(p.fullname ?? "Sin nombre")}
+                 <p class="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs font-semibold text-base-content">
+                   <span class="truncate min-w-0">${escapeHTML(p.fullname ?? "Sin nombre")}</span>
                    ${p.position ? `<span class="badge badge-soft badge-secondary text-xxs">${escapeHTML(p.position.replace(/Supervisor/g, "Sup."))}</span>` : ""}
                  </p>
                </div>
               <div class="flex items-center gap-2 shrink-0">
                 ${
-                  p.telefono
+                  (p.interno || p.telefono)
                     ? `
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-xs gap-1 text-accent"
-                    onclick="copyValue('${escapeHTML(p.telefono)}', this)"
-                    title="Copiar teléfono: ${escapeHTML(p.telefono)}"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                    <span class="font-mono text-xs">${escapeHTML(p.telefono)}</span>
-                  </button>
-                `
-                    : ""
-                }
-                ${
-                  p.interno
-                    ? `
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-xs gap-1 text-info"
-                    onclick="copyValue('${escapeHTML(p.interno)}', this)"
-                    title="Copiar interno: ${escapeHTML(p.interno)}"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" /></svg>
-                    <span class="font-mono text-xs">${escapeHTML(p.interno)}</span>
-                  </button>
+                  <div class="flex items-center gap-1 text-xs text-base-content/70">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                    </svg>
+                    <span class="font-mono">${escapeHTML(p.interno ?? p.telefono)}</span>
+                  </div>
                 `
                     : ""
                 }
@@ -680,47 +662,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
-  }
-
-  function copyValue(value, btn) {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => {
-        const original = btn.innerHTML;
-        btn.innerHTML =
-          '<svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
-        setTimeout(() => {
-          btn.innerHTML = original;
-        }, 1500);
-        showToast("Copiado: " + value, "alert-success");
-      })
-      .catch(() => {});
-  }
-
-  function showToast(message, type) {
-    const container = document.getElementById("global-toast-container");
-    if (!container) return;
-    const toastDiv = document.createElement("div");
-    const alertClass =
-      type === "alert-success"
-        ? "alert-success text-success-content"
-        : type === "alert-error"
-          ? "alert-error text-error-content"
-          : type === "alert-warning"
-            ? "alert-warning text-warning-content"
-            : "alert-info text-info-content";
-    toastDiv.className =
-      "alert " +
-      alertClass +
-      " shadow-xl rounded-2xl border border-base-content/5 flex items-center gap-3 text-sm font-semibold slide-in-right";
-    const span = document.createElement("span");
-    span.textContent = message;
-    toastDiv.appendChild(span);
-    container.appendChild(toastDiv);
-    setTimeout(() => {
-      toastDiv.classList.replace("slide-in-right", "slide-out-right");
-      toastDiv.addEventListener("animationend", () => toastDiv.remove());
-    }, 2500);
   }
 
   let globalObserver = null;
