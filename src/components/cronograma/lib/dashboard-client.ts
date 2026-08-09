@@ -798,6 +798,18 @@ function setupEventListeners(): void {
     }
   });
 
+  document.getElementById('pasiva-month-selector')?.addEventListener('change', (e) => {
+    const select = e.target as HTMLSelectElement;
+    const val = select.value;
+    if (!val) return;
+    const dateInput = document.getElementById('date-input') as HTMLInputElement | null;
+    if (dateInput) {
+      dateInput.value = val;
+      updateDateInputDisplay();
+      reloadDataForActiveMonth(val.slice(0, 7));
+    }
+  });
+
   // New Operator Modal Handlers
   const newOpModal = document.getElementById('new-operator-modal') as HTMLDialogElement & { showModal: () => void; close: () => void } | null;
   const openNewOpBtn = document.getElementById('open-new-op-modal');

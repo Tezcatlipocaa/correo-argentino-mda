@@ -84,6 +84,9 @@ scratch/
 # opencode
 opencode.jsonc
 
+# skills
+.superpowers/sdd
+
 # generated reports and db backups
 scripts/reports
 scripts/backups

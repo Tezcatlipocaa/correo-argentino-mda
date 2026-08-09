@@ -56,6 +56,7 @@ class CronogramaState {
     operatorId: null as number | null,
     originalOperatorId: null as number | null,
     supervisors: [] as string[],
+    referentes: [] as Array<{ id: number; name: string }>,
     weeklyAssignments: {} as Record<
       string,
       {
@@ -63,8 +64,10 @@ class CronogramaState {
         endDate: string;
         supervisorName: string;
         referenteId: number | null;
+        operatorId: number | null;
         originalSupervisorName: string;
         originalReferenteId: number | null;
+        originalOperatorId: number | null;
       }
     >,
   };
