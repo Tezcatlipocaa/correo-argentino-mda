@@ -56,6 +56,16 @@ test("single column: only center (siblings) → center w-full", () => {
   assert.equal(l.centerClass, "w-full");
 });
 
+test("single column: only info → left w-full", () => {
+  const l = getDetailColumnLayout(flags({ hasInfo: true }));
+  assert.equal(l.hasLeft, true);
+  assert.equal(l.hasCenter, false);
+  assert.equal(l.hasRight, false);
+  assert.equal(l.leftClass, "w-full");
+  assert.equal(l.centerClass, "");
+  assert.equal(l.rightClass, "");
+});
+
 test("contacts > 5 moves contacts to center and enables compact assets only with center", () => {
   const l = getDetailColumnLayout(flags({ hasInfo: true, contactsCount: 6, hasAssets: true }));
   assert.equal(l.hasCenter, true);

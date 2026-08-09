@@ -17,13 +17,23 @@ export interface DetailColumnLayout {
   compactAssets: boolean;
 }
 
+const CONTACTS_CENTER_THRESHOLD = 5;
+
+/**
+ * Computes which detail columns render and their responsive Tailwind widths.
+ *
+ * When `contactsCount` exceeds CONTACTS_CENTER_THRESHOLD, the Contacts section
+ * moves from the left column to the center column. The center column may hold
+ * siblings and/or moved contacts; `compactAssets` is true whenever the center
+ * column exists.
+ */
 export function getDetailColumnLayout(
   flags: DetailColumnFlags,
 ): DetailColumnLayout {
-  const contactsToCenter = flags.contactsCount > 5;
-  const leftContacts = flags.contactsCount > 0 && !contactsToCenter;
+  const contactsToCenter = flags.contactsCount > CONTACTS_CENTER_THRESHOLD;
+  const contactsInLeft = flags.contactsCount > 0 && !contactsToCenter;
 
-  const hasLeft = flags.hasInvgate || flags.hasInfo || leftContacts;
+  const hasLeft = flags.hasInvgate || flags.hasInfo || contactsInLeft;
   const hasCenter = flags.hasSiblings || contactsToCenter;
   const hasRight = flags.hasAssets;
 
