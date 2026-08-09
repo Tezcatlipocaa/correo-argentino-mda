@@ -15,6 +15,7 @@ import {
   assetLabelByType,
   assetOrderByType,
 } from "@lib/officeHelpers";
+import { getDetailColumnLayout } from "@lib/officeLayout";
 import {
   getTerminalColorClass,
   getTerminalTypeLabel,
@@ -43,19 +44,28 @@ const searchText = `${office.name} ${office.code} ${office.region} ${office.prov
 const hasContacts = office.contacts && office.contacts.length > 0;
 const hasInfo = Boolean(office.email || office.notes);
 const hasInvgateDetail: boolean = office.invgateLinked === true;
-const hasInfoSection = hasContacts || hasInfo || hasInvgateDetail;
 
 const totalAssets =
   (office.assets?.length || 0) + (office.terminals?.length || 0);
 const hasAssetsSection = totalAssets > 0;
 const siblings = office.siblings ?? [];
 const hasSiblings = siblings.length > 0;
-const hasLeftColumn = hasInfoSection || hasSiblings;
-const hasDetails =
-  hasInfoSection || hasAssetsSection || hasInvgateDetail || hasSiblings;
 
-const activeSectionsCount =
-  (hasInfoSection ? 1 : 0) + (hasAssetsSection ? 1 : 0);
+const layout = getDetailColumnLayout({
+  hasInvgate: hasInvgateDetail,
+  hasInfo,
+  contactsCount: office.contacts.length,
+  hasSiblings,
+  hasAssets: hasAssetsSection,
+});
+
+const contactsToCenter = layout.contactsToCenter;
+const hasDetails =
+  hasInvgateDetail ||
+  hasInfo ||
+  hasContacts ||
+  hasAssetsSection ||
+  hasSiblings;
 
 const officeDirectoryRowGridClass = isAllowedAdmin
   ? "grid grid-cols-[48px_80px_1.2fr_90px_1.8fr_110px_120px] items-center gap-4"
@@ -263,13 +273,53 @@ const officeDirectoryRowGridClass = isAllowedAdmin
       <div class="bg-base-100 border border-base-300 rounded-box p-4">
         <div class="flex flex-col lg:flex-row gap-6">
           {
-            hasLeftColumn && (
+            layout.hasLeft && (
               <div
                 class:list={[
-                  "flex flex-col gap-5",
-                  hasAssetsSection ? "lg:w-2/5" : "w-full",
+                  "flex flex-col gap-5 min-w-0",
+                  layout.leftClass,
                 ]}
               >
+                {hasInfo && (
+                  <section class="space-y-3">
+                    <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
+                      <Icon
+                        name="boxicons:info-circle-filled"
+                        size={16}
+                        class="text-secondary"
+                        aria-hidden="true"
+                      />
+                      Información
+                    </h2>
+                    <div class="rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm space-y-2">
+                      {office.email && (
+                        <p class="flex items-center gap-2 text-sm text-base-content/80">
+                          <Icon
+                            name="boxicons:envelope-filled"
+                            size={14}
+                            class="shrink-0 text-base-content/50"
+                            aria-hidden="true"
+                          />
+                          <span class="font-mono text-xs break-all">
+                            {office.email}
+                          </span>
+                        </p>
+                      )}
+                      {office.notes && (
+                        <p class="flex items-start gap-2 text-xs text-base-content/60">
+                          <Icon
+                            name="boxicons:note-filled"
+                            size={14}
+                            class="mt-0.5 shrink-0 text-base-content/40"
+                            aria-hidden="true"
+                          />
+                          <span>{office.notes}</span>
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                )}
+
                 {hasInvgateDetail && (
                   <section class="space-y-3">
                     <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
@@ -392,8 +442,23 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   />
                 </section>
 
+                {hasContacts && !contactsToCenter && (
+                  <OfficeContactsSection contacts={office.contacts} />
+                )}
+              </div>
+            )
+          }
+
+          {
+            layout.hasCenter && (
+              <div
+                class:list={[
+                  "flex flex-col gap-5 min-w-0",
+                  layout.centerClass,
+                ]}
+              >
                 {hasSiblings && (
-                  <section class="space-y-3">
+                  <section class="space-y-3" data-siblings-section>
                     <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
                       <Icon
                         name="boxicons:building-filled"
@@ -403,7 +468,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                       />
                       Oficinas en el mismo edificio ({siblings.length})
                     </h2>
-                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div class="grid gap-3">
                       {siblings.map((sib) => (
                         <div
                           data-sibling-office
@@ -438,59 +503,22 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   </section>
                 )}
 
-                {hasInfo && (
-                  <section class="space-y-3">
-                    <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
-                      <Icon
-                        name="boxicons:info-circle-filled"
-                        size={16}
-                        class="text-secondary"
-                        aria-hidden="true"
-                      />
-                      Información
-                    </h2>
-                    <div class="rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm space-y-2">
-                      {office.email && (
-                        <p class="flex items-center gap-2 text-sm text-base-content/80">
-                          <Icon
-                            name="boxicons:envelope-filled"
-                            size={14}
-                            class="shrink-0 text-base-content/50"
-                            aria-hidden="true"
-                          />
-                          <span class="font-mono text-xs break-all">
-                            {office.email}
-                          </span>
-                        </p>
-                      )}
-                      {office.notes && (
-                        <p class="flex items-start gap-2 text-xs text-base-content/60">
-                          <Icon
-                            name="boxicons:note-filled"
-                            size={14}
-                            class="mt-0.5 shrink-0 text-base-content/40"
-                            aria-hidden="true"
-                          />
-                          <span>{office.notes}</span>
-                        </p>
-                      )}
-                    </div>
-                  </section>
-                )}
-
-                {hasContacts && (
-                  <OfficeContactsSection contacts={office.contacts} />
+                {contactsToCenter && hasContacts && (
+                  <OfficeContactsSection
+                    contacts={office.contacts}
+                    dense={true}
+                  />
                 )}
               </div>
             )
           }
 
           {
-            hasAssetsSection && (
+            layout.hasRight && (
               <div
                 class:list={[
                   "flex flex-col min-w-0",
-                  hasLeftColumn ? "lg:w-3/5" : "w-full",
+                  layout.rightClass,
                 ]}
               >
                 <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70 mb-3">
@@ -506,7 +534,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   <div
                     class:list={[
                       "grid gap-3 p-1",
-                      hasLeftColumn
+                      layout.compactAssets
                         ? "grid-cols-1 xl:grid-cols-2"
                         : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
                     ]}
