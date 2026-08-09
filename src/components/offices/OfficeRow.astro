@@ -511,7 +511,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
             layout.hasRight && (
               <div
                 class:list={[
-                  "flex flex-col min-w-0",
+                  "relative flex flex-col min-w-0",
                   layout.rightClass,
                 ]}
               >
@@ -524,12 +524,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   />
                   Equipos ({totalAssets})
                 </h2>
-                <div
-                  class:list={[
-                    "flex-1 overflow-y-auto pr-1 min-h-0",
-                    layout.compactAssets && "lg:max-h-[420px]",
-                  ]}
-                >
+                <div class="office-assets-scroll flex-1 overflow-y-auto pr-1 min-h-0">
                   <div
                     data-assets-compact={layout.compactAssets ? "true" : undefined}
                     class:list={[
@@ -572,6 +567,12 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                       ))}
                   </div>
                 </div>
+                {layout.compactAssets && (
+                  <div
+                    class="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent"
+                    aria-hidden="true"
+                  />
+                )}
               </div>
             )
           }
@@ -788,3 +789,12 @@ const officeDirectoryRowGridClass = isAllowedAdmin
   document.addEventListener("astro:page-load", observePersonnelSections);
   observePersonnelSections();
 </script>
+
+<style>
+  .office-assets-scroll {
+    scrollbar-width: none;
+  }
+  .office-assets-scroll::-webkit-scrollbar {
+    display: none;
+  }
+</style>

@@ -48,8 +48,8 @@ export function getDetailColumnLayout(
     if (hasCenter) centerClass = "w-full";
     if (hasRight) rightClass = "w-full";
   } else if (hasLeft && hasCenter && hasRight) {
-    leftClass = "lg:flex-[2]";
-    centerClass = "lg:flex-[1]";
+    leftClass = "lg:flex-[1.5]";
+    centerClass = "lg:flex-[2]";
     rightClass = "lg:flex-[2]";
   } else if (hasLeft && hasRight) {
     leftClass = "lg:w-2/5";

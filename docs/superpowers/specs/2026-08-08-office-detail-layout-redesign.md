@@ -25,11 +25,13 @@ Reorganizar el desplegable de detalle de cada oficina en el directorio `/oficina
 
 | Columnas presentes           | Proporciones              |
 |------------------------------|---------------------------|
-| Izquierda + Centro + Derecha | `2fr / 1fr / 2fr`         |
+| Izquierda + Centro + Derecha | `1.5fr / 2fr / 2fr`       |
 | Izquierda + Derecha          | `2fr / 3fr` (comportamiento actual) |
 | Izquierda + Centro           | `3fr / 2fr`               |
 | Centro + Derecha             | `2fr / 3fr`               |
 | Solo una columna             | `full width`              |
+
+En el layout de 3 columnas, la columna izquierda (Información, Datos InvGate, Referentes del sitio) recibe **menos espacio** (`flex-[1.5]`) y la columna central (oficinas en el mismo edificio) recibe **más espacio** (`flex-[2]`).
 
 Implementación: un helper en frontmatter que devuelve las clases de cada columna (p.ej. `lg:flex-[2]`, `lg:flex-[1]`, `lg:flex-[3]`, `w-full`) según los flags de presencia.
 
@@ -78,9 +80,10 @@ Diseño **actual sin cambios**:
 
 ## Scroll / altura
 
-- En el layout de **3 columnas** (cards compactas), la sección **Equipos** obtiene `max-height` (≈420px) con `overflow-y-auto` para que el desplegable nunca sea interminable cuando hay muchos equipos (ej. 78 en Santa Fe).
-- En el layout de **2 columnas / 1**, se mantiene el comportamiento actual sin scroll (la altura queda acotada por la columna más alta, como hoy).
-- La altura total del desplegable queda acotada por la columna más alta.
+- El listado de **Equipos** (compacto, layout de 3 columnas) llena la **altura total del desplegable** (la de su contenedor padre): la columna estira al alto de la fila y el área scrolleable usa `flex-1 min-h-0 overflow-y-auto` — sin `max-height` fijo. Si otra columna es más alta, equipos ocupa ese alto y scrollea internamente; si equipos es la columna más alta, el desplegable crece con ella.
+- Se agrega un **degradado inferior** (`bg-gradient-to-t from-base-100 to-transparent`, token DaisyUI → tema-aware) al final del área de equipos compacta para que la información no se corte de forma abrupta.
+- La **barra de desplazamiento** del área de equipos se oculta (`scrollbar-width: none` + `::-webkit-scrollbar { display: none }`) manteniendo el scroll.
+- En el layout de **2 columnas / 1**, se mantiene el comportamiento actual.
 
 ## Edge cases
 
