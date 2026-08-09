@@ -514,7 +514,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   />
                   Equipos ({totalAssets})
                 </h2>
-                <div class="office-assets-scroll flex-1 overflow-y-auto pr-1 min-h-0">
+                <div class="office-assets-scroll flex-1 overflow-y-auto pr-1 min-h-0 lg:max-h-[480px]">
                   <div
                     data-assets-compact={
                       layout.compactAssets ? "true" : undefined
@@ -657,9 +657,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
           .join("");
 
         content.innerHTML = html;
-        syncAssetsMaxHeight(
-          section.closest("[data-office-detail-row]"),
-        );
       })
       .catch(() => {
         section.classList.remove("hidden");
@@ -675,38 +672,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
-  }
-
-  function columnNaturalHeight(col) {
-    const children = Array.from(col.children);
-    if (!children.length) return col.scrollHeight;
-    const gap = parseFloat(getComputedStyle(col).rowGap) || 0;
-    return (
-      children.reduce((h, c) => h + c.offsetHeight, 0) +
-      gap * (children.length - 1)
-    );
-  }
-
-  function syncAssetsMaxHeight(detail) {
-    const cols = detail.querySelector(".office-detail-panel > div > div");
-    if (!cols) return;
-    const items = Array.from(cols.children);
-    const right = items.find((c) => c.querySelector(".office-assets-scroll"));
-    if (!right) return;
-    const scrollEl = right.querySelector(".office-assets-scroll");
-    if (!scrollEl) return;
-    const others = items.filter((c) => c !== right);
-    const target = others.reduce(
-      (max, c) => Math.max(max, columnNaturalHeight(c)),
-      0,
-    );
-    scrollEl.style.maxHeight = target > 0 ? `${target}px` : "";
-  }
-
-  function syncAllDetails() {
-    document
-      .querySelectorAll("[data-office-detail-row]:not(.hidden)")
-      .forEach((detail) => syncAssetsMaxHeight(detail));
   }
 
   function copyValue(value, btn) {
@@ -768,7 +733,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
             target.hasAttribute("data-office-detail-row") &&
             !target.classList.contains("hidden")
           ) {
-            syncAssetsMaxHeight(target);
             const section = target.querySelector("[data-branch-personnel]");
             if (section) {
               loadPersonnel(section);
@@ -782,7 +746,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 el.hasAttribute("data-office-detail-row") &&
                 !el.classList.contains("hidden")
               ) {
-                syncAssetsMaxHeight(el);
                 const section = el.querySelector("[data-branch-personnel]");
                 if (section) loadPersonnel(section);
               }
@@ -790,7 +753,6 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 "[data-office-detail-row]:not(.hidden)",
               );
               expandedDetails.forEach((detail) => {
-                syncAssetsMaxHeight(detail);
                 const section = detail.querySelector("[data-branch-personnel]");
                 if (section) loadPersonnel(section);
               });
@@ -811,12 +773,9 @@ const officeDirectoryRowGridClass = isAllowedAdmin
       "[data-office-detail-row]:not(.hidden)",
     );
     visibleDetails.forEach((detail) => {
-      syncAssetsMaxHeight(detail);
       const section = detail.querySelector("[data-branch-personnel]");
       if (section) loadPersonnel(section);
     });
-
-    window.addEventListener("resize", syncAllDetails);
   }
 
   document.addEventListener("astro:page-load", observePersonnelSections);

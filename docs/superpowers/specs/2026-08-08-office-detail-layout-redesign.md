@@ -80,11 +80,10 @@ Diseño **actual sin cambios**:
 
 ## Scroll / altura
 
-- El listado de **Equipos** termina a la **misma altura que la sección más alta de las otras columnas** (no define la altura del desplegable). Un script en `OfficeRow.astro` (`syncAssetsMaxHeight`) mide la altura natural de las columnas no-equipos al expandir (y tras cargar Personal / resize) y fija el `max-height` del área scrolleable a ese valor. Así, si Contactos o Personal hacen alto el desplegable, equipos llega hasta ese alto y **scrollea internamente** — nunca lo hace interminable.
+- El listado de **Equipos** tiene un **`max-height` fijo de `480px`** (`lg:max-h-[480px]` sobre `.office-assets-scroll`, con `overflow-y-auto`) — **no depende de la altura del desplegable**. Independientemente de cuántos equipos tenga una oficina, el área scrollea internamente y el desplegable nunca es interminable.
 - Se agrega un **degradado inferior** (`bg-gradient-to-t from-base-100 to-transparent`, token DaisyUI → tema-aware) al final del área de equipos compacta para que la información no se corte de forma abrupta.
 - La **barra de desplazamiento** del área de equipos se oculta (`scrollbar-width: none` + `::-webkit-scrollbar { display: none }`) manteniendo el scroll.
 - En el layout de **3 columnas**, los números de **IP** de las cards compactas se renderizan a **10px** (via `:global([data-copy-label])`) para que no desborden la columna.
-- En el layout de **2 columnas / 1**, se mantiene el comportamiento actual (el cap por sección más alta aplica igualmente cuando hay otra columna).
 
 ## Edge cases
 
