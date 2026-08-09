@@ -11,12 +11,12 @@ const flags = (overrides: Partial<Parameters<typeof getDetailColumnLayout>[0]> =
   ...overrides,
 });
 
-test("3-column layout: left + center + right → flex 1.5/2/2, compact assets", () => {
+test("3-column layout: left + center + right → flex 1.75/2/2, compact assets", () => {
   const l = getDetailColumnLayout(flags({ hasInfo: true, hasSiblings: true, hasAssets: true }));
   assert.equal(l.hasLeft, true);
   assert.equal(l.hasCenter, true);
   assert.equal(l.hasRight, true);
-  assert.equal(l.leftClass, "lg:flex-[1.5]");
+  assert.equal(l.leftClass, "lg:flex-[1.75]");
   assert.equal(l.centerClass, "lg:flex-[2]");
   assert.equal(l.rightClass, "lg:flex-[2]");
   assert.equal(l.compactAssets, true);
