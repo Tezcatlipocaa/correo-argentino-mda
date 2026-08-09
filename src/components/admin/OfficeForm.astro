@@ -627,6 +627,7 @@ if (office?.type === "SUCURSAL") {
 
 <script>
   import { getCleanBase } from "@lib/baseUrl";
+  import type { AddressSuggestion } from "@lib/officeAddressSuggestions";
 
   console.log("OfficeForm: client script module loaded");
 
@@ -821,7 +822,7 @@ if (office?.type === "SUCURSAL") {
       }
     };
 
-    const renderSuggestions = (items: { address: string; provinceCode: string; provinceName: string; offices: { code: string; name: string }[] }[]) => {
+    const renderSuggestions = (items: AddressSuggestion[]) => {
       list.replaceChildren();
       clearActiveOption();
       items.forEach((item, index) => {
@@ -925,6 +926,7 @@ if (office?.type === "SUCURSAL") {
     provinceSelect?.addEventListener("change", () => {
       clearPreview();
       error.classList.add("hidden");
+      hideNoResults();
       const query = input.value.trim();
       if (query.length < 3) return;
       clearTimeout(timeout);
