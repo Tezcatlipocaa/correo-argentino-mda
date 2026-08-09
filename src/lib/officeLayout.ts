@@ -37,7 +37,8 @@ export function getDetailColumnLayout(
   const hasCenter = flags.hasSiblings || contactsToCenter;
   const hasRight = flags.hasAssets;
 
-  const columnCount = (hasLeft ? 1 : 0) + (hasCenter ? 1 : 0) + (hasRight ? 1 : 0);
+  const columnCount =
+    (hasLeft ? 1 : 0) + (hasCenter ? 1 : 0) + (hasRight ? 1 : 0);
 
   let leftClass = "";
   let centerClass = "";
@@ -50,7 +51,7 @@ export function getDetailColumnLayout(
   } else if (hasLeft && hasCenter && hasRight) {
     leftClass = "lg:flex-[1.75]";
     centerClass = "lg:flex-[2]";
-    rightClass = "lg:flex-[2]";
+    rightClass = "lg:flex-[2.25]";
   } else if (hasLeft && hasRight) {
     leftClass = "lg:w-2/5";
     rightClass = "lg:w-3/5";

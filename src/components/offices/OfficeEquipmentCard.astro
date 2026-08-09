@@ -38,7 +38,7 @@ const showHostname = compact && (isTerminal || asset!.type !== "printer");
 
 {
   compact ? (
-    <div class="flex items-start gap-2.5 rounded-lg border border-base-300 bg-base-100 p-2.5 shadow-sm min-w-0">
+    <div class="office-equipment-card-compact flex items-start gap-2.5 rounded-lg border border-base-300 bg-base-100 p-2.5 shadow-sm min-w-0">
       <span
         class:list={[
           "inline-flex size-8 shrink-0 items-center justify-center rounded-lg border",
@@ -101,3 +101,9 @@ const showHostname = compact && (isTerminal || asset!.type !== "printer");
     </div>
   )
 }
+
+<style>
+  .office-equipment-card-compact :global([data-copy-label]) {
+    font-size: 10px;
+  }
+</style>
