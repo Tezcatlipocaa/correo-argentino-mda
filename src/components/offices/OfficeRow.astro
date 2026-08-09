@@ -54,7 +54,7 @@ const hasSiblings = siblings.length > 0;
 const layout = getDetailColumnLayout({
   hasInvgate: hasInvgateDetail,
   hasInfo,
-  contactsCount: office.contacts.length,
+  contactsCount: office.contacts?.length ?? 0,
   hasSiblings,
   hasAssets: hasAssetsSection,
 });
@@ -534,7 +534,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   <div
                     class:list={[
                       "grid gap-3 p-1",
-                      layout.compactAssets
+                      layout.compactAssets || layout.hasLeft
                         ? "grid-cols-1 xl:grid-cols-2"
                         : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3",
                     ]}
