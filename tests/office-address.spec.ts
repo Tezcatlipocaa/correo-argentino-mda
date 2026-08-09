@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
 import { db } from "../src/db/index";
 import { users, offices, sessions } from "../src/db/schema";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 let testUserId: number;
@@ -32,7 +32,7 @@ test.afterAll(async () => {
 });
 
 async function loginAsAdmin(page: Page) {
-  if (cachedSessionCookies) {
+  if (cachedSessionCookies && cachedSessionCookies.length > 0) {
     await page.context().addCookies(cachedSessionCookies);
     return;
   }
@@ -41,10 +41,20 @@ async function loginAsAdmin(page: Page) {
   });
   expect(response.ok()).toBeTruthy();
   cachedSessionCookies = await page.context().cookies();
+  expect(cachedSessionCookies.some((c) => c.name === "session_id")).toBeTruthy();
+}
+
+function deriveAddressQuery(address: string): string {
+  const token = address.trim().split(/\s+/)[0];
+  return token.length >= 3 ? token : address;
 }
 
 async function selectSharedAddressSuggestion(page: Page): Promise<number> {
-  const officeRows = await db.select({ id: offices.id }).from(offices).limit(1);
+  const officeRows = await db
+    .select({ id: offices.id })
+    .from(offices)
+    .orderBy(asc(offices.id))
+    .limit(1);
   test.skip(officeRows.length === 0, "No offices in current DB");
   const officeId = officeRows[0].id;
 
@@ -55,8 +65,7 @@ async function selectSharedAddressSuggestion(page: Page): Promise<number> {
   const address = office[0]?.address;
   test.skip(!address, "First office has no address in current DB");
 
-  const token = address!.trim().split(/\s+/)[0];
-  const query = token.length >= 3 ? token : address!;
+  const query = deriveAddressQuery(address!);
   const suggestionsResponse = await page.request.get(
     `/api/offices/search-address?q=${encodeURIComponent(query)}&provinceCode=${encodeURIComponent(office[0]?.provinceCode ?? "")}&excludeId=${officeId}`,
   );
@@ -80,6 +89,7 @@ test("address suggestions return unique canonical addresses", async ({ page }) =
   const officeRows = await db
     .select({ id: offices.id, address: offices.address })
     .from(offices)
+    .orderBy(asc(offices.id))
     .limit(1);
   test.skip(officeRows.length === 0, "No offices in current DB");
   const officeId = officeRows[0].id;
@@ -163,7 +173,11 @@ test("changing to unmatched address hides shared-site preview", async ({ page })
 test("confirmed same-building save proceeds on create", async ({ page }) => {
   await loginAsAdmin(page);
 
-  const officeRows = await db.select({ id: offices.id, provinceCode: offices.provinceCode }).from(offices).limit(1);
+  const officeRows = await db
+    .select({ id: offices.id, provinceCode: offices.provinceCode })
+    .from(offices)
+    .orderBy(asc(offices.id))
+    .limit(1);
   test.skip(officeRows.length === 0, "No offices in current DB");
   const officeId = officeRows[0].id;
   const province = officeRows[0].provinceCode;
@@ -175,8 +189,7 @@ test("confirmed same-building save proceeds on create", async ({ page }) => {
   const address = office[0]?.address;
   test.skip(!address, "First office has no address in current DB");
 
-  const token = address!.trim().split(/\s+/)[0];
-  const query = token.length >= 3 ? token : address!;
+  const query = deriveAddressQuery(address!);
   const suggestionsResponse = await page.request.get(
     `/api/offices/search-address?q=${encodeURIComponent(query)}&provinceCode=${encodeURIComponent(province)}`,
   );
@@ -220,7 +233,11 @@ test("API failure shows non-blocking message and keeps manual entry", async ({ p
 test("single-office suggestion shows NIS, name and province in label", async ({ page }) => {
   await loginAsAdmin(page);
 
-  const officeRows = await db.select({ id: offices.id, provinceCode: offices.provinceCode }).from(offices).limit(1);
+  const officeRows = await db
+    .select({ id: offices.id, provinceCode: offices.provinceCode })
+    .from(offices)
+    .orderBy(asc(offices.id))
+    .limit(1);
   test.skip(officeRows.length === 0, "No offices in current DB");
   const officeId = officeRows[0].id;
   const province = officeRows[0].provinceCode;
@@ -275,7 +292,11 @@ test("selecting a suggestion without province auto-fills the province select", a
 
 test("shows no-results feedback when province is selected", async ({ page }) => {
   await loginAsAdmin(page);
-  const officeRows = await db.select({ provinceCode: offices.provinceCode }).from(offices).limit(1);
+  const officeRows = await db
+    .select({ provinceCode: offices.provinceCode })
+    .from(offices)
+    .orderBy(asc(offices.id))
+    .limit(1);
   test.skip(officeRows.length === 0, "No offices in current DB");
   const province = officeRows[0].provinceCode;
 
@@ -302,12 +323,15 @@ test("shows no-results feedback without province using shorter message", async (
 
 test("does not show no-results feedback when suggestions exist", async ({ page }) => {
   await loginAsAdmin(page);
-  const officeRows = await db.select({ address: offices.address, provinceCode: offices.provinceCode }).from(offices).limit(1);
+  const officeRows = await db
+    .select({ address: offices.address, provinceCode: offices.provinceCode })
+    .from(offices)
+    .orderBy(asc(offices.id))
+    .limit(1);
   const address = officeRows[0]?.address;
   test.skip(!address, "First office has no address in current DB");
 
-  const token = address!.trim().split(/\s+/)[0];
-  const query = token.length >= 3 ? token : address!;
+  const query = deriveAddressQuery(address!);
 
   await page.goto("/oficinas/create");
   await page.locator("#input-address").fill(query);
