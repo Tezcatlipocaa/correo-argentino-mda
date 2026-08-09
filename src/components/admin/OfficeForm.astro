@@ -841,6 +841,7 @@ if (office?.type === "SUCURSAL") {
             : `${item.address} · ${item.provinceName} (${officeCount} oficinas)`;
         button.textContent = label;
         button.addEventListener("click", () => {
+          controller?.abort();
           input.value = item.address;
           const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
           if (provinceSelect && provinceSelect.value !== item.provinceCode) {
@@ -850,6 +851,7 @@ if (office?.type === "SUCURSAL") {
           list.replaceChildren();
           list.classList.add("hidden");
           input.setAttribute("aria-expanded", "false");
+          clearActiveOption();
           renderPreview(item.offices.map(({ code, name }) => ({ code, name })));
           input.focus();
         });
