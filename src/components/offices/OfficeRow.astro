@@ -561,7 +561,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 </div>
                 {layout.compactAssets && (
                   <div
-                    class="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent"
+                    class="office-assets-fade pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent transition-opacity duration-200"
                     aria-hidden="true"
                   />
                 )}
@@ -717,6 +717,32 @@ const officeDirectoryRowGridClass = isAllowedAdmin
 
   let globalObserver = null;
 
+  function updateAssetsFade(scrollEl) {
+    if (!scrollEl) return;
+    const fade = scrollEl.parentElement?.querySelector(".office-assets-fade");
+    if (!fade) return;
+    const hasOverflow = scrollEl.scrollHeight > scrollEl.clientHeight + 4;
+    const atBottom =
+      scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 4;
+    fade.classList.toggle("opacity-0", !hasOverflow || atBottom);
+  }
+
+  function updateAllAssetsFades() {
+    document
+      .querySelectorAll(".office-assets-scroll")
+      .forEach(updateAssetsFade);
+  }
+
+  document.addEventListener(
+    "scroll",
+    (e) => {
+      if (!(e.target instanceof Element)) return;
+      const scrollEl = e.target.closest(".office-assets-scroll");
+      if (scrollEl) updateAssetsFade(scrollEl);
+    },
+    true,
+  );
+
   function observePersonnelSections() {
     if (globalObserver) {
       globalObserver.disconnect();
@@ -733,6 +759,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
             target.hasAttribute("data-office-detail-row") &&
             !target.classList.contains("hidden")
           ) {
+            updateAssetsFade(target.querySelector(".office-assets-scroll"));
             const section = target.querySelector("[data-branch-personnel]");
             if (section) {
               loadPersonnel(section);
@@ -746,6 +773,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 el.hasAttribute("data-office-detail-row") &&
                 !el.classList.contains("hidden")
               ) {
+                updateAssetsFade(el.querySelector(".office-assets-scroll"));
                 const section = el.querySelector("[data-branch-personnel]");
                 if (section) loadPersonnel(section);
               }
@@ -753,6 +781,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                 "[data-office-detail-row]:not(.hidden)",
               );
               expandedDetails.forEach((detail) => {
+                updateAssetsFade(detail.querySelector(".office-assets-scroll"));
                 const section = detail.querySelector("[data-branch-personnel]");
                 if (section) loadPersonnel(section);
               });
@@ -773,10 +802,13 @@ const officeDirectoryRowGridClass = isAllowedAdmin
       "[data-office-detail-row]:not(.hidden)",
     );
     visibleDetails.forEach((detail) => {
+      updateAssetsFade(detail.querySelector(".office-assets-scroll"));
       const section = detail.querySelector("[data-branch-personnel]");
       if (section) loadPersonnel(section);
     });
   }
+
+  document.addEventListener("astro:page-load", updateAllAssetsFades);
 
   document.addEventListener("astro:page-load", observePersonnelSections);
   observePersonnelSections();
