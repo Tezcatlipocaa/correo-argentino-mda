@@ -103,6 +103,11 @@ export const GET: APIRoute = async ({ request }) => {
       ),
     ]);
 
+    if (!byEmail.ok && !byUsername.ok) {
+      const message = "message" in byEmail ? byEmail.message : "Error al consultar InvGate";
+      return jsonResponse({ error: message }, 502);
+    }
+
     let invgateUser: InvgateUser | null = null;
     if (byEmail.ok) invgateUser = firstUsersByResult(byEmail.data.data);
     if (!invgateUser && byUsername.ok) {
