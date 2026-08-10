@@ -100,4 +100,60 @@ test.describe('GET /api/usuarios/invgate-user', () => {
     expect(typeof body.openTickets).toBe('number');
     expect(body.user.fullname).toBeTruthy();
   });
+
+  test('tab InvGate visible para empleado sincronizado en InvGate', async ({ context, page }) => {
+    const [synced] = await db
+      .select({ username: employees.username })
+      .from(employees)
+      .where(eq(employees.invgateExists, true))
+      .limit(1);
+    test.skip(!synced, 'No hay empleados sincronizados en InvGate en esta BD');
+
+    const username = synced.username.split('@')[0].toLowerCase();
+
+    await context.addCookies([{
+      name: 'session_id',
+      value: signedSessionId,
+      domain: 'localhost',
+      path: '/',
+    }]);
+
+    await page.goto('/buscador-usuarios');
+    await page.fill('#search-input', username);
+    await expect(page.locator('.card:not(.skeleton-debounced)').first()).toBeVisible({ timeout: 15000 });
+
+    const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const card = page.locator('.card').filter({
+      has: page.locator('.user-card-username-btn', {
+        hasText: new RegExp(`^\\s*${escaped}\\s*$`),
+      }),
+    });
+    await card.locator('[data-net-user-btn]').click();
+    await expect(page.locator('#terminal-modal')).toBeVisible();
+    await expect(page.locator('#tab-invgate-btn')).toBeVisible();
+
+    await page.locator('#tab-invgate-btn').click();
+    await expect(page.locator('#view-invgate')).toBeVisible();
+    await expect(page.locator('#invgate-email')).not.toHaveText('-', { timeout: 15000 });
+  });
+
+  test('tab InvGate oculto para empleado sin cuenta InvGate', async ({ context, page }) => {
+    await context.addCookies([{
+      name: 'session_id',
+      value: signedSessionId,
+      domain: 'localhost',
+      path: '/',
+    }]);
+
+    await page.goto('/buscador-usuarios');
+    await page.fill('#search-input', seededUsername);
+    await expect(page.locator('.card:not(.skeleton-debounced)').first()).toBeVisible({ timeout: 15000 });
+
+    const card = page.locator('.card').filter({
+      has: page.locator('.user-card-username-btn', { hasText: seededUsername }),
+    });
+    await card.locator('[data-net-user-btn]').click();
+    await expect(page.locator('#terminal-modal')).toBeVisible();
+    await expect(page.locator('#tab-invgate-btn')).toBeHidden();
+  });
 });
