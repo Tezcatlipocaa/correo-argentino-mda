@@ -140,3 +140,26 @@ export interface InvgateKbCategoriesResponse {
   data: InvgateKbCategory[];
 }
 
+export interface InvgateUsersByResponse {
+  data: Record<string, InvgateUser>;
+  next_page_key: string | null;
+}
+
+export interface InvgateUserGroupRef {
+  id?: number;
+  name?: string;
+}
+
+export interface InvgateUsersGroupsEntry {
+  id: number;
+  username?: string;
+  email?: string;
+  groups?: (InvgateUserGroupRef | string | number)[];
+  companies?: (InvgateUserGroupRef | string | number)[];
+  helpdesks?: (InvgateUserGroupRef | string | number)[];
+  locations?: (InvgateUserGroupRef | string | number)[];
+  observed?: number[];
+}
+
+export type InvgateUsersGroupsResponse = InvgateUsersGroupsEntry[];
+
