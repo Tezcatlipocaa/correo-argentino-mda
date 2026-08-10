@@ -26,9 +26,10 @@ interface NamedRef {
 }
 
 function toRefs(value: unknown): NamedRef[] {
-  if (!Array.isArray(value)) return [];
+  if (value == null || typeof value !== "object") return [];
+  const items = Array.isArray(value) ? value : Object.values(value);
   const refs: NamedRef[] = [];
-  for (const item of value) {
+  for (const item of items) {
     if (typeof item === "string") {
       refs.push({ id: 0, name: item });
     } else if (typeof item === "number") {

@@ -154,10 +154,10 @@ export interface InvgateUsersGroupsEntry {
   id: number;
   username?: string;
   email?: string;
-  groups?: (InvgateUserGroupRef | string | number)[];
-  companies?: (InvgateUserGroupRef | string | number)[];
-  helpdesks?: (InvgateUserGroupRef | string | number)[];
-  locations?: (InvgateUserGroupRef | string | number)[];
+  groups?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  companies?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  helpdesks?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  locations?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
   observed?: number[];
 }
 
