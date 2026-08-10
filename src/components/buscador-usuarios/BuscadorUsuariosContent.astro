@@ -1160,12 +1160,8 @@ const userRole = Astro.locals.user?.role || "";
       invgateLoading.classList.add("hidden");
       invgateLoading.classList.remove("flex");
     }
-    const wasInvgateActive = viewInvgate && !viewInvgate.classList.contains("hidden");
     if (tabInvgateBtn) tabInvgateBtn.classList.toggle("hidden", !invgateExists);
     viewInvgate?.classList.add("hidden");
-    if (!invgateExists && wasInvgateActive) {
-      tabPanelBtn?.click();
-    }
 
     // Restablecer estilos de botones de categoría
     const categoryButtons = document.querySelectorAll(
@@ -1742,6 +1738,8 @@ const userRole = Astro.locals.user?.role || "";
     tabPanelBtn.classList.remove("border-transparent", "text-base-content/60");
     tabConsoleBtn?.classList.remove("border-secondary", "text-secondary");
     tabConsoleBtn?.classList.add("border-transparent", "text-base-content/60");
+    tabInvgateBtn?.classList.remove("border-secondary", "text-secondary");
+    tabInvgateBtn?.classList.add("border-transparent", "text-base-content/60");
 
     viewPanel?.classList.remove("hidden");
     viewConsole?.classList.add("hidden");
@@ -1756,6 +1754,8 @@ const userRole = Astro.locals.user?.role || "";
     );
     tabPanelBtn?.classList.remove("border-secondary", "text-secondary");
     tabPanelBtn?.classList.add("border-transparent", "text-base-content/60");
+    tabInvgateBtn?.classList.remove("border-secondary", "text-secondary");
+    tabInvgateBtn?.classList.add("border-transparent", "text-base-content/60");
 
     viewConsole?.classList.remove("hidden");
     viewPanel?.classList.add("hidden");
