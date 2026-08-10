@@ -5,7 +5,7 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import { Icon } from "astro-icon/components";
 import { getCleanBase } from "@lib/baseUrl";
 import { db } from "@db/index";
-import { supportGuides } from "@db/schema";
+import { supportGuides, hiddenHelpdesks } from "@db/schema";
 import { isNull } from "drizzle-orm";
 import { invgateGet } from "@lib/invgateClient";
 import type { InvgateHelpdeskAndLevel } from "@/types/invgate";
@@ -26,8 +26,16 @@ const hdResult =
 const allItems: InvgateHelpdeskAndLevel[] =
   hdResult.ok && Array.isArray(hdResult.data) ? hdResult.data : [];
 
+const hiddenRows = await db.query.hiddenHelpdesks.findMany();
+const dbHiddenIds = new Set(hiddenRows.map((r) => r.invgateId));
+
 const helpdesks = allItems
-  .filter((h) => !h.level_order && !HIDDEN_HELPDESK_IDS.includes(h.id))
+  .filter(
+    (h) =>
+      !h.level_order &&
+      !HIDDEN_HELPDESK_IDS.includes(h.id) &&
+      !dbHiddenIds.has(h.id),
+  )
   .map((h) => ({ id: h.id, name: h.name || `Helpdesk #${h.id}` }))
   .sort((a, b) => a.name.localeCompare(b.name));
 ---
