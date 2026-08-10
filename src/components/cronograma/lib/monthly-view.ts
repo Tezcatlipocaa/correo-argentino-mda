@@ -761,6 +761,9 @@ export function renderMonthly(): void {
 
   const container = document.getElementById('cronograma-app-container');
   const userRole = container?.dataset.userRole || 'agent';
+  const currentUsername = (container?.dataset.currentUsername || '').trim().toLowerCase();
+  const currentUserIdStr = container?.dataset.currentUserId || '';
+  const currentUserId = currentUserIdStr ? parseInt(currentUserIdStr, 10) : null;
   const isReadOnly = ['agent', 'referent'].includes(userRole);
   const hideComments = isReadOnly;
   const hideTotals = isReadOnly;
@@ -994,7 +997,16 @@ export function renderMonthly(): void {
 
       const opShadowClass = state.isTotalsCollapsed ? 'shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]' : '';
 
-      tbodyHtml += `<tr class="group ${showViolation ? 'bg-error/2' : ''}" data-op-name="${op.nombre.toLowerCase()}">
+      const opUsername = (op.username || '').trim().toLowerCase();
+      const opNameLower = (op.nombre || '').trim().toLowerCase();
+      const isCurrentUser = !!(
+        (currentUsername && (opUsername === currentUsername || opNameLower === currentUsername || opNameLower.includes(currentUsername))) ||
+        (currentUserId !== null && op.id !== undefined && op.id === currentUserId)
+      );
+
+      const trClass = `group ${showViolation ? 'bg-error/2' : ''} ${isCurrentUser ? 'highlighted-row' : ''}`;
+
+      tbodyHtml += `<tr class="${trClass}" data-op-name="${op.nombre.toLowerCase()}">
         <td class="sticky left-0 bg-base-100 z-40 w-[200px] min-w-[200px] font-bold py-3 px-6 text-xs border-r border-b border-base-200/70 group-hover:!bg-base-200 transition-colors ${opShadowClass}">
           <div class="flex items-center gap-3">
             <span class="w-2 h-2 rounded-full ${showViolation ? 'bg-error animate-pulse' : 'bg-base-300 group-hover:bg-amber-500'} transition-transform shadow-sm cursor-pointer hover:scale-125 hover:ring-2 hover:ring-secondary/50 op-row-dot ${state.isEditMode ? 'op-row-header' : ''}" title="${state.isEditMode ? 'Pintar toda la fila' : 'Destacar fila'}"></span>

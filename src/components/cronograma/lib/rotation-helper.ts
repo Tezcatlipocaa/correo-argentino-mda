@@ -221,12 +221,12 @@ export function renderRotationTimeline(dateStr: string): void {
     return `
       <tr class="hover:bg-base-200/30 transition-colors">
         <td class="px-3 py-3 border-r border-base-300/40 flex items-center gap-2.5">
-          <div class="w-6.5 h-6.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20 flex items-center justify-center text-tiny font-black shrink-0">
+          <div class="w-7 h-7 rounded-full bg-secondary/10 text-secondary border border-secondary/20 flex items-center justify-center text-xs font-black shrink-0">
             ${initials}
           </div>
           <div class="flex flex-col min-w-0">
-            <span class="truncate text-small font-bold text-base-content">${escapeHtml(op.nombre)}</span>
-            <span class="text-tiny font-semibold text-base-content/40">${horario}</span>
+            <span class="truncate text-sm font-bold text-base-content">${escapeHtml(op.nombre)}</span>
+            <span class="text-xs font-semibold text-base-content/70">${horario}</span>
           </div>
         </td>
         ${hourCells}
