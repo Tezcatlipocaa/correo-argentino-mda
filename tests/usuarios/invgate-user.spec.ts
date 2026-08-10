@@ -125,7 +125,7 @@ test.describe('GET /api/usuarios/invgate-user', () => {
     const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const card = page.locator('.card').filter({
       has: page.locator('.user-card-username-btn', {
-        hasText: new RegExp(`^\\s*${escaped}\\s*$`),
+        hasText: new RegExp(`^\\s*${escaped}\\s*$`, 'i'),
       }),
     });
     await card.locator('[data-net-user-btn]').click();
@@ -153,6 +153,49 @@ test.describe('GET /api/usuarios/invgate-user', () => {
       has: page.locator('.user-card-username-btn', { hasText: seededUsername }),
     });
     await card.locator('[data-net-user-btn]').click();
+    await expect(page.locator('#terminal-modal')).toBeVisible();
+    await expect(page.locator('#tab-invgate-btn')).toBeHidden();
+  });
+
+  test('tab InvGate se oculta al reabrir modal con empleado sin cuenta InvGate', async ({ context, page }) => {
+    const [synced] = await db
+      .select({ username: employees.username })
+      .from(employees)
+      .where(eq(employees.invgateExists, true))
+      .limit(1);
+    test.skip(!synced, 'No hay empleados sincronizados en InvGate en esta BD');
+
+    const syncedUser = synced.username.split('@')[0].toLowerCase();
+    const escaped = syncedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    await context.addCookies([{
+      name: 'session_id',
+      value: signedSessionId,
+      domain: 'localhost',
+      path: '/',
+    }]);
+
+    await page.goto('/buscador-usuarios');
+
+    await page.fill('#search-input', syncedUser);
+    await expect(page.locator('.card:not(.skeleton-debounced)').first()).toBeVisible({ timeout: 15000 });
+    const syncedCard = page.locator('.card').filter({
+      has: page.locator('.user-card-username-btn', {
+        hasText: new RegExp(`^\\s*${escaped}\\s*$`, 'i'),
+      }),
+    });
+    await syncedCard.locator('[data-net-user-btn]').click();
+    await expect(page.locator('#tab-invgate-btn')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#terminal-modal')).toBeHidden();
+
+    await page.fill('#search-input', seededUsername);
+    await expect(page.locator('.card:not(.skeleton-debounced)').first()).toBeVisible({ timeout: 15000 });
+    const plainCard = page.locator('.card').filter({
+      has: page.locator('.user-card-username-btn', { hasText: seededUsername }),
+    });
+    await plainCard.locator('[data-net-user-btn]').click();
     await expect(page.locator('#terminal-modal')).toBeVisible();
     await expect(page.locator('#tab-invgate-btn')).toBeHidden();
   });
