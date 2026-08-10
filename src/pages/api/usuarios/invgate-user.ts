@@ -19,6 +19,40 @@ import type {
 const EMAIL_DOMAIN = "correoargentino.com.ar";
 const OPEN_TICKETS_MAX_PAGES = 10;
 const OPEN_TICKETS_PAGE_SIZE = 100;
+const TICKETS_MAX = 20;
+
+const STATUS_NAMES: Record<number, string> = {
+  1: "Nuevo",
+  2: "Abierto",
+  3: "Pendiente",
+  4: "En espera",
+  5: "Solucionado",
+  6: "Cerrado",
+  7: "Rechazado",
+  8: "Cancelado",
+};
+
+interface IncidentSummary {
+  id: number;
+  pretty_id: string;
+  title: string;
+  status_id: number;
+  created_at: number | null;
+}
+
+interface IncidentPage {
+  requests?: Record<
+    string,
+    {
+      id?: number;
+      pretty_id?: string;
+      title?: string;
+      status_id?: number;
+      created_at?: number;
+    }
+  >;
+  next_page_key?: string | null;
+}
 
 interface NamedRef {
   id: number;
@@ -64,6 +98,32 @@ function findGroupsEntry(
 ): InvgateUsersGroupsEntry | null {
   if (!Array.isArray(data)) return null;
   return data.find((e) => Number(e.id) === userId) ?? null;
+}
+
+async function collectIncidentRequests(
+  qsFor: (pageKey: string | null) => string,
+): Promise<IncidentSummary[]> {
+  const seen = new Map<number, IncidentSummary>();
+  let pageKey: string | null = null;
+  for (let page = 0; page < OPEN_TICKETS_MAX_PAGES; page++) {
+    const result: InvgateResult<IncidentPage> = await invgateGet<IncidentPage>(qsFor(pageKey));
+    if (!result.ok) break;
+    const requests = result.data.requests ?? {};
+    for (const key of Object.keys(requests)) {
+      const it = requests[key];
+      if (!it || typeof it.id !== "number" || seen.has(it.id)) continue;
+      seen.set(it.id, {
+        id: it.id,
+        pretty_id: it.pretty_id ?? String(it.id),
+        title: it.title ?? "",
+        status_id: it.status_id ?? 0,
+        created_at: it.created_at ?? null,
+      });
+    }
+    if (!result.data.next_page_key) break;
+    pageKey = result.data.next_page_key;
+  }
+  return [...seen.values()];
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -135,26 +195,38 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    let openTickets = 0;
-    let pageKey: string | null = null;
-    for (let page = 0; page < OPEN_TICKETS_MAX_PAGES; page++) {
-      const qs: string = pageKey
-        ? `incidents.by.customer?id=${invgateId}&limit=${OPEN_TICKETS_PAGE_SIZE}&page_key=${encodeURIComponent(pageKey)}`
-        : `incidents.by.customer?id=${invgateId}&limit=${OPEN_TICKETS_PAGE_SIZE}`;
-      const incidentsResult: InvgateResult<{
-        requests?: Record<string, unknown>;
-        next_page_key?: string | null;
-      }> = await invgateGet<{
-        requests?: Record<string, unknown>;
-        next_page_key?: string | null;
-      }>(qs);
-      if (!incidentsResult.ok) break;
-      const d: { requests?: Record<string, unknown>; next_page_key?: string | null } =
-        incidentsResult.data;
-      openTickets += d.requests ? Object.keys(d.requests).length : 0;
-      if (!d.next_page_key) break;
-      pageKey = d.next_page_key;
+    const [customerTickets, agentTickets] = await Promise.all([
+      collectIncidentRequests((pageKey) =>
+        pageKey
+          ? `incidents.by.customer?id=${invgateId}&limit=${OPEN_TICKETS_PAGE_SIZE}&page_key=${encodeURIComponent(pageKey)}`
+          : `incidents.by.customer?id=${invgateId}&limit=${OPEN_TICKETS_PAGE_SIZE}`,
+      ),
+      collectIncidentRequests((pageKey) =>
+        pageKey
+          ? `incidents.by.agent?id=${invgateId}&limit=${OPEN_TICKETS_PAGE_SIZE}&page_key=${encodeURIComponent(pageKey)}`
+          : `incidents.by.agent?id=${invgateId}&limit=${OPEN_TICKETS_PAGE_SIZE}`,
+      ),
+    ]);
+
+    const ticketMap = new Map<number, IncidentSummary & { role: "customer" | "agent" }>();
+    for (const t of customerTickets) ticketMap.set(t.id, { ...t, role: "customer" });
+    for (const t of agentTickets) {
+      const existing = ticketMap.get(t.id);
+      if (existing) {
+        existing.role = "customer";
+      } else {
+        ticketMap.set(t.id, { ...t, role: "agent" });
+      }
     }
+
+    const sortedTickets = [...ticketMap.values()].sort(
+      (a, b) => (b.created_at ?? 0) - (a.created_at ?? 0),
+    );
+    const openTickets = sortedTickets.length;
+    const tickets = sortedTickets.slice(0, TICKETS_MAX).map((t) => ({
+      ...t,
+      status_name: STATUS_NAMES[t.status_id] ?? String(t.status_id),
+    }));
 
     const org = {
       groups: [] as NamedRef[],
@@ -215,6 +287,7 @@ export const GET: APIRoute = async ({ request }) => {
       manager,
       org,
       openTickets,
+      tickets,
     });
   } catch (error) {
     console.error("[InvGateUser] Error:", error);

@@ -340,9 +340,9 @@ const userRole = Astro.locals.user?.role || "";
   const invgateGroups = document.getElementById("invgate-groups");
   const invgateHelpdesks = document.getElementById("invgate-helpdesks");
   const invgateLocations = document.getElementById("invgate-locations");
-  const invgateCompanies = document.getElementById("invgate-companies");
   const invgateManager = document.getElementById("invgate-manager");
   const invgateOpenTickets = document.getElementById("invgate-open-tickets");
+  const invgateTicketsList = document.getElementById("invgate-tickets-list");
   const btnCopyInvgateUsername = document.getElementById("btn-copy-invgate-username");
   const btnCopyInvgateFullname = document.getElementById("btn-copy-invgate-fullname");
   const btnCopyInvgateEmail = document.getElementById("btn-copy-invgate-email");
@@ -1162,6 +1162,8 @@ const userRole = Astro.locals.user?.role || "";
     }
     if (tabInvgateBtn) tabInvgateBtn.classList.toggle("hidden", !invgateExists);
     viewInvgate?.classList.add("hidden");
+    if (invgateTicketsList) invgateTicketsList.innerHTML = "";
+    if (invgateOpenTickets) invgateOpenTickets.textContent = "0";
 
     // Restablecer estilos de botones de categoría
     const categoryButtons = document.querySelectorAll(
@@ -1396,7 +1398,6 @@ const userRole = Astro.locals.user?.role || "";
     renderInvChips(invgateGroups, data.org?.groups);
     renderInvChips(invgateHelpdesks, data.org?.helpdesks);
     renderInvChips(invgateLocations, data.org?.locations);
-    renderInvChips(invgateCompanies, data.org?.companies);
 
     const managerName = data.manager?.fullname || null;
     if (invgateManager) invgateManager.textContent = managerName || "No especificado";
@@ -1407,14 +1408,59 @@ const userRole = Astro.locals.user?.role || "";
       btnSearchInvgateManager.classList.toggle("hidden", !managerName);
     }
 
+    renderInvgateTickets(data.tickets);
+  }
+
+  function statusBadgeClass(statusId: number): string {
+    switch (statusId) {
+      case 1:
+        return "bg-info/10 text-info border-info/30";
+      case 2:
+        return "bg-primary/10 text-primary border-primary/30";
+      case 3:
+        return "bg-warning/10 text-warning border-warning/30";
+      case 4:
+        return "bg-neutral/10 text-neutral border-neutral/30";
+      case 5:
+      case 6:
+        return "bg-success/10 text-success border-success/30";
+      case 7:
+        return "bg-error/10 text-error border-error/30";
+      default:
+        return "bg-base-300 text-base-content/60 border-base-content/30";
+    }
+  }
+
+  function renderInvgateTickets(tickets: any[]) {
+    if (!invgateTicketsList) return;
+    invgateTicketsList.innerHTML = "";
+    const list = tickets || [];
     if (invgateOpenTickets) {
-      const n = data.openTickets ?? 0;
-      invgateOpenTickets.textContent = `${n} ticket${n === 1 ? "" : "s"} abierto${n === 1 ? "" : "s"}`;
+      invgateOpenTickets.textContent = String(list.length);
       invgateOpenTickets.className =
-        n > 0
+        list.length > 0
           ? "badge badge-xs badge-soft bg-info/10 text-info font-semibold"
           : "badge badge-xs badge-soft bg-success/10 text-success font-semibold";
     }
+    if (list.length === 0) {
+      invgateTicketsList.innerHTML =
+        '<span class="text-base-content/40 text-xs font-sans">Sin tickets relacionados</span>';
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const t of list) {
+      const row = document.createElement("div");
+      row.className =
+        "flex items-center gap-2 px-1.5 py-1 rounded-md bg-base-200/50 border border-base-300 min-w-0";
+      row.innerHTML = `
+        <span class="badge badge-xs badge-soft border ${statusBadgeClass(t.status_id)}">${escapeHTML(t.status_name || String(t.status_id))}</span>
+        <span class="font-mono text-xs text-base-content/70 shrink-0">${escapeHTML(t.pretty_id || String(t.id))}</span>
+        <span class="text-xs text-base-content truncate flex-1 min-w-0" title="${escapeHTML(t.title || "")}">${escapeHTML(t.title || "Sin título")}</span>
+        <span class="badge badge-xs badge-soft ${t.role === "agent" ? "bg-secondary/10 text-secondary border-secondary/30" : "bg-neutral/10 text-neutral border-neutral/30"}">${t.role === "agent" ? "Asignado" : "Solicitante"}</span>
+      `;
+      frag.appendChild(row);
+    }
+    invgateTicketsList.appendChild(frag);
   }
 
   async function loadInvgateData() {

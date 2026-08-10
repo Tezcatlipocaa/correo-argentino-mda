@@ -736,7 +736,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
       <!-- VISTA 3: InvGate -->
       <div
         id="view-invgate"
-        class="hidden relative grid grid-cols-2 md:grid-cols-3 gap-2 content-start items-start flex-1"
+        class="hidden relative grid grid-cols-2 md:grid-cols-3 gap-2 flex-1"
       >
         <!-- Loader de InvGate -->
         <div
@@ -1096,28 +1096,6 @@ import SearchBar from "@components/ui/SearchBar.astro";
           ></div>
         </div>
 
-        <!-- Empresas -->
-        <div
-          class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
-        >
-          <div class="flex items-center gap-1.5">
-            <div
-              class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
-            >
-              <Icon name="boxicons:briefcase" size={14} />
-            </div>
-            <span
-              class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
-            >
-              Empresas
-            </span>
-          </div>
-          <div
-            class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
-            id="invgate-companies"
-          ></div>
-        </div>
-
         <!-- Jefe Directo -->
         <div
           class="bg-base-200/50 border border-base-300 rounded-lg p-2 hover:border-base-content/20 transition-colors group relative flex items-center gap-2 min-w-0 col-span-full"
@@ -1181,25 +1159,29 @@ import SearchBar from "@components/ui/SearchBar.astro";
           Actividad
         </div>
 
-        <!-- Tickets abiertos -->
+        <!-- Tickets relacionados -->
         <div
-          class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex items-center gap-2 min-w-0"
+          class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0 col-span-full"
         >
-          <div
-            class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
-          >
-            <Icon name="boxicons:task" size={14} />
-          </div>
-          <div class="min-w-0 flex-1">
-            <span
-              class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none block truncate"
-            >
-              Tickets abiertos
-            </span>
-            <div class="mt-1">
-              <span id="invgate-open-tickets" class="badge badge-xs badge-soft">-</span>
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <div
+                class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
+              >
+                <Icon name="boxicons:task" size={14} />
+              </div>
+              <span
+                class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
+              >
+                Tickets relacionados
+              </span>
             </div>
+            <span id="invgate-open-tickets" class="badge badge-xs badge-soft">0</span>
           </div>
+          <div
+            id="invgate-tickets-list"
+            class="flex flex-col gap-1 max-h-40 overflow-y-auto scrollbar-thin"
+          ></div>
         </div>
       </div>
     </div>

@@ -98,6 +98,12 @@ test.describe('GET /api/usuarios/invgate-user', () => {
     expect(Array.isArray(body.org.locations)).toBe(true);
     expect(Array.isArray(body.org.companies)).toBe(true);
     expect(typeof body.openTickets).toBe('number');
+    expect(Array.isArray(body.tickets)).toBe(true);
+    for (const t of body.tickets) {
+      expect(typeof t.pretty_id).toBe('string');
+      expect(typeof t.status_name).toBe('string');
+      expect(typeof t.role).toBe('string');
+    }
     expect(body.user.fullname).toBeTruthy();
   });
 
