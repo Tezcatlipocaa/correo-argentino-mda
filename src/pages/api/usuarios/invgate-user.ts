@@ -12,6 +12,7 @@ import type {
   InvgateGroup,
   InvgateLocation,
   InvgateHelpdesk,
+  InvgateCompany,
   InvgateResult,
 } from "@/types/invgate";
 
@@ -168,21 +169,24 @@ export const GET: APIRoute = async ({ request }) => {
         org.locations = toRefs(entry.locations);
         org.companies = toRefs(entry.companies);
 
-        const needsLookup = [org.groups, org.helpdesks, org.locations].some((arr) =>
+        const needsLookup = [org.groups, org.helpdesks, org.locations, org.companies].some((arr) =>
           arr.some((r) => r.id && !r.name),
         );
         if (needsLookup) {
-          const [groupsList, locationsList, helpdesksList] = await Promise.all([
+          const [groupsList, locationsList, helpdesksList, companiesList] = await Promise.all([
             invgateGet<InvgateGroup[]>("groups"),
             invgateGet<InvgateLocation[]>("locations"),
             invgateGet<InvgateHelpdesk[]>("helpdesks"),
+            invgateGet<InvgateCompany[]>("companies"),
           ]);
           const groupMap = new Map((groupsList.ok ? groupsList.data : []).map((g) => [g.id, g.name]));
           const locMap = new Map((locationsList.ok ? locationsList.data : []).map((l) => [l.id, l.name]));
           const hdMap = new Map((helpdesksList.ok ? helpdesksList.data : []).map((h) => [h.id, h.name]));
+          const companyMap = new Map((companiesList.ok ? companiesList.data : []).map((c) => [c.id, c.name]));
           org.groups = resolveNames(org.groups, groupMap);
           org.helpdesks = resolveNames(org.helpdesks, hdMap);
           org.locations = resolveNames(org.locations, locMap);
+          org.companies = resolveNames(org.companies, companyMap);
         }
       }
     }

@@ -163,3 +163,8 @@ export interface InvgateUsersGroupsEntry {
 
 export type InvgateUsersGroupsResponse = InvgateUsersGroupsEntry[];
 
+export interface InvgateCompany {
+  id: number;
+  name: string;
+}
+
