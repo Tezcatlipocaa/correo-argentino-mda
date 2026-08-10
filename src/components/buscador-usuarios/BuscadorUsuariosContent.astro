@@ -1358,7 +1358,7 @@ const userRole = Astro.locals.user?.role || "";
     for (const ref of refs) {
       const chip = document.createElement("span");
       chip.className =
-        "badge badge-sm badge-soft bg-base-200 border border-base-300 text-base-content font-semibold";
+        "badge badge-xs badge-soft bg-base-200 border border-base-300 text-base-content font-semibold";
       chip.textContent = ref.name || String(ref.id);
       frag.appendChild(chip);
     }
@@ -1369,16 +1369,16 @@ const userRole = Astro.locals.user?.role || "";
     if (!invgateState) return;
     let label = "Activo";
     let cls =
-      "badge badge-sm badge-soft bg-success/10 text-success font-semibold";
+      "badge badge-xs badge-soft bg-success/10 text-success font-semibold";
     if (state.is_deleted) {
       label = "Eliminado";
-      cls = "badge badge-sm badge-soft bg-error/10 text-error font-semibold";
+      cls = "badge badge-xs badge-soft bg-error/10 text-error font-semibold";
     } else if (state.is_disabled) {
       label = "Deshabilitado";
-      cls = "badge badge-sm badge-soft bg-warning/10 text-warning font-semibold";
+      cls = "badge badge-xs badge-soft bg-warning/10 text-warning font-semibold";
     } else if (state.is_external) {
       label = "Externo";
-      cls = "badge badge-sm badge-soft bg-info/10 text-info font-semibold";
+      cls = "badge badge-xs badge-soft bg-info/10 text-info font-semibold";
     }
     invgateState.textContent = label;
     invgateState.className = cls;
@@ -1412,8 +1412,8 @@ const userRole = Astro.locals.user?.role || "";
       invgateOpenTickets.textContent = `${n} ticket${n === 1 ? "" : "s"} abierto${n === 1 ? "" : "s"}`;
       invgateOpenTickets.className =
         n > 0
-          ? "badge badge-sm badge-soft bg-info/10 text-info font-semibold"
-          : "badge badge-sm badge-soft bg-success/10 text-success font-semibold";
+          ? "badge badge-xs badge-soft bg-info/10 text-info font-semibold"
+          : "badge badge-xs badge-soft bg-success/10 text-success font-semibold";
     }
   }
 
