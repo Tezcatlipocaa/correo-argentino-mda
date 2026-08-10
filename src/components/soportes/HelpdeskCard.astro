@@ -12,9 +12,11 @@ interface Props {
   isAdmin: boolean;
   parentName?: string;
   subLevels: InvgateHelpdeskAndLevel[];
+  isHidden?: boolean;
+  adminOnly?: boolean;
 }
 
-const { helpdesk, records, isAdmin, parentName, subLevels } = Astro.props;
+const { helpdesk, records, isAdmin, parentName, subLevels, isHidden = false, adminOnly = false } = Astro.props;
 const cleanBase = getCleanBase();
 const hdName = helpdesk.name || `Helpdesk #${helpdesk.id}`;
 const isActive = helpdesk.status_id === 1;
@@ -83,8 +85,12 @@ const searchableText = [
 ---
 
 <div
-  class="card bg-base-100 shadow-sm border border-base-300 h-full hover:border-secondary/40 transition-colors"
+  class:list={[
+    "card bg-base-100 shadow-sm border border-base-300 h-full hover:border-secondary/40 transition-colors",
+    isHidden && "hidden",
+  ]}
   data-card-for={helpdesk.id}
+  data-hidden={isHidden ? "true" : undefined}
   data-search-text={searchableText}
   data-status={isActive ? "active" : "inactive"}
   data-parent-name={parentName || ""}
@@ -128,6 +134,14 @@ const searchableText = [
             <span class:list={["badge badge-sm font-medium", statusBadge]}
               >{statusLabel}</span
             >
+            {
+              isHidden && (
+                <span class="badge badge-sm gap-1 badge-error">
+                  <Icon name="boxicons:low-vision" size={12} aria-hidden="true" />
+                  Oculta
+                </span>
+              )
+            }
             {
               parentName && (
                 <span
@@ -240,6 +254,30 @@ const searchableText = [
         <Icon name="boxicons:info-circle" size={16} aria-hidden="true" />
         <span>Ver más</span>
       </button>
+      {
+        adminOnly && !isHidden && (
+          <button
+            data-hide-helpdesk={helpdesk.id}
+            class="btn btn-sm btn-soft btn-error gap-1"
+            title="Ocultar esta mesa de ayuda del listado"
+          >
+            <Icon name="boxicons:low-vision" size={16} aria-hidden="true" />
+            <span class="hidden xl:inline">Ocultar</span>
+          </button>
+        )
+      }
+      {
+        adminOnly && isHidden && (
+          <button
+            data-show-helpdesk={helpdesk.id}
+            class="btn btn-sm btn-soft btn-success gap-1"
+            title="Mostrar esta mesa de ayuda en el listado"
+          >
+            <Icon name="boxicons:eye" size={16} aria-hidden="true" />
+            <span class="hidden xl:inline">Mostrar</span>
+          </button>
+        )
+      }
       {
         isAdmin && (
           <a
@@ -383,6 +421,39 @@ const searchableText = [
   }
 
   loadIncidentsSequentially();
+
+  async function toggleHidden(invgateId: number, action: "hide" | "show") {
+    try {
+      const res = await fetch(`${cleanBase}api/soportes/helpdesks/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invgate_id: invgateId }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error(
+        `Error al ${action === "hide" ? "ocultar" : "mostrar"} helpdesk`,
+        err,
+      );
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const hideBtn = target.closest<HTMLElement>("[data-hide-helpdesk]");
+    if (hideBtn) {
+      const id = Number(hideBtn.dataset.hideHelpdesk);
+      if (Number.isInteger(id) && id > 0) toggleHidden(id, "hide");
+      return;
+    }
+    const showBtn = target.closest<HTMLElement>("[data-show-helpdesk]");
+    if (showBtn) {
+      const id = Number(showBtn.dataset.showHelpdesk);
+      if (Number.isInteger(id) && id > 0) toggleHidden(id, "show");
+    }
+  });
 
   function getInitials(name: string): string {
     const parts = name.trim().split(/\s+/);

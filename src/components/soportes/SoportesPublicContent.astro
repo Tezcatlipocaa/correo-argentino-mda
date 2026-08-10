@@ -22,6 +22,7 @@ const isAdminUser = user
   ? isAllowed("Administrar Contenido", user.role)
   : false;
 const canExport = user ? can(user.role, "team_leader") : false;
+const isAdminOnly = user ? can(user.role, "admin") : false;
 
 const hdResult =
   await invgateGet<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
@@ -46,12 +47,20 @@ allItems
     subLevelsByParent.set(pid, list);
   });
 
+const hiddenRows = await db.query.hiddenHelpdesks.findMany();
+const dbHiddenIds = new Set(hiddenRows.map((r) => r.invgateId));
+const staticHiddenIds = new Set(HIDDEN_HELPDESK_IDS);
+
 const visibleHelpdesks = parentHelpdesks
-  .filter((hd) => !HIDDEN_HELPDESK_IDS.includes(hd.id))
+  .filter((hd) => !dbHiddenIds.has(hd.id) && !staticHiddenIds.has(hd.id))
+  .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+const hiddenManagedHelpdesks = parentHelpdesks
+  .filter((hd) => dbHiddenIds.has(hd.id))
   .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
 const parentNameMap = new Map<number, string>();
-visibleHelpdesks.forEach((hd) => {
+parentHelpdesks.forEach((hd) => {
   if (hd.parent_id && parentMap.has(hd.parent_id)) {
     parentNameMap.set(hd.id, parentMap.get(hd.parent_id)!.name || "");
   }
@@ -182,6 +191,19 @@ const totalMembers = visibleHelpdesks.reduce(
           />
         )
       }
+      {
+        isAdminOnly && (
+          <button
+            id="toggle-hidden"
+            class="btn btn-outline btn-sm md:btn-md gap-2 shrink-0"
+            aria-pressed="false"
+            title="Ver solo mesas ocultas"
+          >
+            <Icon name="boxicons:low-vision" size={16} aria-hidden="true" />
+            <span class="hidden lg:inline">Mesas ocultas</span>
+          </button>
+        )
+      }
     </div>
   </div>
 
@@ -201,9 +223,30 @@ const totalMembers = visibleHelpdesks.reduce(
             isAdmin={isAdminUser}
             parentName={parentName}
             subLevels={subLevels}
+            adminOnly={isAdminOnly}
           />
         );
       })
+    }
+
+    {
+      isAdminOnly &&
+        hiddenManagedHelpdesks.map((hd) => {
+          const records = groupedRecords.get(hd.id) || [];
+          const parentName = parentNameMap.get(hd.id);
+          const subLevels = subLevelsByParent.get(hd.id) || [];
+          return (
+            <HelpdeskCard
+              helpdesk={hd}
+              records={records}
+              isAdmin={isAdminUser}
+              parentName={parentName}
+              subLevels={subLevels}
+              isHidden
+              adminOnly
+            />
+          );
+        })
     }
 
     {
@@ -234,6 +277,25 @@ const totalMembers = visibleHelpdesks.reduce(
       clearButtonId="btn-clear-empty-soportes"
       clearButtonText="Limpiar filtros"
     />
+
+    {
+      isAdminOnly && (
+        <div
+          id="no-hidden-state-soportes"
+          class="hidden col-span-full flex-col items-center gap-3 py-16 text-base-content/50"
+        >
+          <div class="rounded-full bg-base-200 p-4">
+            <Icon
+              name="boxicons:low-vision"
+              size={32}
+              class="opacity-30"
+              aria-hidden="true"
+            />
+          </div>
+          <p class="text-sm font-semibold">No hay mesas ocultas</p>
+        </div>
+      )
+    }
   </div>
 </PageContainer>
 
@@ -252,12 +314,16 @@ const totalMembers = visibleHelpdesks.reduce(
   const sortBy = document.querySelector<HTMLSelectElement>("#sort-by");
   const grid = document.querySelector<HTMLElement>("#soportes-grid");
   const cards = document.querySelectorAll<HTMLElement>("[data-card-for]");
+  const toggleHiddenBtn = document.querySelector<HTMLButtonElement>(
+    "#toggle-hidden",
+  );
+  let hiddenOnly = false;
 
   function applyFiltersAndSort() {
-    const query = searchInput?.value.trim() || "";
-    const statusFilter = filterStatus?.value || "all";
-    const parentFilter = filterParent?.value || "all";
-    const sortValue = sortBy?.value || "name-asc";
+    const query = hiddenOnly ? "" : (searchInput?.value.trim() || "");
+    const statusFilter = hiddenOnly ? "all" : (filterStatus?.value || "all");
+    const parentFilter = hiddenOnly ? "all" : (filterParent?.value || "all");
+    const sortValue = hiddenOnly ? "name-asc" : (sortBy?.value || "name-asc");
 
     const visible: HTMLElement[] = [];
 
@@ -265,6 +331,7 @@ const totalMembers = visibleHelpdesks.reduce(
       const searchText = card.dataset.searchText || "";
       const cardStatus = card.dataset.status || "";
       const cardParent = card.dataset.parentName || "";
+      const cardHidden = card.dataset.hidden === "true";
 
       const matchesSearch = matchesSearchQuery(query, [searchText]);
       const matchesStatus =
@@ -272,23 +339,35 @@ const totalMembers = visibleHelpdesks.reduce(
       const matchesParent =
         parentFilter === "all" || cardParent === parentFilter;
 
-      const isVisible = matchesSearch && matchesStatus && matchesParent;
-      card.classList.toggle("hidden", !isVisible);
+      const isVisible = hiddenOnly
+        ? cardHidden
+        : !cardHidden && matchesSearch && matchesStatus && matchesParent;
 
       if (isVisible) {
+        card.classList.remove("hidden");
         visible.push(card);
         highlightSearchTargets(card, query);
       }
     });
 
     const noResultsState = document.getElementById("no-results-state-soportes");
-    if (noResultsState) {
-      if (visible.length === 0) {
-        noResultsState.classList.remove("hidden");
-        noResultsState.classList.add("flex");
-      } else {
-        noResultsState.classList.add("hidden");
-        noResultsState.classList.remove("flex");
+    const noHiddenState = document.getElementById("no-hidden-state-soportes");
+
+    if (hiddenOnly) {
+      noResultsState?.classList.add("hidden");
+      noResultsState?.classList.remove("flex");
+      if (noHiddenState) {
+        const showEmpty = visible.length === 0;
+        noHiddenState.classList.toggle("hidden", !showEmpty);
+        noHiddenState.classList.toggle("flex", showEmpty);
+      }
+    } else {
+      noHiddenState?.classList.add("hidden");
+      noHiddenState?.classList.remove("flex");
+      if (noResultsState) {
+        const showEmpty = visible.length === 0;
+        noResultsState.classList.toggle("hidden", !showEmpty);
+        noResultsState.classList.toggle("flex", showEmpty);
       }
     }
 
@@ -317,6 +396,9 @@ const totalMembers = visibleHelpdesks.reduce(
     });
 
     if (grid) {
+      cards.forEach((card) => {
+        if (card.parentNode === grid) grid.removeChild(card);
+      });
       visible.forEach((card) => grid.appendChild(card));
     }
   }
@@ -326,11 +408,20 @@ const totalMembers = visibleHelpdesks.reduce(
   filterParent?.addEventListener("change", applyFiltersAndSort);
   sortBy?.addEventListener("change", applyFiltersAndSort);
 
+  toggleHiddenBtn?.addEventListener("click", () => {
+    hiddenOnly = !hiddenOnly;
+    toggleHiddenBtn.setAttribute("aria-pressed", String(hiddenOnly));
+    toggleHiddenBtn.classList.toggle("btn-active", hiddenOnly);
+    applyFiltersAndSort();
+  });
+
   cards.forEach((card) => {
     card.addEventListener("members-loaded", () => {
       if (searchInput?.value) applyFiltersAndSort();
     });
   });
+
+  applyFiltersAndSort();
 
   const clearFiltersBtn =
     document.querySelector<HTMLButtonElement>("#clear-filters");
@@ -339,6 +430,9 @@ const totalMembers = visibleHelpdesks.reduce(
   );
 
   const resetFilters = () => {
+    hiddenOnly = false;
+    toggleHiddenBtn?.setAttribute("aria-pressed", "false");
+    toggleHiddenBtn?.classList.remove("btn-active");
     if (searchInput) searchInput.value = "";
     if (filterStatus) filterStatus.value = "all";
     if (filterParent) filterParent.value = "all";
@@ -354,7 +448,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
   exportCsvBtn?.addEventListener("click", () => {
     const visibleCards = Array.from(cards).filter(
-      (c) => !c.classList.contains("hidden"),
+      (c) => c.parentNode === grid,
     );
 
     let csvContent = "\uFEFF";

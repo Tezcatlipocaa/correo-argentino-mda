@@ -28,7 +28,7 @@ test('La barra de busqueda y las acciones ocupan la segunda fila', async ({ page
   await expect(searchInput).toBeVisible();
   await expect(searchInput).toHaveAttribute(
     'placeholder',
-    'Buscar por nombre SM, Invgate, topico...',
+    'Buscar por nombre SM, Invgate, tópico…',
   );
 
   const searchBar = page.locator('label[for="soportes-search"]');
