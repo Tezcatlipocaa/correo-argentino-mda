@@ -279,13 +279,16 @@ const userRole = Astro.locals.user?.role || "";
   );
   const terminalOutput = document.getElementById("terminal-output");
   const terminalLoading = document.getElementById("terminal-loading");
-  const closeTerminalBtn = document.getElementById("close-terminal-btn");
   const closeTerminalFooterBtn = document.getElementById(
     "close-terminal-footer-btn",
   );
   const copyTerminalBtn = document.getElementById(
     "copy-terminal-btn",
   ) as HTMLButtonElement | null;
+  const refreshTerminalBtn = document.getElementById(
+    "refresh-terminal-btn",
+  ) as HTMLButtonElement | null;
+  const refreshTerminalIcon = document.getElementById("refresh-terminal-icon");
 
   // Referencias de la versión organizada de terminal
   const tabPanelBtn = document.getElementById("tab-panel-btn");
@@ -357,9 +360,11 @@ const userRole = Astro.locals.user?.role || "";
   const copyAllGroupsBtn = document.getElementById("copy-all-groups-btn");
   const btnViewGrid = document.getElementById("btn-view-grid");
   const btnViewList = document.getElementById("btn-view-list");
-  const clearGroupSearch = document.getElementById("clear-group-search");
+  const clearGroupSearch = document.getElementById("clear-terminal-groups-search");
   let currentSelectedCategory = "all";
   let currentViewMode = "grid";
+  let currentUsername = "";
+  let currentInvgateExists = false;
 
   const netUserCache = new Map<string, string>();
   const pendingLegajoFetches = new Set<string>();
@@ -1143,6 +1148,9 @@ const userRole = Astro.locals.user?.role || "";
     )
       return;
 
+    currentUsername = username;
+    currentInvgateExists = invgateExists;
+
     // Restablecer por defecto a la vista de panel organizado
     tabPanelBtn?.click();
     if (terminalGroupsSearch) {
@@ -1215,9 +1223,14 @@ const userRole = Astro.locals.user?.role || "";
     if (terminalGroupsList) terminalGroupsList.innerHTML = "";
     currentLdapGroups = [];
 
+    terminalModal.showModal();
+    await loadTerminalData(username);
+  }
+
+  async function loadTerminalData(username: string) {
+    if (!terminalLoading || !terminalOutput) return;
     terminalLoading.classList.remove("hidden");
     terminalLoading.classList.add("flex");
-    terminalModal.showModal();
 
     try {
       const url = `/api/usuarios/net-user?username=${encodeURIComponent(username)}`;
@@ -1360,7 +1373,8 @@ const userRole = Astro.locals.user?.role || "";
     for (const ref of refs) {
       const chip = document.createElement("span");
       chip.className =
-        "badge badge-xs badge-soft bg-base-200 border border-base-300 text-base-content font-semibold";
+        "badge badge-xs badge-soft bg-base-200 border border-base-300 text-base-content font-semibold max-w-full truncate";
+      chip.title = ref.name || String(ref.id);
       chip.textContent = ref.name || String(ref.id);
       frag.appendChild(chip);
     }
@@ -1606,10 +1620,10 @@ const userRole = Astro.locals.user?.role || "";
     // Aplicar el diseño según la vista seleccionada
     if (currentViewMode === "grid") {
       terminalGroupsList.className =
-        "flex-1 bg-base-200/30 border border-base-300 p-3.5 rounded-lg overflow-y-auto max-h-[380px] min-h-[380px] scrollbar-thin transition-all grid grid-cols-2 gap-2 content-start auto-rows-max";
+        "flex-1 min-h-0 bg-base-200/30 border border-base-300 p-3 rounded-lg overflow-y-auto scrollbar-thin transition-all grid grid-cols-2 gap-1.5 content-start auto-rows-max";
     } else {
       terminalGroupsList.className =
-        "flex-1 bg-base-200/30 border border-base-300 p-3.5 rounded-lg overflow-y-auto max-h-[380px] min-h-[380px] scrollbar-thin transition-all flex flex-col gap-2 content-start";
+        "flex-1 min-h-0 bg-base-200/30 border border-base-300 p-3 rounded-lg overflow-y-auto scrollbar-thin transition-all flex flex-col gap-1.5 content-start";
     }
 
     const filtered = groupsList.filter((group) => {
@@ -1639,19 +1653,48 @@ const userRole = Astro.locals.user?.role || "";
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <span class="size-4 shrink-0 select-none flex items-center justify-center">${categoryInfo.icon}</span>
             <span class="font-semibold truncate text-small select-all text-base-content" title="${group}">${highlightGroupText(group, filterText)}</span>
+            <button type="button" class="btn btn-ghost btn-xs p-0.5 cursor-pointer shrink-0" title="Ver información del grupo" aria-label="Ver información del grupo">
+              <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
+            </button>
           </div>
           <button type="button" class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer shrink-0" data-copy-control data-copy-value="${group}" data-copy-label-default="Copiar grupo" data-copy-label-success="Copiado" data-copy-replace-label="false" title="Copiar nombre de grupo">
-            <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" data-copy-icon-default>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
-            <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5 hidden opacity-0 scale-75 text-success transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" data-copy-icon-success>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-default><rect width="14" height="14" x="8" y="2" rx="2" ry="2"/><path d="M8.5 18A2.5 2.5 0 0 1 6 15.5V8H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-2z"/></svg>
+            <svg class="size-3.5 hidden opacity-0 scale-75 text-success transition-all duration-200" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-success><path d="M9 15.59L4.71 11.3L3.3 12.71l5 5c.2.2.45.29.71.29s.51-.1.71-.29l11-11l-1.41-1.41L9.02 15.59Z"/></svg>
           </button>
         `;
+      const infoBtn = item.querySelector("button[title='Ver información del grupo']") as HTMLButtonElement | null;
+      if (infoBtn) {
+        infoBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          showGroupInfo(group);
+        });
+      }
       fragment.appendChild(item);
     });
     terminalGroupsList.appendChild(fragment);
+  }
+
+  function showGroupInfo(groupName: string) {
+    const cat = getGroupCategory(groupName);
+    const lower = groupName.toLowerCase();
+    let type = "Grupo de acceso";
+    if (
+      lower.startsWith("dl_") ||
+      lower.includes("lista") ||
+      lower.includes("distribution")
+    ) {
+      type = "Lista de distribución";
+    } else if (
+      lower.includes("admin") ||
+      lower.includes("security") ||
+      lower.includes("seguridad")
+    ) {
+      type = "Grupo de seguridad";
+    }
+    showToast(
+      `${groupName}\nCategoría: ${cat.label}\nTipo: ${type}`,
+      "alert-info",
+    );
   }
 
   function closeTerminalModal() {
@@ -1778,6 +1821,22 @@ const userRole = Astro.locals.user?.role || "";
     renderGroups(currentLdapGroups, val, currentSelectedCategory);
   });
 
+  refreshTerminalBtn?.addEventListener("click", async () => {
+    if (!currentUsername) return;
+    refreshTerminalIcon?.classList.add("animate-spin");
+    refreshTerminalBtn.disabled = true;
+    try {
+      await loadTerminalData(currentUsername);
+      invgateLoaded = false;
+      if (viewInvgate && !viewInvgate.classList.contains("hidden")) {
+        await loadInvgateData();
+      }
+    } finally {
+      refreshTerminalIcon?.classList.remove("animate-spin");
+      refreshTerminalBtn.disabled = false;
+    }
+  });
+
   // Control de pestañas (Tabs)
   tabPanelBtn?.addEventListener("click", () => {
     tabPanelBtn.classList.add("border-secondary", "text-secondary");
@@ -1834,7 +1893,6 @@ const userRole = Astro.locals.user?.role || "";
     }
   });
 
-  closeTerminalBtn?.addEventListener("click", closeTerminalModal);
   closeTerminalFooterBtn?.addEventListener("click", closeTerminalModal);
 
   copyTerminalBtn?.addEventListener("click", async () => {
