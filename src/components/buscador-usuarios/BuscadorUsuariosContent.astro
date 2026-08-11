@@ -1638,10 +1638,10 @@ const userRole = Astro.locals.user?.role || "";
     // Aplicar el diseño según la vista seleccionada
     if (currentViewMode === "grid") {
       terminalGroupsList.className =
-        "flex-1 min-h-0 bg-base-200/30 border border-base-300 p-3 rounded-lg overflow-y-auto scrollbar-thin transition-all grid grid-cols-2 gap-1.5 content-start auto-rows-max";
+        "flex-1 min-h-0 bg-base-200/30 border border-base-300 p-3 rounded-lg overflow-y-auto scrollbar-hide transition-all grid grid-cols-2 gap-1.5 content-start auto-rows-max";
     } else {
       terminalGroupsList.className =
-        "flex-1 min-h-0 bg-base-200/30 border border-base-300 p-3 rounded-lg overflow-y-auto scrollbar-thin transition-all flex flex-col gap-1.5 content-start";
+        "flex-1 min-h-0 bg-base-200/30 border border-base-300 p-3 rounded-lg overflow-y-auto scrollbar-hide transition-all flex flex-col gap-1.5 content-start";
     }
 
     const filtered = groupsList.filter((group) => {

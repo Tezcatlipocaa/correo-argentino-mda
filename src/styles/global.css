@@ -249,6 +249,14 @@
   }
 }
 
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @utility show-only-on-short-viewport {
   @media (min-height: 900px) {
     display: none !important;
