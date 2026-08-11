@@ -334,12 +334,10 @@ const userRole = Astro.locals.user?.role || "";
   const viewInvgate = document.getElementById("view-invgate");
   const invgateLoading = document.getElementById("invgate-loading");
   const invgateError = document.getElementById("invgate-error");
-  const invgateUsername = document.getElementById("invgate-username");
   const invgateFullname = document.getElementById("invgate-fullname");
   const invgateEmail = document.getElementById("invgate-email");
   const invgateRole = document.getElementById("invgate-role");
   const invgatePosition = document.getElementById("invgate-position");
-  const invgateState = document.getElementById("invgate-state");
   const invgateUserid = document.getElementById("invgate-userid");
   const invgatePhones = document.getElementById("invgate-phones");
   const invgateGroups = document.getElementById("invgate-groups");
@@ -348,7 +346,6 @@ const userRole = Astro.locals.user?.role || "";
   const invgateManager = document.getElementById("invgate-manager");
   const invgateOpenTickets = document.getElementById("invgate-open-tickets");
   const invgateTicketsList = document.getElementById("invgate-tickets-list");
-  const btnCopyInvgateUsername = document.getElementById("btn-copy-invgate-username");
   const btnCopyInvgateFullname = document.getElementById("btn-copy-invgate-fullname");
   const btnCopyInvgateEmail = document.getElementById("btn-copy-invgate-email");
   const btnCopyInvgateRole = document.getElementById("btn-copy-invgate-role");
@@ -1421,34 +1418,13 @@ const userRole = Astro.locals.user?.role || "";
     invgatePhones.appendChild(frag);
   }
 
-  function renderInvgateState(state: any) {
-    if (!invgateState) return;
-    let label = "Activo";
-    let cls =
-      "badge badge-sm badge-soft bg-success/10 text-success font-semibold";
-    if (state.is_deleted) {
-      label = "Eliminado";
-      cls = "badge badge-sm badge-soft bg-error/10 text-error font-semibold";
-    } else if (state.is_disabled) {
-      label = "Deshabilitado";
-      cls = "badge badge-sm badge-soft bg-warning/10 text-warning font-semibold";
-    } else if (state.is_external) {
-      label = "Externo";
-      cls = "badge badge-sm badge-soft bg-info/10 text-info font-semibold";
-    }
-    invgateState.textContent = label;
-    invgateState.className = cls;
-  }
-
   function renderInvgateData(data: any) {
     const u = data.user || {};
-    setInvText(invgateUsername, u.username, btnCopyInvgateUsername);
     setInvText(invgateFullname, u.fullname, btnCopyInvgateFullname);
     setInvText(invgateEmail, u.email, btnCopyInvgateEmail);
     setInvText(invgateRole, u.role_name, btnCopyInvgateRole);
     setInvText(invgatePosition, u.position, btnCopyInvgatePosition);
     setInvText(invgateUserid, u.id, btnCopyInvgateUserid);
-    renderInvgateState(u);
     renderInvgatePhones(u);
 
     renderInvChips(invgateGroups, data.org?.groups);
