@@ -1824,11 +1824,14 @@ const userRole = Astro.locals.user?.role || "";
     refreshTerminalIcon?.classList.add("animate-spin");
     refreshTerminalBtn.disabled = true;
     try {
-      await loadTerminalData(currentUsername);
-      invgateLoaded = false;
-      if (viewInvgate && !viewInvgate.classList.contains("hidden")) {
+      const invgateActive = viewInvgate && !viewInvgate.classList.contains("hidden");
+      if (invgateActive) {
         terminalLoading?.classList.add("hidden");
         terminalLoading?.classList.remove("flex");
+      }
+      await loadTerminalData(currentUsername);
+      invgateLoaded = false;
+      if (invgateActive) {
         await loadInvgateData();
       }
     } finally {
