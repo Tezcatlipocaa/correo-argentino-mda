@@ -18,6 +18,7 @@ export interface InvgateUser {
   name: string;
   lastname: string;
   email: string;
+  other_email?: string | null;
   user_type: number;
   type: number;
   is_disabled: boolean;
@@ -26,6 +27,11 @@ export interface InvgateUser {
   position: string | null;
   role_name: string | null;
   manager_id: number | null;
+  phone?: string | null;
+  mobile?: string | null;
+  office?: string | null;
+  other?: string | null;
+  fax?: string | null;
 }
 
 
