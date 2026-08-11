@@ -163,7 +163,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
       </div>
 
       <!-- VISTA 3: InvGate (sin scroll salvo tickets) -->
-      <div id="view-invgate" class="hidden relative flex-1 min-h-0 overflow-y-auto scrollbar-thin p-4">
+      <div id="view-invgate" class="hidden relative flex-1 min-h-0 overflow-y-auto scrollbar-thin p-3">
         <!-- Loader de InvGate -->
         <div
           id="invgate-loading"
@@ -179,8 +179,8 @@ import SearchBar from "@components/ui/SearchBar.astro";
           class="hidden absolute inset-0 bg-base-100/95 flex-col items-center justify-center gap-3 z-20 px-6"
         ></div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-          <div class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-1 mt-1 font-bold font-sans">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+          <div class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-0.5 mt-1 font-bold font-sans">
             Cuenta InvGate
           </div>
 
@@ -191,7 +191,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
           <InfoCard compact icon="boxicons:briefcase-alt" label="Cargo / Puesto" id="invgate-position" copyId="btn-copy-invgate-position" copyLabel="Copiar cargo" />
           <InfoCard compact icon="boxicons:shield" label="Estado de cuenta" id="invgate-state" showCopy={false} badgeClass="bg-success/10 text-success" value="Activo" />
 
-          <div class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-1 mt-3 font-bold font-sans">
+          <div class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-0.5 mt-2 font-bold font-sans">
             Organización
           </div>
 
@@ -260,7 +260,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
             </button>
           </div>
 
-          <div class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-1 mt-3 font-bold font-sans">
+          <div class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-0.5 mt-2 font-bold font-sans">
             Actividad
           </div>
 
