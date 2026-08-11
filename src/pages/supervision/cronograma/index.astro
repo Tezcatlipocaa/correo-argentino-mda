@@ -13,7 +13,7 @@ const role = normalizeRole(user.role);
 
 <BaseLayout>
   <PageContainer width="xl" id="crono-page-container">
-    <CronogramaDashboard userRole={role} />
+    <CronogramaDashboard userRole={role} currentUser={user} />
   </PageContainer>
 </BaseLayout>
 

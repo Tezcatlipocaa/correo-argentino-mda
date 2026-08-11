@@ -18,12 +18,21 @@ import GroupCard from "./subcomponents/GroupCard.astro";
 
 interface Props {
   userRole?: string;
+  currentUser?: { id?: number; username?: string; role?: string };
 }
 
-const { userRole = "agent" } = Astro.props;
+const { userRole = "agent", currentUser = Astro.locals.user } = Astro.props;
+const currentUsername = currentUser?.username ? currentUser.username.toLowerCase() : "";
+const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 ---
 
-<div id="cronograma-app-container" data-user-role={userRole} class="flex-1 flex flex-col min-h-0 w-full">
+<div
+  id="cronograma-app-container"
+  data-user-role={userRole}
+  data-current-username={currentUsername}
+  data-current-user-id={currentUserId}
+  class="flex-1 flex flex-col min-h-0 w-full"
+>
   <div
     id="cronograma-container"
     class="animate-in fade-in duration-700 w-full flex-1 flex flex-col min-h-0 pb-2"
@@ -631,32 +640,32 @@ const { userRole = "agent" } = Astro.props;
                 <thead>
                   <tr class="bg-base-200/60 border-b border-base-300">
                     <th
-                      class="w-44 px-3 py-2 label-xxs text-base-content/40 border-r border-base-300 text-left"
+                      class="w-44 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-base-content/80 border-r border-base-300 text-left"
                     >
                       Operador
                     </th>
                     <th
-                      class="px-2 py-2 label-xxs text-base-content/40 border-r border-base-300 text-center w-24"
+                      class="px-2 py-2.5 text-xs font-bold tracking-wide text-base-content/80 border-r border-base-300 text-center w-24"
                       >7:00 hs</th
                     >
                     <th
-                      class="px-2 py-2 label-xxs text-base-content/40 border-r border-base-300 text-center w-24"
+                      class="px-2 py-2.5 text-xs font-bold tracking-wide text-base-content/80 border-r border-base-300 text-center w-24"
                       >8:00 hs</th
                     >
                     <th
-                      class="px-2 py-2 label-xxs text-base-content/40 border-r border-base-300 text-center w-24"
+                      class="px-2 py-2.5 text-xs font-bold tracking-wide text-base-content/80 border-r border-base-300 text-center w-24"
                       >9:00 hs</th
                     >
                     <th
-                      class="px-2 py-2 label-xxs text-base-content/40 border-r border-base-300 text-center w-24"
+                      class="px-2 py-2.5 text-xs font-bold tracking-wide text-base-content/80 border-r border-base-300 text-center w-24"
                       >10:00 hs</th
                     >
                     <th
-                      class="px-2 py-2 label-xxs text-base-content/40 border-r border-base-300 text-center w-24"
+                      class="px-2 py-2.5 text-xs font-bold tracking-wide text-base-content/80 border-r border-base-300 text-center w-24"
                       >11:00 hs</th
                     >
                     <th
-                      class="px-2 py-2 label-xxs text-base-content/40 text-center w-24"
+                      class="px-2 py-2.5 text-xs font-bold tracking-wide text-base-content/80 text-center w-24"
                       >12:00 hs</th
                     >
                   </tr>
@@ -784,7 +793,7 @@ const { userRole = "agent" } = Astro.props;
         </p>
         <div
           id="overtime-timeline-wrapper"
-          class="relative overflow-x-auto rounded-xl border border-base-300 bg-base-200/30 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          class="relative overflow-x-auto rounded-xl border border-base-300 bg-base-200/30 scrollbar-thin pb-1"
         >
           <!-- Time header labels row -->
           <div
@@ -792,7 +801,7 @@ const { userRole = "agent" } = Astro.props;
             class="flex min-w-[1200px] border-b border-base-300 bg-base-200/60"
           >
             <div
-              class="w-36 shrink-0 px-3 py-2 label-xxs text-base-content/40 border-r border-base-300"
+              class="w-36 shrink-0 px-3 py-2 text-xs font-bold uppercase tracking-wider text-base-content/80 border-r border-base-300 flex items-center"
             >
               Operador
             </div>
