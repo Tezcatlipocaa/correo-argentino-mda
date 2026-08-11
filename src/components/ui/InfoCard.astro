@@ -64,10 +64,10 @@ const resolvedIcon = icon.endsWith("-filled") ? icon : `${icon}-filled`;
         <div
           id={id}
           class:list={[
-            "text-xs font-semibold text-base-content mt-0.5",
-            monospace && "font-mono break-all",
-            !monospace && "truncate",
+            "text-xs font-semibold text-base-content mt-0.5 truncate",
+            monospace && "font-mono",
           ]}
+          title={value}
         >
           {value}
         </div>
