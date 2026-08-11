@@ -1405,7 +1405,7 @@ const userRole = Astro.locals.user?.role || "";
           <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24" aria-hidden="true"><path d="M18.41 22h.37c.31-.01.6-.17.78-.43l2.27-3.27c.15-.22.21-.49.16-.76a1 1 0 0 0-.43-.65l-4.91-3.27c-.41-.27-.96-.21-1.29.15l-1.88 2.03c-.76-.45-2.03-1.26-3.03-2.26s-1.81-2.27-2.26-3.02l2.03-1.88c.36-.33.43-.88.15-1.29L7.1 2.44c-.15-.22-.38-.38-.64-.43c-.27-.05-.54 0-.76.16L2.43 4.43c-.26.18-.42.47-.43.78c-.03.71-.16 7.04 4.79 11.98c4.46 4.46 10.04 4.8 11.62 4.8Z"/></svg>
         </div>
         <div class="min-w-0 flex-1">
-          <span class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none block truncate">${label}</span>
+          <span class="text-base-content/50 text-xs uppercase font-bold tracking-wider select-none block truncate">${label}</span>
           <span class="text-xs font-semibold text-base-content mt-0.5 font-mono truncate block" title="${escapeHTML(num)}">${escapeHTML(num)}</span>
         </div>
         <button type="button" class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-0.5 cursor-pointer shrink-0" data-copy-control data-copy-value="${escapeHTML(num)}" data-copy-label-default="Copiar ${label}" data-copy-label-success="Copiado" data-copy-replace-label="false" title="Copiar ${label}" aria-label="Copiar ${label}">
