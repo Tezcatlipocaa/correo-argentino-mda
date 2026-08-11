@@ -1000,8 +1000,7 @@ export function renderMonthly(): void {
       const opUsername = (op.username || '').trim().toLowerCase();
       const opNameLower = (op.nombre || '').trim().toLowerCase();
       const isCurrentUser = !!(
-        (currentUsername && (opUsername === currentUsername || opNameLower === currentUsername || opNameLower.includes(currentUsername))) ||
-        (currentUserId !== null && op.id !== undefined && op.id === currentUserId)
+        currentUsername && (opUsername === currentUsername || opNameLower === currentUsername)
       );
 
       const trClass = `group ${showViolation ? 'bg-error/2' : ''} ${isCurrentUser ? 'highlighted-row' : ''}`;

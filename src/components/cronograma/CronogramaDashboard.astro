@@ -793,7 +793,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         </p>
         <div
           id="overtime-timeline-wrapper"
-          class="relative overflow-x-auto rounded-xl border border-base-300 bg-base-200/30 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          class="relative overflow-x-auto rounded-xl border border-base-300 bg-base-200/30 scrollbar-thin pb-1"
         >
           <!-- Time header labels row -->
           <div
@@ -801,7 +801,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             class="flex min-w-[1200px] border-b border-base-300 bg-base-200/60"
           >
             <div
-              class="w-36 shrink-0 px-3 py-2 label-xxs text-base-content/40 border-r border-base-300"
+              class="w-36 shrink-0 px-3 py-2 text-xs font-bold uppercase tracking-wider text-base-content/80 border-r border-base-300 flex items-center"
             >
               Operador
             </div>
