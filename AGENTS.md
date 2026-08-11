@@ -2,7 +2,7 @@
 
 ## General workflow
 - **Read docs first** before writing code: `docs/DESIGN.md` (visual system), `docs/CONTEXT.md` (conventions, infra), `docs/lessons.md` (known errors)
-- **MCP tools have priority** over built-in equivalents when available. Use MCPs for: browser automation (Playwright MCP), documentation search, external API queries
+- **MCP tools have priority** over built-in equivalents when available. Use MCPs for: browser automation (Playwright MCP), docs (Context7 MCP, Astro docs MCP), external API queries
 - **When you need to search docs** for a library/framework/API, use Context7 CLI (`ctx7`) — never guess API signatures or rely on training data
 - **Keep outputs minimal**: no preamble/postamble, no code explanations unless asked
 - **Never commit** unless explicitly requested
@@ -34,6 +34,14 @@
 - **Fonts**: `@fontsource-variable/geist` (UI), `@fontsource-variable/geist-mono` (technical data)
 - **Path aliases**: `@/*` → `src/*`, `@components/*`, `@db/*`, `@lib/*`, etc.
 - **Layout contract**: body `flex flex-col min-h-screen`, main `flex-1` (in `BaseLayout.astro`)
+
+## Code conventions (full list in `docs/CONTEXT.md`)
+- **Server Islands**: content pages use `server:defer` + skeleton fallback. In deferred components `Astro.url.pathname`/`searchParams` point to `/_server-islands/...` — recover originals via `getResolvedPathname()`/`getResolvedSearchParams()` from `@lib/navigation.ts` (Referer header)
+- **Icons**: `astro-icon` with `size={24}` numeric — never `w-5`/`h-5`/`size-5`
+- **Scoped styles**: Astro `<style>` doesn't cross component boundaries nor hit injected HTML — use `<style is:global>` when it must
+- **Frontmatter**: keep all `import` statements at the top of `.astro` frontmatter (mid-block imports break the build)
+- **Toasts**: server redirects pass `?toast_msg=&toast_type=success|error|warning|info`; client `showToast()` from `@lib/toastClient.ts`
+- **DataTable sorting**: wrap in `data-table-sort-root`, rows `data-table-row` + `data-sort-*` (master-detail uses `data-master-detail-sort-item`)
 
 ## Auth & RBAC
 - Session cookie-based middleware in `src/middleware.ts`
