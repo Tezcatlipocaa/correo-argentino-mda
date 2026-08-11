@@ -79,9 +79,12 @@ function toRefs(value: unknown): NamedRef[] {
 }
 
 function resolveNames(refs: NamedRef[], lookup: Map<number, string>): NamedRef[] {
-  return refs.map((r) =>
-    r.name ? r : { ...r, name: lookup.get(r.id) ?? String(r.id) },
-  );
+  return refs.map((r) => {
+    const isPlaceholder = !r.name || r.name === String(r.id);
+    return isPlaceholder
+      ? { ...r, name: lookup.get(r.id) ?? String(r.id) }
+      : r;
+  });
 }
 
 function firstUsersByResult(data: InvgateUsersByResponse["data"]): InvgateUser | null {
@@ -248,7 +251,7 @@ export const GET: APIRoute = async ({ request }) => {
         org.companies = toRefs(entry.companies);
 
         const needsLookup = [org.groups, org.helpdesks, org.locations, org.companies].some((arr) =>
-          arr.some((r) => r.id && !r.name),
+          arr.some((r) => r.id && (!r.name || r.name === String(r.id))),
         );
         if (needsLookup) {
           const [groupsList, locationsList, helpdesksList, companiesList] = await Promise.all([
