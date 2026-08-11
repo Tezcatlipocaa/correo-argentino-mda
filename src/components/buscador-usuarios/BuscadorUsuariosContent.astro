@@ -1371,7 +1371,7 @@ const userRole = Astro.locals.user?.role || "";
     for (const ref of refs) {
       const chip = document.createElement("span");
       chip.className =
-        "badge badge-xs badge-soft bg-base-200 border border-base-300 text-base-content font-semibold max-w-full truncate";
+        "badge badge-sm badge-soft bg-base-200 border border-base-300 text-base-content font-semibold max-w-full truncate";
       chip.title = ref.name || String(ref.id);
       chip.textContent = ref.name || String(ref.id);
       frag.appendChild(chip);
@@ -1383,16 +1383,16 @@ const userRole = Astro.locals.user?.role || "";
     if (!invgateState) return;
     let label = "Activo";
     let cls =
-      "badge badge-xs badge-soft bg-success/10 text-success font-semibold";
+      "badge badge-sm badge-soft bg-success/10 text-success font-semibold";
     if (state.is_deleted) {
       label = "Eliminado";
-      cls = "badge badge-xs badge-soft bg-error/10 text-error font-semibold";
+      cls = "badge badge-sm badge-soft bg-error/10 text-error font-semibold";
     } else if (state.is_disabled) {
       label = "Deshabilitado";
-      cls = "badge badge-xs badge-soft bg-warning/10 text-warning font-semibold";
+      cls = "badge badge-sm badge-soft bg-warning/10 text-warning font-semibold";
     } else if (state.is_external) {
       label = "Externo";
-      cls = "badge badge-xs badge-soft bg-info/10 text-info font-semibold";
+      cls = "badge badge-sm badge-soft bg-info/10 text-info font-semibold";
     }
     invgateState.textContent = label;
     invgateState.className = cls;
@@ -1428,7 +1428,7 @@ const userRole = Astro.locals.user?.role || "";
       case 1:
         return "bg-info/10 text-info border-info/30";
       case 2:
-        return "bg-primary/10 text-primary border-primary/30";
+        return "bg-accent/10 text-accent border-accent/30";
       case 3:
         return "bg-warning/10 text-warning border-warning/30";
       case 4:
@@ -1451,8 +1451,8 @@ const userRole = Astro.locals.user?.role || "";
       invgateOpenTickets.textContent = String(list.length);
       invgateOpenTickets.className =
         list.length > 0
-          ? "badge badge-xs badge-soft bg-info/10 text-info font-semibold"
-          : "badge badge-xs badge-soft bg-success/10 text-success font-semibold";
+          ? "badge badge-sm badge-soft bg-info/10 text-info font-semibold"
+          : "badge badge-sm badge-soft bg-success/10 text-success font-semibold";
     }
     if (list.length === 0) {
       invgateTicketsList.innerHTML =
@@ -1465,10 +1465,10 @@ const userRole = Astro.locals.user?.role || "";
       row.className =
         "flex items-center gap-2 px-1.5 py-1 rounded-md bg-base-200/50 border border-base-300 min-w-0";
       row.innerHTML = `
-        <span class="badge badge-xs badge-soft border ${statusBadgeClass(t.status_id)}">${escapeHTML(t.status_name || String(t.status_id))}</span>
+        <span class="badge badge-sm badge-soft border ${statusBadgeClass(t.status_id)}">${escapeHTML(t.status_name || String(t.status_id))}</span>
         <span class="font-mono text-xs text-base-content/70 shrink-0">${escapeHTML(t.pretty_id || String(t.id))}</span>
         <span class="text-xs text-base-content truncate flex-1 min-w-0" title="${escapeHTML(t.title || "")}">${escapeHTML(t.title || "Sin título")}</span>
-        <span class="badge badge-xs badge-soft ${t.role === "agent" ? "bg-secondary/10 text-secondary border-secondary/30" : "bg-neutral/10 text-neutral border-neutral/30"}">${t.role === "agent" ? "Asignado" : "Solicitante"}</span>
+        <span class="badge badge-sm badge-soft ${t.role === "agent" ? "bg-secondary/10 text-secondary border-secondary/30" : "bg-neutral/10 text-neutral border-neutral/30"}">${t.role === "agent" ? "Asignado" : "Solicitante"}</span>
       `;
       frag.appendChild(row);
     }
@@ -1827,6 +1827,8 @@ const userRole = Astro.locals.user?.role || "";
       await loadTerminalData(currentUsername);
       invgateLoaded = false;
       if (viewInvgate && !viewInvgate.classList.contains("hidden")) {
+        terminalLoading?.classList.add("hidden");
+        terminalLoading?.classList.remove("flex");
         await loadInvgateData();
       }
     } finally {
@@ -1876,6 +1878,9 @@ const userRole = Astro.locals.user?.role || "";
     viewPanel?.classList.add("hidden");
     viewConsole?.classList.add("hidden");
     viewInvgate?.classList.remove("hidden");
+
+    terminalLoading?.classList.add("hidden");
+    terminalLoading?.classList.remove("flex");
 
     loadInvgateData();
   });

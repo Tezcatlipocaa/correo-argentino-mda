@@ -33,7 +33,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
       >
         <Icon
           name="boxicons:refresh-ccw-filled"
-          size={12}
+          size={14}
           class="transition-transform duration-300"
           id="refresh-terminal-icon"
         />
@@ -142,11 +142,11 @@ import SearchBar from "@components/ui/SearchBar.astro";
               slot="action"
               type="button"
               id="btn-search-manager"
-              class="btn btn-secondary btn-xs font-sans px-1.5 hidden cursor-pointer shrink-0"
+              class="btn btn-secondary btn-sm font-sans px-2 hidden cursor-pointer shrink-0"
               title="Buscar supervisor en el portal"
             >
-              <Icon name="boxicons:search-filled" size={10} class="shrink-0" />
-              <span class="text-xxs">Buscar</span>
+              <Icon name="boxicons:search" size={14} class="shrink-0" />
+              <span class="text-xs">Buscar</span>
             </button>
           </InfoCard>
 
@@ -207,7 +207,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
               id="copy-all-groups-btn"
               title="Copiar lista de grupos filtrados"
             >
-              <Icon name="boxicons:copy" size={12} />
+              <Icon name="boxicons:copy" size={14} />
               <span>Copiar todos</span>
             </button>
           </div>
@@ -254,7 +254,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
               type="button"
               data-filter="seguridad"
               class="btn btn-xs rounded-full"
-              ><Icon name="boxicons:shield-filled" size={12} />Seguridad (<span
+              ><Icon name="boxicons:shield-filled" size={14} />Seguridad (<span
                 id="count-seguridad">0</span
               >)</button
             >
@@ -262,7 +262,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
               type="button"
               data-filter="correo"
               class="btn btn-xs rounded-full"
-              ><Icon name="boxicons:envelope-filled" size={12} />Correo (<span
+              ><Icon name="boxicons:envelope-filled" size={14} />Correo (<span
                 id="count-correo">0</span
               >)</button
             >
@@ -270,7 +270,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
               type="button"
               data-filter="sistemas"
               class="btn btn-xs rounded-full"
-              ><Icon name="boxicons:desktop-filled" size={12} />Sistemas (<span
+              ><Icon name="boxicons:desktop-filled" size={14} />Sistemas (<span
                 id="count-sistemas">0</span
               >)</button
             >
@@ -278,7 +278,7 @@ import SearchBar from "@components/ui/SearchBar.astro";
               type="button"
               data-filter="otros"
               class="btn btn-xs rounded-full"
-              ><Icon name="boxicons:key-filled" size={12} />Otros (<span
+              ><Icon name="boxicons:key-filled" size={14} />Otros (<span
                 id="count-otros">0</span
               >)</button
             >
@@ -412,195 +412,171 @@ import SearchBar from "@components/ui/SearchBar.astro";
           </div>
 
           <div class="col-span-full grid grid-cols-2 gap-1.5">
-          <!-- Grupos -->
-          <div
-            class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
-          >
-            <div class="flex items-center gap-1.5">
-              <div
-                class="size-5 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
-              >
-                <Icon name="boxicons:group-filled" size={12} />
-              </div>
-              <span
-                class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
-                >Grupos</span
-              >
-            </div>
+            <!-- Grupos -->
             <div
-              class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
-              id="invgate-groups"
+              class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
             >
-            </div>
-          </div>
-
-          <!-- Jefe Directo -->
-          <div
-            class="bg-base-200/50 border border-base-300 rounded-lg p-2 group relative flex items-center gap-2 min-w-0"
-          >
-            <div
-              class="size-5 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
-            >
-              <Icon name="boxicons:user-circle-filled" size={12} />
-            </div>
-            <div class="min-w-0 flex-1">
-              <span
-                class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none block truncate"
-                >Jefe Directo</span
-              >
-              <div class="flex items-center gap-2 mt-0.5">
-                <span
-                  id="invgate-manager"
-                  class="text-xs font-semibold text-base-content truncate"
-                  >-</span
-                >
-                <button
-                  type="button"
-                  id="btn-search-invgate-manager"
-                  class="btn btn-secondary btn-xs font-sans px-1.5 hidden cursor-pointer shrink-0"
-                  title="Buscar jefe en el portal"
-                >
-                  <Icon
-                    name="boxicons:search-filled"
-                    size={10}
-                    class="shrink-0"
-                  />
-                  <span class="text-xxs">Buscar</span>
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-0.5 cursor-pointer shrink-0"
-              data-copy-control
-              data-copy-value=""
-              data-copy-label-default="Copiar jefe"
-              data-copy-label-success="Copiado"
-              data-copy-replace-label="false"
-              id="btn-copy-invgate-manager"
-              title="Copiar jefe"
-              aria-label="Copiar jefe"
-            >
-              <Icon
-                name="boxicons:copy"
-                size={12}
-                data-copy-icon-default
-                class="transition-all duration-200"
-              />
-              <Icon
-                name="boxicons:check-filled"
-                size={12}
-                data-copy-icon-success
-                class="hidden opacity-0 scale-75 text-success transition-all duration-200"
-              />
-            </button>
-          </div>
-
-          <!-- Mesas de ayuda (chips) -->
-          <div
-            class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
-          >
-            <div class="flex items-center gap-1.5">
-              <div
-                class="size-5 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
-              >
-                <Icon name="boxicons:headphone-filled" size={12} />
-              </div>
-              <span
-                class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
-                >Mesas de ayuda</span
-              >
-            </div>
-            <div
-              class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
-              id="invgate-helpdesks"
-            >
-            </div>
-          </div>
-
-          <!-- Ubicaciones (chips) -->
-          <div
-            class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
-          >
-            <div class="flex items-center gap-1.5">
-              <div
-                class="size-5 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
-              >
-                <Icon name="boxicons:building-filled" size={12} />
-              </div>
-              <span
-                class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
-                >Ubicaciones</span
-              >
-            </div>
-            <div
-              class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
-              id="invgate-locations"
-            >
-            </div>
-          </div>
-
-          <div
-            class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-0.5 mt-2 font-bold font-sans"
-          >
-            Actividad
-          </div>
-
-          <!-- Tickets relacionados -->
-          <div
-            class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0 col-span-full"
-          >
-            <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-1.5">
                 <div
-                  class="size-5 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
+                  class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
                 >
-                  <Icon name="boxicons:task-filled" size={12} />
+                  <Icon name="boxicons:group-filled" size={14} />
                 </div>
                 <span
                   class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
-                  >Tickets relacionados</span
+                  >Grupos</span
                 >
               </div>
-              <span
-                id="invgate-open-tickets"
-                class="badge badge-xs badge-soft bg-success/10 text-success font-semibold"
-                >0</span
+              <div
+                class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
+                id="invgate-groups"
               >
+              </div>
             </div>
+
+            <!-- Jefe Directo -->
             <div
-              id="invgate-tickets-list"
-              class="flex flex-col gap-1 max-h-40 overflow-y-auto scrollbar-thin"
+              class="bg-base-200/50 border border-base-300 rounded-lg p-2 group relative flex items-center gap-2 min-w-0"
             >
+              <div
+                class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
+              >
+                <Icon name="boxicons:user-circle-filled" size={14} />
+              </div>
+              <div class="min-w-0 flex-1">
+                <span
+                  class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none block truncate"
+                  >Jefe Directo</span
+                >
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span
+                    id="invgate-manager"
+                    class="text-xs font-semibold text-base-content truncate"
+                    >-</span
+                  >
+                  <button
+                    type="button"
+                    id="btn-search-invgate-manager"
+                    class="btn btn-secondary btn-sm font-sans px-2 hidden cursor-pointer shrink-0"
+                    title="Buscar jefe en el portal"
+                  >
+                    <Icon
+                      name="boxicons:search-filled"
+                      size={14}
+                      class="shrink-0"
+                    />
+                    <span class="text-xs">Buscar</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mesas de ayuda (chips) -->
+            <div
+              class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
+            >
+              <div class="flex items-center gap-1.5">
+                <div
+                  class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
+                >
+                  <Icon name="boxicons:headphone-filled" size={14} />
+                </div>
+                <span
+                  class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
+                  >Mesas de ayuda</span
+                >
+              </div>
+              <div
+                class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
+                id="invgate-helpdesks"
+              >
+              </div>
+            </div>
+
+            <!-- Ubicaciones (chips) -->
+            <div
+              class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0"
+            >
+              <div class="flex items-center gap-1.5">
+                <div
+                  class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
+                >
+                  <Icon name="boxicons:building-filled" size={14} />
+                </div>
+                <span
+                  class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
+                  >Ubicaciones</span
+                >
+              </div>
+              <div
+                class="flex flex-wrap gap-1 max-h-20 overflow-y-auto scrollbar-thin"
+                id="invgate-locations"
+              >
+              </div>
+            </div>
+
+            <div
+              class="col-span-full text-xxs text-base-content/50 uppercase tracking-widest border-b border-base-300 pb-1 mb-0.5 mt-2 font-bold font-sans"
+            >
+              Actividad
+            </div>
+
+            <!-- Tickets relacionados -->
+            <div
+              class="bg-base-200/50 border border-base-300 rounded-lg p-2 flex flex-col gap-1.5 min-w-0 col-span-full"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <div
+                    class="size-6 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0"
+                  >
+                    <Icon name="boxicons:task-filled" size={14} />
+                  </div>
+                  <span
+                    class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none"
+                    >Tickets relacionados</span
+                  >
+                </div>
+                <span
+                  id="invgate-open-tickets"
+                  class="badge badge-sm badge-soft bg-success/10 text-success font-semibold"
+                  >0</span
+                >
+              </div>
+              <div
+                id="invgate-tickets-list"
+                class="flex flex-col gap-1 max-h-40 overflow-y-auto scrollbar-thin"
+              >
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Footer -->
-    <div
-      class="bg-base-200 px-4 py-2.5 flex items-center justify-between border-t border-base-300 select-none shrink-0"
-    >
-      <span class="text-xxs text-base-content/50 font-sans"
-        >Conexión LDAP segura con mda.correo.local</span
+      <!-- Footer -->
+      <div
+        class="bg-base-200 px-4 py-2.5 flex items-center justify-between border-t border-base-300 select-none shrink-0"
       >
-      <div class="flex gap-2">
-        <button
-          type="button"
-          class="btn btn-ghost btn-xs gap-1"
-          id="copy-terminal-btn"
+        <span class="text-xxs text-base-content/50 font-sans"
+          >Conexión LDAP segura con mda.correo.local</span
         >
-          <Icon name="boxicons:copy" size={12} />
-          <span>Copiar salida raw</span>
-        </button>
-        <button
-          type="button"
-          class="btn btn-ghost btn-xs"
-          id="close-terminal-footer-btn"
-        >
-          Cerrar
-        </button>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs gap-1"
+            id="copy-terminal-btn"
+          >
+            <Icon name="boxicons:copy" size={14} />
+            <span>Copiar salida raw</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs"
+            id="close-terminal-footer-btn"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   </Fragment>
