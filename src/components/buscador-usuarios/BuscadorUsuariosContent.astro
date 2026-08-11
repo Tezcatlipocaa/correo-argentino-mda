@@ -289,6 +289,25 @@ const userRole = Astro.locals.user?.role || "";
     "refresh-terminal-btn",
   ) as HTMLButtonElement | null;
   const refreshTerminalIcon = document.getElementById("refresh-terminal-icon");
+  const panelDetailsScroll = document.getElementById("panel-details-scroll");
+  const panelFadeTop = document.getElementById("panel-fade-top");
+  const panelFadeBottom = document.getElementById("panel-fade-bottom");
+
+  function updatePanelFades() {
+    if (!panelDetailsScroll) return;
+    const el = panelDetailsScroll;
+    const hasTop = el.scrollTop > 4;
+    const hasBottom = el.scrollHeight - el.scrollTop - el.clientHeight > 4;
+    panelFadeTop?.classList.toggle("opacity-100", hasTop);
+    panelFadeTop?.classList.toggle("opacity-0", !hasTop);
+    panelFadeBottom?.classList.toggle("opacity-100", hasBottom);
+    panelFadeBottom?.classList.toggle("opacity-0", !hasBottom);
+  }
+
+  panelDetailsScroll?.addEventListener("scroll", updatePanelFades, {
+    passive: true,
+  });
+  window.addEventListener("resize", updatePanelFades);
 
   // Referencias de la versión organizada de terminal
   const tabPanelBtn = document.getElementById("tab-panel-btn");
@@ -467,6 +486,7 @@ const userRole = Astro.locals.user?.role || "";
 
   async function init() {
     isLoaded = true;
+    updatePanelFades();
     if (statusText) statusText.textContent = "Listo para buscar.";
     resultsSkeleton?.classList.add("hidden");
     resultsGrid?.classList.remove("hidden");
@@ -1178,14 +1198,14 @@ const userRole = Astro.locals.user?.role || "";
     );
     categoryButtons.forEach((b) => {
       b.className =
-        "btn btn-xs rounded-full cursor-pointer transition-all bg-base-200 text-base-content/60 border border-base-300 hover:bg-base-300 hover:text-base-content font-sans font-bold gap-1";
+        "btn btn-sm rounded-full cursor-pointer transition-all bg-base-200 text-base-content/60 border border-base-300 hover:bg-base-300 hover:text-base-content font-sans font-bold gap-1";
     });
     const allBtn = document.querySelector(
       '#group-category-filters [data-filter="all"]',
     );
     if (allBtn) {
       allBtn.className =
-        "btn btn-xs rounded-full cursor-pointer transition-all bg-secondary/10 text-secondary border border-secondary/30 hover:bg-secondary/20 font-sans font-bold gap-1";
+        "btn btn-sm rounded-full cursor-pointer transition-all bg-secondary/10 text-secondary border border-secondary/30 hover:bg-secondary/20 font-sans font-bold gap-1";
     }
 
     terminalUserTitle.textContent = username;
@@ -1350,6 +1370,7 @@ const userRole = Astro.locals.user?.role || "";
     } finally {
       terminalLoading.classList.add("hidden");
       terminalLoading.classList.remove("flex");
+      updatePanelFades();
     }
   }
 
@@ -1789,7 +1810,7 @@ const userRole = Astro.locals.user?.role || "";
     btn.addEventListener("click", () => {
       categoryButtons.forEach((b) => {
         b.className =
-          "btn btn-xs rounded-full cursor-pointer transition-all bg-base-200 text-base-content/60 border border-base-300 hover:bg-base-300 hover:text-base-content font-sans font-bold gap-1";
+          "btn btn-sm rounded-full cursor-pointer transition-all bg-base-200 text-base-content/60 border border-base-300 hover:bg-base-300 hover:text-base-content font-sans font-bold gap-1";
       });
 
       const filter = btn.getAttribute("data-filter") || "all";
@@ -1797,19 +1818,19 @@ const userRole = Astro.locals.user?.role || "";
 
       if (filter === "all") {
         btn.className =
-          "btn btn-xs rounded-full cursor-pointer transition-all bg-secondary/10 text-secondary border border-secondary/30 hover:bg-secondary/20 font-sans font-bold gap-1";
+          "btn btn-sm rounded-full cursor-pointer transition-all bg-secondary/10 text-secondary border border-secondary/30 hover:bg-secondary/20 font-sans font-bold gap-1";
       } else if (filter === "seguridad") {
         btn.className =
-          "btn btn-xs rounded-full cursor-pointer transition-all bg-error/20 text-error border border-error/30 hover:bg-error/30 font-sans font-bold gap-1";
+          "btn btn-sm rounded-full cursor-pointer transition-all bg-error/20 text-error border border-error/30 hover:bg-error/30 font-sans font-bold gap-1";
       } else if (filter === "correo") {
         btn.className =
-          "btn btn-xs rounded-full cursor-pointer transition-all bg-success/20 text-success border border-success/30 hover:bg-success/30 font-sans font-bold gap-1";
+          "btn btn-sm rounded-full cursor-pointer transition-all bg-success/20 text-success border border-success/30 hover:bg-success/30 font-sans font-bold gap-1";
       } else if (filter === "sistemas") {
         btn.className =
-          "btn btn-xs rounded-full cursor-pointer transition-all bg-info/20 text-info border border-info/30 hover:bg-info/30 font-sans font-bold gap-1";
+          "btn btn-sm rounded-full cursor-pointer transition-all bg-info/20 text-info border border-info/30 hover:bg-info/30 font-sans font-bold gap-1";
       } else if (filter === "otros") {
         btn.className =
-          "btn btn-xs rounded-full cursor-pointer transition-all bg-base-300 text-base-content border border-base-content/30 hover:bg-base-300 font-sans font-bold gap-1";
+          "btn btn-sm rounded-full cursor-pointer transition-all bg-base-300 text-base-content border border-base-content/30 hover:bg-base-300 font-sans font-bold gap-1";
       }
 
       renderGroups(
