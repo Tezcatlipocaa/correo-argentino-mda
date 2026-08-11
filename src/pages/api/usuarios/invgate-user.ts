@@ -87,6 +87,10 @@ function resolveNames(refs: NamedRef[], lookup: Map<number, string>): NamedRef[]
   });
 }
 
+function dropPlaceholderNames(refs: NamedRef[]): NamedRef[] {
+  return refs.filter((r) => !(r.id > 0 && r.name === String(r.id)));
+}
+
 function firstUsersByResult(data: InvgateUsersByResponse["data"]): InvgateUser | null {
   if (!data || typeof data !== "object") return null;
   const keys = Object.keys(data);
@@ -268,6 +272,11 @@ export const GET: APIRoute = async ({ request }) => {
           org.helpdesks = resolveNames(org.helpdesks, hdMap);
           org.locations = resolveNames(org.locations, locMap);
           org.companies = resolveNames(org.companies, companyMap);
+
+          org.groups = dropPlaceholderNames(org.groups);
+          org.helpdesks = dropPlaceholderNames(org.helpdesks);
+          org.locations = dropPlaceholderNames(org.locations);
+          org.companies = dropPlaceholderNames(org.companies);
         }
       }
     }

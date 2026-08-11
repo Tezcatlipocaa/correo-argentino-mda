@@ -1896,6 +1896,7 @@ const userRole = Astro.locals.user?.role || "";
     viewPanel?.classList.remove("hidden");
     viewConsole?.classList.add("hidden");
     viewInvgate?.classList.add("hidden");
+    copyTerminalBtn?.classList.remove("hidden");
   });
 
   tabConsoleBtn?.addEventListener("click", () => {
@@ -1912,6 +1913,7 @@ const userRole = Astro.locals.user?.role || "";
     viewConsole?.classList.remove("hidden");
     viewPanel?.classList.add("hidden");
     viewInvgate?.classList.add("hidden");
+    copyTerminalBtn?.classList.remove("hidden");
   });
 
   tabInvgateBtn?.addEventListener("click", () => {
@@ -1928,6 +1930,8 @@ const userRole = Astro.locals.user?.role || "";
 
     terminalLoading?.classList.add("hidden");
     terminalLoading?.classList.remove("flex");
+
+    copyTerminalBtn?.classList.add("hidden");
 
     loadInvgateData();
   });
