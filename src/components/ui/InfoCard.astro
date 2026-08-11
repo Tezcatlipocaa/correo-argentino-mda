@@ -7,6 +7,7 @@ interface Props {
   value?: string;
   id?: string;
   copyId?: string;
+  copyLabel?: string;
   monospace?: boolean;
   showCopy?: boolean;
   badgeClass?: string;
@@ -20,6 +21,7 @@ const {
   value = "-",
   id,
   copyId,
+  copyLabel = "",
   monospace = false,
   showCopy = true,
   badgeClass,
@@ -71,14 +73,15 @@ const resolvedIcon = icon.endsWith("-filled") ? icon : `${icon}-filled`;
   {showCopy && (
     <button
       type="button"
-      class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-opacity p-0.5 cursor-pointer shrink-0"
+      class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-0.5 cursor-pointer shrink-0"
       data-copy-control
-      data-copy-value=""
-      data-copy-label-default={`Copiar ${label.toLowerCase()}`}
+      data-copy-value={value}
+      data-copy-label-default={copyLabel || `Copiar ${label.toLowerCase()}`}
       data-copy-label-success="Copiado"
       data-copy-replace-label="false"
       id={copyId}
-      title={`Copiar ${label.toLowerCase()}`}
+      title={copyLabel || `Copiar ${label.toLowerCase()}`}
+      aria-label={copyLabel || `Copiar ${label.toLowerCase()}`}
     >
       <Icon
         name="boxicons:copy-filled"
