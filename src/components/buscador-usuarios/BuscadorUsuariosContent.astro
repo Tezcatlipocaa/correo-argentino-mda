@@ -1395,23 +1395,28 @@ const userRole = Astro.locals.user?.role || "";
     ].filter(([, value]) => value != null && value !== "") as Array<[string, string]>;
     if (phones.length === 0) {
       invgatePhones.innerHTML =
-        '<span class="text-base-content/40 text-xs font-sans">Sin datos</span>';
+        '<span class="text-base-content/40 text-xs font-sans col-span-full">Sin datos</span>';
       return;
     }
     const frag = document.createDocumentFragment();
     for (const [label, num] of phones) {
-      const row = document.createElement("div");
-      row.className =
-        "group flex items-center gap-2 px-1.5 py-1 rounded-md bg-base-200/50 border border-base-300 min-w-0";
-      row.innerHTML = `
-        <span class="text-xxs uppercase font-bold tracking-wider text-base-content/50 shrink-0 w-14">${label}</span>
-        <span class="text-xs font-semibold text-base-content font-mono flex-1 min-w-0 truncate" title="${escapeHTML(num)}">${escapeHTML(num)}</span>
+      const card = document.createElement("div");
+      card.className =
+        "bg-base-200/50 border border-base-300 rounded-lg p-2 group relative flex items-start gap-2 min-w-0";
+      card.innerHTML = `
+        <div class="size-7 rounded-md bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M18.41 22h.37c.31-.01.6-.17.78-.43l2.27-3.27c.15-.22.21-.49.16-.76a1 1 0 0 0-.43-.65l-4.91-3.27c-.41-.27-.96-.21-1.29.15l-1.88 2.03c-.76-.45-2.03-1.26-3.03-2.26s-1.81-2.27-2.26-3.02l2.03-1.88c.36-.33.43-.88.15-1.29L7.1 2.44c-.15-.22-.38-.38-.64-.43c-.27-.05-.54 0-.76.16L2.43 4.43c-.26.18-.42.47-.43.78c-.03.71-.16 7.04 4.79 11.98c4.46 4.46 10.04 4.8 11.62 4.8Z"/></svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <span class="text-base-content/50 text-xxs uppercase font-bold tracking-wider select-none block truncate">${label}</span>
+          <span class="text-xs font-semibold text-base-content mt-0.5 font-mono truncate block" title="${escapeHTML(num)}">${escapeHTML(num)}</span>
+        </div>
         <button type="button" class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-0.5 cursor-pointer shrink-0" data-copy-control data-copy-value="${escapeHTML(num)}" data-copy-label-default="Copiar ${label}" data-copy-label-success="Copiado" data-copy-replace-label="false" title="Copiar ${label}" aria-label="Copiar ${label}">
           <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-default><rect width="14" height="14" x="8" y="2" rx="2" ry="2"/><path d="M8.5 18A2.5 2.5 0 0 1 6 15.5V8H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-2z"/></svg>
           <svg class="size-3.5 hidden opacity-0 scale-75 text-success transition-all duration-200" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-success><path d="M9 15.59L4.71 11.3L3.3 12.71l5 5c.2.2.45.29.71.29s.51-.1.71-.29l11-11l-1.41-1.41L9.02 15.59Z"/></svg>
         </button>
       `;
-      frag.appendChild(row);
+      frag.appendChild(card);
     }
     invgatePhones.appendChild(frag);
   }
