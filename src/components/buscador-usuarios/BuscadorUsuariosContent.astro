@@ -289,26 +289,34 @@ const userRole = Astro.locals.user?.role || "";
     "refresh-terminal-btn",
   ) as HTMLButtonElement | null;
   const refreshTerminalIcon = document.getElementById("refresh-terminal-icon");
-  const panelDetailsScroll = document.getElementById("panel-details-scroll");
-  const panelFadeTop = document.getElementById("panel-fade-top");
-  const panelFadeBottom = document.getElementById("panel-fade-bottom");
 
-  function updatePanelFades() {
-    if (!panelDetailsScroll) return;
-    const el = panelDetailsScroll;
-    const hasOverflow = el.scrollHeight > el.clientHeight + 4;
-    const atTop = el.scrollTop <= 4;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
-    const topHidden = !hasOverflow || atTop;
-    const bottomHidden = !hasOverflow || atBottom;
-    panelFadeTop?.classList.toggle("opacity-0", topHidden);
-    panelFadeBottom?.classList.toggle("opacity-0", bottomHidden);
+  function updatePanelFades(scrollEl: Element | null) {
+    if (!scrollEl) return;
+    const topFade = document.getElementById("panel-fade-top");
+    const bottomFade = document.getElementById("panel-fade-bottom");
+    if (!topFade || !bottomFade) return;
+    const hasOverflow = scrollEl.scrollHeight > scrollEl.clientHeight + 4;
+    const atBottom =
+      scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 4;
+    const atTop = scrollEl.scrollTop <= 4;
+    topFade.classList.toggle("opacity-0", !hasOverflow || atTop);
+    bottomFade.classList.toggle("opacity-0", !hasOverflow || atBottom);
   }
 
-  panelDetailsScroll?.addEventListener("scroll", updatePanelFades, {
-    passive: true,
+  document.addEventListener(
+    "scroll",
+    (e) => {
+      if (!(e.target instanceof Element)) return;
+      const scrollEl = e.target.closest("#panel-details-scroll");
+      if (scrollEl) updatePanelFades(scrollEl);
+    },
+    true,
+  );
+
+  window.addEventListener("resize", () => {
+    const el = document.getElementById("panel-details-scroll");
+    if (el) updatePanelFades(el);
   });
-  window.addEventListener("resize", updatePanelFades);
 
   // Referencias de la versión organizada de terminal
   const tabPanelBtn = document.getElementById("tab-panel-btn");
@@ -487,7 +495,7 @@ const userRole = Astro.locals.user?.role || "";
 
   async function init() {
     isLoaded = true;
-    updatePanelFades();
+    updatePanelFades(document.getElementById("panel-details-scroll"));
     if (statusText) statusText.textContent = "Listo para buscar.";
     resultsSkeleton?.classList.add("hidden");
     resultsGrid?.classList.remove("hidden");
@@ -1371,7 +1379,7 @@ const userRole = Astro.locals.user?.role || "";
     } finally {
       terminalLoading.classList.add("hidden");
       terminalLoading.classList.remove("flex");
-      updatePanelFades();
+      updatePanelFades(document.getElementById("panel-details-scroll"));
     }
   }
 
