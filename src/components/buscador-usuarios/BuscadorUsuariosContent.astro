@@ -296,12 +296,13 @@ const userRole = Astro.locals.user?.role || "";
   function updatePanelFades() {
     if (!panelDetailsScroll) return;
     const el = panelDetailsScroll;
-    const hasTop = el.scrollTop > 4;
-    const hasBottom = el.scrollHeight - el.scrollTop - el.clientHeight > 4;
-    panelFadeTop?.classList.toggle("opacity-100", hasTop);
-    panelFadeTop?.classList.toggle("opacity-0", !hasTop);
-    panelFadeBottom?.classList.toggle("opacity-100", hasBottom);
-    panelFadeBottom?.classList.toggle("opacity-0", !hasBottom);
+    const hasOverflow = el.scrollHeight > el.clientHeight + 4;
+    const atTop = el.scrollTop <= 4;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    const topHidden = !hasOverflow || atTop;
+    const bottomHidden = !hasOverflow || atBottom;
+    panelFadeTop?.classList.toggle("opacity-0", topHidden);
+    panelFadeBottom?.classList.toggle("opacity-0", bottomHidden);
   }
 
   panelDetailsScroll?.addEventListener("scroll", updatePanelFades, {
