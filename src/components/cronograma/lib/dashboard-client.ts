@@ -610,7 +610,7 @@ export async function renderGroupsView(): Promise<void> {
               <div class="flex items-center justify-between p-2.5 bg-base-100 border border-base-300/80 rounded-xl hover:border-secondary/30 transition-all shadow-sm group">
                 <div class="flex flex-col min-w-0">
                   <span class="font-bold text-xs text-base-content truncate">${escapeHtml(agent.nombre)}</span>
-                  <span class="text-tiny font-semibold text-base-content/50 truncate">${escapeHtml(agent.saturdayHorario || '07:00 - 13:00')}</span>
+                  <span class="text-xs font-bold text-base-content/70 truncate">${escapeHtml(agent.saturdayHorario || '07:00 - 13:00')}</span>
                 </div>
                 <div class="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
                   <button 

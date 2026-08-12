@@ -11,7 +11,9 @@
 ## Global Constraints
 
 - Solo rol `admin` puede ocultar/mostrar y ver el menú de ocultas (guard: `ROLE_HIERARCHY[role] >= ROLE_HIERARCHY.admin`).
-- Copys de UI en español, sin tildes (consistente con "areas", "topico" existentes).
+- Copys de UI en español CON tildes (estilo actual tras PR #96, ej. "tópico…", "áreas"). Decisión del usuario: "Con tildes (estilo actual)".
+- Iconos: usar `size` numérico siempre (CONTEXT.md regla 9). NUNCA `class="size-4"` ni clases de dimensión en iconos.
+- NOTA: tras el merge de PR #96, los números de línea de las tareas 2 y 3 están desactualizados. Anclar cada edición POR CONTENIDO (los bloques de código que se reemplazan), no por línea.
 - Sin clases arbitrarias (`-[...]`); solo tokens Tailwind/DaisyUI (`btn-soft`, `badge-error`, etc.). Sin hex hardcodeado.
 - Icons disponibles (verificado en `@iconify-json/boxicons`): `low-vision` (sí), `eye` (sí); `show` y `hide` NO existen — no usarlos.
 - No re-declarar `const base = import.meta.env.BASE_URL || "/"` en frontmatter; usar `getCleanBase()` de `@lib/baseUrl`. En el `<script>` de HelpdeskCard ya existe `cleanBase` (línea 313-316) — reutilizarlo, no duplicar.
@@ -431,7 +433,7 @@ parentHelpdesks.forEach((hd) => {
 
 - [ ] **Step 4: Botón toggle en la barra de filtros**
 
-Después del bloque `ExportCsvButton` (líneas 171-181), dentro del mismo `<div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">`, agregar:
+Después del bloque `ExportCsvButton` (actual: líneas 174-184), dentro del mismo segundo `<div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">`, agregar:
 
 ```astro
 {
@@ -442,7 +444,7 @@ Después del bloque `ExportCsvButton` (líneas 171-181), dentro del mismo `<div 
       aria-pressed="false"
       title="Ver solo mesas ocultas"
     >
-      <Icon name="boxicons:low-vision" class="size-4" aria-hidden="true" />
+      <Icon name="boxicons:low-vision" size={16} aria-hidden="true" />
       <span class="hidden lg:inline">Mesas ocultas</span>
     </button>
   )
@@ -451,7 +453,7 @@ Después del bloque `ExportCsvButton` (líneas 171-181), dentro del mismo `<div 
 
 - [ ] **Step 5: Render de cards ocultas (solo admin)**
 
-Después del cierre del `map` de `visibleHelpdesks` (después de la línea 204), agregar dentro de `#soportes-grid`:
+Después del cierre del `map` de `visibleHelpdesks` (actual: líneas 192-207), agregar dentro de `#soportes-grid`:
 
 ```astro
 {
@@ -627,12 +629,12 @@ y en la desestructuración (línea 17):
 const { helpdesk, records, isAdmin, parentName, subLevels, isHidden = false, adminOnly = false } = Astro.props;
 ```
 
-b) En la raíz del card (líneas 85-94), reemplazar `class="card bg-base-100 shadow-sm border border-base-300 h-full"` por `class:list` y agregar `data-hidden`:
+b) En la raíz del card (actual: líneas 85-94), reemplazar `class="card bg-base-100 shadow-sm border border-base-300 h-full hover:border-secondary/40 transition-colors"` por `class:list` y agregar `data-hidden`:
 
 ```astro
 <div
   class:list={[
-    "card bg-base-100 shadow-sm border border-base-300 h-full",
+    "card bg-base-100 shadow-sm border border-base-300 h-full hover:border-secondary/40 transition-colors",
     isHidden && "hidden",
   ]}
   data-card-for={helpdesk.id}
@@ -646,7 +648,7 @@ b) En la raíz del card (líneas 85-94), reemplazar `class="card bg-base-100 sha
 >
 ```
 
-c) Después del badge de estado (después de la línea 126 `> {statusLabel}</span`), dentro del mismo `<div class="flex flex-wrap items-center gap-2 mt-1">`, agregar:
+c) Después del badge de estado (actual: líneas 128-130, `<span class:list={["badge badge-sm font-medium", statusBadge]}>...{statusLabel}</span>`), dentro del mismo `<div class="flex flex-wrap items-center gap-1.5 mt-1">`, agregar:
 
 ```astro
 {
@@ -661,18 +663,18 @@ c) Después del badge de estado (después de la línea 126 `> {statusLabel}</spa
 
 - [ ] **Step 9: HelpdeskCard — botones Ocultar/Mostrar**
 
-En `.card-actions`, antes del bloque `isAdmin && (...)` (antes de la línea 220), agregar:
+En `.card-actions` (actual: línea 220, `class="card-actions justify-end items-center gap-2 pt-4 border-t border-base-200 mt-3 flex-wrap sm:flex-nowrap"`), antes del bloque `isAdmin && (...)` (actual: líneas 243-254), agregar:
 
 ```astro
 {
   adminOnly && !isHidden && (
     <button
       data-hide-helpdesk={helpdesk.id}
-      class="btn btn-sm md:btn-md btn-soft btn-error gap-2 flex-nowrap"
+      class="btn btn-sm btn-soft btn-error gap-1"
       title="Ocultar esta mesa de ayuda del listado"
     >
-      <Icon name="boxicons:low-vision" size={18} />
-      <span class="hidden sm:inline">Ocultar</span>
+      <Icon name="boxicons:low-vision" size={16} aria-hidden="true" />
+      <span class="hidden xl:inline">Ocultar</span>
     </button>
   )
 }
@@ -680,11 +682,11 @@ En `.card-actions`, antes del bloque `isAdmin && (...)` (antes de la línea 220)
   adminOnly && isHidden && (
     <button
       data-show-helpdesk={helpdesk.id}
-      class="btn btn-sm md:btn-md btn-soft btn-success gap-2 flex-nowrap"
+      class="btn btn-sm btn-soft btn-success gap-1"
       title="Mostrar esta mesa de ayuda en el listado"
     >
-      <Icon name="boxicons:eye" size={18} />
-      <span class="hidden sm:inline">Mostrar</span>
+      <Icon name="boxicons:eye" size={16} aria-hidden="true" />
+      <span class="hidden xl:inline">Mostrar</span>
     </button>
   )
 }
@@ -692,7 +694,7 @@ En `.card-actions`, antes del bloque `isAdmin && (...)` (antes de la línea 220)
 
 - [ ] **Step 10: HelpdeskCard — script de hide/show**
 
-En el `<script>` de `HelpdeskCard.astro`, después de `loadIncidentsSequentially();` (línea 348), agregar:
+En el `<script>` de `HelpdeskCard.astro`, después de `loadIncidentsSequentially();` (actual: línea 385), agregar (`cleanBase` ya existe, línea 349):
 
 ```js
 async function toggleHidden(invgateId: number, action: "hide" | "show") {
@@ -735,8 +737,24 @@ Expected: PASS (4 tests).
 
 - [ ] **Step 12: Regresión de filtros existentes**
 
+PR #96 cambió el placeholder a "Buscar por nombre SM, Invgate, tópico…" pero `tests/mesas-ayuda-filters.spec.ts:31` aún espera "topico..." — test roto pre-existente. Decisión del usuario: actualizar la assertion.
+
+a) En `tests/mesas-ayuda-filters.spec.ts`, reemplazar:
+
+```ts
+    'Buscar por nombre SM, Invgate, topico...',
+```
+
+por:
+
+```ts
+    'Buscar por nombre SM, Invgate, tópico…',
+```
+
+b) Correr:
+
 Run: `npx playwright test tests/mesas-ayuda-filters.spec.ts tests/admin/rbac.spec.ts`
-Expected: PASS (19 tests).
+Expected: PASS (19 tests: 3 filtros + 16 rbac).
 
 - [ ] **Step 13: Verificar build**
 
@@ -746,7 +764,7 @@ Expected: build exitoso.
 - [ ] **Step 14: Commit**
 
 ```bash
-git add src/components/soportes/SoportesPublicContent.astro src/components/soportes/HelpdeskCard.astro tests/mesas-ayuda-hidden.spec.ts
+git add src/components/soportes/SoportesPublicContent.astro src/components/soportes/HelpdeskCard.astro tests/mesas-ayuda-hidden.spec.ts tests/mesas-ayuda-filters.spec.ts
 git commit -m "feat(soportes): menu de mesas ocultas solo admin"
 ```
 
@@ -800,7 +818,7 @@ const helpdesks = allItems
 - [ ] **Step 2: Suite E2E completa**
 
 Run: `npx playwright test`
-Expected: PASS (todos los specs, serial).
+Expected: PASS (todos los specs, serial). Incluye el fix de `tests/mesas-ayuda-filters.spec.ts` (placeholder "tópico…") ya committeado en Task 2.
 
 - [ ] **Step 3: Build + typecheck**
 

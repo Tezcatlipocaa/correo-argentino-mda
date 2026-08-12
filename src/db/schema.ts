@@ -673,6 +673,13 @@ export const supportGuides = sqliteTable("support_guides", {
   searchableText: text("searchable_text"),
 });
 
+export const hiddenHelpdesks = sqliteTable("hidden_helpdesks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  invgateId: integer("invgate_id").notNull().unique(),
+  hiddenBy: text("hidden_by").notNull(),
+  hiddenAt: text("hidden_at").notNull(),
+});
+
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull(),

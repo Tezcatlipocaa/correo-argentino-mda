@@ -20,6 +20,12 @@ export interface OfficeTerminal {
   operatingSystem: string;
 }
 
+export interface SiblingOffice {
+  code: string;
+  name: string;
+  type: string;
+}
+
 export interface OfficeDirectoryItem {
   id: string;
   dbId?: number;
@@ -50,4 +56,5 @@ export interface OfficeDirectoryItem {
   invgateUserTotal?: number;
   active?: boolean;
   closedReason?: string | null;
+  siblings?: SiblingOffice[];
 }

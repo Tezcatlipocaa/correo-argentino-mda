@@ -860,6 +860,31 @@ const mainTabs = [
         const isExpanded = masterRow.getAttribute("aria-expanded") === "true";
         const newExpanded = !isExpanded;
 
+        if (newExpanded) {
+          // Accordion: close any other open row in the same view.
+          document
+            .querySelectorAll<HTMLElement>(
+              '[data-office-master-row][aria-expanded="true"]',
+            )
+            .forEach((row) => {
+              if (row.dataset.officeId === officeId) return;
+              const otherId = row.dataset.officeId ?? "";
+              row.classList.remove("bg-base-200/70");
+              row.setAttribute("aria-expanded", "false");
+              row
+                .querySelector<HTMLElement>("[data-chevron-open]")
+                ?.classList.add("hidden");
+              row
+                .querySelector<HTMLElement>("[data-chevron-closed]")
+                ?.classList.remove("hidden");
+              document
+                .querySelector<HTMLElement>(
+                  `[data-office-detail-row][data-office-id="${otherId}"]`,
+                )
+                ?.classList.add("hidden");
+            });
+        }
+
         masterRow.classList.toggle("bg-base-200/70", newExpanded);
         masterRow.setAttribute("aria-expanded", newExpanded ? "true" : "false");
 

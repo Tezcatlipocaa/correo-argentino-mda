@@ -11,39 +11,39 @@ const { total, active, totalMembers } = Astro.props;
 ---
 
 <div
-  class="flex flex-wrap gap-6 bg-base-200/50 rounded-xl p-4 border border-base-300/50"
+  class="flex flex-wrap gap-6 bg-base-100 rounded-xl p-4 border border-base-300 shadow-xs"
 >
-  <div class="flex items-center gap-2.5">
-    <div class="bg-secondary/10 p-2 rounded-lg text-secondary">
-      <Icon name="boxicons:group-alt-filled" size={20} aria-hidden="true" />
+  <div class="flex items-center gap-3">
+    <div class="bg-secondary/10 p-2.5 rounded-lg text-secondary">
+      <Icon name="boxicons:headphone-mic" size={20} aria-hidden="true" />
     </div>
     <div>
-      <div class="text-xs text-base-content/60">Total de mesas</div>
-      <div class="text-lg font-bold font-mono">{total}</div>
+      <div class="text-xs text-base-content/60 font-medium">Total de mesas</div>
+      <div class="text-xl font-bold font-mono tabular-nums text-base-content">{total}</div>
     </div>
   </div>
 
-  <div class="border-r border-base-300 hidden md:block h-10 self-center"></div>
+  <div class="border-r border-base-200 hidden md:block h-9 self-center"></div>
 
-  <div class="flex items-center gap-2.5">
-    <div class="bg-success/10 p-2 rounded-lg text-success">
+  <div class="flex items-center gap-3">
+    <div class="bg-success/10 p-2.5 rounded-lg text-success">
       <Icon name="boxicons:check-circle" size={20} aria-hidden="true" />
     </div>
     <div>
-      <div class="text-xs text-base-content/60">Activas</div>
-      <div class="text-lg font-bold font-mono text-success">{active}</div>
+      <div class="text-xs text-base-content/60 font-medium">Activas</div>
+      <div class="text-xl font-bold font-mono tabular-nums text-success">{active}</div>
     </div>
   </div>
 
-  <div class="border-r border-base-300 hidden md:block h-10 self-center"></div>
+  <div class="border-r border-base-200 hidden md:block h-9 self-center"></div>
 
-  <div class="flex items-center gap-2.5">
-    <div class="bg-primary/10 p-2 rounded-lg text-primary">
+  <div class="flex items-center gap-3">
+    <div class="bg-primary/15 p-2.5 rounded-lg text-secondary">
       <Icon name="boxicons:group-filled" size={20} aria-hidden="true" />
     </div>
     <div>
-      <div class="text-xs text-base-content/60">Miembros globales</div>
-      <div class="text-lg font-bold font-mono">{totalMembers}</div>
+      <div class="text-xs text-base-content/60 font-medium">Miembros globales</div>
+      <div class="text-xl font-bold font-mono tabular-nums text-base-content">{totalMembers}</div>
     </div>
   </div>
 </div>
