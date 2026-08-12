@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 // TOGGLE: true = QA (crear tickets de prueba en entorno QA)
 //         false = PROD (crear tickets reales en entorno productivo)
 // ============================================================
-export const USE_QA_INVGATE = true;
+export const USE_QA_INVGATE = false;
 
 // --- Helpdesk (mismo ID en QA y producción) ---
 /** Helpdesk: Mesa de Ayuda Operación Telegráfica (id fijo ya conocido) */
@@ -21,7 +21,7 @@ const QA_CATEGORY_ID = 68;
  *  Ruta: Mesa de Ayuda TI → Accesos y Aplicaciones → Distribución → STS → Fallas → STS- Problema con agentes
  *  PENDIENTE: buscar el ID real en producción con GET /api/v1/categories
  */
-const PROD_CATEGORY_ID = 0; // ← REEMPLAZAR con el ID real de producción
+const PROD_CATEGORY_ID = 257; // STS- Problema con agentes
 
 export const AGENTS_TICKET_CATEGORY_ID = USE_QA_INVGATE
   ? QA_CATEGORY_ID
