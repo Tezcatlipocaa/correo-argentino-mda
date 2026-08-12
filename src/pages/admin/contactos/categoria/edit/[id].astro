@@ -33,7 +33,11 @@ if (id && !isNaN(parsedId)) {
       existingCategory.title.toLowerCase() === "sin categoría" ||
       existingCategory.title.toLowerCase() === "sin categoria"
     ) {
-      return redirectWithToast("/admin/contactos", "No se puede modificar la categoría por defecto", "warning");
+      return redirectWithToast(
+        "/admin/contactos",
+        "No se puede modificar la categoría por defecto",
+        "warning",
+      );
     }
     category = existingCategory as any;
   } else {
@@ -67,7 +71,9 @@ if (category.icon && !iconExistsInPredefined) {
 }
 
 if (Astro.request.method === "POST") {
-  const isAjax = Astro.request.headers.get('accept')?.includes('application/json');
+  const isAjax = Astro.request.headers
+    .get("accept")
+    ?.includes("application/json");
   try {
     const formData = await Astro.request.formData();
     const title = formData.get("title")?.toString().trim();
@@ -91,11 +97,13 @@ if (Astro.request.method === "POST") {
         })
         .where(eq(contactCategories.id, parsedId));
       if (oldTitle && oldTitle !== title) {
-        await logAdminFromAstro(Astro.locals,
+        await logAdminFromAstro(
+          Astro.locals,
           `Actualizó la categoría de contactos de "${oldTitle}" a "${title}"`,
         );
       } else {
-        await logAdminFromAstro(Astro.locals,
+        await logAdminFromAstro(
+          Astro.locals,
           `Actualizó la categoría de contactos "${title}"`,
         );
       }
@@ -103,12 +111,19 @@ if (Astro.request.method === "POST") {
 
     const successMsg = "Categoría actualizada con éxito.";
     if (isAjax) {
-      return toastResponse({ success: true, message: successMsg, redirectUrl: resolveUrl("/admin/contactos") });
+      return toastResponse({
+        success: true,
+        message: successMsg,
+        redirectUrl: resolveUrl("/admin/contactos"),
+      });
     }
     return redirectWithToast("/admin/contactos", successMsg);
   } catch (error: any) {
     if (isAjax) {
-      return toastResponse({ success: false, error: error.message || "Error al guardar la categoría." });
+      return toastResponse({
+        success: false,
+        error: error.message || "Error al guardar la categoría.",
+      });
     }
     errorMsg = error.message || "Error al guardar la categoría.";
   }
@@ -117,17 +132,19 @@ if (Astro.request.method === "POST") {
 
 <BaseLayout title="Editar categoría de Contactos">
   <PageContainer>
-    <div class="max-w-2xl mx-auto py-4 sm:py-8">
-      <div class="flex items-center gap-2 text-sm text-base-content/60 mb-4">
+    <div class="mx-auto max-w-2xl py-4 sm:py-8">
+      <div class="text-base-content/60 mb-4 flex items-center gap-2 text-sm">
         <a
           href={resolveUrl("/admin/contactos")}
-          class="flex items-center gap-1.5 hover:text-base-content transition-colors"
+          class="hover:text-base-content flex items-center gap-1.5 transition-colors"
         >
           <Icon name="boxicons:chevron-left" size={16} />
           Contactos
         </a>
         <span>/</span>
-        <span class="text-base-content font-medium truncate">Editar categoría</span>
+        <span class="text-base-content truncate font-medium"
+          >Editar categoría</span
+        >
       </div>
 
       <PageHeader
@@ -135,17 +152,16 @@ if (Astro.request.method === "POST") {
         description="Definí cómo se agruparán y visualizarán los contactos."
       />
 
-      {
-        errorMsg && (
-          <script is:inline define:vars={{ errorMsg }}>
-            window.addEventListener('load', () => window.showToast?.(errorMsg, "alert-error"));
-          </script>
-        )
-      }
+      <script is:inline define:vars={{ errorMsg }}>
+        if (errorMsg) {
+          window.addEventListener("load", () =>
+            window.showToast?.(errorMsg, "alert-error"),
+          );
+        }
+      </script>
 
       <SectionCard>
         <div class="p-6 sm:p-8">
-
           <form method="POST" data-async-form class="space-y-5">
             <div class="grid grid-cols-1 gap-y-5">
               <FormField
@@ -172,9 +188,9 @@ if (Astro.request.method === "POST") {
                   >Color de Identificación (Tono)</FormLegend
                 >
                 <div
-                  class="flex flex-col gap-2.5 bg-base-200/50 p-4 rounded-xl border border-base-300 w-full"
+                  class="bg-base-200/50 border-base-300 flex w-full flex-col gap-2.5 rounded-xl border p-4"
                 >
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -186,7 +202,7 @@ if (Astro.request.method === "POST") {
                     >
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -197,7 +213,7 @@ if (Astro.request.method === "POST") {
                     <span class="text-sm font-medium">Azul (Secundario)</span>
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -208,7 +224,7 @@ if (Astro.request.method === "POST") {
                     <span class="text-sm font-medium">Celeste (Acento)</span>
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -219,7 +235,7 @@ if (Astro.request.method === "POST") {
                     <span class="text-sm font-medium">Verde (Éxito)</span>
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -230,7 +246,7 @@ if (Astro.request.method === "POST") {
                     <span class="text-sm font-medium">Azul claro (Info)</span>
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -241,7 +257,7 @@ if (Astro.request.method === "POST") {
                     <span class="text-sm font-medium">Naranja (Alerta)</span>
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -252,7 +268,7 @@ if (Astro.request.method === "POST") {
                     <span class="text-sm font-medium">Rojo (Error)</span>
                   </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                  <label class="flex cursor-pointer items-center gap-2">
                     <input
                       type="radio"
                       name="tone"
@@ -267,7 +283,7 @@ if (Astro.request.method === "POST") {
             </div>
 
             <div
-              class="flex justify-end gap-3 pt-6 mt-2 border-t border-base-200"
+              class="border-base-200 mt-2 flex justify-end gap-3 border-t pt-6"
             >
               <ActionCancelButton
                 href={resolveUrl("/admin/contactos")}

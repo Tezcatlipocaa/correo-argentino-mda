@@ -81,20 +81,23 @@ let formExternalUrl = "";
 let formSnapshot: FormData | null = null;
 
 if (Astro.request.method === "POST") {
-  const isAjax = Astro.request.headers.get('accept')?.includes('application/json');
+  const isAjax = Astro.request.headers
+    .get("accept")
+    ?.includes("application/json");
   try {
     const formData = await Astro.request.formData();
     formSnapshot = formData;
 
     const title = formData.get("title")?.toString().trim();
     const categoryIdRaw = formData.get("categoryId")?.toString().trim();
-    const categoryId = categoryIdRaw && !isNaN(Number(categoryIdRaw)) ? Number(categoryIdRaw) : null;
+    const categoryId =
+      categoryIdRaw && !isNaN(Number(categoryIdRaw))
+        ? Number(categoryIdRaw)
+        : null;
     const description = formData.get("description")?.toString().trim() || null;
     const version = formData.get("version")?.toString().trim() || null;
     const uploadType = formData.get("uploadType")?.toString() as
-      | "local"
-      | "external"
-      | null;
+      "local" | "external" | null;
 
     if (!title) {
       throw new Error("El título es obligatorio.");
@@ -177,10 +180,7 @@ if (Astro.request.method === "POST") {
 
         // Si existía un archivo viejo, borrarlo
         if (app.instructionPdfPath) {
-          const oldAbsPath = path.join(
-            pdfsDir,
-            app.instructionPdfPath,
-          );
+          const oldAbsPath = path.join(pdfsDir, app.instructionPdfPath);
           if (fs.existsSync(oldAbsPath)) {
             fs.unlinkSync(oldAbsPath);
           }
@@ -210,23 +210,35 @@ if (Astro.request.method === "POST") {
       })
       .where(eq(applications.id, app.id));
     if (oldTitle && oldTitle !== title) {
-      await logAdminFromAstro(Astro.locals,
+      await logAdminFromAstro(
+        Astro.locals,
         `Actualizó el aplicativo de "${oldTitle}" a "${title}"`,
       );
     } else {
-      await logAdminFromAstro(Astro.locals,
+      await logAdminFromAstro(
+        Astro.locals,
         `Actualizó el aplicativo "${title}"`,
       );
     }
 
     if (isAjax) {
-      return toastResponse({ success: true, message: "Aplicativo actualizado con éxito.", redirectUrl: resolveUrl("/admin/aplicativos") });
+      return toastResponse({
+        success: true,
+        message: "Aplicativo actualizado con éxito.",
+        redirectUrl: resolveUrl("/admin/aplicativos"),
+      });
     }
 
-    return redirectWithToast("/admin/aplicativos", "Aplicativo actualizado con éxito.");
+    return redirectWithToast(
+      "/admin/aplicativos",
+      "Aplicativo actualizado con éxito.",
+    );
   } catch (error: any) {
     if (isAjax) {
-      return toastResponse({ success: false, error: error.message || "Error al guardar el aplicativo." });
+      return toastResponse({
+        success: false,
+        error: error.message || "Error al guardar el aplicativo.",
+      });
     }
     errorMsg = error.message || "Error al guardar el aplicativo.";
     if (formSnapshot) {
@@ -254,17 +266,19 @@ const isExternal = formUploadType
 
 <BaseLayout title="Editar aplicativo">
   <PageContainer>
-    <div class="max-w-2xl mx-auto py-4 sm:py-8">
-      <div class="flex items-center gap-2 text-sm text-base-content/60 mb-4">
+    <div class="mx-auto max-w-2xl py-4 sm:py-8">
+      <div class="text-base-content/60 mb-4 flex items-center gap-2 text-sm">
         <a
           href={resolveUrl("/admin/aplicativos")}
-          class="flex items-center gap-1.5 hover:text-base-content transition-colors"
+          class="hover:text-base-content flex items-center gap-1.5 transition-colors"
         >
           <Icon name="boxicons:chevron-left" size={16} />
           Aplicativos
         </a>
         <span>/</span>
-        <span class="text-base-content font-medium truncate">Editar aplicativo</span>
+        <span class="text-base-content truncate font-medium"
+          >Editar aplicativo</span
+        >
       </div>
 
       <PageHeader
@@ -272,18 +286,23 @@ const isExternal = formUploadType
         description="Modificá los datos del aplicativo seleccionado."
       />
 
-      {
-        errorMsg && (
-          <script is:inline define:vars={{ errorMsg }}>
-            window.addEventListener('load', () => window.showToast?.(errorMsg, "alert-error"));
-          </script>
-        )
-      }
+      <script is:inline define:vars={{ errorMsg }}>
+        if (errorMsg) {
+          window.addEventListener("load", () =>
+            window.showToast?.(errorMsg, "alert-error"),
+          );
+        }
+      </script>
 
       <SectionCard>
         <div class="p-6 sm:p-8">
-          <form method="POST" enctype="multipart/form-data" class="space-y-5" data-async-form>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+          <form
+            method="POST"
+            enctype="multipart/form-data"
+            class="space-y-5"
+            data-async-form
+          >
+            <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
               <FormField
                 id="input-title"
                 name="title"
@@ -305,7 +324,10 @@ const isExternal = formUploadType
                 </option>
                 {
                   categories.map((cat) => (
-                    <option value={cat.id} selected={Number(cat.id) === Number(app.categoryId)}>
+                    <option
+                      value={cat.id}
+                      selected={Number(cat.id) === Number(app.categoryId)}
+                    >
                       {cat.title}
                     </option>
                   ))
@@ -333,11 +355,14 @@ const isExternal = formUploadType
             >
               {
                 app.iconPath && (
-                  <div slot="preview" class="w-12 h-12 shrink-0 rounded-box border border-base-300 bg-base-200 flex items-center justify-center overflow-hidden p-1">
+                  <div
+                    slot="preview"
+                    class="rounded-box border-base-300 bg-base-200 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border p-1"
+                  >
                     <img
                       src={resolveUrl(`api/icons/${app.iconPath}`)}
                       alt="Preview del ícono"
-                      class="w-full h-full object-contain"
+                      class="h-full w-full object-contain"
                     />
                   </div>
                 )
@@ -345,19 +370,17 @@ const isExternal = formUploadType
             </FormField>
 
             <fieldset class="fieldset">
-              <FormLegend class="mb-2">
-                Origen del archivo
-              </FormLegend>
+              <FormLegend class="mb-2"> Origen del archivo </FormLegend>
               <div
-                class="flex gap-1 rounded-lg bg-base-200/60 p-1"
+                class="bg-base-200/60 flex gap-1 rounded-lg p-1"
                 role="radiogroup"
                 aria-label="Tipo de subida"
               >
                 <label
                   class:list={[
-                    "flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
                     !isExternal
-                      ? "bg-base-100 shadow-sm text-base-content"
+                      ? "bg-base-100 text-base-content shadow-sm"
                       : "text-base-content/50 hover:text-base-content/80",
                   ]}
                 >
@@ -378,9 +401,9 @@ const isExternal = formUploadType
                 </label>
                 <label
                   class:list={[
-                    "flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
                     isExternal
-                      ? "bg-base-100 shadow-sm text-base-content"
+                      ? "bg-base-100 text-base-content shadow-sm"
                       : "text-base-content/50 hover:text-base-content/80",
                   ]}
                 >
@@ -419,7 +442,8 @@ const isExternal = formUploadType
                 name="externalUrl"
                 label="URL externa"
                 type="url"
-                value={formExternalUrl || (/^https?:\/\//i.test(app.filePath) ? app.filePath : "")}
+                value={formExternalUrl ||
+                  (/^https?:\/\//i.test(app.filePath) ? app.filePath : "")}
                 placeholder="https://ejemplo.com/descarga/archivo.zip"
                 inputClass="font-mono"
               />
@@ -427,7 +451,7 @@ const isExternal = formUploadType
 
             {
               app.filePath && (
-                <div class="flex items-center gap-3 rounded-lg bg-success/10 border border-success/20 px-4 py-3">
+                <div class="bg-success/10 border-success/20 flex items-center gap-3 rounded-lg border px-4 py-3">
                   <Icon
                     name={
                       isExternal
@@ -437,11 +461,11 @@ const isExternal = formUploadType
                     size={20}
                     class="text-success shrink-0"
                   />
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-base-content">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-base-content text-sm font-medium">
                       {isExternal ? "Enlace actual" : "Archivo actual cargado"}
                     </p>
-                    <p class="text-xs text-base-content/60 font-mono truncate">
+                    <p class="text-base-content/60 truncate font-mono text-xs">
                       {app.filePath}
                     </p>
                   </div>
@@ -476,17 +500,17 @@ const isExternal = formUploadType
 
             {
               app.instructionPdfPath && (
-                <div class="flex items-center gap-3 rounded-lg bg-info/10 border border-info/20 px-4 py-3">
+                <div class="bg-info/10 border-info/20 flex items-center gap-3 rounded-lg border px-4 py-3">
                   <Icon
                     name="boxicons:file-detail-filled"
                     size={20}
                     class="text-info shrink-0"
                   />
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-base-content">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-base-content text-sm font-medium">
                       Instructivo PDF actual cargado
                     </p>
-                    <p class="text-xs text-base-content/60 font-mono truncate">
+                    <p class="text-base-content/60 truncate font-mono text-xs">
                       {app.instructionPdfPath}
                     </p>
                   </div>
@@ -507,12 +531,12 @@ const isExternal = formUploadType
             }
 
             <fieldset
-              class="fieldset border border-base-300 rounded-box p-4 bg-base-200/30"
+              class="fieldset border-base-300 rounded-box bg-base-200/30 border p-4"
             >
               <FormLegend class="px-2">
                 Credenciales / Metadatos Sensibles
               </FormLegend>
-              <p class="text-xs text-base-content/60 mb-3 px-2">
+              <p class="text-base-content/60 mb-3 px-2 text-xs">
                 Agregá credenciales o información confidencial (ej. Entorno:
                 Contraseña). Se almacenarán cifradas.
               </p>
@@ -525,7 +549,7 @@ const isExternal = formUploadType
                 <button
                   type="button"
                   id="btn-add-meta"
-                  class="btn btn-sm btn-outline gap-2 mt-4 ml-2"
+                  class="btn btn-sm btn-outline mt-4 ml-2 gap-2"
                 >
                   <Icon name="boxicons:plus" size={16} />
                   Agregar credencial
@@ -551,7 +575,7 @@ const isExternal = formUploadType
             />
 
             <div
-              class="flex justify-end gap-3 pt-6 mt-2 border-t border-base-200"
+              class="border-base-200 mt-2 flex justify-end gap-3 border-t pt-6"
             >
               <ActionCancelButton
                 href={resolveUrl("/admin/aplicativos")}

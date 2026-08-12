@@ -19,7 +19,10 @@ import { redirectWithToast } from "@lib/api/redirectWithToast";
 import OfficeForm from "@components/admin/OfficeForm.astro";
 import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
-import { normalizeOfficeAddress, isSameBuildingConfirmed } from "@lib/officeAddress";
+import {
+  normalizeOfficeAddress,
+  isSameBuildingConfirmed,
+} from "@lib/officeAddress";
 import { findOfficeAddressMatches } from "@lib/officeQueries";
 import type { ToastType } from "@lib/toastClient";
 
@@ -115,127 +118,138 @@ if (Astro.request.method === "POST") {
           })
         : [];
 
-      if (addressMatches.length > 0 && !isSameBuildingConfirmed(fd.get("sameBuildingConfirmed")?.toString())) {
-        errorMsg = "Confirmá si la nueva oficina comparte sitio con las oficinas listadas.";
+      if (
+        addressMatches.length > 0 &&
+        !isSameBuildingConfirmed(fd.get("sameBuildingConfirmed")?.toString())
+      ) {
+        errorMsg =
+          "Confirmá si la nueva oficina comparte sitio con las oficinas listadas.";
         toastType = "alert-warning";
       } else {
-      const activeCostCenter = [
-        officeData.cctAdminOffice,
-        officeData.ccCommercial,
-        officeData.ccCommercialCorp,
-        officeData.ccElectoral,
-        officeData.ccNetworkMgmt,
-        officeData.ccOperations,
-        officeData.ccOperational,
-        officeData.ccHr,
-        officeData.ccSecurity,
-        officeData.ccAdmin,
-        officeData.ccAdmission,
-        officeData.ccCtp,
-        officeData.ccCtt,
-        officeData.ccTransport,
-        officeData.ccLogistics
-      ].find((val) => val && val.trim() !== "");
+        const activeCostCenter = [
+          officeData.cctAdminOffice,
+          officeData.ccCommercial,
+          officeData.ccCommercialCorp,
+          officeData.ccElectoral,
+          officeData.ccNetworkMgmt,
+          officeData.ccOperations,
+          officeData.ccOperational,
+          officeData.ccHr,
+          officeData.ccSecurity,
+          officeData.ccAdmin,
+          officeData.ccAdmission,
+          officeData.ccCtp,
+          officeData.ccCtt,
+          officeData.ccTransport,
+          officeData.ccLogistics,
+        ].find((val) => val && val.trim() !== "");
 
-      const nextSearchableText = normalizeSearchValue(
-        [
-          officeData.code,
-          officeData.name,
-          officeData.locality,
-          officeData.parentNis,
-          officeData.address,
-          activeCostCenter,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      );
+        const nextSearchableText = normalizeSearchValue(
+          [
+            officeData.code,
+            officeData.name,
+            officeData.locality,
+            officeData.parentNis,
+            officeData.address,
+            activeCostCenter,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
 
-      const [created] = await db
-        .insert(offices)
-        .values({
-          ...officeData,
-          searchableText: nextSearchableText,
-        })
-        .returning({ id: offices.id });
-      officeId = created.id;
+        const [created] = await db
+          .insert(offices)
+          .values({
+            ...officeData,
+            searchableText: nextSearchableText,
+          })
+          .returning({ id: offices.id });
+        officeId = created.id;
 
-      await db.delete(officeAssets).where(eq(officeAssets.officeId, officeId));
+        await db
+          .delete(officeAssets)
+          .where(eq(officeAssets.officeId, officeId));
 
-      const assetTypes = fd.getAll("asset_type");
-      const assetHostnames = fd.getAll("asset_hostname");
-      const assetIps = fd.getAll("asset_ip");
+        const assetTypes = fd.getAll("asset_type");
+        const assetHostnames = fd.getAll("asset_hostname");
+        const assetIps = fd.getAll("asset_ip");
 
-      for (let i = 0; i < assetTypes.length; i++) {
-        const aType = assetTypes[i]?.toString().trim();
-        if (!aType) continue;
-        await db.insert(officeAssets).values({
-          officeId,
-          type: aType,
-          hostname: assetHostnames[i]?.toString().trim() || null,
-          ip: assetIps[i]?.toString().trim() || null,
-        });
-      }
-
-      await db
-        .delete(officeContacts)
-        .where(eq(officeContacts.officeId, officeId));
-
-      const cIds = fd.getAll("contact_id");
-      const cNames = fd.getAll("contact_name");
-      const cPhones = fd.getAll("contact_phone");
-      const cRoles = fd.getAll("contact_role");
-      const cTimeSlots = fd.getAll("contact_timeslot");
-
-      for (let i = 0; i < cNames.length; i++) {
-        const cIdStr = cIds[i]?.toString().trim();
-        const cName = cNames[i]?.toString().trim();
-        if (!cName) continue;
-        const cPhone = cPhones[i]?.toString().trim() || null;
-
-        let contactId: number;
-        if (cIdStr) {
-          contactId = Number(cIdStr);
-          await db
-            .update(contacts)
-            .set({ name: cName, phone: cPhone })
-            .where(eq(contacts.id, contactId));
-        } else {
-          let existing;
-          if (cPhone) {
-            [existing] = await db
-              .select()
-              .from(contacts)
-              .where(and(eq(contacts.name, cName), eq(contacts.phone, cPhone)));
-          } else {
-            [existing] = await db
-              .select()
-              .from(contacts)
-              .where(and(eq(contacts.name, cName), isNull(contacts.phone)));
-          }
-
-          if (existing) {
-            contactId = existing.id;
-          } else {
-            const [created] = await db
-              .insert(contacts)
-              .values({ name: cName, phone: cPhone })
-              .returning({ id: contacts.id });
-            contactId = created.id;
-          }
+        for (let i = 0; i < assetTypes.length; i++) {
+          const aType = assetTypes[i]?.toString().trim();
+          if (!aType) continue;
+          await db.insert(officeAssets).values({
+            officeId,
+            type: aType,
+            hostname: assetHostnames[i]?.toString().trim() || null,
+            ip: assetIps[i]?.toString().trim() || null,
+          });
         }
 
-        try {
-          await db.insert(officeContacts).values({
-            officeId,
-            contactId,
-            role: cRoles[i]?.toString().trim() || null,
-            timeSlot: cTimeSlots[i]?.toString().trim() || null,
-          });
-        } catch (e: any) {}
-      }
+        await db
+          .delete(officeContacts)
+          .where(eq(officeContacts.officeId, officeId));
 
-      await logAdminFromAstro(Astro.locals, `Creó la oficina "${officeData.name}" (${officeData.code})`);
-      return redirectWithToast("/oficinas", "Oficina creada con éxito.");
+        const cIds = fd.getAll("contact_id");
+        const cNames = fd.getAll("contact_name");
+        const cPhones = fd.getAll("contact_phone");
+        const cRoles = fd.getAll("contact_role");
+        const cTimeSlots = fd.getAll("contact_timeslot");
+
+        for (let i = 0; i < cNames.length; i++) {
+          const cIdStr = cIds[i]?.toString().trim();
+          const cName = cNames[i]?.toString().trim();
+          if (!cName) continue;
+          const cPhone = cPhones[i]?.toString().trim() || null;
+
+          let contactId: number;
+          if (cIdStr) {
+            contactId = Number(cIdStr);
+            await db
+              .update(contacts)
+              .set({ name: cName, phone: cPhone })
+              .where(eq(contacts.id, contactId));
+          } else {
+            let existing;
+            if (cPhone) {
+              [existing] = await db
+                .select()
+                .from(contacts)
+                .where(
+                  and(eq(contacts.name, cName), eq(contacts.phone, cPhone)),
+                );
+            } else {
+              [existing] = await db
+                .select()
+                .from(contacts)
+                .where(and(eq(contacts.name, cName), isNull(contacts.phone)));
+            }
+
+            if (existing) {
+              contactId = existing.id;
+            } else {
+              const [created] = await db
+                .insert(contacts)
+                .values({ name: cName, phone: cPhone })
+                .returning({ id: contacts.id });
+              contactId = created.id;
+            }
+          }
+
+          try {
+            await db.insert(officeContacts).values({
+              officeId,
+              contactId,
+              role: cRoles[i]?.toString().trim() || null,
+              timeSlot: cTimeSlots[i]?.toString().trim() || null,
+            });
+          } catch (e: any) {}
+        }
+
+        await logAdminFromAstro(
+          Astro.locals,
+          `Creó la oficina "${officeData.name}" (${officeData.code})`,
+        );
+        return redirectWithToast("/oficinas", "Oficina creada con éxito.");
       }
     }
   } catch (e: any) {
@@ -271,16 +285,16 @@ const pageTitle = "Nueva sucursal";
 
 <BaseLayout title={pageTitle}>
   <PageContainer width="xxl">
-    <div class="flex items-center gap-2 text-sm text-base-content/60">
+    <div class="text-base-content/60 flex items-center gap-2 text-sm">
       <a
         href={`${cleanBase}oficinas`}
-        class="flex items-center gap-1.5 hover:text-base-content transition-colors"
+        class="hover:text-base-content flex items-center gap-1.5 transition-colors"
       >
         <Icon name="boxicons:chevron-left" size={16} />
         Oficinas
       </a>
       <span>/</span>
-      <span class="text-base-content font-medium truncate">{pageTitle}</span>
+      <span class="text-base-content truncate font-medium">{pageTitle}</span>
     </div>
 
     <PageHeader
@@ -288,14 +302,18 @@ const pageTitle = "Nueva sucursal";
       description="Completá los datos para registrar una nueva sucursal."
     />
 
-    {
-      errorMsg && (
-        <script is:inline define:vars={{ errorMsg, toastType }}>
-          window.addEventListener('load', () => window.showToast?.(errorMsg, toastType));
-        </script>
-      )
-    }
+    <script is:inline define:vars={{ errorMsg, toastType }}>
+      if (errorMsg) {
+        window.addEventListener("load", () =>
+          window.showToast?.(errorMsg, toastType),
+        );
+      }
+    </script>
 
-    <OfficeForm office={null} groupedProvinces={groupedProvinces} isNew={isNew} />
+    <OfficeForm
+      office={null}
+      groupedProvinces={groupedProvinces}
+      isNew={isNew}
+    />
   </PageContainer>
 </BaseLayout>

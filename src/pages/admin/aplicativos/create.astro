@@ -42,20 +42,23 @@ let formExternalUrl = "";
 let formSnapshot: FormData | null = null;
 
 if (Astro.request.method === "POST") {
-  const isAjax = Astro.request.headers.get('accept')?.includes('application/json');
+  const isAjax = Astro.request.headers
+    .get("accept")
+    ?.includes("application/json");
   try {
     const formData = await Astro.request.formData();
     formSnapshot = formData;
 
     const title = formData.get("title")?.toString().trim();
     const categoryIdRaw = formData.get("categoryId")?.toString().trim();
-    const categoryId = categoryIdRaw && !isNaN(Number(categoryIdRaw)) ? Number(categoryIdRaw) : null;
+    const categoryId =
+      categoryIdRaw && !isNaN(Number(categoryIdRaw))
+        ? Number(categoryIdRaw)
+        : null;
     const description = formData.get("description")?.toString().trim() || null;
     const version = formData.get("version")?.toString().trim() || null;
     const uploadType = formData.get("uploadType")?.toString() as
-      | "local"
-      | "external"
-      | null;
+      "local" | "external" | null;
 
     if (!title) {
       throw new Error("El título es obligatorio.");
@@ -110,7 +113,11 @@ if (Astro.request.method === "POST") {
     const instructionPdfFile = formData.get("instructionPdf") as File | null;
     let instructionPdfPath = null;
 
-    if (instructionPdfFile && instructionPdfFile.size > 0 && instructionPdfFile.name) {
+    if (
+      instructionPdfFile &&
+      instructionPdfFile.size > 0 &&
+      instructionPdfFile.name
+    ) {
       const fs = await import("node:fs");
       const path = await import("node:path");
 
@@ -133,7 +140,9 @@ if (Astro.request.method === "POST") {
         fs.writeFileSync(path.join(pdfsDir, safeFileName), buffer);
         instructionPdfPath = safeFileName;
       } catch (writeError: any) {
-        console.error(`[aplicativos] Error al escribir PDF privado: ${writeError.message}`);
+        console.error(
+          `[aplicativos] Error al escribir PDF privado: ${writeError.message}`,
+        );
         throw new Error(`No se pudo guardar el archivo PDF en el servidor.`);
       }
     }
@@ -151,13 +160,23 @@ if (Astro.request.method === "POST") {
     await logAdminFromAstro(Astro.locals, `Creó el aplicativo "${title}"`);
 
     if (isAjax) {
-      return toastResponse({ success: true, message: "Aplicativo creado con éxito.", redirectUrl: resolveUrl("/admin/aplicativos") });
+      return toastResponse({
+        success: true,
+        message: "Aplicativo creado con éxito.",
+        redirectUrl: resolveUrl("/admin/aplicativos"),
+      });
     }
 
-    return redirectWithToast("/admin/aplicativos", "Aplicativo creado con éxito.");
+    return redirectWithToast(
+      "/admin/aplicativos",
+      "Aplicativo creado con éxito.",
+    );
   } catch (error: any) {
     if (isAjax) {
-      return toastResponse({ success: false, error: error.message || "Error al guardar el aplicativo." });
+      return toastResponse({
+        success: false,
+        error: error.message || "Error al guardar el aplicativo.",
+      });
     }
     errorMsg = error.message || "Error al guardar el aplicativo.";
     if (formSnapshot) {
@@ -167,7 +186,7 @@ if (Astro.request.method === "POST") {
       app.version = formSnapshot.get("version")?.toString() || "";
       formUploadType = formSnapshot.get("uploadType")?.toString() || "";
       formExternalUrl = formSnapshot.get("externalUrl")?.toString() || "";
-      
+
       const formMeta = formSnapshot.get("metadata")?.toString() || "[]";
       try {
         app.metadata = JSON.parse(formMeta);
@@ -178,24 +197,24 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const isExternal = formUploadType
-  ? formUploadType === "external"
-  : false;
+const isExternal = formUploadType ? formUploadType === "external" : false;
 ---
 
 <BaseLayout title="Nuevo aplicativo">
   <PageContainer>
-    <div class="max-w-2xl mx-auto py-4 sm:py-8">
-      <div class="flex items-center gap-2 text-sm text-base-content/60 mb-4">
+    <div class="mx-auto max-w-2xl py-4 sm:py-8">
+      <div class="text-base-content/60 mb-4 flex items-center gap-2 text-sm">
         <a
           href={resolveUrl("/admin/aplicativos")}
-          class="flex items-center gap-1.5 hover:text-base-content transition-colors"
+          class="hover:text-base-content flex items-center gap-1.5 transition-colors"
         >
           <Icon name="boxicons:chevron-left" size={16} />
           Aplicativos
         </a>
         <span>/</span>
-        <span class="text-base-content font-medium truncate">Nuevo aplicativo</span>
+        <span class="text-base-content truncate font-medium"
+          >Nuevo aplicativo</span
+        >
       </div>
 
       <PageHeader
@@ -203,18 +222,23 @@ const isExternal = formUploadType
         description="Registrá un nuevo aplicativo disponible para descarga."
       />
 
-      {
-        errorMsg && (
-          <script is:inline define:vars={{ errorMsg }}>
-            window.addEventListener('load', () => window.showToast?.(errorMsg, "alert-error"));
-          </script>
-        )
-      }
+      <script is:inline define:vars={{ errorMsg }}>
+        if (errorMsg) {
+          window.addEventListener("load", () =>
+            window.showToast?.(errorMsg, "alert-error"),
+          );
+        }
+      </script>
 
       <SectionCard>
         <div class="p-6 sm:p-8">
-          <form method="POST" enctype="multipart/form-data" class="space-y-5" data-async-form>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+          <form
+            method="POST"
+            enctype="multipart/form-data"
+            class="space-y-5"
+            data-async-form
+          >
+            <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
               <FormField
                 id="input-title"
                 name="title"
@@ -268,19 +292,17 @@ const isExternal = formUploadType
             />
 
             <fieldset class="fieldset">
-              <FormLegend class="mb-2">
-                Origen del archivo
-              </FormLegend>
+              <FormLegend class="mb-2"> Origen del archivo </FormLegend>
               <div
-                class="flex gap-1 rounded-lg bg-base-200/60 p-1"
+                class="bg-base-200/60 flex gap-1 rounded-lg p-1"
                 role="radiogroup"
                 aria-label="Tipo de subida"
               >
                 <label
                   class:list={[
-                    "flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
                     !isExternal
-                      ? "bg-base-100 shadow-sm text-base-content"
+                      ? "bg-base-100 text-base-content shadow-sm"
                       : "text-base-content/50 hover:text-base-content/80",
                   ]}
                 >
@@ -301,9 +323,9 @@ const isExternal = formUploadType
                 </label>
                 <label
                   class:list={[
-                    "flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
                     isExternal
-                      ? "bg-base-100 shadow-sm text-base-content"
+                      ? "bg-base-100 text-base-content shadow-sm"
                       : "text-base-content/50 hover:text-base-content/80",
                   ]}
                 >
@@ -357,30 +379,38 @@ const isExternal = formUploadType
               helpText="(Opcional, archivo .pdf confidencial)"
             />
 
-            <fieldset class="fieldset border border-base-300 rounded-box p-4 bg-base-200/30">
+            <fieldset
+              class="fieldset border-base-300 rounded-box bg-base-200/30 border p-4"
+            >
               <FormLegend class="px-2">
                 Credenciales / Metadatos Sensibles
               </FormLegend>
-              <p class="text-xs text-base-content/60 mb-3 px-2">
-                Agregá credenciales o información confidencial (ej. Entorno: Contraseña). Se almacenarán cifradas.
+              <p class="text-base-content/60 mb-3 px-2 text-xs">
+                Agregá credenciales o información confidencial (ej. Entorno:
+                Contraseña). Se almacenarán cifradas.
               </p>
-              
+
               <div id="metadata-rows" class="space-y-3 px-2">
                 <!-- Se poblará dinámicamente con JS -->
               </div>
-              
+
               <div>
                 <button
                   type="button"
                   id="btn-add-meta"
-                  class="btn btn-sm btn-outline gap-2 mt-4 ml-2"
+                  class="btn btn-sm btn-outline mt-4 ml-2 gap-2"
                 >
                   <Icon name="boxicons:plus" size={16} />
                   Agregar credencial
                 </button>
               </div>
-              
-              <input type="hidden" name="metadata" id="input-metadata-json" value={JSON.stringify(app.metadata || [])} />
+
+              <input
+                type="hidden"
+                name="metadata"
+                id="input-metadata-json"
+                value={JSON.stringify(app.metadata || [])}
+              />
             </fieldset>
 
             <FormTextarea
@@ -394,7 +424,7 @@ const isExternal = formUploadType
             />
 
             <div
-              class="flex justify-end gap-3 pt-6 mt-2 border-t border-base-200"
+              class="border-base-200 mt-2 flex justify-end gap-3 border-t pt-6"
             >
               <ActionCancelButton
                 href={resolveUrl("/admin/aplicativos")}
@@ -458,7 +488,9 @@ const isExternal = formUploadType
   const metadataRowsContainer = document.getElementById("metadata-rows");
   const btnAddMeta = document.getElementById("btn-add-meta");
   const form = document.querySelector("form");
-  const metadataJsonInput = document.getElementById("input-metadata-json") as HTMLInputElement | null;
+  const metadataJsonInput = document.getElementById(
+    "input-metadata-json",
+  ) as HTMLInputElement | null;
 
   function createMetaRow(label = "", value = "") {
     const row = document.createElement("div");
@@ -468,14 +500,14 @@ const isExternal = formUploadType
         type="text"
         placeholder="Entorno / Clave (ej: Debian, MySQL)"
         class="input input-bordered input-sm flex-1 font-semibold"
-        value="${label.replace(/"/g, '&quot;')}"
+        value="${label.replace(/"/g, "&quot;")}"
         required
       />
       <input
         type="text"
         placeholder="Valor / Contraseña"
         class="input input-bordered input-sm flex-1 font-mono"
-        value="${value.replace(/"/g, '&quot;')}"
+        value="${value.replace(/"/g, "&quot;")}"
         required
       />
       <button type="button" class="btn btn-sm btn-circle btn-ghost text-error btn-remove-meta" title="Eliminar">

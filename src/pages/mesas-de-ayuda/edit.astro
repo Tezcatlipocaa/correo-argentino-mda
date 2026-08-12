@@ -24,7 +24,8 @@ if (!invgateIdRaw || isNaN(invgateId)) {
 
 let errorMsg = "";
 
-const hdResult = await invgateGet<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
+const hdResult =
+  await invgateGet<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
 const allItems: InvgateHelpdeskAndLevel[] =
   hdResult.ok && Array.isArray(hdResult.data) ? hdResult.data : [];
 const linkedHd = allItems.find((h) => h.id === invgateId && !h.level_order);
@@ -100,8 +101,14 @@ if (Astro.request.method === "POST") {
     }
 
     const label = linkedHd?.name || `ID ${invgateId}`;
-    await logAdminFromAstro(Astro.locals, `Actualizo los datos de la mesa de ayuda "${label}"`);
-    return redirectWithToast("/mesas-de-ayuda", "Mesa de ayuda actualizada con exito.");
+    await logAdminFromAstro(
+      Astro.locals,
+      `Actualizo los datos de la mesa de ayuda "${label}"`,
+    );
+    return redirectWithToast(
+      "/mesas-de-ayuda",
+      "Mesa de ayuda actualizada con exito.",
+    );
   } catch (err) {
     console.error("Error saving helpdesk metadata:", err);
     errorMsg = "Ocurrio un error al guardar los datos.";
@@ -121,117 +128,162 @@ const pageTitle = `Editar: ${hdName}`;
       </a>
     </div>
 
-    <PageHeader title={pageTitle} description="Modifica la metadata local vinculada a esta mesa de ayuda de InvGate." />
+    <PageHeader
+      title={pageTitle}
+      description="Modifica la metadata local vinculada a esta mesa de ayuda de InvGate."
+    />
 
-    <div class="bg-base-100 p-6 md:p-8 rounded-2xl shadow-sm border border-base-200">
-      {errorMsg && (
-        <script is:inline define:vars={{ errorMsg }}>
-          window.addEventListener('load', () => window.showToast?.(errorMsg, "alert-error"));
-        </script>
-      )}
+    <div
+      class="bg-base-100 border-base-200 rounded-2xl border p-6 shadow-sm md:p-8"
+    >
+      <script is:inline define:vars={{ errorMsg }}>
+        if (errorMsg) {
+          window.addEventListener("load", () =>
+            window.showToast?.(errorMsg, "alert-error"),
+          );
+        }
+      </script>
 
       <form method="POST" class="flex flex-col gap-6">
-      {linkedHd && (
-        <div class="bg-base-200/40 rounded-xl p-5 border border-base-300  flex flex-col gap-4">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-base-300 pb-4">
-            <div>
-              <h3 class="text-lg font-bold text-base-content flex items-center gap-2">
-                <Icon name="boxicons:info-circle" size={20} />
-                Mesa de ayuda InvGate: {linkedHd.name}
-              </h3>
-              <p class="text-sm text-base-content/70 mt-1">
-                Información del helpdesk sincronizada desde InvGate.
-              </p>
-            </div>
-            <div class="stats bg-base-100 shadow-sm border border-base-200">
-              <div class="stat py-2 px-4">
-                <div class="stat-title text-xs">Total miembros</div>
-                <div class="stat-value text-xl font-bold">{linkedHd.total_members}</div>
+        {
+          linkedHd && (
+            <div class="bg-base-200/40 border-base-300 flex flex-col gap-4 rounded-xl border p-5">
+              <div class="border-base-300 flex flex-col justify-between gap-4 border-b pb-4 md:flex-row md:items-center">
+                <div>
+                  <h3 class="text-base-content flex items-center gap-2 text-lg font-bold">
+                    <Icon name="boxicons:info-circle" size={20} />
+                    Mesa de ayuda InvGate: {linkedHd.name}
+                  </h3>
+                  <p class="text-base-content/70 mt-1 text-sm">
+                    Información del helpdesk sincronizada desde InvGate.
+                  </p>
+                </div>
+                <div class="stats bg-base-100 border-base-200 border shadow-sm">
+                  <div class="stat px-4 py-2">
+                    <div class="stat-title text-xs">Total miembros</div>
+                    <div class="stat-value text-xl font-bold">
+                      {linkedHd.total_members}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {subLevels.length > 0 && (
+                <div>
+                  <h4 class="text-base-content/70 mb-2 flex items-center gap-1.5 text-sm font-semibold">
+                    <Icon name="boxicons:git-repo-forked" size={16} />
+                    Sub-niveles vinculados
+                  </h4>
+                  <div class="flex flex-wrap gap-2">
+                    {subLevels.map((level, idx) => {
+                      const colorClass = levelColors[idx % levelColors.length];
+                      return (
+                        <span class={`badge ${colorClass} gap-1 p-3`}>
+                          <span class="font-medium">
+                            {level.name || `Nivel ${level.level_order}`}
+                          </span>
+                          <span class="opacity-70">
+                            ({level.total_members} miembros)
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <h4 class="text-base-content/70 mb-2 flex items-center gap-1.5 text-sm font-semibold">
+                  <Icon name="boxicons:group-filled" size={16} />
+                  Lista de miembros
+                </h4>
+                <div
+                  id="members-loader"
+                  class="text-base-content/50 flex items-center gap-2 py-2 text-sm"
+                >
+                  <span class="loading loading-spinner loading-xs" />
+                  Cargando miembros...
+                </div>
+                <ul
+                  id="members-list"
+                  class="grid list-disc grid-cols-1 gap-x-6 gap-y-1.5 pl-5 text-sm md:grid-cols-2"
+                />
+                <div id="members-error" class="text-error hidden text-sm">
+                  Error al cargar la lista de miembros.
+                </div>
               </div>
             </div>
-          </div>
+          )
+        }
 
-          {subLevels.length > 0 && (
-            <div>
-              <h4 class="text-sm font-semibold text-base-content/70 mb-2 flex items-center gap-1.5">
-                <Icon name="boxicons:git-repo-forked" size={16} />
-                Sub-niveles vinculados
-              </h4>
-              <div class="flex flex-wrap gap-2">
-                {subLevels.map((level, idx) => {
-                  const colorClass = levelColors[idx % levelColors.length];
-                  return (
-                    <span class={`badge ${colorClass} gap-1 p-3`}>
-                      <span class="font-medium">{level.name || `Nivel ${level.level_order}`}</span>
-                      <span class="opacity-70">({level.total_members} miembros)</span>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <h4 class="text-sm font-semibold text-base-content/70 mb-2 flex items-center gap-1.5">
-              <Icon name="boxicons:group-filled" size={16} />
-              Lista de miembros
-            </h4>
-            <div id="members-loader" class="flex items-center gap-2 text-sm text-base-content/50 py-2">
-              <span class="loading loading-spinner loading-xs"></span>
-              Cargando miembros...
-            </div>
-            <ul id="members-list" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm list-disc pl-5">
-            </ul>
-            <div id="members-error" class="text-sm text-error hidden">
-              Error al cargar la lista de miembros.
-            </div>
-          </div>
-        </div>
-      )}
-
-        <div class="bg-base-200/50 rounded-lg p-4 border border-base-300">
-          <p class="text-sm font-bold text-base-content/70 mb-2 flex items-center gap-1">
+        <div class="bg-base-200/50 border-base-300 rounded-lg border p-4">
+          <p
+            class="text-base-content/70 mb-2 flex items-center gap-1 text-sm font-bold"
+          >
             <Icon name="boxicons:git-merge" size={16} />
             Mesas SM vinculadas
           </p>
 
-          <div id="linked-sm-list" class="flex flex-wrap gap-2 mb-3">
-             {linkedRecords.length > 0 ? (
-              linkedRecords.map((rec) => (
-                <div class="badge badge-neutral gap-2 pl-3 pr-2 py-4" data-linked-id={rec.id}>
-                  <span>{rec.legacyName || `Registro #${rec.id}`}</span>
-                  <button type="button" class="btn btn-ghost btn-xs btn-circle unlink-btn" data-record-id={rec.id}><Icon name="boxicons:x" size={16} /></button>
-                </div>
-              ))
-            ) : (
-              <p id="empty-linked-message" class="text-sm italic text-base-content/40">Sin mesas SM vinculadas a esta helpdesk.</p>
-            )}
+          <div id="linked-sm-list" class="mb-3 flex flex-wrap gap-2">
+            {
+              linkedRecords.length > 0 ? (
+                linkedRecords.map((rec) => (
+                  <div
+                    class="badge badge-neutral gap-2 py-4 pr-2 pl-3"
+                    data-linked-id={rec.id}
+                  >
+                    <span>{rec.legacyName || `Registro #${rec.id}`}</span>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-xs btn-circle unlink-btn"
+                      data-record-id={rec.id}
+                    >
+                      <Icon name="boxicons:x" size={16} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p
+                  id="empty-linked-message"
+                  class="text-base-content/40 text-sm italic"
+                >
+                  Sin mesas SM vinculadas a esta helpdesk.
+                </p>
+              )
+            }
           </div>
 
-          <div id="assign-chain" data-invgate-id={invgateId} data-unassigned={unassignedJson} data-linked={linkedJson}>
-            {unassignedRecords.length > 0 && (
-              <div class="assign-row flex items-center gap-2">
-                <select class="select select-bordered flex-1 assign-select">
-                  <option value="">Seleccionar mesa SM...</option>
-                  {unassignedRecords.map((rec) => (
-                    <option value={rec.id}>
-                      {rec.legacyName || `Registro #${rec.id}`}
-                    </option>
-                  ))}
-                </select>
-                <button type="button" class="btn btn-primary assign-btn">
-                  Vincular
-                </button>
-              </div>
-            )}
+          <div
+            id="assign-chain"
+            data-invgate-id={invgateId}
+            data-unassigned={unassignedJson}
+            data-linked={linkedJson}
+          >
+            {
+              unassignedRecords.length > 0 && (
+                <div class="assign-row flex items-center gap-2">
+                  <select class="select select-bordered assign-select flex-1">
+                    <option value="">Seleccionar mesa SM...</option>
+                    {unassignedRecords.map((rec) => (
+                      <option value={rec.id}>
+                        {rec.legacyName || `Registro #${rec.id}`}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" class="btn btn-primary assign-btn">
+                    Vincular
+                  </button>
+                </div>
+              )
+            }
           </div>
-          <p class="text-xs text-base-content/40 mt-2 flex items-center gap-1">
+          <p class="text-base-content/40 mt-2 flex items-center gap-1 text-xs">
             <Icon name="boxicons:info-circle" size={12} />
             Selecciona una mesa SM y haz clic en Vincular para asociarla.
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
           <FormTextarea
             id="categories"
             name="categories"
@@ -239,7 +291,7 @@ const pageTitle = `Editar: ${hdName}`;
             textareaClass="font-mono"
             rows={4}
             value={first?.categories || ""}
-            placeholder='[5, 12, 23]'
+            placeholder="[5, 12, 23]"
           />
 
           <FormTextarea
@@ -269,7 +321,7 @@ const pageTitle = `Editar: ${hdName}`;
           />
         </div>
 
-        <div class="flex justify-end gap-3 mt-4 pt-6 border-t border-base-200">
+        <div class="border-base-200 mt-4 flex justify-end gap-3 border-t pt-6">
           <a href={`${cleanBase}mesas-de-ayuda`} class="btn btn-ghost">
             Cancelar
           </a>
@@ -295,10 +347,22 @@ const pageTitle = `Editar: ${hdName}`;
   if (!chain) throw new Error("assign-chain not found");
 
   const invgateId = Number(chain.dataset.invgateId);
-  let unassigned: { id: number; helpDeskName: string; legacyName: string | null }[] = [];
-  let linked: { id: number; helpDeskName: string; legacyName: string | null }[] = [];
-  try { unassigned = JSON.parse(chain.dataset.unassigned || "[]"); } catch {}
-  try { linked = JSON.parse(chain.dataset.linked || "[]"); } catch {}
+  let unassigned: {
+    id: number;
+    helpDeskName: string;
+    legacyName: string | null;
+  }[] = [];
+  let linked: {
+    id: number;
+    helpDeskName: string;
+    legacyName: string | null;
+  }[] = [];
+  try {
+    unassigned = JSON.parse(chain.dataset.unassigned || "[]");
+  } catch {}
+  try {
+    linked = JSON.parse(chain.dataset.linked || "[]");
+  } catch {}
 
   const list = document.getElementById("linked-sm-list");
 
@@ -350,7 +414,9 @@ const pageTitle = `Editar: ${hdName}`;
         </button>
       `;
       chain.appendChild(row);
-      row.querySelector(".assign-btn")?.addEventListener("click", () => handleAssign());
+      row
+        .querySelector(".assign-btn")
+        ?.addEventListener("click", () => handleAssign());
     }
 
     const select = row.querySelector(".assign-select");
@@ -360,7 +426,7 @@ const pageTitle = `Editar: ${hdName}`;
         ${unassigned
           .map(
             (r) =>
-              `<option value="${r.id}">${r.legacyName || "Registro #" + r.id}</option>`
+              `<option value="${r.id}">${r.legacyName || "Registro #" + r.id}</option>`,
           )
           .join("")}
       `;
@@ -382,7 +448,11 @@ const pageTitle = `Editar: ${hdName}`;
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ recordId, invgate_id: invgateId }),
     })
-      .then((r) => (r.ok ? r.json() : r.json().then((e) => Promise.reject(new Error(e.error)))))
+      .then((r) =>
+        r.ok
+          ? r.json()
+          : r.json().then((e) => Promise.reject(new Error(e.error))),
+      )
       .then(() => {
         const itemIndex = unassigned.findIndex((r) => r.id === recordId);
         if (itemIndex > -1) {
@@ -396,7 +466,8 @@ const pageTitle = `Editar: ${hdName}`;
           }
 
           if (list) {
-            const xIconSvg = document.getElementById("x-icon-template")?.innerHTML || "✕";
+            const xIconSvg =
+              document.getElementById("x-icon-template")?.innerHTML || "✕";
             const chip = document.createElement("div");
             chip.className = "badge badge-neutral gap-2 pl-3 pr-2 py-4";
             chip.setAttribute("data-linked-id", item.id.toString());
@@ -411,10 +482,16 @@ const pageTitle = `Editar: ${hdName}`;
         updateAssignChainUI();
         btn.disabled = false;
         btn.textContent = originalText;
-        (window as any).showToast?.("Mesa SM vinculada correctamente", "alert-success");
+        (window as any).showToast?.(
+          "Mesa SM vinculada correctamente",
+          "alert-success",
+        );
       })
       .catch((err: any) => {
-        (window as any).showToast?.(err.message || "Error al vincular", "alert-error");
+        (window as any).showToast?.(
+          err.message || "Error al vincular",
+          "alert-error",
+        );
         btn.disabled = false;
         btn.textContent = originalText;
       });
@@ -442,7 +519,11 @@ const pageTitle = `Editar: ${hdName}`;
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ recordId }),
     })
-      .then((r) => (r.ok ? r.json() : r.json().then((e) => Promise.reject(new Error(e.error)))))
+      .then((r) =>
+        r.ok
+          ? r.json()
+          : r.json().then((e) => Promise.reject(new Error(e.error))),
+      )
       .then(() => {
         const itemIndex = linked.findIndex((r) => r.id === recordId);
         if (itemIndex > -1) {
@@ -461,10 +542,16 @@ const pageTitle = `Editar: ${hdName}`;
         }
 
         updateAssignChainUI();
-        (window as any).showToast?.("Mesa SM desvinculada correctamente", "alert-success");
+        (window as any).showToast?.(
+          "Mesa SM desvinculada correctamente",
+          "alert-success",
+        );
       })
       .catch((err: any) => {
-        (window as any).showToast?.(err.message || "Error al desvincular", "alert-error");
+        (window as any).showToast?.(
+          err.message || "Error al desvincular",
+          "alert-error",
+        );
         btn.disabled = false;
         btn.textContent = originalText;
       });

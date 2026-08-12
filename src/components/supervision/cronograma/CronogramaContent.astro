@@ -4,13 +4,21 @@ import { agents, schedules } from "@db/schema";
 import { like } from "drizzle-orm";
 import CronogramaDashboard from "@components/cronograma/CronogramaDashboard.astro";
 
-const dbAgents = await db.select({
-  id: agents.id, name: agents.name, username: agents.username, location: agents.location,
-  horarioDefault: agents.horarioDefault,
-  esquemaSemanal: agents.esquemaSemanal, esquemaHorario: agents.esquemaHorario,
-  esquemaBreakInicio: agents.esquemaBreakInicio, esquemaBreakFin: agents.esquemaBreakFin,
-  maxConsecutiveHO: agents.maxConsecutiveHO, minPWeek: agents.minPWeek,
-}).from(agents);
+const dbAgents = await db
+  .select({
+    id: agents.id,
+    name: agents.name,
+    username: agents.username,
+    location: agents.location,
+    horarioDefault: agents.horarioDefault,
+    esquemaSemanal: agents.esquemaSemanal,
+    esquemaHorario: agents.esquemaHorario,
+    esquemaBreakInicio: agents.esquemaBreakInicio,
+    esquemaBreakFin: agents.esquemaBreakFin,
+    maxConsecutiveHO: agents.maxConsecutiveHO,
+    minPWeek: agents.minPWeek,
+  })
+  .from(agents);
 
 const baseline = dbAgents.map((agent) => ({
   id: agent.id,
@@ -29,7 +37,9 @@ const baseline = dbAgents.map((agent) => ({
 
 const now = new Date();
 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-const dbSchedules = await db.select().from(schedules)
+const dbSchedules = await db
+  .select()
+  .from(schedules)
   .where(like(schedules.date, `${currentMonth}-%`));
 
 const initialData = baseline.map((operator: any) => {
@@ -64,8 +74,16 @@ const initialData = baseline.map((operator: any) => {
     }
   });
 
-  const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
-  Object.keys(newAsistencia).forEach(dateStr => {
+  const dayNames = [
+    "Domingo",
+    "Lunes",
+    "Martes",
+    "Miercoles",
+    "Jueves",
+    "Viernes",
+    "Sabado",
+  ];
+  Object.keys(newAsistencia).forEach((dateStr) => {
     const dateObj = new Date(dateStr + "T12:00:00");
     const dayName = dayNames[dateObj.getDay()];
     const status = newAsistencia[dateStr];
@@ -107,6 +125,8 @@ const initialData = baseline.map((operator: any) => {
     breaks_inicio: newBreaksInicio,
     breaks_fin: newBreaksFin,
   };
+});
+
 const user = Astro.locals.user;
 ---
 
