@@ -41,8 +41,8 @@ const sizeClasses: Record<string, string> = {
       title && (
         <h3
           class:list={[
-            "text-base-content mb-3 flex items-center gap-2",
-            titleClass || "text-lg font-bold",
+            "flex items-center gap-2 mb-3 text-base-content text-pretty",
+            titleClass || "font-bold text-lg",
           ]}
         >
           {icon && (
@@ -59,3 +59,4 @@ const sizeClasses: Record<string, string> = {
     <button>close</button>
   </form>
 </dialog>
+

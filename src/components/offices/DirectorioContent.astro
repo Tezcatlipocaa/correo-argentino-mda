@@ -14,6 +14,7 @@ import { getOffices, hasClosedOffices } from "@lib/officeQueries";
 import { getUnassignedEmployeesCount } from "@lib/employeeQueries";
 import OfficeRow from "@components/offices/OfficeRow.astro";
 import Modal from "@components/ui/Modal.astro";
+import AgentsTicketModal from "@components/offices/AgentsTicketModal.astro";
 import {
   officeTypeLabelByType,
   officeTypeTabActiveClassByType,
@@ -774,6 +775,7 @@ const mainTabs = [
       <div id="modal-region-content"></div>
     </Fragment>
   </Modal>
+  <AgentsTicketModal />
 </PageContainer>
 
 <script>
@@ -1531,6 +1533,22 @@ const mainTabs = [
   });
 
   bindRowEvents();
+
+  // Agents ticket: delegate click on buttons with data-agents-ticket-trigger
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const trigger = target.closest("[data-agents-ticket-trigger]") as HTMLElement | null;
+    if (!trigger) return;
+
+    const officeName = trigger.getAttribute("data-office-name") || "";
+    const officeCode = trigger.getAttribute("data-office-code") || "";
+    if (!officeName || !officeCode) return;
+
+    const openFn = (window as any).openAgentsTicketModal;
+    if (typeof openFn === "function") {
+      openFn(officeName, officeCode);
+    }
+  });
 
   tableRoot?.addEventListener("master-detail-sort-change", (e: any) => {
     const { sortKey, direction } = e.detail;

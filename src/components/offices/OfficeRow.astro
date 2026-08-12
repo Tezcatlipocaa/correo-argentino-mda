@@ -5,6 +5,7 @@ import OfficeContactsSection from "@components/offices/OfficeContactsSection.ast
 import OfficeEquipmentCard from "@components/offices/OfficeEquipmentCard.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
+import ActionAgentsTicketButton from "@components/ui/ActionAgentsTicketButton.astro";
 import { isAllowed } from "@lib/rolesMatrix";
 import type { OfficeDirectoryItem } from "@/types/offices";
 import {
@@ -26,6 +27,7 @@ const user = Astro.locals.user;
 const isAllowedAdmin = user
   ? isAllowed("Administrar Contenido", user.role)
   : false;
+const isStrictAdmin = user?.role === "admin";
 
 const normalizedType =
   office.type === "SUCURSAL"
@@ -57,7 +59,13 @@ const contactsToCenter = layout.contactsToCenter;
 const hasDetails =
   hasInvgateDetail || hasInfo || hasContacts || hasAssetsSection || hasSiblings;
 
-const officeDirectoryRowGridClass = isAllowedAdmin
+const showActionsColumn =
+  isAllowedAdmin ||
+  (isStrictAdmin &&
+    office.type === "TELEGRAFIA" &&
+    office.invgateLinked === true);
+
+const officeDirectoryRowGridClass = showActionsColumn
   ? "grid grid-cols-[48px_80px_1.2fr_90px_1.8fr_110px_120px] items-center gap-4"
   : "grid grid-cols-[48px_80px_1.2fr_90px_1.8fr_110px] items-center gap-4";
 ---
@@ -83,9 +91,9 @@ const officeDirectoryRowGridClass = isAllowedAdmin
     aria-expanded={hasDetails ? "false" : undefined}
     class:list={[
       officeDirectoryRowGridClass,
-      "border-base-300 border-b px-4 py-3 transition-colors",
+      "border-b border-base-300 px-4 py-3 transition-colors",
       office.active === false &&
-        "bg-base-200/50 [&_>_div:not(.action-buttons)]:opacity-80 [&_>_div:not(.action-buttons)]:grayscale",
+        "bg-base-200/50 [&_>_div:not(.action-buttons)]:grayscale [&_>_div:not(.action-buttons)]:opacity-80",
     ]}
   >
     <div>
@@ -235,20 +243,34 @@ const officeDirectoryRowGridClass = isAllowedAdmin
     </div>
 
     {
-      isAllowedAdmin && (
-        <div class="action-buttons flex min-w-0 items-center justify-end gap-2">
-          <ActionEditButton
-            href={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}`}
-            ariaLabel={`Editar oficina ${office.name}`}
-          />
-          <form
-            method="POST"
-            action={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}/eliminar`}
-            class="inline"
-            onsubmit={`return confirm('¿Estás seguro de que deseas eliminar la oficina \`${office.name}\` (${office.code})?');`}
-          >
-            <ActionDeleteButton ariaLabel={`Eliminar oficina ${office.name}`} />
-          </form>
+      showActionsColumn && (
+        <div class="min-w-0 flex items-center justify-end gap-2 action-buttons">
+          {isAllowedAdmin && (
+            <>
+              <ActionEditButton
+                href={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}`}
+                ariaLabel={`Editar oficina ${office.name}`}
+              />
+              <form
+                method="POST"
+                action={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}/eliminar`}
+                class="inline"
+                onsubmit={`return confirm('¿Estás seguro de que deseas eliminar la oficina \`${office.name}\` (${office.code})?');`}
+              >
+                <ActionDeleteButton
+                  ariaLabel={`Eliminar oficina ${office.name}`}
+                />
+              </form>
+            </>
+          )}
+          {isStrictAdmin &&
+            office.type === "TELEGRAFIA" &&
+            office.invgateLinked === true && (
+              <ActionAgentsTicketButton
+                officeName={office.name}
+                officeCode={office.code}
+              />
+            )}
         </div>
       )
     }
@@ -410,11 +432,11 @@ const officeDirectoryRowGridClass = isAllowedAdmin
 
                 {/* Personal de la sucursal */}
                 <section
-                  class="hidden space-y-3"
+                  class="space-y-3 hidden"
                   data-branch-personnel
                   data-nis={office.code}
                 >
-                  <h2 class="text-base-content/70 flex items-center gap-2 text-xs font-bold tracking-wide uppercase">
+                  <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
                     <Icon
                       name="boxicons:group-filled"
                       size={16}
@@ -425,7 +447,7 @@ const officeDirectoryRowGridClass = isAllowedAdmin
                   </h2>
                   <div
                     data-branch-personnel-content
-                    class="border-base-300 bg-base-100/50 rounded-lg border p-3 shadow-sm"
+                    class="rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
                   />
                 </section>
 
