@@ -26,7 +26,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
       partial: true,
     });
     const normalizedQuery = normalizeOfficeAddress(query) ?? "";
-    const result = buildAddressSuggestions(matches, normalizedQuery).slice(0, MAX_SUGGESTIONS);
+    const result = buildAddressSuggestions(matches, normalizedQuery).slice(
+      0,
+      MAX_SUGGESTIONS,
+    );
     return jsonResponse(result);
   } catch (error) {
     console.error("Error en search-address API:", error);

@@ -22,11 +22,15 @@ async function invgateRequest<T>(
   const rawUsername = getEnv("INVGATE_API_USERNAME");
 
   if (!apiKey) {
-    throw new Error("[InvGate] Variable de entorno INVGATE_API_KEY no definida.");
+    throw new Error(
+      "[InvGate] Variable de entorno INVGATE_API_KEY no definida.",
+    );
   }
 
   if (!baseUrl) {
-    throw new Error("[InvGate] Variable de entorno INVGATE_BASE_URL no definida.");
+    throw new Error(
+      "[InvGate] Variable de entorno INVGATE_BASE_URL no definida.",
+    );
   }
 
   const apiUsername = rawUsername || "portalmda";
@@ -34,7 +38,7 @@ async function invgateRequest<T>(
   const credentials = btoa(apiUsername + ":" + apiKey);
 
   const headers: Record<string, string> = {
-    "Authorization": `Basic ${credentials}`,
+    Authorization: `Basic ${credentials}`,
     "Content-Type": "application/json",
   };
 
@@ -75,7 +79,8 @@ async function invgateRequest<T>(
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido";
+    const message =
+      error instanceof Error ? error.message : "Error desconocido";
     return {
       ok: false,
       status: lastStatus,
@@ -86,18 +91,32 @@ async function invgateRequest<T>(
   }
 }
 
-export async function invgateGet<T>(endpoint: string, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgateGet<T>(
+  endpoint: string,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("GET", endpoint, undefined, timeoutMs);
 }
 
-export async function invgatePost<T>(endpoint: string, body: unknown, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgatePost<T>(
+  endpoint: string,
+  body: unknown,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("POST", endpoint, body, timeoutMs);
 }
 
-export async function invgatePut<T>(endpoint: string, body: unknown, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgatePut<T>(
+  endpoint: string,
+  body: unknown,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("PUT", endpoint, body, timeoutMs);
 }
 
-export async function invgateDelete<T>(endpoint: string, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgateDelete<T>(
+  endpoint: string,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("DELETE", endpoint, undefined, timeoutMs);
 }

@@ -13,21 +13,21 @@ const { origin = "" } = Astro.props;
 
 <div class="space-y-8">
   <div
-    class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start"
+    class="grid grid-cols-1 items-start gap-8 md:grid-cols-2"
     id="signature-generator-container"
     data-origin={origin}
     data-logo-default={logoFirma.src}
   >
-    <SectionCard class="shadow-md overflow-hidden">
-      <div class="flex items-center gap-2 mb-2">
-        <div class="p-2 bg-primary/10 rounded-lg text-primary">
+    <SectionCard class="overflow-hidden shadow-md">
+      <div class="mb-2 flex items-center gap-2">
+        <div class="bg-primary/10 text-primary rounded-lg p-2">
           <Icon name="boxicons:contact-book-filled" size={20} />
         </div>
         <h2 class="text-xl font-bold">Datos del operador</h2>
       </div>
 
-      <form id="signature-form" class="space-y-6 mb-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form id="signature-form" class="mb-4 space-y-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField
             id="input-name"
             name="name"
@@ -55,7 +55,7 @@ const { origin = "" } = Astro.props;
           required
         />
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField
             id="input-address1"
             name="address1"
@@ -74,7 +74,7 @@ const { origin = "" } = Astro.props;
           />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
           <FormField
             id="input-phone"
             name="phone"
@@ -102,7 +102,7 @@ const { origin = "" } = Astro.props;
         </div>
 
         <div class="form-control mt-4 w-max">
-          <label class="cursor-pointer label gap-3">
+          <label class="label cursor-pointer gap-3">
             <input
               type="checkbox"
               id="input-include-image"
@@ -119,7 +119,7 @@ const { origin = "" } = Astro.props;
       <div role="alert" class="alert alert-info text-xs">
         <Icon name="boxicons:info-circle" size={20} />
         <div>
-          <span class="font-bold block text-sm">Configuración de la firma</span>
+          <span class="block text-sm font-bold">Configuración de la firma</span>
           <span>
             Completa todos los campos obligatorios (marcados con <span
               class="text-error">*</span
@@ -133,23 +133,21 @@ const { origin = "" } = Astro.props;
     </SectionCard>
 
     <section class="flex flex-col gap-4">
-      <div class="tabs tabs-box bg-base-200 p-1 rounded-xl self-start">
+      <div class="tabs tabs-box bg-base-200 self-start rounded-xl p-1">
         <button id="tab-visual" class="tab tab-active"> Vista Visual </button>
         <button id="tab-code" class="tab"> Código Fuente </button>
       </div>
 
-      <div
-        class="card bg-base-100 border border-base-300 shadow-md min-h-75"
-      >
+      <div class="card bg-base-100 border-base-300 min-h-75 border shadow-md">
         <div class="card-body p-0">
-          <div id="section-visual" class="flex flex-col h-full p-4 sm:p-6">
+          <div id="section-visual" class="flex h-full flex-col p-4 sm:p-6">
             <div
               id="preview-container"
-              class="flex-1 border border-dashed border-base-300 rounded-lg p-2 sm:p-4 flex items-center justify-center bg-white min-h-40 w-full overflow-x-auto"
+              class="border-base-300 flex min-h-40 w-full flex-1 items-center justify-center overflow-x-auto rounded-lg border border-dashed bg-white p-2 sm:p-4"
             >
             </div>
             <div
-              class="flex flex-col sm:flex-row justify-end mt-6 gap-2 w-full"
+              class="mt-6 flex w-full flex-col justify-end gap-2 sm:flex-row"
             >
               <button
                 id="btn-download-png"
@@ -179,13 +177,13 @@ const { origin = "" } = Astro.props;
             </div>
           </div>
 
-          <div id="section-code" class="flex-col h-full p-6 hidden">
+          <div id="section-code" class="hidden h-full flex-col p-6">
             <div
-              class="flex-1 bg-neutral text-neutral-content p-4 rounded-lg overflow-auto font-mono text-xs max-h-100"
+              class="bg-neutral text-neutral-content max-h-100 flex-1 overflow-auto rounded-lg p-4 font-mono text-xs"
             >
               <pre id="code-output"></pre>
             </div>
-            <div class="card-actions justify-end mt-6">
+            <div class="card-actions mt-6 justify-end">
               <button
                 id="btn-copy-code"
                 disabled
@@ -205,34 +203,34 @@ const { origin = "" } = Astro.props;
 
   <!-- Guía de Configuración en Outlook -->
   <SectionCard class="shadow-md">
-    <div class="flex items-center gap-2 mb-4">
-      <div class="p-2 bg-secondary/10 rounded-lg text-secondary">
+    <div class="mb-4 flex items-center gap-2">
+      <div class="bg-secondary/10 text-secondary rounded-lg p-2">
         <Icon name="boxicons:info-circle" size={20} />
       </div>
       <h2 class="text-xl font-bold">Guía para colocar esta firma en Outlook</h2>
     </div>
 
-    <p class="text-xs text-base-content/70 mb-4">
+    <p class="text-base-content/70 mb-4 text-xs">
       Para que el logo sea visible para todos, tanto dentro como fuera del
       Correo Argentino, debe incrustarse manualmente en Outlook. Sigue estos
       simples pasos:
     </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
       <!-- Paso 1 -->
-      <div class="card bg-base-200/50 border border-base-300 shadow-none">
-        <div class="card-body p-4 space-y-2">
+      <div class="card bg-base-200/50 border-base-300 border shadow-none">
+        <div class="card-body space-y-2 p-4">
           <div class="flex items-center gap-2">
             <span class="badge badge-secondary font-bold">1</span>
-            <h3 class="font-bold text-sm">Descargar el Logo</h3>
+            <h3 class="text-sm font-bold">Descargar el Logo</h3>
           </div>
-          <p class="text-xs text-base-content/85">
+          <p class="text-base-content/85 text-xs">
             Descarga el logo oficial en tu computadora:
           </p>
           <a
             href={logoFirma.src}
             download="firma-correo-argentino.png"
-            class="btn btn-sm btn-neutral btn-outline w-full mt-2"
+            class="btn btn-sm btn-neutral btn-outline mt-2 w-full"
           >
             <Icon name="boxicons:arrow-in-down-square-half-filled" size={16} />
             Descargar Logo (PNG)
@@ -241,13 +239,13 @@ const { origin = "" } = Astro.props;
       </div>
 
       <!-- Paso 2 -->
-      <div class="card bg-base-200/50 border border-base-300 shadow-none">
-        <div class="card-body p-4 space-y-2">
+      <div class="card bg-base-200/50 border-base-300 border shadow-none">
+        <div class="card-body space-y-2 p-4">
           <div class="flex items-center gap-2">
             <span class="badge badge-secondary font-bold">2</span>
-            <h3 class="font-bold text-sm">Copiar y Pegar</h3>
+            <h3 class="text-sm font-bold">Copiar y Pegar</h3>
           </div>
-          <p class="text-xs text-base-content/85">
+          <p class="text-base-content/85 text-xs">
             Completa tus datos y presiona <strong>"Copiar firma visual"</strong
             >. Luego, en la configuración de firmas de Outlook, crea una nueva
             firma y pega el contenido (<code>Ctrl + V</code>).
@@ -256,17 +254,17 @@ const { origin = "" } = Astro.props;
       </div>
 
       <!-- Paso 3 -->
-      <div class="card bg-base-200/50 border border-base-300 shadow-none">
-        <div class="card-body p-4 space-y-2">
+      <div class="card bg-base-200/50 border-base-300 border shadow-none">
+        <div class="card-body space-y-2 p-4">
           <div class="flex items-center gap-2">
             <span class="badge badge-secondary font-bold">3</span>
-            <h3 class="font-bold text-sm">Incrustar el Logo</h3>
+            <h3 class="text-sm font-bold">Incrustar el Logo</h3>
           </div>
-          <p class="text-xs text-base-content/85">
+          <p class="text-base-content/85 text-xs">
             El logo pegado se verá roto. Para solucionarlo:
           </p>
           <ol
-            class="list-decimal list-inside text-small text-base-content/75 space-y-1"
+            class="text-small text-base-content/75 list-inside list-decimal space-y-1"
           >
             <li>Haz clic sobre el logo roto y <strong>bórralo</strong>.</li>
             <li>

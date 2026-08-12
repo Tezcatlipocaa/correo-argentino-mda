@@ -21,7 +21,10 @@ const handler: APIRoute = async ({ request, locals }) => {
     const { regionId, referents } = body;
 
     if (!regionId || !Array.isArray(referents)) {
-      return jsonError("Datos inválidos: se requiere regionId y un array de referentes", 400);
+      return jsonError(
+        "Datos inválidos: se requiere regionId y un array de referentes",
+        400,
+      );
     }
 
     // Verify if regionId exists
@@ -38,7 +41,10 @@ const handler: APIRoute = async ({ request, locals }) => {
     // Validate and sanitize referents
     const sanitizedReferents: { firstName: string; lastName: string }[] = [];
     for (const ref of referents) {
-      if (typeof ref.firstName !== "string" || typeof ref.lastName !== "string") {
+      if (
+        typeof ref.firstName !== "string" ||
+        typeof ref.lastName !== "string"
+      ) {
         return jsonError("Formato de referentes inválido", 400);
       }
       const firstName = ref.firstName.trim();
@@ -60,14 +66,13 @@ const handler: APIRoute = async ({ request, locals }) => {
           firstName: ref.firstName,
           lastName: ref.lastName,
         }));
-        tx.insert(technologyReferents)
-          .values(insertValues)
-          .run();
+        tx.insert(technologyReferents).values(insertValues).run();
       }
     });
 
-    await logAdminFromAstro(locals,
-      `Actualizó los referentes tecnológicos de la región ${regionId}`
+    await logAdminFromAstro(
+      locals,
+      `Actualizó los referentes tecnológicos de la región ${regionId}`,
     );
 
     return jsonResponse({ success: true }, 200);

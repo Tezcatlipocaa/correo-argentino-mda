@@ -11,39 +11,47 @@ const { total, active, totalMembers } = Astro.props;
 ---
 
 <div
-  class="flex flex-wrap gap-6 bg-base-100 rounded-xl p-4 border border-base-300 shadow-xs"
+  class="bg-base-100 border-base-300 flex flex-wrap gap-6 rounded-xl border p-4 shadow-xs"
 >
   <div class="flex items-center gap-3">
-    <div class="bg-secondary/10 p-2.5 rounded-lg text-secondary">
+    <div class="bg-secondary/10 text-secondary rounded-lg p-2.5">
       <Icon name="boxicons:headphone-mic" size={20} aria-hidden="true" />
     </div>
     <div>
-      <div class="text-xs text-base-content/60 font-medium">Total de mesas</div>
-      <div class="text-xl font-bold font-mono tabular-nums text-base-content">{total}</div>
+      <div class="text-base-content/60 text-xs font-medium">Total de mesas</div>
+      <div class="text-base-content font-mono text-xl font-bold tabular-nums">
+        {total}
+      </div>
     </div>
   </div>
 
-  <div class="border-r border-base-200 hidden md:block h-9 self-center"></div>
+  <div class="border-base-200 hidden h-9 self-center border-r md:block"></div>
 
   <div class="flex items-center gap-3">
-    <div class="bg-success/10 p-2.5 rounded-lg text-success">
+    <div class="bg-success/10 text-success rounded-lg p-2.5">
       <Icon name="boxicons:check-circle" size={20} aria-hidden="true" />
     </div>
     <div>
-      <div class="text-xs text-base-content/60 font-medium">Activas</div>
-      <div class="text-xl font-bold font-mono tabular-nums text-success">{active}</div>
+      <div class="text-base-content/60 text-xs font-medium">Activas</div>
+      <div class="text-success font-mono text-xl font-bold tabular-nums">
+        {active}
+      </div>
     </div>
   </div>
 
-  <div class="border-r border-base-200 hidden md:block h-9 self-center"></div>
+  <div class="border-base-200 hidden h-9 self-center border-r md:block"></div>
 
   <div class="flex items-center gap-3">
-    <div class="bg-primary/15 p-2.5 rounded-lg text-secondary">
+    <div class="bg-primary/15 text-secondary rounded-lg p-2.5">
       <Icon name="boxicons:group-filled" size={20} aria-hidden="true" />
     </div>
     <div>
-      <div class="text-xs text-base-content/60 font-medium">Miembros globales</div>
-      <div class="text-xl font-bold font-mono tabular-nums text-base-content">{totalMembers}</div>
+      <div class="text-base-content/60 text-xs font-medium">
+        Miembros globales
+      </div>
+      <div class="text-base-content font-mono text-xl font-bold tabular-nums">
+        {totalMembers}
+      </div>
     </div>
   </div>
 </div>

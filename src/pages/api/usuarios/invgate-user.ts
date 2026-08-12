@@ -78,12 +78,13 @@ function toRefs(value: unknown): NamedRef[] {
   return refs;
 }
 
-function resolveNames(refs: NamedRef[], lookup: Map<number, string>): NamedRef[] {
+function resolveNames(
+  refs: NamedRef[],
+  lookup: Map<number, string>,
+): NamedRef[] {
   return refs.map((r) => {
     const isPlaceholder = !r.name || r.name === String(r.id);
-    return isPlaceholder
-      ? { ...r, name: lookup.get(r.id) ?? String(r.id) }
-      : r;
+    return isPlaceholder ? { ...r, name: lookup.get(r.id) ?? String(r.id) } : r;
   });
 }
 
@@ -91,7 +92,9 @@ function dropPlaceholderNames(refs: NamedRef[]): NamedRef[] {
   return refs.filter((r) => !(r.id > 0 && r.name === String(r.id)));
 }
 
-function firstUsersByResult(data: InvgateUsersByResponse["data"]): InvgateUser | null {
+function firstUsersByResult(
+  data: InvgateUsersByResponse["data"],
+): InvgateUser | null {
   if (!data || typeof data !== "object") return null;
   const keys = Object.keys(data);
   if (keys.length === 0) return null;
@@ -113,7 +116,9 @@ async function collectIncidentRequests(
   const seen = new Map<number, IncidentSummary>();
   let pageKey: string | null = null;
   for (let page = 0; page < OPEN_TICKETS_MAX_PAGES; page++) {
-    const result: InvgateResult<IncidentPage> = await invgateGet<IncidentPage>(qsFor(pageKey));
+    const result: InvgateResult<IncidentPage> = await invgateGet<IncidentPage>(
+      qsFor(pageKey),
+    );
     if (!result.ok) break;
     const requests = result.data.requests ?? {};
     for (const key of Object.keys(requests)) {
@@ -171,7 +176,8 @@ export const GET: APIRoute = async ({ request }) => {
     ]);
 
     if (!byEmail.ok && !byUsername.ok) {
-      const message = "message" in byEmail ? byEmail.message : "Error al consultar InvGate";
+      const message =
+        "message" in byEmail ? byEmail.message : "Error al consultar InvGate";
       return jsonResponse({ error: message }, 502);
     }
 
@@ -192,7 +198,9 @@ export const GET: APIRoute = async ({ request }) => {
 
     let manager: { id: number; fullname: string } | null = null;
     if (profile.manager_id) {
-      const managerResult = await invgateGet<InvgateUser>(`user?id=${profile.manager_id}`);
+      const managerResult = await invgateGet<InvgateUser>(
+        `user?id=${profile.manager_id}`,
+      );
       if (managerResult.ok) {
         const m = managerResult.data;
         manager = {
@@ -215,8 +223,12 @@ export const GET: APIRoute = async ({ request }) => {
       ),
     ]);
 
-    const ticketMap = new Map<number, IncidentSummary & { role: "customer" | "agent" }>();
-    for (const t of customerTickets) ticketMap.set(t.id, { ...t, role: "customer" });
+    const ticketMap = new Map<
+      number,
+      IncidentSummary & { role: "customer" | "agent" }
+    >();
+    for (const t of customerTickets)
+      ticketMap.set(t.id, { ...t, role: "customer" });
     for (const t of agentTickets) {
       const existing = ticketMap.get(t.id);
       if (existing) {
@@ -254,20 +266,43 @@ export const GET: APIRoute = async ({ request }) => {
         org.locations = toRefs(entry.locations);
         org.companies = toRefs(entry.companies);
 
-        const needsLookup = [org.groups, org.helpdesks, org.locations, org.companies].some((arr) =>
+        const needsLookup = [
+          org.groups,
+          org.helpdesks,
+          org.locations,
+          org.companies,
+        ].some((arr) =>
           arr.some((r) => r.id && (!r.name || r.name === String(r.id))),
         );
         if (needsLookup) {
-          const [groupsList, locationsList, helpdesksList, companiesList] = await Promise.all([
-            invgateGet<InvgateGroup[]>("groups"),
-            invgateGet<InvgateLocation[]>("locations"),
-            invgateGet<InvgateHelpdesk[]>("helpdesks"),
-            invgateGet<InvgateCompany[]>("companies"),
-          ]);
-          const groupMap = new Map((groupsList.ok ? groupsList.data : []).map((g) => [g.id, g.name]));
-          const locMap = new Map((locationsList.ok ? locationsList.data : []).map((l) => [l.id, l.name]));
-          const hdMap = new Map((helpdesksList.ok ? helpdesksList.data : []).map((h) => [h.id, h.name]));
-          const companyMap = new Map((companiesList.ok ? companiesList.data : []).map((c) => [c.id, c.name]));
+          const [groupsList, locationsList, helpdesksList, companiesList] =
+            await Promise.all([
+              invgateGet<InvgateGroup[]>("groups"),
+              invgateGet<InvgateLocation[]>("locations"),
+              invgateGet<InvgateHelpdesk[]>("helpdesks"),
+              invgateGet<InvgateCompany[]>("companies"),
+            ]);
+          const groupMap = new Map(
+            (groupsList.ok ? groupsList.data : []).map((g) => [g.id, g.name]),
+          );
+          const locMap = new Map(
+            (locationsList.ok ? locationsList.data : []).map((l) => [
+              l.id,
+              l.name,
+            ]),
+          );
+          const hdMap = new Map(
+            (helpdesksList.ok ? helpdesksList.data : []).map((h) => [
+              h.id,
+              h.name,
+            ]),
+          );
+          const companyMap = new Map(
+            (companiesList.ok ? companiesList.data : []).map((c) => [
+              c.id,
+              c.name,
+            ]),
+          );
           org.groups = resolveNames(org.groups, groupMap);
           org.helpdesks = resolveNames(org.helpdesks, hdMap);
           org.locations = resolveNames(org.locations, locMap);

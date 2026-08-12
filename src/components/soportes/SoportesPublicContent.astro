@@ -121,13 +121,16 @@ const totalMembers = visibleHelpdesks.reduce(
     totalMembers={totalMembers}
   />
 
-  <div id="soportes-filters" class="bg-base-100 border border-base-300 rounded-xl p-3.5 shadow-xs flex flex-col gap-3 w-full">
-    <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">
+  <div
+    id="soportes-filters"
+    class="bg-base-100 border-base-300 flex w-full flex-col gap-3 rounded-xl border p-3.5 shadow-xs"
+  >
+    <div class="flex w-full flex-wrap items-center gap-2 md:gap-3">
       {
         uniqueParentNames.length > 0 && (
           <select
             id="filter-parent"
-            class="select grow select-bordered shrink-0 select-sm md:select-md"
+            class="select select-bordered select-sm md:select-md shrink-0 grow"
             aria-label="Filtrar por mesa padre"
           >
             <option value="all">Todas las mesas padre</option>
@@ -140,7 +143,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
       <select
         id="filter-status"
-        class="select select-bordered shrink-0 select-sm md:select-md"
+        class="select select-bordered select-sm md:select-md shrink-0"
         aria-label="Filtrar por estado"
       >
         <option value="all">Todos los estados</option>
@@ -150,7 +153,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
       <select
         id="sort-by"
-        class="select select-bordered shrink-0 select-sm md:select-md"
+        class="select select-bordered select-sm md:select-md shrink-0"
         aria-label="Ordenar resultados"
       >
         <option value="name-asc">Nombre A-Z</option>
@@ -162,8 +165,8 @@ const totalMembers = visibleHelpdesks.reduce(
       </select>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full">
-      <div class="flex-1 min-w-72 sm:min-w-96">
+    <div class="flex w-full flex-wrap items-center gap-2 md:gap-3">
+      <div class="min-w-72 flex-1 sm:min-w-96">
         <SearchBar
           id="soportes-search"
           placeholder="Buscar por nombre SM, Invgate, tópico…"
@@ -173,7 +176,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
       <button
         id="clear-filters"
-        class="btn btn-outline btn-error font-semibold gap-2 shrink-0 btn-sm md:btn-md"
+        class="btn btn-outline btn-error btn-sm md:btn-md shrink-0 gap-2 font-semibold"
         aria-label="Limpiar todos los filtros"
         title="Limpiar todos los filtros"
       >
@@ -195,7 +198,7 @@ const totalMembers = visibleHelpdesks.reduce(
         isAdminOnly && (
           <button
             id="toggle-hidden"
-            class="btn btn-outline btn-sm md:btn-md gap-2 shrink-0"
+            class="btn btn-outline btn-sm md:btn-md shrink-0 gap-2"
             aria-pressed="false"
             title="Ver solo mesas ocultas"
           >
@@ -209,7 +212,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
   <div
     id="soportes-grid"
-    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+    class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
   >
     {
       visibleHelpdesks.map((hd) => {
@@ -251,8 +254,8 @@ const totalMembers = visibleHelpdesks.reduce(
 
     {
       visibleHelpdesks.length === 0 && guides.length === 0 && (
-        <div class="col-span-full flex flex-col items-center gap-3 py-16 text-base-content/50">
-          <div class="rounded-full bg-base-200 p-4">
+        <div class="text-base-content/50 col-span-full flex flex-col items-center gap-3 py-16">
+          <div class="bg-base-200 rounded-full p-4">
             <Icon
               name="boxicons:headphone-mic"
               size={32}
@@ -270,7 +273,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
     <SearchEmptyState
       id="no-results-state-soportes"
-      class="hidden col-span-full"
+      class="col-span-full hidden"
       title="Sin resultados"
       description="No se encontraron mesas de ayuda o áreas que coincidan con los filtros aplicados."
       showClearButton={true}
@@ -282,9 +285,9 @@ const totalMembers = visibleHelpdesks.reduce(
       isAdminOnly && (
         <div
           id="no-hidden-state-soportes"
-          class="hidden col-span-full flex-col items-center gap-3 py-16 text-base-content/50"
+          class="text-base-content/50 col-span-full hidden flex-col items-center gap-3 py-16"
         >
-          <div class="rounded-full bg-base-200 p-4">
+          <div class="bg-base-200 rounded-full p-4">
             <Icon
               name="boxicons:low-vision"
               size={32}
@@ -314,16 +317,15 @@ const totalMembers = visibleHelpdesks.reduce(
   const sortBy = document.querySelector<HTMLSelectElement>("#sort-by");
   const grid = document.querySelector<HTMLElement>("#soportes-grid");
   const cards = document.querySelectorAll<HTMLElement>("[data-card-for]");
-  const toggleHiddenBtn = document.querySelector<HTMLButtonElement>(
-    "#toggle-hidden",
-  );
+  const toggleHiddenBtn =
+    document.querySelector<HTMLButtonElement>("#toggle-hidden");
   let hiddenOnly = false;
 
   function applyFiltersAndSort() {
-    const query = hiddenOnly ? "" : (searchInput?.value.trim() || "");
-    const statusFilter = hiddenOnly ? "all" : (filterStatus?.value || "all");
-    const parentFilter = hiddenOnly ? "all" : (filterParent?.value || "all");
-    const sortValue = hiddenOnly ? "name-asc" : (sortBy?.value || "name-asc");
+    const query = hiddenOnly ? "" : searchInput?.value.trim() || "";
+    const statusFilter = hiddenOnly ? "all" : filterStatus?.value || "all";
+    const parentFilter = hiddenOnly ? "all" : filterParent?.value || "all";
+    const sortValue = hiddenOnly ? "name-asc" : sortBy?.value || "name-asc";
 
     const visible: HTMLElement[] = [];
 
@@ -447,9 +449,7 @@ const totalMembers = visibleHelpdesks.reduce(
   const exportPdfBtn = document.querySelector<HTMLButtonElement>("#export-pdf");
 
   exportCsvBtn?.addEventListener("click", () => {
-    const visibleCards = Array.from(cards).filter(
-      (c) => c.parentNode === grid,
-    );
+    const visibleCards = Array.from(cards).filter((c) => c.parentNode === grid);
 
     let csvContent = "\uFEFF";
     csvContent += "Nombre,Estado,Mesa Padre,Miembros,Tópicos,Nombres Legacy\n";

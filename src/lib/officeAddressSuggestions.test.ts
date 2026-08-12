@@ -24,7 +24,14 @@ test("groups by address AND province, offices only carry code and name", () => {
   const result = buildAddressSuggestions(
     [
       make("E0076", "VALLE MARIA", "1 DE MAYO", "E", "Entre Ríos", "Centro"),
-      make("O7196", "VALLE MARIA CDD", "1 DE MAYO", "E", "Entre Ríos", "Centro"),
+      make(
+        "O7196",
+        "VALLE MARIA CDD",
+        "1 DE MAYO",
+        "E",
+        "Entre Ríos",
+        "Centro",
+      ),
       make("S8888", "OTRA 1 DE MAYO", "1 DE MAYO", "S", "Santa Fe", "Centro"),
     ],
     "1 DE MAYO",
@@ -35,15 +42,18 @@ test("groups by address AND province, offices only carry code and name", () => {
   const santaFe = result.find((s) => s.provinceCode === "S");
   assert.ok(entreRios);
   assert.ok(santaFe);
-  assert.deepEqual(
-    entreRios.offices.map((o) => o.code).sort(),
-    ["E0076", "O7196"],
-  );
+  assert.deepEqual(entreRios.offices.map((o) => o.code).sort(), [
+    "E0076",
+    "O7196",
+  ]);
   assert.deepEqual(Object.keys(entreRios.offices[0]).sort(), ["code", "name"]);
   assert.equal(entreRios.provinceName, "Entre Ríos");
   assert.equal(entreRios.regionName, "Centro");
   assert.equal(santaFe.offices.length, 1);
-  assert.deepEqual(santaFe.offices[0], { code: "S8888", name: "OTRA 1 DE MAYO" });
+  assert.deepEqual(santaFe.offices[0], {
+    code: "S8888",
+    name: "OTRA 1 DE MAYO",
+  });
 });
 
 test("sorts prefix matches first, then address, then province name", () => {

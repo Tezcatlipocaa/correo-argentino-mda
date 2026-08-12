@@ -33,7 +33,9 @@ const isAllowedAdmin = user
   ? isAllowed("Administrar Contenido", user.role)
   : false;
 
-const canExport = user ? ["team_leader", "supervisor", "admin"].includes(user.role) : false;
+const canExport = user
+  ? ["team_leader", "supervisor", "admin"].includes(user.role)
+  : false;
 
 const terminalHeaderGridClass = "grid-cols-12 gap-4";
 const terminalRowGridClass = "grid grid-cols-12 items-start gap-4";
@@ -60,11 +62,9 @@ const terminalModelsByBrand = await getTerminalModelsByBrand();
 
 const resolvedParams = getResolvedSearchParams(Astro.request, Astro.url);
 const sortBy = (resolvedParams.get("sortBy") || undefined) as
-  | TerminalSortKey
-  | undefined;
+  TerminalSortKey | undefined;
 const sortOrder = (resolvedParams.get("sortOrder") || undefined) as
-  | SortOrder
-  | undefined;
+  SortOrder | undefined;
 const activeTab = resolvedParams.get("inventory_tabs") || "terminales";
 
 const {
@@ -177,13 +177,13 @@ const inventoryTabs = [
       activeValue={activeTab}
       name="inventory_tabs"
       id="inventory-view-switcher"
-      class="w-full grid grid-cols-3"
+      class="grid w-full grid-cols-3"
       containerClass="w-full"
     />
   </div>
 
   <div
-    class="flex flex-col gap-4 w-full rounded-box border border-base-300 bg-base-100 p-4 shadow-md"
+    class="rounded-box border-base-300 bg-base-100 flex w-full flex-col gap-4 border p-4 shadow-md"
   >
     <!-- Contenedor de Filtros (Fila Superior) -->
     <div class="w-full">
@@ -191,14 +191,14 @@ const inventoryTabs = [
       <div
         id="header-right-terminales"
         class:list={[
-          "flex flex-wrap items-center gap-3 w-full transition-opacity duration-300",
+          "flex w-full flex-wrap items-center gap-3 transition-opacity duration-300",
           activeTab === "terminales" ? "flex" : "hidden",
         ]}
       >
         <div class="form-control grow">
           <select
             id="filter-os"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por sistema operativo"
           >
             <option value="all">Sist. Op. (Todos)</option>
@@ -214,7 +214,7 @@ const inventoryTabs = [
         <div class="form-control grow">
           <select
             id="filter-os-variant"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por variante de sistema operativo"
             disabled
           >
@@ -224,7 +224,7 @@ const inventoryTabs = [
         <div class="form-control grow">
           <select
             id="filter-arch"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por arquitectura"
           >
             <option value="all">Arquitectura (Todas)</option>
@@ -235,7 +235,7 @@ const inventoryTabs = [
         <div class="form-control grow">
           <select
             id="filter-brand"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por marca"
           >
             <option value="all">Marca (Todas)</option>
@@ -249,7 +249,7 @@ const inventoryTabs = [
         <div class="form-control grow">
           <select
             id="filter-model"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por modelo de terminal"
           >
             <option value="all">Modelo (Todos)</option>
@@ -265,7 +265,7 @@ const inventoryTabs = [
         <div class="form-control grow">
           <select
             id="filter-ram"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por memoria RAM"
           >
             <option value="all">RAM (Todas)</option>
@@ -306,7 +306,7 @@ const inventoryTabs = [
         </div>
         <button
           id="btn-clear-filters-terminales"
-          class="btn btn-outline btn-error font-semibold gap-2"
+          class="btn btn-outline btn-error gap-2 font-semibold"
           type="button"
           aria-label="Limpiar todos los filtros de terminales"
           title="Limpiar todos los filtros"
@@ -320,7 +320,7 @@ const inventoryTabs = [
       <div
         id="header-right-cubics"
         class:list={[
-          "flex-wrap items-center justify-between gap-4 w-full transition-opacity duration-300",
+          "w-full flex-wrap items-center justify-between gap-4 transition-opacity duration-300",
           activeTab === "cubics" ? "flex" : "hidden",
         ]}
       >
@@ -358,7 +358,7 @@ const inventoryTabs = [
           </div>
           <button
             id="btn-clear-filters-cubics"
-            class="btn btn-outline btn-error font-semibold gap-2"
+            class="btn btn-outline btn-error gap-2 font-semibold"
             type="button"
             aria-label="Limpiar todos los filtros de cúbics"
             title="Limpiar todos los filtros"
@@ -368,16 +368,16 @@ const inventoryTabs = [
           </button>
         </div>
 
-        <div class="flex flex-row gap-3 items-center">
+        <div class="flex flex-row items-center gap-3">
           <aside
-            class="card border border-base-300 bg-base-100 shadow-sm w-full sm:w-auto"
+            class="card border-base-300 bg-base-100 w-full border shadow-sm sm:w-auto"
             aria-label="Resumen de conectividad"
           >
             <div
-              class="card-body flex-row items-center justify-between sm:justify-start gap-2 px-3 py-2"
+              class="card-body flex-row items-center justify-between gap-2 px-3 py-2 sm:justify-start"
             >
               <p
-                class="text-xs font-semibold uppercase tracking-wide text-base-content/60 m-0"
+                class="text-base-content/60 m-0 text-xs font-semibold tracking-wide uppercase"
               >
                 Conectividad
               </p>
@@ -393,7 +393,7 @@ const inventoryTabs = [
               <div>
                 <a
                   href={`${import.meta.env.BASE_URL}inventario-terminales/cubics/create`}
-                  class="btn btn-secondary font-semibold shadow-sm shrink-0 gap-2"
+                  class="btn btn-secondary shrink-0 gap-2 font-semibold shadow-sm"
                   aria-label="Registrar nueva cubic"
                 >
                   <Icon name="boxicons:plus" class="size-4" />
@@ -409,14 +409,14 @@ const inventoryTabs = [
       <div
         id="header-right-mediterranea"
         class:list={[
-          "flex-wrap items-center gap-3 w-full transition-opacity duration-300",
+          "w-full flex-wrap items-center gap-3 transition-opacity duration-300",
           activeTab === "mediterranea" ? "flex" : "hidden",
         ]}
       >
         <div class="form-control grow">
           <select
             id="filter-medi-type"
-            class="select select-bordered w-full font-medium text-base-content/80"
+            class="select select-bordered text-base-content/80 w-full font-medium"
             aria-label="Filtrar por tipo de Mediterránea"
           >
             <option value="all">Tipos (Todos)</option>
@@ -454,7 +454,7 @@ const inventoryTabs = [
         </div>
         <button
           id="btn-clear-filters-medi"
-          class="btn btn-outline btn-error font-semibold gap-2"
+          class="btn btn-outline btn-error gap-2 font-semibold"
           type="button"
           aria-label="Limpiar todos los filtros de Mediterránea"
           title="Limpiar todos los filtros"
@@ -474,7 +474,7 @@ const inventoryTabs = [
           activeTab !== "terminales" && "hidden",
         ]}
       >
-        <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full">
+        <div class="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
           <div class="w-full">
             <SearchBar
               id="terminal-search"
@@ -490,13 +490,15 @@ const inventoryTabs = [
               >{totalTerminals} resultados</span
             >
           </div>
-          {canExport && (
-            <ExportCsvButton
-              id="export-csv-terminales-btn"
-              href={import.meta.env.BASE_URL + "api/export/terminals"}
-              ariaLabel="Exportar terminales a CSV"
-            />
-          )}
+          {
+            canExport && (
+              <ExportCsvButton
+                id="export-csv-terminales-btn"
+                href={import.meta.env.BASE_URL + "api/export/terminals"}
+                ariaLabel="Exportar terminales a CSV"
+              />
+            )
+          }
         </div>
       </div>
 
@@ -520,7 +522,7 @@ const inventoryTabs = [
           activeTab !== "mediterranea" && "hidden",
         ]}
       >
-        <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full">
+        <div class="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
           <div class="w-full">
             <SearchBar
               id="medi-search"
@@ -534,13 +536,17 @@ const inventoryTabs = [
             <Icon name="boxicons:eye-filled" size={16} />
             <span id="total-count-badge-mediterranea">0 resultados</span>
           </div>
-          {canExport && (
-            <ExportCsvButton
-              id="export-csv-medi-btn"
-              href={getCleanBase() + "api/export/terminals?isMediterranea=true"}
-              ariaLabel="Exportar Mediterránea a CSV"
-            />
-          )}
+          {
+            canExport && (
+              <ExportCsvButton
+                id="export-csv-medi-btn"
+                href={
+                  getCleanBase() + "api/export/terminals?isMediterranea=true"
+                }
+                ariaLabel="Exportar Mediterránea a CSV"
+              />
+            )
+          }
         </div>
       </div>
     </div>
@@ -552,15 +558,15 @@ const inventoryTabs = [
   >
     {
       terminals.length === 0 ? (
-        <div class="card border border-error/20 bg-error/5 text-error-content max-w-2xl mx-auto my-8 shadow-sm">
-          <div class="card-body items-center text-center p-6 sm:p-8">
-            <span class="inline-flex size-14 items-center justify-center rounded-full bg-error/10 text-error mb-2 border border-error/20">
+        <div class="card border-error/20 bg-error/5 text-error-content mx-auto my-8 max-w-2xl border shadow-sm">
+          <div class="card-body items-center p-6 text-center sm:p-8">
+            <span class="bg-error/10 text-error border-error/20 mb-2 inline-flex size-14 items-center justify-center rounded-full border">
               <Icon name="boxicons:x-circle-filled-filled" class="size-8" />
             </span>
-            <h3 class="text-lg font-bold text-base-content">
+            <h3 class="text-base-content text-lg font-bold">
               Sin datos de terminales
             </h3>
-            <p class="text-sm text-base-content/70 max-w-md mt-1">
+            <p class="text-base-content/70 mt-1 max-w-md text-sm">
               El servicio no pudo obtener datos de las terminales. Por favor,
             </p>
           </div>
@@ -614,7 +620,7 @@ const inventoryTabs = [
             <div
               id="scroll-sentinel-terminales"
               class:list={[
-                "py-8 text-center flex justify-center",
+                "flex justify-center py-8 text-center",
                 !hasMore && "hidden",
               ]}
               data-has-more={hasMore ? "true" : "false"}
@@ -690,12 +696,12 @@ const inventoryTabs = [
                 data-sort-ip={machine.ip ?? ""}
                 class:list={[
                   cubicRowGridClass,
-                  "border-b border-base-300 px-4 py-4 transition-colors hover:bg-base-300/50 last:border-b-0",
+                  "border-base-300 hover:bg-base-300/50 border-b px-4 py-4 transition-colors last:border-b-0",
                 ]}
               >
                 <div class={hostSpan + " min-w-0"}>
                   <div class="flex items-center gap-3">
-                    <span class="inline-flex size-8 shrink-0 self-center items-center justify-center rounded-lg border-sky-500/30 bg-sky-500/15 text-sky-500 dark:text-sky-400 border">
+                    <span class="inline-flex size-8 shrink-0 items-center justify-center self-center rounded-lg border border-sky-500/30 bg-sky-500/15 text-sky-500 dark:text-sky-400">
                       <Icon name="boxicons:desktop-filled" size={16} />
                     </span>
                     <div class="min-w-0 flex-1">
@@ -748,7 +754,7 @@ const inventoryTabs = [
                           ]}
                         />
                       </div>
-                      <span class="text-sm text-base-content/80">
+                      <span class="text-base-content/80 text-sm">
                         {statusCopy[machine.status as CubicStatus]}
                       </span>
                     </div>
@@ -783,7 +789,7 @@ const inventoryTabs = [
                           tabindex="0"
                           aria-label="Usuario asignado: Sin asignar"
                         >
-                          <div class="w-9 rounded-full bg-base-200 text-base-content/70">
+                          <div class="bg-base-200 text-base-content/70 w-9 rounded-full">
                             <span class="text-xs font-semibold select-none">
                               --
                             </span>
@@ -797,7 +803,7 @@ const inventoryTabs = [
                   <div
                     class={
                       actionsSpan +
-                      " min-w-0 flex items-center justify-end gap-2"
+                      " flex min-w-0 items-center justify-end gap-2"
                     }
                   >
                     <ActionEditButton
@@ -863,10 +869,7 @@ const inventoryTabs = [
 
         <div
           id="scroll-sentinel-mediterranea"
-          class:list={[
-            "py-8 text-center flex justify-center",
-            "hidden",
-          ]}
+          class:list={["flex justify-center py-8 text-center", "hidden"]}
           data-has-more="false"
         >
           <span

@@ -77,9 +77,9 @@ const hasMoreInitial = unassignedCount > limit;
       <div id="users-list" class="flex flex-col">
         {
           unassignedUsers.map((emp) => (
-            <div class="grid grid-cols-[160px_1.5fr_110px_1.5fr_80px] gap-4 border-b border-base-200 hover:bg-base-200/40 px-4 py-3 last:border-b-0 text-sm">
+            <div class="border-base-200 hover:bg-base-200/40 grid grid-cols-[160px_1.5fr_110px_1.5fr_80px] gap-4 border-b px-4 py-3 text-sm last:border-b-0">
               <div class="flex items-center gap-2">
-                <span class="font-mono text-xs font-semibold text-base-content">
+                <span class="text-base-content font-mono text-xs font-semibold">
                   {emp.username}
                 </span>
                 <CopyButton
@@ -92,11 +92,11 @@ const hasMoreInitial = unassignedCount > limit;
                   showTooltip={false}
                 />
               </div>
-              <div class="font-medium text-sm">{emp.fullname}</div>
-              <div class="font-mono text-xs text-base-content/70">
+              <div class="text-sm font-medium">{emp.fullname}</div>
+              <div class="text-base-content/70 font-mono text-xs">
                 {emp.dni}
               </div>
-              <div class="text-xs text-base-content/80">
+              <div class="text-base-content/80 text-xs">
                 {emp.position || "—"}
               </div>
               <div class="place-self-center">

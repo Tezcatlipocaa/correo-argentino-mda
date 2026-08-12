@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const result = await invgateGet<InvgateByStatusResponse>(
-      `incidents.by.helpdesk?helpdesk_id=${helpdeskId}`
+      `incidents.by.helpdesk?helpdesk_id=${helpdeskId}`,
     );
 
     if (!result.ok) {
@@ -20,7 +20,9 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     // incidents.by.helpdesk returns an object with requestIds[] containing IDs of active requests
-    const total = Array.isArray(result.data.requestIds) ? result.data.requestIds.length : 0;
+    const total = Array.isArray(result.data.requestIds)
+      ? result.data.requestIds.length
+      : 0;
 
     return jsonResponse({ total }, result.status, "no-store");
   } catch (error: any) {

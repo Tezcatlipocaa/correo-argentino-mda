@@ -50,33 +50,33 @@ const rowIcons: Record<
   data-sort-location={terminal.branch}
   class:list={[
     terminalRowGridClass,
-    "border-b border-base-300 px-4 py-3 transition-colors hover:bg-base-300/40 last:border-b-0",
+    "border-base-300 hover:bg-base-300/40 border-b px-4 py-3 transition-colors last:border-b-0",
   ]}
 >
   <div class="col-span-2 flex flex-row gap-4">
     <span
       class:list={[
-        "inline-flex size-8 shrink-0 self-center items-center justify-center rounded-lg border text-accent",
+        "text-accent inline-flex size-8 shrink-0 items-center justify-center self-center rounded-lg border",
         getRowColorClass(terminal),
       ]}
     >
       <Icon name="boxicons:desktop-filled" size={16} />
     </span>
-    <div class="flex flex-col w-full gap-1">
+    <div class="flex w-full flex-col gap-1">
       <span
-        class="truncate font-mono text-sm font-medium text-base-content"
+        class="text-base-content truncate font-mono text-sm font-medium"
         data-highlight-target
       >
         {terminal.hostname}
       </span>
       <span
-        class="truncate font-mono text-xs text-base-content/70"
+        class="text-base-content/70 truncate font-mono text-xs"
         data-highlight-target
       >
         {terminal.ip}
       </span>
       <span
-        class="truncate font-mono text-xs text-base-content/50"
+        class="text-base-content/50 truncate font-mono text-xs"
         data-highlight-target
       >
         {terminal.mac}
@@ -88,22 +88,22 @@ const rowIcons: Record<
     <Icon
       name={rowIcons.hardware}
       size={16}
-      class="shrink-0 mt-0.5 text-base-content/60"
+      class="text-base-content/60 mt-0.5 shrink-0"
     />
 
-    <div class="flex flex-col gap-1 w-full">
-      <span class="text-wrap text-sm text-base-content" data-highlight-target>
+    <div class="flex w-full flex-col gap-1">
+      <span class="text-base-content text-sm text-wrap" data-highlight-target>
         {terminal.manufacturer}
       </span>
-      <span class="font-medium text-xs text-base-content" data-highlight-target>
+      <span class="text-base-content text-xs font-medium" data-highlight-target>
         {terminal.model}
       </span>
-      <span class="truncate font-mono text-xs text-base-content/50">
+      <span class="text-base-content/50 truncate font-mono text-xs">
         SN: <span data-highlight-target>{terminal.serial}</span>
       </span>
-      <span class="truncate text-xs text-base-content/70">
+      <span class="text-base-content/70 truncate text-xs">
         RAM:{" "}
-        <span class="font-medium text-base-content" data-highlight-target>
+        <span class="text-base-content font-medium" data-highlight-target>
           {terminal.ram}
         </span>
       </span>
@@ -114,11 +114,11 @@ const rowIcons: Record<
     <Icon
       name={rowIcons.os}
       size={16}
-      class="shrink-0 mt-0.5 text-base-content/60"
+      class="text-base-content/60 mt-0.5 shrink-0"
     />
-    <div class="flex flex-col gap-1 w-full">
+    <div class="flex w-full flex-col gap-1">
       <span
-        class="text-wrap text-sm font-medium text-base-content"
+        class="text-base-content text-sm font-medium text-wrap"
         data-highlight-target
       >
         {terminal.osName}
@@ -135,21 +135,24 @@ const rowIcons: Record<
     <Icon
       name={rowIcons.location}
       size={16}
-      class="shrink-0 mt-0.5 text-base-content/60"
+      class="text-base-content/60 mt-0.5 shrink-0"
     />
     <div class="flex flex-col gap-1">
-      <span class="truncate text-sm text-base-content" data-highlight-target>
+      <span class="text-base-content truncate text-sm" data-highlight-target>
         {terminal.branch}
       </span>
-      <span class="flex flex-row gap-1 items-center w-full">
+      <span class="flex w-full flex-row items-center gap-1">
         <div
           class="badge badge-sm badge-soft badge-neutral max-w-full truncate font-mono text-xs"
           data-highlight-target
         >
           {terminal.nis}
         </div>
-        <span class="truncate text-xs text-base-content/60">•</span>
-        <span class="truncate text-xs text-base-content/60" data-highlight-target>
+        <span class="text-base-content/60 truncate text-xs">•</span>
+        <span
+          class="text-base-content/60 truncate text-xs"
+          data-highlight-target
+        >
           {terminal.province}
         </span>
       </span>
@@ -157,18 +160,18 @@ const rowIcons: Record<
   </div>
 
   <div class="col-span-2 flex flex-row gap-1.5">
-    <div class="flex flex-col text-right w-full font-mono">
-      <span class="truncate text-sm font-medium text-base-content"
+    <div class="flex w-full flex-col text-right font-mono">
+      <span class="text-base-content truncate text-sm font-medium"
         >{terminal.lastContactDate}</span
       >
-      <span class="truncate font-mono text-xs text-base-content/60">
+      <span class="text-base-content/60 truncate font-mono text-xs">
         {terminal.lastContactTime}
       </span>
     </div>
     <Icon
       name={rowIcons.contact}
       size={16}
-      class="shrink-0 mt-0.5 text-base-content/60"
+      class="text-base-content/60 mt-0.5 shrink-0"
     />
   </div>
 </article>

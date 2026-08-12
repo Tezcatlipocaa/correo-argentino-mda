@@ -54,7 +54,7 @@ const helpdesks = allItems
       description="Vincula registros locales de Service Manager a las helpdesks de InvGate."
     />
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       {
         unassignedRecords.map((guide) => {
           let topicsList: string[] = [];
@@ -72,8 +72,8 @@ const helpdesks = allItems
           const selectId = `assign-select-${guide.id}`;
 
           return (
-            <div class="bg-base-100 rounded-lg p-4 border border-base-300 flex flex-col gap-2">
-              <p class="font-semibold text-sm truncate">
+            <div class="bg-base-100 border-base-300 flex flex-col gap-2 rounded-lg border p-4">
+              <p class="truncate text-sm font-semibold">
                 {guide.legacyName || `Registro #${guide.id}`}
               </p>
               {topicsList.length > 0 && (
@@ -82,13 +82,13 @@ const helpdesks = allItems
                     <span class="badge badge-xs badge-outline">{t}</span>
                   ))}
                   {topicsList.length > 3 && (
-                    <span class="text-xs text-base-content/50">
+                    <span class="text-base-content/50 text-xs">
                       +{topicsList.length - 3}
                     </span>
                   )}
                 </div>
               )}
-              <div class="flex items-center gap-2 mt-2">
+              <div class="mt-2 flex items-center gap-2">
                 <select
                   id={selectId}
                   class="select select-sm select-bordered flex-1 text-xs"
@@ -166,7 +166,10 @@ const helpdesks = allItems
             "[data-assign-btn]:not([disabled])",
           );
           if (remaining.length === 0) {
-            setTimeout(() => (location.href = `${cleanBase}mesas-de-ayuda`), 1000);
+            setTimeout(
+              () => (location.href = `${cleanBase}mesas-de-ayuda`),
+              1000,
+            );
           }
         } catch (err: any) {
           (window as any).showToast?.(err.message, "alert-error");

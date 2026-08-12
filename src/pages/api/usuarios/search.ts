@@ -16,12 +16,17 @@ const ACCENT_FOLD: Record<string, string> = {
 
 function buildGlobPattern(word: string): string {
   const normalized = word.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const escaped = normalized.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+  const escaped = normalized
+    .replace(/\*/g, "\\*")
+    .replace(/\?/g, "\\?")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]");
   let pattern = "";
   for (const ch of escaped) {
-    pattern += ACCENT_FOLD[ch] || ACCENT_FOLD[ch.toLowerCase()] || (
-      /^[a-zA-Z]$/.test(ch) ? `[${ch.toLowerCase()}${ch.toUpperCase()}]` : ch
-    );
+    pattern +=
+      ACCENT_FOLD[ch] ||
+      ACCENT_FOLD[ch.toLowerCase()] ||
+      (/^[a-zA-Z]$/.test(ch) ? `[${ch.toLowerCase()}${ch.toUpperCase()}]` : ch);
   }
   return `*${pattern}*`;
 }
@@ -46,7 +51,8 @@ export const GET: APIRoute = async ({ request }) => {
       );
     });
 
-    const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+    const whereClause =
+      conditions.length === 1 ? conditions[0] : and(...conditions);
 
     const results = await db
       .select({
@@ -62,7 +68,10 @@ export const GET: APIRoute = async ({ request }) => {
     const usernames = results
       .map((r) => (r.username?.split("@")[0] ?? "").toLowerCase())
       .filter(Boolean);
-    const officesMap = new Map<string, { code: string; name: string | null }[]>();
+    const officesMap = new Map<
+      string,
+      { code: string; name: string | null }[]
+    >();
     if (usernames.length > 0) {
       const rows = await db
         .select({
@@ -90,9 +99,8 @@ export const GET: APIRoute = async ({ request }) => {
         telefono: e.telefono,
         sucursal: e.sucursal,
         sucursalNombre: e.officeName || null,
-        sucursales: officesMap.get(
-          (e.username?.split("@")[0] ?? "").toLowerCase(),
-        ) ?? [],
+        sucursales:
+          officesMap.get((e.username?.split("@")[0] ?? "").toLowerCase()) ?? [],
         invgateExists: e.invgateExists ?? false,
       })),
       total: results.length,

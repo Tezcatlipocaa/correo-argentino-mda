@@ -14,12 +14,18 @@ const brand = searchParams.get("brand") || "all";
 const ram = searchParams.get("ram") || "all";
 const status = searchParams.get("status") || "all";
 const model = searchParams.get("model") || "all";
-const sortBy = (searchParams.get("sortBy") || undefined) as TerminalSortKey | undefined;
-const sortOrder = (searchParams.get("sortOrder") || undefined) as SortOrder | undefined;
+const sortBy = (searchParams.get("sortBy") || undefined) as
+  TerminalSortKey | undefined;
+const sortOrder = (searchParams.get("sortOrder") || undefined) as
+  SortOrder | undefined;
 const isMediterranea = searchParams.get("isMediterranea") === "true";
 const mediterraneaType = searchParams.get("mediterraneaType") || "all";
 
-const { data: terminals, count, hasMore } = await getTerminals({
+const {
+  data: terminals,
+  count,
+  hasMore,
+} = await getTerminals({
   page,
   limit,
   search,

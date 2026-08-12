@@ -1,6 +1,7 @@
 export type OfficeType = string;
 
-export type OfficeAssetType = "server" | "printer" | "desktop" | "client" | "backup";
+export type OfficeAssetType =
+  "server" | "printer" | "desktop" | "client" | "backup";
 
 export interface OfficeContact {
   name: string;

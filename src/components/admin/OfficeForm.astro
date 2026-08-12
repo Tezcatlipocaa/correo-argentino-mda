@@ -90,7 +90,7 @@ const officeTypes = Object.entries(officeTypeLabelByType).map(
   ([value, label]) => ({
     value,
     label,
-  })
+  }),
 );
 
 const assetTypeOptions = [
@@ -117,93 +117,96 @@ if (office?.type === "SUCURSAL") {
   class="space-y-4"
 >
   {/* ── Top: Datos básicos ── */}
-      <SectionCard class="shadow-md">
-      <h2 class="flex items-center gap-2 text-sm font-semibold text-base-content">
-        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-secondary/10 text-secondary">
-          <Icon name="boxicons:building-filled" size={15} />
-        </span>
-        Datos básicos
-      </h2>
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+      >
+        <Icon name="boxicons:building-filled" size={15} />
+      </span>
+      Datos básicos
+    </h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="space-y-3">
-          <FormField
-            id="input-code"
-            name="code"
-            label="Código"
-            required
-            value={office?.code ?? ""}
-            placeholder="I2659"
-            autocomplete="off"
-            inputClass="input-sm font-mono"
-          />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div class="space-y-3">
+        <FormField
+          id="input-code"
+          name="code"
+          label="Código"
+          required
+          value={office?.code ?? ""}
+          placeholder="I2659"
+          autocomplete="off"
+          inputClass="input-sm font-mono"
+        />
 
-          <SelectField
-            id="select-type"
-            name="type"
-            label="Tipo"
-            required
-            options={officeTypes}
-            value={currentType}
-            selectClass="select-sm"
-          />
+        <SelectField
+          id="select-type"
+          name="type"
+          label="Tipo"
+          required
+          options={officeTypes}
+          value={currentType}
+          selectClass="select-sm"
+        />
 
-          <FormField
-            id="input-zone"
-            name="zone"
-            label="Zona"
-            value={office?.zone ?? ""}
-            placeholder="ej: ZONA SUR"
-            autocomplete="off"
-            inputClass="input-sm"
-          />
-        </div>
+        <FormField
+          id="input-zone"
+          name="zone"
+          label="Zona"
+          value={office?.zone ?? ""}
+          placeholder="ej: ZONA SUR"
+          autocomplete="off"
+          inputClass="input-sm"
+        />
+      </div>
 
-        <div class="space-y-3">
-          <FormField
-            id="input-name"
-            name="name"
-            label="Nombre"
-            required
-            value={office?.name ?? ""}
-            placeholder="ej: Neuquén"
-            autocomplete="off"
-            inputClass="input-sm"
-          />
+      <div class="space-y-3">
+        <FormField
+          id="input-name"
+          name="name"
+          label="Nombre"
+          required
+          value={office?.name ?? ""}
+          placeholder="ej: Neuquén"
+          autocomplete="off"
+          inputClass="input-sm"
+        />
 
-          <FormField
-            id="input-email"
-            type="email"
-            name="email"
-            label="Email"
-            value={office?.email ?? ""}
-            placeholder="oficina@correo.com.ar"
-            inputClass="input-sm"
-          />
+        <FormField
+          id="input-email"
+          type="email"
+          name="email"
+          label="Email"
+          value={office?.email ?? ""}
+          placeholder="oficina@correo.com.ar"
+          inputClass="input-sm"
+        />
 
-          <FormField
-            id="input-county"
-            name="county"
-            label="Partido / Departamento"
-            value={office?.county ?? ""}
-            placeholder="ej: Confluencia"
-            autocomplete="off"
-            inputClass="input-sm"
-          />
-        </div>
+        <FormField
+          id="input-county"
+          name="county"
+          label="Partido / Departamento"
+          value={office?.county ?? ""}
+          placeholder="ej: Confluencia"
+          autocomplete="off"
+          inputClass="input-sm"
+        />
+      </div>
 
-        <div class="space-y-3">
-          <SelectField
-            id="select-provinceCode"
-            name="provinceCode"
-            label="Provincia"
-            required
-            selectClass="select-sm"
-          >
-            <option value="" disabled selected={!office?.provinceCode}>
-              Seleccionar provincia
-            </option>
-            {groupedProvinces.map((group) => (
+      <div class="space-y-3">
+        <SelectField
+          id="select-provinceCode"
+          name="provinceCode"
+          label="Provincia"
+          required
+          selectClass="select-sm"
+        >
+          <option value="" disabled selected={!office?.provinceCode}>
+            Seleccionar provincia
+          </option>
+          {
+            groupedProvinces.map((group) => (
               <optgroup label={group.regionName}>
                 {group.provinces.map((p) => (
                   <option
@@ -214,201 +217,452 @@ if (office?.type === "SUCURSAL") {
                   </option>
                 ))}
               </optgroup>
-            ))}
-          </SelectField>
+            ))
+          }
+        </SelectField>
 
-          <fieldset class="fieldset gap-1">
-            <FormLegend class="normal-case tracking-normal">Dirección *</FormLegend>
-            <div class="relative w-full">
-              <input
-                id="input-address"
-                type="text"
-                name="address"
-                role="combobox"
-                aria-autocomplete="list"
-                required
-                value={office?.address ?? ""}
-                placeholder="ej: SANTA FE 101"
-                autocomplete="off"
-                aria-controls="address-suggestions"
-                aria-expanded="false"
-                class="input input-sm input-bordered w-full"
-              />
-              <ul
-                id="address-suggestions"
-                role="listbox"
-                class="menu bg-base-100 w-full rounded-box absolute top-full z-50 mt-1 hidden max-h-60 overflow-y-auto shadow-lg"
-              ></ul>
-              <div id="address-building-preview" class="mt-2 hidden"></div>
-              <p id="address-autocomplete-error" class="mt-1 hidden text-sm text-error"></p>
-              <p id="address-no-results" class="mt-1 hidden text-sm text-warning" role="status"></p>
-            </div>
-          </fieldset>
-
-          <FormField
-            id="input-locality"
-            name="locality"
-            label="Localidad"
-            value={office?.locality ?? ""}
-            placeholder="ej: Neuquén"
-            autocomplete="off"
-            inputClass="input-sm"
-          />
-        </div>
-
-        <div class="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="col-span-1">
-            <FormField
-              id="input-parentNis"
-              name="parentNis"
-              label="NIS Padre (Dependencia)"
-              value={office?.parentNis ?? ""}
-              placeholder="ej: I2659"
+        <fieldset class="fieldset gap-1">
+          <FormLegend class="tracking-normal normal-case"
+            >Dirección *</FormLegend
+          >
+          <div class="relative w-full">
+            <input
+              id="input-address"
+              type="text"
+              name="address"
+              role="combobox"
+              aria-autocomplete="list"
+              required
+              value={office?.address ?? ""}
+              placeholder="ej: SANTA FE 101"
               autocomplete="off"
-              inputClass="input-sm font-mono"
+              aria-controls="address-suggestions"
+              aria-expanded="false"
+              class="input input-sm input-bordered w-full"
             />
+            <ul
+              id="address-suggestions"
+              role="listbox"
+              class="menu bg-base-100 rounded-box absolute top-full z-50 mt-1 hidden max-h-60 w-full overflow-y-auto shadow-lg"
+            >
+            </ul>
+            <div id="address-building-preview" class="mt-2 hidden"></div>
+            <p
+              id="address-autocomplete-error"
+              class="text-error mt-1 hidden text-sm"
+            >
+            </p>
+            <p
+              id="address-no-results"
+              class="text-warning mt-1 hidden text-sm"
+              role="status"
+            >
+            </p>
           </div>
-          
-          <div class="col-span-2 flex flex-wrap items-center gap-4 mt-6 md:mt-0 md:justify-end">
-            <label class="cursor-pointer label gap-2 tooltip" data-tip="Habilita la red interna">
-              <span class="label-text font-medium">En Red</span>
-              <input type="checkbox" name="enRed" class="toggle toggle-primary toggle-sm" checked={office?.enRed || false} />
-            </label>
-            <label class="cursor-pointer label gap-2 tooltip" data-tip="Habilita la admisión de Paq.AR">
-              <span class="label-text font-medium">Paq.AR (Adm)</span>
-              <input type="checkbox" name="paqarAdmision" class="toggle toggle-primary toggle-sm" checked={office?.paqarAdmision || false} />
-            </label>
-            <label class="cursor-pointer label gap-2 tooltip" data-tip="Habilita la entrega de Paq.AR">
-              <span class="label-text font-medium">Paq.AR (Ent)</span>
-              <input type="checkbox" name="paqarEntrega" class="toggle toggle-primary toggle-sm" checked={office?.paqarEntrega || false} />
-            </label>
-            <label class="cursor-pointer label gap-2 tooltip" data-tip="Nómina habilitada">
-              <span class="label-text font-medium">Payroll</span>
-              <input type="checkbox" name="payroll" class="toggle toggle-primary toggle-sm" checked={office?.payroll || false} />
-            </label>
-            <label class="cursor-pointer label gap-2 tooltip" data-tip="Indica si la oficina está activa y operativa">
-              <span class="label-text font-medium">Activa</span>
-              <input type="checkbox" name="active" id="toggle-active" class="toggle toggle-success toggle-sm" checked={office ? (office.active !== false) : true} />
-            </label>
-            <label class="cursor-pointer label gap-2 tooltip" data-tip="Exento de impuestos">
-              <span class="label-text font-medium">Tax Exempt</span>
-              <input type="checkbox" name="taxExempt" class="toggle toggle-primary toggle-sm" checked={office?.taxExempt || false} />
-            </label>
-          </div>
-        </div>
+        </fieldset>
 
-        <div class="col-span-1 md:col-span-3" id="closed-reason-container" style={office ? (office.active !== false ? "display: none;" : "") : "display: none;"}>
+        <FormField
+          id="input-locality"
+          name="locality"
+          label="Localidad"
+          value={office?.locality ?? ""}
+          placeholder="ej: Neuquén"
+          autocomplete="off"
+          inputClass="input-sm"
+        />
+      </div>
+
+      <div
+        class="col-span-1 grid grid-cols-1 gap-4 md:col-span-3 md:grid-cols-3"
+      >
+        <div class="col-span-1">
           <FormField
-            id="input-closedReason"
-            name="closedReason"
-            label="Motivo de Cierre"
-            value={office?.closedReason ?? ""}
-            placeholder="Ej: Problemas edilicios, cerrada por decisión institucional"
+            id="input-parentNis"
+            name="parentNis"
+            label="NIS Padre (Dependencia)"
+            value={office?.parentNis ?? ""}
+            placeholder="ej: I2659"
             autocomplete="off"
-            inputClass="input-sm"
+            inputClass="input-sm font-mono"
           />
         </div>
 
-        <div class="col-span-1 md:col-span-3">
-          <FormTextarea
-            id="input-notes"
-            name="notes"
-            label="Notas"
-            value={office?.notes ?? ""}
-            placeholder="Observaciones internas"
-            rows={2}
-          />
+        <div
+          class="col-span-2 mt-6 flex flex-wrap items-center gap-4 md:mt-0 md:justify-end"
+        >
+          <label
+            class="label tooltip cursor-pointer gap-2"
+            data-tip="Habilita la red interna"
+          >
+            <span class="label-text font-medium">En Red</span>
+            <input
+              type="checkbox"
+              name="enRed"
+              class="toggle toggle-primary toggle-sm"
+              checked={office?.enRed || false}
+            />
+          </label>
+          <label
+            class="label tooltip cursor-pointer gap-2"
+            data-tip="Habilita la admisión de Paq.AR"
+          >
+            <span class="label-text font-medium">Paq.AR (Adm)</span>
+            <input
+              type="checkbox"
+              name="paqarAdmision"
+              class="toggle toggle-primary toggle-sm"
+              checked={office?.paqarAdmision || false}
+            />
+          </label>
+          <label
+            class="label tooltip cursor-pointer gap-2"
+            data-tip="Habilita la entrega de Paq.AR"
+          >
+            <span class="label-text font-medium">Paq.AR (Ent)</span>
+            <input
+              type="checkbox"
+              name="paqarEntrega"
+              class="toggle toggle-primary toggle-sm"
+              checked={office?.paqarEntrega || false}
+            />
+          </label>
+          <label
+            class="label tooltip cursor-pointer gap-2"
+            data-tip="Nómina habilitada"
+          >
+            <span class="label-text font-medium">Payroll</span>
+            <input
+              type="checkbox"
+              name="payroll"
+              class="toggle toggle-primary toggle-sm"
+              checked={office?.payroll || false}
+            />
+          </label>
+          <label
+            class="label tooltip cursor-pointer gap-2"
+            data-tip="Indica si la oficina está activa y operativa"
+          >
+            <span class="label-text font-medium">Activa</span>
+            <input
+              type="checkbox"
+              name="active"
+              id="toggle-active"
+              class="toggle toggle-success toggle-sm"
+              checked={office ? office.active !== false : true}
+            />
+          </label>
+          <label
+            class="label tooltip cursor-pointer gap-2"
+            data-tip="Exento de impuestos"
+          >
+            <span class="label-text font-medium">Tax Exempt</span>
+            <input
+              type="checkbox"
+              name="taxExempt"
+              class="toggle toggle-primary toggle-sm"
+              checked={office?.taxExempt || false}
+            />
+          </label>
         </div>
       </div>
-      </SectionCard>
+
+      <div
+        class="col-span-1 md:col-span-3"
+        id="closed-reason-container"
+        style={office
+          ? office.active !== false
+            ? "display: none;"
+            : ""
+          : "display: none;"}
+      >
+        <FormField
+          id="input-closedReason"
+          name="closedReason"
+          label="Motivo de Cierre"
+          value={office?.closedReason ?? ""}
+          placeholder="Ej: Problemas edilicios, cerrada por decisión institucional"
+          autocomplete="off"
+          inputClass="input-sm"
+        />
+      </div>
+
+      <div class="col-span-1 md:col-span-3">
+        <FormTextarea
+          id="input-notes"
+          name="notes"
+          label="Notas"
+          value={office?.notes ?? ""}
+          placeholder="Observaciones internas"
+          rows={2}
+        />
+      </div>
+    </div>
+  </SectionCard>
 
   {/* ── Clasificación y Organización ── */}
-      <SectionCard class="shadow-md">
-      <h2 class="flex items-center gap-2 text-sm font-semibold text-base-content">
-        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Icon name="boxicons:sitemap" size={15} />
-        </span>
-        Clasificación y Organización
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <FormField id="input-division" name="division" label="División" value={office?.division ?? ""} placeholder="ej: SUR" inputClass="input-sm" />
-        <FormField id="input-company" name="company" label="Compañía" value={office?.company ?? ""} placeholder="ej: COASA" inputClass="input-sm" />
-        <FormField id="input-warehouse" name="warehouse" label="Almacén" value={office?.warehouse ?? ""} placeholder="ej: ALM-01" inputClass="input-sm" />
-        <FormField id="input-profitCenter" name="profitCenter" label="Centro de Beneficio" value={office?.profitCenter ?? ""} placeholder="ej: CB-123" inputClass="input-sm" />
-      </div>
-      </SectionCard>
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-primary/10 text-primary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+      >
+        <Icon name="boxicons:sitemap" size={15} />
+      </span>
+      Clasificación y Organización
+    </h2>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <FormField
+        id="input-division"
+        name="division"
+        label="División"
+        value={office?.division ?? ""}
+        placeholder="ej: SUR"
+        inputClass="input-sm"
+      />
+      <FormField
+        id="input-company"
+        name="company"
+        label="Compañía"
+        value={office?.company ?? ""}
+        placeholder="ej: COASA"
+        inputClass="input-sm"
+      />
+      <FormField
+        id="input-warehouse"
+        name="warehouse"
+        label="Almacén"
+        value={office?.warehouse ?? ""}
+        placeholder="ej: ALM-01"
+        inputClass="input-sm"
+      />
+      <FormField
+        id="input-profitCenter"
+        name="profitCenter"
+        label="Centro de Beneficio"
+        value={office?.profitCenter ?? ""}
+        placeholder="ej: CB-123"
+        inputClass="input-sm"
+      />
+    </div>
+  </SectionCard>
 
   {/* ── Centros de Costo ── */}
-      <SectionCard class="shadow-md">
-      <h2 class="flex items-center gap-2 text-sm font-semibold text-base-content">
-        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
-          <Icon name="boxicons:wallet" size={15} />
-        </span>
-        Centros de Costo
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <FormField id="input-cctAdminOffice" name="cctAdminOffice" label="Oficina Admin." value={office?.cctAdminOffice ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccCommercial" name="ccCommercial" label="Comercial" value={office?.ccCommercial ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccCommercialCorp" name="ccCommercialCorp" label="Comercial Corp." value={office?.ccCommercialCorp ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccElectoral" name="ccElectoral" label="Electoral" value={office?.ccElectoral ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccNetworkMgmt" name="ccNetworkMgmt" label="Gestión de Red" value={office?.ccNetworkMgmt ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccOperations" name="ccOperations" label="Operaciones" value={office?.ccOperations ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccOperational" name="ccOperational" label="Operativo" value={office?.ccOperational ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccHr" name="ccHr" label="RRHH" value={office?.ccHr ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccSecurity" name="ccSecurity" label="Seguridad" value={office?.ccSecurity ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccAdmin" name="ccAdmin" label="Admin" value={office?.ccAdmin ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccAdmission" name="ccAdmission" label="Admisión" value={office?.ccAdmission ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccCtp" name="ccCtp" label="CTP" value={office?.ccCtp ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccCtt" name="ccCtt" label="CTT" value={office?.ccCtt ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccTransport" name="ccTransport" label="Transporte" value={office?.ccTransport ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-ccLogistics" name="ccLogistics" label="Logística" value={office?.ccLogistics ?? ""} inputClass="input-sm font-mono" />
-      </div>
-      </SectionCard>
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-accent/10 text-accent inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+      >
+        <Icon name="boxicons:wallet" size={15} />
+      </span>
+      Centros de Costo
+    </h2>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-5">
+      <FormField
+        id="input-cctAdminOffice"
+        name="cctAdminOffice"
+        label="Oficina Admin."
+        value={office?.cctAdminOffice ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccCommercial"
+        name="ccCommercial"
+        label="Comercial"
+        value={office?.ccCommercial ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccCommercialCorp"
+        name="ccCommercialCorp"
+        label="Comercial Corp."
+        value={office?.ccCommercialCorp ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccElectoral"
+        name="ccElectoral"
+        label="Electoral"
+        value={office?.ccElectoral ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccNetworkMgmt"
+        name="ccNetworkMgmt"
+        label="Gestión de Red"
+        value={office?.ccNetworkMgmt ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccOperations"
+        name="ccOperations"
+        label="Operaciones"
+        value={office?.ccOperations ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccOperational"
+        name="ccOperational"
+        label="Operativo"
+        value={office?.ccOperational ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccHr"
+        name="ccHr"
+        label="RRHH"
+        value={office?.ccHr ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccSecurity"
+        name="ccSecurity"
+        label="Seguridad"
+        value={office?.ccSecurity ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccAdmin"
+        name="ccAdmin"
+        label="Admin"
+        value={office?.ccAdmin ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccAdmission"
+        name="ccAdmission"
+        label="Admisión"
+        value={office?.ccAdmission ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccCtp"
+        name="ccCtp"
+        label="CTP"
+        value={office?.ccCtp ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccCtt"
+        name="ccCtt"
+        label="CTT"
+        value={office?.ccCtt ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccTransport"
+        name="ccTransport"
+        label="Transporte"
+        value={office?.ccTransport ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-ccLogistics"
+        name="ccLogistics"
+        label="Logística"
+        value={office?.ccLogistics ?? ""}
+        inputClass="input-sm font-mono"
+      />
+    </div>
+  </SectionCard>
 
   {/* ── Puntos de Venta (POS) ── */}
-      <SectionCard class="shadow-md">
-      <h2 class="flex items-center gap-2 text-sm font-semibold text-base-content">
-        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-success/10 text-success">
-          <Icon name="boxicons:store-alt" size={15} />
-        </span>
-        Puntos de Venta (POS)
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <FormField id="input-posAutoAuto" name="posAutoAuto" label="Auto-Auto" value={office?.posAutoAuto ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posCurrentAccount" name="posCurrentAccount" label="Cta. Corriente" value={office?.posCurrentAccount ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posManual" name="posManual" label="Manual" value={office?.posManual ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posManualAuto" name="posManualAuto" label="Manual-Auto" value={office?.posManualAuto ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posPlantaMg" name="posPlantaMg" label="Planta MG" value={office?.posPlantaMg ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posVirtual" name="posVirtual" label="Virtual" value={office?.posVirtual ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posAutoAuto2" name="posAutoAuto2" label="Auto-Auto 2" value={office?.posAutoAuto2 ?? ""} inputClass="input-sm font-mono" />
-        <FormField id="input-posSapTerminal" name="posSapTerminal" label="Terminal SAP" value={office?.posSapTerminal ?? ""} inputClass="input-sm font-mono" />
-      </div>
-      </SectionCard>
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-success/10 text-success inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+      >
+        <Icon name="boxicons:store-alt" size={15} />
+      </span>
+      Puntos de Venta (POS)
+    </h2>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <FormField
+        id="input-posAutoAuto"
+        name="posAutoAuto"
+        label="Auto-Auto"
+        value={office?.posAutoAuto ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posCurrentAccount"
+        name="posCurrentAccount"
+        label="Cta. Corriente"
+        value={office?.posCurrentAccount ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posManual"
+        name="posManual"
+        label="Manual"
+        value={office?.posManual ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posManualAuto"
+        name="posManualAuto"
+        label="Manual-Auto"
+        value={office?.posManualAuto ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posPlantaMg"
+        name="posPlantaMg"
+        label="Planta MG"
+        value={office?.posPlantaMg ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posVirtual"
+        name="posVirtual"
+        label="Virtual"
+        value={office?.posVirtual ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posAutoAuto2"
+        name="posAutoAuto2"
+        label="Auto-Auto 2"
+        value={office?.posAutoAuto2 ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="input-posSapTerminal"
+        name="posSapTerminal"
+        label="Terminal SAP"
+        value={office?.posSapTerminal ?? ""}
+        inputClass="input-sm font-mono"
+      />
+    </div>
+  </SectionCard>
 
   {/* ── Bottom: Infra + Contactos ── */}
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
     {/* ── Infraestructura ── */}
-      <SectionCard id="section-assets" class="shadow-md">
-        <div class="flex items-center justify-between">
-          <h2 class="flex items-center gap-2 text-sm font-semibold text-base-content">
-            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-info/10 text-info">
-              <Icon name="boxicons:server-filled" size={15} />
-            </span>
-            Infraestructura tecnológico
-          </h2>
-          <button
-            type="button"
-            id="btn-add-asset"
-            class="btn btn-ghost btn-xs text-info gap-1"
+    <SectionCard id="section-assets" class="shadow-md">
+      <div class="flex items-center justify-between">
+        <h2
+          class="text-base-content flex items-center gap-2 text-sm font-semibold"
+        >
+          <span
+            class="bg-info/10 text-info inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
           >
-            <Icon name="boxicons:plus" size={14} />
-            Agregar
-          </button>
-        </div>
+            <Icon name="boxicons:server-filled" size={15} />
+          </span>
+          Infraestructura tecnológico
+        </h2>
+        <button
+          type="button"
+          id="btn-add-asset"
+          class="btn btn-ghost btn-xs text-info gap-1"
+        >
+          <Icon name="boxicons:plus" size={14} />
+          Agregar
+        </button>
+      </div>
 
-        <div id="assets-container" class="space-y-3">
-          {(office?.assets ?? []).map((a) => (
-            <div class="asset-row relative grid grid-cols-1 md:grid-cols-3 gap-3 rounded-lg bg-base-200/50 p-4 border border-base-300 pr-10">
+      <div id="assets-container" class="space-y-3">
+        {
+          (office?.assets ?? []).map((a) => (
+            <div class="asset-row bg-base-200/50 border-base-300 relative grid grid-cols-1 gap-3 rounded-lg border p-4 pr-10 md:grid-cols-3">
               <SelectField
                 id={`asset-type-${a.id}`}
                 name="asset_type"
@@ -442,37 +696,45 @@ if (office?.type === "SUCURSAL") {
                 <Icon name="boxicons:trash" size={18} />
               </button>
             </div>
-          ))}
-        </div>
-        {(office?.assets ?? []).length === 0 && (
-          <p class="text-xs text-base-content/40 text-center py-1">
+          ))
+        }
+      </div>
+      {
+        (office?.assets ?? []).length === 0 && (
+          <p class="text-base-content/40 py-1 text-center text-xs">
             Sin equipos registrados.
           </p>
-        )}
-      </SectionCard>
+        )
+      }
+    </SectionCard>
 
     {/* ── Personal a cargo ── */}
-      <SectionCard id="section-contacts" class="shadow-md flex-1">
-        <div class="flex items-center justify-between">
-          <h2 class="flex items-center gap-2 text-sm font-semibold text-base-content">
-            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-warning/10 text-warning">
-              <Icon name="boxicons:group-filled" size={15} />
-            </span>
-            Contactos
-          </h2>
-          <button
-            type="button"
-            id="btn-add-contact"
-            class="btn btn-ghost btn-xs text-warning gap-1"
+    <SectionCard id="section-contacts" class="flex-1 shadow-md">
+      <div class="flex items-center justify-between">
+        <h2
+          class="text-base-content flex items-center gap-2 text-sm font-semibold"
+        >
+          <span
+            class="bg-warning/10 text-warning inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
           >
-            <Icon name="boxicons:plus" size={14} />
-            Agregar
-          </button>
-        </div>
+            <Icon name="boxicons:group-filled" size={15} />
+          </span>
+          Contactos
+        </h2>
+        <button
+          type="button"
+          id="btn-add-contact"
+          class="btn btn-ghost btn-xs text-warning gap-1"
+        >
+          <Icon name="boxicons:plus" size={14} />
+          Agregar
+        </button>
+      </div>
 
-        <div id="contacts-container" class="space-y-3">
-          {(office?.contacts ?? []).map((oc) => (
-            <div class="contact-row relative rounded-lg bg-base-200/50 p-4 border border-base-300">
+      <div id="contacts-container" class="space-y-3">
+        {
+          (office?.contacts ?? []).map((oc) => (
+            <div class="contact-row bg-base-200/50 border-base-300 relative rounded-lg border p-4">
               <input type="hidden" name="contact_id" value={oc.contact.id} />
               <button
                 type="button"
@@ -481,7 +743,7 @@ if (office?.type === "SUCURSAL") {
               >
                 <Icon name="boxicons:trash" size={18} />
               </button>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pr-6">
+              <div class="grid grid-cols-1 gap-4 pr-6 md:grid-cols-2">
                 <FormField
                   id={`contact-name-${oc.contact.id}`}
                   name="contact_name"
@@ -516,16 +778,19 @@ if (office?.type === "SUCURSAL") {
                 />
               </div>
             </div>
-          ))}
-        </div>
-        {(office?.contacts ?? []).length === 0 && (
-          <p class="text-xs text-base-content/40 text-center py-1">
+          ))
+        }
+      </div>
+      {
+        (office?.contacts ?? []).length === 0 && (
+          <p class="text-base-content/40 py-1 text-center text-xs">
             Sin personal vinculado.
           </p>
-        )}
-      </SectionCard>
+        )
+      }
+    </SectionCard>
   </div>
-  
+
   {/* ── Acciones ── */}
   <div class="flex items-center justify-between gap-3 pt-1">
     <ActionCancelButton
@@ -544,7 +809,9 @@ if (office?.type === "SUCURSAL") {
 
 {/* ── Templates dinámicos ── */}
 <template id="tpl-asset-row">
-  <div class="asset-row relative grid grid-cols-1 md:grid-cols-3 gap-3 rounded-lg bg-base-200/50 p-4 border border-base-300 pr-10">
+  <div
+    class="asset-row bg-base-200/50 border-base-300 relative grid grid-cols-1 gap-3 rounded-lg border p-4 pr-10 md:grid-cols-3"
+  >
     <SelectField
       id="tpl-asset-type"
       name="asset_type"
@@ -553,7 +820,7 @@ if (office?.type === "SUCURSAL") {
         { value: "server", label: "Servidor" },
         { value: "client", label: "Cliente" },
         { value: "printer", label: "Impresora" },
-        { value: "backup", label: "Backup" }
+        { value: "backup", label: "Backup" },
       ]}
       selectClass="select-sm"
     />
@@ -583,7 +850,9 @@ if (office?.type === "SUCURSAL") {
 </template>
 
 <template id="tpl-contact-row">
-  <div class="contact-row relative rounded-lg bg-base-200/50 p-4 border border-base-300">
+  <div
+    class="contact-row bg-base-200/50 border-base-300 relative rounded-lg border p-4"
+  >
     <input type="hidden" name="contact_id" value="" />
     <button
       type="button"
@@ -592,7 +861,7 @@ if (office?.type === "SUCURSAL") {
     >
       <Icon name="boxicons:trash" size={18} />
     </button>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pr-6">
+    <div class="grid grid-cols-1 gap-4 pr-6 md:grid-cols-2">
       <FormField
         id="tpl-contact-name"
         name="contact_name"
@@ -641,10 +910,10 @@ if (office?.type === "SUCURSAL") {
     }
 
     const tplAsset = document.getElementById(
-      "tpl-asset-row"
+      "tpl-asset-row",
     ) as HTMLTemplateElement;
     const tplContact = document.getElementById(
-      "tpl-contact-row"
+      "tpl-contact-row",
     ) as HTMLTemplateElement;
     if (!tplAsset || !tplContact) {
       console.log("initDynamicRows: template elements not found, skipping");
@@ -684,10 +953,18 @@ if (office?.type === "SUCURSAL") {
 
   function initAddressAutocomplete() {
     const input = document.querySelector<HTMLInputElement>("#input-address");
-    const list = document.querySelector<HTMLUListElement>("#address-suggestions");
-    const preview = document.querySelector<HTMLDivElement>("#address-building-preview");
-    const error = document.querySelector<HTMLParagraphElement>("#address-autocomplete-error");
-    const noResults = document.querySelector<HTMLParagraphElement>("#address-no-results");
+    const list = document.querySelector<HTMLUListElement>(
+      "#address-suggestions",
+    );
+    const preview = document.querySelector<HTMLDivElement>(
+      "#address-building-preview",
+    );
+    const error = document.querySelector<HTMLParagraphElement>(
+      "#address-autocomplete-error",
+    );
+    const noResults = document.querySelector<HTMLParagraphElement>(
+      "#address-no-results",
+    );
     const form = document.querySelector<HTMLFormElement>("#office-form");
     if (!input || !list || !preview || !error || !noResults || !form) return;
     if (input.dataset.autocompleteBound === "true") return;
@@ -711,14 +988,17 @@ if (office?.type === "SUCURSAL") {
     };
 
     const showNoResults = () => {
-      const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
+      const provinceSelect = form.querySelector<HTMLSelectElement>(
+        "[name=provinceCode]",
+      );
       noResults.textContent = provinceSelect?.value
         ? "No se encontraron oficinas con esta dirección en la región/provincia seleccionada. Si es la correcta, podés agregarla; o cambiá región/provincia."
         : "No se encontraron oficinas con esta dirección. Si es la correcta, podés agregarla.";
       noResults.classList.remove("hidden");
     };
 
-    const getOptions = () => list.querySelectorAll<HTMLButtonElement>('button[role="option"]');
+    const getOptions = () =>
+      list.querySelectorAll<HTMLButtonElement>('button[role="option"]');
 
     const clearActiveOption = () => {
       activeIndex = -1;
@@ -730,7 +1010,9 @@ if (office?.type === "SUCURSAL") {
       const options = getOptions();
       if (options.length === 0) return;
       activeIndex = (index + options.length) % options.length;
-      options.forEach((opt, i) => opt.setAttribute("aria-selected", String(i === activeIndex)));
+      options.forEach((opt, i) =>
+        opt.setAttribute("aria-selected", String(i === activeIndex)),
+      );
       input.setAttribute("aria-activedescendant", options[activeIndex].id);
       options[activeIndex].scrollIntoView({ block: "nearest" });
     };
@@ -768,7 +1050,11 @@ if (office?.type === "SUCURSAL") {
         const codeSpan = document.createElement("span");
         codeSpan.className = "font-mono";
         codeSpan.textContent = office.code;
-        li.append(codeSpan, document.createTextNode(" · "), document.createTextNode(office.name));
+        li.append(
+          codeSpan,
+          document.createTextNode(" · "),
+          document.createTextNode(office.name),
+        );
         ul.appendChild(li);
       }
 
@@ -799,10 +1085,16 @@ if (office?.type === "SUCURSAL") {
         const params = new URLSearchParams({ q: query });
         const officeId = form.dataset.officeId;
         if (officeId) params.set("excludeId", officeId);
-        const province = form.querySelector<HTMLSelectElement>("[name=provinceCode]")?.value;
+        const province = form.querySelector<HTMLSelectElement>(
+          "[name=provinceCode]",
+        )?.value;
         if (province) params.set("provinceCode", province);
-        const response = await fetch(`${base}api/offices/search-address?${params}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`Address suggestions failed: ${response.status}`);
+        const response = await fetch(
+          `${base}api/offices/search-address?${params}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok)
+          throw new Error(`Address suggestions failed: ${response.status}`);
         const suggestions = await response.json();
         if (suggestions.length === 0) {
           renderSuggestions([]);
@@ -817,7 +1109,8 @@ if (office?.type === "SUCURSAL") {
         list.classList.add("hidden");
         input.setAttribute("aria-expanded", "false");
         clearActiveOption();
-        error.textContent = "No se pudieron cargar sugerencias. Podés ingresar el domicilio manualmente.";
+        error.textContent =
+          "No se pudieron cargar sugerencias. Podés ingresar el domicilio manualmente.";
         error.classList.remove("hidden");
       }
     };
@@ -843,7 +1136,9 @@ if (office?.type === "SUCURSAL") {
         button.addEventListener("click", () => {
           controller?.abort();
           input.value = item.address;
-          const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
+          const provinceSelect = form.querySelector<HTMLSelectElement>(
+            "[name=provinceCode]",
+          );
           if (provinceSelect && provinceSelect.value !== item.provinceCode) {
             provinceSelect.value = item.provinceCode;
           }
@@ -924,7 +1219,9 @@ if (office?.type === "SUCURSAL") {
       }
     });
 
-    const provinceSelect = form.querySelector<HTMLSelectElement>("[name=provinceCode]");
+    const provinceSelect = form.querySelector<HTMLSelectElement>(
+      "[name=provinceCode]",
+    );
     provinceSelect?.addEventListener("change", () => {
       clearPreview();
       error.classList.add("hidden");
@@ -937,21 +1234,34 @@ if (office?.type === "SUCURSAL") {
 
     form.addEventListener("submit", (event) => {
       if (hasBuildingMatches) {
-        const confirmation = form.querySelector<HTMLInputElement>("#address-building-confirmed");
+        const confirmation = form.querySelector<HTMLInputElement>(
+          "#address-building-confirmed",
+        );
         if (!confirmation?.checked) {
           event.preventDefault();
           confirmation?.focus();
-          (window as any).showToast?.("Confirmá si las oficinas comparten sitio.", "alert-warning");
+          (window as any).showToast?.(
+            "Confirmá si las oficinas comparten sitio.",
+            "alert-warning",
+          );
           return;
         }
       }
-      if (!window.confirm("¿Estás seguro de que deseas guardar estas modificaciones?")) {
+      if (
+        !window.confirm(
+          "¿Estás seguro de que deseas guardar estas modificaciones?",
+        )
+      ) {
         event.preventDefault();
       }
     });
 
     document.addEventListener("click", (event) => {
-      if (!(event.target instanceof Node) || input.closest(".relative")?.contains(event.target)) return;
+      if (
+        !(event.target instanceof Node) ||
+        input.closest(".relative")?.contains(event.target)
+      )
+        return;
       list.replaceChildren();
       list.classList.add("hidden");
       input.setAttribute("aria-expanded", "false");
@@ -961,10 +1271,16 @@ if (office?.type === "SUCURSAL") {
 
   function initTypeToggle() {
     console.log("initTypeToggle: starting initialization");
-    const typeSelect = document.getElementById("select-type") as HTMLSelectElement;
-    const assetsSection = document.getElementById("section-assets") as HTMLElement;
-    const contactsSection = document.getElementById("section-contacts") as HTMLElement;
-    
+    const typeSelect = document.getElementById(
+      "select-type",
+    ) as HTMLSelectElement;
+    const assetsSection = document.getElementById(
+      "section-assets",
+    ) as HTMLElement;
+    const contactsSection = document.getElementById(
+      "section-contacts",
+    ) as HTMLElement;
+
     if (!typeSelect || !assetsSection || !contactsSection) {
       console.warn("initTypeToggle: required elements not found");
       return;
@@ -985,27 +1301,31 @@ if (office?.type === "SUCURSAL") {
       typeSelect.dataset.toggleBound = "true";
       typeSelect.addEventListener("change", toggleAssets);
     }
-    
+
     // Initial call
     toggleAssets();
   }
 
   function initTextFormatting() {
-    const textInputs = document.querySelectorAll('#office-form input[type="text"], #office-form textarea') as NodeListOf<HTMLInputElement | HTMLTextAreaElement>;
-    textInputs.forEach(el => {
-      if (el.name !== 'email' && el.dataset.formatBound !== "true") {
+    const textInputs = document.querySelectorAll(
+      '#office-form input[type="text"], #office-form textarea',
+    ) as NodeListOf<HTMLInputElement | HTMLTextAreaElement>;
+    textInputs.forEach((el) => {
+      if (el.name !== "email" && el.dataset.formatBound !== "true") {
         el.dataset.formatBound = "true";
-        el.addEventListener('input', () => {
+        el.addEventListener("input", () => {
           el.value = el.value.toUpperCase();
         });
       }
     });
 
-    const emailInputs = document.querySelectorAll('#office-form input[type="email"]') as NodeListOf<HTMLInputElement>;
-    emailInputs.forEach(el => {
+    const emailInputs = document.querySelectorAll(
+      '#office-form input[type="email"]',
+    ) as NodeListOf<HTMLInputElement>;
+    emailInputs.forEach((el) => {
       if (el.dataset.formatBound !== "true") {
         el.dataset.formatBound = "true";
-        el.addEventListener('input', () => {
+        el.addEventListener("input", () => {
           el.value = el.value.toLowerCase();
         });
       }
@@ -1014,10 +1334,16 @@ if (office?.type === "SUCURSAL") {
 
   function initActiveToggle() {
     console.log("initActiveToggle: starting initialization");
-    const activeToggle = document.getElementById("toggle-active") as HTMLInputElement;
-    const closedReasonContainer = document.getElementById("closed-reason-container") as HTMLElement;
+    const activeToggle = document.getElementById(
+      "toggle-active",
+    ) as HTMLInputElement;
+    const closedReasonContainer = document.getElementById(
+      "closed-reason-container",
+    ) as HTMLElement;
     if (!activeToggle || !closedReasonContainer) {
-      console.warn("initActiveToggle: activeToggle or closedReasonContainer not found");
+      console.warn(
+        "initActiveToggle: activeToggle or closedReasonContainer not found",
+      );
       return;
     }
 

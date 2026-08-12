@@ -9,13 +9,16 @@ export async function getUnassignedEmployeesCount(): Promise<number> {
     .where(
       and(
         eq(employees.invgateExists, true),
-        or(isNull(employees.sucursal), eq(employees.sucursal, ""))
-      )
+        or(isNull(employees.sucursal), eq(employees.sucursal, "")),
+      ),
     );
   return result[0]?.count ?? 0;
 }
 
-export async function getUnassignedEmployees(options?: { offset?: number; limit?: number }) {
+export async function getUnassignedEmployees(options?: {
+  offset?: number;
+  limit?: number;
+}) {
   return db
     .select({
       dni: employees.dni,
@@ -33,8 +36,8 @@ export async function getUnassignedEmployees(options?: { offset?: number; limit?
     .where(
       and(
         eq(employees.invgateExists, true),
-        or(isNull(employees.sucursal), eq(employees.sucursal, ""))
-      )
+        or(isNull(employees.sucursal), eq(employees.sucursal, "")),
+      ),
     )
     .limit(options?.limit ?? 30)
     .offset(options?.offset ?? 0);

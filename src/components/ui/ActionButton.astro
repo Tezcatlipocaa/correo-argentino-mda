@@ -49,12 +49,16 @@ const baseClass = `btn ${sizeClass} btn-soft ${color} gap-1.5 font-bold uppercas
   {...attrs}
 >
   {icon && <Icon name={icon} size={13} />}
-  {shortLabel ? (
-    <>
-      <span class="inline xl:hidden">{shortLabel}</span>
-      <span id={labelId} class="hidden xl:inline">{label}</span>
-    </>
-  ) : (
-    label && <span id={labelId}>{label}</span>
-  )}
+  {
+    shortLabel ? (
+      <>
+        <span class="inline xl:hidden">{shortLabel}</span>
+        <span id={labelId} class="hidden xl:inline">
+          {label}
+        </span>
+      </>
+    ) : (
+      label && <span id={labelId}>{label}</span>
+    )
+  }
 </button>

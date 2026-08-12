@@ -6,13 +6,13 @@ Poner el Portal MDA en producción sobre Windows Server con XAMPP (Apache) + PM2
 
 ## Requisitos en el servidor
 
-| Software | Versión | Verificar con |
-|---|---|---|
-| Node.js | >= 22.12.0 | `node --version` |
-| npm | (incluido con Node) | `npm --version` |
-| Git | cualquiera | `git --version` |
-| PM2 | última | `pm2 --version` |
-| XAMPP | 8.x (Apache + PHP) | `httpd -v` |
+| Software | Versión             | Verificar con    |
+| -------- | ------------------- | ---------------- |
+| Node.js  | >= 22.12.0          | `node --version` |
+| npm      | (incluido con Node) | `npm --version`  |
+| Git      | cualquiera          | `git --version`  |
+| PM2      | última              | `pm2 --version`  |
+| XAMPP    | 8.x (Apache + PHP)  | `httpd -v`       |
 
 Si falta PM2: `npm install -g pm2`
 
@@ -41,14 +41,14 @@ copy .env.example .env
 
 Completá las 6 variables en `.env`. En producción prestá atención a:
 
-| Variable | Valor de ejemplo en producción |
-|---|---|
-| `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `ENCRYPTION_KEY` | `node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"` |
-| `INVGATE_API_KEY` | La API key real de InvGate |
-| `INVGATE_BASE_URL` | `https://correoargentino.sd.cloud.invgate.net/api/v1/` |
-| `INVGATE_API_USERNAME` | `portalmda` |
-| `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto) |
+| Variable               | Valor de ejemplo en producción                                             |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `SESSION_SECRET`       | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `ENCRYPTION_KEY`       | `node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"` |
+| `INVGATE_API_KEY`      | La API key real de InvGate                                                 |
+| `INVGATE_BASE_URL`     | `https://correoargentino.sd.cloud.invgate.net/api/v1/`                     |
+| `INVGATE_API_USERNAME` | `portalmda`                                                                |
+| `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
 
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
@@ -73,13 +73,13 @@ pm2 save
 
 **Resultado:** Los 5 procesos se inician:
 
-| Proceso | Puerto / Schedule | Rol |
-|---|---|---|
-| `correo-argentino-mda` | 4321 | Servidor Astro SSR |
-| `mda-ping-cubics` | persistente | Ping a terminales |
-| `sync-legacy-inventory` | 05:00, 17:00 | Sincroniza inventario PHP |
-| `sync-users` | 02:00 | Sincroniza empleados desde MidPoint |
-| `sync-office-links` | 03:00 | Sincroniza vínculos oficina-InvGate |
+| Proceso                 | Puerto / Schedule | Rol                                 |
+| ----------------------- | ----------------- | ----------------------------------- |
+| `correo-argentino-mda`  | 4321              | Servidor Astro SSR                  |
+| `mda-ping-cubics`       | persistente       | Ping a terminales                   |
+| `sync-legacy-inventory` | 05:00, 17:00      | Sincroniza inventario PHP           |
+| `sync-users`            | 02:00             | Sincroniza empleados desde MidPoint |
+| `sync-office-links`     | 03:00             | Sincroniza vínculos oficina-InvGate |
 
 Configurá PM2 para que arranque al iniciar Windows:
 
@@ -199,6 +199,7 @@ Podés ejecutarlo manualmente cada vez que haya cambios, o desde un webhook de G
 **Causa:** Astro no está corriendo o no responde en el puerto 4321.
 
 **Solución:**
+
 ```powershell
 pm2 list                    # Verificar si el proceso existe
 pm2 logs correo-argentino-mda --lines 20  # Ver el último error
@@ -224,6 +225,7 @@ pm2 : El término 'pm2' no se reconoce...
 **Causa:** PM2 no está instalado globalmente o no está en el PATH.
 
 **Solución:**
+
 ```powershell
 npm install -g pm2
 ```
@@ -237,6 +239,7 @@ Error: ENOSPC: no space left on device
 **Causa:** Disco lleno o `dist/` corrupto de un build anterior.
 
 **Solución:**
+
 ```powershell
 Remove-Item -Recurse -Force dist
 npm run build
@@ -251,6 +254,7 @@ Error: Cannot find database/mda.db
 **Causa:** El proyecto se clonó sin la base de datos (está en `.gitignore`).
 
 **Solución:**
+
 ```powershell
 npm run db:push
 ```
@@ -261,13 +265,13 @@ Si necesitás los datos de producción, copiá `database/mda.db` desde el servid
 
 ## Comandos útiles de PM2
 
-| Comando | Qué hace |
-|---|---|
-| `pm2 list` | Lista procesos en ejecución |
-| `pm2 logs` | Muestra logs en tiempo real |
-| `pm2 logs correo-argentino-mda` | Logs del proceso principal |
-| `pm2 restart all` | Reinicia todos los procesos |
-| `pm2 stop all` | Detiene todos los procesos |
-| `pm2 save` | Guarda el listado actual para `pm2 resurrect` |
-| `pm2 startup` | Instala script de inicio automático al bootear |
-| `pm2 status` | Estado de cada proceso |
+| Comando                         | Qué hace                                       |
+| ------------------------------- | ---------------------------------------------- |
+| `pm2 list`                      | Lista procesos en ejecución                    |
+| `pm2 logs`                      | Muestra logs en tiempo real                    |
+| `pm2 logs correo-argentino-mda` | Logs del proceso principal                     |
+| `pm2 restart all`               | Reinicia todos los procesos                    |
+| `pm2 stop all`                  | Detiene todos los procesos                     |
+| `pm2 save`                      | Guarda el listado actual para `pm2 resurrect`  |
+| `pm2 startup`                   | Instala script de inicio automático al bootear |
+| `pm2 status`                    | Estado de cada proceso                         |

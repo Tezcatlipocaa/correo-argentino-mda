@@ -129,57 +129,56 @@ const globalFontFaceCss = `
 
 <html lang="es">
   <meta charset="utf-8" />
-  <head>
-    <script is:inline>
-      (() => {
-        const savedTheme = localStorage.getItem("theme");
-        const theme =
-          savedTheme === "light" || savedTheme === "dark"
-            ? savedTheme
-            : "light";
-        document.documentElement.setAttribute("data-theme", theme);
-      })();
-    </script>
-    <style is:global set:html={globalFontFaceCss}></style>
-    <link
-      rel="preload"
-      href={geistLatinWoff2}
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href={geistMonoLatinWoff2}
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
 
-    <link
-      rel="icon"
-      type="image/png"
-      href={`${cleanBase}favicon-96x96.png`}
-      sizes="96x96"
-    />
-    
-    <link rel="icon" type="image/svg+xml" href={`${cleanBase}favicon.svg`} />
-    <link rel="shortcut icon" href={`${cleanBase}favicon.ico`} />
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href={`${cleanBase}apple-touch-icon.png`}
-    />
+  <script is:inline>
+    (() => {
+      const savedTheme = localStorage.getItem("theme");
+      const theme =
+        savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style is:global set:html={globalFontFaceCss}></style>
+  <link
+    rel="preload"
+    href={geistLatinWoff2}
+    as="font"
+    type="font/woff2"
+    crossorigin
+  />
+  <link
+    rel="preload"
+    href={geistMonoLatinWoff2}
+    as="font"
+    type="font/woff2"
+    crossorigin
+  />
 
-    <meta name="apple-mobile-web-app-title" content="MDA" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <link rel="manifest" href={`${cleanBase}site.webmanifest`} />
+  <link
+    rel="icon"
+    type="image/png"
+    href={`${cleanBase}favicon-96x96.png`}
+    sizes="96x96"
+  />
 
-    <title>{inferredTitle}</title>
-  </head>
+  <link rel="icon" type="image/svg+xml" href={`${cleanBase}favicon.svg`} />
+  <link rel="shortcut icon" href={`${cleanBase}favicon.ico`} />
+  <link
+    rel="apple-touch-icon"
+    sizes="180x180"
+    href={`${cleanBase}apple-touch-icon.png`}
+  />
 
-  <body class="min-h-screen max-w-full overflow-x-hidden bg-base-100 text-base-content">
+  <meta name="apple-mobile-web-app-title" content="MDA" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="generator" content={Astro.generator} />
+  <link rel="manifest" href={`${cleanBase}site.webmanifest`} />
+
+  <title>{inferredTitle}</title>
+
+  <body
+    class="bg-base-100 text-base-content min-h-screen max-w-full overflow-x-hidden"
+  >
     <div class="drawer lg:drawer-open h-screen overflow-hidden">
       <input
         id="main-drawer"
@@ -187,12 +186,16 @@ const globalFontFaceCss = `
         class="drawer-toggle"
         aria-label="toggle sidebar"
       />
-      <div class="drawer-content flex h-screen max-w-full flex-col overflow-hidden">
+      <div
+        class="drawer-content flex h-screen max-w-full flex-col overflow-hidden"
+      >
         <!-- Navbar -->
-        <Navbar user={user} normalizedUserRole={normalizedUserRole}/>
+        <Navbar user={user} normalizedUserRole={normalizedUserRole} />
 
         <!-- Main content -->
-        <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 [scrollbar-gutter:stable_both-edges]">
+        <main
+          class="flex-1 overflow-x-hidden overflow-y-auto p-4 [scrollbar-gutter:stable_both-edges] md:p-6"
+        >
           <slot />
         </main>
       </div>

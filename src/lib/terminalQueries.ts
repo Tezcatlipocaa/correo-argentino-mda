@@ -1,6 +1,17 @@
 import { db } from "@db/index";
 import { terminals, offices, provinces, regions } from "@db/schema";
-import { eq, like, or, and, sql, gte, lt, isNull, asc, desc } from "drizzle-orm";
+import {
+  eq,
+  like,
+  or,
+  and,
+  sql,
+  gte,
+  lt,
+  isNull,
+  asc,
+  desc,
+} from "drizzle-orm";
 import { normalizeSearchValue } from "@lib/clientSearch";
 
 import { type OsFamily, toOsFamily } from "@lib/terminalHelpers";
@@ -14,7 +25,10 @@ const terminalSortColumns = {
   hardware: terminals.manufacturer,
   os: terminals.operatingSystem,
   location: terminals.nis,
-} as const satisfies Record<TerminalSortKey, (typeof terminals)[keyof typeof terminals]>;
+} as const satisfies Record<
+  TerminalSortKey,
+  (typeof terminals)[keyof typeof terminals]
+>;
 
 export interface TerminalItem {
   hostname: string;
@@ -50,8 +64,6 @@ const monthLabels = [
   "Nov",
   "Dic",
 ];
-
-
 
 const parseLastContact = (
   lastContact: string,
@@ -120,8 +132,8 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
       filters.push(
         or(
           like(terminals.hostname, "TMEDI%"),
-          like(terminals.hostname, "TVMEDI%")
-        )
+          like(terminals.hostname, "TVMEDI%"),
+        ),
       );
     }
   }
@@ -131,35 +143,54 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
     filters.push(
       or(
         like(terminals.searchableText, `%${normalizedSearch}%`),
-        like(offices.searchableText, `%${normalizedSearch}%`)
-      )
+        like(offices.searchableText, `%${normalizedSearch}%`),
+      ),
     );
   }
 
   if (params.osVariant && params.osVariant !== "all") {
-    filters.push(like(sql`lower(${terminals.operatingSystem})`, `%${params.osVariant.toLowerCase()}%`));
+    filters.push(
+      like(
+        sql`lower(${terminals.operatingSystem})`,
+        `%${params.osVariant.toLowerCase()}%`,
+      ),
+    );
   } else if (params.os && params.os !== "all") {
     switch (params.os) {
       case "win11":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%windows 11%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%windows 11%"),
+        );
         break;
       case "win10":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%windows 10%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%windows 10%"),
+        );
         break;
       case "win7":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%windows 7%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%windows 7%"),
+        );
         break;
       case "winxp":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%windows xp%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%windows xp%"),
+        );
         break;
       case "winserver":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%windows server%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%windows server%"),
+        );
         break;
       case "ubuntu":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+        );
         break;
       case "debian":
-        filters.push(like(sql`lower(${terminals.operatingSystem})`, "%debian%"));
+        filters.push(
+          like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
+        );
         break;
       default:
         filters.push(eq(terminals.operatingSystem, params.os));
@@ -169,12 +200,15 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
   if (params.architecture && params.architecture !== "all") {
     if (params.architecture.includes("64")) {
       filters.push(like(terminals.osArchitecture, "%64%"));
-    } else if (params.architecture.includes("32") || params.architecture.includes("86")) {
+    } else if (
+      params.architecture.includes("32") ||
+      params.architecture.includes("86")
+    ) {
       filters.push(
         or(
           like(terminals.osArchitecture, "%32%"),
-          like(terminals.osArchitecture, "%86%")
-        )
+          like(terminals.osArchitecture, "%86%"),
+        ),
       );
     } else {
       filters.push(eq(terminals.osArchitecture, params.architecture));
@@ -187,11 +221,16 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
         or(
           like(sql`lower(${terminals.manufacturer})`, "%hp%"),
           like(sql`lower(${terminals.manufacturer})`, "%hewlett-packard%"),
-          like(sql`lower(${terminals.manufacturer})`, "%hewlett packard%")
-        )
+          like(sql`lower(${terminals.manufacturer})`, "%hewlett packard%"),
+        ),
       );
     } else {
-      filters.push(like(sql`lower(${terminals.manufacturer})`, `%${params.brand.toLowerCase()}%`));
+      filters.push(
+        like(
+          sql`lower(${terminals.manufacturer})`,
+          `%${params.brand.toLowerCase()}%`,
+        ),
+      );
     }
   }
 
@@ -201,20 +240,15 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
         or(
           like(terminals.ram, "%MB%"),
           like(terminals.ram, "1.%"),
-          like(terminals.ram, "1 %")
-        )
+          like(terminals.ram, "1 %"),
+        ),
       );
     } else if (params.ram === "2gb") {
       filters.push(like(terminals.ram, "2%"));
     } else if (params.ram === "4gb") {
       filters.push(like(terminals.ram, "4%"));
     } else if (params.ram === "8gb") {
-      filters.push(
-        or(
-          like(terminals.ram, "8%"),
-          like(terminals.ram, "7%")
-        )
-      );
+      filters.push(or(like(terminals.ram, "8%"), like(terminals.ram, "7%")));
     } else if (params.ram === ">=16gb") {
       filters.push(
         or(
@@ -222,8 +256,8 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
           like(terminals.ram, "24%"),
           like(terminals.ram, "32%"),
           like(terminals.ram, "64%"),
-          like(terminals.ram, "128%")
-        )
+          like(terminals.ram, "128%"),
+        ),
       );
     }
   }
@@ -242,8 +276,8 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
         or(
           lt(terminals.lastContact, thresholdDate),
           isNull(terminals.lastContact),
-          eq(terminals.lastContact, "")
-        )
+          eq(terminals.lastContact, ""),
+        ),
       );
     }
   }
@@ -273,15 +307,20 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
     queryBuilder = queryBuilder.orderBy(orderFn(sortColumn));
   } else if (params.isMediterranea === true) {
     queryBuilder = queryBuilder.orderBy(
-      asc(sql`SUBSTR(${terminals.hostname}, INSTR(${terminals.hostname}, 'MEDI') + 6)`),
+      asc(
+        sql`SUBSTR(${terminals.hostname}, INSTR(${terminals.hostname}, 'MEDI') + 6)`,
+      ),
       asc(sql`CASE WHEN ${terminals.hostname} LIKE 'TMEDI%' THEN 0 ELSE 1 END`),
-      asc(terminals.hostname)
+      asc(terminals.hostname),
     );
   } else {
     queryBuilder = queryBuilder.orderBy(asc(terminals.hostname));
   }
 
-  const rows = await queryBuilder.limit(limit + 1).offset(offset).all();
+  const rows = await queryBuilder
+    .limit(limit + 1)
+    .offset(offset)
+    .all();
   const hasMore = rows.length > limit;
 
   if (hasMore) {
@@ -292,12 +331,15 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
   const data: TerminalItem[] = rows.map((row) => {
     const t = row.terminal;
     const lastContact = parseLastContact(t.lastContact || "");
-    
+
     let architecture = "--";
     if (t.osArchitecture) {
       if (t.osArchitecture.includes("64")) {
         architecture = "64 bits";
-      } else if (t.osArchitecture.includes("32") || t.osArchitecture.includes("86")) {
+      } else if (
+        t.osArchitecture.includes("32") ||
+        t.osArchitecture.includes("86")
+      ) {
         architecture = "32 bits";
       } else {
         architecture = t.osArchitecture;
@@ -367,7 +409,9 @@ export interface ModelBrandEntry {
   brand: string;
 }
 
-function inferBrandFromManufacturer(manufacturer: string | null): string | null {
+function inferBrandFromManufacturer(
+  manufacturer: string | null,
+): string | null {
   if (!manufacturer) return null;
   const lower = manufacturer.toLowerCase();
   if (lower.includes("dell")) return "dell";

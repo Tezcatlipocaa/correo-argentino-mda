@@ -15,17 +15,23 @@ if (!existsSync(dbPath)) {
 }
 const sqlite = new Database(dbPath);
 const rows = sqlite
-  .prepare("SELECT id, code, address FROM offices WHERE address IS NOT NULL AND trim(address) != ''")
+  .prepare(
+    "SELECT id, code, address FROM offices WHERE address IS NOT NULL AND trim(address) != ''",
+  )
   .all() as OfficeRow[];
 const changes = rows.flatMap((row) => {
   const normalized = normalizeOfficeAddress(row.address);
-  return normalized && normalized !== row.address ? [{ ...row, normalized }] : [];
+  return normalized && normalized !== row.address
+    ? [{ ...row, normalized }]
+    : [];
 });
 
 console.log(`Oficinas revisadas: ${rows.length}`);
 console.log(`Domicilios a normalizar: ${changes.length}`);
 for (const change of changes) {
-  console.log(`${change.code}: ${JSON.stringify(change.address)} => ${JSON.stringify(change.normalized)}`);
+  console.log(
+    `${change.code}: ${JSON.stringify(change.address)} => ${JSON.stringify(change.normalized)}`,
+  );
 }
 
 if (dryRun || changes.length === 0) {
@@ -34,7 +40,9 @@ if (dryRun || changes.length === 0) {
 }
 
 const rl = createInterface({ input, output });
-const answer = await rl.question("Escribí NORMALIZAR para actualizar domicilios: ");
+const answer = await rl.question(
+  "Escribí NORMALIZAR para actualizar domicilios: ",
+);
 rl.close();
 if (answer !== "NORMALIZAR") {
   console.log("Sin cambios.");
