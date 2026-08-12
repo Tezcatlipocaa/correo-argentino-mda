@@ -128,53 +128,57 @@ const globalFontFaceCss = `
 ---
 
 <html lang="es">
-  <meta charset="utf-8" />
+  <head>
+    <meta charset="utf-8" />
 
-  <script is:inline>
-    (() => {
-      const savedTheme = localStorage.getItem("theme");
-      const theme =
-        savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
-      document.documentElement.setAttribute("data-theme", theme);
-    })();
-  </script>
-  <style is:global set:html={globalFontFaceCss}></style>
-  <link
-    rel="preload"
-    href={geistLatinWoff2}
-    as="font"
-    type="font/woff2"
-    crossorigin
-  />
-  <link
-    rel="preload"
-    href={geistMonoLatinWoff2}
-    as="font"
-    type="font/woff2"
-    crossorigin
-  />
+    <script is:inline>
+      (() => {
+        const savedTheme = localStorage.getItem("theme");
+        const theme =
+          savedTheme === "light" || savedTheme === "dark"
+            ? savedTheme
+            : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <style is:global set:html={globalFontFaceCss}></style>
+    <link
+      rel="preload"
+      href={geistLatinWoff2}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href={geistMonoLatinWoff2}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
-  <link
-    rel="icon"
-    type="image/png"
-    href={`${cleanBase}favicon-96x96.png`}
-    sizes="96x96"
-  />
+    <link
+      rel="icon"
+      type="image/png"
+      href={`${cleanBase}favicon-96x96.png`}
+      sizes="96x96"
+    />
 
-  <link rel="icon" type="image/svg+xml" href={`${cleanBase}favicon.svg`} />
-  <link rel="shortcut icon" href={`${cleanBase}favicon.ico`} />
-  <link
-    rel="apple-touch-icon"
-    sizes="180x180"
-    href={`${cleanBase}apple-touch-icon.png`}
-  />
+    <link rel="icon" type="image/svg+xml" href={`${cleanBase}favicon.svg`} />
+    <link rel="shortcut icon" href={`${cleanBase}favicon.ico`} />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href={`${cleanBase}apple-touch-icon.png`}
+    />
 
-  <meta name="apple-mobile-web-app-title" content="MDA" />
-  <meta name="viewport" content="width=device-width" />
-  <meta name="generator" content={Astro.generator} />
-  <link rel="manifest" href={`${cleanBase}site.webmanifest`} />
+    <meta name="apple-mobile-web-app-title" content="MDA" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="manifest" href={`${cleanBase}site.webmanifest`} />
 
-  <title>{inferredTitle}</title>
+    <title>{inferredTitle}</title>
+  </head>
 
   <body
     class="bg-base-100 text-base-content min-h-screen max-w-full overflow-x-hidden"

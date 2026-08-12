@@ -1,6 +1,8 @@
 ---
 import { Icon } from "astro-icon/components";
 import { resolveUrl } from "@/lib/url";
+import { getResolvedPathname } from "@/lib/navigation";
+import { getBaseNoSlash } from "@/lib/baseUrl";
 
 const roleAvatarClasses: Record<string, string> = {
   admin: "bg-error text-error-content",
@@ -28,6 +30,9 @@ const avatarClass =
   roleAvatarClasses[normalizedUserRole] ?? roleAvatarClasses.agent;
 const roleLabel = roleLabelMap[normalizedUserRole] ?? "Agente";
 const userInitials = user.username.slice(0, 2).toUpperCase();
+
+const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
+const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 ---
 
 <header class="border-base-300 bg-base-100/95 z-30 min-h-20 border-b">
@@ -111,15 +116,17 @@ const userInitials = user.username.slice(0, 2).toUpperCase();
       <!-- User button -->
       {
         user.id === 0 ? (
-          <div class="aura aura-md text-primary bg-secondary">
-            <a href={resolveUrl("/login")} class="btn btn-sm">
-              <Icon
-                name="boxicons:arrow-out-right-stroke-circle-half-filled"
-                size={20}
-              />
-              Iniciar sesión
-            </a>
-          </div>
+          !isLoginPage && (
+            <div class="login-aura-hover aura aura-md text-primary bg-secondary">
+              <a href={resolveUrl("/login")} class="btn btn-sm">
+                <Icon
+                  name="boxicons:arrow-out-right-stroke-circle-half-filled"
+                  size={20}
+                />
+                Iniciar sesión
+              </a>
+            </div>
+          )
         ) : (
           <div class="dropdown dropdown-end">
             <div
@@ -185,3 +192,25 @@ const userInitials = user.username.slice(0, 2).toUpperCase();
     </div>
   </nav>
 </header>
+
+<style is:global>
+  .login-aura-hover {
+    background-image: none;
+  }
+  .login-aura-hover::before,
+  .login-aura-hover::after {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .login-aura-hover:hover {
+    background-image: conic-gradient(
+      from var(--aura-angle),
+      transparent 225deg,
+      currentColor
+    );
+  }
+  .login-aura-hover:hover::before,
+  .login-aura-hover:hover::after {
+    opacity: 1;
+  }
+</style>
