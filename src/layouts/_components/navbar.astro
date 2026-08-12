@@ -111,17 +111,20 @@ const userInitials = user.username.slice(0, 2).toUpperCase();
             <!-- User button -->
             {
                 user.id === 0 ? (
-                    <a
-                        href={resolveUrl("/login")}
-                        aria-label="Iniciar sesión"
-                        class="btn btn-ghost btn-circle"
-                        title="Iniciar sesión"
-                    >
-                        <Icon
-                            name="boxicons:arrow-out-right-stroke-circle-half-filled"
-                            size={20}
-                        />
-                    </a>
+                    <div class="aura">
+                        <a
+                            href={resolveUrl("/login")}
+                            aria-label="Iniciar sesión"
+                            class="btn btn-sm"
+                            title="Iniciar sesión"
+                        >
+                            <Icon
+                                name="boxicons:arrow-out-right-stroke-circle-half-filled"
+                                size={20}
+                            />
+                            Iniciar sesión
+                        </a>
+                    </div>
                 ) : (
                     <div class="dropdown dropdown-end">
                         <div
