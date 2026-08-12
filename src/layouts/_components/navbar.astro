@@ -117,7 +117,7 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
       {
         user.id === 0 ? (
           !isLoginPage && (
-            <div class="login-aura-hover aura aura-md hover:text-primary hover:bg-secondary">
+            <div class="login-aura-hover aura aura-xs hover:text-primary hover:bg-secondary transition-transform hover:scale-105">
               <a href={resolveUrl("/login")} class="btn btn-sm">
                 <Icon
                   name="boxicons:arrow-out-right-stroke-circle-half-filled"
