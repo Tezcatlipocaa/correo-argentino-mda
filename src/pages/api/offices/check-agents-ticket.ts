@@ -11,9 +11,6 @@ import {
 } from "@lib/telegrafiaTicket";
 import { resolveInvgateLocationId } from "@lib/invgate/resolveOfficeLocation";
 
-// Status de ticket abiertos (excluye Cerrado, Rechazado, Cancelado)
-const OPEN_STATUS_IDS = [1, 2, 3, 4, 5];
-
 export const GET: APIRoute = async ({ request, locals }) => {
   const denied = requireWriteAccess(locals, "usuarios");
   if (denied) return denied;
@@ -39,10 +36,26 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const getFn = USE_QA_INVGATE ? invgateQaGet : invgateGet;
 
-    // Step 1: Get all open ticket IDs (status 1-5), paginating
-    const statusQuery = OPEN_STATUS_IDS.map((s) => `status_ids[]=${s}`).join(
-      "&",
+    // Step 1a: Fast path — status 1 (Nuevo) filtered by location server-side.
+    // InvGate honors location_id ONLY with a single status_id and only for status 1.
+    const newAtLocationRes = await getFn<InvgateByStatusResponse>(
+      `incidents.by.status?status_id=1&location_id=${invgateLocationId}&limit=200`,
     );
+
+    if (!newAtLocationRes.ok || !newAtLocationRes.data?.requestIds) {
+      return jsonResponse({
+        exists: false,
+        reason: "No se pudieron consultar los tickets nuevos.",
+      });
+    }
+
+    const locationNewIds = newAtLocationRes.data.requestIds;
+
+    // Step 1b: Slow path — remaining open statuses (2-5) have no server-side
+    // location filter, so scan the global open set.
+    const openStatusQuery = [2, 3, 4, 5]
+      .map((s) => `status_ids[]=${s}`)
+      .join("&");
     const requestIds: number[] = [];
     let offset = 0;
     let total = 1;
@@ -51,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     while (offset < total && pages < MAX_PAGES) {
       const pageRes = await getFn<InvgateByStatusResponse>(
-        `incidents.by.status?${statusQuery}&limit=200&offset=${offset}`,
+        `incidents.by.status?${openStatusQuery}&limit=200&offset=${offset}`,
       );
 
       if (!pageRes.ok || !pageRes.data?.requestIds) {
@@ -67,32 +80,55 @@ export const GET: APIRoute = async ({ request, locals }) => {
       pages++;
     }
 
-    if (requestIds.length === 0) {
-      return jsonResponse({ exists: false });
-    }
-
-    // Step 2: Batch fetch full objects in chunks to stay under URL-length limits
+    // Step 2: Fetch full objects. Parallelize the batch fetch (the bottleneck:
+    // each incidents?ids[]=500 request takes ~8s). 4 workers cut 67s -> ~17s.
     const CHUNK = 500;
-    const incidents: InvgateIncident[] = [];
+    const CONCURRENCY = 4;
+    const chunks: number[][] = [];
     for (let i = 0; i < requestIds.length; i += CHUNK) {
-      const chunk = requestIds.slice(i, i + CHUNK);
-      const idsQuery = chunk.map((id) => `ids[]=${id}`).join("&");
-      const chunkRes = await getFn<Record<string, InvgateIncident>>(
-        `incidents?${idsQuery}`,
-      );
-
-      if (!chunkRes.ok || !chunkRes.data) {
-        return jsonResponse({
-          exists: false,
-          reason: "No se pudieron obtener los detalles de los tickets.",
-        });
-      }
-
-      incidents.push(...Object.values(chunkRes.data));
+      chunks.push(requestIds.slice(i, i + CHUNK));
     }
+
+    const incidents: InvgateIncident[] = [];
+    let chunkIdx = 0;
+
+    async function fetchChunk(): Promise<void> {
+      while (chunkIdx < chunks.length) {
+        const chunk = chunks[chunkIdx++];
+        const idsQuery = chunk.map((id) => `ids[]=${id}`).join("&");
+        const chunkRes = await getFn<Record<string, InvgateIncident>>(
+          `incidents?${idsQuery}`,
+        );
+
+        if (!chunkRes.ok || !chunkRes.data) {
+          throw new Error(
+            "message" in chunkRes
+              ? chunkRes.message
+              : "No se pudieron obtener los detalles de los tickets.",
+          );
+        }
+
+        incidents.push(...Object.values(chunkRes.data));
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => fetchChunk()));
 
     // Step 3: Filter by location and either category or title pattern
-    const matchingIncident = incidents.find(
+    const locationNewIncidents: InvgateIncident[] = [];
+
+    if (locationNewIds.length > 0) {
+      const newIdsQuery = locationNewIds.map((id) => `ids[]=${id}`).join("&");
+      const newRes = await getFn<Record<string, InvgateIncident>>(
+        `incidents?${newIdsQuery}`,
+      );
+      if (newRes.ok && newRes.data) {
+        locationNewIncidents.push(...Object.values(newRes.data));
+      }
+    }
+
+    const allCandidates = [...incidents, ...locationNewIncidents];
+    const matchingIncident = allCandidates.find(
       (inc) =>
         inc.location_id === invgateLocationId &&
         (AGENTS_TICKET_CATEGORY_IDS.includes(inc.category_id ?? -1) ||
