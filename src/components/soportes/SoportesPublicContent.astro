@@ -345,8 +345,12 @@ const totalMembers = visibleHelpdesks.reduce(
         ? cardHidden
         : !cardHidden && matchesSearch && matchesStatus && matchesParent;
 
+      // Hide non-matching cards instead of removing them from the DOM.
+      // astro-icon dedupes repeated icons into <symbol>/<use> sprites whose
+      // <symbol> lives in the first card; removing cards would orphan the
+      // <use> references and make icons disappear.
+      card.classList.toggle("hidden", !isVisible);
       if (isVisible) {
-        card.classList.remove("hidden");
         visible.push(card);
         highlightSearchTargets(card, query);
       }
@@ -398,9 +402,6 @@ const totalMembers = visibleHelpdesks.reduce(
     });
 
     if (grid) {
-      cards.forEach((card) => {
-        if (card.parentNode === grid) grid.removeChild(card);
-      });
       visible.forEach((card) => grid.appendChild(card));
     }
   }
@@ -449,7 +450,9 @@ const totalMembers = visibleHelpdesks.reduce(
   const exportPdfBtn = document.querySelector<HTMLButtonElement>("#export-pdf");
 
   exportCsvBtn?.addEventListener("click", () => {
-    const visibleCards = Array.from(cards).filter((c) => c.parentNode === grid);
+    const visibleCards = Array.from(cards).filter(
+      (c) => c.parentNode === grid && !c.classList.contains("hidden"),
+    );
 
     let csvContent = "\uFEFF";
     csvContent += "Nombre,Estado,Mesa Padre,Miembros,Tópicos,Nombres Legacy\n";
