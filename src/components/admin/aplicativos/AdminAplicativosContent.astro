@@ -18,9 +18,6 @@ import AddEntityButton from "@components/ui/AddEntityButton.astro";
 
 const cleanBase = getCleanBase();
 
-let deleteSuccess = false;
-let deleteError = "";
-
 interface Category {
   id: number;
   title: string;
@@ -84,7 +81,6 @@ try {
   console.error(
     `[aplicativos] Error al consultar la base de datos: ${dbError.message}`,
   );
-  deleteError = deleteError || "No se pudieron cargar los aplicativos.";
 }
 
 const appsGridCols = "grid-cols-[40px_50px_1fr_100px] gap-4";
@@ -133,17 +129,6 @@ const truncatePath = (filePath: string | null) => {
       />
     </div>
   </div>
-
-  <script is:inline>
-    if (deleteSuccess) {
-      window.showToast?.("Aplicativo eliminado con éxito.", "alert-success");
-    }
-  </script>
-  <script is:inline define:vars={{ deleteError }}>
-    if (deleteError) {
-      window.showToast?.(deleteError, "alert-error");
-    }
-  </script>
 
   <!-- Split View layout -->
   <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-4">
