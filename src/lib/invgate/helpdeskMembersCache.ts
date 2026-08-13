@@ -19,7 +19,7 @@ const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos de cache
  * Obtiene los miembros de una Mesa de Ayuda de InvGate (incluyendo niveles/sub-niveles).
  * Retorna los datos enriquecidos de usuario (id, username, nombre, apellido).
  */
-export async function getHelpdeskMembers(helpdeskId: number = 36): Promise<HelpdeskMemberUser[]> {
+export async function getHelpdeskMembers(helpdeskId: number = 3866): Promise<HelpdeskMemberUser[]> {
   const now = Date.now();
   if (cachedMemberUsersMap.has(helpdeskId) && now - lastFetchTime < CACHE_TTL_MS) {
     return cachedMemberUsersMap.get(helpdeskId) || [];
@@ -96,7 +96,7 @@ export async function getHelpdeskMembers(helpdeskId: number = 36): Promise<Helpd
 /**
  * Obtiene el conjunto de usernames (limpios, sin @dominio) pertenecientes a una Mesa de Ayuda.
  */
-export async function getHelpdeskMemberUsernames(helpdeskId: number = 36): Promise<Set<string>> {
+export async function getHelpdeskMemberUsernames(helpdeskId: number = 3866): Promise<Set<string>> {
   await getHelpdeskMembers(helpdeskId);
   return cachedMembersMap.get(helpdeskId) || new Set();
 }

@@ -1,4 +1,4 @@
-import { invgateGet } from "@lib/invgateClient";
+import { invgateGet, invgatePost } from "@lib/invgateClient";
 import type { InvgateIncident, InvgateByStatusResponse } from "@/types/invgate";
 import { getCategoryMap, getLastCategoryName } from "./categoryCache";
 import { getFullUserMap } from "./userCache";
@@ -21,10 +21,10 @@ export interface UnassignedTicketsResult {
 }
 
 /**
- * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 36).
+ * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 3866).
  */
 export async function getUnassignedTicketsByHelpdesk(
-  helpdeskId: number = 36
+  helpdeskId: number = 3866
 ): Promise<UnassignedTicketsResult> {
   try {
     // 1. Obtener IDs de incidentes abiertos de la mesa de ayuda
@@ -133,3 +133,35 @@ export async function getUnassignedTicketsByHelpdesk(
     };
   }
 }
+
+/**
+ * Reasigna un ticket en InvGate a un agente específico.
+ */
+export async function reassignTicketToAgent(
+  requestId: number,
+  agentId: number,
+  helpdeskId: number = 3866,
+  authorId: number = 1
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await invgatePost<{ status: string; info?: string }>("incident.reassign", {
+      request_id: requestId,
+      author_id: authorId,
+      group_id: helpdeskId,
+      agent_id: agentId,
+    });
+
+    if (!res.ok) {
+      return { ok: false, message: res.message };
+    }
+
+    if (res.data?.status === "ERROR") {
+      return { ok: false, message: res.data.info || "Error al reasignar en InvGate" };
+    }
+
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, message: err.message || "Error al conectar con InvGate" };
+  }
+}
+

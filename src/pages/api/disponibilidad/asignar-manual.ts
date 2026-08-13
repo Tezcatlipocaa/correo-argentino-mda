@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { asignarManual, ensureHasLock, resetAssignmentLock } from "@lib/disponibilidad";
+import { asignarManual, getDisponibilidadHoy, ensureHasLock, resetAssignmentLock } from "@lib/disponibilidad";
 import { db } from "@db/index";
 import { agents } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -21,7 +21,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const assignedBy = locals.user?.username || "Sistema";
-    const result = await asignarManual(agentId, assignedBy);
+    const userClean = locals.user?.username ? locals.user.username.split("@")[0].toLowerCase().trim() : "";
+    const list = await getDisponibilidadHoy();
+    const loggedOp = list.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
+    const authorInvgateId = loggedOp?.invgateId;
+
+    const result = await asignarManual(agentId, assignedBy, authorInvgateId);
     if (result.success) {
       await resetAssignmentLock();
     }

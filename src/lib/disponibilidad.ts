@@ -1,12 +1,14 @@
 import { db } from "@db/index";
-import { agents, schedules, assignmentLock } from "@db/schema";
-import { eq, and } from "drizzle-orm";
+import { agents, schedules, assignmentLock, assignmentHistory } from "@db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
+import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent } from "@/lib/invgate/agsTickets";
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
 
 export interface AgentDisponibilidad {
   agentId: number;
+  invgateId?: number;
   nombre: string;
   username?: string;
   location: string;
@@ -48,15 +50,15 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
   const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
   const dayName = dayNames[now.getDay()];
 
-  // Obtener miembros de la Mesa 36 de InvGate
-  const helpdesk36Members = await getHelpdeskMembers(36);
-  const helpdesk36Usernames = new Set(
-    helpdesk36Members
+  // Obtener miembros de la Mesa 3866 de InvGate
+  const helpdeskMembers = await getHelpdeskMembers(3866);
+  const helpdeskUsernames = new Set(
+    helpdeskMembers
       .map((m) => (m.username ? m.username.split("@")[0].toLowerCase().trim() : ""))
       .filter(Boolean)
   );
-  const helpdesk36FullNames = new Set(
-    helpdesk36Members
+  const helpdeskFullNames = new Set(
+    helpdeskMembers
       .map((m) => m.fullName.toLowerCase().replace(/\s+/g, " ").trim())
       .filter(Boolean)
   );
@@ -76,14 +78,14 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     estadoExcepcionalMinutos: agents.estadoExcepcionalMinutos,
   }).from(agents);
 
-  // Filtrar solo operadores que pertenecen a la Mesa 36 de InvGate
+  // Filtrar solo operadores que pertenecen a la Mesa 3866 de InvGate
   const dbAgents = dbAgentsAll.filter((agent) => {
-    if (helpdesk36Members.length === 0) return true; // Fallback por seguridad si falla InvGate
+    if (helpdeskMembers.length === 0) return true; // Fallback por seguridad si falla InvGate
     
     // Check 1: Match por username
     if (agent.username) {
       const cleanUser = agent.username.split("@")[0].toLowerCase().trim();
-      if (helpdesk36Usernames.has(cleanUser)) return true;
+      if (helpdeskUsernames.has(cleanUser)) return true;
     }
     
     // Check 2: Match por nombre completo o cruzado (Apellido / Nombre)
@@ -91,7 +93,7 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       const cleanName = agent.name.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
       const tokens = cleanName.split(" ").filter((t) => t.length > 2);
 
-      for (const member of helpdesk36Members) {
+      for (const member of helpdeskMembers) {
         const memberClean = member.fullName.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
         // Exact match normalized
         if (cleanName === memberClean) return true;
@@ -129,17 +131,23 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       horario = schedule.horario || "";
       breakInicio = schedule.breakInicio || "";
       breakFin = schedule.breakFin || "";
-    } else {
-      // Fallback to weekly schedule
-      const esquemaSemanal = (agent.esquemaSemanal as Record<string, string>) || {};
-      const esquemaHorario = (agent.esquemaHorario as Record<string, string>) || {};
-      const esquemaBreakInicio = (agent.esquemaBreakInicio as Record<string, string>) || {};
-      const esquemaBreakFin = (agent.esquemaBreakFin as Record<string, string>) || {};
-
-      status = esquemaSemanal[dayName] ?? "Franco";
-      horario = esquemaHorario[dayName] || "";
-      breakInicio = esquemaBreakInicio[dayName] || "";
-      breakFin = esquemaBreakFin[dayName] || "";
+    } else if (agent.esquemaSemanal) {
+      try {
+        const esquema = JSON.parse(agent.esquemaSemanal);
+        if (esquema && esquema[dayName]) {
+          const diaConfig = esquema[dayName];
+          if (diaConfig.activo === false) {
+            status = "Franco";
+          } else {
+            status = diaConfig.modalidad || "Home Office";
+            if (diaConfig.horario) horario = diaConfig.horario;
+            if (diaConfig.breakInicio) breakInicio = diaConfig.breakInicio;
+            if (diaConfig.breakFin) breakFin = diaConfig.breakFin;
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing esquemaSemanal for agent:", agent.name, e);
+      }
     }
 
     // Map database blank or invalid status to Franco
@@ -173,8 +181,40 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     }
 
 
+    let matchedInvgateId: number | undefined;
+
+    // Check 1: Match por username
+    if (agent.username) {
+      const cleanUser = agent.username.split("@")[0].toLowerCase().trim();
+      const m = helpdeskMembers.find((mem) => {
+        if (!mem.username) return false;
+        const memClean = mem.username.split("@")[0].toLowerCase().trim();
+        return memClean === cleanUser;
+      });
+      if (m) matchedInvgateId = m.id;
+    }
+
+    // Check 2: Match por nombre completo o cruzado (Apellido / Nombre)
+    if (!matchedInvgateId && agent.name) {
+      const cleanName = agent.name.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+      const tokens = cleanName.split(" ").filter((t) => t.length > 2);
+
+      for (const mem of helpdeskMembers) {
+        const memClean = mem.fullName.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        if (cleanName === memClean) {
+          matchedInvgateId = mem.id;
+          break;
+        }
+        if (tokens.length >= 2 && tokens.every((tok) => memClean.includes(tok))) {
+          matchedInvgateId = mem.id;
+          break;
+        }
+      }
+    }
+
     const info: AgentDisponibilidad = {
       agentId: agent.id,
+      invgateId: matchedInvgateId,
       nombre: agent.name,
       username: agent.username || undefined,
       location: agent.location || "Monte Grande",
@@ -340,9 +380,13 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
   return list;
 }
 
-export async function asignarSiguienteAutogestion(assignedBy: string = "Sistema"): Promise<{
+export async function asignarSiguienteAutogestion(
+  assignedBy: string = "Sistema",
+  authorInvgateId?: number
+): Promise<{
   success: boolean;
   agent?: AgentDisponibilidad;
+  ticketNumber?: string;
   error?: string;
 }> {
   const list = await getDisponibilidadHoy();
@@ -370,6 +414,33 @@ export async function asignarSiguienteAutogestion(assignedBy: string = "Sistema"
   const winner = available[0];
   const now = Date.now();
 
+  // Consultar ticket sin asignar de InvGate Mesa 3866
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      error: "No hay autogestiones sin asignar en la mesa de ayuda para entregar.",
+    };
+  }
+
+  const oldestTicket = unassignedRes.tickets[0];
+  if (!winner.invgateId) {
+    return {
+      success: false,
+      error: `El operador ${winner.nombre} no tiene un ID de InvGate vinculado en Mesa 3866.`,
+    };
+  }
+  const targetInvgateId = winner.invgateId;
+  const authorId = authorInvgateId || targetInvgateId || 1;
+  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, 3866, authorId);
+  if (!reassignRes.ok) {
+    return {
+      success: false,
+      error: `Error al reasignar ticket #${oldestTicket.id} en InvGate a ${winner.nombre}: ${reassignRes.message}`,
+    };
+  }
+  const ticketAssigned = oldestTicket.pretty_id || `#${oldestTicket.id}`;
+
   // Clear any existing undo states
   await db
     .update(agents)
@@ -390,14 +461,63 @@ export async function asignarSiguienteAutogestion(assignedBy: string = "Sistema"
   winner.lastAutogestionAssignedAt = now;
   winner.lastAutogestionAssignedBy = assignedBy;
   winner.lastAutogestionUndo = prevValue;
-  
+
+  // Record audit history entry
+  try {
+    await db.insert(assignmentHistory).values({
+      agentId: winner.agentId,
+      agentName: winner.nombre,
+      ticketNumber: ticketAssigned || null,
+      assignedBy,
+      assignedAt: now,
+      type: "cyclic",
+    });
+  } catch (historyErr) {
+    console.error("Error saving assignment history:", historyErr);
+  }
+
   return {
     success: true,
     agent: winner,
+    ticketNumber: ticketAssigned,
   };
 }
 
-export async function asignarManual(agentId: number, assignedBy: string = "Sistema"): Promise<{ success: boolean; error?: string }> {
+export async function asignarManual(
+  agentId: number,
+  assignedBy: string = "Sistema",
+  authorInvgateId?: number
+): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
+  const list = await getDisponibilidadHoy();
+  const targetAgent = list.find((a) => a.agentId === agentId);
+
+  // Consultar ticket sin asignar de InvGate Mesa 3866
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      error: "No hay autogestiones sin asignar en la mesa de ayuda para entregar.",
+    };
+  }
+
+  const oldestTicket = unassignedRes.tickets[0];
+  if (!targetAgent?.invgateId) {
+    return {
+      success: false,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa 3866.`,
+    };
+  }
+  const targetInvgateId = targetAgent.invgateId;
+  const authorId = authorInvgateId || targetInvgateId || 1;
+  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, 3866, authorId);
+  if (!reassignRes.ok) {
+    return {
+      success: false,
+      error: `Error al reasignar ticket #${oldestTicket.id} en InvGate: ${reassignRes.message}`,
+    };
+  }
+  const ticketAssigned = oldestTicket.pretty_id || `#${oldestTicket.id}`;
+
   // Clear any existing undo states
   await db
     .update(agents)
@@ -408,15 +528,32 @@ export async function asignarManual(agentId: number, assignedBy: string = "Siste
   const prevValue = ag ? ag.lastAutogestionAssignedAt : null;
 
   // Update lastAutogestionAssignedAt for the manually assigned agent
+  const assignTime = Date.now();
   await db
     .update(agents)
     .set({ 
-      lastAutogestionAssignedAt: Date.now(),
+      lastAutogestionAssignedAt: assignTime,
       lastAutogestionAssignedBy: assignedBy,
       lastAutogestionUndo: prevValue
     })
     .where(eq(agents.id, agentId));
-  return { success: true };
+
+  // Record audit history entry
+  try {
+    const targetName = targetAgent?.nombre || ag?.name || `ID ${agentId}`;
+    await db.insert(assignmentHistory).values({
+      agentId,
+      agentName: targetName,
+      ticketNumber: ticketAssigned || null,
+      assignedBy,
+      assignedAt: assignTime,
+      type: "manual",
+    });
+  } catch (historyErr) {
+    console.error("Error saving assignment history:", historyErr);
+  }
+
+  return { success: true, ticketNumber: ticketAssigned };
 }
 
 export async function marcarEstadoExcepcional(
@@ -476,12 +613,38 @@ export async function deshacerAsignacion(): Promise<{ success: boolean; agentNam
     })
     .where(eq(agents.id, target.id));
 
+  try {
+    await db.insert(assignmentHistory).values({
+      agentId: target.id,
+      agentName: target.name,
+      ticketNumber: null,
+      assignedBy: "Sistema (Deshacer)",
+      assignedAt: Date.now(),
+      type: "undo",
+    });
+  } catch (historyErr) {
+    console.error("Error saving undo history:", historyErr);
+  }
+
   return { success: true, agentName: target.name };
 }
 
 export function isLockExpired(lastActivityAt: number, releaseRequested: boolean = false): boolean {
   const timeout = releaseRequested ? 1 * 60 * 1000 : LOCK_TIMEOUT_MS;
   return Date.now() > lastActivityAt + timeout;
+}
+
+export async function getAssignmentHistory(limit: number = 50) {
+  try {
+    return await db
+      .select()
+      .from(assignmentHistory)
+      .orderBy(desc(assignmentHistory.assignedAt))
+      .limit(limit);
+  } catch (err) {
+    console.error("Error fetching assignment history:", err);
+    return [];
+  }
 }
 
 export async function getLockStatus(): Promise<

@@ -23,7 +23,7 @@ import { normalizeRole } from "@lib/rbac";
 
 const cleanBase = getCleanBase();
 
-const invgateApiBase = import.meta.env.INVGATE_BASE_URL || "";
+const invgateApiBase = import.meta.env.INVGATE_QA_BASE_URL || import.meta.env.INVGATE_BASE_URL || "";
 const invgateWebBase = invgateApiBase
   ? invgateApiBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
   : "";
@@ -53,22 +53,35 @@ if (Astro.request.method === "POST" && !isReadOnly) {
     let msg = "";
     let msgType = "success";
 
+    const userClean = user?.username ? user.username.split("@")[0].toLowerCase().trim() : "";
+    const allOpsForAuthor = await getDisponibilidadHoy();
+    const loggedInOp = allOpsForAuthor.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
+    const authorInvgateId = loggedInOp?.invgateId;
+
     if (action === "assign_manual") {
       const agentId = Number(formData.get("agentId"));
       if (!isNaN(agentId)) {
-        await asignarManual(agentId, user?.username || "Sistema");
+        const res = await asignarManual(agentId, user?.username || "Sistema", authorInvgateId);
+        if (res.success) {
+          const [ag] = await db
+            .select({ name: agents.name })
+            .from(agents)
+            .where(eq(agents.id, agentId));
 
-        const [ag] = await db
-          .select({ name: agents.name })
-          .from(agents)
-          .where(eq(agents.id, agentId));
-
-        msg = `Autogestión asignada manualmente a ${ag?.name ?? `ID ${agentId}`}.`;
+          msg = res.ticketNumber
+            ? `Autogestión ${res.ticketNumber} asignada manualmente a ${ag?.name ?? `ID ${agentId}`} en InvGate QA.`
+            : `Autogestión asignada manualmente a ${ag?.name ?? `ID ${agentId}`}.`;
+        } else {
+          msg = res.error || "Error al asignar autogestión.";
+          msgType = "error";
+        }
       }
     } else if (action === "assign_cyclic") {
-      const res = await asignarSiguienteAutogestion(user?.username || "Sistema");
+      const res = await asignarSiguienteAutogestion(user?.username || "Sistema", authorInvgateId);
       if (res.success && res.agent) {
-        msg = `Autogestión asignada cíclicamente a ${res.agent.nombre}.`;
+        msg = res.ticketNumber
+          ? `Autogestión ${res.ticketNumber} asignada a ${res.agent.nombre} en InvGate QA.`
+          : `Autogestión asignada cíclicamente a ${res.agent.nombre}.`;
       } else {
         msg = res.error || "No hay operadores disponibles o dentro de horario operativo para asignar.";
         msgType = "error";
@@ -119,8 +132,8 @@ const nextSuggestedOperators = availableOperators.length > 0
     }).slice(0, 10)
   : [];
 
-// Fetch unassigned InvGate tickets for Helpdesk 36
-const unassignedRes = await getUnassignedTicketsByHelpdesk(36);
+// Fetch unassigned InvGate tickets for Helpdesk 3866
+const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
 const unassignedTickets = unassignedRes.tickets;
 const unassignedCount = unassignedTickets.length;
 
@@ -384,9 +397,10 @@ function getInitials(name: string): string {
         <button
           id="btn-assign-cyclic"
           type="button"
-          disabled={isReadOnly}
+          disabled={isReadOnly || unassignedCount === 0}
+          title={unassignedCount === 0 ? "No hay autogestiones sin asignar para entregar" : (isReadOnly ? "Tomá el control para habilitar la asignación" : "Asignar siguiente autogestión")}
           class={`btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all ${
-            !isReadOnly
+            !isReadOnly && unassignedCount > 0
               ? "btn-primary shadow-lg shadow-primary/20"
               : "btn-neutral btn-disabled opacity-50 cursor-not-allowed"
           }`}
@@ -404,7 +418,7 @@ function getInitials(name: string): string {
             <div class="flex items-center gap-2">
               <Icon name="boxicons:inbox" size={20} class="text-warning" />
               <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/70">
-                Sin Asignar (Mesa 36)
+                Sin Asignar (Mesa 3866)
               </h3>
             </div>
             <span class={`badge ${unassignedCount > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`} id="stat-unassigned-count">
@@ -414,42 +428,110 @@ function getInitials(name: string): string {
 
           <div id="unassigned-tickets-list" class="divide-y divide-base-200/80 max-h-[calc(100vh-320px)] overflow-y-auto">
             {unassignedTickets.length > 0 ? (
-              unassignedTickets.map((t: any) => (
-                <div data-ticket-id={t.id} class="p-3.5 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-1.5 cursor-pointer group">
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
-                      <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs shrink-0">{t.pretty_id || `#${t.id}`}</span>
-                      {t.priority_id && (
-                        <span class={`badge badge-xs font-bold text-tiny tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-neutral'}`}>
-                          {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
-                        </span>
-                      )}
-                      {t.category_last_name && (
-                        <span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[130px] truncate shrink-0" title={t.category_name || t.category_last_name}>
-                          {t.category_last_name}
-                        </span>
-                      )}
-                    </div>
-                    <span class="text-xs text-base-content/60 font-mono font-semibold shrink-0">
-                      {t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}
-                    </span>
-                  </div>
-                  <div class="font-semibold text-base-content text-xs group-hover:text-primary transition-colors" title={t.title}>
-                    {t.title}
-                  </div>
-                  {(t.creator_name || t.customer_name) && (
-                    <div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate mt-1">
-                      <Icon name="boxicons:user" size={13} class="opacity-60 shrink-0" />
-                      <span class="truncate">
-                        Generado por: <strong class="text-base-content/80 font-bold">{t.creator_name || t.customer_name}</strong>
-                        {t.customer_name && t.creator_name && t.customer_name !== t.creator_name && (
-                          <span class="opacity-75"> • Cliente: <strong class="text-base-content/80 font-semibold">{t.customer_name}</strong></span>
+              unassignedTickets.map((t: any) => {
+                const timeStr = t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : "";
+                
+                let elapsedMin = 0;
+                if (t.created_at) {
+                  elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
+                }
+                const formatWait = elapsedMin >= 60 
+                  ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
+                  : `${elapsedMin}m`;
+
+                const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+                const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+                const matchingAvailableOp = availableOperators.find((op) => {
+                  if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+                  if (op.nombre && creatorNameNorm) {
+                    const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+                    if (opNameNorm === creatorNameNorm) return true;
+                    const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+                    if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+                  }
+                  return false;
+                });
+
+                const creatorStr = t.creator_name || t.customer_name || "";
+                const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
+
+                return (
+                  <div data-ticket-id={t.id} class="p-3.5 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-1.5 cursor-pointer group">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                        <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs shrink-0">{t.pretty_id || `#${t.id}`}</span>
+                        {t.priority_id && (
+                          <span class={`badge badge-xs font-bold text-tiny tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-neutral'}`}>
+                            {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
+                          </span>
                         )}
+                        {t.category_last_name && (
+                          <span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[130px] truncate shrink-0" title={t.category_name || t.category_last_name}>
+                            {t.category_last_name}
+                          </span>
+                        )}
+                        {t.sla_incident_first_reply && (
+                          <span class="badge badge-outline badge-info badge-xs font-mono text-tiny shrink-0" title="SLA de respuesta">
+                            SLA: {t.sla_incident_first_reply}
+                          </span>
+                        )}
+                        {t.created_at && (
+                          <span class={`badge badge-xs font-mono text-tiny px-1.5 py-0.5 shrink-0 ${
+                            elapsedMin >= 60
+                              ? "bg-error/15 text-error border-none font-bold"
+                              : elapsedMin >= 30
+                              ? "bg-warning/15 text-warning border-none font-semibold"
+                              : "bg-base-200 text-base-content/70 border-none"
+                          }`} title="Tiempo de espera en cola">
+                            ⏱ {formatWait}
+                          </span>
+                        )}
+                      </div>
+                      <span class="text-xs text-base-content/60 font-mono font-semibold shrink-0">
+                        {timeStr}
                       </span>
                     </div>
-                  )}
-                </div>
-              ))
+                    <div class="font-semibold text-base-content text-xs group-hover:text-primary transition-colors" title={t.title}>
+                      {t.title}
+                    </div>
+                    {creatorStr && (
+                      <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate mt-1">
+                        <div class="flex items-center gap-1 min-w-0 truncate text-base-content/70">
+                          <Icon name="boxicons:user" size={13} class={matchingAvailableOp ? "text-success shrink-0" : "opacity-60 shrink-0"} />
+                          <span class="truncate">
+                            Generado por: <strong class={matchingAvailableOp ? "text-success font-bold" : "text-base-content/80 font-bold"}>{creatorStr}</strong>
+                            {matchingAvailableOp && <span class="text-success text-xxs font-semibold"> (Disponible)</span>}
+                            {customerStr && <span class="opacity-75"> • Cliente: <strong class="text-base-content/80 font-semibold">{customerStr}</strong></span>}
+                          </span>
+                        </div>
+                        {matchingAvailableOp && (
+                          <button
+                            type="button"
+                            class={`btn btn-ghost btn-xs px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1 ${
+                              isReadOnly
+                                ? "btn-disabled opacity-40 cursor-not-allowed text-base-content/40"
+                                : "text-success hover:bg-success/15"
+                            }`}
+                            data-op-assign-btn={matchingAvailableOp.agentId}
+                            title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar a ${matchingAvailableOp.nombre}`}
+                            disabled={isReadOnly}
+                          >
+                            <Icon name="boxicons:bolt-filled" size={12} class={isReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current"} />
+                            <span>Asignar</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {t.location_name && (
+                      <div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate">
+                        <Icon name="boxicons:map-pin" size={13} class="text-info opacity-70 shrink-0" />
+                        <span class="truncate">Ubicación: <strong class="text-base-content/80 font-semibold">{t.location_name}</strong></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div class="text-xs text-base-content/40 italic py-12 text-center">No hay tickets sin asignar</div>
             )}
@@ -529,11 +611,22 @@ function getInitials(name: string): string {
 
           <!-- Sección: Última Asignación -->
           <div class="p-4 bg-base-200/20">
-            <div class="flex items-center gap-2 mb-2">
-              <Icon name="boxicons:history" size={18} class="text-info" />
-              <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/60">
-                Última Asignación
-              </h3>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <Icon name="boxicons:history" size={18} class="text-info" />
+                <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/60">
+                  Última Asignación
+                </h3>
+              </div>
+              <button
+                type="button"
+                id="btn-open-historial-modal"
+                class="btn btn-ghost btn-xs text-info hover:bg-info/10 font-bold gap-1 px-2 py-0.5 h-6 min-h-0 text-tiny"
+                title="Ver historial completo y detallado de asignaciones"
+              >
+                <Icon name="boxicons:clock" size={14} />
+                <span>Ver historial</span>
+              </button>
             </div>
 
             <div id="stat-last-assigned-container">
@@ -984,7 +1077,7 @@ function getInitials(name: string): string {
 
       <!-- Modal Footer -->
       <div class="p-4 bg-base-200/50 border-t border-base-300 flex items-center justify-between gap-3">
-        <span class="text-tiny text-base-content/50">Mesa de Ayuda #36</span>
+        <span class="text-tiny text-base-content/50">Mesa de Ayuda #3866</span>
         <div class="flex items-center gap-2">
           <button
             id="ticket-modal-assign-btn"
@@ -1010,6 +1103,66 @@ function getInitials(name: string): string {
         </div>
       </div>
     </div>
+  </dialog>
+
+  <!-- Modal Historial de Asignaciones -->
+  <dialog id="modal-historial-asignaciones" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box sm:max-w-2xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <!-- Header -->
+      <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-info/10 text-info shrink-0">
+            <Icon name="boxicons:history" size={22} />
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-base-content uppercase tracking-wider">Historial de Asignaciones</h3>
+            <p class="text-xs text-base-content/60 font-medium">Registro cronológico detallado de asignaciones de autogestión</p>
+          </div>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content">✕</button>
+        </form>
+      </div>
+
+      <!-- Body -->
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1">
+        <div id="historial-loading" class="flex flex-col items-center justify-center py-12 gap-3 text-base-content/50">
+          <span class="loading loading-spinner loading-md text-info"></span>
+          <span class="text-xs font-semibold">Cargando historial...</span>
+        </div>
+
+        <div id="historial-empty" class="hidden text-xs text-base-content/40 italic py-12 text-center">
+          No hay registros de asignaciones en el historial.
+        </div>
+
+        <div id="historial-table-container" class="hidden overflow-x-auto">
+          <table class="table table-sm w-full text-xs">
+            <thead>
+              <tr class="bg-base-200/60 text-base-content/70 uppercase text-tiny font-mono">
+                <th>Fecha y Hora</th>
+                <th>Operador Asignado</th>
+                <th>Ticket InvGate</th>
+                <th>Tipo</th>
+                <th>Asignado Por</th>
+              </tr>
+            </thead>
+            <tbody id="historial-rows" class="divide-y divide-base-200">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-3.5 bg-base-200/50 border-t border-base-300 flex items-center justify-between">
+        <span class="text-tiny text-base-content/50 font-mono">Últimos 50 registros</span>
+        <form method="dialog">
+          <button class="btn btn-sm btn-neutral font-semibold">Cerrar</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>cerrar</button>
+    </form>
   </dialog>
 </PageContainer>
 
@@ -1638,7 +1791,8 @@ function getInitials(name: string): string {
 
       // -1. Open unassigned ticket detail modal
       const ticketCard = target.closest("[data-ticket-id]");
-      if (ticketCard) {
+      const isAssignBtnClick = target.closest("[data-op-assign-btn]");
+      if (ticketCard && !isAssignBtnClick) {
         const ticketId = Number(ticketCard.getAttribute("data-ticket-id"));
         const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
         const modal = document.getElementById("modal-ticket-detail") as HTMLDialogElement | null;
@@ -2027,7 +2181,7 @@ function getInitials(name: string): string {
 
       // 4. Manual assign
       const assignManualBtn = target.closest("[data-op-assign-btn]");
-      if (assignManualBtn) {
+      if (assignManualBtn && !assignManualBtn.hasAttribute("disabled") && !(assignManualBtn as HTMLButtonElement).disabled) {
         const agentId = Number(assignManualBtn.getAttribute("data-op-assign-btn"));
         if (!isNaN(agentId)) {
           assignManualBtn.setAttribute("disabled", "true");
@@ -2048,7 +2202,8 @@ function getInitials(name: string): string {
               if (modalTicket && modalTicket.open) {
                 modalTicket.close();
               }
-              showAlert("success", `Autogestión asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
+              const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
+              showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
               await fetchDisponibilidad();
             } else {
               showAlert("error", data.error || "No se pudo realizar la asignación manual.");
@@ -2064,18 +2219,38 @@ function getInitials(name: string): string {
       }
     });
 
-    // Fetch unassigned tickets for Helpdesk 36
+    // Fetch unassigned tickets for Helpdesk 3866
     const fetchUnassignedTickets = async () => {
       try {
-        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=36");
+        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3866");
         if (!res.ok) return;
         const data = await res.json();
         latestUnassignedTickets = data.tickets || [];
         const countEl = document.getElementById("stat-unassigned-count");
         const listEl = document.getElementById("unassigned-tickets-list");
+        const count = data.count ?? 0;
+
+        const btnAssignCyclic = document.getElementById("btn-assign-cyclic") as HTMLButtonElement | null;
+        if (btnAssignCyclic) {
+          const lockIndicator = document.getElementById("lock-indicator");
+          const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+          const clientIsReadOnly = !clientHasLock;
+          const isDisabled = clientIsReadOnly || count === 0;
+
+          if (isDisabled) {
+            btnAssignCyclic.setAttribute("disabled", "true");
+            btnAssignCyclic.className = "btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all btn-neutral btn-disabled opacity-50 cursor-not-allowed";
+            btnAssignCyclic.title = count === 0 ? "No hay autogestiones sin asignar para entregar" : "Tomá el control para habilitar la asignación";
+          } else {
+            btnAssignCyclic.removeAttribute("disabled");
+            btnAssignCyclic.className = "btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all btn-primary shadow-lg shadow-primary/20";
+            btnAssignCyclic.title = "Asignar siguiente autogestión";
+          }
+        }
+
         if (countEl) {
-          countEl.textContent = String(data.count ?? 0);
-          countEl.className = `badge ${data.count > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`;
+          countEl.textContent = String(count);
+          countEl.className = `badge ${count > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`;
         }
         if (listEl) {
           if (data.tickets && data.tickets.length > 0) {
@@ -2142,6 +2317,21 @@ function getInitials(name: string): string {
               let userRow = "";
               if (creatorStr) {
                 if (matchingAvailableOp) {
+                  const lockIndicator = document.getElementById("lock-indicator");
+                  const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+                  const clientIsReadOnly = !clientHasLock;
+
+                  const btnClass = clientIsReadOnly
+                    ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1"
+                    : "btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1";
+
+                  const btnTitle = clientIsReadOnly
+                    ? "Toma el control para asignar autogestiones"
+                    : `Asignar a ${escapeHtml(matchingAvailableOp.nombre)}`;
+
+                  const btnDisabledAttr = clientIsReadOnly ? 'disabled="true"' : "";
+                  const iconClass = clientIsReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current";
+
                   userRow = `
                     <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate mt-1">
                       <div class="flex items-center gap-1 min-w-0 truncate text-base-content/70">
@@ -2152,12 +2342,12 @@ function getInitials(name: string): string {
                       </div>
                       <button
                         type="button"
-                        class="btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1"
+                        class="${btnClass}"
                         data-op-assign-btn="${matchingAvailableOp.agentId}"
-                        title="Asignar a ${escapeHtml(matchingAvailableOp.nombre)}"
-                        onclick="event.stopPropagation();"
+                        title="${btnTitle}"
+                        ${btnDisabledAttr}
                       >
-                        <svg class="size-3 text-success fill-current" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
+                        <svg class="size-3 ${iconClass}" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
                         <span>Asignar</span>
                       </button>
                     </div>
@@ -2337,6 +2527,69 @@ function getInitials(name: string): string {
           fetchDisponibilidad(),
           fetchLockStatus().then(updateLockBanner)
         ]);
+      });
+    }
+
+    // Click handler for history modal
+    const btnOpenHistorial = document.getElementById("btn-open-historial-modal");
+    if (btnOpenHistorial) {
+      btnOpenHistorial.addEventListener("click", async () => {
+        const modal = document.getElementById("modal-historial-asignaciones") as HTMLDialogElement | null;
+        const loadingEl = document.getElementById("historial-loading");
+        const emptyEl = document.getElementById("historial-empty");
+        const tableContainer = document.getElementById("historial-table-container");
+        const rowsEl = document.getElementById("historial-rows");
+
+        if (modal) {
+          if (loadingEl) loadingEl.classList.remove("hidden");
+          if (emptyEl) emptyEl.classList.add("hidden");
+          if (tableContainer) tableContainer.classList.add("hidden");
+          modal.showModal();
+
+          const TYPE_MAP: Record<string, { label: string; badgeClass: string }> = {
+            cyclic: { label: "Cíclica", badgeClass: "badge-primary text-primary-content font-bold" },
+            manual: { label: "Manual", badgeClass: "badge-info text-info-content font-bold" },
+            undo: { label: "Deshecha", badgeClass: "badge-warning text-warning-content font-bold" },
+          };
+
+          try {
+            const res = await fetch("/api/disponibilidad/historial");
+            const data = await res.json();
+            if (loadingEl) loadingEl.classList.add("hidden");
+
+            if (res.ok && data.history && data.history.length > 0) {
+              if (tableContainer) tableContainer.classList.remove("hidden");
+              if (rowsEl) {
+                rowsEl.innerHTML = data.history.map((item: any) => {
+                  const dateStr = item.assignedAt ? new Date(item.assignedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "medium" }) : "-";
+                  const typeInfo = TYPE_MAP[item.type] || { label: item.type || "Asignación", badgeClass: "badge-neutral" };
+                  const ticketBadge = item.ticketNumber
+                    ? `<span class="badge badge-primary badge-xs font-mono font-bold px-1.5 py-0.5">${escapeHtml(item.ticketNumber)}</span>`
+                    : `<span class="text-base-content/40 font-mono text-tiny">-</span>`;
+
+                  return `
+                    <tr class="hover:bg-base-200/50">
+                      <td class="font-mono text-tiny font-semibold text-base-content/70">${escapeHtml(dateStr)}</td>
+                      <td class="font-bold text-xs text-base-content">${escapeHtml(item.agentName)}</td>
+                      <td>${ticketBadge}</td>
+                      <td><span class="badge badge-xs ${typeInfo.badgeClass} text-tiny">${escapeHtml(typeInfo.label)}</span></td>
+                      <td class="font-medium text-xs text-base-content/80">${escapeHtml(item.assignedBy || "Sistema")}</td>
+                    </tr>
+                  `;
+                }).join("");
+              }
+            } else {
+              if (emptyEl) emptyEl.classList.remove("hidden");
+            }
+          } catch (err) {
+            console.error("Error fetching assignment history:", err);
+            if (loadingEl) loadingEl.classList.add("hidden");
+            if (emptyEl) {
+              emptyEl.textContent = "Ocurrió un error al cargar el historial.";
+              emptyEl.classList.remove("hidden");
+            }
+          }
+        }
       });
     }
 
