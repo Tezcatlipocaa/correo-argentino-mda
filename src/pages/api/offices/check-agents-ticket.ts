@@ -71,21 +71,27 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return jsonResponse({ exists: false });
     }
 
-    // Step 2: Batch fetch full objects (max 200 IDs, URL-safe)
-    const idsQuery = requestIds.map((id) => `ids[]=${id}`).join("&");
-    const incidentsRes = await getFn<Record<string, InvgateIncident>>(
-      `incidents?${idsQuery}`,
-    );
+    // Step 2: Batch fetch full objects in chunks to stay under URL-length limits
+    const CHUNK = 500;
+    const incidents: InvgateIncident[] = [];
+    for (let i = 0; i < requestIds.length; i += CHUNK) {
+      const chunk = requestIds.slice(i, i + CHUNK);
+      const idsQuery = chunk.map((id) => `ids[]=${id}`).join("&");
+      const chunkRes = await getFn<Record<string, InvgateIncident>>(
+        `incidents?${idsQuery}`,
+      );
 
-    if (!incidentsRes.ok || !incidentsRes.data) {
-      return jsonResponse({
-        exists: false,
-        reason: "No se pudieron obtener los detalles de los tickets.",
-      });
+      if (!chunkRes.ok || !chunkRes.data) {
+        return jsonResponse({
+          exists: false,
+          reason: "No se pudieron obtener los detalles de los tickets.",
+        });
+      }
+
+      incidents.push(...Object.values(chunkRes.data));
     }
 
     // Step 3: Filter by location and either category or title pattern
-    const incidents = Object.values(incidentsRes.data);
     const matchingIncident = incidents.find(
       (inc) =>
         inc.location_id === invgateLocationId &&
