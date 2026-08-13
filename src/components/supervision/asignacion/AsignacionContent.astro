@@ -514,7 +514,8 @@ function getInitials(name: string): string {
                                 : "text-success hover:bg-success/15"
                             }`}
                             data-op-assign-btn={matchingAvailableOp.agentId}
-                            title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar a ${matchingAvailableOp.nombre}`}
+                            data-ticket-id={t.id}
+                            title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar ticket #${t.pretty_id || t.id} a ${matchingAvailableOp.nombre}`}
                             disabled={isReadOnly}
                           >
                             <Icon name="boxicons:bolt-filled" size={12} class={isReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current"} />
@@ -1144,6 +1145,7 @@ function getInitials(name: string): string {
                 <th>Ticket InvGate</th>
                 <th>Tipo</th>
                 <th>Asignado Por</th>
+                <th class="text-right">Acción</th>
               </tr>
             </thead>
             <tbody id="historial-rows" class="divide-y divide-base-200">
@@ -2183,13 +2185,16 @@ function getInitials(name: string): string {
       const assignManualBtn = target.closest("[data-op-assign-btn]");
       if (assignManualBtn && !assignManualBtn.hasAttribute("disabled") && !(assignManualBtn as HTMLButtonElement).disabled) {
         const agentId = Number(assignManualBtn.getAttribute("data-op-assign-btn"));
+        const ticketIdAttr = assignManualBtn.getAttribute("data-ticket-id");
+        const ticketId = ticketIdAttr ? Number(ticketIdAttr) : undefined;
+
         if (!isNaN(agentId)) {
           assignManualBtn.setAttribute("disabled", "true");
           try {
             const res = await fetch("/api/disponibilidad/asignar-manual", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ agentId }),
+              body: JSON.stringify({ agentId, ticketId }),
             });
             const data = await res.json();
             if (res.status === 423) {
@@ -2344,6 +2349,7 @@ function getInitials(name: string): string {
                         type="button"
                         class="${btnClass}"
                         data-op-assign-btn="${matchingAvailableOp.agentId}"
+                        data-ticket-id="${t.id}"
                         title="${btnTitle}"
                         ${btnDisabledAttr}
                       >
@@ -2567,6 +2573,10 @@ function getInitials(name: string): string {
                     ? `<span class="badge badge-primary badge-xs font-mono font-bold px-1.5 py-0.5">${escapeHtml(item.ticketNumber)}</span>`
                     : `<span class="text-base-content/40 font-mono text-tiny">-</span>`;
 
+                  const actionBtn = item.canUndo
+                    ? `<button type="button" class="btn btn-ghost btn-xs text-warning hover:bg-warning/15 px-2 py-0.5 h-6 min-h-0 font-bold gap-1 shrink-0" data-undo-ticket="${escapeHtml(item.ticketNumber)}" title="Devolver ${escapeHtml(item.ticketNumber)} a la cola de sin asignar en InvGate"><svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span></button>`
+                    : `<span class="text-base-content/30 text-tiny italic">-</span>`;
+
                   return `
                     <tr class="hover:bg-base-200/50">
                       <td class="font-mono text-tiny font-semibold text-base-content/70">${escapeHtml(dateStr)}</td>
@@ -2574,9 +2584,48 @@ function getInitials(name: string): string {
                       <td>${ticketBadge}</td>
                       <td><span class="badge badge-xs ${typeInfo.badgeClass} text-tiny">${escapeHtml(typeInfo.label)}</span></td>
                       <td class="font-medium text-xs text-base-content/80">${escapeHtml(item.assignedBy || "Sistema")}</td>
+                      <td class="text-right">${actionBtn}</td>
                     </tr>
                   `;
                 }).join("");
+
+                if (rowsEl && !rowsEl.hasAttribute("data-listener-attached")) {
+                  rowsEl.setAttribute("data-listener-attached", "true");
+                  rowsEl.addEventListener("click", async (e) => {
+                    const target = e.target as HTMLElement;
+                    const btn = target.closest("[data-undo-ticket]") as HTMLButtonElement | null;
+                    if (!btn || btn.disabled) return;
+
+                    const ticketNumber = btn.getAttribute("data-undo-ticket");
+                    if (!ticketNumber) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="loading loading-spinner loading-xs text-warning"></span><span>Deshaciendo...</span>`;
+
+                    try {
+                      const res = await fetch("/api/disponibilidad/deshacer-ticket", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ticketNumber }),
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.success) {
+                        showAlert("success", data.message || `Ticket ${ticketNumber} devuelto a sin asignar.`);
+                        await fetchDisponibilidad();
+                        btnOpenHistorial.click();
+                      } else {
+                        showAlert("error", data.error || "Error al desasignar ticket.");
+                        btn.disabled = false;
+                        btn.innerHTML = `<svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
+                      }
+                    } catch (err: any) {
+                      console.error("Error undoing ticket:", err);
+                      showAlert("error", `Error: ${err.message || err}`);
+                      btn.disabled = false;
+                      btn.innerHTML = `<svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
+                    }
+                  });
+                }
               }
             } else {
               if (emptyEl) emptyEl.classList.remove("hidden");
@@ -2593,13 +2642,13 @@ function getInitials(name: string): string {
       });
     }
 
-    // Set up 10-second polling interval
+    // Set up 5-second polling interval
     polling = setInterval(async () => {
       await Promise.all([
         fetchDisponibilidad(),
         fetchLockStatus().then(updateLockBanner)
       ]);
-    }, 10000);
+    }, 5000);
 
     // Close dropdowns on Escape key
     document.addEventListener("keydown", (e) => {

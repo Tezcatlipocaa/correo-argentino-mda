@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!lockCheck.ok) return lockCheck.response;
 
   try {
-    const { agentId } = await request.json();
+    const { agentId, ticketId } = await request.json();
 
     if (!agentId || typeof agentId !== "number") {
       return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
@@ -26,7 +26,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const loggedOp = list.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
     const authorInvgateId = loggedOp?.invgateId;
 
-    const result = await asignarManual(agentId, assignedBy, authorInvgateId);
+    const result = await asignarManual(
+      agentId,
+      assignedBy,
+      authorInvgateId,
+      typeof ticketId === "number" ? ticketId : undefined
+    );
     if (result.success) {
       await resetAssignmentLock();
     }

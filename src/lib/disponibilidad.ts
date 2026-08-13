@@ -486,7 +486,8 @@ export async function asignarSiguienteAutogestion(
 export async function asignarManual(
   agentId: number,
   assignedBy: string = "Sistema",
-  authorInvgateId?: number
+  authorInvgateId?: number,
+  ticketId?: number
 ): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
   const list = await getDisponibilidadHoy();
   const targetAgent = list.find((a) => a.agentId === agentId);
@@ -500,7 +501,20 @@ export async function asignarManual(
     };
   }
 
-  const oldestTicket = unassignedRes.tickets[0];
+  let targetTicket = ticketId
+    ? unassignedRes.tickets.find((t) => t.id === ticketId)
+    : unassignedRes.tickets[0];
+
+  if (!targetTicket) {
+    if (ticketId) {
+      return {
+        success: false,
+        error: `El ticket #${ticketId} ya no se encuentra sin asignar en la Mesa 3866.`,
+      };
+    }
+    targetTicket = unassignedRes.tickets[0];
+  }
+
   if (!targetAgent?.invgateId) {
     return {
       success: false,
@@ -509,14 +523,14 @@ export async function asignarManual(
   }
   const targetInvgateId = targetAgent.invgateId;
   const authorId = authorInvgateId || targetInvgateId || 1;
-  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, 3866, authorId);
+  const reassignRes = await reassignTicketToAgent(targetTicket.id, targetInvgateId, 3866, authorId);
   if (!reassignRes.ok) {
     return {
       success: false,
-      error: `Error al reasignar ticket #${oldestTicket.id} en InvGate: ${reassignRes.message}`,
+      error: `Error al reasignar ticket #${targetTicket.id} en InvGate: ${reassignRes.message}`,
     };
   }
-  const ticketAssigned = oldestTicket.pretty_id || `#${oldestTicket.id}`;
+  const ticketAssigned = targetTicket.pretty_id || `#${targetTicket.id}`;
 
   // Clear any existing undo states
   await db
