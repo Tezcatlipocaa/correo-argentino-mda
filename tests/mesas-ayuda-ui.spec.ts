@@ -87,3 +87,22 @@ test("La fila de acciones envuelve sin desbordar en anchos angostos", async ({
   });
   expect(overflows).toBe(false);
 });
+
+test("El endpoint de incidentes devuelve caché (no no-store)", async ({
+  page,
+}) => {
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
+
+  const id = await page
+    .locator("[data-card-for]")
+    .first()
+    .getAttribute("data-card-for");
+  const resp = await page.request.get(
+    `/api/invgate/incidents-by-helpdesk?helpdesk_id=${id}`,
+  );
+  expect(resp.status()).toBe(200);
+  const cacheControl = resp.headers()["cache-control"] ?? "";
+  expect(cacheControl).toContain("max-age=300");
+  expect(cacheControl).not.toContain("no-store");
+});

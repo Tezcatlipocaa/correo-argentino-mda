@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ url }) => {
       ? result.data.requestIds.length
       : 0;
 
-    return jsonResponse({ total }, result.status, "no-store");
+    return jsonResponse({ total }, result.status, "private, max-age=300");
   } catch (error: any) {
     console.error("[InvGate Helpdesk Incidents] Error:", error);
     return jsonResponse({ error: sanitizeError(error) }, 500);
