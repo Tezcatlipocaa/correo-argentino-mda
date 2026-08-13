@@ -36,20 +36,32 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const getFn = USE_QA_INVGATE ? invgateQaGet : invgateGet;
 
+    const MAX_PAGES = 60;
+
     // Step 1a: Fast path — status 1 (Nuevo) filtered by location server-side.
     // InvGate honors location_id ONLY with a single status_id and only for status 1.
-    const newAtLocationRes = await getFn<InvgateByStatusResponse>(
-      `incidents.by.status?status_id=1&location_id=${invgateLocationId}&limit=200`,
-    );
+    const locationNewIds: number[] = [];
+    let newOffset = 0;
+    let newTotal = 1;
+    let newPages = 0;
 
-    if (!newAtLocationRes.ok || !newAtLocationRes.data?.requestIds) {
-      return jsonResponse({
-        exists: false,
-        reason: "No se pudieron consultar los tickets nuevos.",
-      });
+    while (newOffset < newTotal && newPages < MAX_PAGES) {
+      const newAtLocationRes = await getFn<InvgateByStatusResponse>(
+        `incidents.by.status?status_id=1&location_id=${invgateLocationId}&limit=200&offset=${newOffset}`,
+      );
+
+      if (!newAtLocationRes.ok || !newAtLocationRes.data?.requestIds) {
+        return jsonResponse({
+          exists: false,
+          reason: "No se pudieron consultar los tickets nuevos.",
+        });
+      }
+
+      locationNewIds.push(...newAtLocationRes.data.requestIds);
+      newTotal = newAtLocationRes.data.total ?? locationNewIds.length;
+      newOffset += newAtLocationRes.data.requestIds.length;
+      newPages++;
     }
-
-    const locationNewIds = newAtLocationRes.data.requestIds;
 
     // Step 1b: Slow path — remaining open statuses (2-5) have no server-side
     // location filter, so scan the global open set.
@@ -60,7 +72,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let offset = 0;
     let total = 1;
     let pages = 0;
-    const MAX_PAGES = 60;
 
     while (offset < total && pages < MAX_PAGES) {
       const pageRes = await getFn<InvgateByStatusResponse>(
@@ -122,9 +133,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const newRes = await getFn<Record<string, InvgateIncident>>(
         `incidents?${newIdsQuery}`,
       );
-      if (newRes.ok && newRes.data) {
-        locationNewIncidents.push(...Object.values(newRes.data));
+
+      if (!newRes.ok || !newRes.data) {
+        throw new Error(
+          "message" in newRes && newRes.message
+            ? newRes.message
+            : "No se pudieron obtener los detalles de los tickets nuevos.",
+        );
       }
+
+      locationNewIncidents.push(...Object.values(newRes.data));
     }
 
     const allCandidates = [...incidents, ...locationNewIncidents];
