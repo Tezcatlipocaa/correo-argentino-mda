@@ -42,3 +42,14 @@ test("Los iconos sobreviven al filtrado (sin referencias <use> huerfanas)", asyn
   });
   expect(orphanedUses).toBe(0);
 });
+
+test("Los tópicos se muestran en mayúsculas", async ({ page }) => {
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
+
+  const badge = page.locator(".badge-secondary").first();
+  if ((await badge.count()) === 0) {
+    test.skip(true, "Sin tópicos en los datos de InvGate");
+  }
+  await expect(badge).toHaveClass(/uppercase/);
+});
