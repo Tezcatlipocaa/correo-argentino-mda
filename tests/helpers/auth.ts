@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHmac, randomUUID } from "crypto";
 import { db } from "../../src/db/index";
 import { users, sessions } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
@@ -23,8 +23,9 @@ export interface TestUser {
 export async function createTestUserAndSession(
   role: string,
 ): Promise<TestUser> {
-  const username = `test_${role}_${Date.now()}`;
-  const sessionId = `session_${Date.now()}`;
+  const suffix = randomUUID();
+  const username = `test_${role}_${suffix}`;
+  const sessionId = `session_${suffix}`;
   const signedSessionId = signSessionId(sessionId);
 
   const [newUser] = await db
