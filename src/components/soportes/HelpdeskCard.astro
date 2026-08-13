@@ -189,13 +189,19 @@ const searchableText = [
               {sortedSubLevels.map((sl, i) => (
                 <span
                   class:list={[
-                    "badge badge-sm",
+                    "badge badge-sm gap-1.5",
                     levelColors[i % levelColors.length],
                   ]}
                   title={`${sl.total_members} miembros`}
+                  data-level-badge
                 >
-                  {sl.name || `Nivel ${sl.level_order}`}
-                  <span class="text-xxs ml-0.5 font-mono opacity-60">
+                  <span>{sl.name || `Nivel ${sl.level_order}`}</span>
+                  <span
+                    class="h-3 w-px bg-current opacity-40"
+                    data-level-divider
+                    aria-hidden="true"
+                  ></span>
+                  <span class="font-mono opacity-80">
                     ({sl.total_members})
                   </span>
                 </span>

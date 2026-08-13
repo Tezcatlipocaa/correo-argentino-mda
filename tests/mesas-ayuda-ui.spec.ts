@@ -53,3 +53,16 @@ test("Los tópicos se muestran en mayúsculas", async ({ page }) => {
   }
   await expect(badge).toHaveClass(/uppercase/);
 });
+
+test("El contador de miembros de cada nivel tiene un divisor visible", async ({
+  page,
+}) => {
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
+
+  const badge = page.locator("[data-level-badge]").first();
+  if ((await badge.count()) === 0) {
+    test.skip(true, "Sin niveles de atención en los datos de InvGate");
+  }
+  await expect(badge.locator("[data-level-divider]")).toHaveCount(1);
+});
