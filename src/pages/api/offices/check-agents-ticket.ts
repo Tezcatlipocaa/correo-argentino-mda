@@ -6,7 +6,8 @@ import { invgateGet } from "@lib/invgateClient";
 import { invgateQaGet } from "@lib/invgate-qa-client";
 import {
   USE_QA_INVGATE,
-  AGENTS_TICKET_CATEGORY_ID,
+  AGENTS_TICKET_CATEGORY_IDS,
+  isAgentsTicketTitle,
 } from "@lib/telegrafiaTicket";
 import { resolveInvgateLocationId } from "@lib/invgate/resolveOfficeLocation";
 
@@ -83,12 +84,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Step 3: Filter by category_id and location_id
+    // Step 3: Filter by location and either category or title pattern
     const incidents = Object.values(incidentsRes.data);
     const matchingIncident = incidents.find(
       (inc) =>
-        inc.category_id === AGENTS_TICKET_CATEGORY_ID &&
-        inc.location_id === invgateLocationId,
+        inc.location_id === invgateLocationId &&
+        (AGENTS_TICKET_CATEGORY_IDS.includes(inc.category_id ?? -1) ||
+          isAgentsTicketTitle(inc.title)),
     );
 
     if (!matchingIncident) {
