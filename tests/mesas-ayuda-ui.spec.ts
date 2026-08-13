@@ -66,3 +66,24 @@ test("El contador de miembros de cada nivel tiene un divisor visible", async ({
   }
   await expect(badge.locator("[data-level-divider]")).toHaveCount(1);
 });
+
+test("La fila de acciones envuelve sin desbordar en anchos angostos", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
+
+  const actions = page.locator(".card-actions").first();
+  await expect(actions).toBeVisible();
+
+  const flexWrap = await actions.evaluate((el) =>
+    getComputedStyle(el).flexWrap,
+  );
+  expect(flexWrap).toBe("wrap");
+
+  const overflows = await actions.evaluate((el) => {
+    return el.scrollWidth > el.clientWidth + 1;
+  });
+  expect(overflows).toBe(false);
+});
