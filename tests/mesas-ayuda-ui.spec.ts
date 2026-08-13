@@ -106,3 +106,37 @@ test("El endpoint de incidentes devuelve caché (no no-store)", async ({
   expect(cacheControl).toContain("max-age=300");
   expect(cacheControl).not.toContain("no-store");
 });
+
+test("Los miembros se cargan solo al abrir el modal", async ({ page }) => {
+  let membersCalls = 0;
+  await page.route("**/api/invgate/helpdesk-members*", (route) => {
+    membersCalls += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        members: ["Ana Perez", "Juan Gomez"],
+        levels: [],
+      }),
+    });
+  });
+
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
+  await expect(page.locator("[data-card-for]").first()).toBeVisible();
+
+  expect(membersCalls).toBe(0);
+
+  const memberModal = page.locator("dialog [data-members-for]").first();
+  if ((await memberModal.count()) === 0) {
+    test.skip(true, "Sin secciones de miembros en los datos de InvGate");
+  }
+  const invgateId = await memberModal.getAttribute("data-members-for");
+
+  await page
+    .locator(`[data-card-for="${invgateId}"] [data-open-modal]`)
+    .click();
+  await expect(page.locator("dialog[open]")).toBeVisible();
+
+  expect(membersCalls).toBeGreaterThan(0);
+});

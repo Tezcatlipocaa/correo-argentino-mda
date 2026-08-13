@@ -276,7 +276,8 @@ const searchableText = [
       <button
         type="button"
         class="btn btn-sm btn-ghost border-base-300 flex-1 gap-1 border sm:flex-none"
-        onclick={`document.getElementById('${modalId}').showModal()`}
+        data-open-modal={modalId}
+        data-helpdesk-id={helpdesk.id}
       >
         <Icon name="boxicons:info-circle" size={16} aria-hidden="true" />
         <span>Ver más</span>
@@ -495,54 +496,77 @@ const searchableText = [
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  document.querySelectorAll<HTMLElement>("[data-members-for]").forEach((el) => {
-    const invgateId = el.dataset.membersFor;
-    const list = el.querySelector<HTMLElement>("[data-members-list]");
-    if (!invgateId || !list) return;
+  const loadedMembers = new Set<string>();
 
-    fetch(`${cleanBase}api/invgate/helpdesk-members?invgate_id=${invgateId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.members && data.members.length > 0) {
-          list.innerHTML = data.members
-            .map((m: string) => {
-              const initials = getInitials(m);
-              return `
-                <div class="flex items-center gap-2.5 p-2 rounded-lg bg-base-200/50 border border-base-200 text-sm">
-                  <div class="avatar placeholder shrink-0">
-                    <div class="bg-secondary/15 text-secondary rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs">
-                      <span>${initials}</span>
-                    </div>
+  async function loadMembers(invgateId: string) {
+    const container = document.querySelector<HTMLElement>(
+      `[data-members-for="${invgateId}"]`,
+    );
+    if (!container) return;
+    const list = container.querySelector<HTMLElement>("[data-members-list]");
+    if (!list || loadedMembers.has(invgateId)) return;
+    loadedMembers.add(invgateId);
+
+    try {
+      const res = await fetch(
+        `${cleanBase}api/invgate/helpdesk-members?invgate_id=${invgateId}`,
+      );
+      const data = await res.json();
+      if (data.members && data.members.length > 0) {
+        list.innerHTML = data.members
+          .map((m: string) => {
+            const initials = getInitials(m);
+            return `
+              <div class="flex items-center gap-2.5 p-2 rounded-lg bg-base-200/50 border border-base-200 text-sm">
+                <div class="avatar placeholder shrink-0">
+                  <div class="bg-secondary/15 text-secondary rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs">
+                    <span>${initials}</span>
                   </div>
-                  <span class="font-medium text-base-content" data-highlight-target>${m}</span>
                 </div>
-              `;
-            })
-            .join("");
+                <span class="font-medium text-base-content" data-highlight-target>${m}</span>
+              </div>
+            `;
+          })
+          .join("");
 
-          const cardEl = el.closest<HTMLElement>("[data-card-for]");
-          if (cardEl) {
-            const existing = cardEl.dataset.searchText || "";
-            const membersText = data.members.join(" ").toLowerCase();
-            if (!existing.includes(membersText)) {
-              cardEl.dataset.searchText = existing + " " + membersText;
-            }
-            cardEl.dispatchEvent(new Event("members-loaded"));
+        const cardEl = document.querySelector<HTMLElement>(
+          `[data-card-for="${invgateId}"]`,
+        );
+        if (cardEl) {
+          const existing = cardEl.dataset.searchText || "";
+          const membersText = data.members.join(" ").toLowerCase();
+          if (!existing.includes(membersText)) {
+            cardEl.dataset.searchText = existing + " " + membersText;
           }
-        } else {
-          list.innerHTML = `
-            <div class="p-3 text-center text-xs text-base-content/50 italic bg-base-200/30 rounded-lg">
-              Sin miembros registrados en InvGate
-            </div>
-          `;
+          cardEl.dispatchEvent(new Event("members-loaded"));
         }
-      })
-      .catch(() => {
+      } else {
         list.innerHTML = `
-          <div class="p-3 text-center text-xs text-error/70 italic bg-error/10 rounded-lg">
-            Error al cargar miembros
+          <div class="p-3 text-center text-xs text-base-content/50 italic bg-base-200/30 rounded-lg">
+            Sin miembros registrados en InvGate
           </div>
         `;
-      });
+      }
+    } catch {
+      list.innerHTML = `
+        <div class="p-3 text-center text-xs text-error/70 italic bg-error/10 rounded-lg">
+          Error al cargar miembros
+        </div>
+      `;
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-open-modal]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const modalId = btn.dataset.openModal;
+      const invgateId = btn.dataset.helpdeskId;
+      if (modalId) {
+        const modal = document.getElementById(
+          modalId,
+        ) as HTMLDialogElement | null;
+        modal?.showModal();
+      }
+      if (invgateId) loadMembers(invgateId);
+    });
   });
 </script>
