@@ -27,6 +27,23 @@ export const AGENTS_TICKET_CATEGORY_ID = USE_QA_INVGATE
   ? QA_CATEGORY_ID
   : PROD_CATEGORY_ID;
 
+// --- Categorías conocidas del problema "desconexión de agentes" ---
+// 257 = STS- Problema con agentes (categoría que usa este portal)
+// 2625 = Alarma (Operación Telegráfica) — misma problemática registrada en prod
+export const AGENTS_TICKET_CATEGORY_IDS = [
+  AGENTS_TICKET_CATEGORY_ID,
+  2625,
+];
+
+// Patrón de título para "desconexión de agentes" / "agentes caídos",
+// tolera variantes: "STS - Desconexión de Agentes", "Agentes Caidos", "[I1913] STS- ...", etc.
+export const AGENTS_TICKET_TITLE_PATTERN = /desconexi[oó]n\s*de\s*agentes|agentes\s*ca[ií]dos/i;
+
+export function isAgentsTicketTitle(title: string | null | undefined): boolean {
+  if (!title) return false;
+  return AGENTS_TICKET_TITLE_PATTERN.test(title);
+}
+
 // --- IDs de usuario de prueba (solo QA) ---
 export const QA_CUSTOMER_ID = 6;
 export const QA_CREATOR_ID = 6;
