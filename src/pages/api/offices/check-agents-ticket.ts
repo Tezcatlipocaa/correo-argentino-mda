@@ -128,15 +128,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Step 3: Filter by location and either category or title pattern
     const locationNewIncidents: InvgateIncident[] = [];
 
-    if (locationNewIds.length > 0) {
-      const newIdsQuery = locationNewIds.map((id) => `ids[]=${id}`).join("&");
+    for (let i = 0; i < locationNewIds.length; i += CHUNK) {
+      const chunk = locationNewIds.slice(i, i + CHUNK);
+      const newIdsQuery = chunk.map((id) => `ids[]=${id}`).join("&");
       const newRes = await getFn<Record<string, InvgateIncident>>(
         `incidents?${newIdsQuery}`,
       );
 
       if (!newRes.ok || !newRes.data) {
         throw new Error(
-          "message" in newRes && newRes.message
+          "message" in newRes
             ? newRes.message
             : "No se pudieron obtener los detalles de los tickets nuevos.",
         );
