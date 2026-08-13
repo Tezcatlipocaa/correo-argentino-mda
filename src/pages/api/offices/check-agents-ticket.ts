@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let offset = 0;
     let total = 1;
     let pages = 0;
-    const MAX_PAGES = 10;
+    const MAX_PAGES = 60;
 
     while (offset < total && pages < MAX_PAGES) {
       const pageRes = await getFn<InvgateByStatusResponse>(
