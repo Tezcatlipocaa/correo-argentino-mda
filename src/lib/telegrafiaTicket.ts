@@ -7,15 +7,15 @@ import { eq } from "drizzle-orm";
 // TOGGLE: true = QA (crear tickets de prueba en entorno QA)
 //         false = PROD (crear tickets reales en entorno productivo)
 // ============================================================
-export const USE_QA_INVGATE = false;
+export const USE_QA_INVGATE = true;
 
 // --- Helpdesk (mismo ID en QA y producción) ---
 /** Helpdesk: Mesa de Ayuda Operación Telegráfica (id fijo ya conocido) */
 export const TELEGRAFIA_HELPDESK_ID = 5994;
 
 // --- Categoría ---
-/** QA: Portal MDA > General */
-const QA_CATEGORY_ID = 68;
+/** QA: Pruebas */
+const QA_CATEGORY_ID = 79;
 
 /** PROD: STS- Problema con agentes
  *  Ruta: Mesa de Ayuda TI → Accesos y Aplicaciones → Distribución → STS → Fallas → STS- Problema con agentes
@@ -26,6 +26,13 @@ const PROD_CATEGORY_ID = 257; // STS- Problema con agentes
 export const AGENTS_TICKET_CATEGORY_ID = USE_QA_INVGATE
   ? QA_CATEGORY_ID
   : PROD_CATEGORY_ID;
+
+// --- Helpdesk destino de reasignación (TI_GSM_MDA TI Nivel 1) ---
+const QA_AGENTS_ASSIGN_GROUP_ID = 3950;   // QA
+const PROD_AGENTS_ASSIGN_GROUP_ID = 2510; // prod
+export const AGENTS_TICKET_ASSIGN_GROUP_ID = USE_QA_INVGATE
+  ? QA_AGENTS_ASSIGN_GROUP_ID
+  : PROD_AGENTS_ASSIGN_GROUP_ID;
 
 // --- Categorías conocidas del problema "desconexión de agentes" ---
 // 257 = STS- Problema con agentes (categoría que usa este portal)

@@ -367,9 +367,12 @@ const { id = "agents-ticket-modal" } = Astro.props;
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(pendingCreateData),
     })
-      .then((response) => {
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        return response.json();
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "HTTP " + response.status);
+        }
+        return data;
       })
       .then((result) => {
         if (result.success) {
@@ -391,7 +394,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
       })
       .catch((err: any) => {
         console.error(err);
-        showToast("Error de conexión al crear el ticket.", "alert-error");
+        showToast(
+          err?.message || "Error al crear el ticket.",
+          "alert-error",
+        );
       })
       .finally(() => {
         confirmCreateTicketBtn.disabled = false;
