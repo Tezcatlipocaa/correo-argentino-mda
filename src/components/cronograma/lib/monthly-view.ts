@@ -25,7 +25,6 @@ import {
   updateViewSwitcherUI,
   resolveOperatorStatusAndHorario,
 } from "./dashboard-client";
-import { renderPasivaView } from "./pasiva-view";
 
 export function isWorkingAtHour(horario: string, hourStr: string): boolean {
   if (!horario || horario === "-" || horario === "Franco") return false;
