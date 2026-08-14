@@ -33,6 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       typeof body?.observaciones === "string"
         ? body.observaciones
         : undefined;
+    const sourceId = body?.sourceId;
 
     if (
       typeof officeCode !== "string" ||
@@ -47,6 +48,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!officeCode.trim() || !officeName.trim()) {
       return jsonError(
         "Los campos officeCode y officeName no pueden estar vacíos.",
+        400,
+      );
+    }
+
+    if (typeof sourceId !== "number" || sourceId <= 0) {
+      return jsonError(
+        "sourceId es requerido y debe ser un ID válido.",
         400,
       );
     }
@@ -165,6 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       category_id: AGENTS_TICKET_CATEGORY_ID,
       title: buildAgentsTicketTitle(officeCode.trim()),
       priority_id: AGENTS_TICKET_PRIORITY_ID,
+      source_id: sourceId,
       customer_id: customerId,
       creator_id: adminId,
       description,

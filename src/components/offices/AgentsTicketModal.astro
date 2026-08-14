@@ -38,6 +38,26 @@ const { id = "agents-ticket-modal" } = Astro.props;
         </p>
       </div>
 
+      <!-- Source selector -->
+      <fieldset class="fieldset">
+        <legend
+          class="fieldset-legend font-bold tracking-wider uppercase text-xs"
+        >
+          Origen de la solicitud
+          <span class="text-error">*</span>
+        </legend>
+        <select
+          id="ticket-source-select"
+          class="select select-bordered w-full"
+          required
+        >
+          <option value="" disabled selected>Cargando orígenes...</option>
+        </select>
+        <p class="fieldset-label text-xs text-base-content/50">
+          Cómo llegó la novedad (correo, teléfono, etc.)
+        </p>
+      </fieldset>
+
       <!-- Agent selector -->
       <fieldset class="fieldset">
         <legend
@@ -121,6 +141,12 @@ const { id = "agents-ticket-modal" } = Astro.props;
         ¿Estás seguro que deseas crear un ticket por agentes caídos en
         <strong id="confirm-office-label">&mdash;</strong>?
       </p>
+      <p class="text-xs text-base-content/60 mt-2">
+        Origen: <span id="confirm-source-label" class="font-semibold">&mdash;</span>
+      </p>
+      <p class="text-xs text-base-content/60">
+        Agente: <span id="confirm-agent-label" class="font-semibold">&mdash;</span>
+      </p>
     </div>
     <div id="confirm-duplicate-state" class="hidden">
       <div
@@ -186,7 +212,13 @@ const { id = "agents-ticket-modal" } = Astro.props;
     username: string;
   }
 
+  interface IncidentSource {
+    id: number;
+    name: string;
+  }
+
   let agentsCache: TelegrafiaAgent[] | null = null;
+  let sourcesCache: IncidentSource[] | null = null;
   let currentOfficeName = "";
   let currentOfficeCode = "";
   let pendingCreateData: {
@@ -194,6 +226,8 @@ const { id = "agents-ticket-modal" } = Astro.props;
     officeName: string;
     customerId: number;
     customerName: string;
+    sourceId: number;
+    sourceName: string;
     observaciones?: string;
   } | null = null;
   const modal = document.getElementById(
@@ -201,6 +235,9 @@ const { id = "agents-ticket-modal" } = Astro.props;
   ) as HTMLDialogElement | null;
   const agentSelect = document.getElementById(
     "ticket-agent-select",
+  ) as HTMLSelectElement | null;
+  const sourceSelect = document.getElementById(
+    "ticket-source-select",
   ) as HTMLSelectElement | null;
   const observacionesTextarea = document.getElementById(
     "ticket-observaciones",
@@ -219,6 +256,8 @@ const { id = "agents-ticket-modal" } = Astro.props;
     "confirm-duplicate-state",
   );
   const confirmOfficeLabel = document.getElementById("confirm-office-label");
+  const confirmSourceLabel = document.getElementById("confirm-source-label");
+  const confirmAgentLabel = document.getElementById("confirm-agent-label");
   const confirmDupId = document.getElementById("confirm-dup-id");
   const confirmDupTitle = document.getElementById("confirm-dup-title");
   const confirmDupLink = document.getElementById(
@@ -256,6 +295,33 @@ const { id = "agents-ticket-modal" } = Astro.props;
         .join("");
   }
 
+  async function loadSources(): Promise<IncidentSource[]> {
+    if (sourcesCache) return sourcesCache;
+
+    const res = await fetch("/api/invgate/incident-sources");
+    if (!res.ok) throw new Error("Failed to load sources");
+
+    const data = (await res.json()) as { sources: IncidentSource[] };
+    if (!data.sources || !Array.isArray(data.sources)) {
+      throw new Error("Invalid response");
+    }
+
+    sourcesCache = data.sources;
+    return sourcesCache;
+  }
+
+  function populateSourceSelect(sources: IncidentSource[]) {
+    if (!sourceSelect) return;
+    sourceSelect.innerHTML =
+      '<option value="" disabled selected>Seleccionar origen...</option>' +
+      sources
+        .map(
+          (s) =>
+            `<option value="${s.id}" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`,
+        )
+        .join("");
+  }
+
   function openAgentsTicketModal(officeName: string, officeCode: string) {
     if (!modal) return;
 
@@ -271,6 +337,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
       agentSelect.innerHTML =
         '<option value="" disabled selected>Cargando agentes...</option>';
     }
+    if (sourceSelect) {
+      sourceSelect.innerHTML =
+        '<option value="" disabled selected>Cargando orígenes...</option>';
+    }
     if (observacionesTextarea) observacionesTextarea.value = "";
     if (confirmBtn) {
       confirmBtn.disabled = false;
@@ -280,9 +350,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
 
     modal.showModal();
 
-    loadAgents()
-      .then((agents) => {
+    Promise.all([loadAgents(), loadSources()])
+      .then(([agents, sources]) => {
         populateAgentSelect(agents);
+        populateSourceSelect(sources);
         if (loadingEl) loadingEl.classList.add("hidden");
       })
       .catch(() => {
@@ -290,6 +361,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
         if (errorEl) errorEl.classList.remove("hidden");
         if (agentSelect) {
           agentSelect.innerHTML =
+            '<option value="" disabled selected>Error al cargar</option>';
+        }
+        if (sourceSelect) {
+          sourceSelect.innerHTML =
             '<option value="" disabled selected>Error al cargar</option>';
         }
       });
@@ -331,6 +406,12 @@ const { id = "agents-ticket-modal" } = Astro.props;
       confirmDuplicateState.classList.toggle("hidden", !hasDuplicate);
     if (confirmOfficeLabel) {
       confirmOfficeLabel.textContent = ` ${currentOfficeName} (${currentOfficeCode})`;
+    }
+    if (confirmSourceLabel) {
+      confirmSourceLabel.textContent = pendingCreateData?.sourceName || "—";
+    }
+    if (confirmAgentLabel) {
+      confirmAgentLabel.textContent = pendingCreateData?.customerName || "—";
     }
 
     if (hasDuplicate) {
@@ -406,6 +487,23 @@ const { id = "agents-ticket-modal" } = Astro.props;
   });
 
   confirmBtn?.addEventListener("click", async () => {
+    if (!sourceSelect || !sourceSelect.value) {
+      showToast(
+        "Debe seleccionar el origen de la solicitud.",
+        "alert-warning",
+      );
+      return;
+    }
+
+    const sourceOption = sourceSelect.selectedOptions[0];
+    const sourceId = Number(sourceSelect.value);
+    const sourceName = sourceOption?.getAttribute("data-name") || "";
+
+    if (!sourceId || !sourceName) {
+      showToast("Origen de la solicitud inválido.", "alert-warning");
+      return;
+    }
+
     if (!agentSelect || !agentSelect.value) {
       showToast(
         "Debe seleccionar un agente de mesa de ayuda.",
@@ -430,6 +528,8 @@ const { id = "agents-ticket-modal" } = Astro.props;
       officeName: currentOfficeName,
       customerId,
       customerName,
+      sourceId,
+      sourceName,
       observaciones,
     };
 
