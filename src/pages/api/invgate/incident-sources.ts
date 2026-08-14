@@ -10,6 +10,9 @@ export interface IncidentSource {
   name: string;
 }
 
+// Orígenes permitidos para el ticket de desconexión de agentes
+const ALLOWED_SOURCE_IDS = [1, 3, 8]; // Correo, Teléfono, API
+
 export const GET: APIRoute = async ({ locals }) => {
   const denied = requireWriteAccess(locals, "usuarios");
   if (denied) return denied;
@@ -22,7 +25,8 @@ export const GET: APIRoute = async ({ locals }) => {
       return jsonResponse({ error: res.message }, res.status);
     }
 
-    const sources = Array.isArray(res.data) ? res.data : [];
+    const all = Array.isArray(res.data) ? res.data : [];
+    const sources = all.filter((s) => ALLOWED_SOURCE_IDS.includes(s.id));
 
     return jsonResponse({ sources }, 200, "private, max-age=300");
   } catch (error: any) {
