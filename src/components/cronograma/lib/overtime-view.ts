@@ -249,7 +249,7 @@ export function renderOvertimeTimeline(
 
   const bgGrid = hours
     .map((h) => {
-      return `<div class="flex-1 min-w-0 border-r border-base-300/[0.12] ${h.isMidnight ? "border-info/30 bg-info/[0.03]" : ""}"></div>`;
+      return `<div class="flex-1 min-w-0 border-r border-base-300/12 ${h.isMidnight ? "border-info/30 bg-info/3" : ""}"></div>`;
     })
     .join("");
 
@@ -270,11 +270,11 @@ export function renderOvertimeTimeline(
           const lp = (startMin / TOTAL_MINUTES) * 100;
           const wp = ((cappedEndMin - startMin) / TOTAL_MINUTES) * 100;
           const dur = calcDuration(s.startTime, s.endTime);
-          return `<div class="absolute top-[3px] bottom-[3px] overflow-visible cursor-pointer overtime-timeline-bar pointer-events-auto" style="left:${lp.toFixed(4)}%;width:${wp.toFixed(4)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xs font-black text-warning-content truncate px-1">${dur}h</span></div></div>`;
+          return `<div class="absolute top-0.75 bottom-0.75 overflow-visible cursor-pointer overtime-timeline-bar pointer-events-auto" style="left:${lp.toFixed(4)}%;width:${wp.toFixed(4)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xs font-black text-warning-content truncate px-1">${dur}h</span></div></div>`;
         })
         .join("");
       return `
-      <div class="flex items-stretch min-h-[36px] border-b border-base-300/[0.12] last:border-0">
+      <div class="flex items-stretch min-h-9 border-b border-base-300/12 last:border-0">
         <div class="w-36 shrink-0 px-2 py-1.5 border-r border-base-300/40 flex items-center gap-2">
           <div class="w-6 h-6 rounded-full bg-base-300/50 flex items-center justify-center text-xs font-black shrink-0">${initials}</div>
           <span class="truncate text-xs font-bold text-base-content">${escapeHtml(op.nombre)}</span>

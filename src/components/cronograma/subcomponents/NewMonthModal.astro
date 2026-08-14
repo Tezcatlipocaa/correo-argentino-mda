@@ -5,7 +5,7 @@ import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 ---
 
-<div id="new-month-modal" class="modal modal-bottom sm:modal-middle z-[200]">
+<div id="new-month-modal" class="modal modal-bottom sm:modal-middle z-200">
   <div class="modal-box w-11/12 max-w-md p-4 sm:w-full sm:p-5">
     <h3
       class="text-base-content mb-3 flex items-center gap-2 text-lg font-black tracking-tight uppercase"
@@ -91,7 +91,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
     const backdrop = document.getElementById("new-month-backdrop");
 
     function closeModal() {
-      modal.classList.remove("modal-open");
+      modal?.classList.remove("modal-open");
     }
 
     backdrop?.addEventListener("click", closeModal);

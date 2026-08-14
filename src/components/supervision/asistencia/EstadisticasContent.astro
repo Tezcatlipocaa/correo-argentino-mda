@@ -99,7 +99,7 @@ const initialData = await getAttendanceData(startDate, endDate);
       >
         Distribución de Incidencias
       </h3>
-      <div class="relative flex h-[220px] w-full items-center justify-center">
+      <div class="relative flex h-55 w-full items-center justify-center">
         <canvas id="doughnut-chart"></canvas>
       </div>
     </div>
@@ -118,7 +118,7 @@ const initialData = await getAttendanceData(startDate, endDate);
           >
             Tendencia Semanal de Puntualidad
           </h3>
-          <div class="relative h-[220px] w-full">
+          <div class="relative h-55 w-full">
             <canvas id="bar-chart"></canvas>
           </div>
         </div>
@@ -159,7 +159,7 @@ const initialData = await getAttendanceData(startDate, endDate);
           </div>
           <div
             id="detail-content"
-            class="text-base-content/85 max-h-[220px] space-y-2 overflow-y-auto pr-2 text-xs font-semibold"
+            class="text-base-content/85 max-h-55 space-y-2 overflow-y-auto pr-2 text-xs font-semibold"
           >
             <!-- Dynamically populated list of operators & dates -->
           </div>
@@ -182,7 +182,7 @@ const initialData = await getAttendanceData(startDate, endDate);
       </h3>
       <select
         id="operator-select"
-        class="select select-sm select-bordered w-full max-w-[200px] rounded-xl text-xs font-bold"
+        class="select select-sm select-bordered w-full max-w-50 rounded-xl text-xs font-bold"
       >
         <option value="">Seleccione operador...</option>
       </select>

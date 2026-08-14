@@ -637,7 +637,7 @@ const getExcepcionalShortLabel = (tipo: string): string => {
       <div class="flex items-center gap-1">
         <span
           id="sync-indicator"
-          class="text-base-content/50 w-[180px] text-xs font-semibold"
+          class="text-base-content/50 w-45 text-xs font-semibold"
         >
           Actualizado hace unos instantes
         </span>
@@ -842,7 +842,7 @@ const getExcepcionalShortLabel = (tipo: string): string => {
               {op.estadoExcepcional && op.estadoExcepcionalMotivo && (
                 <div
                   data-op-exception-comment={op.agentId}
-                  class="text-small text-base-content/50 mt-0.5 max-w-[150px] truncate font-medium italic"
+                  class="text-small text-base-content/50 mt-0.5 max-w-37.5 truncate font-medium italic"
                   title={op.estadoExcepcionalMotivo}
                 >
                   "{op.estadoExcepcionalMotivo}"

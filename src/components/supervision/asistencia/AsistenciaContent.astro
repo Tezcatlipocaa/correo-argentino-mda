@@ -103,7 +103,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
           >
         </summary>
         <ul
-          class="dropdown-content menu bg-base-100 border-base-300 z-[100] mt-1 w-60 gap-1 rounded-xl border p-2 text-xs font-semibold tracking-normal normal-case shadow-lg"
+          class="dropdown-content menu bg-base-100 border-base-300 z-100 mt-1 w-60 gap-1 rounded-xl border p-2 text-xs font-semibold tracking-normal normal-case shadow-lg"
           id="sort-menu"
         >
           <li>
@@ -218,7 +218,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
   <div
     class="bg-base-100 border-base-300 relative z-0 overflow-hidden rounded-2xl border shadow-md"
   >
-    <div class="min-h-[300px] overflow-x-auto">
+    <div class="min-h-75 overflow-x-auto">
       <table
         class="w-full border-collapse text-left text-xs"
         id="attendance-table"
@@ -227,8 +227,8 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
           class="bg-base-200/80 border-base-300 text-base-content/60 border-b font-bold tracking-wider uppercase"
         >
           <tr>
-            <th class="w-[28%] min-w-[180px] px-4 py-3.5">Operador</th>
-            <th class="w-[20%] min-w-[230px] px-3 py-3.5">
+            <th class="w-[28%] min-w-45 px-4 py-3.5">Operador</th>
+            <th class="w-[20%] min-w-57.5 px-3 py-3.5">
               <div class="flex items-center gap-1">
                 Asistencia Real
                 <details class="dropdown dropdown-bottom">
@@ -252,7 +252,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                   </summary>
                   <div
                     tabindex="0"
-                    class="dropdown-content bg-base-100 border-base-300 z-[100] mt-1 flex w-64 flex-col gap-1 rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-lg"
+                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex w-64 flex-col gap-1 rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-lg"
                   >
                     <label
                       class="hover:bg-base-200 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
@@ -315,7 +315,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                 </details>
               </div>
             </th>
-            <th class="w-[20%] min-w-[180px] px-3 py-3.5">
+            <th class="w-[20%] min-w-45 px-3 py-3.5">
               <div class="flex items-center gap-1">
                 Ausencia / Eventualidad
                 <details class="dropdown dropdown-bottom">
@@ -339,7 +339,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                   </summary>
                   <div
                     tabindex="0"
-                    class="dropdown-content bg-base-100 border-base-300 z-[100] mt-1 flex max-h-64 w-60 flex-col gap-1 overflow-y-auto rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-lg"
+                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex max-h-64 w-60 flex-col gap-1 overflow-y-auto rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-lg"
                   >
                     <label
                       class="hover:bg-base-200 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
@@ -545,13 +545,13 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                 </details>
               </div>
             </th>
-            <th class="w-[12%] min-w-[100px] px-3 py-3.5 text-center"
+            <th class="w-[12%] min-w-25 px-3 py-3.5 text-center"
               >Horario Estipulado</th
             >
-            <th class="w-[10%] min-w-[80px] px-3 py-3.5 text-center"
+            <th class="w-[10%] min-w-20 px-3 py-3.5 text-center"
               >Entrada Real</th
             >
-            <th class="w-[10%] min-w-[110px] px-3 py-3.5 text-center">
+            <th class="w-[10%] min-w-27.5 px-3 py-3.5 text-center">
               <div class="flex items-center justify-center gap-1">
                 Cumplimiento
                 <details class="dropdown dropdown-bottom dropdown-end">
@@ -575,7 +575,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                   </summary>
                   <div
                     tabindex="0"
-                    class="dropdown-content bg-base-100 border-base-300 z-[100] mt-1 flex w-52 flex-col gap-1 rounded-xl border p-2 text-left text-xs font-normal tracking-normal normal-case shadow-lg"
+                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex w-52 flex-col gap-1 rounded-xl border p-2 text-left text-xs font-normal tracking-normal normal-case shadow-lg"
                   >
                     <label
                       class="hover:bg-base-200 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
