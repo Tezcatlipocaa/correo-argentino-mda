@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 // TOGGLE: true = QA (crear tickets de prueba en entorno QA)
 //         false = PROD (crear tickets reales en entorno productivo)
 // ============================================================
-export const USE_QA_INVGATE = true;
+export const USE_QA_INVGATE = false;
 
 // --- Helpdesk (mismo ID en QA y producción) ---
 /** Helpdesk: Mesa de Ayuda Operación Telegráfica (id fijo ya conocido) */
