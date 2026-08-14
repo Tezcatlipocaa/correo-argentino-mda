@@ -4,7 +4,7 @@ Generado el 2026-04-10. Ultima actualizacion: 2026-07-06.
 
 ## Stack
 
-- Framework: Astro v6 (output: `server` / SSR) con adaptador `@astrojs/node` standalone
+- Framework: Astro v7 (output: `server` / SSR) con adaptador `@astrojs/node` standalone
 - Estilos: Tailwind CSS v4 + DaisyUI v5
 - Tipografia: `Geist Variable` (Sans) + `Geist Mono Variable` (Mono) via Fontsource
 - Iconos: `astro-icon` con Boxicons (`@iconify-json/boxicons`)

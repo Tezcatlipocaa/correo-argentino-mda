@@ -26,7 +26,7 @@ de operaciones logisticas y postales.
 
 ## Stack tecnologico
 
-- **Framework:** Astro v6 (output: `server` / SSR) con adaptador `@astrojs/node` standalone
+- **Framework:** Astro v7 (output: `server` / SSR) con adaptador `@astrojs/node` standalone
 - **Estilos:** Tailwind CSS v4 + DaisyUI v5
 - **Tipografia:** `Geist Variable` (UI) y `Geist Mono Variable` (datos tecnicos) via Fontsource
 - **Interactividad:** React islands via `@astrojs/react`, iconos con `astro-icon` + `@iconify-json/boxicons`, `theme-change` para toggle de tema
