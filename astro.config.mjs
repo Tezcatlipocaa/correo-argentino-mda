@@ -25,16 +25,18 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
-      esbuildOptions: {
-        define: {
-          "process.env.NODE_ENV": JSON.stringify(
-            process.env.NODE_ENV ?? "development",
-          ),
+      rolldownOptions: {
+        transform: {
+          define: {
+            "process.env.NODE_ENV": JSON.stringify(
+              process.env.NODE_ENV ?? "development",
+            ),
+          },
         },
       },
     },
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         external: ["ldapjs"],
       },
     },
