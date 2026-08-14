@@ -65,6 +65,7 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
+    "@iconify/tools": "^5.0.12",
     "esbuild": "^0.28.1",
     "yaml": "^2.3.0"
   }
