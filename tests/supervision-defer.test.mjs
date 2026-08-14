@@ -9,8 +9,7 @@ const exists = (path) => existsSync(fileUrl(path));
 
 // 1. Check file existence
 const filesToExist = [
-  "src/components/supervision/cronograma/CronogramaSkeleton.astro",
-  "src/components/supervision/cronograma/CronogramaContent.astro",
+  "src/components/cronograma/CronogramaDashboard.astro",
   "src/components/supervision/asistencia/AsistenciaSkeleton.astro",
   "src/components/supervision/asistencia/AsistenciaContent.astro",
   "src/components/supervision/asistencia/EstadisticasSkeleton.astro",
@@ -21,23 +20,15 @@ for (const path of filesToExist) {
   assert.ok(exists(path), `Expected ${path} to exist`);
 }
 
-// 2. Check Cronograma Page Defer
+// 2. Check Cronograma Page (renders dashboard directly, no defer)
 const cronogramaPage = await read(
   "src/pages/supervision/cronograma/index.astro",
 );
 assert.match(
   cronogramaPage,
-  /import\s+CronogramaContent\s+from\s+["']@components\/supervision\/cronograma\/CronogramaContent\.astro["']/,
+  /import\s+CronogramaDashboard\s+from\s+["']@components\/cronograma\/CronogramaDashboard\.astro["']/,
 );
-assert.match(
-  cronogramaPage,
-  /import\s+CronogramaSkeleton\s+from\s+["']@components\/supervision\/cronograma\/CronogramaSkeleton\.astro["']/,
-);
-assert.match(cronogramaPage, /<CronogramaContent\s+server:defer\s*>/);
-assert.match(
-  cronogramaPage,
-  /<CronogramaSkeleton\s+slot=["']fallback["']\s*\/>/,
-);
+assert.match(cronogramaPage, /<CronogramaDashboard\s+/);
 
 // 3. Check Asistencia Page Defer
 const asistenciaPage = await read(
