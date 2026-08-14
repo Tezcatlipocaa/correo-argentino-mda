@@ -91,9 +91,9 @@ const officeDirectoryRowGridClass = showActionsColumn
     aria-expanded={hasDetails ? "false" : undefined}
     class:list={[
       officeDirectoryRowGridClass,
-      "border-b border-base-300 px-4 py-3 transition-colors",
+      "border-base-300 border-b px-4 py-3 transition-colors",
       office.active === false &&
-        "bg-base-200/50 [&_>_div:not(.action-buttons)]:grayscale [&_>_div:not(.action-buttons)]:opacity-80",
+        "bg-base-200/50 [&_>_div:not(.action-buttons)]:opacity-80 [&_>_div:not(.action-buttons)]:grayscale",
     ]}
   >
     <div>
@@ -244,7 +244,7 @@ const officeDirectoryRowGridClass = showActionsColumn
 
     {
       showActionsColumn && (
-        <div class="min-w-0 flex items-center justify-end gap-2 action-buttons">
+        <div class="action-buttons flex min-w-0 items-center justify-end gap-2">
           {isAllowedAdmin && (
             <>
               <ActionEditButton
@@ -432,11 +432,11 @@ const officeDirectoryRowGridClass = showActionsColumn
 
                 {/* Personal de la sucursal */}
                 <section
-                  class="space-y-3 hidden"
+                  class="hidden space-y-3"
                   data-branch-personnel
                   data-nis={office.code}
                 >
-                  <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-base-content/70">
+                  <h2 class="text-base-content/70 flex items-center gap-2 text-xs font-bold tracking-wide uppercase">
                     <Icon
                       name="boxicons:group-filled"
                       size={16}
@@ -447,7 +447,7 @@ const officeDirectoryRowGridClass = showActionsColumn
                   </h2>
                   <div
                     data-branch-personnel-content
-                    class="rounded-lg border border-base-300 bg-base-100/50 p-3 shadow-sm"
+                    class="border-base-300 bg-base-100/50 rounded-lg border p-3 shadow-sm"
                   />
                 </section>
 

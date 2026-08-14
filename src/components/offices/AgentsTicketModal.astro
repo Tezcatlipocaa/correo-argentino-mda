@@ -18,20 +18,20 @@ const { id = "agents-ticket-modal" } = Astro.props;
   <Fragment slot="content">
     <div class="space-y-4">
       <!-- Office info (set dynamically by JS) -->
-      <div class="rounded-lg border border-base-300 bg-base-200/50 p-3">
+      <div class="border-base-300 bg-base-200/50 rounded-lg border p-3">
         <p
-          class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2"
+          class="text-base-content/60 mb-2 text-xs font-bold tracking-wide uppercase"
         >
           Oficina afectada
         </p>
         <p
-          class="text-sm font-semibold text-base-content"
+          class="text-base-content text-sm font-semibold"
           id="ticket-office-name"
         >
           &mdash;
         </p>
         <p
-          class="font-mono text-xs text-base-content/70 mt-1"
+          class="text-base-content/70 mt-1 font-mono text-xs"
           id="ticket-office-code"
         >
           &mdash;
@@ -41,7 +41,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
       <!-- Source selector -->
       <fieldset class="fieldset">
         <legend
-          class="fieldset-legend font-bold tracking-wider uppercase text-xs"
+          class="fieldset-legend text-xs font-bold tracking-wider uppercase"
         >
           Origen de la solicitud
           <span class="text-error">*</span>
@@ -53,7 +53,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
         >
           <option value="" disabled selected>Cargando orígenes...</option>
         </select>
-        <p class="fieldset-label text-xs text-base-content/50">
+        <p class="fieldset-label text-base-content/50 text-xs">
           Cómo llegó la novedad (correo, teléfono, etc.)
         </p>
       </fieldset>
@@ -61,7 +61,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
       <!-- Agent selector -->
       <fieldset class="fieldset">
         <legend
-          class="fieldset-legend font-bold tracking-wider uppercase text-xs"
+          class="fieldset-legend text-xs font-bold tracking-wider uppercase"
         >
           Agente de mesa de ayuda
           <span class="text-error">*</span>
@@ -73,7 +73,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
         >
           <option value="" disabled selected>Cargando agentes...</option>
         </select>
-        <p class="fieldset-label text-xs text-base-content/50">
+        <p class="fieldset-label text-base-content/50 text-xs">
           El ticket se creará a nombre de este agente como cliente
         </p>
       </fieldset>
@@ -81,7 +81,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
       <!-- Observaciones -->
       <fieldset class="fieldset">
         <legend
-          class="fieldset-legend font-bold tracking-wider uppercase text-xs"
+          class="fieldset-legend text-xs font-bold tracking-wider uppercase"
         >
           Observaciones adicionales
           <span class="text-base-content/50 font-normal">(opcional)</span>
@@ -97,22 +97,22 @@ const { id = "agents-ticket-modal" } = Astro.props;
       <!-- Loading / error states -->
       <div
         id="ticket-modal-loading"
-        class="flex items-center gap-2 text-sm text-base-content/60"
+        class="text-base-content/60 flex items-center gap-2 text-sm"
       >
         <span class="loading loading-spinner loading-xs"></span>
         Cargando agentes de la mesa de ayuda...
       </div>
-      <div id="ticket-modal-error" class="hidden text-sm text-error">
+      <div id="ticket-modal-error" class="text-error hidden text-sm">
         Error al cargar los agentes. Intentá de nuevo.
       </div>
     </div>
   </Fragment>
   <Fragment slot="actions">
-    <div class="flex justify-end gap-2 mt-6">
+    <div class="mt-6 flex justify-end gap-2">
       <form method="dialog">
         <button
           type="button"
-          class="btn btn-ghost border border-base-300 hover:bg-base-200 cursor-pointer"
+          class="btn btn-ghost border-base-300 hover:bg-base-200 cursor-pointer border"
           onclick="this.closest('dialog')?.close()"
         >
           Cancelar
@@ -137,31 +137,35 @@ const { id = "agents-ticket-modal" } = Astro.props;
 >
   <Fragment slot="content">
     <div id="confirm-default-state" class="space-y-1">
-      <p class="text-sm text-base-content/80">
+      <p class="text-base-content/80 text-sm">
         ¿Estás seguro que deseas crear un ticket por agentes caídos en
         <strong id="confirm-office-label">&mdash;</strong>?
       </p>
-      <p class="text-xs text-base-content/60 mt-2">
-        Origen: <span id="confirm-source-label" class="font-semibold">&mdash;</span>
+      <p class="text-base-content/60 mt-2 text-xs">
+        Origen: <span id="confirm-source-label" class="font-semibold"
+          >&mdash;</span
+        >
       </p>
-      <p class="text-xs text-base-content/60">
-        Agente: <span id="confirm-agent-label" class="font-semibold">&mdash;</span>
+      <p class="text-base-content/60 text-xs">
+        Agente: <span id="confirm-agent-label" class="font-semibold"
+          >&mdash;</span
+        >
       </p>
     </div>
     <div id="confirm-duplicate-state" class="hidden">
       <div
         role="alert"
-        class="rounded-lg border border-error/40 bg-error/10 p-4"
+        class="border-error/40 bg-error/10 rounded-lg border p-4"
       >
         <div class="flex items-start gap-3">
           <span class="text-error mt-0.5">
             <Icon name="boxicons:alert-circle-filled" size={24} />
           </span>
-          <div class="flex-1 min-w-0 flex gap-2 flex-col">
-            <p class="text-sm font-semibold text-error">
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <p class="text-error text-sm font-semibold">
               Ya existe un ticket abierto por este motivo en la misma ubicación
             </p>
-            <p class="text-xs text-base-content/70">
+            <p class="text-base-content/70 text-xs">
               Ticket <strong id="confirm-dup-id" class="font-mono"
                 >#&mdash;</strong
               >:
@@ -172,11 +176,11 @@ const { id = "agents-ticket-modal" } = Astro.props;
               href="#"
               target="_blank"
               rel="noopener noreferrer"
-              class="link-neutral text-lg mt-2"
+              class="link-neutral mt-2 text-lg"
             >
               Ver ticket en InvGate
             </a>
-            <p class="text-xs text-base-content/80">
+            <p class="text-base-content/80 text-xs">
               ¿Deseas continuar con la creación de todos modos?
             </p>
           </div>
@@ -185,10 +189,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
     </div>
   </Fragment>
   <Fragment slot="actions">
-    <div class="flex justify-end gap-2 mt-6">
+    <div class="mt-6 flex justify-end gap-2">
       <form method="dialog">
         <button
-          class="btn btn-ghost border border-base-300 hover:bg-base-200 cursor-pointer"
+          class="btn btn-ghost border-base-300 hover:bg-base-200 cursor-pointer border"
           >Cancelar</button
         >
       </form>
@@ -475,10 +479,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
       })
       .catch((err: any) => {
         console.error(err);
-        showToast(
-          err?.message || "Error al crear el ticket.",
-          "alert-error",
-        );
+        showToast(err?.message || "Error al crear el ticket.", "alert-error");
       })
       .finally(() => {
         confirmCreateTicketBtn.disabled = false;
@@ -488,10 +489,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
 
   confirmBtn?.addEventListener("click", async () => {
     if (!sourceSelect || !sourceSelect.value) {
-      showToast(
-        "Debe seleccionar el origen de la solicitud.",
-        "alert-warning",
-      );
+      showToast("Debe seleccionar el origen de la solicitud.", "alert-warning");
       return;
     }
 

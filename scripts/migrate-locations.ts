@@ -67,7 +67,15 @@ function flattenTopological(roots: LocationNode[]): LocationNode[] {
 
 async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
   const idMap = new Map<number, number>();
-  const result: MigrationResult = { created: 0, reused: 0, skipped: 0, errors: [], idMap, wouldCreate: 0, total: 0 };
+  const result: MigrationResult = {
+    created: 0,
+    reused: 0,
+    skipped: 0,
+    errors: [],
+    idMap,
+    wouldCreate: 0,
+    total: 0,
+  };
 
   console.log("[MigrateLocations] Fetching locations from PROD...");
   const prodResponse = await invgateGet<InvgateLocation[]>("locations");
@@ -78,15 +86,21 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
 
   const flatList = Array.isArray(prodResponse.data) ? prodResponse.data : [];
   if (flatList.length === 0) {
-    console.log("[MigrateLocations] No locations found in PROD. Nothing to migrate.");
+    console.log(
+      "[MigrateLocations] No locations found in PROD. Nothing to migrate.",
+    );
     return result;
   }
 
-  console.log(`[MigrateLocations] Fetched ${flatList.length} locations from PROD.`);
+  console.log(
+    `[MigrateLocations] Fetched ${flatList.length} locations from PROD.`,
+  );
 
   const prodIdSet = new Set(flatList.map((l) => l.id));
 
-  console.log("[MigrateLocations] Fetching existing locations from QA for resume matching...");
+  console.log(
+    "[MigrateLocations] Fetching existing locations from QA for resume matching...",
+  );
   const qaResponse = await invgateQaGet<InvgateLocation[]>("locations");
 
   if (!qaResponse.ok) {
@@ -117,7 +131,9 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
   const roots = buildTree(flatList);
   const ordered = flattenTopological(roots);
 
-  console.log(`[MigrateLocations] ${ordered.length} locations to migrate (${roots.length} roots).`);
+  console.log(
+    `[MigrateLocations] ${ordered.length} locations to migrate (${roots.length} roots).`,
+  );
 
   if (dryRun) {
     console.log("[MigrateLocations] DRY RUN — no locations will be created.");
@@ -128,8 +144,12 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
     for (const node of ordered) {
       const indent = getDepth(node, flatList);
       const prefix = "  ".repeat(indent);
-      const parentIsReal = node.prodParentId !== null && prodIdSet.has(node.prodParentId);
-      const willSkip = parentIsReal && node.prodParentId !== null && !simulatedIds.has(node.prodParentId);
+      const parentIsReal =
+        node.prodParentId !== null && prodIdSet.has(node.prodParentId);
+      const willSkip =
+        parentIsReal &&
+        node.prodParentId !== null &&
+        !simulatedIds.has(node.prodParentId);
       if (willSkip) {
         console.log(`${prefix}[SKIP] ${node.name} (parent missing)`);
         continue;
@@ -142,28 +162,34 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
           existingQaId = qaByNameParent.get(`${node.name}|${parentQaId}`);
         }
       } else {
-        existingQaId = qaByNameParent.get(`${node.name}|null`) ?? qaTopByName.get(node.name);
+        existingQaId =
+          qaByNameParent.get(`${node.name}|null`) ?? qaTopByName.get(node.name);
       }
 
       if (existingQaId !== undefined) {
         simulatedQaIds.set(node.prodId, existingQaId);
         simulatedIds.add(node.prodId);
         wouldReuse++;
-        console.log(`${prefix}[REUSE] ${node.name} (exists as QA#${existingQaId})`);
+        console.log(
+          `${prefix}[REUSE] ${node.name} (exists as QA#${existingQaId})`,
+        );
         continue;
       }
 
       simulatedIds.add(node.prodId);
       wouldCreate++;
-      const parentInfo = node.prodParentId !== null
-        ? ` (parent: prod#${node.prodParentId})`
-        : "";
+      const parentInfo =
+        node.prodParentId !== null
+          ? ` (parent: prod#${node.prodParentId})`
+          : "";
       console.log(`${prefix}- ${node.name}${parentInfo}`);
     }
     result.wouldCreate = wouldCreate;
     result.reused = wouldReuse;
     result.total = ordered.length;
-    console.log(`[MigrateLocations] DRY RUN would create: ${wouldCreate} of ${ordered.length}`);
+    console.log(
+      `[MigrateLocations] DRY RUN would create: ${wouldCreate} of ${ordered.length}`,
+    );
     console.log(`[MigrateLocations] DRY RUN would reuse: ${wouldReuse}`);
     return result;
   }
@@ -172,7 +198,8 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
     const body: { name: string; parent_id?: number } = { name: node.name };
     let parentQaId: number | null = null;
 
-    const parentIsReal = node.prodParentId !== null && prodIdSet.has(node.prodParentId);
+    const parentIsReal =
+      node.prodParentId !== null && prodIdSet.has(node.prodParentId);
     if (parentIsReal && node.prodParentId !== null) {
       const qaParentId = idMap.get(node.prodParentId);
       if (qaParentId === undefined) {
@@ -191,17 +218,22 @@ async function migrateLocations(dryRun: boolean): Promise<MigrationResult> {
     if (parentIsReal) {
       existingQaId = qaByNameParent.get(`${node.name}|${parentQaId}`);
     } else {
-      existingQaId = qaByNameParent.get(`${node.name}|null`) ?? qaTopByName.get(node.name);
+      existingQaId =
+        qaByNameParent.get(`${node.name}|null`) ?? qaTopByName.get(node.name);
     }
 
     if (existingQaId !== undefined) {
       idMap.set(node.prodId, existingQaId);
       result.reused++;
-      console.log(`[MigrateLocations] Reused ${node.name} as QA#${existingQaId}`);
+      console.log(
+        `[MigrateLocations] Reused ${node.name} as QA#${existingQaId}`,
+      );
       continue;
     }
 
-    console.log(`[MigrateLocations] Creating: ${node.name}${body.parent_id ? ` (parent: QA#${body.parent_id})` : ""}`);
+    console.log(
+      `[MigrateLocations] Creating: ${node.name}${body.parent_id ? ` (parent: QA#${body.parent_id})` : ""}`,
+    );
 
     const postResponse = await invgateQaPost<{ id: number }>("locations", body);
 
@@ -232,7 +264,12 @@ function getDepth(node: LocationNode, flatList: InvgateLocation[]): number {
     const parent = flatList.find((l) => l.id === current!.prodParentId);
     if (!parent) break;
     depth++;
-    current = { prodId: parent.id, name: parent.name, prodParentId: parent.parent_id, children: [] };
+    current = {
+      prodId: parent.id,
+      name: parent.name,
+      prodParentId: parent.parent_id,
+      children: [],
+    };
   }
   return depth;
 }

@@ -77,8 +77,8 @@ test("La fila de acciones envuelve sin desbordar en anchos angostos", async ({
   const actions = page.locator(".card-actions").first();
   await expect(actions).toBeVisible();
 
-  const flexWrap = await actions.evaluate((el) =>
-    getComputedStyle(el).flexWrap,
+  const flexWrap = await actions.evaluate(
+    (el) => getComputedStyle(el).flexWrap,
   );
   expect(flexWrap).toBe("wrap");
 

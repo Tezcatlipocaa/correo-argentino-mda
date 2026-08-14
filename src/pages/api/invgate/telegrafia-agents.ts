@@ -16,15 +16,11 @@ export const GET: APIRoute = async ({ locals }) => {
   if (denied) return denied;
 
   try {
-    const helpdesksRes = await invgateGet<InvgateHelpdeskAndLevel[]>(
-      "helpdesksandlevels",
-    );
+    const helpdesksRes =
+      await invgateGet<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
 
     if (!helpdesksRes.ok) {
-      return jsonResponse(
-        { error: helpdesksRes.message },
-        helpdesksRes.status,
-      );
+      return jsonResponse({ error: helpdesksRes.message }, helpdesksRes.status);
     }
 
     const all = Array.isArray(helpdesksRes.data) ? helpdesksRes.data : [];
@@ -35,8 +31,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
     const subLevels = all.filter(
       (h) =>
-        h.parent_id === TELEGRAFIA_HELPDESK_ID &&
-        h.level_order !== undefined,
+        h.parent_id === TELEGRAFIA_HELPDESK_ID && h.level_order !== undefined,
     );
 
     const memberIdSet = new Set<number>();
@@ -52,9 +47,7 @@ export const GET: APIRoute = async ({ locals }) => {
     const agents: TelegrafiaAgent[] = [];
     for (const memberId of memberIdSet) {
       try {
-        const userResult = await invgateGet<InvgateUser>(
-          `user?id=${memberId}`,
-        );
+        const userResult = await invgateGet<InvgateUser>(`user?id=${memberId}`);
         if (userResult.ok && userResult.data) {
           const u = userResult.data;
           agents.push({
@@ -68,11 +61,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
     agents.sort((a, b) => a.name.localeCompare(b.name));
 
-    return jsonResponse(
-      { agents },
-      200,
-      "private, max-age=300",
-    );
+    return jsonResponse({ agents }, 200, "private, max-age=300");
   } catch (error: any) {
     console.error("[Telegrafia Agents] Error:", error);
     return jsonResponse({ error: sanitizeError(error) }, 500);

@@ -30,15 +30,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const officeCode = body?.officeCode;
     const officeName = body?.officeName;
     const observaciones =
-      typeof body?.observaciones === "string"
-        ? body.observaciones
-        : undefined;
+      typeof body?.observaciones === "string" ? body.observaciones : undefined;
     const sourceId = body?.sourceId;
 
-    if (
-      typeof officeCode !== "string" ||
-      typeof officeName !== "string"
-    ) {
+    if (typeof officeCode !== "string" || typeof officeName !== "string") {
       return jsonError(
         "Los campos officeCode y officeName son requeridos.",
         400,
@@ -53,10 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (typeof sourceId !== "number" || sourceId <= 0) {
-      return jsonError(
-        "sourceId es requerido y debe ser un ID válido.",
-        400,
-      );
+      return jsonError("sourceId es requerido y debe ser un ID válido.", 400);
     }
 
     const getFn = USE_QA_INVGATE ? invgateQaGet : invgateGet;
@@ -104,9 +96,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // --- Validar membresía al helpdesk destino ANTES de crear el ticket ---
-    const helpdesksRes = await getFn<InvgateHelpdeskAndLevel[]>(
-      "helpdesksandlevels",
-    );
+    const helpdesksRes =
+      await getFn<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
 
     if (!helpdesksRes.ok || !Array.isArray(helpdesksRes.data)) {
       return jsonError(
@@ -158,9 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       customerId = customerIdFromBody;
     }
 
-    const invgateLocationId = await resolveInvgateLocationId(
-      officeCode.trim(),
-    );
+    const invgateLocationId = await resolveInvgateLocationId(officeCode.trim());
 
     const description = buildTicketDescription(
       officeName.trim(),
@@ -238,17 +227,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const invgateBaseUrl = USE_QA_INVGATE
-      ? (import.meta.env.INVGATE_QA_BASE_URL || process.env.INVGATE_QA_BASE_URL || "")
-      : (import.meta.env.INVGATE_BASE_URL || process.env.INVGATE_BASE_URL || "");
+      ? import.meta.env.INVGATE_QA_BASE_URL ||
+        process.env.INVGATE_QA_BASE_URL ||
+        ""
+      : import.meta.env.INVGATE_BASE_URL || process.env.INVGATE_BASE_URL || "";
     const cleanBaseUrl = invgateBaseUrl.replace(/\/api\/v1\/?$/, "");
     const ticketUrl = `${cleanBaseUrl}/requests/show/index/id/${id}`;
 
     return jsonResponse({ success: true, id, ticketUrl });
   } catch (error: any) {
-    console.error(
-      "POST /api/offices/create-agents-ticket Error:",
-      error,
-    );
+    console.error("POST /api/offices/create-agents-ticket Error:", error);
     return jsonError(sanitizeError(error), 500);
   }
 };

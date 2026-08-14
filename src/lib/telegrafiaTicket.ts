@@ -28,7 +28,7 @@ export const AGENTS_TICKET_CATEGORY_ID = USE_QA_INVGATE
   : PROD_CATEGORY_ID;
 
 // --- Helpdesk destino de reasignación (TI_GSM_MDA TI Nivel 1) ---
-const QA_AGENTS_ASSIGN_GROUP_ID = 3950;   // QA
+const QA_AGENTS_ASSIGN_GROUP_ID = 3950; // QA
 const PROD_AGENTS_ASSIGN_GROUP_ID = 2510; // prod
 export const AGENTS_TICKET_ASSIGN_GROUP_ID = USE_QA_INVGATE
   ? QA_AGENTS_ASSIGN_GROUP_ID
@@ -37,14 +37,12 @@ export const AGENTS_TICKET_ASSIGN_GROUP_ID = USE_QA_INVGATE
 // --- Categorías conocidas del problema "desconexión de agentes" ---
 // 257 = STS- Problema con agentes (categoría que usa este portal)
 // 2625 = Alarma (Operación Telegráfica) — misma problemática registrada en prod
-export const AGENTS_TICKET_CATEGORY_IDS = [
-  AGENTS_TICKET_CATEGORY_ID,
-  2625,
-];
+export const AGENTS_TICKET_CATEGORY_IDS = [AGENTS_TICKET_CATEGORY_ID, 2625];
 
 // Patrón de título para "desconexión de agentes" / "agentes caídos",
 // tolera variantes: "STS - Desconexión de Agentes", "Agentes Caidos", "[I1913] STS- ...", etc.
-export const AGENTS_TICKET_TITLE_PATTERN = /desconexi[oó]n\s*de\s*agentes|agentes\s*ca[ií]dos/i;
+export const AGENTS_TICKET_TITLE_PATTERN =
+  /desconexi[oó]n\s*de\s*agentes|agentes\s*ca[ií]dos/i;
 
 export function isAgentsTicketTitle(title: string | null | undefined): boolean {
   if (!title) return false;

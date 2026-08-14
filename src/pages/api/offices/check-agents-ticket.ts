@@ -23,9 +23,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const invgateLocationId = await resolveInvgateLocationId(
-      officeCode.trim(),
-    );
+    const invgateLocationId = await resolveInvgateLocationId(officeCode.trim());
 
     if (invgateLocationId === null) {
       return jsonResponse({
@@ -160,8 +158,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Step 4: Build ticket URL
     const invgateBaseUrl = USE_QA_INVGATE
-      ? (import.meta.env.INVGATE_QA_BASE_URL || "")
-      : (import.meta.env.INVGATE_BASE_URL || "");
+      ? import.meta.env.INVGATE_QA_BASE_URL || ""
+      : import.meta.env.INVGATE_BASE_URL || "";
     const cleanBaseUrl = invgateBaseUrl.replace(/\/api\/v1\/?$/, "");
     const ticketUrl = `${cleanBaseUrl}/requests/show/index/id/${matchingIncident.id}`;
 

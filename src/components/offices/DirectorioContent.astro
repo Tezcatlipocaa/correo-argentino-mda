@@ -248,7 +248,8 @@ const mainTabs = [
           <div class="flex items-center gap-2">
             <Icon name="boxicons:info-circle" class="size-5 shrink-0" />
             <span class="text-sm font-medium">
-              Se detectaron {unassignedUsersCount} usuario{unassignedUsersCount !== 1 ? "s" : ""} sin ubicación asignada.
+              Se detectaron {unassignedUsersCount} usuario
+              {unassignedUsersCount !== 1 ? "s" : ""} sin ubicación asignada.
             </span>
           </div>
           <a
@@ -1507,7 +1508,9 @@ const mainTabs = [
   // Agents ticket: delegate click on buttons with data-agents-ticket-trigger
   document.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const trigger = target.closest("[data-agents-ticket-trigger]") as HTMLElement | null;
+    const trigger = target.closest(
+      "[data-agents-ticket-trigger]",
+    ) as HTMLElement | null;
     if (!trigger) return;
 
     const officeName = trigger.getAttribute("data-office-name") || "";

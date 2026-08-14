@@ -53,8 +53,10 @@ function simulateIdMapping(ordered) {
 
     if (node.prodParentId !== null) {
       node.qaParentId = idMap.get(node.prodParentId);
-      assert.ok(node.qaParentId !== undefined,
-        `Parent prod#${node.prodParentId} should be in ID map before child ${node.name}`);
+      assert.ok(
+        node.qaParentId !== undefined,
+        `Parent prod#${node.prodParentId} should be in ID map before child ${node.name}`,
+      );
     } else {
       node.qaParentId = null;
     }
@@ -92,11 +94,23 @@ function simulateIdMapping(ordered) {
   const roots = buildTree(flat);
   assert.equal(roots.length, 1, "One root: Argentina");
   assert.equal(roots[0].name, "Argentina", "Root is Argentina");
-  assert.equal(roots[0].children.length, 2, "Argentina has 2 children: CABA and Córdoba");
+  assert.equal(
+    roots[0].children.length,
+    2,
+    "Argentina has 2 children: CABA and Córdoba",
+  );
   assert.equal(roots[0].children[0].name, "CABA", "First child is CABA");
-  assert.equal(roots[0].children[0].children.length, 2, "CABA has 2 children: Palermo and Belgrano");
+  assert.equal(
+    roots[0].children[0].children.length,
+    2,
+    "CABA has 2 children: Palermo and Belgrano",
+  );
   assert.equal(roots[0].children[1].name, "Córdoba", "Second child is Córdoba");
-  assert.equal(roots[0].children[1].children.length, 0, "Córdoba has no children");
+  assert.equal(
+    roots[0].children[1].children.length,
+    0,
+    "Córdoba has no children",
+  );
 }
 
 // --- Test 4: Topological sort preserves parent-before-child order ---
@@ -131,7 +145,11 @@ function simulateIdMapping(ordered) {
   assert.notEqual(idMap.get(20), undefined, "A has QA ID");
 
   const a1 = mapped.find((n) => n.name === "A1");
-  assert.equal(a1.qaParentId, idMap.get(20), "A1 parent QA ID matches A's new QA ID");
+  assert.equal(
+    a1.qaParentId,
+    idMap.get(20),
+    "A1 parent QA ID matches A's new QA ID",
+  );
 }
 
 // --- Test 6: Orphan children become roots ---

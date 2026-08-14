@@ -12,9 +12,8 @@ export interface RegionTechMember {
 
 export const GET: APIRoute = async () => {
   try {
-    const helpdesksRes = await invgateGet<InvgateHelpdeskAndLevel[]>(
-      "helpdesksandlevels",
-    );
+    const helpdesksRes =
+      await invgateGet<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
 
     if (!helpdesksRes.ok) {
       return jsonResponse({ error: helpdesksRes.message }, helpdesksRes.status);
@@ -41,27 +40,25 @@ export const GET: APIRoute = async () => {
       } catch {}
     }
 
-    const regions = Object.entries(TECLOCAL_REGIONS).map(
-      ([regionId, cfg]) => {
-        const level = levelById.get(cfg.helpdeskLevelId);
-        const members = (level?.members_ids ?? [])
-          .map((id) => userById.get(id))
-          .filter((u): u is InvgateUser => Boolean(u))
-          .map((u) => ({
-            id: u.id,
-            name: `${u.name} ${u.lastname}`.trim(),
-            username: u.username,
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name));
+    const regions = Object.entries(TECLOCAL_REGIONS).map(([regionId, cfg]) => {
+      const level = levelById.get(cfg.helpdeskLevelId);
+      const members = (level?.members_ids ?? [])
+        .map((id) => userById.get(id))
+        .filter((u): u is InvgateUser => Boolean(u))
+        .map((u) => ({
+          id: u.id,
+          name: `${u.name} ${u.lastname}`.trim(),
+          username: u.username,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-        return {
-          regionId,
-          helpdeskId: cfg.helpdeskLevelId,
-          helpdeskName: cfg.helpdeskName,
-          members,
-        };
-      },
-    );
+      return {
+        regionId,
+        helpdeskId: cfg.helpdeskLevelId,
+        helpdeskName: cfg.helpdeskName,
+        members,
+      };
+    });
 
     return jsonResponse({ regions }, 200, "private, max-age=300");
   } catch (error: any) {
