@@ -68,5 +68,9 @@
     "@iconify/tools": "^5.0.12",
     "esbuild": "^0.28.1",
     "yaml": "^2.3.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.10.0": true,
+    "esbuild@0.28.1": true
   }
 }
