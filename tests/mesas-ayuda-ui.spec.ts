@@ -43,15 +43,22 @@ test("Los iconos sobreviven al filtrado (sin referencias <use> huerfanas)", asyn
   expect(orphanedUses).toBe(0);
 });
 
-test("Los tópicos se muestran en mayúsculas", async ({ page }) => {
+test("La primera letra de cada tópico es mayúscula", async ({ page }) => {
   await page.goto("/mesas-de-ayuda");
   await expect(page.locator("#soportes-search")).toBeVisible();
 
-  const badge = page.locator(".badge-secondary").first();
-  if ((await badge.count()) === 0) {
+  const badges = page.locator(".badge-secondary");
+  if ((await badges.count()) === 0) {
     test.skip(true, "Sin tópicos en los datos de InvGate");
   }
-  await expect(badge).toHaveClass(/uppercase/);
+
+  const count = await badges.count();
+  for (let i = 0; i < count; i++) {
+    const text = ((await badges.nth(i).textContent()) ?? "").trim();
+    if (text.length > 0) {
+      expect(text[0]).toBe(text[0].toUpperCase());
+    }
+  }
 });
 
 test("El contador de miembros de cada nivel tiene un divisor visible", async ({

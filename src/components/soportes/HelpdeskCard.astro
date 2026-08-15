@@ -67,6 +67,10 @@ if (first?.categories) {
   } catch {}
 }
 
+const displayTopics = topicsList.map((t) =>
+  t ? t.charAt(0).toUpperCase() + t.slice(1) : t,
+);
+
 const sortedSubLevels = [...subLevels].sort(
   (a, b) => (a.level_order || 0) - (b.level_order || 0),
 );
@@ -236,9 +240,9 @@ const searchableText = [
               Tópicos de atención
             </p>
             <div class="flex flex-wrap gap-1">
-              {topicsList.map((t) => (
+              {displayTopics.map((t) => (
                 <span
-                  class="badge badge-sm badge-secondary badge-soft font-medium uppercase"
+                  class="badge badge-sm badge-secondary badge-soft font-medium"
                   data-highlight-target
                 >
                   {t}
