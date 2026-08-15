@@ -180,7 +180,7 @@ const totalMembers = visibleHelpdesks.reduce(
         aria-label="Limpiar todos los filtros"
         title="Limpiar todos los filtros"
       >
-        <Icon name="boxicons:trash" size={16} aria-hidden="true" />
+        <Icon name="boxicons:trash-filled" size={16} aria-hidden="true" />
         <span class="hidden lg:inline">Limpiar filtros</span>
       </button>
       {
@@ -202,7 +202,7 @@ const totalMembers = visibleHelpdesks.reduce(
             aria-pressed="false"
             title="Ver solo mesas ocultas"
           >
-            <Icon name="boxicons:low-vision" size={16} aria-hidden="true" />
+            <Icon name="boxicons:low-vision-filled" size={16} aria-hidden="true" />
             <span class="hidden lg:inline">Mesas ocultas</span>
           </button>
         )
@@ -257,7 +257,7 @@ const totalMembers = visibleHelpdesks.reduce(
         <div class="text-base-content/50 col-span-full flex flex-col items-center gap-3 py-16">
           <div class="bg-base-200 rounded-full p-4">
             <Icon
-              name="boxicons:headphone-mic"
+              name="boxicons:headphone-mic-filled"
               size={32}
               class="opacity-30"
               aria-hidden="true"
@@ -273,6 +273,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
     <SearchEmptyState
       id="no-results-state-soportes"
+      icon="boxicons:search-filled"
       class="col-span-full hidden"
       title="Sin resultados"
       description="No se encontraron mesas de ayuda o áreas que coincidan con los filtros aplicados."
@@ -289,7 +290,7 @@ const totalMembers = visibleHelpdesks.reduce(
         >
           <div class="bg-base-200 rounded-full p-4">
             <Icon
-              name="boxicons:low-vision"
+              name="boxicons:low-vision-filled"
               size={32}
               class="opacity-30"
               aria-hidden="true"

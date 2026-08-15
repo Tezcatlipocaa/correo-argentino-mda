@@ -29,6 +29,16 @@ test("Los iconos sobreviven al filtrado (sin referencias <use> huerfanas)", asyn
 
   await expect(page.locator("svg[data-icon]")).not.toHaveCount(0);
 
+  const iconNames = await page
+    .locator("#soportes-grid svg[data-icon]")
+    .evaluateAll((svgs) =>
+      svgs.map((s) => s.getAttribute("data-icon") ?? ""),
+    );
+  expect(iconNames.length).toBeGreaterThan(0);
+  for (const name of iconNames) {
+    expect(name).toMatch(/-filled$/);
+  }
+
   await page.locator("#filter-status").selectOption("active");
 
   const orphanedUses = await page.evaluate(() => {
@@ -59,6 +69,33 @@ test("La primera letra de cada tópico es mayúscula", async ({ page }) => {
       expect(text[0]).toBe(text[0].toUpperCase());
     }
   }
+});
+
+test("El badge de mesa padre no se estira al ancho completo de la card", async ({
+  page,
+}) => {
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
+
+  const badge = page.locator("[data-parent-badge]").first();
+  if ((await badge.count()) === 0) {
+    test.skip(true, "Sin badges de mesa padre en los datos de InvGate");
+  }
+
+  const hasCap = await badge.evaluate((el) => {
+    const mw = getComputedStyle(el).maxWidth;
+    return mw && mw !== "none" && parseFloat(mw) > 0;
+  });
+  expect(hasCap).toBe(true);
+
+  await expect(badge.locator("[data-highlight-target]")).toHaveClass(/truncate/);
+
+  const fits = await badge.evaluate((el) => {
+    const card = el.closest("[data-card-for]");
+    if (!card) return true;
+    return el.scrollWidth <= card.clientWidth + 1;
+  });
+  expect(fits).toBe(true);
 });
 
 test("El contador de miembros de cada nivel tiene un divisor visible", async ({
