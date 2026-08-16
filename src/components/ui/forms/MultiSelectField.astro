@@ -73,8 +73,6 @@ const selectedSet = new Set(selected);
       data-multiselect-search
       placeholder={placeholder}
       autocomplete="off"
-      role="combobox"
-      aria-expanded="false"
     />
     <ul
       class="menu bg-base-100 border-base-300 absolute top-full z-50 mt-1 hidden max-h-48 w-full overflow-y-auto rounded-box border shadow-lg"
@@ -205,15 +203,14 @@ const selectedSet = new Set(selected);
     });
 
     search.addEventListener("focus", open);
+    search.addEventListener("click", open);
 
     function open() {
       list.classList.remove("hidden");
-      search.setAttribute("aria-expanded", "true");
     }
 
     function close() {
       list.classList.add("hidden");
-      search.setAttribute("aria-expanded", "false");
     }
 
     document.addEventListener("click", (event) => {
