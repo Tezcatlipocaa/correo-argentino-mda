@@ -13,7 +13,11 @@ import UnassignedRecords from "./UnassignedRecords.astro";
 import SoportesStats from "./SoportesStats.astro";
 import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
-import type { InvgateHelpdesk, InvgateHelpdeskAndLevel } from "@/types/invgate";
+import type {
+  InvgateHelpdesk,
+  InvgateHelpdeskAndLevel,
+  InvgateCategory,
+} from "@/types/invgate";
 import { HIDDEN_HELPDESK_IDS } from "@lib/soportesConfig";
 import { can } from "@lib/roleConfig";
 
@@ -29,6 +33,21 @@ const hdResult =
 const allItems: InvgateHelpdeskAndLevel[] =
   hdResult.ok && Array.isArray(hdResult.data) ? hdResult.data : [];
 const invgateError = !hdResult.ok;
+
+const catResult = await invgateGet<InvgateCategory[]>(
+  "categories?page_size=500",
+);
+const categoryNames: Record<string, string> = {};
+if (catResult.ok) {
+  const cats = Array.isArray(catResult.data)
+    ? catResult.data
+    : (catResult.data as { data?: InvgateCategory[] })?.data;
+  if (Array.isArray(cats)) {
+    for (const c of cats) {
+      if (c && c.id != null && c.name) categoryNames[String(c.id)] = c.name;
+    }
+  }
+}
 
 const parentHelpdesks = allItems.filter(
   (item) => item.level_order === undefined,
@@ -226,6 +245,7 @@ const totalMembers = visibleHelpdesks.reduce(
             isAdmin={isAdminUser}
             parentName={parentName}
             subLevels={subLevels}
+            categoryNames={categoryNames}
             adminOnly={isAdminOnly}
           />
         );
@@ -245,6 +265,7 @@ const totalMembers = visibleHelpdesks.reduce(
               isAdmin={isAdminUser}
               parentName={parentName}
               subLevels={subLevels}
+              categoryNames={categoryNames}
               isHidden
               adminOnly
             />
