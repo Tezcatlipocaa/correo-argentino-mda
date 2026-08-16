@@ -33,7 +33,9 @@ const allItems: InvgateHelpdeskAndLevel[] =
   hdResult.ok && Array.isArray(hdResult.data) ? hdResult.data : [];
 const linkedHd = allItems.find((h) => h.id === invgateId && !h.level_order);
 
-const catResult = await invgateGet<InvgateCategory[]>("categories");
+const catResult = await invgateGet<InvgateCategory[]>(
+  "categories?page_size=500",
+);
 let categoryOptions: { value: string; label: string }[] = [];
 if (catResult.ok) {
   const cats = Array.isArray(catResult.data)
