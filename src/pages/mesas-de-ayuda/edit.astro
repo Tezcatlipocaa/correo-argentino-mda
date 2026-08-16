@@ -3,8 +3,10 @@ import { getCleanBase } from "@lib/baseUrl";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import MultiSelectField from "@components/ui/forms/MultiSelectField.astro";
+import TagInputField from "@components/ui/forms/TagInputField.astro";
 import { Icon } from "astro-icon/components";
 import { db } from "@db/index";
 import { supportGuides } from "@db/schema";
@@ -12,7 +14,8 @@ import { eq, isNull } from "drizzle-orm";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { invgateGet } from "@lib/invgateClient";
-import type { InvgateHelpdeskAndLevel } from "@/types/invgate";
+import { parseCategoryIds, parseTopics } from "@lib/supportGuides";
+import type { InvgateHelpdeskAndLevel, InvgateCategory } from "@/types/invgate";
 
 const cleanBase = getCleanBase();
 const invgateIdRaw = Astro.url.searchParams.get("invgate_id");
@@ -29,6 +32,20 @@ const hdResult =
 const allItems: InvgateHelpdeskAndLevel[] =
   hdResult.ok && Array.isArray(hdResult.data) ? hdResult.data : [];
 const linkedHd = allItems.find((h) => h.id === invgateId && !h.level_order);
+
+const catResult = await invgateGet<InvgateCategory[]>("categories");
+let categoryOptions: { value: string; label: string }[] = [];
+if (catResult.ok) {
+  const cats = Array.isArray(catResult.data)
+    ? catResult.data
+    : (catResult.data as { data?: InvgateCategory[] })?.data;
+  if (Array.isArray(cats)) {
+    categoryOptions = cats
+      .filter((c) => c && c.id != null && c.name)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({ value: String(c.id), label: c.name }));
+  }
+}
 
 const linkedRecords = await db.query.supportGuides.findMany({
   where: eq(supportGuides.invgate_id, invgateId),
@@ -54,6 +71,9 @@ const linkedJson = JSON.stringify(
 );
 
 const first = linkedRecords[0];
+
+const selectedCategories = parseCategoryIds(first?.categories).map(String);
+const topicTags = parseTopics(first?.topics);
 
 const unassignedRecords = await db.query.supportGuides.findMany({
   where: isNull(supportGuides.invgate_id),
@@ -283,34 +303,29 @@ const pageTitle = `Editar: ${hdName}`;
           </p>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <FormTextarea
-            id="categories"
-            name="categories"
-            label="Categorias de derivacion"
-            textareaClass="font-mono"
-            rows={4}
-            value={first?.categories || ""}
-            placeholder="[5, 12, 23]"
-          />
+        <SectionCard
+          title="Metadata de derivación"
+          icon="boxicons:tag"
+          class="shadow-md"
+        >
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <MultiSelectField
+              id="categories"
+              name="categories"
+              label="Categorías de derivación"
+              options={categoryOptions}
+              selected={selectedCategories}
+              helpText="Categorías de InvGate a las que deriva esta mesa."
+            />
 
-          <FormTextarea
-            id="topics"
-            name="topics"
-            label="Topicos (JSON array)"
-            textareaClass="font-mono"
-            rows={4}
-            value={first?.topics || ""}
-            placeholder='["VPN", "Correo", "Hardware"]'
-          />
-
-          <FormTextarea
-            id="contacts"
-            name="contacts"
-            label="Contactos"
-            rows={4}
-            value={first?.contacts || ""}
-          />
+            <TagInputField
+              id="topics"
+              name="topics"
+              label="Tópicos"
+              tags={topicTags}
+              helpText="Escribí un tópico y presioná Enter para agregarlo."
+            />
+          </div>
 
           <FormTextarea
             id="notes"
@@ -319,7 +334,7 @@ const pageTitle = `Editar: ${hdName}`;
             rows={4}
             value={first?.notes || ""}
           />
-        </div>
+        </SectionCard>
 
         <div class="border-base-200 mt-4 flex justify-end gap-3 border-t pt-6">
           <a href={`${cleanBase}mesas-de-ayuda`} class="btn btn-ghost">
