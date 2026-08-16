@@ -109,6 +109,12 @@ export interface InvgateKbCategory {
   parent_id?: number | null;
 }
 
+export interface InvgateCategory {
+  id: number;
+  name: string;
+  parent_id?: number | null;
+}
+
 export interface InvgateGroup {
   id: number;
   name: string;
