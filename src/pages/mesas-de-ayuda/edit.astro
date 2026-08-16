@@ -92,10 +92,18 @@ const unassignedJson = JSON.stringify(
 if (Astro.request.method === "POST") {
   try {
     const data = await Astro.request.formData();
-    const categories = data.get("categories")?.toString() || null;
+    const categoryIds = data
+      .getAll("categories")
+      .map((v) => Number(v))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    const categories =
+      categoryIds.length > 0 ? JSON.stringify(categoryIds) : null;
     const route = categories;
-    const topics = data.get("topics")?.toString() || null;
-    const contacts = data.get("contacts")?.toString() || null;
+    const topicsArr = data
+      .getAll("topics")
+      .map((v) => v.toString().trim())
+      .filter(Boolean);
+    const topics = topicsArr.length > 0 ? JSON.stringify(topicsArr) : null;
     const notes = data.get("notes")?.toString() || null;
 
     if (linkedRecords.length > 0) {
@@ -106,7 +114,6 @@ if (Astro.request.method === "POST") {
             categories,
             route,
             topics,
-            contacts,
             notes,
           })
           .where(eq(supportGuides.id, record.id));
@@ -117,7 +124,6 @@ if (Astro.request.method === "POST") {
         categories,
         route,
         topics,
-        contacts,
         notes,
       });
     }
