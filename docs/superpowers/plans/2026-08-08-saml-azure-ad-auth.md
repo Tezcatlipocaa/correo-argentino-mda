@@ -66,7 +66,7 @@ SAML_IDP_CERT=-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----
 # SAML_WANT_ASSERTIONS_SIGNED=true
 ```
 
-**CRITICAL:** Azure AD requires HTTPS for the ACS Reply URL. The only exception is `localhost`. If the server runs under `http://mda.correo.local`, Azure AD will reject the reply URL registration. A TLS/SSL certificate must be deployed on the internal server so the ACS resolves at `https://mda.correo.local/auth/saml/callback`.
+**CRITICAL:** Azure AD requires HTTPS for the ACS Reply URL. The only exception is `localhost`. The portal MUST be reachable at `https://mda.correo.local/auth/saml/callback`. See Task 3 (HTTPS/TLS infrastructure) — it is a hard prerequisite, not optional.
 
 The `SAML_ISSUER` (SP Entity ID) does NOT need to be a real URL — it just needs to match what's configured in the Azure AD Enterprise App "Identifier (Entity ID)" field. Using `http://mda.correo.local/saml/metadata` is valid as it's just an identifier string.
 
@@ -79,7 +79,64 @@ git commit -m "feat: add SAML environment variables to type definitions"
 
 ---
 
-### Task 3: Create SAML library module
+### Task 3: Configure HTTPS/TLS on internal server (prerequisite)
+
+**Files:**
+- None (infrastructure task — no code changes)
+
+**Goal:** Make the portal reachable at `https://mda.correo.local` so Azure AD accepts the ACS Reply URL. For a `.local` internal domain, public CAs (Let's Encrypt) cannot issue certificates. This must go through the organization's internal CA.
+
+- [ ] **Step 1: Emit certificate via internal CA**
+
+For `.local` domains, request an SSL/TLS certificate from the infrastructure/identity team via the internal Certificate Authority (Active Directory Certificate Services — AD CS). Deliverables: public key certificate (`.crt`/`.cer`) and private key (`.key`).
+
+- [ ] **Step 2: Configure server or reverse proxy**
+
+Integrate the certificate into one of:
+- **Reverse proxy (recommended):** Nginx, Caddy, or IIS in front of the Astro app, terminating TLS on port 443 and forwarding to the Astro process (port 4321). Caddy auto-manages internal certs if the internal CA chain is trusted.
+- **Direct:** Configure TLS on the Node/Astro server itself (via a proxy layer like `http-proxy` or a process manager wrapper).
+
+Example Nginx config:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name mda.correo.local;
+
+    ssl_certificate     /etc/ssl/mda.correo.local.crt;
+    ssl_certificate_key /etc/ssl/mda.correo.local.key;
+
+    location / {
+        proxy_pass http://127.0.0.1:4321;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+server {
+    listen 80;
+    server_name mda.correo.local;
+    return 301 https://$host$request_uri;
+}
+```
+
+- [ ] **Step 3: Update endpoints in Azure AD**
+
+Once TLS is operational, register in the Azure AD Enterprise App:
+- Identifier (Entity ID): `http://mda.correo.local/saml/metadata`
+- Reply URL (ACS): `https://mda.correo.local/auth/saml/callback`
+- Sign-on URL: `https://mda.correo.local/login`
+
+Verify the ACS endpoint is reachable: `curl -k https://mda.correo.local/auth/saml/callback` should not return a connection error (a 404/405 from the app is expected before the POST handler is wired; the TLS handshake must succeed).
+
+- [ ] **Step 4: Record completion**
+
+No commit needed (infra task). Confirm HTTPS is live before proceeding to Task 4+ and before configuring SAML in Azure AD.
+
+---
+
+### Task 4: Create SAML library module
 
 **Files:**
 - Create: `src/lib/saml.ts`
@@ -199,7 +256,7 @@ git commit -m "feat: add SAML library module with group mapping, profile extract
 
 ---
 
-### Task 4: Add "guest" role to RBAC system
+### Task 5: Add "guest" role to RBAC system
 
 **Files:**
 - Modify: `src/lib/rbac.ts`
@@ -259,7 +316,7 @@ git commit -m "feat: add guest role to RBAC hierarchy (rank 0, minimal permissio
 
 ---
 
-### Task 5: Add samlNameId column to users table
+### Task 6: Add samlNameId column to users table
 
 **Files:**
 - Modify: `src/db/schema.ts`
@@ -295,7 +352,7 @@ git commit -m "feat: add samlNameId column to users table for SAML identity mapp
 
 ---
 
-### Task 6: Create SAML login route (GET /auth/saml/login)
+### Task 7: Create SAML login route (GET /auth/saml/login)
 
 **Files:**
 - Create: `src/pages/auth/saml/login.ts`
@@ -361,7 +418,7 @@ git commit -m "feat: add SAML login initiation endpoint"
 
 ---
 
-### Task 7: Create SAML callback route (POST /auth/saml/callback)
+### Task 8: Create SAML callback route (POST /auth/saml/callback)
 
 **Files:**
 - Create: `src/pages/auth/saml/callback.ts`
@@ -495,7 +552,7 @@ git commit -m "feat: add SAML assertion consumer service endpoint"
 
 ---
 
-### Task 8: Verify TypeScript compilation
+### Task 9: Verify TypeScript compilation
 
 **Files:**
 - None (verification only)
@@ -514,7 +571,7 @@ No code changes needed if compilation succeeds.
 
 ---
 
-### Task 9: Update login page with Azure AD button
+### Task 10: Update login page with Azure AD button
 
 **Files:**
 - Modify: `src/pages/login/index.astro`
@@ -547,7 +604,7 @@ git commit -m "feat: add Azure AD SAML login button to login page"
 
 ---
 
-### Task 10: Mark SAML callback route as non-protected in middleware
+### Task 11: Mark SAML callback route as non-protected in middleware
 
 **Files:**
 - Modify: `src/middleware.ts`
@@ -573,7 +630,7 @@ git commit -m "feat: exclude SAML routes from middleware auth checks"
 
 ---
 
-### Task 11: Update design doc for final config
+### Task 12: Update design doc for final config
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-08-08-saml-azure-ad-auth-design.md`
@@ -617,7 +674,7 @@ git commit -m "docs: update SAML design with Azure AD specific attribute mapping
 
 ---
 
-### Task 12: Build and verify
+### Task 13: Build and verify
 
 - [ ] **Step 1: Build project**
 
