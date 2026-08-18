@@ -314,14 +314,15 @@ function getInitials(name: string): string {
     />
   </div>
 
-  <!-- Tabs Navigation Header -->
-  <div class="flex items-center justify-between mb-6">
+  <!-- Global Header Bar: Tabs Navigation + System Controls -->
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <!-- Tabs Header -->
     <div class="role-tabs tabs tabs-box bg-base-200/60 p-1.5 rounded-2xl inline-flex gap-1 border border-base-300">
       <button
         type="button"
         id="tab-btn-asignacion"
         data-tab-target="panel-asignacion"
-        class="tab tab-active font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2"
+        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'asignacion' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <Icon name="boxicons:user-check" size={18} />
         Asignación Operativa
@@ -330,178 +331,350 @@ function getInitials(name: string): string {
         type="button"
         id="tab-btn-monitoreo"
         data-tab-target="panel-monitoreo"
-        class="tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2"
+        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'monitoreo' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <Icon name="boxicons:group" size={18} />
         Monitoreo de Operadores
       </button>
     </div>
+
+    <!-- Right Controls: Lock Status & Sync -->
+    <div class="flex items-center gap-4">
+      {role !== "agent" && (
+        <>
+          <div id="lock-indicator"
+               data-user-id={user?.id}
+               data-user-username={user?.username}
+               data-lock-timeout={10 * 60 * 1000}
+               class="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs font-semibold text-base-content/70">
+          </div>
+          <div class="w-px h-5 bg-base-300/60"></div>
+        </>
+      )}
+
+      <div class="flex items-center gap-1">
+        <span id="sync-indicator" class="text-xs text-base-content/50 font-semibold hidden sm:inline-block w-[180px]">
+          Actualizado hace unos instantes
+        </span>
+        <button id="btn-refresh" class="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content" title="Actualizar ahora">
+          <Icon name="boxicons:refresh-ccw-filled" size={18} id="refresh-icon" />
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- TAB 1: ASIGNACIÓN OPERATIVA -->
-  <div id="panel-asignacion" class="flex flex-col gap-6">
-    <!-- Hero Action Card -->
-    <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4 w-full md:w-auto">
-        {!isReadOnly && (
-          <div class="w-full md:w-auto">
-            <button id="btn-assign-cyclic" type="button" class="btn btn-primary btn-md w-full md:w-auto shadow-lg shadow-primary/20 flex items-center justify-center gap-2 font-bold uppercase tracking-wider px-6">
-              <Icon name="boxicons:user-check" size={20} aria-hidden="true" />
-              Asignar Siguiente
-            </button>
+  <!-- Pestaña 1: Asignación Operativa -->
+  <div id="panel-asignacion" class={initialTab === "asignacion" ? "flex flex-col gap-6" : "flex flex-col gap-6 hidden"}>
+    <!-- Workspace Panel Dividido / IDE Style (0 Cajas Flotantes) -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-xs flex flex-col">
+      <!-- Header Superior de Acción (Espacio Reservado Fijo - 0 Saltos de Layout) -->
+      <div id="action-bar-header" class="border-b border-base-300 bg-base-200/40 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-300">
+        <div class="flex items-center gap-3.5">
+          <div class={`p-3 rounded-2xl shrink-0 transition-colors ${!isReadOnly ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content/40"}`}>
+            <Icon name={!isReadOnly ? "boxicons:user-check" : "boxicons:lock"} size={26} />
           </div>
-        )}
-        {nextSuggestedOperators.length > 0 && (
-          <p class="text-xs text-base-content/70 font-medium">
-            Siguiente operador: <strong class="text-base-content font-black">{nextSuggestedOperators[0].nombre}</strong>
-          </p>
-        )}
+          <div>
+            <h2 class="font-black text-base sm:text-lg uppercase tracking-wider text-base-content flex items-center gap-2.5">
+              Asignación Automática
+              {isReadOnly && (
+                <span class="badge badge-neutral badge-sm font-bold uppercase text-xs tracking-wider">Modo Lectura</span>
+              )}
+            </h2>
+            <p class="text-xs sm:text-sm text-base-content/70 font-medium mt-0.5">
+              {!isReadOnly ? (
+                nextSuggestedOperators.length > 0 ? (
+                  <>Asignará el siguiente ticket a <strong class="text-base-content font-black">{nextSuggestedOperators[0].nombre}</strong></>
+                ) : (
+                  <>No hay operadores disponibles actualmente</>
+                )
+              ) : (
+                <>Tomá el control desde el indicador de estado para habilitar la asignación automática.</>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <button
+          id="btn-assign-cyclic"
+          type="button"
+          disabled={isReadOnly || unassignedCount === 0}
+          title={unassignedCount === 0 ? "No hay autogestiones sin asignar para entregar" : (isReadOnly ? "Tomá el control para habilitar la asignación" : "Asignar siguiente autogestión")}
+          class={`btn btn-md flex items-center justify-center gap-2.5 font-extrabold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 text-sm sm:text-base transition-all ${
+            !isReadOnly && unassignedCount > 0
+              ? "btn-primary shadow-lg shadow-primary/20"
+              : "btn-neutral btn-disabled opacity-50 cursor-not-allowed"
+          }`}
+        >
+          <Icon name="boxicons:user-check" size={22} aria-hidden="true" />
+          Asignar Siguiente
+        </button>
       </div>
 
-      <!-- Lock indicator -->
-      {role !== "agent" && (
-        <div id="lock-indicator"
-             data-user-id={user?.id}
-             data-user-username={user?.username}
-             data-lock-timeout={10 * 60 * 1000}
-             class="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs font-semibold text-base-content/70">
-        </div>
-      )}
-    </div>
-
-    <!-- 50/50 Operative Split Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-      <!-- Left: Sin Asignar (Mesa 2510) -->
-      <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-4">
-        <div class="flex items-center justify-between border-b border-base-200 pb-3">
-          <div class="flex items-center gap-2">
-            <div class="p-2 bg-warning/10 text-warning rounded-lg font-bold">
-              <Icon name="boxicons:inbox" size={22} />
-            </div>
-            <div>
-              <h3 class="font-bold text-sm uppercase tracking-wider text-base-content">
-                Sin Asignar (Mesa 2510)
+      <!-- Grid de Paneles Divididos (60% Tickets / 40% Cola) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 h-[560px] max-h-[560px] border-b border-base-300">
+        <!-- Panel Izquierdo (60%): Tickets en Espera -->
+        <div class="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-base-300 bg-base-100 h-full overflow-hidden">
+          <div class="p-4 sm:p-4.5 border-b border-base-300 bg-base-200/40 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2.5">
+              <Icon name="boxicons:inbox" size={22} class="text-warning" />
+              <h3 class="font-extrabold text-sm uppercase tracking-wider text-base-content/80">
+                Sin Asignar (Mesa 3950)
               </h3>
-              <p class="text-xxs text-base-content/50">Tickets pendientes de asignación en InvGate</p>
             </div>
+            <span class={`badge badge-md ${unassignedCount > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-sm px-2.5 py-1`} id="stat-unassigned-count">
+              {unassignedCount}
+            </span>
           </div>
-          <span class={`badge ${unassignedCount > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs px-2.5 py-1`} id="stat-unassigned-count">
-            {unassignedCount}
-          </span>
+
+          <div id="unassigned-tickets-list" class="divide-y divide-base-200/80 flex-1 overflow-y-auto overflow-x-auto">
+            {unassignedTickets.length > 0 ? (
+              unassignedTickets.map((t: any) => {
+                const timeStr = t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : "";
+                
+                let elapsedMin = 0;
+                if (t.created_at) {
+                  elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
+                }
+                const formatWait = elapsedMin >= 60 
+                  ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
+                  : `${elapsedMin}m`;
+
+                const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+                const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+                const matchingAvailableOp = availableOperators.find((op) => {
+                  if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+                  if (op.nombre && creatorNameNorm) {
+                    const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+                    if (opNameNorm === creatorNameNorm) return true;
+                    const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+                    if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+                  }
+                  return false;
+                });
+
+                const creatorStr = t.creator_name || t.customer_name || "";
+                const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
+
+                return (
+                  <div data-ticket-id={t.id} class="p-4 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-2 cursor-pointer group min-w-[480px] sm:min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span class="font-mono font-bold text-primary-content bg-primary px-2.5 py-1 rounded-lg text-xs sm:text-sm shrink-0">{t.pretty_id || `#${t.id}`}</span>
+                        {t.priority_id && (
+                          <span class={`badge badge-sm font-bold text-xs tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-neutral'}`}>
+                            {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
+                          </span>
+                        )}
+                        {t.category_last_name && (
+                          <span class="badge badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title={t.category_name || t.category_last_name}>
+                            {t.category_last_name}
+                          </span>
+                        )}
+                        {t.sla_incident_first_reply && (
+                          <span class="badge badge-outline badge-info badge-sm font-mono text-xs shrink-0" title="SLA de respuesta">
+                            SLA: {t.sla_incident_first_reply}
+                          </span>
+                        )}
+                        {t.created_at && (
+                          <span class={`badge badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${
+                            elapsedMin >= 60
+                              ? "bg-error/15 text-error border-none font-bold"
+                              : elapsedMin >= 30
+                              ? "bg-warning/15 text-warning border-none font-semibold"
+                              : "bg-base-200 text-base-content/70 border-none"
+                          }`} title="Tiempo de espera en cola">
+                            ⏱ {formatWait}
+                          </span>
+                        )}
+                      </div>
+                      <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">
+                        {timeStr}
+                      </span>
+                    </div>
+                    <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors" title={t.title}>
+                      {t.title}
+                    </div>
+                    <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-1">
+                      <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/75">
+                        {creatorStr ? (
+                          <>
+                            <Icon name="boxicons:user" size={15} class={matchingAvailableOp ? "text-success shrink-0" : "opacity-60 shrink-0"} />
+                            <span class="truncate">
+                              Generado por: <strong class={matchingAvailableOp ? "text-success font-bold text-sm" : "text-base-content/90 font-bold text-sm"}>{creatorStr}</strong>
+                              {matchingAvailableOp && <span class="text-success text-xs font-semibold"> (Disponible)</span>}
+                              {customerStr && <span class="opacity-75"> • Cliente: <strong class="text-base-content/85 font-semibold">{customerStr}</strong></span>}
+                            </span>
+                          </>
+                        ) : (
+                          <span class="opacity-50 italic text-xs">Sin creador especificado</span>
+                        )}
+                      </div>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        {matchingAvailableOp && (
+                          <button
+                            type="button"
+                            class={`btn btn-ghost btn-xs px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs ${
+                              isReadOnly
+                                ? "btn-disabled opacity-40 cursor-not-allowed text-base-content/40"
+                                : "text-success hover:bg-success/15"
+                            }`}
+                            data-op-assign-btn={matchingAvailableOp.agentId}
+                            data-ticket-id={t.id}
+                            title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar ticket #${t.pretty_id || t.id} a ${matchingAvailableOp.nombre}`}
+                            disabled={isReadOnly}
+                          >
+                            <Icon name="boxicons:bolt-filled" size={13} class={isReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current"} />
+                            <span>Asignar</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          class={`btn btn-ghost btn-xs px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs text-base-content/70 hover:text-primary hover:bg-primary/10 ${
+                            isReadOnly ? "btn-disabled opacity-40 cursor-not-allowed text-base-content/40" : ""
+                          }`}
+                          data-action-assign-to={t.id}
+                          title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar ticket #${t.pretty_id || t.id} a un operador...`}
+                          disabled={isReadOnly}
+                        >
+                          <Icon name="boxicons:user-plus" size={13} class="shrink-0" />
+                          <span>Asignar a...</span>
+                        </button>
+                      </div>
+                    </div>
+                    {t.location_name && (
+                      <div class="flex items-center gap-1.5 text-xs text-base-content/70 font-medium truncate">
+                        <Icon name="boxicons:map-pin" size={14} class="text-info opacity-75 shrink-0" />
+                        <span class="truncate">Ubicación: <strong class="text-base-content/90 font-bold">{t.location_name}</strong></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div class="text-sm text-base-content/40 italic py-16 text-center">No hay tickets sin asignar</div>
+            )}
+          </div>
         </div>
 
-        <div id="unassigned-tickets-list" class="space-y-2.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
-          {unassignedTickets.length > 0 ? (
-            unassignedTickets.map((t) => (
-              <div class="p-3 rounded-xl bg-base-200/50 border border-base-300/60 hover:bg-base-200 hover:border-warning/50 hover:shadow-xs transition-all duration-200 flex flex-col gap-2 text-xs group cursor-default">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs">{t.pretty_id || `#${t.id}`}</span>
-                  <span class="text-xs text-base-content/60 font-mono font-semibold">
-                    {t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}
-                  </span>
-                </div>
-                <div class="font-semibold text-base-content leading-snug" title={t.title}>
-                  {t.title}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div class="text-xs text-base-content/40 italic py-8 text-center">No hay tickets sin asignar</div>
-          )}
-        </div>
-      </div>
-
-      <!-- Right: Próximos en Cola + Última Asignación -->
-      <div class="flex flex-col gap-6">
-        <!-- Card Próximos en Cola -->
-        <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-4">
-          <div class="flex items-center gap-2 border-b border-base-200 pb-3">
-            <div class="p-2 bg-primary/10 text-primary rounded-lg">
-              <Icon name="boxicons:sparkles" size={22} />
-            </div>
-            <div>
-              <h3 class="font-bold text-sm uppercase tracking-wider text-base-content">
+        <!-- Panel Derecho (40%): Gestión y Cola -->
+        <div class="lg:col-span-5 flex flex-col divide-y divide-base-300 bg-base-100 h-full overflow-hidden">
+          <!-- Sección: Próximos en Cola -->
+          <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="p-4 sm:p-4.5 bg-base-200/40 border-b border-base-300 flex items-center gap-2.5 shrink-0">
+              <Icon name="boxicons:sparkles" size={22} class="text-primary" />
+              <h3 class="font-extrabold text-sm uppercase tracking-wider text-base-content/80">
                 Próximos en Cola
               </h3>
-              <p class="text-xxs text-base-content/50">Orden de recepción para la siguiente asignación</p>
             </div>
-          </div>
 
-          <div id="queue-container" class="space-y-2.5">
-            {nextSuggestedOperators.length > 0 ? (
-              nextSuggestedOperators.map((op, idx) => (
-                <div
-                  data-agent-id={op.agentId}
-                  class={`flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-base-200/70 hover:border-base-300 hover:shadow-xs cursor-default ${
-                    idx === 0
-                      ? "bg-primary/10 border border-primary/40 shadow-xs"
-                      : "bg-base-200/40 border border-transparent"
-                  }`}
-                >
-                  <div class={`avatar placeholder size-9 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
-                    idx === 0 ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70"
-                  }`}>
-                    {getInitials(op.nombre)}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class={`truncate font-bold text-xs ${idx === 0 ? "text-base-content font-black" : "text-base-content/80"}`}>
-                      {op.nombre}
+            <div id="queue-container" class="divide-y divide-base-200/80 flex-1 overflow-y-auto overflow-x-auto">
+              {nextSuggestedOperators.length > 0 ? (
+                nextSuggestedOperators.map((op, idx) => (
+                  <div
+                    data-agent-id={op.agentId}
+                    class={`flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0 ${
+                      idx === 0
+                        ? "bg-primary/5"
+                        : ""
+                    }`}
+                  >
+                    <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                      <div class={`avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${
+                        idx === 0 ? "bg-primary text-primary-content shadow-xs" : "bg-base-300 text-base-content/70"
+                      }`}>
+                        {getInitials(op.nombre)}
+                      </div>
+                      <div class="min-w-0 flex-1 flex flex-col gap-0.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class={`truncate font-extrabold text-sm ${idx === 0 ? "text-base-content font-black" : "text-base-content/85"}`}>
+                            {op.nombre}
+                          </span>
+                          {idx === 0 && (
+                            <span class="badge badge-primary text-primary-content badge-sm font-bold uppercase text-xs shrink-0">Siguiente</span>
+                          )}
+                          <span class="badge badge-success/15 text-success border border-success/30 badge-sm font-bold text-xs shrink-0">
+                            {op.disponible ? "Disponible" : (op.motivo || "No disponible")}
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
+                          <span class="uppercase font-semibold text-xs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}</span>
+                          {op.breakInicioHoy && op.breakFinHoy && (
+                            <span class="flex items-center gap-1 font-mono text-base-content/75">
+                              <Icon name="boxicons:cup-hot" size={13} class="opacity-60 shrink-0 text-warning" />
+                              <span>Break: {op.breakInicioHoy} - {op.breakFinHoy}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div class="text-xxs text-base-content/50 uppercase font-semibold">
-                      {op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}
-                    </div>
+
+                    {unassignedTickets[idx] && (
+                      <div
+                        class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 cursor-help"
+                        title={`Si se asigna en orden, recibirá: ${unassignedTickets[idx].title}`}
+                      >
+                        <span class="text-warning font-sans font-bold">↳</span>
+                        <span>{unassignedTickets[idx].pretty_id || `#${unassignedTickets[idx].id}`}</span>
+                      </div>
+                    )}
                   </div>
-                  {idx === 0 && (
-                    <span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny px-2 py-1">Siguiente</span>
-                  )}
+                ))
+              ) : (
+                <div class="text-sm text-base-content/40 italic py-12 text-center" id="stat-suggested-name-empty">
+                  No hay operadores disponibles
                 </div>
-              ))
-            ) : (
-              <div class="text-xs text-base-content/40 italic py-4 text-center" id="stat-suggested-name-empty">
-                No hay operadores disponibles
-              </div>
-            )}
-          </div>
-        </div>
-
-        <!-- Card Última Asignación -->
-        <div class="card bg-base-100 border border-base-300 shadow-md p-5 flex flex-col gap-3">
-          <div class="flex items-center gap-2 border-b border-base-200 pb-3">
-            <div class="p-2 bg-info/10 text-info rounded-lg">
-              <Icon name="boxicons:history" size={22} />
-            </div>
-            <div>
-              <h3 class="font-bold text-sm uppercase tracking-wider text-base-content">
-                Última Asignación
-              </h3>
-              <p class="text-xxs text-base-content/50">Asignación más reciente realizada hoy</p>
+              )}
             </div>
           </div>
 
-          <div id="stat-last-assigned-container">
-            {lastAssignedOperator ? (
-              <div class="text-xs space-y-1.5 bg-base-200/40 p-3 rounded-xl border border-base-300/50">
-                <div class="text-base-content/70">
-                  Realizado por: <strong class="text-info font-bold" id="stat-last-assigned-by">{lastAssignedOperator.lastAutogestionAssignedBy || "Sistema"}</strong>
-                </div>
-                <div class="text-base-content/70">
-                  Asignado a: <strong class="text-base-content font-bold" id="stat-last-assigned-to">{lastAssignedOperator.nombre}</strong>
-                </div>
-                <div class="text-xxs text-base-content/50 font-mono pt-1 border-t border-base-300/40 mt-1" id="stat-last-assigned-time">
-                  Hora: {new Date(lastAssignedOperator.lastAutogestionAssignedAt!).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                </div>
+          <!-- Sección: Última Asignación -->
+          <div class="p-3.5 sm:p-4 bg-base-200/20 shrink-0">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <Icon name="boxicons:history" size={20} class="text-info" />
+                <h3 class="font-bold text-xs uppercase tracking-wider text-base-content/70">
+                  Última Asignación
+                </h3>
               </div>
-            ) : (
-              <div class="text-xs text-base-content/40 italic py-2">Sin asignaciones hoy</div>
-            )}
+              <button
+                type="button"
+                id="btn-open-historial-modal"
+                class="btn btn-ghost btn-xs text-info hover:bg-info/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs"
+                title="Ver historial completo y detallado de asignaciones"
+              >
+                <Icon name="boxicons:clock" size={14} />
+                <span>Ver historial</span>
+              </button>
+            </div>
+
+            <div id="stat-last-assigned-container">
+              {lastAssignedOperator ? (
+                <div class="text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2.5 bg-base-100 p-3.5 rounded-xl border border-base-300/60">
+                  <div class="flex items-center gap-4">
+                    <span class="text-base-content/70">
+                      De: <strong class="text-info font-bold" id="stat-last-assigned-by">{lastAssignedOperator.lastAutogestionAssignedBy || "Sistema"}</strong>
+                    </span>
+                    <span class="text-base-content/70">
+                      Para: <strong class="text-base-content font-bold" id="stat-last-assigned-to">{lastAssignedOperator.nombre}</strong>
+                    </span>
+                  </div>
+                  <span class="text-xs text-base-content/50 font-mono" id="stat-last-assigned-time">
+                    Hora: {new Date(lastAssignedOperator.lastAutogestionAssignedAt!).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              ) : (
+                <div class="text-xs text-base-content/40 italic py-1">Sin asignaciones hoy</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- TAB 2: MONITOREO DE OPERADORES -->
-  <div id="panel-monitoreo" class="flex flex-col gap-6 hidden">
+  <!-- Pestaña 2: Monitoreo de Operadores -->
+  <div id="panel-monitoreo" class={initialTab === "monitoreo" ? "flex flex-col gap-6" : "flex flex-col gap-6 hidden"}>
     <!-- Top KPIs (Disponibilidad + Fuera de Servicio) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <!-- Card Disponibles -->
@@ -586,36 +759,6 @@ function getInitials(name: string): string {
               >en estados especiales</span
             >
           </div>
-      <!-- Card No Disponibles -->
-      <div
-        class="card bg-base-100 border border-base-300 shadow-md overflow-hidden group hover:border-base-content/20 transition-colors duration-300"
-      >
-        <div
-          class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"
-        >
-          <Icon name="boxicons:user-x" size={128} />
-        </div>
-        <div class="card-body p-6">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 bg-base-content/5 rounded-lg text-base-content/50">
-              <Icon name="boxicons:user-x" size={24} />
-            </div>
-            <h3
-              class="font-bold text-xs uppercase tracking-widest text-base-content/50"
-            >
-              Fuera de Servicio
-            </h3>
-          </div>
-          <div class="flex items-baseline gap-2">
-            <span
-              class="text-5xl font-black text-base-content/80 tracking-tight"
-              id="stat-no-disponibles-count">{noDisponiblesCount}</span
-            >
-            <span
-              class="text-base-content/40 font-bold uppercase text-xs tracking-wider"
-              >en estados especiales</span
-            >
-          </div>
 
           <div class="mt-4 grid grid-cols-2 gap-2">
             {
@@ -646,39 +789,9 @@ function getInitials(name: string): string {
         </div>
       </div>
     </div>
-          <div class="mt-4 grid grid-cols-2 gap-2">
-            {
-              Object.entries(breakdown).map(([estado, count]) => (
-                <div
-                  class="flex items-center justify-between p-2 rounded-lg bg-base-200/50 border border-transparent hover:border-base-300 transition-colors duration-200 data-[count='0']:opacity-40"
-                  data-breakdown-container
-                  data-count={count}
-                >
-                  <div class="flex items-center gap-2 min-w-0">
-                    <span
-                      class={`size-2 rounded-full shrink-0 ${breakdownBadge(estado)}`}
-                    />
-                    <span class="text-xs font-bold truncate text-base-content/60 uppercase tracking-tight">
-                      {STATUS_LABELS[estado] ?? estado}
-                    </span>
-                  </div>
-                  <span
-                    class="text-xs font-mono font-bold text-base-content/90"
-                    data-breakdown-count={estado}
-                  >
-                    {count}
-                  </span>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Control Bar: Toggle + Status + Refresh + Undo -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <!-- Left: Toggle -->
+    <!-- Control Bar: Toggle + Undo -->
+    <div class="flex items-center justify-between gap-4">
       <label class="label cursor-pointer justify-start gap-3 bg-base-200/40 hover:bg-base-200/80 px-4 py-2.5 rounded-xl border border-base-300/45 transition-colors duration-250">
         <input type="checkbox" id="toggle-disponibles" class="toggle toggle-primary toggle-sm" />
         <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/70">
@@ -686,28 +799,12 @@ function getInitials(name: string): string {
         </span>
       </label>
 
-      <!-- Right: Status + Actions -->
-      <div class="flex items-center gap-4">
-        <!-- Sync + Refresh -->
-        <div class="flex items-center gap-1">
-          <span id="sync-indicator" class="text-xs text-base-content/50 font-semibold w-[180px]">
-            Actualizado hace unos instantes
-          </span>
-          <button id="btn-refresh" class="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content" title="Actualizar ahora">
-            <Icon name="boxicons:refresh-ccw-filled" size={18} id="refresh-icon" />
-          </button>
-        </div>
-
-        {!isReadOnly && (
-          <>
-            <div class="w-px h-5 bg-base-300/60"></div>
-            <button id="btn-undo" type="button" class="btn btn-secondary btn-outline btn-sm shadow-sm" disabled>
-              <Icon name="boxicons:undo" size={18} aria-hidden="true" />
-              <span id="btn-undo-text">Deshacer</span>
-            </button>
-          </>
-        )}
-      </div>
+      {!isReadOnly && (
+        <button id="btn-undo" type="button" class="btn btn-secondary btn-outline btn-sm shadow-sm" disabled>
+          <Icon name="boxicons:undo" size={18} aria-hidden="true" />
+          <span id="btn-undo-text">Deshacer</span>
+        </button>
+      )}
     </div>
 
     <!-- Tabla de Operadores -->
@@ -722,23 +819,7 @@ function getInitials(name: string): string {
         <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
         {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
       </Fragment>
-    <!-- Tabla de Operadores -->
-    <DataTable
-      ariaLabel="Lista de operadores para asignación de autogestiones"
-      headerGridClass={isReadOnly ? "grid-cols-[1.8fr_1.5fr_1.2fr] gap-2 md:gap-4" : "grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] gap-2 md:gap-4"}
-      rowGridClass={isReadOnly ? "grid grid-cols-[1.8fr_1.5fr_1.2fr] items-center gap-2 md:gap-4" : "grid grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] items-center gap-2 md:gap-4"}
-    >
-      <Fragment slot="header">
-        <DataTableHeaderCell sortKey="nombre">Operador</DataTableHeaderCell>
-        <DataTableHeaderCell>Horario / Modo</DataTableHeaderCell>
-        <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
-        {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
-      </Fragment>
 
-      {
-        allOperators.map((op) => {
-          const isHighlighted = op.agentId === maxAssignedOperatorId;
-          const isExceptional = !!op.estadoExcepcional;
       {
         allOperators.map((op) => {
           const isHighlighted = op.agentId === maxAssignedOperatorId;
@@ -754,54 +835,7 @@ function getInitials(name: string): string {
           if (!op.disponible && !isExceptional) {
             rowClasses += " opacity-50 grayscale-[30%]";
           }
-          let rowClasses =
-            "group border-b border-base-300 px-4 py-2.5 transition-colors duration-300 hover:bg-base-200/50";
-          if (isExceptional) {
-            rowClasses += " bg-secondary/10 border-l-4 border-l-secondary";
-          } else if (isHighlighted) {
-            rowClasses += " bg-primary/10 border-l-4 border-l-primary";
-          }
-          if (!op.disponible && !isExceptional) {
-            rowClasses += " opacity-50 grayscale-[30%]";
-          }
 
-          return (
-            <div
-              class={rowClasses}
-              data-table-row
-              data-op-id={op.agentId}
-              data-op-estado={
-                op.disponible ? "disponible" : op.motivo || "offline"
-              }
-              data-sort-nombre={op.nombre}
-              data-sort-estado={
-                op.disponible ? "disponible" : op.motivo || "offline"
-              }
-            >
-              {/* Nombre + Last Assigned */}
-              <div class="flex min-w-0 flex-col">
-                <span class="truncate text-xs font-bold text-base-content">
-                  {op.nombre}
-                </span>
-                <div data-op-last-assigned-container>
-                  {op.lastAutogestionAssignedAt ? (
-                    <span
-                      class="text-tiny text-base-content/75 bg-base-300/50 rounded px-1.5 py-0.5 inline-block font-semibold mt-0.5"
-                      data-last-assigned={op.lastAutogestionAssignedAt}
-                    >
-                      Asignado:{" "}
-                      {new Date(op.lastAutogestionAssignedAt).toLocaleTimeString(
-                        "es-AR",
-                        { hour: "2-digit", minute: "2-digit" },
-                      )}
-                    </span>
-                  ) : (
-                    <span class="text-tiny text-base-content/40 bg-base-200/40 rounded px-1.5 py-0.5 inline-block italic mt-0.5">
-                      Nunca asignado
-                    </span>
-                  )}
-                </div>
-              </div>
           return (
             <div
               class={rowClasses}
@@ -868,43 +902,7 @@ function getInitials(name: string): string {
                     <span class="text-base-content/40 italic">Sin horario</span>
                   )}
                 </div>
-              {/* Horario y Modo */}
-              <div class="flex flex-col gap-1 min-w-0">
-                <div data-op-horario>
-                  {op.horarioHoy ? (
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
-                      <span class="flex items-center gap-1 font-semibold">
-                        <Icon
-                          name="boxicons:clock-dashed-half-filled"
-                          size={14}
-                          class="opacity-60 shrink-0"
-                        />
-                        {op.horarioHoy}
-                      </span>
-                      {op.breakInicioHoy && op.breakFinHoy && (
-                        <span class="flex items-center gap-1 opacity-70">
-                          <Icon
-                            name="boxicons:cup-hot"
-                            size={14}
-                            class="opacity-60 shrink-0"
-                          />
-                          {op.breakInicioHoy} - {op.breakFinHoy}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span class="text-base-content/40 italic">Sin horario</span>
-                  )}
-                </div>
 
-                <div data-op-modalidad>
-                  {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
-                    <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
-                      {op.modalidadHoy === "Home Office" ? "Home" : "Presencial"}
-                    </span>
-                  )}
-                </div>
-              </div>
                 <div data-op-modalidad>
                   {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
                     <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
@@ -965,76 +963,7 @@ function getInitials(name: string): string {
                   </div>
                 )}
               </div>
-              {/* Badge estado */}
-              <div
-                data-op-status-cell={op.agentId}
-                class="flex flex-col items-start gap-1"
-              >
-                {op.estadoExcepcional ? (
-                  <div
-                    class="tooltip tooltip-bottom before:text-xxs before:px-2 before:py-1"
-                    data-tip={`${op.estadoExcepcionalMotivo || "Sin comentario"} — marcado a las ${op.estadoExcepcionalAt ? new Date(op.estadoExcepcionalAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}`}
-                  >
-                    <span
-                      data-op-status-badge={op.agentId}
-                      class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2 cursor-help`}
-                    >
-                      {getExcepcionalShortLabel(op.estadoExcepcional)}
-                      {op.estadoExcepcional === "break_extendido" &&
-                      op.retornoEstimado
-                        ? op.retornoEstimado === "Manual"
-                          ? " (Manual)"
-                          : ` - vuelve ${op.retornoEstimado}`
-                        : ""}
-                    </span>
-                  </div>
-                ) : (
-                  <span
-                    data-op-status-badge={op.agentId}
-                    class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
-                  >
-                    {op.disponible && (
-                      <span class="size-1.5 rounded-full bg-success-content animate-ping" />
-                    )}
-                    {!op.disponible && op.motivo === "En break" && (
-                      <span class="size-1.5 rounded-full bg-warning-content/75 animate-pulse" />
-                    )}
-                    {op.disponible
-                      ? "Disponible"
-                      : op.motivo === "En break"
-                        ? `En break - vuelve ${op.retornoEstimado || ""}`
-                        : op.motivo || "Franco"}
-                  </span>
-                )}
-                {op.estadoExcepcional && op.estadoExcepcionalMotivo && (
-                  <div
-                    data-op-exception-comment={op.agentId}
-                    class="text-small text-base-content/50 italic font-medium max-w-[150px] truncate mt-0.5"
-                    title={op.estadoExcepcionalMotivo}
-                  >
-                    "{op.estadoExcepcionalMotivo}"
-                  </div>
-                )}
-              </div>
 
-              {/* Botones de acción */}
-              {!isReadOnly && (
-                <div
-                  class="flex items-center justify-end gap-2"
-                  data-op-actions={op.agentId}
-                >
-                  <>
-                    <div class="m-0">
-                      <button
-                        type="button"
-                        class="btn btn-secondary btn-xs btn-soft font-bold uppercase tracking-wider"
-                        data-op-assign-btn={op.agentId}
-                        title={`Asignar autogestión a ${op.nombre}`}
-                        disabled={!op.disponible}
-                      >
-                        Asignar
-                      </button>
-                    </div>
               {/* Botones de acción */}
               {!isReadOnly && (
                 <div
@@ -1098,6 +1027,265 @@ function getInitials(name: string): string {
       }
     </DataTable>
   </div>
+
+  <!-- Modal Detalle de Ticket Sin Asignar -->
+  <dialog id="modal-ticket-detail" class="modal" data-invgate-web-base={invgateWebBase}>
+    <div class="modal-box w-11/12 max-w-4xl border border-base-300 bg-base-100 p-0 overflow-hidden shadow-2xl rounded-2xl">
+      <!-- Modal Header -->
+      <div class="p-5 sm:p-6 bg-base-200/50 border-b border-base-300 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+          <span id="ticket-modal-id" class="font-mono font-bold text-primary-content bg-primary px-3 py-1.5 rounded-lg text-base shrink-0">#0</span>
+          <span id="ticket-modal-prio" class="badge badge-md font-bold tracking-wider uppercase shrink-0 text-xs"></span>
+          <span id="ticket-modal-cat" class="badge badge-neutral badge-md font-semibold truncate shrink-0 max-w-[280px] text-xs"></span>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content" aria-label="Cerrar modal">✕</button>
+        </form>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 sm:p-7 flex flex-col gap-6 max-h-[72vh] overflow-y-auto">
+        <!-- Título -->
+        <div>
+          <label class="text-xs font-bold text-base-content/50 uppercase tracking-wider block mb-1.5">Título de la solicitud</label>
+          <h3 id="ticket-modal-title" class="text-xl sm:text-2xl font-extrabold text-base-content leading-snug"></h3>
+        </div>
+
+        <!-- Grid de Metadatos -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-base-200/30 p-5 rounded-2xl border border-base-300/60">
+          <div>
+            <span class="text-xs font-semibold text-base-content/50 block mb-0.5">Creado por</span>
+            <span id="ticket-modal-creator" class="text-sm sm:text-base font-bold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-base-content/50 block mb-0.5">Usuario afectado (Cliente)</span>
+            <span id="ticket-modal-customer" class="text-sm sm:text-base font-bold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-base-content/50 block mb-0.5">Ubicación / Sede</span>
+            <span id="ticket-modal-location" class="text-sm font-semibold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-base-content/50 block mb-0.5">Fecha y Hora de Creación</span>
+            <span id="ticket-modal-created" class="text-sm font-mono font-semibold text-base-content"></span>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-base-content/50 block mb-0.5">Tiempo en cola</span>
+            <span id="ticket-modal-wait" class="text-sm sm:text-base font-mono font-bold"></span>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-base-content/50 block mb-0.5">SLA de Respuesta</span>
+            <span id="ticket-modal-sla" class="text-sm font-mono font-bold text-info"></span>
+          </div>
+        </div>
+
+        <!-- Categoría Completa -->
+        <div id="ticket-modal-cat-full-container" class="hidden">
+          <label class="text-xs font-bold text-base-content/50 uppercase tracking-wider block mb-1.5">Ruta de Categoría</label>
+          <span id="ticket-modal-cat-full" class="text-sm font-mono bg-base-200/70 px-4 py-2 rounded-xl block text-base-content/80"></span>
+        </div>
+
+        <!-- Descripción Completa -->
+        <div>
+          <label class="text-xs font-bold text-base-content/50 uppercase tracking-wider block mb-1.5">Descripción del ticket</label>
+          <div id="ticket-modal-description" class="text-sm sm:text-base text-base-content/85 whitespace-pre-wrap bg-base-200/40 p-5 rounded-2xl border border-base-300/40 font-sans max-h-72 overflow-y-auto leading-relaxed">
+            Sin descripción disponible.
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-5 bg-base-200/50 border-t border-base-300 flex items-center justify-between gap-3">
+        <span class="text-xs text-base-content/50 font-medium">Mesa de Ayuda #3950</span>
+        <div class="flex items-center gap-2.5">
+          <button
+            id="ticket-modal-assign-btn"
+            type="button"
+            class="btn btn-success text-success-content btn-md font-bold gap-2 shadow-sm hidden"
+          >
+            <Icon name="boxicons:bolt" class="size-5 shrink-0" />
+            <span id="ticket-modal-assign-btn-text">Asignar a operador</span>
+          </button>
+          <button
+            id="ticket-modal-assign-to-btn"
+            type="button"
+            class="btn btn-secondary btn-soft btn-md font-bold gap-2 shadow-sm"
+          >
+            <Icon name="boxicons:user-plus" class="size-5 shrink-0" />
+            <span>Asignar a...</span>
+          </button>
+          <a
+            id="ticket-modal-invgate-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-primary btn-md font-bold gap-2 shadow-sm"
+          >
+            <span>Abrir en InvGate</span>
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
+          <form method="dialog">
+            <button class="btn btn-ghost btn-md font-semibold">Cerrar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal Asignar Ticket a Operador Específico -->
+  <dialog id="modal-asignar-operador" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box w-11/12 max-w-4xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <!-- Header -->
+      <div class="p-5 sm:p-6 border-b border-base-300 bg-base-200/50 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="p-3 rounded-2xl bg-primary/10 text-primary shrink-0">
+            <Icon name="boxicons:user-plus" size={26} />
+          </div>
+          <div class="min-w-0">
+            <h3 class="font-extrabold text-base sm:text-lg text-base-content uppercase tracking-wider">Asignar Ticket a Operador</h3>
+            <div class="flex items-center gap-2 text-sm text-base-content/70 mt-1 min-w-0">
+              <span id="modal-assign-to-ticket-badge" class="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-lg shrink-0">#---</span>
+              <span id="modal-assign-to-ticket-title" class="truncate font-semibold text-base-content">Selecciona un operador</span>
+            </div>
+          </div>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content">✕</button>
+        </form>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="p-4 border-b border-base-300 bg-base-100">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-base-content/40">
+            <Icon name="boxicons:search" size={18} />
+          </div>
+          <input
+            id="modal-assign-to-search"
+            type="text"
+            placeholder="Buscar operador por nombre o usuario..."
+            class="input input-md input-bordered w-full pl-10 text-sm focus:outline-none focus:border-primary h-11"
+          />
+        </div>
+      </div>
+
+      <!-- Body / Lists -->
+      <div class="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6" id="modal-assign-to-scroll">
+        <!-- Grupo 1: Operadores Disponibles -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between pb-1.5 border-b border-base-200">
+            <div class="flex items-center gap-2.5">
+              <span class="size-2.5 rounded-full bg-success animate-ping"></span>
+              <h4 class="text-sm font-bold uppercase tracking-wider text-success">
+                Operadores Disponibles
+              </h4>
+            </div>
+            <span id="modal-assign-to-available-count" class="badge badge-success text-success-content badge-sm font-mono font-bold px-2.5 py-1">
+              0
+            </span>
+          </div>
+
+          <div id="modal-assign-to-available-list" class="space-y-2">
+            <!-- Rendered dynamically from latestDisponibilidadData -->
+          </div>
+        </div>
+
+        <!-- Grupo 2: Operadores No Disponibles -->
+        <div class="space-y-3 pt-3">
+          <div class="flex items-center justify-between pb-1.5 border-b border-base-200">
+            <div class="flex items-center gap-2.5">
+              <span class="size-2.5 rounded-full bg-base-content/30"></span>
+              <h4 class="text-sm font-bold uppercase tracking-wider text-base-content/70">
+                Operadores No Disponibles / En Pausa / Franco
+              </h4>
+            </div>
+            <span id="modal-assign-to-unavailable-count" class="badge badge-neutral badge-sm font-mono font-bold text-base-content/80 px-2.5 py-1">
+              0
+            </span>
+          </div>
+
+          <div id="modal-assign-to-unavailable-list" class="space-y-2">
+            <!-- Rendered dynamically from latestDisponibilidadData -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 sm:p-5 bg-base-200/50 border-t border-base-300 flex items-center justify-between">
+        <span class="text-xs text-base-content/50 font-medium">Mesa de Ayuda #3950</span>
+        <form method="dialog">
+          <button class="btn btn-md btn-ghost font-semibold">Cerrar</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>cerrar</button>
+    </form>
+  </dialog>
+
+  <!-- Modal Historial de Asignaciones -->
+  <dialog id="modal-historial-asignaciones" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box sm:max-w-4xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <!-- Header -->
+      <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-info/10 text-info shrink-0">
+            <Icon name="boxicons:history" size={22} />
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-base-content uppercase tracking-wider">Historial de Asignaciones</h3>
+            <p class="text-xs text-base-content/60 font-medium">Registro cronológico detallado de asignaciones de autogestión</p>
+          </div>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content">✕</button>
+        </form>
+      </div>
+
+      <!-- Body -->
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1">
+        <div id="historial-loading" class="flex flex-col items-center justify-center py-12 gap-3 text-base-content/50">
+          <span class="loading loading-spinner loading-md text-info"></span>
+          <span class="text-xs font-semibold">Cargando historial...</span>
+        </div>
+
+        <div id="historial-empty" class="hidden text-xs text-base-content/40 italic py-12 text-center">
+          No hay registros de asignaciones en el historial.
+        </div>
+
+        <div id="historial-table-container" class="hidden overflow-x-auto">
+          <table class="table table-sm w-full text-xs">
+            <thead>
+              <tr class="bg-base-200/60 text-base-content/70 uppercase text-tiny font-mono">
+                <th>Fecha y Hora</th>
+                <th>Operador Asignado</th>
+                <th>Ticket InvGate</th>
+                <th>Tipo</th>
+                <th>Asignado Por</th>
+                <th class="text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="historial-rows" class="divide-y divide-base-200">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-3.5 bg-base-200/50 border-t border-base-300 flex items-center justify-between">
+        <span class="text-tiny text-base-content/50 font-mono">Últimos 50 registros</span>
+        <form method="dialog">
+          <button class="btn btn-sm btn-neutral font-semibold">Cerrar</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>cerrar</button>
+    </form>
+  </dialog>
+
+  <script id="initial-unassigned-data" type="application/json" set:html={JSON.stringify(unassignedTickets)} />
+  <script id="initial-disponibilidad-data" type="application/json" set:html={JSON.stringify(allOperators)} />
 </PageContainer>
 
 <script>
@@ -1116,30 +1304,28 @@ function getInitials(name: string): string {
     ) as HTMLInputElement | null;
     if (!toggle) return false;
 
-    // Tab switching handler
+    // Tab switching listener
     const tabBtns = document.querySelectorAll("[data-tab-target]");
     tabBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
         const targetId = btn.getAttribute("data-tab-target");
-        tabBtns.forEach((b) => b.classList.remove("tab-active"));
-        btn.classList.add("tab-active");
 
-        document.getElementById("panel-asignacion")?.classList.toggle("hidden", targetId !== "panel-asignacion");
-        document.getElementById("panel-monitoreo")?.classList.toggle("hidden", targetId !== "panel-monitoreo");
+        tabBtns.forEach((b) => {
+          b.classList.remove("tab-active", "bg-primary", "text-primary-content", "shadow-sm");
+          b.classList.add("text-base-content/70", "hover:text-base-content");
+        });
+        btn.classList.add("tab-active", "bg-primary", "text-primary-content", "shadow-sm");
+        btn.classList.remove("text-base-content/70", "hover:text-base-content");
 
-        if (targetId) {
-          const url = new URL(window.location.href);
-          url.searchParams.set("tab", targetId === "panel-monitoreo" ? "monitoreo" : "asignacion");
-          window.history.replaceState({}, "", url.toString());
-        }
+        const isAsignacion = targetId === "panel-asignacion";
+        document.getElementById("panel-asignacion")?.classList.toggle("hidden", !isAsignacion);
+        document.getElementById("panel-monitoreo")?.classList.toggle("hidden", isAsignacion);
+
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", isAsignacion ? "asignacion" : "monitoreo");
+        window.history.replaceState({}, "", url.toString());
       });
     });
-
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("tab") === "monitoreo") {
-      const btnMonitoreo = document.getElementById("tab-btn-monitoreo");
-      if (btnMonitoreo) btnMonitoreo.click();
-    }
 
     const syncIndicator = document.getElementById("sync-indicator");
     const refreshIcon = document.getElementById("refresh-icon");
@@ -1179,6 +1365,19 @@ function getInitials(name: string): string {
     let currentLockStatus: any = null;
     let latestUnassignedTickets: any[] = [];
     let latestDisponibilidadData: any[] = [];
+
+    const rawTicketsEl = document.getElementById("initial-unassigned-data");
+    if (rawTicketsEl && rawTicketsEl.textContent) {
+      try {
+        latestUnassignedTickets = JSON.parse(rawTicketsEl.textContent);
+      } catch {}
+    }
+    const rawOpsEl = document.getElementById("initial-disponibilidad-data");
+    if (rawOpsEl && rawOpsEl.textContent) {
+      try {
+        latestDisponibilidadData = JSON.parse(rawOpsEl.textContent);
+      } catch {}
+    }
 
     const formatCountdown = (ms: number): string => {
       if (ms <= 0) return "0:00";
@@ -1421,38 +1620,38 @@ function getInitials(name: string): string {
         if (sortedQueue.length > 0) {
           queueContainer.innerHTML = sortedQueue.map((op, idx) => {
             const isFirst = idx === 0;
-            const avatarBg = isFirst ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70";
+            const avatarBg = isFirst ? "bg-primary text-primary-content shadow-xs" : "bg-base-300 text-base-content/70";
             const containerClass = isFirst ? "bg-primary/5" : "";
-            const titleClass = isFirst ? "text-base-content font-black" : "text-base-content/80";
+            const titleClass = isFirst ? "text-base-content font-black" : "text-base-content/85";
 
             const projTicket = latestUnassignedTickets[idx];
             const projBadge = projTicket
-              ? `<div class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-tiny px-2 py-1 flex items-center gap-1 shrink-0 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="text-warning font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
+              ? `<div class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="text-warning font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
               : "";
 
             const statusText = op.disponible ? "Disponible" : (op.motivo || "No disponible");
             const statusBadgeClass = op.disponible ? "badge-success/15 text-success border border-success/30" : "badge-neutral opacity-70";
 
             const breakStr = op.breakInicioHoy && op.breakFinHoy
-              ? `<span class="flex items-center gap-1 font-mono text-base-content/70"><svg class="size-3 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`
+              ? `<span class="flex items-center gap-1 font-mono text-base-content/75"><svg class="size-3.5 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`
               : "";
 
             return `
-              <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3 p-3.5 transition-colors hover:bg-base-200/60 cursor-default ${containerClass}">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                  <div class="avatar placeholder size-9 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarBg}">
+              <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0 ${containerClass}">
+                <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${avatarBg}">
                     ${escapeHtml(getInitialsJs(op.nombre))}
                   </div>
                   <div class="min-w-0 flex-1 flex flex-col gap-0.5">
                     <div class="flex items-center gap-2 flex-wrap">
-                      <span class="truncate font-bold text-xs ${titleClass}">
+                      <span class="truncate font-extrabold text-sm ${titleClass}">
                         ${escapeHtml(op.nombre)}
                       </span>
-                      ${isFirst ? '<span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny shrink-0">Siguiente</span>' : ''}
-                      <span class="badge ${statusBadgeClass} badge-xs font-bold text-tiny shrink-0">${escapeHtml(statusText)}</span>
+                      ${isFirst ? '<span class="badge badge-primary text-primary-content badge-sm font-bold uppercase text-xs shrink-0">Siguiente</span>' : ''}
+                      <span class="badge ${statusBadgeClass} badge-sm font-bold text-xs shrink-0">${escapeHtml(statusText)}</span>
                     </div>
-                    <div class="flex items-center gap-2 text-tiny text-base-content/50 font-medium flex-wrap">
-                      <span class="uppercase font-semibold text-xxs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
+                    <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
+                      <span class="uppercase font-semibold text-xs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
                       ${breakStr}
                     </div>
                   </div>
@@ -1463,7 +1662,7 @@ function getInitials(name: string): string {
           }).join("");
         } else {
           queueContainer.innerHTML = `
-            <div class="text-xs text-base-content/40 italic py-8 text-center" id="stat-suggested-name-empty">
+            <div class="text-sm text-base-content/40 italic py-12 text-center" id="stat-suggested-name-empty">
               No hay operadores disponibles
             </div>
           `;
@@ -1721,13 +1920,174 @@ function getInitials(name: string): string {
       showToast(message, type === "success" ? "alert-success" : "alert-error");
     };
 
+    const getBadgeColorClient = (status: string, disponible: boolean): string => {
+      if (disponible) return "badge-success text-success-content shadow-xs";
+      switch (status) {
+        case "En break":
+          return "badge-warning text-warning-content shadow-xs";
+        case "Fuera de horario":
+        case "Franco":
+          return "badge-neutral text-neutral-content/75 opacity-70";
+        case "Licencia":
+          return "badge-error text-error-content shadow-xs";
+        case "Vacaciones":
+          return "badge-info text-info-content shadow-xs";
+        case "Devolución Supervisor":
+        case "Break Extendido":
+        case "Problema Técnico":
+          return "badge-secondary text-secondary-content shadow-xs";
+        default:
+          return "badge-neutral";
+      }
+    };
+
+    const getInitialsClient = (name: string): string => {
+      if (!name) return "?";
+      const parts = name.trim().split(" ");
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return name.slice(0, 2).toUpperCase();
+    };
+
+    const renderModalOpItem = (op: any, ticketId: number, isReadOnly: boolean): string => {
+      const isAvailable = !!op.disponible;
+      const initials = getInitialsClient(op.nombre);
+      const badgeColor = getBadgeColorClient(op.motivo || "", isAvailable);
+      const statusLabel = isAvailable 
+        ? "Disponible" 
+        : (op.motivo === "En break" && op.retornoEstimado 
+            ? `En break (vuelve ${escapeHtml(op.retornoEstimado)})` 
+            : escapeHtml(op.motivo || "Franco"));
+
+      const scheduleInfo = op.horarioHoy ? escapeHtml(op.horarioHoy) : "Sin horario";
+      const breakInfo = (op.breakInicioHoy && op.breakFinHoy) ? ` • Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}` : "";
+      const modality = op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial";
+
+      const btnDisabled = isReadOnly ? 'disabled="true"' : "";
+      const btnClass = isAvailable
+        ? (isReadOnly ? "btn btn-sm btn-disabled opacity-40" : "btn btn-primary btn-sm font-bold uppercase tracking-wider gap-1.5 shadow-sm px-4")
+        : (isReadOnly ? "btn btn-sm btn-disabled opacity-40" : "btn btn-secondary btn-outline btn-sm font-bold uppercase tracking-wider gap-1.5 px-4");
+
+      return `
+        <div
+          data-modal-op-item
+          data-op-name="${escapeHtml(op.nombre.toLowerCase())}"
+          data-op-username="${escapeHtml((op.username || '').toLowerCase())}"
+          class="flex items-center justify-between gap-4 p-3.5 rounded-2xl border border-base-300/70 bg-base-100 hover:bg-base-200/60 transition-all shadow-xs"
+        >
+          <div class="flex items-center gap-3.5 min-w-0 flex-1">
+            <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${isAvailable ? 'bg-primary text-primary-content shadow-xs' : 'bg-base-300 text-base-content/60'}">
+              ${initials}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <span class="font-extrabold text-sm text-base-content truncate">${escapeHtml(op.nombre)}</span>
+                <span class="badge ${badgeColor} badge-sm text-xs font-semibold px-2.5 py-1">${statusLabel}</span>
+              </div>
+              <div class="text-xs text-base-content/65 font-medium truncate mt-0.5">
+                <span class="font-semibold text-base-content/80">${modality}</span> • <span class="font-mono">${scheduleInfo}${breakInfo}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="${btnClass}"
+            data-op-assign-btn="${op.agentId}"
+            data-ticket-id="${ticketId}"
+            title="${isReadOnly ? 'Toma el control para asignar autogestiones' : `Asignar ticket a ${escapeHtml(op.nombre)}`}"
+            ${btnDisabled}
+          >
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Asignar</span>
+          </button>
+        </div>
+      `;
+    };
+
+    const renderAssignToModalLists = (ticketId: number, searchQuery: string = "") => {
+      const availableContainer = document.getElementById("modal-assign-to-available-list");
+      const unavailableContainer = document.getElementById("modal-assign-to-unavailable-list");
+      const availableCountEl = document.getElementById("modal-assign-to-available-count");
+      const unavailableCountEl = document.getElementById("modal-assign-to-unavailable-count");
+      if (!availableContainer || !unavailableContainer) return;
+
+      const lockIndicator = document.getElementById("lock-indicator");
+      const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+      const clientIsReadOnly = !clientHasLock;
+
+      const q = searchQuery.toLowerCase().trim();
+      const opsList = latestDisponibilidadData.length > 0 ? latestDisponibilidadData : [];
+      const filteredOps = opsList.filter((op: any) => {
+        if (!q) return true;
+        const name = (op.nombre || "").toLowerCase();
+        const user = (op.username || "").toLowerCase();
+        return name.includes(q) || user.includes(q);
+      });
+
+      const availableOps = filteredOps.filter((op: any) => op.disponible);
+      const unavailableOps = filteredOps.filter((op: any) => !op.disponible);
+
+      if (availableCountEl) availableCountEl.textContent = String(availableOps.length);
+      if (unavailableCountEl) unavailableCountEl.textContent = String(unavailableOps.length);
+
+      if (availableOps.length > 0) {
+        availableContainer.innerHTML = availableOps.map((op: any) => renderModalOpItem(op, ticketId, clientIsReadOnly)).join("");
+      } else {
+        availableContainer.innerHTML = '<div class="text-xs text-base-content/40 italic py-3 text-center bg-base-200/20 rounded-xl">No hay operadores disponibles' + (q ? ' que coincidan con la búsqueda' : '') + '</div>';
+      }
+
+      if (unavailableOps.length > 0) {
+        unavailableContainer.innerHTML = unavailableOps.map((op: any) => renderModalOpItem(op, ticketId, clientIsReadOnly)).join("");
+      } else {
+        unavailableContainer.innerHTML = '<div class="text-xs text-base-content/40 italic py-3 text-center bg-base-200/20 rounded-xl">No hay operadores no disponibles' + (q ? ' que coincidan con la búsqueda' : '') + '</div>';
+      }
+    };
+
+    const openAssignToModal = (ticketId: number) => {
+      const modal = document.getElementById("modal-asignar-operador") as HTMLDialogElement | null;
+      if (!modal) return;
+
+      const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
+      const badgeEl = document.getElementById("modal-assign-to-ticket-badge");
+      const titleEl = document.getElementById("modal-assign-to-ticket-title");
+      const searchInput = document.getElementById("modal-assign-to-search") as HTMLInputElement | null;
+
+      if (badgeEl) badgeEl.textContent = ticket ? (ticket.pretty_id || `#${ticket.id}`) : `#${ticketId}`;
+      if (titleEl) titleEl.textContent = ticket?.title || `Ticket #${ticketId}`;
+      if (searchInput) searchInput.value = "";
+
+      renderAssignToModalLists(ticketId);
+      modal.showModal();
+    };
+
+    const searchInput = document.getElementById("modal-assign-to-search") as HTMLInputElement | null;
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        const badgeEl = document.getElementById("modal-assign-to-ticket-badge");
+        const rawId = badgeEl?.textContent?.replace("#", "").trim() || "0";
+        const ticketId = Number(rawId) || 0;
+        renderAssignToModalLists(ticketId, searchInput.value);
+      });
+    }
+
     // Event delegation for exceptional states, assignments, and ticket details
     document.addEventListener("click", async (e) => {
       const target = e.target as HTMLElement;
 
+      // -0. Open specific operator assignment modal
+      const assignToBtn = target.closest("[data-action-assign-to]");
+      if (assignToBtn) {
+        const ticketId = Number(assignToBtn.getAttribute("data-action-assign-to"));
+        if (!isNaN(ticketId) && ticketId > 0) {
+          openAssignToModal(ticketId);
+        }
+        return;
+      }
+
       // -1. Open unassigned ticket detail modal
       const ticketCard = target.closest("[data-ticket-id]");
-      const isAssignBtnClick = target.closest("[data-op-assign-btn]");
+      const isAssignBtnClick = target.closest("[data-op-assign-btn]") || target.closest("[data-action-assign-to]");
       if (ticketCard && !isAssignBtnClick) {
         const ticketId = Number(ticketCard.getAttribute("data-ticket-id"));
         const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
@@ -1824,13 +2184,31 @@ function getInitials(name: string): string {
           if (btnAssignModal) {
             if (matchingAvailableOp) {
               btnAssignModal.setAttribute("data-op-assign-btn", String(matchingAvailableOp.agentId));
+              btnAssignModal.setAttribute("data-ticket-id", String(ticket.id));
               if (btnAssignModalText) {
                 btnAssignModalText.textContent = `Asignar a ${matchingAvailableOp.nombre}`;
               }
               btnAssignModal.classList.remove("hidden");
             } else {
               btnAssignModal.removeAttribute("data-op-assign-btn");
+              btnAssignModal.removeAttribute("data-ticket-id");
               btnAssignModal.classList.add("hidden");
+            }
+          }
+
+          const btnAssignToModal = document.getElementById("ticket-modal-assign-to-btn") as HTMLButtonElement | null;
+          if (btnAssignToModal) {
+            btnAssignToModal.setAttribute("data-action-assign-to", String(ticket.id));
+            const lockIndicator = document.getElementById("lock-indicator");
+            const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+            if (!clientHasLock) {
+              btnAssignToModal.disabled = true;
+              btnAssignToModal.classList.add("btn-disabled", "opacity-50");
+              btnAssignToModal.title = "Toma el control para habilitar la asignación";
+            } else {
+              btnAssignToModal.disabled = false;
+              btnAssignToModal.classList.remove("btn-disabled", "opacity-50");
+              btnAssignToModal.title = `Asignar ticket #${ticket.pretty_id || ticket.id} a un operador...`;
             }
           }
 
@@ -2141,6 +2519,10 @@ function getInitials(name: string): string {
               if (modalTicket && modalTicket.open) {
                 modalTicket.close();
               }
+              const modalAssignOp = document.getElementById("modal-asignar-operador") as HTMLDialogElement | null;
+              if (modalAssignOp && modalAssignOp.open) {
+                modalAssignOp.close();
+              }
               const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
               showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
               await fetchDisponibilidad();
@@ -2189,7 +2571,7 @@ function getInitials(name: string): string {
 
         if (countEl) {
           countEl.textContent = String(count);
-          countEl.className = `badge ${count > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`;
+          countEl.className = `badge badge-md ${count > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-sm px-2.5 py-1`;
         }
         if (listEl) {
           if (data.tickets && data.tickets.length > 0) {
@@ -2217,21 +2599,21 @@ function getInitials(name: string): string {
                 const formatWait = elapsedMin >= 60 
                   ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
                   : `${elapsedMin}m`;
-                waitingBadge = `<span class="badge badge-xs font-mono text-tiny px-1.5 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
+                waitingBadge = `<span class="badge badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
               }
 
               // SLA first reply badge
               let slaBadge = "";
               if (t.sla_incident_first_reply) {
-                slaBadge = `<span class="badge badge-outline badge-info badge-xs font-mono text-tiny shrink-0" title="SLA de respuesta">SLA: ${escapeHtml(t.sla_incident_first_reply)}</span>`;
+                slaBadge = `<span class="badge badge-outline badge-info badge-sm font-mono text-xs shrink-0" title="SLA de respuesta">SLA: ${escapeHtml(t.sla_incident_first_reply)}</span>`;
               }
 
               const prioInfo = PRIORITY_MAP[t.priority_id] || (t.priority_id ? { label: `P${t.priority_id}`, badgeClass: "badge-neutral" } : null);
               const prioBadge = prioInfo
-                ? `<span class="badge badge-xs font-bold text-tiny tracking-wider uppercase shrink-0 ${prioInfo.badgeClass}">${escapeHtml(prioInfo.label)}</span>`
+                ? `<span class="badge badge-sm font-bold text-xs tracking-wider uppercase shrink-0 ${prioInfo.badgeClass}">${escapeHtml(prioInfo.label)}</span>`
                 : "";
               const catBadge = t.category_last_name
-                ? `<span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[130px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
+                ? `<span class="badge badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
                 : "";
 
               // Check if creator matches any available operator
@@ -2253,74 +2635,96 @@ function getInitials(name: string): string {
               const creatorStr = t.creator_name || t.customer_name || "";
               const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
 
-              let userRow = "";
-              if (creatorStr) {
-                if (matchingAvailableOp) {
-                  const lockIndicator = document.getElementById("lock-indicator");
-                  const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
-                  const clientIsReadOnly = !clientHasLock;
+              const lockIndicator = document.getElementById("lock-indicator");
+              const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+              const clientIsReadOnly = !clientHasLock;
+              const clientIsDisabled = clientIsReadOnly ? 'disabled="true"' : "";
+              const clientAssignToClass = clientIsReadOnly
+                ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
+                : "btn btn-ghost btn-xs text-base-content/70 hover:text-primary hover:bg-primary/10 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs";
 
-                  const btnClass = clientIsReadOnly
-                    ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1"
-                    : "btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1";
+              let assignButtons = "";
+              if (matchingAvailableOp) {
+                const btnClass = clientIsReadOnly
+                  ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
+                  : "btn btn-ghost btn-xs text-success hover:bg-success/15 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs";
+                const btnTitle = clientIsReadOnly
+                  ? "Toma el control para asignar autogestiones"
+                  : `Asignar ticket #${escapeHtml(t.pretty_id || t.id)} a ${escapeHtml(matchingAvailableOp.nombre)}`;
+                const iconClass = clientIsReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current";
 
-                  const btnTitle = clientIsReadOnly
-                    ? "Toma el control para asignar autogestiones"
-                    : `Asignar a ${escapeHtml(matchingAvailableOp.nombre)}`;
-
-                  const btnDisabledAttr = clientIsReadOnly ? 'disabled="true"' : "";
-                  const iconClass = clientIsReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current";
-
-                  userRow = `
-                    <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate mt-1">
-                      <div class="flex items-center gap-1 min-w-0 truncate text-base-content/70">
-                        <svg class="size-3 text-success shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <span class="truncate">
-                          Generado por: <strong class="text-success font-bold">${escapeHtml(creatorStr)}</strong> <span class="text-success text-xxs font-semibold">(Disponible)</span>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        class="${btnClass}"
-                        data-op-assign-btn="${matchingAvailableOp.agentId}"
-                        data-ticket-id="${t.id}"
-                        title="${btnTitle}"
-                        ${btnDisabledAttr}
-                      >
-                        <svg class="size-3 ${iconClass}" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
-                        <span>Asignar</span>
-                      </button>
-                    </div>
-                  `;
-                } else {
-                  userRow = `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate mt-1"><svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate">Generado por: <strong class="text-base-content/80 font-bold">${escapeHtml(creatorStr)}</strong>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}</span></div>`;
-                }
+                assignButtons += `
+                  <button
+                    type="button"
+                    class="${btnClass}"
+                    data-op-assign-btn="${matchingAvailableOp.agentId}"
+                    data-ticket-id="${t.id}"
+                    title="${btnTitle}"
+                    ${clientIsDisabled}
+                  >
+                    <svg class="size-3.5 ${iconClass}" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
+                    <span>Asignar</span>
+                  </button>
+                `;
               }
 
+              assignButtons += `
+                <button
+                  type="button"
+                  class="${clientAssignToClass}"
+                  data-action-assign-to="${t.id}"
+                  title="${clientIsReadOnly ? 'Toma el control para asignar autogestiones' : `Asignar ticket #${escapeHtml(t.pretty_id || t.id)} a un operador...`}"
+                  ${clientIsDisabled}
+                >
+                  <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                  <span>Asignar a...</span>
+                </button>
+              `;
+
+              const creatorContent = creatorStr
+                ? `
+                  <svg class="size-3.5 ${matchingAvailableOp ? 'text-success' : 'opacity-60'} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  <span class="truncate">
+                    Generado por: <strong class="${matchingAvailableOp ? 'text-success font-bold text-sm' : 'text-base-content/90 font-bold text-sm'}">${escapeHtml(creatorStr)}</strong> ${matchingAvailableOp ? '<span class="text-success text-xs font-semibold">(Disponible)</span>' : ''}${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/85 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}
+                  </span>
+                `
+                : `<span class="opacity-50 italic text-xs">Sin creador especificado</span>`;
+
+              const userRow = `
+                <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-1">
+                  <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/75">
+                    ${creatorContent}
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    ${assignButtons}
+                  </div>
+                </div>
+              `;
+
               const locationRow = t.location_name
-                ? `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate"><svg class="size-3 text-info opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/80 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
+                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/70 font-medium truncate"><svg class="size-3.5 text-info opacity-75 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/90 font-bold">${escapeHtml(t.location_name)}</strong></span></div>`
                 : "";
 
               return `
-                <div data-ticket-id="${t.id}" class="p-3.5 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-1.5 cursor-pointer group">
+                <div data-ticket-id="${t.id}" class="p-4 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-2 cursor-pointer group min-w-[480px] sm:min-w-0">
                   <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
-                      <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs shrink-0">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
-                      ${waitingBadge}
+                    <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                      <span class="font-mono font-bold text-primary-content bg-primary px-2.5 py-1 rounded-lg text-xs sm:text-sm shrink-0">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
                       ${prioBadge}
                       ${catBadge}
                       ${slaBadge}
+                      ${waitingBadge}
                     </div>
-                    <span class="text-xs text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
+                    <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
                   </div>
-                  <div class="font-semibold text-base-content text-xs group-hover:text-primary transition-colors" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+                  <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
                   ${userRow}
                   ${locationRow}
                 </div>
               `;
             }).join("");
           } else {
-            listEl.innerHTML = '<div class="text-xs text-base-content/40 italic py-12 text-center">No hay tickets sin asignar</div>';
+            listEl.innerHTML = '<div class="text-sm text-base-content/40 italic py-16 text-center">No hay tickets sin asignar</div>';
           }
         }
       } catch (err) {
@@ -2576,13 +2980,20 @@ function getInitials(name: string): string {
       });
     }
 
-    // Set up 5-second polling interval
+    // Set up 1-second polling interval
+    let isPollingBusy = false;
     polling = setInterval(async () => {
-      await Promise.all([
-        fetchDisponibilidad(),
-        fetchLockStatus().then(updateLockBanner)
-      ]);
-    }, 5000);
+      if (isPollingBusy) return;
+      isPollingBusy = true;
+      try {
+        await Promise.all([
+          fetchDisponibilidad(),
+          fetchLockStatus().then(updateLockBanner)
+        ]);
+      } finally {
+        isPollingBusy = false;
+      }
+    }, 1000);
 
     // Close dropdowns on Escape key
     document.addEventListener("keydown", (e) => {
