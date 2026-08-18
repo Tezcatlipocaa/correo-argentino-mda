@@ -570,6 +570,243 @@ export async function asignarManual(
   return { success: true, ticketNumber: ticketAssigned };
 }
 
+export interface BatchAssignmentItem {
+  ticketId: number;
+  ticketPrettyId?: string;
+  agentId: number;
+  agentName: string;
+  creatorName?: string;
+}
+
+export interface BatchAssignmentResult {
+  success: boolean;
+  assignedCount: number;
+  totalAttempted: number;
+  items: Array<BatchAssignmentItem & { success: boolean; error?: string }>;
+  error?: string;
+}
+
+export async function asignarSugeridasAutogestion(
+  assignedBy: string = "Sistema",
+  authorInvgateId?: number
+): Promise<BatchAssignmentResult> {
+  const list = await getDisponibilidadHoy();
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay autogestiones sin asignar en la mesa de ayuda.",
+    };
+  }
+
+  // Find matches where creator is available and has an invgateId
+  const pairs: Array<{ ticket: (typeof unassignedRes.tickets)[0]; op: AgentDisponibilidad }> = [];
+
+  for (const ticket of unassignedRes.tickets) {
+    const creatorUsername = (ticket.creator_username || "").toLowerCase().trim();
+    const creatorNameNorm = (ticket.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+    const matchingOp = list.find((op) => {
+      if (!op.disponible || !op.invgateId) return false;
+      if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+      if (op.nombre && creatorNameNorm) {
+        const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        if (opNameNorm === creatorNameNorm) return true;
+        const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+        if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+      }
+      return false;
+    });
+
+    if (matchingOp) {
+      pairs.push({ ticket, op: matchingOp });
+    }
+  }
+
+  if (pairs.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay autogestiones con creadores disponibles actualmente.",
+    };
+  }
+
+  const results: Array<BatchAssignmentItem & { success: boolean; error?: string }> = [];
+  let assignedCount = 0;
+  const now = Date.now();
+
+  for (let i = 0; i < pairs.length; i++) {
+    const { ticket, op } = pairs[i];
+    const authorId = authorInvgateId || op.invgateId || 1;
+    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, 3950, authorId);
+    const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
+
+    if (reassignRes.ok) {
+      assignedCount++;
+      const assignTime = now + i;
+      await db
+        .update(agents)
+        .set({
+          lastAutogestionAssignedAt: assignTime,
+          lastAutogestionAssignedBy: assignedBy,
+          lastAutogestionUndo: null,
+        })
+        .where(eq(agents.id, op.agentId));
+
+      try {
+        await db.insert(assignmentHistory).values({
+          agentId: op.agentId,
+          agentName: op.nombre,
+          ticketNumber: ticketAssigned,
+          assignedBy,
+          assignedAt: assignTime,
+          type: "batch_suggested",
+        });
+      } catch (hErr) {
+        console.error("Error saving batch suggested history:", hErr);
+      }
+
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: true,
+      });
+    } else {
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: false,
+        error: reassignRes.message,
+      });
+    }
+  }
+
+  return {
+    success: assignedCount > 0,
+    assignedCount,
+    totalAttempted: pairs.length,
+    items: results,
+    error: assignedCount === 0 ? "No se pudo asignar ninguna autogestión sugerida." : undefined,
+  };
+}
+
+export async function asignarTodasEnCola(
+  assignedBy: string = "Sistema",
+  authorInvgateId?: number
+): Promise<BatchAssignmentResult> {
+  const list = await getDisponibilidadHoy();
+  const available = list.filter((a) => a.disponible && a.invgateId);
+
+  if (available.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay operadores disponibles con ID de InvGate para asignar.",
+    };
+  }
+
+  // Sort available by queue order (lastAutogestionAssignedAt ASC)
+  available.sort((a, b) => {
+    const tA = a.lastAutogestionAssignedAt ?? 0;
+    const tB = b.lastAutogestionAssignedAt ?? 0;
+    if (a.lastAutogestionAssignedAt === null && b.lastAutogestionAssignedAt !== null) return -1;
+    if (a.lastAutogestionAssignedAt !== null && b.lastAutogestionAssignedAt === null) return 1;
+    return tA - tB;
+  });
+
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay autogestiones sin asignar en la mesa de ayuda.",
+    };
+  }
+
+  // Pair up tickets with operators sequentially
+  const assignCountToAttempt = Math.min(unassignedRes.tickets.length, available.length);
+  const results: Array<BatchAssignmentItem & { success: boolean; error?: string }> = [];
+  let assignedCount = 0;
+  const now = Date.now();
+
+  for (let i = 0; i < assignCountToAttempt; i++) {
+    const ticket = unassignedRes.tickets[i];
+    const op = available[i];
+    const authorId = authorInvgateId || op.invgateId || 1;
+    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, 3950, authorId);
+    const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
+
+    if (reassignRes.ok) {
+      assignedCount++;
+      const assignTime = now + i;
+      await db
+        .update(agents)
+        .set({
+          lastAutogestionAssignedAt: assignTime,
+          lastAutogestionAssignedBy: assignedBy,
+          lastAutogestionUndo: null,
+        })
+        .where(eq(agents.id, op.agentId));
+
+      try {
+        await db.insert(assignmentHistory).values({
+          agentId: op.agentId,
+          agentName: op.nombre,
+          ticketNumber: ticketAssigned,
+          assignedBy,
+          assignedAt: assignTime,
+          type: "batch_all",
+        });
+      } catch (hErr) {
+        console.error("Error saving batch all history:", hErr);
+      }
+
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: true,
+      });
+    } else {
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: false,
+        error: reassignRes.message,
+      });
+    }
+  }
+
+  return {
+    success: assignedCount > 0,
+    assignedCount,
+    totalAttempted: assignCountToAttempt,
+    items: results,
+    error: assignedCount === 0 ? "No se pudo asignar ninguna autogestión en cola." : undefined,
+  };
+}
+
 export async function marcarEstadoExcepcional(
   agentId: number,
   tipo: string,

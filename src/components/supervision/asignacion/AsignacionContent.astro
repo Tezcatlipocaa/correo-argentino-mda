@@ -137,6 +137,24 @@ const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
 const unassignedTickets = unassignedRes.tickets;
 const unassignedCount = unassignedTickets.length;
 
+// Count how many unassigned tickets match an available operator
+const suggestedTicketsCount = unassignedTickets.filter((t) => {
+  const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+  const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+  return availableOperators.some((op) => {
+    if (!op.disponible || !op.invgateId) return false;
+    if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+    if (op.nombre && creatorNameNorm) {
+      const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+      if (opNameNorm === creatorNameNorm) return true;
+      const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+      if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+    }
+    return false;
+  });
+}).length;
+const allQueueCount = Math.min(unassignedCount, availableOperators.filter((op) => op.invgateId).length);
+
 const STATUS_LABELS: Record<string, string> = {
   "En break": "En Break",
   "Fuera de horario": "Fuera de Horario",
@@ -325,7 +343,16 @@ function getInitials(name: string): string {
         class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'asignacion' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <Icon name="boxicons:user-check" size={18} />
-        Asignación Operativa
+        Asignación de Autogestión
+      </button>
+      <button
+        type="button"
+        disabled
+        class="tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl flex items-center gap-2 opacity-50 cursor-not-allowed text-base-content/40 hover:text-base-content/40 select-none"
+        title="Asignación de tareas bloqueada"
+      >
+        <Icon name="boxicons:lock" size={18} />
+        <span>Asignación de Tareas</span>
       </button>
       <button
         type="button"
@@ -368,46 +395,64 @@ function getInitials(name: string): string {
     <!-- Workspace Panel Dividido / IDE Style (0 Cajas Flotantes) -->
     <div class="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-xs flex flex-col">
       <!-- Header Superior de Acción (Espacio Reservado Fijo - 0 Saltos de Layout) -->
-      <div id="action-bar-header" class="border-b border-base-300 bg-base-200/40 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-300">
-        <div class="flex items-center gap-3.5">
+      <!-- Header Superior de Acción -->
+      <div id="action-bar-header" class="border-b border-base-300 bg-base-200/40 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-300">
+        <div class="flex items-center gap-3.5 min-w-0">
           <div class={`p-3 rounded-2xl shrink-0 transition-colors ${!isReadOnly ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content/40"}`}>
             <Icon name={!isReadOnly ? "boxicons:user-check" : "boxicons:lock"} size={26} />
           </div>
-          <div>
-            <h2 class="font-black text-base sm:text-lg uppercase tracking-wider text-base-content flex items-center gap-2.5">
-              Asignación Automática
+          <div class="min-w-0">
+            <h2 class="font-black text-base sm:text-lg uppercase tracking-wider text-base-content flex items-center gap-2.5 flex-wrap">
+              Asignación de Autogestión
               {isReadOnly && (
                 <span class="badge badge-neutral badge-sm font-bold uppercase text-xs tracking-wider">Modo Lectura</span>
               )}
             </h2>
-            <p class="text-xs sm:text-sm text-base-content/70 font-medium mt-0.5">
+            <p id="action-bar-subtitle" class="text-xs sm:text-sm text-base-content/70 font-medium mt-0.5 truncate">
               {!isReadOnly ? (
-                nextSuggestedOperators.length > 0 ? (
-                  <>Asignará el siguiente ticket a <strong class="text-base-content font-black">{nextSuggestedOperators[0].nombre}</strong></>
-                ) : (
-                  <>No hay operadores disponibles actualmente</>
-                )
+                <>{suggestedTicketsCount} sugeridas con creador disponible • {allQueueCount} asignables por cola ({availableOperators.length} operadores disponibles)</>
               ) : (
-                <>Tomá el control desde el indicador de estado para habilitar la asignación automática.</>
+                <>Tomá el control desde el indicador de estado para habilitar la asignación.</>
               )}
             </p>
           </div>
         </div>
 
-        <button
-          id="btn-assign-cyclic"
-          type="button"
-          disabled={isReadOnly || unassignedCount === 0}
-          title={unassignedCount === 0 ? "No hay autogestiones sin asignar para entregar" : (isReadOnly ? "Tomá el control para habilitar la asignación" : "Asignar siguiente autogestión")}
-          class={`btn btn-md flex items-center justify-center gap-2.5 font-extrabold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 text-sm sm:text-base transition-all ${
-            !isReadOnly && unassignedCount > 0
-              ? "btn-primary shadow-lg shadow-primary/20"
-              : "btn-neutral btn-disabled opacity-50 cursor-not-allowed"
-          }`}
-        >
-          <Icon name="boxicons:user-check" size={22} aria-hidden="true" />
-          Asignar Siguiente
-        </button>
+        <div class="flex items-center gap-3 w-full md:w-auto flex-wrap sm:flex-nowrap shrink-0">
+          <!-- Botón: Asignar Sugeridas -->
+          <button
+            id="btn-assign-suggested"
+            type="button"
+            disabled={isReadOnly || suggestedTicketsCount === 0}
+            title={suggestedTicketsCount === 0 ? "No hay autogestiones con creadores disponibles actualmente" : (isReadOnly ? "Tomá el control para habilitar la asignación" : `Asignar ${suggestedTicketsCount} autogestión(es) a sus respectivos creadores disponibles`)}
+            class={`btn btn-md flex-1 sm:flex-initial flex items-center justify-center gap-2 font-extrabold uppercase tracking-wider px-5 text-xs sm:text-sm transition-all ${
+              !isReadOnly && suggestedTicketsCount > 0
+                ? "btn-success text-success-content shadow-md shadow-success/20 hover:scale-[1.02]"
+                : "btn-neutral btn-disabled opacity-50 cursor-not-allowed"
+            }`}
+          >
+            <Icon name="boxicons:user-check" size={20} aria-hidden="true" />
+            <span>Asignar Sugeridas</span>
+            <span id="badge-suggested-count" class="badge badge-sm font-black px-1.5 py-0.5 bg-black/20 text-current">{suggestedTicketsCount}</span>
+          </button>
+
+          <!-- Botón: Asignar Todas en Cola -->
+          <button
+            id="btn-assign-all"
+            type="button"
+            disabled={isReadOnly || unassignedCount === 0 || allQueueCount === 0}
+            title={unassignedCount === 0 ? "No hay autogestiones sin asignar" : allQueueCount === 0 ? "No hay operadores disponibles en cola" : (isReadOnly ? "Tomá el control para habilitar la asignación" : `Asignar ${allQueueCount} autogestión(es) por orden de cola`)}
+            class={`btn btn-md flex-1 sm:flex-initial flex items-center justify-center gap-2 font-extrabold uppercase tracking-wider px-5 text-xs sm:text-sm transition-all ${
+              !isReadOnly && unassignedCount > 0 && allQueueCount > 0
+                ? "btn-primary shadow-md shadow-primary/20 hover:scale-[1.02]"
+                : "btn-neutral btn-disabled opacity-50 cursor-not-allowed"
+            }`}
+          >
+            <Icon name="boxicons:check-circle" size={20} aria-hidden="true" />
+            <span>Asignar Todas</span>
+            <span id="badge-all-count" class="badge badge-sm font-black px-1.5 py-0.5 bg-black/20 text-current">{allQueueCount}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Grid de Paneles Divididos (60% Tickets / 40% Cola) -->
@@ -511,23 +556,6 @@ function getInitials(name: string): string {
                         )}
                       </div>
                       <div class="flex items-center gap-1.5 shrink-0">
-                        {matchingAvailableOp && (
-                          <button
-                            type="button"
-                            class={`btn btn-ghost btn-xs px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs ${
-                              isReadOnly
-                                ? "btn-disabled opacity-40 cursor-not-allowed text-base-content/40"
-                                : "text-success hover:bg-success/15"
-                            }`}
-                            data-op-assign-btn={matchingAvailableOp.agentId}
-                            data-ticket-id={t.id}
-                            title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar ticket #${t.pretty_id || t.id} a ${matchingAvailableOp.nombre}`}
-                            disabled={isReadOnly}
-                          >
-                            <Icon name="boxicons:bolt-filled" size={13} class={isReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current"} />
-                            <span>Asignar</span>
-                          </button>
-                        )}
                         <button
                           type="button"
                           class={`btn btn-ghost btn-xs px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs text-base-content/70 hover:text-primary hover:bg-primary/10 ${
@@ -1099,14 +1127,6 @@ function getInitials(name: string): string {
         <span class="text-xs text-base-content/50 font-medium">Mesa de Ayuda #3950</span>
         <div class="flex items-center gap-2.5">
           <button
-            id="ticket-modal-assign-btn"
-            type="button"
-            class="btn btn-success text-success-content btn-md font-bold gap-2 shadow-sm hidden"
-          >
-            <Icon name="boxicons:bolt" class="size-5 shrink-0" />
-            <span id="ticket-modal-assign-btn-text">Asignar a operador</span>
-          </button>
-          <button
             id="ticket-modal-assign-to-btn"
             type="button"
             class="btn btn-secondary btn-soft btn-md font-bold gap-2 shadow-sm"
@@ -1143,9 +1163,10 @@ function getInitials(name: string): string {
           </div>
           <div class="min-w-0">
             <h3 class="font-extrabold text-base sm:text-lg text-base-content uppercase tracking-wider">Asignar Ticket a Operador</h3>
-            <div class="flex items-center gap-2 text-sm text-base-content/70 mt-1 min-w-0">
+            <div class="flex items-center gap-2 text-sm text-base-content/70 mt-1 min-w-0 flex-wrap">
               <span id="modal-assign-to-ticket-badge" class="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-lg shrink-0">#---</span>
               <span id="modal-assign-to-ticket-title" class="truncate font-semibold text-base-content">Selecciona un operador</span>
+              <span id="modal-assign-to-ticket-creator" class="badge badge-neutral badge-sm font-medium text-xs text-base-content/80 hidden"></span>
             </div>
           </div>
         </div>
@@ -1277,6 +1298,54 @@ function getInitials(name: string): string {
         <form method="dialog">
           <button class="btn btn-sm btn-neutral font-semibold">Cerrar</button>
         </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>cerrar</button>
+    </form>
+  </dialog>
+
+  <!-- Modal Confirmar Asignación Masiva -->
+  <dialog id="modal-confirm-batch-assign" class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box w-11/12 max-w-2xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="p-5 border-b border-base-300 bg-base-200/50 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="p-3 rounded-2xl bg-primary/10 text-primary shrink-0">
+            <Icon name="boxicons:user-check" size={24} />
+          </div>
+          <div class="min-w-0">
+            <h3 id="modal-batch-title" class="font-extrabold text-base sm:text-lg text-base-content uppercase tracking-wider">Confirmar Asignación Masiva</h3>
+            <p id="modal-batch-subtitle" class="text-xs sm:text-sm text-base-content/70 font-medium mt-0.5 truncate">Revisión previa de autogestiones</p>
+          </div>
+        </div>
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content">✕</button>
+        </form>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+        <div id="modal-batch-summary-alert" class="alert alert-info text-xs font-semibold rounded-xl flex items-center gap-2.5">
+          <Icon name="boxicons:info-circle" size={20} class="shrink-0" />
+          <span id="modal-batch-summary-text">Se asignarán las siguientes autogestiones...</span>
+        </div>
+
+        <div class="space-y-2 max-h-72 overflow-y-auto pr-1" id="modal-batch-items-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <div class="p-4 bg-base-200/50 border-t border-base-300 flex items-center justify-end gap-3">
+        <form method="dialog">
+          <button class="btn btn-ghost btn-sm font-semibold">Cancelar</button>
+        </form>
+        <button
+          id="modal-batch-confirm-btn"
+          type="button"
+          class="btn btn-primary btn-sm font-black uppercase tracking-wider px-5 shadow-sm gap-2"
+        >
+          <Icon name="boxicons:check" size={18} />
+          <span>Confirmar Asignación</span>
+        </button>
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -1667,16 +1736,10 @@ function getInitials(name: string): string {
             </div>
           `;
         }
-
-        const nextAssignedInfo = document.querySelector("#btn-assign-cyclic + p strong");
-        if (nextAssignedInfo) {
-          if (sortedQueue.length > 0) {
-            nextAssignedInfo.textContent = sortedQueue[0].nombre;
-          }
-        }
       };
 
       updateQueueUI(data);
+      updateActionBarButtons();
 
       // 4. Update each table row
       data.forEach((op) => {
@@ -1950,7 +2013,7 @@ function getInitials(name: string): string {
       return name.slice(0, 2).toUpperCase();
     };
 
-    const renderModalOpItem = (op: any, ticketId: number, isReadOnly: boolean): string => {
+    const renderModalOpItem = (op: any, ticketId: number, isReadOnly: boolean, isCreator: boolean = false): string => {
       const isAvailable = !!op.disponible;
       const initials = getInitialsClient(op.nombre);
       const badgeColor = getBadgeColorClient(op.motivo || "", isAvailable);
@@ -1965,24 +2028,61 @@ function getInitials(name: string): string {
       const modality = op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial";
 
       const btnDisabled = isReadOnly ? 'disabled="true"' : "";
-      const btnClass = isAvailable
-        ? (isReadOnly ? "btn btn-sm btn-disabled opacity-40" : "btn btn-primary btn-sm font-bold uppercase tracking-wider gap-1.5 shadow-sm px-4")
-        : (isReadOnly ? "btn btn-sm btn-disabled opacity-40" : "btn btn-secondary btn-outline btn-sm font-bold uppercase tracking-wider gap-1.5 px-4");
+
+      let containerClasses = "";
+      let avatarClasses = "";
+      let creatorBadge = "";
+      let btnClass = "";
+
+      if (isAvailable) {
+        if (isCreator) {
+          containerClasses = "border-2 border-success/80 bg-success/15 hover:bg-success/20 shadow-md ring-2 ring-success/30 transition-all";
+          avatarClasses = "bg-success text-success-content font-black ring-2 ring-success/80 ring-offset-2 ring-offset-base-100 shadow-sm";
+          creatorBadge = `<span class="badge badge-success text-success-content badge-sm font-black text-xs gap-1 px-2.5 py-1 shadow-sm"><svg class="size-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>Creador del ticket</span>`;
+          btnClass = isReadOnly 
+            ? "btn btn-sm btn-disabled opacity-40" 
+            : "btn btn-success text-success-content btn-sm font-black uppercase tracking-wider gap-1.5 shadow-md px-4";
+        } else {
+          containerClasses = "border border-base-300/70 bg-base-100 hover:bg-base-200/60 transition-all shadow-xs";
+          avatarClasses = "bg-primary text-primary-content shadow-xs";
+          creatorBadge = "";
+          btnClass = isReadOnly 
+            ? "btn btn-sm btn-disabled opacity-40" 
+            : "btn btn-primary btn-sm font-bold uppercase tracking-wider gap-1.5 shadow-sm px-4";
+        }
+      } else {
+        if (isCreator) {
+          containerClasses = "border-2 border-warning/70 bg-warning/10 hover:bg-warning/15 shadow-sm ring-2 ring-warning/20 transition-all";
+          avatarClasses = "bg-warning/25 text-warning font-black border border-warning/40 shadow-xs";
+          creatorBadge = `<span class="badge badge-warning text-warning-content badge-sm font-bold text-xs gap-1 px-2.5 py-1 shadow-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Creador del ticket</span>`;
+          btnClass = isReadOnly 
+            ? "btn btn-sm btn-disabled opacity-40" 
+            : "btn btn-warning btn-outline btn-sm font-bold uppercase tracking-wider gap-1.5 px-4";
+        } else {
+          containerClasses = "border border-base-300/70 bg-base-100 hover:bg-base-200/60 transition-all shadow-xs";
+          avatarClasses = "bg-base-300 text-base-content/60";
+          creatorBadge = "";
+          btnClass = isReadOnly 
+            ? "btn btn-sm btn-disabled opacity-40" 
+            : "btn btn-secondary btn-outline btn-sm font-bold uppercase tracking-wider gap-1.5 px-4";
+        }
+      }
 
       return `
         <div
           data-modal-op-item
           data-op-name="${escapeHtml(op.nombre.toLowerCase())}"
           data-op-username="${escapeHtml((op.username || '').toLowerCase())}"
-          class="flex items-center justify-between gap-4 p-3.5 rounded-2xl border border-base-300/70 bg-base-100 hover:bg-base-200/60 transition-all shadow-xs"
+          class="flex items-center justify-between gap-4 p-3.5 rounded-2xl ${containerClasses}"
         >
           <div class="flex items-center gap-3.5 min-w-0 flex-1">
-            <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${isAvailable ? 'bg-primary text-primary-content shadow-xs' : 'bg-base-300 text-base-content/60'}">
+            <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${avatarClasses}">
               ${initials}
             </div>
             <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2.5 flex-wrap">
+              <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-extrabold text-sm text-base-content truncate">${escapeHtml(op.nombre)}</span>
+                ${creatorBadge}
                 <span class="badge ${badgeColor} badge-sm text-xs font-semibold px-2.5 py-1">${statusLabel}</span>
               </div>
               <div class="text-xs text-base-content/65 font-medium truncate mt-0.5">
@@ -2016,6 +2116,22 @@ function getInitials(name: string): string {
       const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
       const clientIsReadOnly = !clientHasLock;
 
+      const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
+      const creatorUsername = (ticket?.creator_username || "").toLowerCase().trim();
+      const creatorNameNorm = (ticket?.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+      const isCreatorOp = (op: any) => {
+        if (!creatorUsername && !creatorNameNorm) return false;
+        if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+        if (op.nombre && creatorNameNorm) {
+          const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+          if (opNameNorm === creatorNameNorm) return true;
+          const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+          if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+        }
+        return false;
+      };
+
       const q = searchQuery.toLowerCase().trim();
       const opsList = latestDisponibilidadData.length > 0 ? latestDisponibilidadData : [];
       const filteredOps = opsList.filter((op: any) => {
@@ -2025,20 +2141,33 @@ function getInitials(name: string): string {
         return name.includes(q) || user.includes(q);
       });
 
-      const availableOps = filteredOps.filter((op: any) => op.disponible);
-      const unavailableOps = filteredOps.filter((op: any) => !op.disponible);
+      const availableOps = filteredOps
+        .filter((op: any) => op.disponible)
+        .sort((a: any, b: any) => {
+          const aCreator = isCreatorOp(a) ? 1 : 0;
+          const bCreator = isCreatorOp(b) ? 1 : 0;
+          return bCreator - aCreator;
+        });
+
+      const unavailableOps = filteredOps
+        .filter((op: any) => !op.disponible)
+        .sort((a: any, b: any) => {
+          const aCreator = isCreatorOp(a) ? 1 : 0;
+          const bCreator = isCreatorOp(b) ? 1 : 0;
+          return bCreator - aCreator;
+        });
 
       if (availableCountEl) availableCountEl.textContent = String(availableOps.length);
       if (unavailableCountEl) unavailableCountEl.textContent = String(unavailableOps.length);
 
       if (availableOps.length > 0) {
-        availableContainer.innerHTML = availableOps.map((op: any) => renderModalOpItem(op, ticketId, clientIsReadOnly)).join("");
+        availableContainer.innerHTML = availableOps.map((op: any) => renderModalOpItem(op, ticketId, clientIsReadOnly, isCreatorOp(op))).join("");
       } else {
         availableContainer.innerHTML = '<div class="text-xs text-base-content/40 italic py-3 text-center bg-base-200/20 rounded-xl">No hay operadores disponibles' + (q ? ' que coincidan con la búsqueda' : '') + '</div>';
       }
 
       if (unavailableOps.length > 0) {
-        unavailableContainer.innerHTML = unavailableOps.map((op: any) => renderModalOpItem(op, ticketId, clientIsReadOnly)).join("");
+        unavailableContainer.innerHTML = unavailableOps.map((op: any) => renderModalOpItem(op, ticketId, clientIsReadOnly, isCreatorOp(op))).join("");
       } else {
         unavailableContainer.innerHTML = '<div class="text-xs text-base-content/40 italic py-3 text-center bg-base-200/20 rounded-xl">No hay operadores no disponibles' + (q ? ' que coincidan con la búsqueda' : '') + '</div>';
       }
@@ -2051,10 +2180,19 @@ function getInitials(name: string): string {
       const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
       const badgeEl = document.getElementById("modal-assign-to-ticket-badge");
       const titleEl = document.getElementById("modal-assign-to-ticket-title");
+      const creatorEl = document.getElementById("modal-assign-to-ticket-creator");
       const searchInput = document.getElementById("modal-assign-to-search") as HTMLInputElement | null;
 
       if (badgeEl) badgeEl.textContent = ticket ? (ticket.pretty_id || `#${ticket.id}`) : `#${ticketId}`;
       if (titleEl) titleEl.textContent = ticket?.title || `Ticket #${ticketId}`;
+      if (creatorEl) {
+        if (ticket?.creator_name) {
+          creatorEl.textContent = `Generado por: ${ticket.creator_name}`;
+          creatorEl.classList.remove("hidden");
+        } else {
+          creatorEl.classList.add("hidden");
+        }
+      }
       if (searchInput) searchInput.value = "";
 
       renderAssignToModalLists(ticketId);
@@ -2070,6 +2208,242 @@ function getInitials(name: string): string {
         renderAssignToModalLists(ticketId, searchInput.value);
       });
     }
+
+    const updateActionBarButtons = () => {
+      const btnAssignSuggested = document.getElementById("btn-assign-suggested") as HTMLButtonElement | null;
+      const btnAssignAll = document.getElementById("btn-assign-all") as HTMLButtonElement | null;
+      const badgeSuggestedCount = document.getElementById("badge-suggested-count");
+      const badgeAllCount = document.getElementById("badge-all-count");
+      const subtitleEl = document.getElementById("action-bar-subtitle");
+
+      const lockIndicator = document.getElementById("lock-indicator");
+      const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+      const clientIsReadOnly = !clientHasLock;
+
+      const availableOps = latestDisponibilidadData.filter((op: any) => op.disponible && op.invgateId);
+      const unassignedTickets = latestUnassignedTickets || [];
+
+      // Calculate suggested matches
+      const suggestedMatches: Array<{ ticket: any; op: any }> = [];
+      for (const t of unassignedTickets) {
+        const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+        const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        const matchingOp = availableOps.find((op: any) => {
+          if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+          if (op.nombre && creatorNameNorm) {
+            const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+            if (opNameNorm === creatorNameNorm) return true;
+            const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+            if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+          }
+          return false;
+        });
+        if (matchingOp) {
+          suggestedMatches.push({ ticket: t, op: matchingOp });
+        }
+      }
+
+      const suggestedCount = suggestedMatches.length;
+      const allCount = Math.min(unassignedTickets.length, availableOps.length);
+
+      if (badgeSuggestedCount) badgeSuggestedCount.textContent = String(suggestedCount);
+      if (badgeAllCount) badgeAllCount.textContent = String(allCount);
+
+      if (subtitleEl) {
+        if (clientIsReadOnly) {
+          subtitleEl.textContent = "Tomá el control desde el indicador de estado para habilitar la asignación.";
+        } else {
+          subtitleEl.textContent = `${suggestedCount} sugeridas con creador disponible • ${allCount} asignables por cola (${availableOps.length} operadores disponibles)`;
+        }
+      }
+
+      if (btnAssignSuggested) {
+        const disabled = clientIsReadOnly || suggestedCount === 0;
+        btnAssignSuggested.disabled = disabled;
+        if (disabled) {
+          btnAssignSuggested.className = "btn btn-md flex-1 sm:flex-initial flex items-center justify-center gap-2 font-extrabold uppercase tracking-wider px-5 text-xs sm:text-sm transition-all btn-neutral btn-disabled opacity-50 cursor-not-allowed";
+          btnAssignSuggested.title = suggestedCount === 0 ? "No hay autogestiones con creadores disponibles actualmente" : "Tomá el control para habilitar la asignación";
+        } else {
+          btnAssignSuggested.className = "btn btn-md flex-1 sm:flex-initial flex items-center justify-center gap-2 font-extrabold uppercase tracking-wider px-5 text-xs sm:text-sm transition-all btn-success text-success-content shadow-md shadow-success/20 hover:scale-[1.02]";
+          btnAssignSuggested.title = `Asignar ${suggestedCount} autogestión(es) a sus respectivos creadores disponibles`;
+        }
+      }
+
+      if (btnAssignAll) {
+        const disabled = clientIsReadOnly || allCount === 0;
+        btnAssignAll.disabled = disabled;
+        if (disabled) {
+          btnAssignAll.className = "btn btn-md flex-1 sm:flex-initial flex items-center justify-center gap-2 font-extrabold uppercase tracking-wider px-5 text-xs sm:text-sm transition-all btn-neutral btn-disabled opacity-50 cursor-not-allowed";
+          btnAssignAll.title = unassignedTickets.length === 0 ? "No hay autogestiones sin asignar" : availableOps.length === 0 ? "No hay operadores disponibles en cola" : "Tomá el control para habilitar la asignación";
+        } else {
+          btnAssignAll.className = "btn btn-md flex-1 sm:flex-initial flex items-center justify-center gap-2 font-extrabold uppercase tracking-wider px-5 text-xs sm:text-sm transition-all btn-primary shadow-md shadow-primary/20 hover:scale-[1.02]";
+          btnAssignAll.title = `Asignar ${allCount} autogestión(es) por orden de cola a operadores disponibles`;
+        }
+      }
+    };
+
+    let currentBatchMode: "suggested" | "all" = "suggested";
+
+    const openBatchConfirmModal = (mode: "suggested" | "all") => {
+      currentBatchMode = mode;
+      const modal = document.getElementById("modal-confirm-batch-assign") as HTMLDialogElement | null;
+      const titleEl = document.getElementById("modal-batch-title");
+      const subtitleEl = document.getElementById("modal-batch-subtitle");
+      const alertEl = document.getElementById("modal-batch-summary-alert");
+      const summaryTextEl = document.getElementById("modal-batch-summary-text");
+      const itemsContainer = document.getElementById("modal-batch-items-container");
+      const confirmBtn = document.getElementById("modal-batch-confirm-btn") as HTMLButtonElement | null;
+
+      if (!modal || !itemsContainer) return;
+
+      const availableOps = latestDisponibilidadData.filter((op: any) => op.disponible && op.invgateId);
+      availableOps.sort((a: any, b: any) => {
+        const tA = a.lastAutogestionAssignedAt ?? 0;
+        const tB = b.lastAutogestionAssignedAt ?? 0;
+        if (a.lastAutogestionAssignedAt === null && b.lastAutogestionAssignedAt !== null) return -1;
+        if (a.lastAutogestionAssignedAt !== null && b.lastAutogestionAssignedAt === null) return 1;
+        return tA - tB;
+      });
+
+      const unassignedTickets = latestUnassignedTickets || [];
+
+      if (mode === "suggested") {
+        if (titleEl) titleEl.textContent = "Asignar Autogestiones Sugeridas";
+        if (subtitleEl) subtitleEl.textContent = "Asignará cada ticket a su operador creador disponible";
+
+        const suggestedMatches: Array<{ ticket: any; op: any }> = [];
+        for (const t of unassignedTickets) {
+          const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+          const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+          const matchingOp = availableOps.find((op: any) => {
+            if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+            if (op.nombre && creatorNameNorm) {
+              const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+              if (opNameNorm === creatorNameNorm) return true;
+              const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+              if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+            }
+            return false;
+          });
+          if (matchingOp) {
+            suggestedMatches.push({ ticket: t, op: matchingOp });
+          }
+        }
+
+        if (suggestedMatches.length === 0) {
+          showAlert("warning", "No hay autogestiones con creadores disponibles para asignar.");
+          return;
+        }
+
+        if (alertEl) {
+          alertEl.className = "alert alert-success text-xs font-semibold rounded-xl flex items-center gap-2.5";
+        }
+        if (summaryTextEl) {
+          summaryTextEl.textContent = `Se asignarán ${suggestedMatches.length} autogestión(es) directamente a sus operadores creadores disponibles.`;
+        }
+
+        itemsContainer.innerHTML = suggestedMatches.map(({ ticket, op }) => `
+          <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-success/40 bg-success/10">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-xs px-2 py-0.5 bg-base-100 rounded text-success">${escapeHtml(ticket.pretty_id || `#${ticket.id}`)}</span>
+                <span class="font-semibold text-xs text-base-content truncate">${escapeHtml(ticket.title || "Autogestión")}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs text-base-content/60 font-medium">Asignar a:</span>
+              <span class="badge badge-success text-success-content font-bold text-xs px-2.5 py-1">${escapeHtml(op.nombre)}</span>
+            </div>
+          </div>
+        `).join("");
+
+      } else {
+        if (titleEl) titleEl.textContent = "Asignar Todas las Autogestiones en Cola";
+        if (subtitleEl) subtitleEl.textContent = "Asignará tickets en orden secuencial a los operadores en cola";
+
+        const assignCount = Math.min(unassignedTickets.length, availableOps.length);
+        if (assignCount === 0) {
+          showAlert("warning", "No hay tickets o no hay operadores disponibles para asignar en cola.");
+          return;
+        }
+
+        if (alertEl) {
+          alertEl.className = "alert alert-info text-xs font-semibold rounded-xl flex items-center gap-2.5";
+        }
+        if (summaryTextEl) {
+          summaryTextEl.textContent = `Se asignarán ${assignCount} autogestión(es) a los ${assignCount} operadores siguientes en la cola de disponibilidad.`;
+        }
+
+        const previewPairs: Array<{ ticket: any; op: any; pos: number }> = [];
+        for (let i = 0; i < assignCount; i++) {
+          previewPairs.push({ ticket: unassignedTickets[i], op: availableOps[i], pos: i + 1 });
+        }
+
+        itemsContainer.innerHTML = previewPairs.map(({ ticket, op, pos }) => `
+          <div class="flex items-center justify-between gap-3 p-3 rounded-xl border border-base-300 bg-base-100">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="badge badge-neutral badge-xs font-mono font-bold">${pos}°</span>
+                <span class="font-mono font-bold text-xs px-2 py-0.5 bg-base-200 rounded">${escapeHtml(ticket.pretty_id || `#${ticket.id}`)}</span>
+                <span class="font-semibold text-xs text-base-content truncate">${escapeHtml(ticket.title || "Autogestión")}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs text-base-content/60 font-medium">Asignar a:</span>
+              <span class="badge badge-primary font-bold text-xs px-2.5 py-1">${escapeHtml(op.nombre)}</span>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+      }
+
+      modal.showModal();
+    };
+
+    const executeBatchAssignment = async () => {
+      const confirmBtn = document.getElementById("modal-batch-confirm-btn") as HTMLButtonElement | null;
+      const modal = document.getElementById("modal-confirm-batch-assign") as HTMLDialogElement | null;
+
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span><span>Asignando...</span>';
+      }
+
+      try {
+        const res = await fetch("/api/disponibilidad/asignar-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: currentBatchMode }),
+        });
+        const data = await res.json();
+
+        if (res.status === 423) {
+          showAlert("error", data.error || "Perdiste el control de asignación. Recargando...");
+          setTimeout(() => window.location.reload(), 1500);
+          return;
+        }
+
+        if (res.ok && data.success) {
+          if (modal && modal.open) modal.close();
+          const label = currentBatchMode === "suggested" ? "autogestión(es) sugerida(s)" : "autogestión(es) en cola";
+          showAlert("success", `¡Éxito! Se asignaron ${data.assignedCount} ${label}.`);
+          await Promise.all([fetchDisponibilidad(), fetchUnassignedTickets()]);
+        } else {
+          showAlert("error", data.error || "Ocurrió un error al procesar la asignación masiva.");
+        }
+      } catch (err: any) {
+        console.error(err);
+        showAlert("error", `Error de conexión al asignar: ${err.message || err}`);
+      } finally {
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = '<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Confirmar Asignación</span>';
+        }
+      }
+    };
 
     // Event delegation for exceptional states, assignments, and ticket details
     document.addEventListener("click", async (e) => {
@@ -2177,24 +2551,6 @@ function getInitials(name: string): string {
           
           if (elCustomer) elCustomer.textContent = ticket.customer_name || "Mismo creador";
           if (elLocation) elLocation.textContent = ticket.location_name || "No especificada";
-
-          const btnAssignModal = document.getElementById("ticket-modal-assign-btn") as HTMLButtonElement | null;
-          const btnAssignModalText = document.getElementById("ticket-modal-assign-btn-text");
-
-          if (btnAssignModal) {
-            if (matchingAvailableOp) {
-              btnAssignModal.setAttribute("data-op-assign-btn", String(matchingAvailableOp.agentId));
-              btnAssignModal.setAttribute("data-ticket-id", String(ticket.id));
-              if (btnAssignModalText) {
-                btnAssignModalText.textContent = `Asignar a ${matchingAvailableOp.nombre}`;
-              }
-              btnAssignModal.classList.remove("hidden");
-            } else {
-              btnAssignModal.removeAttribute("data-op-assign-btn");
-              btnAssignModal.removeAttribute("data-ticket-id");
-              btnAssignModal.classList.add("hidden");
-            }
-          }
 
           const btnAssignToModal = document.getElementById("ticket-modal-assign-to-btn") as HTMLButtonElement | null;
           if (btnAssignToModal) {
@@ -2448,48 +2804,22 @@ function getInitials(name: string): string {
         return;
       }
 
-      // 3. Cyclic assign
-      const assignCyclicBtn = target.closest("#btn-assign-cyclic");
-      if (assignCyclicBtn) {
-        assignCyclicBtn.setAttribute("disabled", "true");
-        // Micro-animación: desvanecer hacia la izquierda el primer operador en cola
-        const firstQueueItem = document.querySelector("#queue-container > [data-agent-id]:first-child") as HTMLElement | null;
-        if (firstQueueItem) {
-          firstQueueItem.style.transition = "all 0.3s ease-in-out";
-          firstQueueItem.style.transform = "translateX(-24px)";
-          firstQueueItem.style.opacity = "0";
-        }
-        try {
-          const res = await fetch("/api/disponibilidad/asignar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }
-          });
-          const data = await res.json();
-          if (res.status === 423) {
-            showAlert("error", data.error || "Perdiste el control de asignación. Recargando...");
-            setTimeout(() => window.location.reload(), 1500);
-            return;
-          }
-          if (res.ok && data.success && data.agent) {
-            showAlert("success", `Autogestión asignada cíclicamente a ${data.agent.nombre || data.agent.name}.`);
-            await fetchDisponibilidad();
-          } else {
-            showAlert("error", data.error || "No hay operadores disponibles o dentro de horario operativo para asignar.");
-            if (firstQueueItem) {
-              firstQueueItem.style.transform = "";
-              firstQueueItem.style.opacity = "";
-            }
-          }
-        } catch (err: any) {
-          console.error(err);
-          showAlert("error", `Ocurrió un error al procesar la asignación cíclica: ${err.message || err}`);
-          if (firstQueueItem) {
-            firstQueueItem.style.transform = "";
-            firstQueueItem.style.opacity = "";
-          }
-        } finally {
-          assignCyclicBtn.removeAttribute("disabled");
-        }
+      // 3. Batch assign buttons
+      const assignSuggestedBtn = target.closest("#btn-assign-suggested");
+      if (assignSuggestedBtn && !assignSuggestedBtn.hasAttribute("disabled") && !(assignSuggestedBtn as HTMLButtonElement).disabled) {
+        openBatchConfirmModal("suggested");
+        return;
+      }
+
+      const assignAllBtn = target.closest("#btn-assign-all");
+      if (assignAllBtn && !assignAllBtn.hasAttribute("disabled") && !(assignAllBtn as HTMLButtonElement).disabled) {
+        openBatchConfirmModal("all");
+        return;
+      }
+
+      const batchConfirmBtn = target.closest("#modal-batch-confirm-btn");
+      if (batchConfirmBtn && !batchConfirmBtn.hasAttribute("disabled") && !(batchConfirmBtn as HTMLButtonElement).disabled) {
+        executeBatchAssignment();
         return;
       }
 
@@ -2551,23 +2881,7 @@ function getInitials(name: string): string {
         const listEl = document.getElementById("unassigned-tickets-list");
         const count = data.count ?? 0;
 
-        const btnAssignCyclic = document.getElementById("btn-assign-cyclic") as HTMLButtonElement | null;
-        if (btnAssignCyclic) {
-          const lockIndicator = document.getElementById("lock-indicator");
-          const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
-          const clientIsReadOnly = !clientHasLock;
-          const isDisabled = clientIsReadOnly || count === 0;
-
-          if (isDisabled) {
-            btnAssignCyclic.setAttribute("disabled", "true");
-            btnAssignCyclic.className = "btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all btn-neutral btn-disabled opacity-50 cursor-not-allowed";
-            btnAssignCyclic.title = count === 0 ? "No hay autogestiones sin asignar para entregar" : "Tomá el control para habilitar la asignación";
-          } else {
-            btnAssignCyclic.removeAttribute("disabled");
-            btnAssignCyclic.className = "btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all btn-primary shadow-lg shadow-primary/20";
-            btnAssignCyclic.title = "Asignar siguiente autogestión";
-          }
-        }
+        updateActionBarButtons();
 
         if (countEl) {
           countEl.textContent = String(count);
@@ -2643,32 +2957,7 @@ function getInitials(name: string): string {
                 ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
                 : "btn btn-ghost btn-xs text-base-content/70 hover:text-primary hover:bg-primary/10 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs";
 
-              let assignButtons = "";
-              if (matchingAvailableOp) {
-                const btnClass = clientIsReadOnly
-                  ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
-                  : "btn btn-ghost btn-xs text-success hover:bg-success/15 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs";
-                const btnTitle = clientIsReadOnly
-                  ? "Toma el control para asignar autogestiones"
-                  : `Asignar ticket #${escapeHtml(t.pretty_id || t.id)} a ${escapeHtml(matchingAvailableOp.nombre)}`;
-                const iconClass = clientIsReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current";
-
-                assignButtons += `
-                  <button
-                    type="button"
-                    class="${btnClass}"
-                    data-op-assign-btn="${matchingAvailableOp.agentId}"
-                    data-ticket-id="${t.id}"
-                    title="${btnTitle}"
-                    ${clientIsDisabled}
-                  >
-                    <svg class="size-3.5 ${iconClass}" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
-                    <span>Asignar</span>
-                  </button>
-                `;
-              }
-
-              assignButtons += `
+              const assignButtons = `
                 <button
                   type="button"
                   class="${clientAssignToClass}"
