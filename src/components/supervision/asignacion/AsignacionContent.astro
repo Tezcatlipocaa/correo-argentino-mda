@@ -23,8 +23,15 @@ import { normalizeRole } from "@lib/rbac";
 
 const cleanBase = getCleanBase();
 
+const invgateApiBase = import.meta.env.INVGATE_QA_BASE_URL || import.meta.env.INVGATE_BASE_URL || "";
+const invgateWebBase = invgateApiBase
+  ? invgateApiBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
+  : "";
+
 const user = Astro.locals.user;
 const role = normalizeRole(user.role);
+
+const initialTab = Astro.url.searchParams.get("tab") === "monitoreo" ? "monitoreo" : "asignacion";
 
 const lockStatus = await getLockStatus();
 let hasLock = false;
@@ -46,22 +53,35 @@ if (Astro.request.method === "POST" && !isReadOnly) {
     let msg = "";
     let msgType = "success";
 
+    const userClean = user?.username ? user.username.split("@")[0].toLowerCase().trim() : "";
+    const allOpsForAuthor = await getDisponibilidadHoy();
+    const loggedInOp = allOpsForAuthor.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
+    const authorInvgateId = loggedInOp?.invgateId;
+
     if (action === "assign_manual") {
       const agentId = Number(formData.get("agentId"));
       if (!isNaN(agentId)) {
-        await asignarManual(agentId, user?.username || "Sistema");
+        const res = await asignarManual(agentId, user?.username || "Sistema", authorInvgateId);
+        if (res.success) {
+          const [ag] = await db
+            .select({ name: agents.name })
+            .from(agents)
+            .where(eq(agents.id, agentId));
 
-        const [ag] = await db
-          .select({ name: agents.name })
-          .from(agents)
-          .where(eq(agents.id, agentId));
-
-        msg = `Autogestión asignada manualmente a ${ag?.name ?? `ID ${agentId}`}.`;
+          msg = res.ticketNumber
+            ? `Autogestión ${res.ticketNumber} asignada manualmente a ${ag?.name ?? `ID ${agentId}`} en InvGate QA.`
+            : `Autogestión asignada manualmente a ${ag?.name ?? `ID ${agentId}`}.`;
+        } else {
+          msg = res.error || "Error al asignar autogestión.";
+          msgType = "error";
+        }
       }
     } else if (action === "assign_cyclic") {
-      const res = await asignarSiguienteAutogestion(user?.username || "Sistema");
+      const res = await asignarSiguienteAutogestion(user?.username || "Sistema", authorInvgateId);
       if (res.success && res.agent) {
-        msg = `Autogestión asignada cíclicamente a ${res.agent.nombre}.`;
+        msg = res.ticketNumber
+          ? `Autogestión ${res.ticketNumber} asignada a ${res.agent.nombre} en InvGate QA.`
+          : `Autogestión asignada cíclicamente a ${res.agent.nombre}.`;
       } else {
         msg = res.error || "No hay operadores disponibles o dentro de horario operativo para asignar.";
         msgType = "error";
@@ -100,7 +120,7 @@ const lastAssignedOperator =
     : null;
 const maxAssignedOperatorId = lastAssignedOperator?.agentId ?? null;
 
-// Find the next suggested operators (up to 4) for the queue
+// Find the next suggested operators (up to 10) for the queue
 const availableOperators = allOperators.filter((o) => o.disponible);
 const nextSuggestedOperators = availableOperators.length > 0
   ? [...availableOperators].sort((a, b) => {
@@ -109,11 +129,11 @@ const nextSuggestedOperators = availableOperators.length > 0
       if (a.lastAutogestionAssignedAt === null && b.lastAutogestionAssignedAt !== null) return -1;
       if (a.lastAutogestionAssignedAt !== null && b.lastAutogestionAssignedAt === null) return 1;
       return tA - tB;
-    }).slice(0, 4)
+    }).slice(0, 10)
   : [];
 
-// Fetch unassigned InvGate tickets for Helpdesk 2510
-const unassignedRes = await getUnassignedTicketsByHelpdesk(2510);
+// Fetch unassigned InvGate tickets for Helpdesk 3950
+const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
 const unassignedTickets = unassignedRes.tickets;
 const unassignedCount = unassignedTickets.length;
 
@@ -124,6 +144,14 @@ const STATUS_LABELS: Record<string, string> = {
   Licencia: "Licencia",
   Vacaciones: "Vacaciones",
   Excepción: "Excepción",
+};
+
+const PRIORITY_LABELS: Record<number, { label: string; badgeClass: string }> = {
+  1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
+  2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
+  3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
+  4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
+  5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
 };
 
 const breakdown: Record<string, number> = {
@@ -279,9 +307,7 @@ function getInitials(name: string): string {
     </Fragment>
   </Modal>
 
-  <div
-    class="mb-6 border-b border-base-200 pb-5"
-  >
+  <div class="mb-6 border-b border-base-200 pb-5">
     <PageHeader
       description="Distribución equitativa y controlada de autogestiones entre operadores técnicos."
       descriptionClass="max-w-prose"
@@ -560,7 +586,66 @@ function getInitials(name: string): string {
               >en estados especiales</span
             >
           </div>
+      <!-- Card No Disponibles -->
+      <div
+        class="card bg-base-100 border border-base-300 shadow-md overflow-hidden group hover:border-base-content/20 transition-colors duration-300"
+      >
+        <div
+          class="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500 pointer-events-none"
+        >
+          <Icon name="boxicons:user-x" size={128} />
+        </div>
+        <div class="card-body p-6">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 bg-base-content/5 rounded-lg text-base-content/50">
+              <Icon name="boxicons:user-x" size={24} />
+            </div>
+            <h3
+              class="font-bold text-xs uppercase tracking-widest text-base-content/50"
+            >
+              Fuera de Servicio
+            </h3>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span
+              class="text-5xl font-black text-base-content/80 tracking-tight"
+              id="stat-no-disponibles-count">{noDisponiblesCount}</span
+            >
+            <span
+              class="text-base-content/40 font-bold uppercase text-xs tracking-wider"
+              >en estados especiales</span
+            >
+          </div>
 
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            {
+              Object.entries(breakdown).map(([estado, count]) => (
+                <div
+                  class="flex items-center justify-between p-2 rounded-lg bg-base-200/50 border border-transparent hover:border-base-300 transition-colors duration-200 data-[count='0']:opacity-40"
+                  data-breakdown-container
+                  data-count={count}
+                >
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span
+                      class={`size-2 rounded-full shrink-0 ${breakdownBadge(estado)}`}
+                    />
+                    <span class="text-xs font-bold truncate text-base-content/60 uppercase tracking-tight">
+                      {STATUS_LABELS[estado] ?? estado}
+                    </span>
+                  </div>
+                  <span
+                    class="text-xs font-mono font-bold text-base-content/90"
+                    data-breakdown-count={estado}
+                  >
+                    {count}
+                  </span>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </div>
           <div class="mt-4 grid grid-cols-2 gap-2">
             {
               Object.entries(breakdown).map(([estado, count]) => (
@@ -637,7 +722,23 @@ function getInitials(name: string): string {
         <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
         {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
       </Fragment>
+    <!-- Tabla de Operadores -->
+    <DataTable
+      ariaLabel="Lista de operadores para asignación de autogestiones"
+      headerGridClass={isReadOnly ? "grid-cols-[1.8fr_1.5fr_1.2fr] gap-2 md:gap-4" : "grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] gap-2 md:gap-4"}
+      rowGridClass={isReadOnly ? "grid grid-cols-[1.8fr_1.5fr_1.2fr] items-center gap-2 md:gap-4" : "grid grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] items-center gap-2 md:gap-4"}
+    >
+      <Fragment slot="header">
+        <DataTableHeaderCell sortKey="nombre">Operador</DataTableHeaderCell>
+        <DataTableHeaderCell>Horario / Modo</DataTableHeaderCell>
+        <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
+        {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
+      </Fragment>
 
+      {
+        allOperators.map((op) => {
+          const isHighlighted = op.agentId === maxAssignedOperatorId;
+          const isExceptional = !!op.estadoExcepcional;
       {
         allOperators.map((op) => {
           const isHighlighted = op.agentId === maxAssignedOperatorId;
@@ -653,7 +754,54 @@ function getInitials(name: string): string {
           if (!op.disponible && !isExceptional) {
             rowClasses += " opacity-50 grayscale-[30%]";
           }
+          let rowClasses =
+            "group border-b border-base-300 px-4 py-2.5 transition-colors duration-300 hover:bg-base-200/50";
+          if (isExceptional) {
+            rowClasses += " bg-secondary/10 border-l-4 border-l-secondary";
+          } else if (isHighlighted) {
+            rowClasses += " bg-primary/10 border-l-4 border-l-primary";
+          }
+          if (!op.disponible && !isExceptional) {
+            rowClasses += " opacity-50 grayscale-[30%]";
+          }
 
+          return (
+            <div
+              class={rowClasses}
+              data-table-row
+              data-op-id={op.agentId}
+              data-op-estado={
+                op.disponible ? "disponible" : op.motivo || "offline"
+              }
+              data-sort-nombre={op.nombre}
+              data-sort-estado={
+                op.disponible ? "disponible" : op.motivo || "offline"
+              }
+            >
+              {/* Nombre + Last Assigned */}
+              <div class="flex min-w-0 flex-col">
+                <span class="truncate text-xs font-bold text-base-content">
+                  {op.nombre}
+                </span>
+                <div data-op-last-assigned-container>
+                  {op.lastAutogestionAssignedAt ? (
+                    <span
+                      class="text-tiny text-base-content/75 bg-base-300/50 rounded px-1.5 py-0.5 inline-block font-semibold mt-0.5"
+                      data-last-assigned={op.lastAutogestionAssignedAt}
+                    >
+                      Asignado:{" "}
+                      {new Date(op.lastAutogestionAssignedAt).toLocaleTimeString(
+                        "es-AR",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </span>
+                  ) : (
+                    <span class="text-tiny text-base-content/40 bg-base-200/40 rounded px-1.5 py-0.5 inline-block italic mt-0.5">
+                      Nunca asignado
+                    </span>
+                  )}
+                </div>
+              </div>
           return (
             <div
               class={rowClasses}
@@ -720,7 +868,43 @@ function getInitials(name: string): string {
                     <span class="text-base-content/40 italic">Sin horario</span>
                   )}
                 </div>
+              {/* Horario y Modo */}
+              <div class="flex flex-col gap-1 min-w-0">
+                <div data-op-horario>
+                  {op.horarioHoy ? (
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
+                      <span class="flex items-center gap-1 font-semibold">
+                        <Icon
+                          name="boxicons:clock-dashed-half-filled"
+                          size={14}
+                          class="opacity-60 shrink-0"
+                        />
+                        {op.horarioHoy}
+                      </span>
+                      {op.breakInicioHoy && op.breakFinHoy && (
+                        <span class="flex items-center gap-1 opacity-70">
+                          <Icon
+                            name="boxicons:cup-hot"
+                            size={14}
+                            class="opacity-60 shrink-0"
+                          />
+                          {op.breakInicioHoy} - {op.breakFinHoy}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span class="text-base-content/40 italic">Sin horario</span>
+                  )}
+                </div>
 
+                <div data-op-modalidad>
+                  {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
+                    <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
+                      {op.modalidadHoy === "Home Office" ? "Home" : "Presencial"}
+                    </span>
+                  )}
+                </div>
+              </div>
                 <div data-op-modalidad>
                   {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
                     <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
@@ -781,7 +965,76 @@ function getInitials(name: string): string {
                   </div>
                 )}
               </div>
+              {/* Badge estado */}
+              <div
+                data-op-status-cell={op.agentId}
+                class="flex flex-col items-start gap-1"
+              >
+                {op.estadoExcepcional ? (
+                  <div
+                    class="tooltip tooltip-bottom before:text-xxs before:px-2 before:py-1"
+                    data-tip={`${op.estadoExcepcionalMotivo || "Sin comentario"} — marcado a las ${op.estadoExcepcionalAt ? new Date(op.estadoExcepcionalAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : ""}`}
+                  >
+                    <span
+                      data-op-status-badge={op.agentId}
+                      class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2 cursor-help`}
+                    >
+                      {getExcepcionalShortLabel(op.estadoExcepcional)}
+                      {op.estadoExcepcional === "break_extendido" &&
+                      op.retornoEstimado
+                        ? op.retornoEstimado === "Manual"
+                          ? " (Manual)"
+                          : ` - vuelve ${op.retornoEstimado}`
+                        : ""}
+                    </span>
+                  </div>
+                ) : (
+                  <span
+                    data-op-status-badge={op.agentId}
+                    class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
+                  >
+                    {op.disponible && (
+                      <span class="size-1.5 rounded-full bg-success-content animate-ping" />
+                    )}
+                    {!op.disponible && op.motivo === "En break" && (
+                      <span class="size-1.5 rounded-full bg-warning-content/75 animate-pulse" />
+                    )}
+                    {op.disponible
+                      ? "Disponible"
+                      : op.motivo === "En break"
+                        ? `En break - vuelve ${op.retornoEstimado || ""}`
+                        : op.motivo || "Franco"}
+                  </span>
+                )}
+                {op.estadoExcepcional && op.estadoExcepcionalMotivo && (
+                  <div
+                    data-op-exception-comment={op.agentId}
+                    class="text-small text-base-content/50 italic font-medium max-w-[150px] truncate mt-0.5"
+                    title={op.estadoExcepcionalMotivo}
+                  >
+                    "{op.estadoExcepcionalMotivo}"
+                  </div>
+                )}
+              </div>
 
+              {/* Botones de acción */}
+              {!isReadOnly && (
+                <div
+                  class="flex items-center justify-end gap-2"
+                  data-op-actions={op.agentId}
+                >
+                  <>
+                    <div class="m-0">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-xs btn-soft font-bold uppercase tracking-wider"
+                        data-op-assign-btn={op.agentId}
+                        title={`Asignar autogestión a ${op.nombre}`}
+                        disabled={!op.disponible}
+                      >
+                        Asignar
+                      </button>
+                    </div>
               {/* Botones de acción */}
               {!isReadOnly && (
                 <div
@@ -924,6 +1177,8 @@ function getInitials(name: string): string {
     let lockExpiresAt = 0;
     let lockTimeoutMs = 300000;
     let currentLockStatus: any = null;
+    let latestUnassignedTickets: any[] = [];
+    let latestDisponibilidadData: any[] = [];
 
     const formatCountdown = (ms: number): string => {
       if (ms <= 0) return "0:00";
@@ -970,11 +1225,6 @@ function getInitials(name: string): string {
       countdownInterval = setInterval(tick, 1000);
     };
 
-    // Initialize prevQueueIds from the SSR rendered elements
-    let prevQueueIds: number[] = Array.from(document.querySelectorAll("#queue-container [data-agent-id]"))
-      .map((el) => Number(el.getAttribute("data-agent-id")))
-      .filter((id) => !isNaN(id));
-
     const updateIndicatorText = () => {
       if (!syncIndicator) return;
       if (secondsSinceSync === 0) {
@@ -1007,6 +1257,7 @@ function getInitials(name: string): string {
 
     // Dynamic UI Update from API Response
     const updateUI = (data: any[]) => {
+      latestDisponibilidadData = data || [];
       // Update Undo button state
       const opWithUndo = data.find(op => op.lastAutogestionUndo !== null && op.lastAutogestionUndo !== undefined);
       const btnUndo = document.getElementById("btn-undo") as HTMLButtonElement | null;
@@ -1128,25 +1379,29 @@ function getInitials(name: string): string {
             minute: "2-digit",
           });
           lastAssignedContainer.innerHTML = `
-            <div>
-              <div class="text-sm font-semibold text-base-content">
-                De: <span class="font-black text-info" id="stat-last-assigned-by">${escapeHtml(lastAssignedOp.lastAutogestionAssignedBy || "Sistema")}</span>
+            <div class="text-xs flex flex-wrap items-center justify-between gap-2 bg-base-100 p-3 rounded-xl border border-base-300/60">
+              <div class="flex items-center gap-4">
+                <span class="text-base-content/70">
+                  De: <strong class="text-info" id="stat-last-assigned-by">${escapeHtml(lastAssignedOp.lastAutogestionAssignedBy || "Sistema")}</strong>
+                </span>
+                <span class="text-base-content/70">
+                  Para: <strong class="text-base-content" id="stat-last-assigned-to">${escapeHtml(lastAssignedOp.nombre)}</strong>
+                </span>
               </div>
-              <div class="text-sm font-semibold text-base-content mt-1">
-                Para: <span class="font-black text-base-content" id="stat-last-assigned-to">${escapeHtml(lastAssignedOp.nombre)}</span>
-              </div>
-              <div class="text-xs text-base-content/50 font-mono mt-2" id="stat-last-assigned-time">
+              <span class="text-xxs text-base-content/50 font-mono" id="stat-last-assigned-time">
                 Hora: ${timeStr}
-              </div>
+              </span>
             </div>
           `;
         } else {
-          lastAssignedContainer.innerHTML = `<span class="text-xs text-base-content/40 italic">Sin asignaciones hoy</span>`;
+          lastAssignedContainer.innerHTML = `<span class="text-xs text-base-content/40 italic py-1">Sin asignaciones hoy</span>`;
         }
       }
 
-      const queueContainer = document.getElementById("queue-container");
-      if (queueContainer) {
+      const updateQueueUI = (data: any[]) => {
+        const queueContainer = document.getElementById("queue-container");
+        if (!queueContainer) return;
+
         const available = data.filter((op) => op.disponible);
         const sortedQueue = [...available].sort((a, b) => {
           const tA = a.lastAutogestionAssignedAt ?? 0;
@@ -1154,7 +1409,7 @@ function getInitials(name: string): string {
           if (a.lastAutogestionAssignedAt === null && b.lastAutogestionAssignedAt !== null) return -1;
           if (a.lastAutogestionAssignedAt !== null && b.lastAutogestionAssignedAt === null) return 1;
           return tA - tB;
-        }).slice(0, 4);
+        }).slice(0, 10);
 
         const getInitialsJs = (name: string) => {
           if (!name) return "OP";
@@ -1167,29 +1422,48 @@ function getInitials(name: string): string {
           queueContainer.innerHTML = sortedQueue.map((op, idx) => {
             const isFirst = idx === 0;
             const avatarBg = isFirst ? "bg-primary text-primary-content" : "bg-base-300 text-base-content/70";
-            const containerClass = isFirst ? "bg-primary/10 border border-primary/40 shadow-xs" : "bg-base-200/40 border border-transparent";
+            const containerClass = isFirst ? "bg-primary/5" : "";
             const titleClass = isFirst ? "text-base-content font-black" : "text-base-content/80";
 
+            const projTicket = latestUnassignedTickets[idx];
+            const projBadge = projTicket
+              ? `<div class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-tiny px-2 py-1 flex items-center gap-1 shrink-0 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="text-warning font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
+              : "";
+
+            const statusText = op.disponible ? "Disponible" : (op.motivo || "No disponible");
+            const statusBadgeClass = op.disponible ? "badge-success/15 text-success border border-success/30" : "badge-neutral opacity-70";
+
+            const breakStr = op.breakInicioHoy && op.breakFinHoy
+              ? `<span class="flex items-center gap-1 font-mono text-base-content/70"><svg class="size-3 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`
+              : "";
+
             return `
-              <div data-agent-id="${op.agentId}" class="flex items-center gap-3 p-2.5 rounded-xl transition-all hover:bg-base-200/70 hover:border-base-300 hover:shadow-xs cursor-default ${containerClass}">
-                <div class="avatar placeholder size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarBg}">
-                  ${escapeHtml(getInitialsJs(op.nombre))}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="truncate font-bold text-xs ${titleClass}">
-                    ${escapeHtml(op.nombre)}
+              <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3 p-3.5 transition-colors hover:bg-base-200/60 cursor-default ${containerClass}">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                  <div class="avatar placeholder size-9 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarBg}">
+                    ${escapeHtml(getInitialsJs(op.nombre))}
                   </div>
-                  <div class="text-xxs text-base-content/40 uppercase font-semibold">
-                    ${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}
+                  <div class="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="truncate font-bold text-xs ${titleClass}">
+                        ${escapeHtml(op.nombre)}
+                      </span>
+                      ${isFirst ? '<span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny shrink-0">Siguiente</span>' : ''}
+                      <span class="badge ${statusBadgeClass} badge-xs font-bold text-tiny shrink-0">${escapeHtml(statusText)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-tiny text-base-content/50 font-medium flex-wrap">
+                      <span class="uppercase font-semibold text-xxs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
+                      ${breakStr}
+                    </div>
                   </div>
                 </div>
-                ${isFirst ? '<span class="badge badge-primary text-primary-content badge-xs font-bold uppercase text-tiny">Siguiente</span>' : ''}
+                ${projBadge}
               </div>
             `;
           }).join("");
         } else {
           queueContainer.innerHTML = `
-            <div class="text-xs text-base-content/40 italic py-2 text-center" id="stat-suggested-name-empty">
+            <div class="text-xs text-base-content/40 italic py-8 text-center" id="stat-suggested-name-empty">
               No hay operadores disponibles
             </div>
           `;
@@ -1201,8 +1475,9 @@ function getInitials(name: string): string {
             nextAssignedInfo.textContent = sortedQueue[0].nombre;
           }
         }
-      }
+      };
 
+      updateQueueUI(data);
 
       // 4. Update each table row
       data.forEach((op) => {
@@ -1446,9 +1721,173 @@ function getInitials(name: string): string {
       showToast(message, type === "success" ? "alert-success" : "alert-error");
     };
 
-    // Event delegation for exceptional states and assignments
+    // Event delegation for exceptional states, assignments, and ticket details
     document.addEventListener("click", async (e) => {
       const target = e.target as HTMLElement;
+
+      // -1. Open unassigned ticket detail modal
+      const ticketCard = target.closest("[data-ticket-id]");
+      const isAssignBtnClick = target.closest("[data-op-assign-btn]");
+      if (ticketCard && !isAssignBtnClick) {
+        const ticketId = Number(ticketCard.getAttribute("data-ticket-id"));
+        const ticket = latestUnassignedTickets.find((t) => t.id === ticketId);
+        const modal = document.getElementById("modal-ticket-detail") as HTMLDialogElement | null;
+
+        if (ticket && modal) {
+          const webBase = modal.getAttribute("data-invgate-web-base") || "";
+
+          const elId = document.getElementById("ticket-modal-id");
+          const elTitle = document.getElementById("ticket-modal-title");
+          const elPrio = document.getElementById("ticket-modal-prio");
+          const elCat = document.getElementById("ticket-modal-cat");
+          const elCatFull = document.getElementById("ticket-modal-cat-full");
+          const elCatFullContainer = document.getElementById("ticket-modal-cat-full-container");
+          const elCreator = document.getElementById("ticket-modal-creator");
+          const elCustomer = document.getElementById("ticket-modal-customer");
+          const elLocation = document.getElementById("ticket-modal-location");
+          const elCreated = document.getElementById("ticket-modal-created");
+          const elWait = document.getElementById("ticket-modal-wait");
+          const elSla = document.getElementById("ticket-modal-sla");
+          const elDescription = document.getElementById("ticket-modal-description");
+          const elLink = document.getElementById("ticket-modal-invgate-link") as HTMLAnchorElement | null;
+
+          const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
+            1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
+            2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
+            3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
+            4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
+            5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
+          };
+
+          if (elId) elId.textContent = ticket.pretty_id || `#${ticket.id}`;
+          if (elTitle) elTitle.textContent = ticket.title || "Sin título";
+          
+          if (elPrio) {
+            const prio = PRIORITY_MAP[ticket.priority_id];
+            if (prio) {
+              elPrio.textContent = prio.label;
+              elPrio.className = `badge badge-sm font-bold tracking-wider uppercase shrink-0 ${prio.badgeClass}`;
+              elPrio.classList.remove("hidden");
+            } else {
+              elPrio.classList.add("hidden");
+            }
+          }
+
+          if (elCat) {
+            if (ticket.category_last_name) {
+              elCat.textContent = ticket.category_last_name;
+              elCat.classList.remove("hidden");
+            } else {
+              elCat.classList.add("hidden");
+            }
+          }
+
+          if (elCatFullContainer && elCatFull) {
+            if (ticket.category_name) {
+              elCatFull.textContent = ticket.category_name;
+              elCatFullContainer.classList.remove("hidden");
+            } else {
+              elCatFullContainer.classList.add("hidden");
+            }
+          }
+
+          // Match creator with available operators
+          const creatorUsername = (ticket.creator_username || "").toLowerCase().trim();
+          const creatorNameNorm = (ticket.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+          const matchingAvailableOp = latestDisponibilidadData.find((op) => {
+            if (!op.disponible) return false;
+            if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+            if (op.nombre && creatorNameNorm) {
+              const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+              if (opNameNorm === creatorNameNorm) return true;
+              const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+              if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+            }
+            return false;
+          });
+
+          if (elCreator) {
+            if (matchingAvailableOp) {
+              elCreator.innerHTML = `<span class="text-success font-bold">${escapeHtml(ticket.creator_name || "Creador")} <span class="text-xxs font-semibold opacity-90">(Disponible)</span></span>`;
+            } else {
+              elCreator.textContent = ticket.creator_name || "Sin especificar";
+            }
+          }
+          
+          if (elCustomer) elCustomer.textContent = ticket.customer_name || "Mismo creador";
+          if (elLocation) elLocation.textContent = ticket.location_name || "No especificada";
+
+          const btnAssignModal = document.getElementById("ticket-modal-assign-btn") as HTMLButtonElement | null;
+          const btnAssignModalText = document.getElementById("ticket-modal-assign-btn-text");
+
+          if (btnAssignModal) {
+            if (matchingAvailableOp) {
+              btnAssignModal.setAttribute("data-op-assign-btn", String(matchingAvailableOp.agentId));
+              if (btnAssignModalText) {
+                btnAssignModalText.textContent = `Asignar a ${matchingAvailableOp.nombre}`;
+              }
+              btnAssignModal.classList.remove("hidden");
+            } else {
+              btnAssignModal.removeAttribute("data-op-assign-btn");
+              btnAssignModal.classList.add("hidden");
+            }
+          }
+
+          if (elCreated) {
+            elCreated.textContent = ticket.created_at
+              ? new Date(ticket.created_at * 1000).toLocaleString("es-AR", {
+                  dateStyle: "short",
+                  timeStyle: "medium",
+                })
+              : "Desconocida";
+          }
+
+          if (elWait) {
+            if (ticket.created_at) {
+              const elapsedMin = Math.floor((Date.now() - ticket.created_at * 1000) / 60000);
+              const formatWait = elapsedMin >= 60 
+                ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
+                : `${elapsedMin}m`;
+              elWait.textContent = formatWait;
+              elWait.className = `text-xs font-mono font-bold ${
+                elapsedMin >= 60 ? "text-error" : elapsedMin >= 30 ? "text-warning" : "text-base-content/80"
+              }`;
+            } else {
+              elWait.textContent = "-";
+            }
+          }
+
+          if (elSla) elSla.textContent = ticket.sla_incident_first_reply || "No configurado";
+
+          if (elDescription) {
+            const rawDesc = ticket.description && ticket.description.trim().length > 0
+              ? ticket.description
+              : "Sin descripción provista.";
+            
+            // Render safe HTML parsing for formatted ticket descriptions (tables, paragraphs, breaks)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(rawDesc, "text/html");
+            
+            // Remove any script or iframe tags if present
+            doc.querySelectorAll("script, iframe, object, embed").forEach((node) => node.remove());
+            
+            elDescription.innerHTML = doc.body.innerHTML;
+          }
+
+          if (elLink) {
+            if (webBase) {
+              elLink.href = `${webBase}/requests/show/index/id/${ticket.id}`;
+              elLink.classList.remove("hidden");
+            } else {
+              elLink.classList.add("hidden");
+            }
+          }
+
+          modal.showModal();
+        }
+        return;
+      }
 
       // 0. Open exception modal
       const openModalBtn = target.closest("[data-action-open-exception-modal]");
@@ -1678,15 +2117,18 @@ function getInitials(name: string): string {
 
       // 4. Manual assign
       const assignManualBtn = target.closest("[data-op-assign-btn]");
-      if (assignManualBtn) {
+      if (assignManualBtn && !assignManualBtn.hasAttribute("disabled") && !(assignManualBtn as HTMLButtonElement).disabled) {
         const agentId = Number(assignManualBtn.getAttribute("data-op-assign-btn"));
+        const ticketIdAttr = assignManualBtn.getAttribute("data-ticket-id");
+        const ticketId = ticketIdAttr ? Number(ticketIdAttr) : undefined;
+
         if (!isNaN(agentId)) {
           assignManualBtn.setAttribute("disabled", "true");
           try {
             const res = await fetch("/api/disponibilidad/asignar-manual", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ agentId }),
+              body: JSON.stringify({ agentId, ticketId }),
             });
             const data = await res.json();
             if (res.status === 423) {
@@ -1695,7 +2137,12 @@ function getInitials(name: string): string {
               return;
             }
             if (res.ok && data.success) {
-              showAlert("success", `Autogestión asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
+              const modalTicket = document.getElementById("modal-ticket-detail") as HTMLDialogElement | null;
+              if (modalTicket && modalTicket.open) {
+                modalTicket.close();
+              }
+              const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
+              showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
               await fetchDisponibilidad();
             } else {
               showAlert("error", data.error || "No se pudo realizar la asignación manual.");
@@ -1711,34 +2158,169 @@ function getInitials(name: string): string {
       }
     });
 
-    // Fetch unassigned tickets for Helpdesk 2510
+    // Fetch unassigned tickets for Helpdesk 3950
     const fetchUnassignedTickets = async () => {
       try {
-        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=2510");
+        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3950");
         if (!res.ok) return;
         const data = await res.json();
+        latestUnassignedTickets = data.tickets || [];
         const countEl = document.getElementById("stat-unassigned-count");
         const listEl = document.getElementById("unassigned-tickets-list");
+        const count = data.count ?? 0;
+
+        const btnAssignCyclic = document.getElementById("btn-assign-cyclic") as HTMLButtonElement | null;
+        if (btnAssignCyclic) {
+          const lockIndicator = document.getElementById("lock-indicator");
+          const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+          const clientIsReadOnly = !clientHasLock;
+          const isDisabled = clientIsReadOnly || count === 0;
+
+          if (isDisabled) {
+            btnAssignCyclic.setAttribute("disabled", "true");
+            btnAssignCyclic.className = "btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all btn-neutral btn-disabled opacity-50 cursor-not-allowed";
+            btnAssignCyclic.title = count === 0 ? "No hay autogestiones sin asignar para entregar" : "Tomá el control para habilitar la asignación";
+          } else {
+            btnAssignCyclic.removeAttribute("disabled");
+            btnAssignCyclic.className = "btn btn-md flex items-center justify-center gap-2 font-bold uppercase tracking-wider shrink-0 w-full sm:w-auto px-6 transition-all btn-primary shadow-lg shadow-primary/20";
+            btnAssignCyclic.title = "Asignar siguiente autogestión";
+          }
+        }
+
         if (countEl) {
-          countEl.textContent = String(data.count ?? 0);
-          countEl.className = `badge ${data.count > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`;
+          countEl.textContent = String(count);
+          countEl.className = `badge ${count > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`;
         }
         if (listEl) {
           if (data.tickets && data.tickets.length > 0) {
+            const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
+              1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
+              2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
+              3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
+              4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
+              5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
+            };
+
             listEl.innerHTML = data.tickets.map((t: any) => {
               const timeStr = t.created_at ? new Date(t.created_at * 1000).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : "";
+              
+              // Calculate elapsed waiting time
+              let waitingBadge = "";
+              if (t.created_at) {
+                const elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
+                let colorClass = "bg-base-200 text-base-content/70 border-none";
+                if (elapsedMin >= 60) {
+                  colorClass = "bg-error/15 text-error border-none font-bold";
+                } else if (elapsedMin >= 30) {
+                  colorClass = "bg-warning/15 text-warning border-none font-semibold";
+                }
+                const formatWait = elapsedMin >= 60 
+                  ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
+                  : `${elapsedMin}m`;
+                waitingBadge = `<span class="badge badge-xs font-mono text-tiny px-1.5 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
+              }
+
+              // SLA first reply badge
+              let slaBadge = "";
+              if (t.sla_incident_first_reply) {
+                slaBadge = `<span class="badge badge-outline badge-info badge-xs font-mono text-tiny shrink-0" title="SLA de respuesta">SLA: ${escapeHtml(t.sla_incident_first_reply)}</span>`;
+              }
+
+              const prioInfo = PRIORITY_MAP[t.priority_id] || (t.priority_id ? { label: `P${t.priority_id}`, badgeClass: "badge-neutral" } : null);
+              const prioBadge = prioInfo
+                ? `<span class="badge badge-xs font-bold text-tiny tracking-wider uppercase shrink-0 ${prioInfo.badgeClass}">${escapeHtml(prioInfo.label)}</span>`
+                : "";
+              const catBadge = t.category_last_name
+                ? `<span class="badge badge-neutral badge-xs font-semibold text-tiny tracking-tight max-w-[130px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
+                : "";
+
+              // Check if creator matches any available operator
+              const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+              const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+              const matchingAvailableOp = latestDisponibilidadData.find((op) => {
+                if (!op.disponible) return false;
+                if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+                if (op.nombre && creatorNameNorm) {
+                  const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+                  if (opNameNorm === creatorNameNorm) return true;
+                  const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+                  if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+                }
+                return false;
+              });
+
+              const creatorStr = t.creator_name || t.customer_name || "";
+              const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
+
+              let userRow = "";
+              if (creatorStr) {
+                if (matchingAvailableOp) {
+                  const lockIndicator = document.getElementById("lock-indicator");
+                  const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
+                  const clientIsReadOnly = !clientHasLock;
+
+                  const btnClass = clientIsReadOnly
+                    ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1"
+                    : "btn btn-ghost btn-xs text-success hover:bg-success/15 px-1.5 py-0 h-5 min-h-0 font-bold shrink-0 gap-1";
+
+                  const btnTitle = clientIsReadOnly
+                    ? "Toma el control para asignar autogestiones"
+                    : `Asignar a ${escapeHtml(matchingAvailableOp.nombre)}`;
+
+                  const btnDisabledAttr = clientIsReadOnly ? 'disabled="true"' : "";
+                  const iconClass = clientIsReadOnly ? "text-base-content/40 fill-current" : "text-success fill-current";
+
+                  userRow = `
+                    <div class="flex items-center justify-between gap-1 text-tiny font-medium truncate mt-1">
+                      <div class="flex items-center gap-1 min-w-0 truncate text-base-content/70">
+                        <svg class="size-3 text-success shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span class="truncate">
+                          Generado por: <strong class="text-success font-bold">${escapeHtml(creatorStr)}</strong> <span class="text-success text-xxs font-semibold">(Disponible)</span>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        class="${btnClass}"
+                        data-op-assign-btn="${matchingAvailableOp.agentId}"
+                        data-ticket-id="${t.id}"
+                        title="${btnTitle}"
+                        ${btnDisabledAttr}
+                      >
+                        <svg class="size-3 ${iconClass}" viewBox="0 0 24 24"><path d="M12 2 3.5 13h7L9 22l11.5-11h-7z"/></svg>
+                        <span>Asignar</span>
+                      </button>
+                    </div>
+                  `;
+                } else {
+                  userRow = `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate mt-1"><svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate">Generado por: <strong class="text-base-content/80 font-bold">${escapeHtml(creatorStr)}</strong>${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/80 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}</span></div>`;
+                }
+              }
+
+              const locationRow = t.location_name
+                ? `<div class="flex items-center gap-1 text-tiny text-base-content/60 font-medium truncate"><svg class="size-3 text-info opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/80 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
+                : "";
+
               return `
-                <div class="p-2.5 rounded-xl bg-base-200/60 border border-base-300/60 hover:bg-base-200 hover:border-warning/50 hover:shadow-xs transition-all duration-200 flex flex-col gap-1.5 text-xs group cursor-default">
+                <div data-ticket-id="${t.id}" class="p-3.5 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-1.5 cursor-pointer group">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
-                    <span class="text-xs text-base-content/60 font-mono font-semibold">${timeStr}</span>
+                    <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                      <span class="font-mono font-bold text-primary-content bg-primary px-2 py-0.5 rounded-md text-xs shrink-0">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
+                      ${waitingBadge}
+                      ${prioBadge}
+                      ${catBadge}
+                      ${slaBadge}
+                    </div>
+                    <span class="text-xs text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
                   </div>
-                  <div class="font-semibold text-base-content truncate" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+                  <div class="font-semibold text-base-content text-xs group-hover:text-primary transition-colors" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+                  ${userRow}
+                  ${locationRow}
                 </div>
               `;
             }).join("");
           } else {
-            listEl.innerHTML = '<div class="text-xs text-base-content/40 italic py-2 text-center">No hay tickets sin asignar</div>';
+            listEl.innerHTML = '<div class="text-xs text-base-content/40 italic py-12 text-center">No hay tickets sin asignar</div>';
           }
         }
       } catch (err) {
@@ -1888,13 +2470,119 @@ function getInitials(name: string): string {
       });
     }
 
-    // Set up 10-second polling interval
+    // Click handler for history modal
+    const btnOpenHistorial = document.getElementById("btn-open-historial-modal");
+    if (btnOpenHistorial) {
+      btnOpenHistorial.addEventListener("click", async () => {
+        const modal = document.getElementById("modal-historial-asignaciones") as HTMLDialogElement | null;
+        const loadingEl = document.getElementById("historial-loading");
+        const emptyEl = document.getElementById("historial-empty");
+        const tableContainer = document.getElementById("historial-table-container");
+        const rowsEl = document.getElementById("historial-rows");
+
+        if (modal) {
+          if (loadingEl) loadingEl.classList.remove("hidden");
+          if (emptyEl) emptyEl.classList.add("hidden");
+          if (tableContainer) tableContainer.classList.add("hidden");
+          modal.showModal();
+
+          const TYPE_MAP: Record<string, { label: string; badgeClass: string }> = {
+            cyclic: { label: "Cíclica", badgeClass: "badge-primary text-primary-content font-bold" },
+            manual: { label: "Manual", badgeClass: "badge-info text-info-content font-bold" },
+            undo: { label: "Deshecha", badgeClass: "badge-warning text-warning-content font-bold" },
+          };
+
+          try {
+            const res = await fetch("/api/disponibilidad/historial");
+            const data = await res.json();
+            if (loadingEl) loadingEl.classList.add("hidden");
+
+            if (res.ok && data.history && data.history.length > 0) {
+              if (tableContainer) tableContainer.classList.remove("hidden");
+              if (rowsEl) {
+                rowsEl.innerHTML = data.history.map((item: any) => {
+                  const dateStr = item.assignedAt ? new Date(item.assignedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "medium" }) : "-";
+                  const typeInfo = TYPE_MAP[item.type] || { label: item.type || "Asignación", badgeClass: "badge-neutral" };
+                  const ticketBadge = item.ticketNumber
+                    ? `<span class="badge badge-primary badge-xs font-mono font-bold px-1.5 py-0.5">${escapeHtml(item.ticketNumber)}</span>`
+                    : `<span class="text-base-content/40 font-mono text-tiny">-</span>`;
+
+                  const actionBtn = item.canUndo
+                    ? `<button type="button" class="btn btn-ghost btn-xs text-warning hover:bg-warning/15 px-2 py-0.5 h-6 min-h-0 font-bold gap-1 shrink-0" data-undo-ticket="${escapeHtml(item.ticketNumber)}" title="Devolver ${escapeHtml(item.ticketNumber)} a la cola de sin asignar en InvGate"><svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span></button>`
+                    : `<span class="text-base-content/30 text-tiny italic">-</span>`;
+
+                  return `
+                    <tr class="hover:bg-base-200/50">
+                      <td class="font-mono text-tiny font-semibold text-base-content/70">${escapeHtml(dateStr)}</td>
+                      <td class="font-bold text-xs text-base-content">${escapeHtml(item.agentName)}</td>
+                      <td>${ticketBadge}</td>
+                      <td><span class="badge badge-xs ${typeInfo.badgeClass} text-tiny">${escapeHtml(typeInfo.label)}</span></td>
+                      <td class="font-medium text-xs text-base-content/80">${escapeHtml(item.assignedBy || "Sistema")}</td>
+                      <td class="text-right">${actionBtn}</td>
+                    </tr>
+                  `;
+                }).join("");
+
+                if (rowsEl && !rowsEl.hasAttribute("data-listener-attached")) {
+                  rowsEl.setAttribute("data-listener-attached", "true");
+                  rowsEl.addEventListener("click", async (e) => {
+                    const target = e.target as HTMLElement;
+                    const btn = target.closest("[data-undo-ticket]") as HTMLButtonElement | null;
+                    if (!btn || btn.disabled) return;
+
+                    const ticketNumber = btn.getAttribute("data-undo-ticket");
+                    if (!ticketNumber) return;
+
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="loading loading-spinner loading-xs text-warning"></span><span>Deshaciendo...</span>`;
+
+                    try {
+                      const res = await fetch("/api/disponibilidad/deshacer-ticket", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ticketNumber }),
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.success) {
+                        showAlert("success", data.message || `Ticket ${ticketNumber} devuelto a sin asignar.`);
+                        await fetchDisponibilidad();
+                        btnOpenHistorial.click();
+                      } else {
+                        showAlert("error", data.error || "Error al desasignar ticket.");
+                        btn.disabled = false;
+                        btn.innerHTML = `<svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
+                      }
+                    } catch (err: any) {
+                      console.error("Error undoing ticket:", err);
+                      showAlert("error", `Error: ${err.message || err}`);
+                      btn.disabled = false;
+                      btn.innerHTML = `<svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
+                    }
+                  });
+                }
+              }
+            } else {
+              if (emptyEl) emptyEl.classList.remove("hidden");
+            }
+          } catch (err) {
+            console.error("Error fetching assignment history:", err);
+            if (loadingEl) loadingEl.classList.add("hidden");
+            if (emptyEl) {
+              emptyEl.textContent = "Ocurrió un error al cargar el historial.";
+              emptyEl.classList.remove("hidden");
+            }
+          }
+        }
+      });
+    }
+
+    // Set up 5-second polling interval
     polling = setInterval(async () => {
       await Promise.all([
         fetchDisponibilidad(),
         fetchLockStatus().then(updateLockBanner)
       ]);
-    }, 10000);
+    }, 5000);
 
     // Close dropdowns on Escape key
     document.addEventListener("keydown", (e) => {

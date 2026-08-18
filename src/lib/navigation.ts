@@ -88,7 +88,7 @@ export const navSections: NavSection[] = [
       {
         href: "/mesas-de-ayuda",
         label: "Mesas de Ayuda",
-        icon: "boxicons:group-alt-filled",
+        icon: "boxicons:headphone-mic",
       },
     ],
   },
@@ -146,6 +146,11 @@ export const navSections: NavSection[] = [
             href: "/admin/invgate/ubicaciones",
             label: "Ubicaciones InvGate",
             icon: "boxicons:location-alt-filled",
+          },
+          {
+            href: "/admin/feedback",
+            label: "Sugerencias y Reportes",
+            icon: "boxicons:mail-open-filled",
           },
         ],
       },

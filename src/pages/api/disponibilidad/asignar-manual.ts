@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { asignarManual, ensureHasLock, resetAssignmentLock } from "@lib/disponibilidad";
+import { asignarManual, getDisponibilidadHoy, ensureHasLock, resetAssignmentLock } from "@lib/disponibilidad";
 import { db } from "@db/index";
 import { agents } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -14,14 +14,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!lockCheck.ok) return lockCheck.response;
 
   try {
-    const { agentId } = await request.json();
+    const { agentId, ticketId } = await request.json();
 
     if (!agentId || typeof agentId !== "number") {
       return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
     }
 
     const assignedBy = locals.user?.username || "Sistema";
-    const result = await asignarManual(agentId, assignedBy);
+    const userClean = locals.user?.username ? locals.user.username.split("@")[0].toLowerCase().trim() : "";
+    const list = await getDisponibilidadHoy();
+    const loggedOp = list.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
+    const authorInvgateId = loggedOp?.invgateId;
+
+    const result = await asignarManual(
+      agentId,
+      assignedBy,
+      authorInvgateId,
+      typeof ticketId === "number" ? ticketId : undefined
+    );
     if (result.success) {
       await resetAssignmentLock();
     }

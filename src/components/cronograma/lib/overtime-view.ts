@@ -148,13 +148,12 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
   hoursContainer.innerHTML = `
     <div class="flex flex-col flex-1">
       <div class="flex border-b border-base-300/60">
-        <div style="width: ${satWidthPct.toFixed(2)}%" class="text-micro font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 border-r border-base-300/50 py-1 px-2 bg-warning/5">Sábado</div>
-        <div style="width: ${sunWidthPct.toFixed(2)}%" class="text-micro font-black uppercase tracking-wider text-info py-1 px-2 bg-info/5">Domingo</div>
+        <div style="width: 50%" class="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 border-r border-base-300/50 py-1 px-2 bg-warning/5 text-center">Sábado</div>
+        <div style="width: 50%" class="text-xs font-black uppercase tracking-wider text-info py-1 px-2 bg-info/5 text-center">Domingo</div>
       </div>
       <div class="flex">
         ${hours.map((h) => {
-          const wp = (120 / TOTAL_MINUTES) * 100;
-          return `<div style="width:${wp.toFixed(2)}%" class="text-micro font-bold text-base-content/40 border-r border-base-300/[0.12] py-1 px-1 shrink-0 ${h.isMidnight ? 'bg-info/5 text-info/60 font-black border-info/30' : ''}">${h.label}</div>`;
+          return `<div class="flex-1 min-w-0 text-xxs font-bold text-base-content/80 border-r border-base-300/30 py-1.5 px-0.5 text-center ${h.isMidnight ? 'bg-info/10 text-info font-black border-info/40' : ''}">${h.label}</div>`;
         }).join('')}
       </div>
     </div>
@@ -209,6 +208,10 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
     return;
   }
 
+  const bgGrid = hours.map((h) => {
+    return `<div class="flex-1 min-w-0 border-r border-base-300/[0.12] ${h.isMidnight ? 'border-info/30 bg-info/[0.03]' : ''}"></div>`;
+  }).join('');
+
   bodyContainer.innerHTML = activeOps.map(op => {
     const opShifts = shifts.filter(s => s.agentId === op.id);
     const initials = op.nombre.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
@@ -219,16 +222,21 @@ export function renderOvertimeTimeline(weekendDate: string, shifts: WeekendOvert
       const lp = (startMin / TOTAL_MINUTES) * 100;
       const wp = ((cappedEndMin - startMin) / TOTAL_MINUTES) * 100;
       const dur = calcDuration(s.startTime, s.endTime);
-      return `<div class="absolute top-[3px] bottom-[3px] overflow-visible cursor-pointer overtime-timeline-bar" style="left:${lp.toFixed(2)}%;width:${wp.toFixed(2)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xxs font-black text-warning-content truncate px-1">${dur}h</span></div></div>`;
+      return `<div class="absolute top-[3px] bottom-[3px] overflow-visible cursor-pointer overtime-timeline-bar pointer-events-auto" style="left:${lp.toFixed(4)}%;width:${wp.toFixed(4)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xs font-black text-warning-content truncate px-1">${dur}h</span></div></div>`;
     }).join('');
     return `
-      <div class="flex items-stretch min-h-[32px] border-b border-base-300/[0.12] last:border-0">
-        <div class="w-36 shrink-0 px-2 py-1 border-r border-base-300/40 flex items-center gap-2">
-          <div class="w-6 h-6 rounded-full bg-base-300/50 flex items-center justify-center text-tiny font-black shrink-0">${initials}</div>
-          <span class="truncate text-xxs font-bold text-base-content">${escapeHtml(op.nombre)}</span>
+      <div class="flex items-stretch min-h-[36px] border-b border-base-300/[0.12] last:border-0">
+        <div class="w-36 shrink-0 px-2 py-1.5 border-r border-base-300/40 flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-base-300/50 flex items-center justify-center text-xs font-black shrink-0">${initials}</div>
+          <span class="truncate text-xs font-bold text-base-content">${escapeHtml(op.nombre)}</span>
         </div>
-        <div class="flex-1 relative bg-base-100">
-          ${shiftBars}
+        <div class="flex-1 relative bg-base-100 flex">
+          <div class="absolute inset-0 flex pointer-events-none z-0">
+            ${bgGrid}
+          </div>
+          <div class="absolute inset-0 z-10 pointer-events-none">
+            ${shiftBars}
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -346,11 +354,11 @@ export function renderOvertimeShiftsList(weekendDate: string, shifts: WeekendOve
     const initials = op?.nombre?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '??';
     const dur = calcDuration(s.startTime, s.endTime);
     return `
-      <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-base-100/50 border border-base-300/40 group hover:bg-base-100 transition-all cursor-pointer overtime-shift-card" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}">
-        <div class="w-5 h-5 rounded-full bg-base-300/60 flex items-center justify-center text-tiny font-black shrink-0">${initials}</div>
-        <span class="text-xs font-semibold text-base-content truncate flex-1">${escapeHtml(op?.nombre || '#' + s.agentId)}</span>
-        <span class="font-mono text-xxs font-bold text-base-content/40 shrink-0">${s.startTime}–${s.endTime}</span>
-        <span class="text-xxs font-bold text-warning shrink-0">${dur}h</span>
+      <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-base-100/50 border border-base-300/40 group hover:bg-base-100 transition-all cursor-pointer overtime-shift-card" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}">
+        <div class="w-6 h-6 rounded-full bg-base-300/60 flex items-center justify-center text-xs font-black shrink-0">${initials}</div>
+        <span class="text-xs font-bold text-base-content truncate flex-1">${escapeHtml(op?.nombre || '#' + s.agentId)}</span>
+        <span class="font-mono text-xs font-extrabold text-base-content/85 shrink-0">${s.startTime}–${s.endTime}</span>
+        <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0">${dur}h</span>
         <button type="button" class="btn btn-xs btn-ghost text-error opacity-0 group-hover:opacity-100 transition-opacity overtime-delete-shift-btn p-1 min-h-0 h-auto" data-shift-id="${s.id}" aria-label="Eliminar">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>

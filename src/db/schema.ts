@@ -673,6 +673,13 @@ export const supportGuides = sqliteTable("support_guides", {
   searchableText: text("searchable_text"),
 });
 
+export const hiddenHelpdesks = sqliteTable("hidden_helpdesks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  invgateId: integer("invgate_id").notNull().unique(),
+  hiddenBy: text("hidden_by").notNull(),
+  hiddenAt: text("hidden_at").notNull(),
+});
+
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull(),
@@ -880,4 +887,16 @@ export const titles = sqliteTable("titles", {
     .$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .$onUpdateFn(() => new Date()),
-})
+});
+
+export const assignmentHistory = sqliteTable("assignment_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  agentId: integer("agent_id").notNull(),
+  agentName: text("agent_name").notNull(),
+  ticketNumber: text("ticket_number"),
+  assignedBy: text("assigned_by").notNull(),
+  assignedAt: integer("assigned_at").notNull(),
+  type: text("type").notNull().default("cyclic"),
+}, (table) => ({
+  assignedAtIdx: index("assignment_history_assigned_at_idx").on(table.assignedAt),
+}));

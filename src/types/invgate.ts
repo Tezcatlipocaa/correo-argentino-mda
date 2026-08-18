@@ -18,6 +18,7 @@ export interface InvgateUser {
   name: string;
   lastname: string;
   email: string;
+  other_email?: string | null;
   user_type: number;
   type: number;
   is_disabled: boolean;
@@ -26,6 +27,11 @@ export interface InvgateUser {
   position: string | null;
   role_name: string | null;
   manager_id: number | null;
+  phone?: string | null;
+  mobile?: string | null;
+  office?: string | null;
+  other?: string | null;
+  fax?: string | null;
 }
 
 
@@ -138,5 +144,33 @@ export interface InvgateKbSearchResponse {
 export interface InvgateKbCategoriesResponse {
   status: string;
   data: InvgateKbCategory[];
+}
+
+export interface InvgateUsersByResponse {
+  data: Record<string, InvgateUser>;
+  next_page_key: string | null;
+}
+
+export interface InvgateUserGroupRef {
+  id?: number;
+  name?: string;
+}
+
+export interface InvgateUsersGroupsEntry {
+  id: number;
+  username?: string;
+  email?: string;
+  groups?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  companies?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  helpdesks?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  locations?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  observed?: number[];
+}
+
+export type InvgateUsersGroupsResponse = InvgateUsersGroupsEntry[];
+
+export interface InvgateCompany {
+  id: number;
+  name: string;
 }
 

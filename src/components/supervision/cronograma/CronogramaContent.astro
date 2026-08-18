@@ -107,7 +107,7 @@ const initialData = baseline.map((operator: any) => {
     breaks_inicio: newBreaksInicio,
     breaks_fin: newBreaksFin,
   };
-});
+const user = Astro.locals.user;
 ---
 
-<CronogramaDashboard initialData={initialData} />
+<CronogramaDashboard initialData={initialData} currentUser={user} />

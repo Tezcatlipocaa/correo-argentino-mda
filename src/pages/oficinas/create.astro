@@ -19,12 +19,16 @@ import { redirectWithToast } from "@lib/api/redirectWithToast";
 import OfficeForm from "@components/admin/OfficeForm.astro";
 import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
+import { normalizeOfficeAddress, isSameBuildingConfirmed } from "@lib/officeAddress";
+import { findOfficeAddressMatches } from "@lib/officeQueries";
+import type { ToastType } from "@lib/toastClient";
 
 const cleanBase = getCleanBase();
 
 const isNew = true;
 let successMsg = "";
 let errorMsg = "";
+let toastType: ToastType = "alert-error";
 
 if (Astro.request.method === "POST") {
   try {
@@ -53,7 +57,7 @@ if (Astro.request.method === "POST") {
       type: type,
       officeType: officeType,
       provinceCode: valStr("provinceCode") ?? "",
-      address: valStr("address"),
+      address: normalizeOfficeAddress(valStr("address")),
       locality: valStr("locality"),
       county: valStr("county"),
       zone: valStr("zone"),
@@ -104,6 +108,17 @@ if (Astro.request.method === "POST") {
       const officeData = parsed.data;
       let officeId: number;
 
+      const addressMatches = officeData.address
+        ? await findOfficeAddressMatches({
+            address: officeData.address,
+            provinceCode: officeData.provinceCode,
+          })
+        : [];
+
+      if (addressMatches.length > 0 && !isSameBuildingConfirmed(fd.get("sameBuildingConfirmed")?.toString())) {
+        errorMsg = "Confirmá si la nueva oficina comparte sitio con las oficinas listadas.";
+        toastType = "alert-warning";
+      } else {
       const activeCostCenter = [
         officeData.cctAdminOffice,
         officeData.ccCommercial,
@@ -221,6 +236,7 @@ if (Astro.request.method === "POST") {
 
       await logAdminFromAstro(Astro.locals, `Creó la oficina "${officeData.name}" (${officeData.code})`);
       return redirectWithToast("/oficinas", "Oficina creada con éxito.");
+      }
     }
   } catch (e: any) {
     console.error("[CreateOffice] Error guardando la oficina:", e);
@@ -274,8 +290,8 @@ const pageTitle = "Nueva sucursal";
 
     {
       errorMsg && (
-        <script is:inline define:vars={{ errorMsg }}>
-          window.addEventListener('load', () => window.showToast?.(errorMsg, "alert-error"));
+        <script is:inline define:vars={{ errorMsg, toastType }}>
+          window.addEventListener('load', () => window.showToast?.(errorMsg, toastType));
         </script>
       )
     }

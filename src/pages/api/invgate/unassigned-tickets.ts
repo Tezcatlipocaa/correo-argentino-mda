@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
   try {
     const helpdeskParam = url.searchParams.get("helpdesk_id");
-    const helpdeskId = helpdeskParam ? parseInt(helpdeskParam, 10) : 2510;
+    const helpdeskId = helpdeskParam ? parseInt(helpdeskParam, 10) : 3950;
 
     if (isNaN(helpdeskId)) {
       return jsonResponse({ error: "helpdesk_id inválido" }, 400);
