@@ -132,8 +132,8 @@ const nextSuggestedOperators = availableOperators.length > 0
     }).slice(0, 10)
   : [];
 
-// Fetch unassigned InvGate tickets for Helpdesk 3866
-const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
+// Fetch unassigned InvGate tickets for Helpdesk 3950
+const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
 const unassignedTickets = unassignedRes.tickets;
 const unassignedCount = unassignedTickets.length;
 
@@ -418,7 +418,7 @@ function getInitials(name: string): string {
             <div class="flex items-center gap-2">
               <Icon name="boxicons:inbox" size={20} class="text-warning" />
               <h3 class="font-bold text-xs uppercase tracking-widest text-base-content/70">
-                Sin Asignar (Mesa 3866)
+                Sin Asignar (Mesa 3950)
               </h3>
             </div>
             <span class={`badge ${unassignedCount > 0 ? "badge-warning text-warning-content" : "badge-neutral"} font-mono font-bold text-xs`} id="stat-unassigned-count">
@@ -1078,7 +1078,7 @@ function getInitials(name: string): string {
 
       <!-- Modal Footer -->
       <div class="p-4 bg-base-200/50 border-t border-base-300 flex items-center justify-between gap-3">
-        <span class="text-tiny text-base-content/50">Mesa de Ayuda #3866</span>
+        <span class="text-tiny text-base-content/50">Mesa de Ayuda #3950</span>
         <div class="flex items-center gap-2">
           <button
             id="ticket-modal-assign-btn"
@@ -1108,7 +1108,7 @@ function getInitials(name: string): string {
 
   <!-- Modal Historial de Asignaciones -->
   <dialog id="modal-historial-asignaciones" class="modal modal-bottom sm:modal-middle">
-    <div class="modal-box sm:max-w-2xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div class="modal-box sm:max-w-4xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
       <!-- Header -->
       <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/50 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -2224,10 +2224,10 @@ function getInitials(name: string): string {
       }
     });
 
-    // Fetch unassigned tickets for Helpdesk 3866
+    // Fetch unassigned tickets for Helpdesk 3950
     const fetchUnassignedTickets = async () => {
       try {
-        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3866");
+        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3950");
         if (!res.ok) return;
         const data = await res.json();
         latestUnassignedTickets = data.tickets || [];

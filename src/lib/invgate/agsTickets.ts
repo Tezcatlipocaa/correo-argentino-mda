@@ -21,10 +21,10 @@ export interface UnassignedTicketsResult {
 }
 
 /**
- * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 3866).
+ * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 3950).
  */
 export async function getUnassignedTicketsByHelpdesk(
-  helpdeskId: number = 3866
+  helpdeskId: number = 3950
 ): Promise<UnassignedTicketsResult> {
   try {
     // 1. Obtener IDs de incidentes abiertos de la mesa de ayuda
@@ -140,7 +140,7 @@ export async function getUnassignedTicketsByHelpdesk(
 export async function reassignTicketToAgent(
   requestId: number,
   agentId: number,
-  helpdeskId: number = 3866,
+  helpdeskId: number = 3950,
   authorId: number = 1
 ): Promise<{ ok: boolean; message?: string }> {
   try {

@@ -6,7 +6,7 @@ import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 export const GET: APIRoute = async () => {
   try {
     const history = await getAssignmentHistory(50);
-    const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
+    const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
     const unassignedTicketIds = new Set(
       unassignedRes.ok ? unassignedRes.tickets.map((t) => t.id) : []
     );
@@ -15,13 +15,13 @@ export const GET: APIRoute = async () => {
 
     const enrichedHistory = history.map((item) => {
       let canUndo = false;
-      if (item.ticketNumber && item.type !== "undo") {
+      if (item.ticketNumber) {
         const ticketKey = item.ticketNumber.trim();
         const numId = Number(ticketKey.replace(/[^0-9]/g, ""));
         
         if (!seenTickets.has(ticketKey)) {
           seenTickets.add(ticketKey);
-          if (!isNaN(numId) && numId > 0 && !unassignedTicketIds.has(numId)) {
+          if (item.type !== "undo" && !isNaN(numId) && numId > 0 && !unassignedTicketIds.has(numId)) {
             canUndo = true;
           }
         }

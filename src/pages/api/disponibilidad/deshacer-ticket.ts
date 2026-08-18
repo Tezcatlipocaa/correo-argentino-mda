@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authorInvgateId = loggedOp?.invgateId || 1;
 
     // Call InvGate QA to reassign ticket to agent_id: 0 (unassigned)
-    const reassignRes = await reassignTicketToAgent(numericId, 0, 3866, authorInvgateId);
+    const reassignRes = await reassignTicketToAgent(numericId, 0, 3950, authorInvgateId);
     if (!reassignRes.ok) {
       return jsonResponse({ success: false, error: `Error al desasignar ticket #${numericId} en InvGate: ${reassignRes.message}` }, 400);
     }

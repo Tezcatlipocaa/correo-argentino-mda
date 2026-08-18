@@ -19,7 +19,7 @@ const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos de cache
  * Obtiene los miembros de una Mesa de Ayuda de InvGate (incluyendo niveles/sub-niveles).
  * Retorna los datos enriquecidos de usuario (id, username, nombre, apellido).
  */
-export async function getHelpdeskMembers(helpdeskId: number = 3866): Promise<HelpdeskMemberUser[]> {
+export async function getHelpdeskMembers(helpdeskId: number = 3950): Promise<HelpdeskMemberUser[]> {
   const now = Date.now();
   if (cachedMemberUsersMap.has(helpdeskId) && now - lastFetchTime < CACHE_TTL_MS) {
     return cachedMemberUsersMap.get(helpdeskId) || [];
@@ -36,18 +36,28 @@ export async function getHelpdeskMembers(helpdeskId: number = 3866): Promise<Hel
     }
 
     const all = result.data;
-    const helpdesk = all.find((h) => h.id === helpdeskId && !h.level_order);
-    const subLevels = all.filter((h) => h.parent_id === helpdeskId && h.level_order !== undefined);
-
+    const targetItem = all.find((h) => h.id === helpdeskId);
     const memberIdSet = new Set<number>();
-    if (helpdesk && helpdesk.members_ids) {
-      helpdesk.members_ids.forEach((id) => memberIdSet.add(id));
+
+    if (targetItem && targetItem.members_ids) {
+      targetItem.members_ids.forEach((id) => memberIdSet.add(id));
     }
+
+    // Include sub-levels if target is a parent helpdesk
+    const subLevels = all.filter((h) => h.parent_id === helpdeskId);
     subLevels.forEach((level) => {
       if (level.members_ids) {
         level.members_ids.forEach((id) => memberIdSet.add(id));
       }
     });
+
+    // If target is a level (has parent_id), also include parent's members
+    if (targetItem && targetItem.parent_id) {
+      const parentItem = all.find((h) => h.id === targetItem.parent_id);
+      if (parentItem && parentItem.members_ids) {
+        parentItem.members_ids.forEach((id) => memberIdSet.add(id));
+      }
+    }
 
     const members: HelpdeskMemberUser[] = [];
     const usernamesSet = new Set<string>();
@@ -96,7 +106,7 @@ export async function getHelpdeskMembers(helpdeskId: number = 3866): Promise<Hel
 /**
  * Obtiene el conjunto de usernames (limpios, sin @dominio) pertenecientes a una Mesa de Ayuda.
  */
-export async function getHelpdeskMemberUsernames(helpdeskId: number = 3866): Promise<Set<string>> {
+export async function getHelpdeskMemberUsernames(helpdeskId: number = 3950): Promise<Set<string>> {
   await getHelpdeskMembers(helpdeskId);
   return cachedMembersMap.get(helpdeskId) || new Set();
 }

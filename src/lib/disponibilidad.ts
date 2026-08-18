@@ -50,8 +50,8 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
   const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
   const dayName = dayNames[now.getDay()];
 
-  // Obtener miembros de la Mesa 3866 de InvGate
-  const helpdeskMembers = await getHelpdeskMembers(3866);
+  // Obtener miembros de la Mesa 3950 de InvGate
+  const helpdeskMembers = await getHelpdeskMembers(3950);
   const helpdeskUsernames = new Set(
     helpdeskMembers
       .map((m) => (m.username ? m.username.split("@")[0].toLowerCase().trim() : ""))
@@ -78,7 +78,7 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     estadoExcepcionalMinutos: agents.estadoExcepcionalMinutos,
   }).from(agents);
 
-  // Filtrar solo operadores que pertenecen a la Mesa 3866 de InvGate
+  // Filtrar solo operadores que pertenecen a la Mesa 3950 de InvGate
   const dbAgents = dbAgentsAll.filter((agent) => {
     if (helpdeskMembers.length === 0) return true; // Fallback por seguridad si falla InvGate
     
@@ -414,8 +414,8 @@ export async function asignarSiguienteAutogestion(
   const winner = available[0];
   const now = Date.now();
 
-  // Consultar ticket sin asignar de InvGate Mesa 3866
-  const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
+  // Consultar ticket sin asignar de InvGate Mesa 3950
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
   if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
       success: false,
@@ -427,12 +427,12 @@ export async function asignarSiguienteAutogestion(
   if (!winner.invgateId) {
     return {
       success: false,
-      error: `El operador ${winner.nombre} no tiene un ID de InvGate vinculado en Mesa 3866.`,
+      error: `El operador ${winner.nombre} no tiene un ID de InvGate vinculado en Mesa 3950.`,
     };
   }
   const targetInvgateId = winner.invgateId;
   const authorId = authorInvgateId || targetInvgateId || 1;
-  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, 3866, authorId);
+  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, 3950, authorId);
   if (!reassignRes.ok) {
     return {
       success: false,
@@ -492,8 +492,8 @@ export async function asignarManual(
   const list = await getDisponibilidadHoy();
   const targetAgent = list.find((a) => a.agentId === agentId);
 
-  // Consultar ticket sin asignar de InvGate Mesa 3866
-  const unassignedRes = await getUnassignedTicketsByHelpdesk(3866);
+  // Consultar ticket sin asignar de InvGate Mesa 3950
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
   if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
       success: false,
@@ -509,7 +509,7 @@ export async function asignarManual(
     if (ticketId) {
       return {
         success: false,
-        error: `El ticket #${ticketId} ya no se encuentra sin asignar en la Mesa 3866.`,
+        error: `El ticket #${ticketId} ya no se encuentra sin asignar en la Mesa 3950.`,
       };
     }
     targetTicket = unassignedRes.tickets[0];
@@ -518,12 +518,12 @@ export async function asignarManual(
   if (!targetAgent?.invgateId) {
     return {
       success: false,
-      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa 3866.`,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa 3950.`,
     };
   }
   const targetInvgateId = targetAgent.invgateId;
   const authorId = authorInvgateId || targetInvgateId || 1;
-  const reassignRes = await reassignTicketToAgent(targetTicket.id, targetInvgateId, 3866, authorId);
+  const reassignRes = await reassignTicketToAgent(targetTicket.id, targetInvgateId, 3950, authorId);
   if (!reassignRes.ok) {
     return {
       success: false,
