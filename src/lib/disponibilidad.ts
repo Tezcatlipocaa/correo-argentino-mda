@@ -2,7 +2,7 @@ import { db } from "@db/index";
 import { agents, schedules, assignmentLock, assignmentHistory } from "@db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
-import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent } from "@/lib/invgate/agsTickets";
+import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment } from "@/lib/invgate/agsTickets";
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
 
@@ -568,6 +568,100 @@ export async function asignarManual(
   }
 
   return { success: true, ticketNumber: ticketAssigned };
+}
+
+/**
+ * Asigna un ticket manualmente a un agente y lo pone en estado 'Esperando fecha' en InvGate.
+ */
+export async function asignarYPosponer(
+  agentId: number,
+  assignedBy: string,
+  authorInvgateId?: number,
+  ticketId?: number,
+  postponeDate?: string,
+  reason: string = "Pospuesto por supervisión"
+): Promise<{ success: boolean; error?: string; ticketNumber?: string; postponeDate?: string }> {
+  if (!ticketId) {
+    return { success: false, error: "Se requiere especificar un ticket para posponer." };
+  }
+  if (!postponeDate) {
+    return { success: false, error: "Se requiere especificar una fecha futura para posponer." };
+  }
+
+  const allOps = await getDisponibilidadHoy();
+  const targetAgent = allOps.find((op) => op.agentId === agentId);
+  if (!targetAgent?.invgateId) {
+    return {
+      success: false,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa 3950.`,
+    };
+  }
+
+  const targetInvgateId = targetAgent.invgateId;
+  const authorId = authorInvgateId || targetInvgateId || 1;
+
+  // 1. Reasignar ticket al operador
+  const reassignRes = await reassignTicketToAgent(ticketId, targetInvgateId, 3950, authorId);
+  if (!reassignRes.ok) {
+    return {
+      success: false,
+      error: `Error al reasignar ticket #${ticketId} en InvGate: ${reassignRes.message}`,
+    };
+  }
+
+  // 2. Cambiar estado a 'esperando fecha' con la fecha especificada
+  const waitDateRes = await setTicketWaitingForDate(ticketId, postponeDate, authorId, reason || "Pospuesto por supervisión");
+  if (!waitDateRes.ok) {
+    return {
+      success: false,
+      error: `Ticket #${ticketId} reasignado al operador, pero falló al posponer (Esperando fecha) en InvGate: ${waitDateRes.message}`,
+    };
+  }
+
+  // 2b. Si se especificó un motivo/comentario, publicarlo como nota interna (visible para el operador)
+  const trimmedComment = reason?.trim();
+  if (trimmedComment && trimmedComment !== "Pospuesto por supervisión") {
+    try {
+      await addTicketComment(ticketId, trimmedComment, authorId, 0);
+    } catch (commentErr) {
+      console.error(`Error agregando nota interna a ticket #${ticketId}:`, commentErr);
+    }
+  }
+
+  const ticketAssigned = `#${ticketId}`;
+
+  // 3. Limpiar undo y actualizar estado del agente
+  await db.update(agents).set({ lastAutogestionUndo: null });
+
+  const [ag] = await db.select({ lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt }).from(agents).where(eq(agents.id, agentId));
+  const prevValue = ag ? ag.lastAutogestionAssignedAt : null;
+  const assignTime = Date.now();
+
+  await db
+    .update(agents)
+    .set({
+      lastAutogestionAssignedAt: assignTime,
+      lastAutogestionAssignedBy: assignedBy,
+      lastAutogestionUndo: prevValue,
+    })
+    .where(eq(agents.id, agentId));
+
+  // 4. Registrar en historial de asignaciones
+  try {
+    const targetName = targetAgent?.nombre || ag?.name || `ID ${agentId}`;
+    await db.insert(assignmentHistory).values({
+      agentId,
+      agentName: targetName,
+      ticketNumber: ticketAssigned,
+      assignedBy,
+      assignedAt: assignTime,
+      type: "manual",
+    });
+  } catch (historyErr) {
+    console.error("Error guardando historial de asignación pospuesta:", historyErr);
+  }
+
+  return { success: true, ticketNumber: ticketAssigned, postponeDate };
 }
 
 export interface BatchAssignmentItem {

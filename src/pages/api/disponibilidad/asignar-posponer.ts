@@ -1,0 +1,77 @@
+import type { APIRoute } from "astro";
+import {
+  asignarYPosponer,
+  getDisponibilidadHoy,
+  ensureHasLock,
+  resetAssignmentLock,
+} from "@lib/disponibilidad";
+import { db } from "@db/index";
+import { agents } from "@db/schema";
+import { eq } from "drizzle-orm";
+import { requireWriteAccess } from "@lib/rbac-middleware";
+import { jsonResponse, sanitizeError } from "@lib/apiResponse";
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const denied = requireWriteAccess(locals, "asignacion_ag");
+  if (denied) return denied;
+
+  const lockCheck = await ensureHasLock(locals);
+  if (!lockCheck.ok) return lockCheck.response;
+
+  try {
+    const { agentId, ticketId, postponeDate, reason } = await request.json();
+
+    if (!agentId || typeof agentId !== "number") {
+      return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
+    }
+    if (!ticketId || typeof ticketId !== "number") {
+      return jsonResponse({ success: false, error: "ID de ticket inválido" }, 400);
+    }
+    if (!postponeDate || typeof postponeDate !== "string") {
+      return jsonResponse({ success: false, error: "Fecha de postergación inválida" }, 400);
+    }
+
+    const assignedBy = locals.user?.username || "Sistema";
+    const userClean = locals.user?.username
+      ? locals.user.username.split("@")[0].toLowerCase().trim()
+      : "";
+    const list = await getDisponibilidadHoy();
+    const loggedOp = list.find(
+      (op) =>
+        op.username &&
+        op.username.split("@")[0].toLowerCase().trim() === userClean
+    );
+    const authorInvgateId = loggedOp?.invgateId;
+
+    const result = await asignarYPosponer(
+      agentId,
+      assignedBy,
+      authorInvgateId,
+      ticketId,
+      postponeDate,
+      reason || "Pospuesto por supervisión"
+    );
+
+    if (result.success) {
+      await resetAssignmentLock();
+    }
+
+    let agentName = `ID ${agentId}`;
+    try {
+      const [ag] = await db
+        .select({ name: agents.name })
+        .from(agents)
+        .where(eq(agents.id, agentId));
+      if (ag) {
+        agentName = ag.name;
+      }
+    } catch (dbErr) {
+      console.error("Error retrieving agent name:", dbErr);
+    }
+
+    return jsonResponse({ ...result, agentName }, result.success ? 200 : 400);
+  } catch (error: any) {
+    console.error("POST /api/disponibilidad/asignar-posponer Error:", error);
+    return jsonResponse({ success: false, error: sanitizeError(error) }, 500);
+  }
+};

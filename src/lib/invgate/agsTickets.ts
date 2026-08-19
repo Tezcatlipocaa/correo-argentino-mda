@@ -165,3 +165,86 @@ export async function reassignTicketToAgent(
   }
 }
 
+/**
+ * Pone un ticket de InvGate en estado "Esperando Fecha".
+ * Endpoint: POST /incident.waitingfor.date
+ */
+export async function setTicketWaitingForDate(
+  requestId: number,
+  date: string | number,
+  authorId: number = 1,
+  reason: string = "Pospuesto por supervisión"
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    let epochSeconds: number;
+    if (typeof date === "number") {
+      epochSeconds = date > 1e11 ? Math.floor(date / 1000) : date;
+    } else {
+      const str = String(date).trim();
+      if (/^\d+$/.test(str)) {
+        const num = Number(str);
+        epochSeconds = num > 1e11 ? Math.floor(num / 1000) : num;
+      } else {
+        const parsed = new Date(str).getTime();
+        if (isNaN(parsed)) {
+          return { ok: false, message: `Fecha inválida para posponer: ${date}` };
+        }
+        epochSeconds = Math.floor(parsed / 1000);
+      }
+    }
+
+    const res = await invgatePost<{ status: string; info?: string }>("incident.waitingfor.date", {
+      request_id: requestId,
+      timestamp: String(epochSeconds),
+      author_id: authorId,
+      reason,
+    });
+
+    if (!res.ok) {
+      return { ok: false, message: res.message };
+    }
+
+    if (res.data?.status === "ERROR") {
+      return { ok: false, message: res.data.info || "Error al cambiar estado a esperando fecha en InvGate" };
+    }
+
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, message: err.message || "Error al conectar con InvGate" };
+  }
+}
+
+/**
+ * Agrega un comentario o nota interna a un ticket en InvGate.
+ * Endpoint: POST /incident.comment
+ * @param customerVisible 0 para nota interna (visible solo para operadores/agentes), 1 para público
+ */
+export async function addTicketComment(
+  requestId: number,
+  comment: string,
+  authorId: number = 1,
+  customerVisible: number = 0
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await invgatePost<{ status: string; error?: string }>("incident.comment", {
+      request_id: requestId,
+      author_id: authorId,
+      comment,
+      customer_visible: customerVisible,
+    });
+
+    if (!res.ok) {
+      return { ok: false, message: res.message };
+    }
+
+    if (res.data?.status === "ERROR") {
+      return { ok: false, message: res.data.error || "Error al agregar comentario en InvGate" };
+    }
+
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, message: err.message || "Error al conectar con InvGate" };
+  }
+}
+
+
