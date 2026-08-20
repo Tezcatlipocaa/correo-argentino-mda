@@ -1,6 +1,6 @@
 import { db } from "@db/index";
 import { agents, schedules, assignmentLock, assignmentHistory } from "@db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
 import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment } from "@/lib/invgate/agsTickets";
 
@@ -18,6 +18,12 @@ export interface AgentDisponibilidad {
   breakInicioHoy?: string;    // "12:00"
   breakFinHoy?: string;       // "13:00"
   retornoEstimado?: string;   // "13:00"
+  breakInminente?: boolean;   // true si faltan <= 10 min para entrar en break
+  breakInminenteMin?: number; // minutos que faltan para el break
+  salidaInminente?: boolean;  // true si faltan <= 10 min para terminar su jornada
+  salidaInminenteMin?: number; // minutos que faltan para el fin de jornada
+  proximoTurnoDisponible?: string; // Formato "YYYY-MM-DDTHH:mm"
+  proximoTurnoMotivo?: string;     // "Fin de break (13:00)", "Próximo turno (Vie 21/08 08:00)"
   lastAutogestionAssignedAt: number | null;
   lastAutogestionAssignedBy?: string | null;
   lastAutogestionUndo?: number | null;
@@ -40,6 +46,137 @@ export function getLocalDateString(date: Date = new Date()): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * Calcula el próximo turno disponible para un operador (o fin de break si está en break).
+ * Excluye operadores en vacaciones.
+ */
+export function calcularProximoTurnoDisponible(
+  agent: {
+    name: string;
+    horarioDefault?: string | null;
+    esquemaSemanal?: string | null;
+  },
+  dbSchedules: Array<{ date: string; agentName: string; status: string; horario?: string | null }>,
+  currentStatus: string,
+  currentMotivo: string | undefined,
+  currentHorario: string,
+  currentBreakFin: string,
+  retornoEstimado: string | undefined,
+  isCurrentlyOnBreak: boolean,
+  isDisponible: boolean,
+  now: Date = new Date()
+): { proximoTurnoDisponible?: string; proximoTurnoMotivo?: string } {
+  // Solo aplica para operadores no disponibles o en break (no para operadores actualmente disponibles)
+  if (isDisponible && !isCurrentlyOnBreak) {
+    return {};
+  }
+
+  // Excluir vacaciones según requerimiento explícito
+  if (currentStatus === "Vacaciones" || currentMotivo === "Vacaciones") {
+    return {};
+  }
+
+  const workingStatuses = ["Presencial Monte Grande", "Presencial Parque Patricios", "Home Office"];
+  const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+  const shortDays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const todayStr = getLocalDateString(now);
+
+  // 1. Si está en break o break extendido hoy
+  if (isCurrentlyOnBreak) {
+    const returnTime = retornoEstimado && /^\d{1,2}:\d{2}$/.test(retornoEstimado)
+      ? retornoEstimado
+      : currentBreakFin && /^\d{1,2}:\d{2}$/.test(currentBreakFin)
+        ? currentBreakFin
+        : null;
+
+    if (returnTime) {
+      const [rH, rM] = returnTime.split(":").map(Number);
+      const returnDate = new Date(now);
+      returnDate.setHours(rH, rM, 0, 0);
+
+      // Si la hora de retorno aún no pasó hoy
+      if (returnDate > now) {
+        return {
+          proximoTurnoDisponible: `${todayStr}T${pad(rH)}:${pad(rM)}`,
+          proximoTurnoMotivo: `Fin de break (${pad(rH)}:${pad(rM)})`,
+        };
+      }
+    }
+  }
+
+  // 2. Si hoy es un día laborable pero aún no empezó su turno (now < startTime)
+  if (workingStatuses.includes(currentStatus) && currentHorario) {
+    const [startStr] = currentHorario.split(" - ");
+    if (startStr && /^\d{1,2}:\d{2}$/.test(startStr.trim())) {
+      const [sH, sM] = startStr.trim().split(":").map(Number);
+      const startDate = new Date(now);
+      startDate.setHours(sH, sM, 0, 0);
+
+      if (now < startDate) {
+        return {
+          proximoTurnoDisponible: `${todayStr}T${pad(sH)}:${pad(sM)}`,
+          proximoTurnoMotivo: `Inicio de turno hoy (${pad(sH)}:${pad(sM)})`,
+        };
+      }
+    }
+  }
+
+  // 3. Buscar el próximo turno hábil en los próximos 14 días (desde mañana)
+  let esquemaObj: Record<string, any> | null = null;
+  if (agent.esquemaSemanal) {
+    try {
+      esquemaObj = JSON.parse(agent.esquemaSemanal);
+    } catch {}
+  }
+
+  for (let d = 1; d <= 14; d++) {
+    const targetDate = new Date(now.getTime() + d * 24 * 3600 * 1000);
+    const targetDateStr = getLocalDateString(targetDate);
+    const targetDayName = dayNames[targetDate.getDay()];
+    const targetShortDay = shortDays[targetDate.getDay()];
+
+    // Buscar si hay excepción para ese día
+    const override = dbSchedules.find((s) => s.date === targetDateStr && s.agentName === agent.name);
+
+    let dayStatus = "Franco";
+    let dayHorario = "";
+
+    if (override) {
+      dayStatus = override.status;
+      dayHorario = override.horario || "";
+    } else if (esquemaObj && esquemaObj[targetDayName]) {
+      const diaConfig = esquemaObj[targetDayName];
+      if (diaConfig.activo !== false) {
+        dayStatus = diaConfig.modalidad || "Home Office";
+        dayHorario = diaConfig.horario || "";
+      }
+    }
+
+    if (workingStatuses.includes(dayStatus)) {
+      if (!dayHorario || dayHorario === "-" || dayHorario.trim() === "") {
+        dayHorario = agent.horarioDefault || "08:00 - 17:00";
+      }
+
+      const [startStr] = dayHorario.split(" - ");
+      const [hS, mS] = (startStr || "08:00").trim().split(":").map(Number);
+      const validH = isNaN(hS) ? 8 : hS;
+      const validM = isNaN(mS) ? 0 : mS;
+
+      const dateLabel = `${targetShortDay} ${pad(targetDate.getDate())}/${pad(targetDate.getMonth() + 1)}`;
+      const timeLabel = `${pad(validH)}:${pad(validM)}`;
+
+      return {
+        proximoTurnoDisponible: `${targetDateStr}T${timeLabel}`,
+        proximoTurnoMotivo: `Próximo turno (${dateLabel} ${timeLabel})`,
+      };
+    }
+  }
+
+  return {};
 }
 
 export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
@@ -109,17 +246,19 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     return false;
   });
 
-  // 2. Fetch today's persistent schedule overrides
+  const endDate14Str = getLocalDateString(new Date(now.getTime() + 14 * 24 * 3600 * 1000));
+
+  // 2. Fetch today's and upcoming persistent schedule overrides (next 14 days)
   const dbSchedules = await db
     .select()
     .from(schedules)
-    .where(eq(schedules.date, todayStr));
+    .where(and(gte(schedules.date, todayStr), lte(schedules.date, endDate14Str)));
 
   // 3. Process each agent
   const list: AgentDisponibilidad[] = dbAgents.map((agent) => {
     const workingStatuses = ["Presencial Monte Grande", "Presencial Parque Patricios", "Home Office"];
     // Check if there is an override for this agent today
-    const schedule = dbSchedules.find((s) => s.agentName === agent.name);
+    const schedule = dbSchedules.find((s) => s.date === todayStr && s.agentName === agent.name);
 
     let status = "Franco";
     let horario = "";
@@ -179,7 +318,6 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
         }
       }
     }
-
 
     let matchedInvgateId: number | undefined;
 
@@ -244,136 +382,180 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       info.disponible = false;
       info.motivo = status; // "Franco", "Vacaciones", "Licencia"
       applyOverride();
-      return info;
-    }
-
-    // Parse the shift hours
-    const parts = horario.split(" - ");
-    if (parts.length !== 2) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      applyOverride();
-      return info;
-    }
-
-    const [startStr, endStr] = parts;
-    const [hS, mS] = startStr.split(":").map(Number);
-    const [hE, mE] = endStr.split(":").map(Number);
-
-    if (isNaN(hS) || isNaN(mS) || isNaN(hE) || isNaN(mE)) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      applyOverride();
-      return info;
-    }
-
-    const startTime = new Date(now);
-    startTime.setHours(hS, mS, 0, 0);
-
-    const endTime = new Date(now);
-    endTime.setHours(hE, mE, 0, 0);
-
-    // Check if within shift
-    if (now < startTime) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      info.retornoEstimado = startStr;
-      applyOverride();
-      return info;
-    }
-
-    if (now > endTime) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      applyOverride();
-      return info;
-    }
-
-    // Check break times
-    let breakStart: Date;
-    let breakEnd: Date;
-
-    if (breakInicio && breakFin) {
-      const [bhS, bmS] = breakInicio.split(":").map(Number);
-      const [bhE, bmE] = breakFin.split(":").map(Number);
-
-      if (!isNaN(bhS) && !isNaN(bmS) && !isNaN(bhE) && !isNaN(bmE)) {
-        breakStart = new Date(now);
-        breakStart.setHours(bhS, bmS, 0, 0);
-        breakEnd = new Date(now);
-        breakEnd.setHours(bhE, bmE, 0, 0);
-      } else {
-        // Fallback calculation if breaks format is invalid
-        const shiftDuration = endTime.getTime() - startTime.getTime();
-        breakStart = new Date(startTime.getTime() + shiftDuration / 2 - 30 * 60000);
-        breakEnd = new Date(breakStart.getTime() + 60 * 60000);
-      }
     } else {
-      // Estimate 1 hour break in the middle of the shift
-      const shiftDuration = endTime.getTime() - startTime.getTime();
-      breakStart = new Date(startTime.getTime() + shiftDuration / 2 - 30 * 60000);
-      breakEnd = new Date(breakStart.getTime() + 60 * 60000);
-    }
-
-    // Auto-cleanup of break_extendido if it expired
-    if (agent.estadoExcepcional === "break_extendido") {
-      if (agent.estadoExcepcionalMinutos !== null && agent.estadoExcepcionalMinutos !== undefined) {
-        const extraMinutes = agent.estadoExcepcionalMinutos;
-        const extendedBreakEnd = new Date(breakEnd.getTime() + extraMinutes * 60000);
-        if (now >= extendedBreakEnd) {
-          // Clear in DB asynchronously
-          db.update(agents)
-            .set({
-              estadoExcepcional: null,
-              estadoExcepcionalMotivo: null,
-              estadoExcepcionalAt: null,
-              estadoExcepcionalMinutos: null,
-            })
-            .where(eq(agents.id, agent.id))
-            .catch((err) =>
-              console.error(`Error auto-clearing break_extendido state for agent ${agent.id}:`, err)
-            );
-
-          // Mutate local object and info so we don't apply the override in this render
-          agent.estadoExcepcional = null;
-          agent.estadoExcepcionalMotivo = null;
-          agent.estadoExcepcionalAt = null;
-          agent.estadoExcepcionalMinutos = null;
-          
-          info.estadoExcepcional = undefined;
-          info.estadoExcepcionalMotivo = undefined;
-          info.estadoExcepcionalAt = undefined;
-          info.estadoExcepcionalMinutos = undefined;
-        } else {
-          // Format return time
-          const retHours = String(extendedBreakEnd.getHours()).padStart(2, "0");
-          const retMins = String(extendedBreakEnd.getMinutes()).padStart(2, "0");
-          info.retornoEstimado = `${retHours}:${retMins}`;
-        }
+      // Parse the shift hours
+      const parts = horario.split(" - ");
+      if (parts.length !== 2) {
+        info.disponible = false;
+        info.motivo = "Fuera de horario";
+        applyOverride();
       } else {
-        // Manual / No auto-cleanup
-        info.retornoEstimado = "Manual";
+        const [startStr, endStr] = parts;
+        const [hS, mS] = startStr.split(":").map(Number);
+        const [hE, mE] = endStr.split(":").map(Number);
+
+        if (isNaN(hS) || isNaN(mS) || isNaN(hE) || isNaN(mE)) {
+          info.disponible = false;
+          info.motivo = "Fuera de horario";
+          applyOverride();
+        } else {
+          const startTime = new Date(now);
+          startTime.setHours(hS, mS, 0, 0);
+
+          const endTime = new Date(now);
+          endTime.setHours(hE, mE, 0, 0);
+
+          // Check if within shift
+          if (now < startTime) {
+            info.disponible = false;
+            info.motivo = "Fuera de horario";
+            info.retornoEstimado = startStr;
+            applyOverride();
+          } else if (now > endTime) {
+            info.disponible = false;
+            info.motivo = "Fuera de horario";
+            applyOverride();
+          } else {
+            // Check break times
+            let breakStart: Date;
+            let breakEnd: Date;
+
+            if (breakInicio && breakFin) {
+              const [bhS, bmS] = breakInicio.split(":").map(Number);
+              const [bhE, bmE] = breakFin.split(":").map(Number);
+
+              if (!isNaN(bhS) && !isNaN(bmS) && !isNaN(bhE) && !isNaN(bmE)) {
+                breakStart = new Date(now);
+                breakStart.setHours(bhS, bmS, 0, 0);
+                breakEnd = new Date(now);
+                breakEnd.setHours(bhE, bmE, 0, 0);
+              } else {
+                // Fallback calculation if breaks format is invalid
+                const shiftDuration = endTime.getTime() - startTime.getTime();
+                breakStart = new Date(startTime.getTime() + shiftDuration / 2 - 30 * 60000);
+                breakEnd = new Date(breakStart.getTime() + 60 * 60000);
+              }
+            } else {
+              // Estimate 1 hour break in the middle of the shift
+              const shiftDuration = endTime.getTime() - startTime.getTime();
+              breakStart = new Date(startTime.getTime() + shiftDuration / 2 - 30 * 60000);
+              breakEnd = new Date(breakStart.getTime() + 60 * 60000);
+            }
+
+            // Auto-cleanup of break_extendido if it expired
+            if (agent.estadoExcepcional === "break_extendido") {
+              if (agent.estadoExcepcionalMinutos !== null && agent.estadoExcepcionalMinutos !== undefined) {
+                const extraMinutes = agent.estadoExcepcionalMinutos;
+                const extendedBreakEnd = new Date(breakEnd.getTime() + extraMinutes * 60000);
+                if (now >= extendedBreakEnd) {
+                  // Clear in DB asynchronously
+                  db.update(agents)
+                    .set({
+                      estadoExcepcional: null,
+                      estadoExcepcionalMotivo: null,
+                      estadoExcepcionalAt: null,
+                      estadoExcepcionalMinutos: null,
+                    })
+                    .where(eq(agents.id, agent.id))
+                    .catch((err) =>
+                      console.error(`Error auto-clearing break_extendido state for agent ${agent.id}:`, err)
+                    );
+
+                  // Mutate local object and info so we don't apply the override in this render
+                  agent.estadoExcepcional = null;
+                  agent.estadoExcepcionalMotivo = null;
+                  agent.estadoExcepcionalAt = null;
+                  agent.estadoExcepcionalMinutos = null;
+                  
+                  info.estadoExcepcional = undefined;
+                  info.estadoExcepcionalMotivo = undefined;
+                  info.estadoExcepcionalAt = undefined;
+                  info.estadoExcepcionalMinutos = undefined;
+                } else {
+                  // Format return time
+                  const retHours = String(extendedBreakEnd.getHours()).padStart(2, "0");
+                  const retMins = String(extendedBreakEnd.getMinutes()).padStart(2, "0");
+                  info.retornoEstimado = `${retHours}:${retMins}`;
+                }
+              } else {
+                // Manual / No auto-cleanup
+                info.retornoEstimado = "Manual";
+              }
+            }
+
+            // Check if currently in break
+            if (now >= breakStart && now <= breakEnd) {
+              info.disponible = false;
+              info.motivo = "En break";
+              
+              // Format return time if not already set
+              if (!info.retornoEstimado) {
+                const retHours = String(breakEnd.getHours()).padStart(2, "0");
+                const retMins = String(breakEnd.getMinutes()).padStart(2, "0");
+                info.retornoEstimado = `${retHours}:${retMins}`;
+              }
+              applyOverride();
+            } else {
+              // If we passed all checks, agent is available
+              info.disponible = true;
+              applyOverride();
+            }
+          }
+        }
       }
     }
 
-    // Check if currently in break
-    if (now >= breakStart && now <= breakEnd) {
-      info.disponible = false;
-      info.motivo = "En break";
-      
-      // Format return time if not already set
-      if (!info.retornoEstimado) {
-        const retHours = String(breakEnd.getHours()).padStart(2, "0");
-        const retMins = String(breakEnd.getMinutes()).padStart(2, "0");
-        info.retornoEstimado = `${retHours}:${retMins}`;
+    // Verificar si el break es inminente (faltan <= 10 min y está disponible)
+    if (info.disponible && breakInicio) {
+      const [bhS, bmS] = breakInicio.split(":").map(Number);
+      if (!isNaN(bhS) && !isNaN(bmS)) {
+        const breakStartTime = new Date(now);
+        breakStartTime.setHours(bhS, bmS, 0, 0);
+        const diffMs = breakStartTime.getTime() - now.getTime();
+        const diffMin = Math.ceil(diffMs / 60000);
+        if (diffMin > 0 && diffMin <= 10) {
+          info.breakInminente = true;
+          info.breakInminenteMin = diffMin;
+        }
       }
-      applyOverride();
-      return info;
     }
 
-    // If we passed all checks, agent is available
-    info.disponible = true;
-    applyOverride();
+    // Verificar si el fin de jornada / salida es inminente (faltan <= 10 min y está disponible)
+    if (info.disponible && horario) {
+      const parts = horario.split(" - ");
+      if (parts.length === 2) {
+        const [_, endStr] = parts;
+        const [ehS, emS] = endStr.split(":").map(Number);
+        if (!isNaN(ehS) && !isNaN(emS)) {
+          const shiftEndTime = new Date(now);
+          shiftEndTime.setHours(ehS, emS, 0, 0);
+          const diffMs = shiftEndTime.getTime() - now.getTime();
+          const diffMin = Math.ceil(diffMs / 60000);
+          if (diffMin > 0 && diffMin <= 10) {
+            info.salidaInminente = true;
+            info.salidaInminenteMin = diffMin;
+          }
+        }
+      }
+    }
+
+    // Calcular sugerencia de próximo turno disponible
+    const proximoTurno = calcularProximoTurnoDisponible(
+      agent,
+      dbSchedules,
+      status,
+      info.motivo,
+      horario,
+      breakFin,
+      info.retornoEstimado,
+      info.motivo === "En break" || agent.estadoExcepcional === "break_extendido",
+      info.disponible,
+      now
+    );
+
+    info.proximoTurnoDisponible = proximoTurno.proximoTurnoDisponible;
+    info.proximoTurnoMotivo = proximoTurno.proximoTurnoMotivo;
+
     return info;
   });
 

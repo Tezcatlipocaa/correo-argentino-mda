@@ -440,7 +440,9 @@ function getInitials(name: string): string {
                   <div data-ticket-id={t.id} class="p-4 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-2 cursor-pointer group min-w-[480px] sm:min-w-0">
                     <div class="flex items-center justify-between gap-2">
                       <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                        <span class="font-mono font-bold text-primary-content bg-primary px-2.5 py-1 rounded-lg text-xs sm:text-sm shrink-0">{t.pretty_id || `#${t.id}`}</span>
+                        <div class="-ml-4 pl-4 pr-3.5 py-1 bg-primary text-primary-content font-mono font-black text-xs sm:text-sm shadow-xs [clip-path:polygon(0_0,100%_0,calc(100%-8px)_50%,100%_100%,0_100%)] shrink-0 flex items-center">
+                          <span>{t.pretty_id || `#${t.id}`}</span>
+                        </div>
                         {t.priority_id && (
                           <span class={`badge badge-sm font-bold text-xs tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-neutral'}`}>
                             {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
@@ -562,7 +564,20 @@ function getInitials(name: string): string {
                         </div>
                         <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
                           <span class="uppercase font-semibold text-xs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}</span>
-                          {op.breakInicioHoy && op.breakFinHoy && (
+                          {op.salidaInminente ? (
+                            <span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Termina su jornada en ${op.salidaInminenteMin || 1} min`}>
+                              <Icon name="boxicons:arrow-out-right-square-half" size={12} class="shrink-0" />
+                              <span>Salida en {op.salidaInminenteMin}m ({op.horarioHoy?.split(" - ")[1]})</span>
+                            </span>
+                          ) : op.horarioHoy && (
+                            <span class="font-mono text-base-content/75">{op.horarioHoy}</span>
+                          )}
+                          {op.breakInminente ? (
+                            <span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Entra en break en ${op.breakInminenteMin || 1} min`}>
+                              <Icon name="boxicons:cup-hot" size={12} class="shrink-0" />
+                              <span>Break en {op.breakInminenteMin}m ({op.breakInicioHoy})</span>
+                            </span>
+                          ) : op.breakInicioHoy && op.breakFinHoy && (
                             <span class="flex items-center gap-1 font-mono text-base-content/75">
                               <Icon name="boxicons:cup-hot" size={13} class="opacity-60 shrink-0 text-warning" />
                               <span>Break: {op.breakInicioHoy} - {op.breakFinHoy}</span>
@@ -842,15 +857,27 @@ function getInitials(name: string): string {
                 <div data-op-horario>
                   {op.horarioHoy ? (
                     <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
-                      <span class="flex items-center gap-1 font-semibold">
-                        <Icon
-                          name="boxicons:clock-dashed-half-filled"
-                          size={14}
-                          class="opacity-60 shrink-0"
-                        />
-                        {op.horarioHoy}
-                      </span>
-                      {op.breakInicioHoy && op.breakFinHoy && (
+                      {op.salidaInminente ? (
+                        <span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Termina su jornada en ${op.salidaInminenteMin || 1} min`}>
+                          <Icon name="boxicons:arrow-out-right-square-half" size={12} class="shrink-0" />
+                          <span>Salida en {op.salidaInminenteMin}m ({op.horarioHoy.split(" - ")[1]})</span>
+                        </span>
+                      ) : (
+                        <span class="flex items-center gap-1 font-semibold">
+                          <Icon
+                            name="boxicons:clock-dashed-half-filled"
+                            size={14}
+                            class="opacity-60 shrink-0"
+                          />
+                          {op.horarioHoy}
+                        </span>
+                      )}
+                      {op.breakInminente ? (
+                        <span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Entra en break en ${op.breakInminenteMin || 1} min`}>
+                          <Icon name="boxicons:cup-hot" size={12} class="shrink-0" />
+                          <span>Break en {op.breakInminenteMin}m ({op.breakInicioHoy})</span>
+                        </span>
+                      ) : op.breakInicioHoy && op.breakFinHoy && (
                         <span class="flex items-center gap-1 opacity-70">
                           <Icon
                             name="boxicons:cup-hot"
@@ -995,9 +1022,13 @@ function getInitials(name: string): string {
   <dialog id="modal-ticket-detail" class="modal" data-invgate-web-base={invgateWebBase}>
     <div class="modal-box w-11/12 max-w-4xl border border-base-300 bg-base-100 p-0 overflow-hidden shadow-2xl rounded-2xl">
       <!-- Modal Header -->
-      <div class="p-5 sm:p-6 bg-base-200/50 border-b border-base-300 flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
-          <span id="ticket-modal-id" class="font-mono font-bold text-primary-content bg-primary px-3 py-1.5 rounded-lg text-base shrink-0">#0</span>
+      <div class="p-5 sm:p-6 bg-base-200/50 border-b border-base-300 flex items-center justify-between gap-3 relative">
+        <div class="flex items-center gap-3 min-w-0 flex-wrap">
+          <!-- Marcapágina que sobresale por el lateral -->
+          <div class="-ml-5 sm:-ml-6 pl-5 sm:pl-6 pr-5 py-1.5 bg-primary text-primary-content font-mono font-black text-sm sm:text-base shadow-md flex items-center gap-1.5 [clip-path:polygon(0_0,100%_0,calc(100%-10px)_50%,100%_100%,0_100%)] shrink-0">
+            <span class="text-xxs uppercase tracking-widest font-extrabold opacity-75 font-sans">Ticket</span>
+            <span id="ticket-modal-id" class="tracking-tight">#0</span>
+          </div>
           <span id="ticket-modal-prio" class="badge badge-md font-bold tracking-wider uppercase shrink-0 text-xs"></span>
           <span id="ticket-modal-cat" class="badge badge-neutral badge-md font-semibold truncate shrink-0 max-w-[280px] text-xs"></span>
         </div>
@@ -1055,6 +1086,37 @@ function getInitials(name: string): string {
             Sin descripción disponible.
           </div>
         </div>
+
+        <!-- Sección de Comentarios y Notas -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between gap-2 border-b border-base-300 pb-2">
+            <div class="flex items-center gap-2">
+              <Icon name="boxicons:message-circle-detail" size={18} class="text-primary" />
+              <h4 class="text-xs font-bold text-base-content/75 uppercase tracking-wider">Comentarios y Notas</h4>
+            </div>
+            <span id="ticket-modal-comments-count" class="badge badge-neutral badge-sm font-mono font-bold">0</span>
+          </div>
+
+          <!-- Loading state -->
+          <div id="ticket-modal-comments-loading" class="flex items-center justify-center gap-2 py-6 text-base-content/50 text-xs font-medium">
+            <span class="loading loading-spinner loading-xs text-primary"></span>
+            <span>Cargando comentarios...</span>
+          </div>
+
+          <!-- Empty state -->
+          <div id="ticket-modal-comments-empty" class="hidden py-6 text-center text-xs text-base-content/40 italic bg-base-200/30 rounded-2xl border border-base-300/40">
+            No hay comentarios registrados en este ticket.
+          </div>
+
+          <!-- Error state -->
+          <div id="ticket-modal-comments-error" class="hidden py-4 text-center text-xs text-error bg-error/10 rounded-2xl border border-error/20">
+            No se pudieron cargar los comentarios.
+          </div>
+
+          <!-- List container -->
+          <div id="ticket-modal-comments-list" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+          </div>
+        </div>
       </div>
 
       <!-- Modal Footer -->
@@ -1099,7 +1161,9 @@ function getInitials(name: string): string {
           <div class="min-w-0">
             <h3 class="font-extrabold text-base sm:text-lg text-base-content uppercase tracking-wider">Asignar Ticket a Operador</h3>
             <div class="flex items-center gap-2 text-sm text-base-content/70 mt-1 min-w-0 flex-wrap">
-              <span id="modal-assign-to-ticket-badge" class="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-lg shrink-0">#---</span>
+              <div class="inline-flex items-center pl-2.5 pr-4 py-0.5 bg-primary text-primary-content font-mono font-black text-xs sm:text-sm shadow-xs [clip-path:polygon(0_0,100%_0,calc(100%-8px)_50%,100%_100%,0_100%)] shrink-0">
+                <span id="modal-assign-to-ticket-badge">#---</span>
+              </div>
               <span id="modal-assign-to-ticket-title" class="truncate font-semibold text-base-content">Selecciona un operador</span>
               <span id="modal-assign-to-ticket-creator" class="badge badge-neutral badge-sm font-medium text-xs text-base-content/80 hidden"></span>
             </div>
@@ -1242,74 +1306,82 @@ function getInitials(name: string): string {
 
   <!-- Modal Posponer y Asignar Ticket -->
   <dialog id="modal-posponer-ticket" class="modal modal-bottom sm:modal-middle">
-    <div class="modal-box w-11/12 max-w-lg bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col">
-      <div class="p-5 border-b border-base-300 bg-base-200/50 flex items-center justify-between gap-3">
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="p-2.5 rounded-xl bg-warning/15 text-warning shrink-0">
-            <Icon name="boxicons:calendar" size={22} />
+    <div class="modal-box w-11/12 max-w-xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col">
+      <div class="p-5 sm:p-6 border-b border-base-300 bg-base-200/50 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="p-3 rounded-2xl bg-warning/15 text-warning shrink-0">
+            <Icon name="boxicons:calendar" size={26} />
           </div>
           <div class="min-w-0">
-            <h3 class="font-extrabold text-base text-base-content uppercase tracking-wider">Posponer Autogestión</h3>
-            <p class="text-xs text-base-content/60 font-medium">Asigna al operador y pasa a estado Esperando Fecha</p>
+            <h3 class="font-extrabold text-lg sm:text-xl text-base-content uppercase tracking-wider">Posponer Autogestión</h3>
+            <p class="text-sm text-base-content/60 font-medium">Asigna al operador y pasa a estado Esperando Fecha</p>
           </div>
         </div>
         <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content">✕</button>
+          <button class="btn btn-sm sm:btn-md btn-circle btn-ghost text-base-content/60 hover:text-base-content text-base font-bold">✕</button>
         </form>
       </div>
 
-      <div class="p-5 space-y-4">
+      <div class="p-5 sm:p-6 space-y-5">
         <!-- Resumen del Ticket y Operador -->
-        <div class="p-3.5 rounded-xl bg-base-200/50 border border-base-300 space-y-2 text-xs">
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/60 font-medium">Ticket:</span>
-            <span id="posponer-ticket-badge" class="font-mono font-bold text-primary">#---</span>
+        <div class="p-4 rounded-2xl bg-base-200/60 border border-base-300 space-y-2.5 text-sm">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-base-content/70 font-semibold uppercase tracking-wider text-xs">Ticket:</span>
+            <div class="inline-flex items-center pl-3 pr-5 py-1 bg-primary text-primary-content font-mono font-black text-sm sm:text-base shadow-xs [clip-path:polygon(0_0,100%_0,calc(100%-8px)_50%,100%_100%,0_100%)]">
+              <span id="posponer-ticket-badge">#---</span>
+            </div>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/60 font-medium">Operador:</span>
-            <span id="posponer-operator-name" class="font-bold text-base-content">---</span>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-base-content/70 font-semibold uppercase tracking-wider text-xs">Operador:</span>
+            <span id="posponer-operator-name" class="font-black text-base text-base-content">---</span>
           </div>
         </div>
 
         <!-- Input de Fecha y Hora -->
-        <div class="form-control space-y-1">
-          <label class="label-text font-bold text-xs uppercase tracking-wider text-base-content/80">
-            Fecha y Hora de Reanudación
-          </label>
+        <div class="form-control space-y-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <label class="label-text font-bold text-xs uppercase tracking-wider text-base-content/85">
+              Fecha y Hora de Reanudación
+            </label>
+            <span id="posponer-sugerencia-badge" class="hidden badge badge-warning/15 text-warning border border-warning/30 badge-sm font-bold text-xs px-2.5 py-1 gap-1.5 shrink-0">
+              <Icon name="boxicons:sparkles" size={13} class="shrink-0" />
+              <span id="posponer-sugerencia-text">Sugerido</span>
+            </span>
+          </div>
           <input
             id="posponer-input-datetime"
             type="datetime-local"
-            class="input input-bordered input-sm w-full font-mono text-xs focus:outline-none focus:border-warning"
+            class="input input-bordered input-md w-full font-mono text-sm sm:text-base focus:outline-none focus:border-warning"
             required
           />
-          <p class="text-tiny text-base-content/50">El ticket quedará pausado en InvGate hasta la fecha seleccionada.</p>
+          <p class="text-xs text-base-content/55">El ticket quedará pausado en InvGate hasta la fecha seleccionada.</p>
         </div>
 
         <!-- Input de Nota Interna -->
-        <div class="form-control space-y-1">
-          <label class="label-text font-bold text-xs uppercase tracking-wider text-base-content/80">
+        <div class="form-control space-y-1.5">
+          <label class="label-text font-bold text-xs uppercase tracking-wider text-base-content/85">
             Nota interna para el operador (opcional)
           </label>
           <input
             id="posponer-input-motivo"
             type="text"
             placeholder="Ej. Coordinado con el cliente para el día..."
-            class="input input-bordered input-sm w-full text-xs focus:outline-none focus:border-warning"
+            class="input input-bordered input-md w-full text-sm sm:text-base focus:outline-none focus:border-warning"
           />
-          <p class="text-tiny text-base-content/50">Se publicará como comentario interno en el ticket de InvGate visible para el operador.</p>
+          <p class="text-xs text-base-content/55">Se publicará como comentario interno en el ticket de InvGate visible para el operador.</p>
         </div>
       </div>
 
-      <div class="p-4 bg-base-200/50 border-t border-base-300 flex items-center justify-end gap-3">
+      <div class="p-5 sm:p-6 bg-base-200/50 border-t border-base-300 flex items-center justify-end gap-3">
         <form method="dialog">
-          <button class="btn btn-ghost btn-sm font-semibold">Cancelar</button>
+          <button class="btn btn-ghost btn-md font-semibold text-sm">Cancelar</button>
         </form>
         <button
           id="btn-confirm-posponer"
           type="button"
-          class="btn btn-warning btn-sm font-bold uppercase tracking-wider px-5 shadow-sm gap-2"
+          class="btn btn-warning btn-md font-black uppercase tracking-wider px-6 shadow-md gap-2 text-sm"
         >
-          <Icon name="boxicons:calendar-check" size={18} />
+          <Icon name="boxicons:calendar-check" size={20} />
           <span>Confirmar y Posponer</span>
         </button>
       </div>
@@ -1666,9 +1738,20 @@ function getInitials(name: string): string {
             const statusText = op.disponible ? "Disponible" : (op.motivo || "No disponible");
             const statusBadgeClass = op.disponible ? "badge-success/15 text-success border border-success/30" : "badge-neutral opacity-70";
 
-            const breakStr = op.breakInicioHoy && op.breakFinHoy
-              ? `<span class="flex items-center gap-1 font-mono text-base-content/75"><svg class="size-3.5 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`
-              : "";
+            let scheduleBadge = "";
+            if (op.salidaInminente) {
+              const endHour = op.horarioHoy ? op.horarioHoy.split(" - ")[1] : "";
+              scheduleBadge = `<span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Termina su jornada en ${op.salidaInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Salida en ${op.salidaInminenteMin}m (${escapeHtml(endHour)})</span></span>`;
+            } else if (op.horarioHoy) {
+              scheduleBadge = `<span class="font-mono text-base-content/75">${escapeHtml(op.horarioHoy)}</span>`;
+            }
+
+            let breakStr = "";
+            if (op.breakInminente) {
+              breakStr = `<span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Entra en break en ${op.breakInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break en ${op.breakInminenteMin}m (${escapeHtml(op.breakInicioHoy)})</span></span>`;
+            } else if (op.breakInicioHoy && op.breakFinHoy) {
+              breakStr = `<span class="flex items-center gap-1 font-mono text-base-content/75"><svg class="size-3.5 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`;
+            }
 
             return `
               <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0 ${containerClass}">
@@ -1686,6 +1769,7 @@ function getInitials(name: string): string {
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
                       <span class="uppercase font-semibold text-xs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
+                      ${scheduleBadge}
                       ${breakStr}
                     </div>
                   </div>
@@ -1759,21 +1843,34 @@ function getInitials(name: string): string {
         const horarioEl = row.querySelector(`[data-op-horario]`);
         if (horarioEl) {
           if (op.horarioHoy) {
-            let breakHtml = "";
-            if (op.breakInicioHoy && op.breakFinHoy) {
-              breakHtml = `
-                <span class="flex items-center gap-1 opacity-70">
-                  <svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>
-                  ${op.breakInicioHoy} - ${op.breakFinHoy}
+            let scheduleSpan = "";
+            if (op.salidaInminente) {
+              const endHour = op.horarioHoy.split(" - ")[1] || "";
+              scheduleSpan = `<span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Termina su jornada en ${op.salidaInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Salida en ${op.salidaInminenteMin}m (${escapeHtml(endHour)})</span></span>`;
+            } else {
+              scheduleSpan = `
+                <span class="flex items-center gap-1 font-semibold">
+                  <svg class="size-3.5 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  ${escapeHtml(op.horarioHoy)}
                 </span>
               `;
             }
+
+            let breakHtml = "";
+            if (op.breakInminente) {
+              breakHtml = `<span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Entra en break en ${op.breakInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break en ${op.breakInminenteMin}m (${escapeHtml(op.breakInicioHoy)})</span></span>`;
+            } else if (op.breakInicioHoy && op.breakFinHoy) {
+              breakHtml = `
+                <span class="flex items-center gap-1 opacity-70">
+                  <svg class="size-3 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>
+                  ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}
+                </span>
+              `;
+            }
+
             horarioEl.innerHTML = `
               <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
-                <span class="flex items-center gap-1 font-semibold">
-                  <svg class="size-3.5 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  ${op.horarioHoy}
-                </span>
+                ${scheduleSpan}
                 ${breakHtml}
               </div>
             `;
@@ -1998,8 +2095,18 @@ function getInitials(name: string): string {
             ? `En break (vuelve ${escapeHtml(op.retornoEstimado)})` 
             : escapeHtml(op.motivo || "Franco"));
 
-      const scheduleInfo = op.horarioHoy ? escapeHtml(op.horarioHoy) : "Sin horario";
-      const breakInfo = (op.breakInicioHoy && op.breakFinHoy) ? ` • Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}` : "";
+      let scheduleInfo = op.horarioHoy ? escapeHtml(op.horarioHoy) : "Sin horario";
+      if (op.salidaInminente) {
+        const endHour = op.horarioHoy ? op.horarioHoy.split(" - ")[1] : "";
+        scheduleInfo = `<span class="badge badge-error text-error-content font-bold text-xxs px-1.5 py-0.5">Salida en ${op.salidaInminenteMin || 1}m (${escapeHtml(endHour)})</span>`;
+      }
+
+      let breakInfo = "";
+      if (op.breakInminente) {
+        breakInfo = ` • <span class="badge badge-warning text-warning-content font-bold text-xxs px-1.5 py-0.5">Break en ${op.breakInminenteMin || 1}m (${escapeHtml(op.breakInicioHoy)})</span>`;
+      } else if (op.breakInicioHoy && op.breakFinHoy) {
+        breakInfo = ` • Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}`;
+      }
       const modality = op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial";
 
       const btnDisabled = isReadOnly ? 'disabled="true"' : "";
@@ -2239,15 +2346,30 @@ function getInitials(name: string): string {
           if (motivoInput) motivoInput.value = "";
 
           if (datetimeInput) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(9, 0, 0, 0);
-            const pad = (n: number) => String(n).padStart(2, "0");
-            const defaultStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T${pad(tomorrow.getHours())}:${pad(tomorrow.getMinutes())}`;
             const now = new Date();
+            const pad = (n: number) => String(n).padStart(2, "0");
             const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
             datetimeInput.min = nowStr;
-            datetimeInput.value = defaultStr;
+
+            const badgeSugerencia = document.getElementById("posponer-sugerencia-badge");
+            const textSugerencia = document.getElementById("posponer-sugerencia-text");
+
+            if (op?.proximoTurnoDisponible) {
+              datetimeInput.value = op.proximoTurnoDisponible;
+              if (badgeSugerencia && textSugerencia) {
+                textSugerencia.textContent = op.proximoTurnoMotivo || "Sugerido según próximo turno";
+                badgeSugerencia.classList.remove("hidden");
+              }
+            } else {
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              tomorrow.setHours(9, 0, 0, 0);
+              const defaultStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T${pad(tomorrow.getHours())}:${pad(tomorrow.getMinutes())}`;
+              datetimeInput.value = defaultStr;
+              if (badgeSugerencia) {
+                badgeSugerencia.classList.add("hidden");
+              }
+            }
           }
 
           if (modalPosponer) {
@@ -2710,6 +2832,92 @@ function getInitials(name: string): string {
             }
           }
 
+          // Cargar comentarios y notas del ticket
+          const commentsLoading = document.getElementById("ticket-modal-comments-loading");
+          const commentsEmpty = document.getElementById("ticket-modal-comments-empty");
+          const commentsError = document.getElementById("ticket-modal-comments-error");
+          const commentsList = document.getElementById("ticket-modal-comments-list");
+          const commentsCount = document.getElementById("ticket-modal-comments-count");
+
+          if (commentsList) commentsList.innerHTML = "";
+          if (commentsLoading) commentsLoading.classList.remove("hidden");
+          if (commentsEmpty) commentsEmpty.classList.add("hidden");
+          if (commentsError) commentsError.classList.add("hidden");
+          if (commentsCount) commentsCount.textContent = "0";
+
+          fetch(`/api/invgate/ticket-comments?request_id=${ticket.id}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (commentsLoading) commentsLoading.classList.add("hidden");
+              const comments = data.comments || [];
+              if (commentsCount) commentsCount.textContent = String(comments.length);
+
+              if (comments.length === 0) {
+                if (commentsEmpty) commentsEmpty.classList.remove("hidden");
+                return;
+              }
+
+              if (commentsList) {
+                commentsList.innerHTML = comments.map((c: any) => {
+                  const isInternal = c.customer_visible === false || c.customer_visible === 0;
+                  const authorName = c.author_name || `Usuario #${c.author_id}`;
+                  const authorParts = authorName.trim().split(/\s+/);
+                  const initials = authorParts.length >= 2
+                    ? (authorParts[0][0] + authorParts[authorParts.length - 1][0]).toUpperCase()
+                    : authorName.substring(0, 2).toUpperCase();
+
+                  const timeStr = c.created_at
+                    ? new Date(c.created_at * 1000).toLocaleString("es-AR", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })
+                    : "";
+
+                  let typeBadge = `<span class="badge badge-info/15 text-info border border-info/30 badge-sm text-xs font-bold px-2.5 py-0.5">Público</span>`;
+                  if (c.is_solution) {
+                    typeBadge = `<span class="badge badge-success text-success-content badge-sm text-xs font-bold px-2.5 py-0.5">Solución</span>`;
+                  } else if (isInternal) {
+                    typeBadge = `<span class="badge badge-warning/15 text-warning border border-warning/30 badge-sm text-xs font-bold px-2.5 py-0.5">Nota Interna</span>`;
+                  }
+
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(c.message || "", "text/html");
+                  doc.querySelectorAll("script, iframe, object, embed").forEach((node) => node.remove());
+                  const safeMessage = doc.body.innerHTML;
+
+                  const cardClass = isInternal
+                    ? "bg-warning/5 border border-warning/25"
+                    : "bg-base-200/50 border border-base-300";
+                  const avatarClass = isInternal
+                    ? "bg-warning/20 text-warning"
+                    : "bg-primary/20 text-primary";
+
+                  return `
+                    <div class="p-4 rounded-2xl ${cardClass} space-y-2.5">
+                      <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="flex items-center gap-2.5">
+                          <div class="avatar placeholder size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarClass}">
+                            ${escapeHtml(initials)}
+                          </div>
+                          <span class="font-extrabold text-sm sm:text-base text-base-content">${escapeHtml(authorName)}</span>
+                          ${typeBadge}
+                        </div>
+                        <span class="text-xs font-mono text-base-content/70">${escapeHtml(timeStr)}</span>
+                      </div>
+                      <div class="text-sm sm:text-base text-base-content/90 whitespace-pre-wrap leading-relaxed pl-10">
+                        ${safeMessage}
+                      </div>
+                    </div>
+                  `;
+                }).join("");
+              }
+            })
+            .catch((err) => {
+              console.error("Error fetching comments:", err);
+              if (commentsLoading) commentsLoading.classList.add("hidden");
+              if (commentsError) commentsError.classList.remove("hidden");
+            });
+
           modal.showModal();
         }
         return;
@@ -2844,7 +3052,9 @@ function getInitials(name: string): string {
                 <div data-ticket-id="${t.id}" class="p-4 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-2 cursor-pointer group min-w-[480px] sm:min-w-0">
                   <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                      <span class="font-mono font-bold text-primary-content bg-primary px-2.5 py-1 rounded-lg text-xs sm:text-sm shrink-0">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
+                      <div class="-ml-4 pl-4 pr-3.5 py-1 bg-primary text-primary-content font-mono font-black text-xs sm:text-sm shadow-xs [clip-path:polygon(0_0,100%_0,calc(100%-8px)_50%,100%_100%,0_100%)] shrink-0 flex items-center">
+                        <span>${escapeHtml(t.pretty_id || '#' + t.id)}</span>
+                      </div>
                       ${prioBadge}
                       ${catBadge}
                       ${slaBadge}
@@ -3099,7 +3309,7 @@ function getInitials(name: string): string {
       });
     }
 
-    // Set up 1-second polling interval
+    // Set up 2-second polling interval
     let isPollingBusy = false;
     polling = setInterval(async () => {
       if (isPollingBusy) return;
@@ -3112,7 +3322,7 @@ function getInitials(name: string): string {
       } finally {
         isPollingBusy = false;
       }
-    }, 1000);
+    }, 2000);
 
     // Close dropdowns on Escape key
     document.addEventListener("keydown", (e) => {

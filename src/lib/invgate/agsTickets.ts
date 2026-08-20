@@ -247,4 +247,59 @@ export async function addTicketComment(
   }
 }
 
+export interface InvgateComment {
+  id: number;
+  incident_id: number;
+  author_id: number;
+  author_name?: string;
+  message: string;
+  created_at: number;
+  customer_visible: boolean | number;
+  is_solution?: boolean;
+}
+
+/**
+ * Obtiene los comentarios y notas internas de un ticket en InvGate.
+ * Endpoint: GET /incident.comment?request_id=X
+ */
+export async function getTicketComments(
+  requestId: number
+): Promise<{ ok: boolean; comments: InvgateComment[]; message?: string }> {
+  try {
+    const [res, userMap] = await Promise.all([
+      invgateGet<any[]>(`incident.comment?request_id=${requestId}`),
+      getFullUserMap().catch(() => new Map()),
+    ]);
+
+    if (!res.ok || !Array.isArray(res.data)) {
+      return { ok: false, comments: [], message: res.message || "Error al obtener comentarios de InvGate" };
+    }
+
+    const comments: InvgateComment[] = res.data.map((c) => {
+      const author = userMap.get(c.author_id);
+      const authorFullName = author
+        ? `${author.name || ""} ${author.lastname || ""}`.trim() || author.username || `Usuario #${c.author_id}`
+        : `Usuario #${c.author_id}`;
+
+      return {
+        id: c.id,
+        incident_id: c.incident_id,
+        author_id: c.author_id,
+        author_name: authorFullName,
+        message: c.message || "",
+        created_at: c.created_at || 0,
+        customer_visible: c.customer_visible,
+        is_solution: c.is_solution,
+      };
+    });
+
+    // Ordenar de más reciente a más antiguo
+    comments.sort((a, b) => b.created_at - a.created_at);
+
+    return { ok: true, comments };
+  } catch (err: any) {
+    return { ok: false, comments: [], message: err.message || "Error al conectar con InvGate" };
+  }
+}
+
 
