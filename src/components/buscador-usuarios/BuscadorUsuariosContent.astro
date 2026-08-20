@@ -1727,31 +1727,71 @@ const userRole = Astro.locals.user?.role || "";
     const fragment = document.createDocumentFragment();
     filtered.forEach((group) => {
       const categoryInfo = getGroupCategory(group);
-      const license = GROUP_DESCRIPTIONS[group];
+      const licenses = GROUP_DESCRIPTIONS[group];
       const item = document.createElement("div");
       // Alto estandarizado h-11 para tamaño fijo independientemente de la cantidad
       item.className = `flex items-center justify-between gap-2.5 px-3 h-11 rounded-lg border transition-all font-sans relative group ${categoryInfo.colorClass}`;
+
+      const licenseIcons = Array.isArray(licenses)
+        ? licenses
+            .map(
+              (lic) => `
+            <div class="tooltip tooltip-top tooltip-neutral">
+              <div class="tooltip-content max-w-xs whitespace-normal text-left">
+                <span class="block text-xs font-bold">${escapeHTML(lic.name)}</span>
+                <span class="block text-xs">${escapeHTML(lic.description)}</span>
+                <span class="mt-1 block text-xs text-base-content/70">Recomendación: ${escapeHTML(lic.recommendation)}</span>
+              </div>
+              <button type="button" class="btn btn-ghost btn-xs p-0.5 shrink-0 cursor-pointer" aria-label="Información de licencia ${escapeHTML(lic.name)}">
+                <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
+              </button>
+            </div>`,
+            )
+            .join("")
+        : "";
 
       item.innerHTML = `
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <span class="size-4 shrink-0 select-none flex items-center justify-center">${categoryInfo.icon}</span>
             <span class="font-semibold truncate text-small select-all text-base-content" title="${escapeHTML(group)}">${highlightGroupText(group, filterText)}</span>
-            ${license ? `
-            <div class="tooltip tooltip-top tooltip-neutral">
-              <div class="tooltip-content max-w-xs whitespace-normal text-left">
-                <span class="block text-xs font-semibold">${escapeHTML(license.description)}</span>
-                <span class="mt-1 block text-xs text-base-content/70">Recomendación: ${escapeHTML(license.recommendation)}</span>
-              </div>
-              <button type="button" class="btn btn-ghost btn-xs p-0.5 shrink-0 cursor-pointer" aria-label="Información de licencia">
-                <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
-              </button>
-            </div>` : ``}
+            ${licenseIcons}
           </div>
           <button type="button" class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer shrink-0" data-copy-control data-copy-value="${escapeHTML(group)}" data-copy-label-default="Copiar grupo" data-copy-label-success="Copiado" data-copy-replace-label="false" title="Copiar nombre de grupo">
             <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-default><rect width="14" height="14" x="8" y="2" rx="2" ry="2"/><path d="M8.5 18A2.5 2.5 0 0 1 6 15.5V8H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-2z"/></svg>
             <svg class="size-3.5 hidden opacity-0 scale-75 text-success transition-all duration-200" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-success><path d="M9 15.59L4.71 11.3L3.3 12.71l5 5c.2.2.45.29.71.29s.51-.1.71-.29l11-11l-1.41-1.41L9.02 15.59Z"/></svg>
           </button>
         `;
+      const copyBtn = item.querySelector(
+        "button[data-copy-control]",
+      ) as HTMLButtonElement | null;
+      if (copyBtn) {
+        copyBtn.addEventListener("click", async () => {
+          const copied = await copyText(group);
+          if (!copied) return;
+          const defaultIcons = Array.from(
+            copyBtn.querySelectorAll("[data-copy-icon-default]"),
+          );
+          const successIcons = Array.from(
+            copyBtn.querySelectorAll("[data-copy-icon-success]"),
+          );
+          defaultIcons.forEach((icon) =>
+            icon.classList.add("hidden", "opacity-0", "scale-75"),
+          );
+          successIcons.forEach((icon) => {
+            icon.classList.remove("hidden", "opacity-0", "scale-75");
+            icon.classList.add("scale-100", "opacity-100");
+          });
+          setTimeout(() => {
+            defaultIcons.forEach((icon) =>
+              icon.classList.remove("hidden", "opacity-0", "scale-75"),
+            );
+            successIcons.forEach((icon) => {
+              icon.classList.add("hidden", "opacity-0", "scale-75");
+              icon.classList.remove("scale-100", "opacity-100");
+            });
+          }, 1800);
+        });
+      }
       fragment.appendChild(item);
     });
     terminalGroupsList.appendChild(fragment);
