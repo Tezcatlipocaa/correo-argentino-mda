@@ -528,6 +528,8 @@ const userRole = Astro.locals.user?.role || "";
     if (q && searchInput) {
       searchInput.value = q;
       handleSearch();
+    } else if (searchInput) {
+      searchInput.focus();
     }
 
     fetchSyncStatus();
