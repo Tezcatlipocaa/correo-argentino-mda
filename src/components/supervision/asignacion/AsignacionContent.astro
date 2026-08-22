@@ -474,7 +474,7 @@ function getInitials(name: string): string {
                         {timeStr}
                       </span>
                     </div>
-                    <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors" title={t.title}>
+                    <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors max-w-[65%] truncate pr-2" title={t.title}>
                       {t.title}
                     </div>
                     <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-1">
@@ -1042,7 +1042,7 @@ function getInitials(name: string): string {
         <!-- Título -->
         <div>
           <label class="text-xs font-bold text-base-content/50 uppercase tracking-wider block mb-1.5">Título de la solicitud</label>
-          <h3 id="ticket-modal-title" class="text-xl sm:text-2xl font-extrabold text-base-content leading-snug"></h3>
+          <h3 id="ticket-modal-title" class="text-xl sm:text-2xl font-extrabold text-base-content leading-snug truncate"></h3>
         </div>
 
         <!-- Grid de Metadatos -->
@@ -2708,7 +2708,10 @@ function getInitials(name: string): string {
           };
 
           if (elId) elId.textContent = ticket.pretty_id || `#${ticket.id}`;
-          if (elTitle) elTitle.textContent = ticket.title || "Sin título";
+          if (elTitle) {
+            elTitle.textContent = ticket.title || "Sin título";
+            elTitle.setAttribute("title", ticket.title || "");
+          }
           
           if (elPrio) {
             const prio = PRIORITY_MAP[ticket.priority_id];
@@ -3062,7 +3065,7 @@ function getInitials(name: string): string {
                     </div>
                     <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
                   </div>
-                  <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+                  <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors max-w-[65%] truncate pr-2" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
                   ${userRow}
                   ${locationRow}
                 </div>
