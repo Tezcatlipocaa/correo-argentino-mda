@@ -1,8 +1,6 @@
 ---
 import { getCleanBase } from "@lib/baseUrl";
-import BaseLayout from "@layouts/BaseLayout.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
+import FormShell from "@components/ui/FormShell.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
 import MultiSelectField from "@components/ui/forms/MultiSelectField.astro";
@@ -152,147 +150,122 @@ const hdName = linkedHd?.name || `Helpdesk #${invgateId}`;
 const pageTitle = `Editar: ${hdName}`;
 ---
 
-<BaseLayout>
-  <PageContainer>
-    <div class="mb-6">
-      <a href={`${cleanBase}mesas-de-ayuda`} class="btn btn-sm gap-2">
-        <Icon name="boxicons:arrow-left-filled" size={16} />
-        Volver al listado
-      </a>
-    </div>
+<FormShell
+  backHref={`${cleanBase}mesas-de-ayuda`}
+  backLabel="Mesas de ayuda"
+  title={pageTitle}
+  subtitle="Modifica la metadata local vinculada a esta mesa de ayuda de InvGate."
+>
+  <script is:inline define:vars={{ errorMsg }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, "alert-error"),
+      );
+    }
+  </script>
 
-    <PageHeader
-      title={pageTitle}
-      description="Modifica la metadata local vinculada a esta mesa de ayuda de InvGate."
-    />
+  <div class="bg-base-200/50 border-base-300 rounded-lg border p-4">
+    <p
+      class="text-base-content/70 mb-2 flex items-center gap-1 text-sm font-bold"
+    >
+      <Icon name="boxicons:git-merge-filled" size={16} />
+      Mesas SM vinculadas
+    </p>
+
+    <div id="linked-sm-list" class="mb-3 flex flex-wrap gap-2">
+      {
+        linkedRecords.length > 0 ? (
+          linkedRecords.map((rec) => (
+            <div
+              class="badge badge-neutral gap-2 py-4 pr-2 pl-3"
+              data-linked-id={rec.id}
+            >
+              <Icon name="boxicons:server-filled" size={16} class="shrink-0" />
+              <span>{displayNameOf(rec)}</span>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs btn-circle unlink-btn"
+                data-record-id={rec.id}
+              >
+                <Icon name="boxicons:x-filled" size={16} />
+              </button>
+            </div>
+          ))
+        ) : (
+          <p
+            id="empty-linked-message"
+            class="text-base-content/40 text-sm italic"
+          >
+            Sin mesas SM vinculadas a esta helpdesk.
+          </p>
+        )
+      }
+    </div>
 
     <div
-      class="bg-base-100 border-base-200 rounded-2xl border p-6 shadow-sm md:p-8"
+      id="assign-chain"
+      data-invgate-id={invgateId}
+      data-unassigned={unassignedJson}
+      data-linked={linkedJson}
     >
-      <script is:inline define:vars={{ errorMsg }}>
-        if (errorMsg) {
-          window.addEventListener("load", () =>
-            window.showToast?.(errorMsg, "alert-error"),
-          );
-        }
-      </script>
-
-      <form method="POST" class="flex flex-col gap-6">
-        <div class="bg-base-200/50 border-base-300 rounded-lg border p-4">
-          <p
-            class="text-base-content/70 mb-2 flex items-center gap-1 text-sm font-bold"
-          >
-            <Icon name="boxicons:git-merge-filled" size={16} />
-            Mesas SM vinculadas
-          </p>
-
-          <div id="linked-sm-list" class="mb-3 flex flex-wrap gap-2">
-            {
-              linkedRecords.length > 0 ? (
-                linkedRecords.map((rec) => (
-                  <div
-                    class="badge badge-neutral gap-2 py-4 pr-2 pl-3"
-                    data-linked-id={rec.id}
-                  >
-                    <Icon name="boxicons:server-filled" size={16} class="shrink-0" />
-                    <span>{displayNameOf(rec)}</span>
-                    <button
-                      type="button"
-                      class="btn btn-ghost btn-xs btn-circle unlink-btn"
-                      data-record-id={rec.id}
-                    >
-                      <Icon name="boxicons:x-filled" size={16} />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p
-                  id="empty-linked-message"
-                  class="text-base-content/40 text-sm italic"
-                >
-                  Sin mesas SM vinculadas a esta helpdesk.
-                </p>
-              )
-            }
+      {
+        unassignedRecords.length > 0 && (
+          <div class="assign-row flex items-center gap-2">
+            <select class="select select-bordered assign-select flex-1">
+              <option value="">Seleccionar mesa SM...</option>
+              {unassignedRecords.map((rec) => (
+                <option value={rec.id}>
+                  {rec.legacyName || `Registro #${rec.id}`}
+                </option>
+              ))}
+            </select>
+            <button type="button" class="btn btn-primary assign-btn">
+              Vincular
+            </button>
           </div>
-
-          <div
-            id="assign-chain"
-            data-invgate-id={invgateId}
-            data-unassigned={unassignedJson}
-            data-linked={linkedJson}
-          >
-            {
-              unassignedRecords.length > 0 && (
-                <div class="assign-row flex items-center gap-2">
-                  <select class="select select-bordered assign-select flex-1">
-                    <option value="">Seleccionar mesa SM...</option>
-                    {unassignedRecords.map((rec) => (
-                      <option value={rec.id}>
-                        {rec.legacyName || `Registro #${rec.id}`}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" class="btn btn-primary assign-btn">
-                    Vincular
-                  </button>
-                </div>
-              )
-            }
-          </div>
-          <p class="text-base-content/40 mt-2 flex items-center gap-1 text-xs">
-            <Icon name="boxicons:info-circle-filled" size={12} />
-            Selecciona una mesa SM y haz clic en Vincular para asociarla.
-          </p>
-        </div>
-
-        <SectionCard
-          title="Metadata de derivación"
-          icon="boxicons:tag-filled"
-          class="shadow-md"
-        >
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <MultiSelectField
-              id="categories"
-              name="categories"
-              label="Categorías de derivación"
-              options={categoryOptions}
-              selected={selectedCategories}
-              placeholder="Escribí al menos 3 letras…"
-              helpText="Categorías finales de InvGate (sin subcategorías). Buscá con 3+ letras."
-            />
-
-            <TagInputField
-              id="topics"
-              name="topics"
-              label="Tópicos"
-              tags={topicTags}
-              helpText="Escribí un tópico y presioná Enter para agregarlo."
-            />
-          </div>
-
-          <FormTextarea
-            id="notes"
-            name="notes"
-            label="Notas"
-            rows={4}
-            value={first?.notes || ""}
-          />
-        </SectionCard>
-
-        <div class="border-base-200 mt-4 flex justify-end gap-3 border-t pt-6">
-          <a href={`${cleanBase}mesas-de-ayuda`} class="btn btn-ghost">
-            Cancelar
-          </a>
-          <button type="submit" class="btn btn-primary">
-            <Icon name="boxicons:save-filled" size={20} />
-            Guardar Cambios
-          </button>
-        </div>
-      </form>
+        )
+      }
     </div>
-  </PageContainer>
-</BaseLayout>
+    <p class="text-base-content/40 mt-2 flex items-center gap-1 text-xs">
+      <Icon name="boxicons:info-circle-filled" size={12} />
+      Selecciona una mesa SM y haz clic en Vincular para asociarla.
+    </p>
+  </div>
+
+  <SectionCard
+    title="Metadata de derivación"
+    icon="boxicons:tag-filled"
+    class="shadow-md"
+  >
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <MultiSelectField
+        id="categories"
+        name="categories"
+        label="Categorías de derivación"
+        options={categoryOptions}
+        selected={selectedCategories}
+        placeholder="Escribí al menos 3 letras…"
+        helpText="Categorías finales de InvGate (sin subcategorías). Buscá con 3+ letras."
+      />
+
+      <TagInputField
+        id="topics"
+        name="topics"
+        label="Tópicos"
+        tags={topicTags}
+        helpText="Escribí un tópico y presioná Enter para agregarlo."
+      />
+    </div>
+
+    <FormTextarea
+      id="notes"
+      name="notes"
+      label="Notas"
+      rows={4}
+      value={first?.notes || ""}
+    />
+  </SectionCard>
+</FormShell>
 
 <template id="linked-sm-chip-tpl">
   <div class="badge badge-neutral gap-2 py-4 pr-2 pl-3" data-linked-id="">
