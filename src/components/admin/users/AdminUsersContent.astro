@@ -223,25 +223,25 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                           inputClass="input-sm"
                         />
                         <div class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3">
-                          <button
-                            type="submit"
-                            class="btn btn-secondary btn-sm gap-1"
-                          >
-                            <Icon name="boxicons:check-filled" size={14} />
-                            Guardar
-                          </button>
-                          <button
+                          <ActionCancelButton
                             type="button"
-                            class="btn btn-ghost btn-sm"
+                            label="Cancelar"
+                            icon="boxicons:x-filled"
+                            size="sm"
+                            variant="error"
                             onclick="this.closest('dialog').close()"
-                          >
-                            Cancelar
-                          </button>
+                          />
+                          <ActionConfirmButton
+                            type="submit"
+                            color="btn-secondary"
+                            label="Guardar"
+                            icon="boxicons:check-filled"
+                            size="sm"
+                          />
                         </div>
                       </form>
                     </Fragment>
                   </Modal>
-
                   <Modal id={`modal-reset-${u.id}`}>
                     <Fragment slot="content">
                       <h3 class="text-base-content mb-1 text-base font-semibold">
