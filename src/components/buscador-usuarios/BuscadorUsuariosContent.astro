@@ -270,7 +270,6 @@ const userRole = Astro.locals.user?.role || "";
   const saveEditBtn = document.getElementById(
     "save-edit-btn",
   ) as HTMLButtonElement | null;
-  const saveBtnSpinner = document.getElementById("save-btn-spinner");
 
   // Referencias del modal de terminal (net user)
   const terminalModal = document.getElementById("terminal-modal") as any;
@@ -1122,21 +1121,17 @@ const userRole = Astro.locals.user?.role || "";
 
   editForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (
-      !editDni ||
-      !editInterno ||
-      !editTelefono ||
-      !saveEditBtn ||
-      !saveBtnSpinner
-    )
-      return;
+    if (!editDni || !editInterno || !editTelefono || !saveEditBtn) return;
 
     const dni = editDni.value;
     const interno = editInterno.value.trim();
     const telefono = editTelefono.value.trim();
 
     saveEditBtn.disabled = true;
-    saveBtnSpinner.classList.remove("hidden");
+    saveEditBtn.insertAdjacentHTML(
+      "afterbegin",
+      '<span class="loading loading-spinner loading-xs" data-save-spinner></span>',
+    );
 
     try {
       const url = `/api/usuarios/${dni}`;
@@ -1183,7 +1178,7 @@ const userRole = Astro.locals.user?.role || "";
       alert(err.message || "Error al conectar con la base de datos.");
     } finally {
       saveEditBtn.disabled = false;
-      saveBtnSpinner.classList.add("hidden");
+      saveEditBtn.querySelector("[data-save-spinner]")?.remove();
     }
   });
 

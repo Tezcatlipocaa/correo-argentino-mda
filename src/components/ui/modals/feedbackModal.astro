@@ -95,45 +95,30 @@ const user = Astro.locals.user || { username: "Invitado" };
 
     {/* Formulario de Reportar Bug */}
     <form id="bug-form" class="hidden space-y-4">
-      <div class="form-control w-full">
-        <label
-          class="label text-xxs text-base-content/60 py-1 font-semibold uppercase"
-          >Asunto</label
-        >
-        <input
-          type="text"
-          id="bug-asunto"
-          placeholder="Ej: El buscador no funciona"
-          class="input input-bordered w-full rounded-md text-sm"
-          required
-        />
-      </div>
+      <FormField
+        id="bug-asunto"
+        name="bug-asunto"
+        label="Asunto"
+        placeholder="Ej: El buscador no funciona"
+        inputClass="text-sm"
+        required
+      />
 
-      <div class="form-control w-full">
-        <label
-          class="label text-xxs text-base-content/60 py-1 font-semibold uppercase"
-          >Área o Categoría</label
-        >
-        <select
-          id="bug-categoria"
-          class="select select-bordered w-full rounded-md text-sm"
-          required
-        >
-          <option value="" disabled selected>Selecciona una opción</option>
-          <option value="cronograma">Cronograma</option>
-          <option value="asistencia">Asistencia</option>
-          <option value="calidad">Calidad</option>
-          <option value="autogesitones">Autogestiones</option>
-          <option value="titulos">Títulos</option>
-          <option value="mesas-de-ayuda">Mesas de Ayuda</option>
-          <option value="buscador-usuarios">Buscador de Usuarios</option>
-          <option value="contactos">Contactos</option>
-          <option value="enlaces">Enlaces/Recursos</option>
-          <option value="oficinas">Oficinas</option>
-          <option value="inventario">Inventario de Terminales</option>
-          <option value="otros">Otros</option>
-        </select>
-      </div>
+      <SelectField id="bug-categoria" name="bug-categoria" label="Área o Categoría" required>
+        <option value="" disabled selected>Selecciona una opción</option>
+        <option value="cronograma">Cronograma</option>
+        <option value="asistencia">Asistencia</option>
+        <option value="calidad">Calidad</option>
+        <option value="autogesitones">Autogestiones</option>
+        <option value="titulos">Títulos</option>
+        <option value="mesas-de-ayuda">Mesas de Ayuda</option>
+        <option value="buscador-usuarios">Buscador de Usuarios</option>
+        <option value="contactos">Contactos</option>
+        <option value="enlaces">Enlaces/Recursos</option>
+        <option value="oficinas">Oficinas</option>
+        <option value="inventario">Inventario de Terminales</option>
+        <option value="otros">Otros</option>
+      </SelectField>
 
       <SelectField
         id="bug-gravedad"
@@ -180,7 +165,6 @@ const user = Astro.locals.user || { username: "Invitado" };
       <div class="flex gap-2">
         <ActionCancelButton
           type="button"
-          class="rounded-md"
           size="sm"
           variant="error"
           icon="boxicons:x-filled"
@@ -191,7 +175,6 @@ const user = Astro.locals.user || { username: "Invitado" };
           type="submit"
           id="btn-submit-sugerencia"
           color="btn-primary"
-          class="rounded-md"
           size="sm"
           form="suggestion-form"
           label="Enviar sugerencia"
@@ -201,7 +184,7 @@ const user = Astro.locals.user || { username: "Invitado" };
           type="submit"
           id="btn-submit-bug"
           color="btn-primary"
-          class="hidden rounded-md"
+          class="hidden"
           size="sm"
           form="bug-form"
           label="Reportar bug"

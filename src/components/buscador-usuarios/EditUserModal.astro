@@ -2,6 +2,7 @@
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 ---
 
 <Modal
@@ -58,24 +59,24 @@ import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
     </form>
   </Fragment>
   <Fragment slot="actions">
-    <ActionCancelButton
-      type="button"
-      id="close-edit-modal-btn"
-      label="Cancelar"
-      icon="boxicons:x-filled"
-      size="sm"
-      variant="error"
-    />
-    <button
-      type="submit"
-      form="edit-user-form"
-      class="btn btn-primary cursor-pointer gap-2 shadow-md"
-      id="save-edit-btn"
-    >
-      <span
-        id="save-btn-spinner"
-        class="loading loading-spinner loading-xs hidden"></span>
-      Guardar Cambios
-    </button>
+    <div class="modal-action mt-6 flex items-center justify-end gap-3">
+      <ActionCancelButton
+        type="button"
+        id="close-edit-modal-btn"
+        label="Cancelar"
+        icon="boxicons:x-filled"
+        size="sm"
+        variant="error"
+      />
+      <ActionConfirmButton
+        type="submit"
+        id="save-edit-btn"
+        form="edit-user-form"
+        color="btn-primary"
+        label="Guardar Cambios"
+        icon="boxicons:save-filled"
+        size="sm"
+      />
+    </div>
   </Fragment>
 </Modal>

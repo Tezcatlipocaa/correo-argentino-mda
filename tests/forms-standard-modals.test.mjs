@@ -11,6 +11,8 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.match(src, /icon="boxicons:x-filled"/, "DeleteCategory: cancelar x-filled");
   assert.match(src, /boxicons:trash-filled/, "DeleteCategory: confirmar trash-filled");
   assert.doesNotMatch(src, /boxicons:trash"/, "DeleteCategory: sin trash no-filled");
+  assert.match(src, /gap-3 sm:flex-row/, "DeleteCategory: gap-3 como FormShell");
+  assert.doesNotMatch(src, /sm:ml-2/, "DeleteCategory: sin margen extra entre botones");
   assert.ok(
     src.indexOf("ActionCancelButton") < src.indexOf("ActionConfirmButton"),
     "DeleteCategory: Cancelar antes de Confirmar",
@@ -26,6 +28,9 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.doesNotMatch(src, /name="boxicons:bug"/, "feedback: bug filled");
   assert.doesNotMatch(src, /name="boxicons:light-bulb-on"/, "feedback: light-bulb filled");
   assert.match(src, /boxicons:send-filled/, "feedback: submits con send-filled");
+  assert.doesNotMatch(src, /class="rounded-md"/, "feedback: sin rounded-md custom");
+  assert.match(src, /FormField\s+id="bug-asunto"/, "feedback: bug-asunto con FormField");
+  assert.match(src, /SelectField\s+id="bug-categoria"/, "feedback: bug-categoria con SelectField");
 }
 
 // ── EditUserModal ──
@@ -37,7 +42,10 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.match(src, /icon="boxicons:x-filled"/, "EditUser: cancelar x-filled");
   assert.ok(src.includes('id="close-edit-modal-btn"'), "EditUser: id cancelar preservado");
   assert.ok(src.includes('id="save-edit-btn"'), "EditUser: id guardar preservado");
-  assert.ok(src.includes("save-btn-spinner"), "EditUser: spinner preservado");
+  assert.match(src, /ActionConfirmButton/, "EditUser: guardar con ActionConfirmButton");
+  assert.match(src, /icon="boxicons:save-filled"/, "EditUser: guardar save-filled");
+  assert.match(src, /modal-action mt-6 flex items-center justify-end gap-3/, "EditUser: barra abajo-derecha gap-3");
+  assert.doesNotMatch(src, /save-btn-spinner/, "EditUser: sin spinner fijo (JS inyectado)");
 }
 
 // ── OperatorFormModal ──
