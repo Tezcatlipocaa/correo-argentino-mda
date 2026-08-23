@@ -13,7 +13,7 @@ Todo formulario de edición/creación de esta rama debe usar el componente
 4. **Íconos**: usar siempre la variante **`-filled`** cuando exista
    (`boxicons:building-house-filled`, `boxicons:save-filled`, etc.).
 5. **Barra de acciones** (parte de `FormShell`, abajo-derecha, sticky):
-   - Botón **Cancelar / Volver**: `ActionCancelButton` (variante `btn-soft`),
+   - Botón **Cancelar / Volver**: `ActionCancelButton` (estilo `btn-soft`, integrado por defecto),
      `href` = listado.
    - Botón **Guardar cambios** (o "Crear …"): `ActionConfirmButton`,
      `type="submit"`.
