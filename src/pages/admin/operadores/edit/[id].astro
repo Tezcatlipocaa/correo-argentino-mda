@@ -2,9 +2,6 @@
 import { db } from "@db/index";
 import { agents, workLocations, schedules } from "@db/schema";
 import { eq } from "drizzle-orm";
-import BaseLayout from "@layouts/BaseLayout.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import { Icon } from "astro-icon/components";
@@ -12,11 +9,10 @@ import { getDisponibilidadHoy } from "@lib/disponibilidad";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
+import FormShell from "@components/ui/FormShell.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { toastResponse } from "@lib/api/toastResponse";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 const { id } = Astro.params;
 
@@ -263,223 +259,178 @@ for (const day of daysOfWeek) {
 const pageTitle = `Editar: ${operator!.name}`;
 ---
 
-<BaseLayout title={pageTitle}>
-  <PageContainer>
-    <div class="text-base-content/60 flex items-center gap-2 text-sm">
-      <a
-        href={resolveUrl("/admin/operadores")}
-        class="hover:text-base-content flex items-center gap-1.5 transition-colors"
+<FormShell
+  backHref={resolveUrl("/admin/operadores")}
+  title={pageTitle}
+  subtitle={`ID de base de datos: ${operator!.id}`}
+  formId="operator-form"
+  async
+  saveLabel="Guardar cambios"
+  cancelLabel="Volver al listado"
+>
+  <script is:inline define:vars={{ errorMsg }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, "alert-error"),
+      );
+    }
+  </script>
+
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
       >
-        <Icon name="boxicons:chevron-left" size={16} />
-        Gestión de operadores
-      </a>
-      <span>/</span>
-      <span class="text-base-content truncate font-medium">{pageTitle}</span>
-    </div>
+        <Icon name="boxicons:user-id-card-filled" size={15} />
+      </span>
+      Datos del operador
+    </h2>
 
-    <PageHeader
-      title={pageTitle}
-      description={`ID de base de datos: ${operator!.id}`}
-    />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <FormField
+        id="input-id"
+        name="id"
+        label="ID de usuario"
+        required
+        value={operator?.username ?? ""}
+        placeholder="ej: jperez"
+        autocomplete="off"
+        readonly
+        inputClass="input-sm font-mono input-disabled bg-base-200 cursor-not-allowed"
+      />
 
-    <script is:inline define:vars={{ errorMsg }}>
-      if (errorMsg) {
-        window.addEventListener("load", () =>
-          window.showToast?.(errorMsg, "alert-error"),
-        );
-      }
-    </script>
+      <FormField
+        id="input-name"
+        name="name"
+        label="Nombre completo"
+        required
+        value={operator?.name ?? ""}
+        placeholder="ej: Juan Pérez"
+        autocomplete="off"
+        inputClass="input-sm"
+      />
 
-    <form method="POST" id="operator-form" class="space-y-4" data-async-form>
-      <SectionCard class="shadow-md">
-        <h2
-          class="text-base-content flex items-center gap-2 text-sm font-semibold"
-        >
-          <span
-            class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-          >
-            <Icon name="boxicons:user-id-card-filled" size={15} />
-          </span>
-          Datos del operador
-        </h2>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <FormField
-            id="input-id"
-            name="id"
-            label="ID de usuario"
-            required
-            value={operator?.username ?? ""}
-            placeholder="ej: jperez"
-            autocomplete="off"
-            readonly
-            inputClass="input-sm font-mono input-disabled bg-base-200 cursor-not-allowed"
-          />
-
-          <FormField
-            id="input-name"
-            name="name"
-            label="Nombre completo"
-            required
-            value={operator?.name ?? ""}
-            placeholder="ej: Juan Pérez"
-            autocomplete="off"
-            inputClass="input-sm"
-          />
-
-          <SelectField
-            id="select-locationId"
-            name="locationId"
-            label="Ubicación presencial"
-            selectClass="select-sm"
-          >
-            <option value="" selected={!operator?.locationId}>
-              Sin asignar
+      <SelectField
+        id="select-locationId"
+        name="locationId"
+        label="Ubicación presencial"
+        selectClass="select-sm"
+      >
+        <option value="" selected={!operator?.locationId}> Sin asignar </option>
+        {
+          allLocations.map((loc) => (
+            <option value={loc.id} selected={operator?.locationId === loc.id}>
+              {loc.name}
             </option>
-            {
-              allLocations.map((loc) => (
-                <option
-                  value={loc.id}
-                  selected={operator?.locationId === loc.id}
-                >
-                  {loc.name}
-                </option>
-              ))
-            }
-          </SelectField>
+          ))
+        }
+      </SelectField>
 
-          <FormField
-            id="input-status"
-            name="status"
-            label="Estado"
-            readonly
-            value={operator?.status === "disponible"
-              ? "Activo (en servicio)"
-              : "No disponible / Excepción"}
-            inputClass="input-sm input-disabled bg-base-200 cursor-not-allowed"
-            helpText="El estado de disponibilidad se calcula automáticamente basado en la matriz de horarios y Cronograma."
-          />
-        </div>
-      </SectionCard>
+      <FormField
+        id="input-status"
+        name="status"
+        label="Estado"
+        readonly
+        value={operator?.status === "disponible"
+          ? "Activo (en servicio)"
+          : "No disponible / Excepción"}
+        inputClass="input-sm input-disabled bg-base-200 cursor-not-allowed"
+        helpText="El estado de disponibilidad se calcula automáticamente basado en la matriz de horarios y Cronograma."
+      />
+    </div>
+  </SectionCard>
 
-      <SectionCard class="shadow-md">
-        <h2
-          class="text-base-content flex items-center gap-2 text-sm font-semibold"
-        >
-          <span
-            class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-          >
-            <Icon name="boxicons:calendar" size={15} />
-          </span>
-          Matriz de Horarios (Esquema Semanal)
-        </h2>
-        <div class="space-y-2">
-          {
-            daysOfWeek.map((day) => (
-              <div class="collapse-arrow border-base-300 bg-base-100 rounded-box collapse border">
-                <input type="checkbox" />
-                <div class="collapse-title text-sm font-medium">{day}</div>
-                <div class="collapse-content">
-                  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div class="space-y-3">
-                      <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
-                        <span>🏠</span> Home Office
-                      </h3>
-                      <div class="grid grid-cols-3 gap-2">
-                        <FormField
-                          id={`home_${day}_start`}
-                          type="time"
-                          name={`home_${day}_start`}
-                          label="Entrada"
-                          value={
-                            operatorSchedulesData[day]?.home?.shiftStart || ""
-                          }
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`home_${day}_end`}
-                          type="time"
-                          name={`home_${day}_end`}
-                          label="Salida"
-                          value={
-                            operatorSchedulesData[day]?.home?.shiftEnd || ""
-                          }
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`home_${day}_break`}
-                          type="time"
-                          name={`home_${day}_break`}
-                          label="Break"
-                          value={
-                            operatorSchedulesData[day]?.home?.breakTime || ""
-                          }
-                          inputClass="input-sm"
-                        />
-                      </div>
-                    </div>
-                    <div class="space-y-3">
-                      <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
-                        <span>🏢</span> Presencial
-                      </h3>
-                      <div class="grid grid-cols-3 gap-2">
-                        <FormField
-                          id={`presencial_${day}_start`}
-                          type="time"
-                          name={`presencial_${day}_start`}
-                          label="Entrada"
-                          value={
-                            operatorSchedulesData[day]?.presencial
-                              ?.shiftStart || ""
-                          }
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`presencial_${day}_end`}
-                          type="time"
-                          name={`presencial_${day}_end`}
-                          label="Salida"
-                          value={
-                            operatorSchedulesData[day]?.presencial?.shiftEnd ||
-                            ""
-                          }
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`presencial_${day}_break`}
-                          type="time"
-                          name={`presencial_${day}_break`}
-                          label="Break"
-                          value={
-                            operatorSchedulesData[day]?.presencial?.breakTime ||
-                            ""
-                          }
-                          inputClass="input-sm"
-                        />
-                      </div>
-                    </div>
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+      >
+        <Icon name="boxicons:calendar" size={15} />
+      </span>
+      Matriz de Horarios (Esquema Semanal)
+    </h2>
+    <div class="space-y-2">
+      {
+        daysOfWeek.map((day) => (
+          <div class="collapse-arrow border-base-300 bg-base-100 rounded-box collapse border">
+            <input type="checkbox" />
+            <div class="collapse-title text-sm font-medium">{day}</div>
+            <div class="collapse-content">
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="space-y-3">
+                  <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
+                    <span>🏠</span> Home Office
+                  </h3>
+                  <div class="grid grid-cols-3 gap-2">
+                    <FormField
+                      id={`home_${day}_start`}
+                      type="time"
+                      name={`home_${day}_start`}
+                      label="Entrada"
+                      value={operatorSchedulesData[day]?.home?.shiftStart || ""}
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`home_${day}_end`}
+                      type="time"
+                      name={`home_${day}_end`}
+                      label="Salida"
+                      value={operatorSchedulesData[day]?.home?.shiftEnd || ""}
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`home_${day}_break`}
+                      type="time"
+                      name={`home_${day}_break`}
+                      label="Break"
+                      value={operatorSchedulesData[day]?.home?.breakTime || ""}
+                      inputClass="input-sm"
+                    />
+                  </div>
+                </div>
+                <div class="space-y-3">
+                  <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
+                    <span>🏢</span> Presencial
+                  </h3>
+                  <div class="grid grid-cols-3 gap-2">
+                    <FormField
+                      id={`presencial_${day}_start`}
+                      type="time"
+                      name={`presencial_${day}_start`}
+                      label="Entrada"
+                      value={
+                        operatorSchedulesData[day]?.presencial?.shiftStart || ""
+                      }
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`presencial_${day}_end`}
+                      type="time"
+                      name={`presencial_${day}_end`}
+                      label="Salida"
+                      value={
+                        operatorSchedulesData[day]?.presencial?.shiftEnd || ""
+                      }
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`presencial_${day}_break`}
+                      type="time"
+                      name={`presencial_${day}_break`}
+                      label="Break"
+                      value={
+                        operatorSchedulesData[day]?.presencial?.breakTime || ""
+                      }
+                      inputClass="input-sm"
+                    />
                   </div>
                 </div>
               </div>
-            ))
-          }
-        </div>
-      </SectionCard>
-
-      <div class="flex items-center justify-between gap-3 pt-1">
-        <ActionCancelButton
-          href={resolveUrl("/admin/operadores")}
-          label="Volver al listado"
-          icon="boxicons:arrow-left-filled"
-        />
-        <ActionConfirmButton
-          type="submit"
-          color="btn-primary"
-          label="Guardar cambios"
-          icon="boxicons:save-filled"
-        />
-      </div>
-    </form>
-  </PageContainer>
-  <AsyncFormScript />
-</BaseLayout>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </SectionCard>
+</FormShell>
+<AsyncFormScript />
