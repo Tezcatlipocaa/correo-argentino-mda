@@ -53,26 +53,16 @@ const linkedRecords = await db.query.supportGuides.findMany({
   where: eq(supportGuides.invgate_id, invgateId),
 });
 
-const subLevels = allItems
-  .filter((h) => h.parent_id === invgateId && h.level_order !== undefined)
-  .sort((a, b) => (a.level_order ?? 0) - (b.level_order ?? 0));
-
-const levelColors = [
-  "badge-accent badge-soft",
-  "badge-info badge-soft",
-  "badge-success badge-soft",
-  "badge-warning badge-soft",
-];
-
-const linkedJson = JSON.stringify(
-  linkedRecords.map((r) => ({
-    id: r.id,
-    helpDeskName: r.legacyName || `Registro #${r.id}`,
-    legacyName: r.legacyName,
-  })),
-);
+const displayNameOf = (r: { id: number; legacyName: string | null }) =>
+  r.legacyName || `Registro #${r.id}`;
+const byDisplayName = (
+  a: { id: number; legacyName: string | null },
+  b: { id: number; legacyName: string | null },
+) => displayNameOf(a).localeCompare(displayNameOf(b), "es", { sensitivity: "base" });
 
 const first = linkedRecords[0];
+
+linkedRecords.sort(byDisplayName);
 
 const selectedCategories = parseCategoryIds(first?.categories).map(String);
 const topicTags = parseTopics(first?.topics);
@@ -81,10 +71,20 @@ const unassignedRecords = await db.query.supportGuides.findMany({
   where: isNull(supportGuides.invgate_id),
 });
 
+unassignedRecords.sort(byDisplayName);
+
+const linkedJson = JSON.stringify(
+  linkedRecords.map((r) => ({
+    id: r.id,
+    helpDeskName: displayNameOf(r),
+    legacyName: r.legacyName,
+  })),
+);
+
 const unassignedJson = JSON.stringify(
   unassignedRecords.map((r) => ({
     id: r.id,
-    helpDeskName: r.legacyName || `Registro #${r.id}`,
+    helpDeskName: displayNameOf(r),
     legacyName: r.legacyName,
   })),
 );
@@ -173,77 +173,6 @@ const pageTitle = `Editar: ${hdName}`;
       </script>
 
       <form method="POST" class="flex flex-col gap-6">
-        {
-          linkedHd && (
-            <div class="bg-base-200/40 border-base-300 flex flex-col gap-4 rounded-xl border p-5">
-              <div class="border-base-300 flex flex-col justify-between gap-4 border-b pb-4 md:flex-row md:items-center">
-                <div>
-                  <h3 class="text-base-content flex items-center gap-2 text-lg font-bold">
-                    <Icon name="boxicons:info-circle" size={20} />
-                    Mesa de ayuda InvGate: {linkedHd.name}
-                  </h3>
-                  <p class="text-base-content/70 mt-1 text-sm">
-                    Información del helpdesk sincronizada desde InvGate.
-                  </p>
-                </div>
-                <div class="stats bg-base-100 border-base-200 border shadow-sm">
-                  <div class="stat px-4 py-2">
-                    <div class="stat-title text-xs">Total miembros</div>
-                    <div class="stat-value text-xl font-bold">
-                      {linkedHd.total_members}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {subLevels.length > 0 && (
-                <div>
-                  <h4 class="text-base-content/70 mb-2 flex items-center gap-1.5 text-sm font-semibold">
-                    <Icon name="boxicons:git-repo-forked" size={16} />
-                    Sub-niveles vinculados
-                  </h4>
-                  <div class="flex flex-wrap gap-2">
-                    {subLevels.map((level, idx) => {
-                      const colorClass = levelColors[idx % levelColors.length];
-                      return (
-                        <span class={`badge ${colorClass} gap-1 p-3`}>
-                          <span class="font-medium">
-                            {level.name || `Nivel ${level.level_order}`}
-                          </span>
-                          <span class="opacity-70">
-                            ({level.total_members} miembros)
-                          </span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <h4 class="text-base-content/70 mb-2 flex items-center gap-1.5 text-sm font-semibold">
-                  <Icon name="boxicons:group-filled" size={16} />
-                  Lista de miembros
-                </h4>
-                <div
-                  id="members-loader"
-                  class="text-base-content/50 flex items-center gap-2 py-2 text-sm"
-                >
-                  <span class="loading loading-spinner loading-xs" />
-                  Cargando miembros...
-                </div>
-                <ul
-                  id="members-list"
-                  class="grid list-disc grid-cols-1 gap-x-6 gap-y-1.5 pl-5 text-sm md:grid-cols-2"
-                />
-                <div id="members-error" class="text-error hidden text-sm">
-                  Error al cargar la lista de miembros.
-                </div>
-              </div>
-            </div>
-          )
-        }
-
         <div class="bg-base-200/50 border-base-300 rounded-lg border p-4">
           <p
             class="text-base-content/70 mb-2 flex items-center gap-1 text-sm font-bold"
@@ -260,7 +189,8 @@ const pageTitle = `Editar: ${hdName}`;
                     class="badge badge-neutral gap-2 py-4 pr-2 pl-3"
                     data-linked-id={rec.id}
                   >
-                    <span>{rec.legacyName || `Registro #${rec.id}`}</span>
+                    <Icon name="boxicons:server" size={16} class="shrink-0" />
+                    <span>{displayNameOf(rec)}</span>
                     <button
                       type="button"
                       class="btn btn-ghost btn-xs btn-circle unlink-btn"
@@ -358,8 +288,45 @@ const pageTitle = `Editar: ${hdName}`;
   </PageContainer>
 </BaseLayout>
 
-<template id="x-icon-template">
-  <Icon name="boxicons:x" size={16} />
+<template id="linked-sm-chip-tpl">
+  <div class="badge badge-neutral gap-2 py-4 pr-2 pl-3" data-linked-id="">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      data-icon="boxicons:server"
+      class="shrink-0"
+    >
+      <path
+        fill="currentColor"
+        d="M20 13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2M4 19v-4h16v4z"></path>
+      <path
+        fill="currentColor"
+        d="M17 16h2v2h-2zm-3 0h2v2h-2zm6-13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2M4 9V5h16v4z"></path>
+      <path
+        fill="currentColor"
+        d="M17 6h2v2h-2zm-3 0h2v2h-2z"></path>
+    </svg>
+    <span data-chip-label></span>
+    <button
+      type="button"
+      class="btn btn-ghost btn-xs btn-circle unlink-btn"
+      data-record-id=""
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        data-icon="boxicons:x"
+      >
+        <path
+          fill="currentColor"
+          d="m7.76 14.83l-2.83 2.83l1.41 1.41l2.83-2.83l2.12-2.12l.71-.71l.71.71l1.41 1.42l3.54 3.53l1.41-1.41l-3.53-3.54l-1.42-1.41l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12l-.71.71z"></path>
+      </svg>
+    </button>
+  </div>
 </template>
 
 <script>
@@ -388,34 +355,7 @@ const pageTitle = `Editar: ${hdName}`;
   } catch {}
 
   const list = document.getElementById("linked-sm-list");
-
-  const membersLoader = document.getElementById("members-loader");
-  const membersList = document.getElementById("members-list");
-  const membersError = document.getElementById("members-error");
-
-  if (membersLoader && membersList && membersError) {
-    fetch(`${cleanBase}api/invgate/helpdesk-members?invgate_id=${invgateId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then((data) => {
-        membersLoader.classList.add("hidden");
-        if (data.members && data.members.length > 0) {
-          membersList.innerHTML = data.members
-            .map((m: string) => `<li>${m}</li>`)
-            .join("");
-          membersList.classList.remove("hidden");
-        } else {
-          membersLoader.textContent = "No hay miembros registrados.";
-          membersLoader.classList.remove("hidden");
-        }
-      })
-      .catch(() => {
-        membersLoader.classList.add("hidden");
-        membersError.classList.remove("hidden");
-      });
-  }
+  const chipTpl = document.getElementById("linked-sm-chip-tpl");
 
   function updateAssignChainUI() {
     if (!chain) return;
@@ -456,8 +396,7 @@ const pageTitle = `Editar: ${hdName}`;
     }
   }
 
-  function handleAssign() {
-    const select = chain?.querySelector<HTMLSelectElement>(".assign-select");
+  function handleAssign() {    const select = chain?.querySelector<HTMLSelectElement>(".assign-select");
     const btn = chain?.querySelector<HTMLButtonElement>(".assign-btn");
     const recordId = Number(select?.value);
     if (!recordId || !btn) return;
@@ -488,17 +427,19 @@ const pageTitle = `Editar: ${hdName}`;
             emptyMsg.remove();
           }
 
-          if (list) {
-            const xIconSvg =
-              document.getElementById("x-icon-template")?.innerHTML || "✕";
-            const chip = document.createElement("div");
-            chip.className = "badge badge-neutral gap-2 pl-3 pr-2 py-4";
-            chip.setAttribute("data-linked-id", item.id.toString());
-            chip.innerHTML = `
-              <span>${item.legacyName || "Registro #" + item.id}</span>
-              <button type="button" class="btn btn-ghost btn-xs btn-circle unlink-btn" data-record-id="${item.id}">${xIconSvg}</button>
-            `;
-            list.appendChild(chip);
+          if (list && chipTpl) {
+            const chip = chipTpl.content.firstElementChild?.cloneNode(true) as
+              | HTMLElement
+              | undefined;
+            if (chip) {
+              chip.setAttribute("data-linked-id", item.id.toString());
+              const label = chip.querySelector("[data-chip-label]");
+              if (label) label.textContent = item.helpDeskName;
+              const unlinkBtn = chip.querySelector(".unlink-btn");
+              if (unlinkBtn)
+                unlinkBtn.setAttribute("data-record-id", item.id.toString());
+              list.appendChild(chip);
+            }
           }
         }
 
