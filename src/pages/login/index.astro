@@ -3,7 +3,7 @@ import { db } from "@db/index";
 import { users, sessions } from "@db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import PublicLayout from "@layouts/PublicLayout.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
 import {
   generateSessionId,
   signSessionId,
@@ -66,7 +66,7 @@ if (Astro.request.method === "POST") {
 }
 ---
 
-<PublicLayout title="Iniciar sesión">
+<BaseLayout title="Iniciar sesión">
   <div class="flex min-h-[80vh] items-center justify-center px-4">
     <div class="w-full max-w-sm">
       <div class="card bg-base-100 border-base-300 border shadow-md">
@@ -140,4 +140,4 @@ if (Astro.request.method === "POST") {
       </p>
     </div>
   </div>
-</PublicLayout>
+</BaseLayout>
