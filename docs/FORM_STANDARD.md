@@ -3,8 +3,9 @@
 Todo formulario de edición/creación de esta rama debe usar el componente
 `src/components/ui/FormShell.astro`. Reglas obligatorias:
 
-1. **Ancho de contenedor**: siempre `PageContainer` con `width="xxl"` (mismo ancho
-   para todos los editores). `FormShell` ya lo aplica.
+1. **Ancho de contenedor**: `PageContainer` con `width="xxl"` para editores
+   completos; los formularios chicos (≤4 campos) usan `containerWidth="2xl"`
+   (`max-w-2xl`, centrado). `FormShell` ya lo aplica vía prop `containerWidth`.
 2. **Sin breadcrumb**: la primera sección del formulario muestra solo el
    `PageHeader` (`<h1>` título + `description` subtítulo), igual que las demás
    secciones de página. No se usa breadcrumb de navegación.
