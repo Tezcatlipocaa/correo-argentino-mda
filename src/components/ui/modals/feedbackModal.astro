@@ -19,13 +19,13 @@ const user = Astro.locals.user || { username: "Invitado" };
       aria-label="Cerrar modal"
       data-close-feedback-modal
     >
-      <Icon name="boxicons:x" size={20} />
+      <Icon name="boxicons:x-filled" size={20} />
     </button>
 
     <h3
       class="text-base-content mb-4 flex items-center gap-2 text-lg font-bold"
     >
-      <Icon name="boxicons:mail-open" size={24} class="text-primary" />
+      <Icon name="boxicons:mail-open-filled" size={24} class="text-primary" />
       <span>Enviar Comentarios o Reportes</span>
     </h3>
 
@@ -38,7 +38,7 @@ const user = Astro.locals.user || { username: "Invitado" };
         id="tab-sugerencia"
         class="tab tab-active bg-base-100 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-semibold shadow-sm transition-all"
       >
-        <Icon name="boxicons:light-bulb-on" size={18} />
+        <Icon name="boxicons:light-bulb-filled" size={18} />
         <span>Sugerir Idea</span>
       </button>
       <button
@@ -46,7 +46,7 @@ const user = Astro.locals.user || { username: "Invitado" };
         id="tab-bug"
         class="tab text-base-content/60 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-all"
       >
-        <Icon name="boxicons:bug" size={18} />
+        <Icon name="boxicons:bug-filled" size={18} />
         <span>Reportar Bug</span>
       </button>
     </div>
@@ -181,6 +181,9 @@ const user = Astro.locals.user || { username: "Invitado" };
         <ActionCancelButton
           type="button"
           class="rounded-md"
+          size="sm"
+          variant="error"
+          icon="boxicons:x-filled"
           label="Cancelar"
           data-close-feedback-modal
         />
@@ -189,16 +192,20 @@ const user = Astro.locals.user || { username: "Invitado" };
           id="btn-submit-sugerencia"
           color="btn-primary"
           class="rounded-md"
+          size="sm"
           form="suggestion-form"
           label="Enviar sugerencia"
+          icon="boxicons:send-filled"
         />
         <ActionConfirmButton
           type="submit"
           id="btn-submit-bug"
           color="btn-primary"
           class="hidden rounded-md"
+          size="sm"
           form="bug-form"
           label="Reportar bug"
+          icon="boxicons:send-filled"
         />
       </div>
     </div>
