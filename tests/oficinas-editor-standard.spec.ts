@@ -7,6 +7,7 @@ import {
 } from "./helpers/auth";
 import { db } from "../src/db/index";
 import { offices } from "../src/db/schema";
+import { asc } from "drizzle-orm";
 
 let adminUser: TestUser;
 
@@ -15,7 +16,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await cleanupTestUser(adminUser.userId, adminUser.sessionId);
+  if (adminUser) await cleanupTestUser(adminUser.userId, adminUser.sessionId);
 });
 
 test.beforeEach(async ({ context }) => {
@@ -41,7 +42,7 @@ test("create: shell estándar sin sección de contactos", async ({ page }) => {
 
   // Botón guardar (submit) con label de create
   await expect(
-    page.locator("button[type='submit']"),
+    page.locator("form#office-form button[type='submit']"),
   ).toContainText("Crear sucursal");
 
   // Sin contactos
@@ -54,6 +55,7 @@ test("edicion: shell estándar sin sección de contactos", async ({ page }) => {
   const [office] = await db
     .select({ id: offices.id })
     .from(offices)
+    .orderBy(asc(offices.id))
     .limit(1);
   test.skip(!office, "Sin oficinas en la base de datos de prueba");
 
@@ -62,7 +64,7 @@ test("edicion: shell estándar sin sección de contactos", async ({ page }) => {
   await expect(page.locator("nav[aria-label='Breadcrumb']")).toHaveCount(0);
   await expect(page.locator("h1")).toContainText("Editar:");
   await expect(
-    page.locator("button[type='submit']"),
+    page.locator("form#office-form button[type='submit']"),
   ).toContainText("Guardar cambios");
 
   const cancel = page.locator("a.btn-soft.btn-error").first();
