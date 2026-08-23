@@ -46,6 +46,6 @@ export default defineConfig({
   integrations: [icon(), react()],
 
   adapter: node({
-    mode: "standalone",
+    mode: "middleware",
   }),
 });
