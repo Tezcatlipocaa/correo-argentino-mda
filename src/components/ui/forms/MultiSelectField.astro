@@ -75,13 +75,18 @@ const selectedSet = new Set(selected);
       autocomplete="off"
     />
     <ul
-      class="menu bg-base-100 border-base-300 absolute top-full z-50 mt-1 hidden max-h-48 w-full overflow-y-auto rounded-box border shadow-lg"
+      class="menu bg-base-100 border-base-300 absolute top-full z-50 mt-1 hidden w-full overflow-x-hidden overflow-y-auto rounded-box border shadow-lg"
       data-multiselect-list
       role="listbox"
     >
       {options.map((o) => (
         <li data-multiselect-option data-value={o.value} data-label={o.label} hidden>
-          <button type="button" role="option" data-value={o.value}>
+          <button
+            type="button"
+            role="option"
+            data-value={o.value}
+            class="block whitespace-normal text-left break-words"
+          >
             {o.label}
           </button>
         </li>
@@ -158,7 +163,7 @@ const selectedSet = new Set(selected);
     let query = "";
 
     const MIN_QUERY = 3;
-    const MAX_RESULTS = 20;
+    const MAX_RESULTS = 5;
 
     function renderOptions() {
       let visible = 0;
