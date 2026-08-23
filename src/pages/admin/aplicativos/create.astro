@@ -1,7 +1,4 @@
 ---
-import BaseLayout from "@layouts/BaseLayout.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
@@ -15,12 +12,11 @@ import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { toastResponse } from "@lib/api/toastResponse";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 import { getPdfsDir, ensureDir } from "@lib/storage";
 import { processAppFileUpload } from "@lib/appFileUpload";
 import SectionCard from "@components/ui/SectionCard.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
+import FormShell from "@components/ui/FormShell.astro";
 
 let errorMsg = "";
 let app = {
@@ -200,45 +196,25 @@ if (Astro.request.method === "POST") {
 const isExternal = formUploadType ? formUploadType === "external" : false;
 ---
 
-<BaseLayout title="Nuevo aplicativo">
-  <PageContainer>
-    <div class="mx-auto max-w-2xl py-4 sm:py-8">
-      <div class="text-base-content/60 mb-4 flex items-center gap-2 text-sm">
-        <a
-          href={resolveUrl("/admin/aplicativos")}
-          class="hover:text-base-content flex items-center gap-1.5 transition-colors"
-        >
-          <Icon name="boxicons:chevron-left" size={16} />
-          Aplicativos
-        </a>
-        <span>/</span>
-        <span class="text-base-content truncate font-medium"
-          >Nuevo aplicativo</span
-        >
-      </div>
+<FormShell
+  async
+  enctype="multipart/form-data"
+  backHref={resolveUrl("/admin/aplicativos")}
+  title="Nuevo aplicativo"
+  subtitle="Registrá un nuevo aplicativo disponible para descarga."
+  saveLabel="Guardar aplicativo"
+>
+  <script is:inline define:vars={{ errorMsg }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, "alert-error"),
+      );
+    }
+  </script>
 
-      <PageHeader
-        title="Nuevo aplicativo"
-        description="Registrá un nuevo aplicativo disponible para descarga."
-      />
-
-      <script is:inline define:vars={{ errorMsg }}>
-        if (errorMsg) {
-          window.addEventListener("load", () =>
-            window.showToast?.(errorMsg, "alert-error"),
-          );
-        }
-      </script>
-
-      <SectionCard>
-        <div class="p-6 sm:p-8">
-          <form
-            method="POST"
-            enctype="multipart/form-data"
-            class="space-y-5"
-            data-async-form
-          >
-            <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+  <SectionCard>
+    <div class="p-6 sm:p-8">
+      <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
               <FormField
                 id="input-title"
                 name="title"
@@ -422,28 +398,10 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
               rows={3}
               maxlength={150}
             />
-
-            <div
-              class="border-base-200 mt-2 flex justify-end gap-3 border-t pt-6"
-            >
-              <ActionCancelButton
-                href={resolveUrl("/admin/aplicativos")}
-                label="Cancelar"
-              />
-              <ActionConfirmButton
-                type="submit"
-                color="btn-primary"
-                label="Guardar aplicativo"
-                icon="boxicons:save"
-              />
-            </div>
-          </form>
         </div>
       </SectionCard>
-    </div>
-  </PageContainer>
+  </FormShell>
   <AsyncFormScript />
-</BaseLayout>
 
 <script>
   const radios = document.querySelectorAll<HTMLInputElement>(

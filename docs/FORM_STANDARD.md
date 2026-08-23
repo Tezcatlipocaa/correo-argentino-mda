@@ -24,5 +24,11 @@ Todo formulario de edición/creación de esta rama debe usar el componente
    - Botón **Guardar cambios** (o "Crear …"): `ActionConfirmButton`,
      `type="submit"`.
    - Ambos alineados a la derecha (`justify-end`), al pie del formulario.
+6. **Submit asíncrono (editores admin)**: los editores que responden JSON
+   (`toastResponse` + `redirectUrl`) deben pasar `async` a `FormShell` (agrega
+   `data-async-form` al `<form>`) y mantener `<AsyncFormScript />` en la página.
+   Para formularios con archivos agregar también `enctype="multipart/form-data"`.
+   El handler existente (`AsyncFormScript`) intercepta el submit, muestra toast
+   y redirige; no duplicar lógica de fetch en la página.
 
 No reinventar header ni barra de acciones en cada página: usar `FormShell`.
