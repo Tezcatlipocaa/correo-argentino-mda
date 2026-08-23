@@ -39,19 +39,19 @@ const {
 
 <BaseLayout title={title}>
   <PageContainer width={width}>
-    <nav aria-label="Breadcrumb" class="mb-4">
-      <ul class="breadcrumbs text-base-content/60 text-sm">
+    <nav aria-label="Breadcrumb" class="breadcrumbs text-base-content/60 text-sm mb-4">
+      <ul>
         <li>
           <a
             href={backHref}
             class="hover:text-base-content flex items-center gap-1.5 transition-colors"
           >
-            <Icon name={cancelIcon} size={16} />
+            <Icon name={cancelIcon} size={16} aria-hidden="true" />
             {backLabel}
           </a>
         </li>
         <li>
-          <span class="text-base-content truncate font-medium">{title}</span>
+          <span class="text-base-content truncate font-medium" aria-current="page">{title}</span>
         </li>
       </ul>
     </nav>
@@ -61,7 +61,7 @@ const {
     <form id={formId} method="POST" class:list={["mt-6 space-y-4", className]}>
       <slot />
 
-      <div class="sticky bottom-4 flex items-center justify-end gap-3">
+      <div class="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-box bg-base-100 p-2 shadow-sm">
         <ActionCancelButton
           href={backHref}
           label={cancelLabel}
