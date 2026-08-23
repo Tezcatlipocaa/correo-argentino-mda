@@ -42,8 +42,13 @@ if (catResult.ok) {
     ? catResult.data
     : (catResult.data as { data?: InvgateCategory[] })?.data;
   if (Array.isArray(cats)) {
+    const parentIds = new Set(
+      cats
+        .map((c) => c.parent_category_id)
+        .filter((v): v is number => v != null),
+    );
     categoryOptions = cats
-      .filter((c) => c && c.id != null && c.name)
+      .filter((c) => c && c.id != null && c.name && !parentIds.has(c.id))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((c) => ({ value: String(c.id), label: c.name }));
   }
@@ -151,7 +156,7 @@ const pageTitle = `Editar: ${hdName}`;
   <PageContainer>
     <div class="mb-6">
       <a href={`${cleanBase}mesas-de-ayuda`} class="btn btn-sm gap-2">
-        <Icon name="boxicons:arrow-left" size={16} />
+        <Icon name="boxicons:arrow-left-filled" size={16} />
         Volver al listado
       </a>
     </div>
@@ -177,7 +182,7 @@ const pageTitle = `Editar: ${hdName}`;
           <p
             class="text-base-content/70 mb-2 flex items-center gap-1 text-sm font-bold"
           >
-            <Icon name="boxicons:git-merge" size={16} />
+            <Icon name="boxicons:git-merge-filled" size={16} />
             Mesas SM vinculadas
           </p>
 
@@ -189,14 +194,14 @@ const pageTitle = `Editar: ${hdName}`;
                     class="badge badge-neutral gap-2 py-4 pr-2 pl-3"
                     data-linked-id={rec.id}
                   >
-                    <Icon name="boxicons:server" size={16} class="shrink-0" />
+                    <Icon name="boxicons:server-filled" size={16} class="shrink-0" />
                     <span>{displayNameOf(rec)}</span>
                     <button
                       type="button"
                       class="btn btn-ghost btn-xs btn-circle unlink-btn"
                       data-record-id={rec.id}
                     >
-                      <Icon name="boxicons:x" size={16} />
+                      <Icon name="boxicons:x-filled" size={16} />
                     </button>
                   </div>
                 ))
@@ -236,14 +241,14 @@ const pageTitle = `Editar: ${hdName}`;
             }
           </div>
           <p class="text-base-content/40 mt-2 flex items-center gap-1 text-xs">
-            <Icon name="boxicons:info-circle" size={12} />
+            <Icon name="boxicons:info-circle-filled" size={12} />
             Selecciona una mesa SM y haz clic en Vincular para asociarla.
           </p>
         </div>
 
         <SectionCard
           title="Metadata de derivación"
-          icon="boxicons:tag"
+          icon="boxicons:tag-filled"
           class="shadow-md"
         >
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -253,7 +258,8 @@ const pageTitle = `Editar: ${hdName}`;
               label="Categorías de derivación"
               options={categoryOptions}
               selected={selectedCategories}
-              helpText="Categorías de InvGate a las que deriva esta mesa."
+              placeholder="Escribí al menos 3 letras…"
+              helpText="Categorías finales de InvGate (sin subcategorías). Buscá con 3+ letras."
             />
 
             <TagInputField
@@ -279,7 +285,7 @@ const pageTitle = `Editar: ${hdName}`;
             Cancelar
           </a>
           <button type="submit" class="btn btn-primary">
-            <Icon name="boxicons:save" size={20} />
+            <Icon name="boxicons:save-filled" size={20} />
             Guardar Cambios
           </button>
         </div>
@@ -295,18 +301,12 @@ const pageTitle = `Editar: ${hdName}`;
       height="16"
       viewBox="0 0 24 24"
       aria-hidden="true"
-      data-icon="boxicons:server"
+      data-icon="boxicons:server-filled"
       class="shrink-0"
     >
       <path
         fill="currentColor"
-        d="M20 13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2M4 19v-4h16v4z"></path>
-      <path
-        fill="currentColor"
-        d="M17 16h2v2h-2zm-3 0h2v2h-2zm6-13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2M4 9V5h16v4z"></path>
-      <path
-        fill="currentColor"
-        d="M17 6h2v2h-2zm-3 0h2v2h-2z"></path>
+        d="M20 13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2m-5 5h-2v-2h2zm4 0h-2v-2h2zm1-15H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-5 5h-2V6h2zm4 0h-2V6h2z"></path>
     </svg>
     <span data-chip-label></span>
     <button
@@ -319,11 +319,11 @@ const pageTitle = `Editar: ${hdName}`;
         height="16"
         viewBox="0 0 24 24"
         aria-hidden="true"
-        data-icon="boxicons:x"
+        data-icon="boxicons:x-filled"
       >
         <path
           fill="currentColor"
-          d="m7.76 14.83l-2.83 2.83l1.41 1.41l2.83-2.83l2.12-2.12l.71-.71l.71.71l1.41 1.42l3.54 3.53l1.41-1.41l-3.53-3.54l-1.42-1.41l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12l-.71.71z"></path>
+          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"></path>
       </svg>
     </button>
   </div>

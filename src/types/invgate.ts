@@ -112,7 +112,7 @@ export interface InvgateKbCategory {
 export interface InvgateCategory {
   id: number;
   name: string;
-  parent_id?: number | null;
+  parent_category_id?: number | null;
 }
 
 export interface InvgateGroup {
