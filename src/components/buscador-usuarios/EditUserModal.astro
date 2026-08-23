@@ -1,12 +1,13 @@
 ---
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 ---
 
 <Modal
   id="edit-user-modal"
   title="Editar Datos de Contacto"
-  icon="boxicons:pencil"
+  icon="boxicons:pencil-filled"
 >
   <Fragment slot="content">
     <p
@@ -57,13 +58,14 @@ import FormField from "@components/ui/forms/FormField.astro";
     </form>
   </Fragment>
   <Fragment slot="actions">
-    <button
+    <ActionCancelButton
       type="button"
-      class="btn btn-ghost border-base-300 hover:bg-base-200 cursor-pointer border"
       id="close-edit-modal-btn"
-    >
-      Cancelar
-    </button>
+      label="Cancelar"
+      icon="boxicons:x-filled"
+      size="sm"
+      variant="error"
+    />
     <button
       type="submit"
       form="edit-user-form"
