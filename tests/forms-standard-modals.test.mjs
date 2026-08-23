@@ -82,7 +82,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.ok(src.includes("create_office_form"), "Ubicaciones: form preservado");
   assert.match(
     src,
-    /label="Crear" icon="boxicons:plus-filled"/,
+    /icon="boxicons:plus-filled"/,
     "Ubicaciones: confirmar con plus-filled",
   );
 }

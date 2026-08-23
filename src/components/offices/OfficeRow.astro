@@ -7,6 +7,7 @@ import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import ActionAgentsTicketButton from "@components/ui/ActionAgentsTicketButton.astro";
 import { isAllowed } from "@lib/rolesMatrix";
+import { resolveUrl } from "@lib/url";
 import type { OfficeDirectoryItem } from "@/types/offices";
 import {
   officeTypeLabelByType,
@@ -253,7 +254,7 @@ const officeDirectoryRowGridClass = showActionsColumn
               />
               <form
                 method="POST"
-                action={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}/eliminar`}
+                action={resolveUrl(`oficinas/edit/${office.dbId}/eliminar`)}
                 class="inline"
                 onsubmit={`return confirm('¿Estás seguro de que deseas eliminar la oficina \`${office.name}\` (${office.code})?');`}
               >
