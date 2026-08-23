@@ -3,19 +3,12 @@ import { getCleanBase } from "@lib/baseUrl";
 import { db } from "@db/index";
 import {
   offices,
-  contacts,
-  officeContacts,
   officeAssets,
   provinces,
   regions,
 } from "@db/schema";
-import { eq, and, isNull } from "drizzle-orm";
-import BaseLayout from "@layouts/BaseLayout.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
-import { Icon } from "astro-icon/components";
-import { logAdminFromAstro } from "@lib/auditLogger";
-import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { eq } from "drizzle-orm";
+import FormShell from "@components/ui/FormShell.astro";
 import OfficeForm from "@components/admin/OfficeForm.astro";
 import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
@@ -24,12 +17,12 @@ import {
   isSameBuildingConfirmed,
 } from "@lib/officeAddress";
 import { findOfficeAddressMatches } from "@lib/officeQueries";
+import { logAdminFromAstro } from "@lib/auditLogger";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
 import type { ToastType } from "@lib/toastClient";
 
 const cleanBase = getCleanBase();
 
-const isNew = true;
-let successMsg = "";
 let errorMsg = "";
 let toastType: ToastType = "alert-error";
 
@@ -185,66 +178,6 @@ if (Astro.request.method === "POST") {
           });
         }
 
-        await db
-          .delete(officeContacts)
-          .where(eq(officeContacts.officeId, officeId));
-
-        const cIds = fd.getAll("contact_id");
-        const cNames = fd.getAll("contact_name");
-        const cPhones = fd.getAll("contact_phone");
-        const cRoles = fd.getAll("contact_role");
-        const cTimeSlots = fd.getAll("contact_timeslot");
-
-        for (let i = 0; i < cNames.length; i++) {
-          const cIdStr = cIds[i]?.toString().trim();
-          const cName = cNames[i]?.toString().trim();
-          if (!cName) continue;
-          const cPhone = cPhones[i]?.toString().trim() || null;
-
-          let contactId: number;
-          if (cIdStr) {
-            contactId = Number(cIdStr);
-            await db
-              .update(contacts)
-              .set({ name: cName, phone: cPhone })
-              .where(eq(contacts.id, contactId));
-          } else {
-            let existing;
-            if (cPhone) {
-              [existing] = await db
-                .select()
-                .from(contacts)
-                .where(
-                  and(eq(contacts.name, cName), eq(contacts.phone, cPhone)),
-                );
-            } else {
-              [existing] = await db
-                .select()
-                .from(contacts)
-                .where(and(eq(contacts.name, cName), isNull(contacts.phone)));
-            }
-
-            if (existing) {
-              contactId = existing.id;
-            } else {
-              const [created] = await db
-                .insert(contacts)
-                .values({ name: cName, phone: cPhone })
-                .returning({ id: contacts.id });
-              contactId = created.id;
-            }
-          }
-
-          try {
-            await db.insert(officeContacts).values({
-              officeId,
-              contactId,
-              role: cRoles[i]?.toString().trim() || null,
-              timeSlot: cTimeSlots[i]?.toString().trim() || null,
-            });
-          } catch (e: any) {}
-        }
-
         await logAdminFromAstro(
           Astro.locals,
           `Creó la oficina "${officeData.name}" (${officeData.code})`,
@@ -283,37 +216,20 @@ const groupedProvinces = Array.from(
 const pageTitle = "Nueva sucursal";
 ---
 
-<BaseLayout title={pageTitle}>
-  <PageContainer width="xxl">
-    <div class="text-base-content/60 flex items-center gap-2 text-sm">
-      <a
-        href={`${cleanBase}oficinas`}
-        class="hover:text-base-content flex items-center gap-1.5 transition-colors"
-      >
-        <Icon name="boxicons:chevron-left" size={16} />
-        Oficinas
-      </a>
-      <span>/</span>
-      <span class="text-base-content truncate font-medium">{pageTitle}</span>
-    </div>
+<FormShell
+  backHref={`${cleanBase}oficinas`}
+  title={pageTitle}
+  subtitle="Completá los datos para registrar una nueva sucursal."
+  formId="office-form"
+  saveLabel="Crear sucursal"
+>
+  <script is:inline define:vars={{ errorMsg, toastType }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, toastType),
+      );
+    }
+  </script>
 
-    <PageHeader
-      title={pageTitle}
-      description="Completá los datos para registrar una nueva sucursal."
-    />
-
-    <script is:inline define:vars={{ errorMsg, toastType }}>
-      if (errorMsg) {
-        window.addEventListener("load", () =>
-          window.showToast?.(errorMsg, toastType),
-        );
-      }
-    </script>
-
-    <OfficeForm
-      office={null}
-      groupedProvinces={groupedProvinces}
-      isNew={isNew}
-    />
-  </PageContainer>
-</BaseLayout>
+  <OfficeForm office={null} groupedProvinces={groupedProvinces} />
+</FormShell>
