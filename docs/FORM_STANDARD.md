@@ -30,5 +30,13 @@ Todo formulario de edición/creación de esta rama debe usar el componente
    Para formularios con archivos agregar también `enctype="multipart/form-data"`.
    El handler existente (`AsyncFormScript`) intercepta el submit, muestra toast
    y redirige; no duplicar lógica de fetch en la página.
+7. **Formularios dentro de modal**: los modales no usan `FormShell` (es layout
+   de página completa). Dentro del modal la barra de acciones va al pie
+   (`justify-end`, separada con borde superior) con el mismo orden del estándar:
+   **Cancelar primero** — `ActionCancelButton` con `variant="error"`,
+   `icon="boxicons:x-filled"`, `size="sm"`, `type="button"` y
+   `onclick="this.closest('dialog').close()"` — y luego `ActionConfirmButton`
+   `type="submit"` con ícono filled. Si el modal envía datos, usar
+   `data-async-form` + `<AsyncFormScript />`.
 
 No reinventar header ni barra de acciones en cada página: usar `FormShell`.
