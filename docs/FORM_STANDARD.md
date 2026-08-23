@@ -5,20 +5,20 @@ Todo formulario de edición/creación de esta rama debe usar el componente
 
 1. **Ancho de contenedor**: siempre `PageContainer` con `width="xxl"` (mismo ancho
    para todos los editores). `FormShell` ya lo aplica.
-2. **Breadcrumb**: componente daisyUI `breadcrumbs`. Primera miga = link de
-   vuelta al listado con ícono **filled** (`boxicons:arrow-left-filled`). Segunda
-   miga = título actual (no es link).
-3. **Título**: `PageHeader` (`<h1>`). **Subtítulo opcional**: prop `description`
-   de `PageHeader` (p. ej. información de lo que se está modificando).
+2. **Sin breadcrumb**: la primera sección del formulario muestra solo el
+   `PageHeader` (`<h1>` título + `description` subtítulo), igual que las demás
+   secciones de página. No se usa breadcrumb de navegación.
+3. **Título y subtítulo**: `PageHeader` con `title` y `description` (p. ej.
+   información de lo que se está modificando). El volver al listado se resuelve
+   con el botón Cancelar de la barra de acciones (`backHref`).
 4. **Íconos**: usar siempre la variante **`-filled`** cuando exista
    (`boxicons:building-house-filled`, `boxicons:save-filled`, etc.).
-5. **Barra de acciones** (parte de `FormShell`, abajo-derecha, sticky):
-   - Botón **Cancelar / Volver**: `ActionCancelButton` (estilo `btn-soft`, integrado por defecto),
-     `href` = listado.
+5. **Barra de acciones** (parte de `FormShell`, al final del formulario, flujo
+   normal — no sticky ni flotante):
+   - Botón **Cancelar / Volver**: `ActionCancelButton` con `variant="error"`
+     (estilo `btn-soft btn-error`), `href` = listado.
    - Botón **Guardar cambios** (o "Crear …"): `ActionConfirmButton`,
      `type="submit"`.
-   - Ambos alineados a la derecha (`justify-end`), pegados a la esquina
-     inferior derecha (`sticky bottom-4`).
+   - Ambos alineados a la derecha (`justify-end`), al pie del formulario.
 
-No reinventar breadcrumb, header ni barra de acciones en cada página: usar
-`FormShell`.
+No reinventar header ni barra de acciones en cada página: usar `FormShell`.

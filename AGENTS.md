@@ -81,8 +81,9 @@
 - `docs/lessons.md` — known bugs and error patterns (read at session start)
 - `src/lib/navigation.ts` — register new routes here to auto-propagate sidebar + command palette
 - **Estándar de formularios (edit/create)**: ver `docs/FORM_STANDARD.md`.
-  Usar siempre `src/components/ui/FormShell.astro` (breadcrumb daisyUI, título +
-  subtítulo, íconos `-filled`, barra de acciones soft+cancelar abajo-derecha).
+  Usar siempre `src/components/ui/FormShell.astro` (`PageHeader` título +
+  subtítulo, íconos `-filled`, barra de acciones al pie: Cancelar
+  `variant="error"` + Guardar, alineados a la derecha). Sin breadcrumb.
   No duplicar el shell en cada página.
 
 ## PM2 production

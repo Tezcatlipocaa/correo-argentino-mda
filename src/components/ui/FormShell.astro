@@ -2,13 +2,11 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import { Icon } from "astro-icon/components";
 import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 interface Props {
   backHref: string;
-  backLabel: string;
   title: string;
   subtitle?: string;
   formId?: string;
@@ -23,7 +21,6 @@ interface Props {
 
 const {
   backHref,
-  backLabel,
   title,
   subtitle,
   formId = "editor-form",
@@ -39,33 +36,17 @@ const {
 
 <BaseLayout title={title}>
   <PageContainer width={width}>
-    <nav aria-label="Breadcrumb" class="breadcrumbs text-base-content/60 text-sm mb-4">
-      <ul>
-        <li>
-          <a
-            href={backHref}
-            class="hover:text-base-content flex items-center gap-1.5 transition-colors"
-          >
-            <Icon name={cancelIcon} size={16} aria-hidden="true" />
-            {backLabel}
-          </a>
-        </li>
-        <li>
-          <span class="text-base-content truncate font-medium" aria-current="page">{title}</span>
-        </li>
-      </ul>
-    </nav>
-
     <PageHeader title={title} description={subtitle} />
 
     <form id={formId} method="POST" class:list={["mt-6 space-y-4", className]}>
       <slot />
 
-      <div class="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-box bg-base-100 p-2 shadow-sm">
+      <div class="flex items-center justify-end gap-3 pt-4">
         <ActionCancelButton
           href={backHref}
           label={cancelLabel}
           icon={cancelIcon}
+          variant="error"
         />
         <ActionConfirmButton
           type="submit"
