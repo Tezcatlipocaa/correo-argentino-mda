@@ -1,6 +1,8 @@
 ---
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 ---
 
 <Modal
@@ -78,17 +80,24 @@ import FormField from "@components/ui/forms/FormField.astro";
   </Fragment>
   <Fragment slot="actions">
     <div class="modal-action">
-      <form method="dialog" class="flex gap-2">
-        <button
-          class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
-          >Cancelar</button
-        >
-        <button
-          class="btn btn-sm btn-secondary text-xs font-black uppercase"
+      <div class="flex justify-end gap-2">
+        <ActionCancelButton
+          type="button"
+          label="Cancelar"
+          icon="boxicons:x-filled"
+          size="sm"
+          variant="error"
+          onclick="this.closest('dialog')?.close()"
+        />
+        <ActionConfirmButton
+          type="button"
           id="save-rules-btn"
-          type="button">Guardar Reglas</button
-        >
-      </form>
+          color="btn-secondary"
+          label="Guardar Reglas"
+          icon="boxicons:save-filled"
+          size="sm"
+        />
+      </div>
     </div>
   </Fragment>
 </Modal>

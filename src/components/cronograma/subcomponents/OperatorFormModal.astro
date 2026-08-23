@@ -3,6 +3,8 @@
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 interface Props {
   mode: "create" | "edit";
@@ -12,7 +14,9 @@ const { mode } = Astro.props;
 const isEdit = mode === "edit";
 
 const dialogId = isEdit ? "edit-operator-modal" : "new-operator-modal";
-const titleIcon = isEdit ? "boxicons:edit-alt" : "boxicons:user-plus";
+const titleIcon = isEdit
+  ? "boxicons:edit-alt-filled"
+  : "boxicons:user-plus-filled";
 const titleText = isEdit ? "Editar Operador" : "Agregar Nuevo Operador";
 const confirmBtnId = isEdit ? "confirm-edit-op" : "confirm-new-op";
 const cancelBtnId = isEdit ? "cancel-edit-op" : "cancel-new-op";
@@ -61,18 +65,22 @@ const confirmBtnText = isEdit ? "Guardar Cambios" : "Agregar Operador";
   </Fragment>
   <Fragment slot="actions">
     <div class="modal-action mt-6 flex justify-end gap-2">
-      <form method="dialog" class="flex gap-2">
-        <button
-          class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
-          id={cancelBtnId}
-          type="button">Cancelar</button
-        >
-        <button
-          class="btn btn-sm btn-secondary text-xs font-black uppercase"
-          id={confirmBtnId}
-          type="button">{confirmBtnText}</button
-        >
-      </form>
+      <ActionCancelButton
+        type="button"
+        id={cancelBtnId}
+        label="Cancelar"
+        icon="boxicons:x-filled"
+        size="sm"
+        variant="error"
+      />
+      <ActionConfirmButton
+        type="button"
+        id={confirmBtnId}
+        color="btn-secondary"
+        label={confirmBtnText}
+        icon="boxicons:check-filled"
+        size="sm"
+      />
     </div>
   </Fragment>
 </Modal>
