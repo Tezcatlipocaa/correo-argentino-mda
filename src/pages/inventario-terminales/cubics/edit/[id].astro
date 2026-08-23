@@ -296,7 +296,7 @@ for (const agent of allAgents) {
         id="btn-add-assignment"
         class="btn btn-ghost btn-xs text-warning gap-1"
       >
-        <Icon name="boxicons:plus" size={14} />
+        <Icon name="boxicons:plus-filled" size={14} />
         Agregar
       </button>
     </div>
@@ -328,15 +328,17 @@ for (const agent of allAgents) {
                     <span class="text-xxs text-base-content/60 bg-base-300/40 border-base-300 flex items-center gap-1 rounded border px-2 py-0.5 select-none">
                       {agentShiftMap.get(a.agent.id) === "Diurno" ? (
                         <Icon
-                          name="boxicons:sun"
+                          name="boxicons:sun-filled"
                           size={12}
                           class="text-warning shrink-0"
+                          is:inline
                         />
                       ) : (
                         <Icon
-                          name="boxicons:moon"
+                          name="boxicons:moon-filled"
                           size={12}
                           class="text-info shrink-0"
+                          is:inline
                         />
                       )}
                       <span>{agentShiftMap.get(a.agent.id) || "Diurno"}</span>
@@ -349,7 +351,7 @@ for (const agent of allAgents) {
                   type="button"
                   class="btn btn-ghost btn-xs edit-row-btn text-warning"
                 >
-                  <Icon name="boxicons:edit-alt" size={16} />
+                  <Icon name="boxicons:edit-alt-filled" size={16} is:inline />
                   Editar
                 </button>
                 <button
@@ -357,7 +359,7 @@ for (const agent of allAgents) {
                   class="btn btn-ghost btn-xs text-error remove-row-btn"
                   aria-label="Quitar asignación"
                 >
-                  <Icon name="boxicons:trash" size={16} />
+                  <Icon name="boxicons:trash-filled" size={16} is:inline />
                   Quitar
                 </button>
               </div>
