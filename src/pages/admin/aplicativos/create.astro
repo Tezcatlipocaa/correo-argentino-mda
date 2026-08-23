@@ -214,194 +214,192 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
 
   <SectionCard>
     <div class="p-6 sm:p-8">
-      <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-              <FormField
-                id="input-title"
-                name="title"
-                label="Título"
-                required
-                value={app.title}
-                placeholder="Ej: ShareX"
-                maxlength={50}
-                autofocus
-              />
+      <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
+        <FormField
+          id="input-title"
+          name="title"
+          label="Título"
+          required
+          value={app.title}
+          placeholder="Ej: ShareX"
+          maxlength={50}
+          autofocus
+        />
 
-              <SelectField
-                id="select-categoryId"
-                name="categoryId"
-                label="Categoría"
-                selectClass="font-medium"
+        <SelectField
+          id="select-categoryId"
+          name="categoryId"
+          label="Categoría"
+          selectClass="font-medium"
+        >
+          <option value="" selected={!app.categoryId}> Sin categoría </option>
+          {
+            categories.map((cat) => (
+              <option
+                value={cat.id}
+                selected={Number(cat.id) === Number(app.categoryId)}
               >
-                <option value="" selected={!app.categoryId}>
-                  Sin categoría
-                </option>
-                {
-                  categories.map((cat) => (
-                    <option
-                      value={cat.id}
-                      selected={Number(cat.id) === Number(app.categoryId)}
-                    >
-                      {cat.title}
-                    </option>
-                  ))
-                }
-              </SelectField>
+                {cat.title}
+              </option>
+            ))
+          }
+        </SelectField>
 
-              <FormField
-                id="input-version"
-                name="version"
-                label="Versión"
-                value={app.version}
-                placeholder="Ej: 1.2.0"
-                inputClass="font-mono text-sm"
-                helpText="(Opcional)"
-              />
-            </div>
+        <FormField
+          id="input-version"
+          name="version"
+          label="Versión"
+          value={app.version}
+          placeholder="Ej: 1.2.0"
+          inputClass="font-mono text-sm"
+          helpText="(Opcional)"
+        />
+      </div>
 
-            <FormField
-              type="file"
-              id="input-icon"
-              name="icon"
-              label="Ícono"
-              accept="image/png, image/jpeg, image/svg+xml, .ico"
-              helpText="(Opcional, .png, .jpg, .svg, .ico)"
+      <FormField
+        type="file"
+        id="input-icon"
+        name="icon"
+        label="Ícono"
+        accept="image/png, image/jpeg, image/svg+xml, .ico"
+        helpText="(Opcional, .png, .jpg, .svg, .ico)"
+      />
+
+      <fieldset class="fieldset">
+        <FormLegend class="mb-2"> Origen del archivo </FormLegend>
+        <div
+          class="bg-base-200/60 flex gap-1 rounded-lg p-1"
+          role="radiogroup"
+          aria-label="Tipo de subida"
+        >
+          <label
+            class:list={[
+              "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+              !isExternal
+                ? "bg-base-100 text-base-content shadow-sm"
+                : "text-base-content/50 hover:text-base-content/80",
+            ]}
+          >
+            <input
+              type="radio"
+              name="uploadType"
+              value="local"
+              checked={!isExternal}
+              class="hidden"
+              id="radio-local"
             />
-
-            <fieldset class="fieldset">
-              <FormLegend class="mb-2"> Origen del archivo </FormLegend>
-              <div
-                class="bg-base-200/60 flex gap-1 rounded-lg p-1"
-                role="radiogroup"
-                aria-label="Tipo de subida"
-              >
-                <label
-                  class:list={[
-                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                    !isExternal
-                      ? "bg-base-100 text-base-content shadow-sm"
-                      : "text-base-content/50 hover:text-base-content/80",
-                  ]}
-                >
-                  <input
-                    type="radio"
-                    name="uploadType"
-                    value="local"
-                    checked={!isExternal}
-                    class="hidden"
-                    id="radio-local"
-                  />
-                  <Icon
-                    name="boxicons:arrow-in-up-square-half-filled"
-                    size={16}
-                    class="shrink-0"
-                  />
-                  Archivo local
-                </label>
-                <label
-                  class:list={[
-                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                    isExternal
-                      ? "bg-base-100 text-base-content shadow-sm"
-                      : "text-base-content/50 hover:text-base-content/80",
-                  ]}
-                >
-                  <input
-                    type="radio"
-                    name="uploadType"
-                    value="external"
-                    checked={isExternal}
-                    class="hidden"
-                    id="radio-external"
-                  />
-                  <Icon
-                    name="boxicons:arrow-out-up-right-square-filled"
-                    size={16}
-                    class="shrink-0"
-                  />
-                  Enlace externo
-                </label>
-              </div>
-            </fieldset>
-
-            <div id="localUploadGroup" class:list={[isExternal && "hidden"]}>
-              <FormField
-                type="file"
-                id="input-file"
-                name="file"
-                label="Archivo"
-                accept=".zip,.exe,.msi,.rar"
-                helpText="Formatos: .zip, .exe, .msi, .rar"
-              />
-            </div>
-
-            <div id="externalUrlGroup" class:list={[!isExternal && "hidden"]}>
-              <FormField
-                id="input-externalUrl"
-                name="externalUrl"
-                label="URL externa"
-                type="url"
-                value={formExternalUrl}
-                placeholder="https://ejemplo.com/descarga/archivo.zip"
-                inputClass="font-mono"
-              />
-            </div>
-
-            <FormField
-              type="file"
-              id="input-instruction-pdf"
-              name="instructionPdf"
-              label="Instructivo PDF"
-              accept=".pdf"
-              helpText="(Opcional, archivo .pdf confidencial)"
+            <Icon
+              name="boxicons:arrow-in-up-square-half-filled"
+              size={16}
+              class="shrink-0"
             />
-
-            <fieldset
-              class="fieldset border-base-300 rounded-box bg-base-200/30 border p-4"
-            >
-              <FormLegend class="px-2">
-                Credenciales / Metadatos Sensibles
-              </FormLegend>
-              <p class="text-base-content/60 mb-3 px-2 text-xs">
-                Agregá credenciales o información confidencial (ej. Entorno:
-                Contraseña). Se almacenarán cifradas.
-              </p>
-
-              <div id="metadata-rows" class="space-y-3 px-2">
-                <!-- Se poblará dinámicamente con JS -->
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  id="btn-add-meta"
-                  class="btn btn-sm btn-outline mt-4 ml-2 gap-2"
-                >
-                  <Icon name="boxicons:plus" size={16} />
-                  Agregar credencial
-                </button>
-              </div>
-
-              <input
-                type="hidden"
-                name="metadata"
-                id="input-metadata-json"
-                value={JSON.stringify(app.metadata || [])}
-              />
-            </fieldset>
-
-            <FormTextarea
-              id="input-description"
-              name="description"
-              label="Descripción (Opcional)"
-              value={app.description}
-              placeholder="Breve descripción del aplicativo y su uso operativo."
-              rows={3}
-              maxlength={150}
+            Archivo local
+          </label>
+          <label
+            class:list={[
+              "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+              isExternal
+                ? "bg-base-100 text-base-content shadow-sm"
+                : "text-base-content/50 hover:text-base-content/80",
+            ]}
+          >
+            <input
+              type="radio"
+              name="uploadType"
+              value="external"
+              checked={isExternal}
+              class="hidden"
+              id="radio-external"
             />
+            <Icon
+              name="boxicons:arrow-out-up-right-square-filled"
+              size={16}
+              class="shrink-0"
+            />
+            Enlace externo
+          </label>
         </div>
-      </SectionCard>
-  </FormShell>
-  <AsyncFormScript />
+      </fieldset>
+
+      <div id="localUploadGroup" class:list={[isExternal && "hidden"]}>
+        <FormField
+          type="file"
+          id="input-file"
+          name="file"
+          label="Archivo"
+          accept=".zip,.exe,.msi,.rar"
+          helpText="Formatos: .zip, .exe, .msi, .rar"
+        />
+      </div>
+
+      <div id="externalUrlGroup" class:list={[!isExternal && "hidden"]}>
+        <FormField
+          id="input-externalUrl"
+          name="externalUrl"
+          label="URL externa"
+          type="url"
+          value={formExternalUrl}
+          placeholder="https://ejemplo.com/descarga/archivo.zip"
+          inputClass="font-mono"
+        />
+      </div>
+
+      <FormField
+        type="file"
+        id="input-instruction-pdf"
+        name="instructionPdf"
+        label="Instructivo PDF"
+        accept=".pdf"
+        helpText="(Opcional, archivo .pdf confidencial)"
+      />
+
+      <fieldset
+        class="fieldset border-base-300 rounded-box bg-base-200/30 border p-4"
+      >
+        <FormLegend class="px-2">
+          Credenciales / Metadatos Sensibles
+        </FormLegend>
+        <p class="text-base-content/60 mb-3 px-2 text-xs">
+          Agregá credenciales o información confidencial (ej. Entorno:
+          Contraseña). Se almacenarán cifradas.
+        </p>
+
+        <div id="metadata-rows" class="space-y-3 px-2">
+          <!-- Se poblará dinámicamente con JS -->
+        </div>
+
+        <div>
+          <button
+            type="button"
+            id="btn-add-meta"
+            class="btn btn-sm btn-outline mt-4 ml-2 gap-2"
+          >
+            <Icon name="boxicons:plus" size={16} />
+            Agregar credencial
+          </button>
+        </div>
+
+        <input
+          type="hidden"
+          name="metadata"
+          id="input-metadata-json"
+          value={JSON.stringify(app.metadata || [])}
+        />
+      </fieldset>
+
+      <FormTextarea
+        id="input-description"
+        name="description"
+        label="Descripción (Opcional)"
+        value={app.description}
+        placeholder="Breve descripción del aplicativo y su uso operativo."
+        rows={3}
+        maxlength={150}
+      />
+    </div>
+  </SectionCard>
+</FormShell>
+<AsyncFormScript />
 
 <script>
   const radios = document.querySelectorAll<HTMLInputElement>(
