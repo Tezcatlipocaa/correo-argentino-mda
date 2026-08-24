@@ -30,7 +30,7 @@ const {
   async = false,
   enctype,
   cancelLabel = "Cancelar",
-  cancelIcon = "boxicons:arrow-left-filled",
+  cancelIcon = "boxicons:arrow-big-left-filled",
   saveLabel = "Guardar cambios",
   saveIcon = "boxicons:save-filled",
   saveColor = "btn-secondary",
@@ -45,9 +45,9 @@ const {
     <form
       id={formId}
       method="POST"
-      class:list={["mt-6 space-y-4", className]}
-      {...(async ? { "data-async-form": "" } : {})}
-      {...(enctype ? { enctype } : {})}
+      class:list={["mt-4 space-y-4", className]}
+      {...async ? { "data-async-form": "" } : {}}
+      {...enctype ? { enctype } : {}}
     >
       <slot />
 
