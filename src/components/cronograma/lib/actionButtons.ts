@@ -12,13 +12,15 @@ const TRASH_FILLED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" hei
 export function actionEditButtonHtml(options: {
   ariaLabel: string;
   attrs?: string;
+  actionClass?: string;
 }): string {
-  return `<button type="button" class="btn btn-xs btn-soft btn-secondary gap-2" aria-label="${options.ariaLabel}" ${options.attrs ?? ""}>${PENCIL_FILLED_SVG}</button>`;
+  return `<button type="button" class="btn btn-xs btn-soft btn-secondary gap-2 ${options.actionClass ?? ""}" aria-label="${options.ariaLabel}" ${options.attrs ?? ""}>${PENCIL_FILLED_SVG}</button>`;
 }
 
 export function actionDeleteButtonHtml(options: {
   ariaLabel: string;
   attrs?: string;
+  actionClass?: string;
 }): string {
-  return `<button type="button" class="btn btn-xs btn-soft btn-error gap-2" aria-label="${options.ariaLabel}" ${options.attrs ?? ""}>${TRASH_FILLED_SVG}</button>`;
+  return `<button type="button" class="btn btn-xs btn-soft btn-error gap-2 ${options.actionClass ?? ""}" aria-label="${options.ariaLabel}" ${options.attrs ?? ""}>${TRASH_FILLED_SVG}</button>`;
 }

@@ -1298,10 +1298,12 @@ export function renderMonthly(): void {
                 <div class="flex items-center gap-1 shrink-0 ml-1.5 no-print ${state.isEditMode ? "" : "invisible"}">
                   ${actionEditButtonHtml({
                     ariaLabel: "Editar operador",
+                    actionClass: "edit-op-btn",
                     attrs: `data-edit-op-name="${escapeHtml(op.nombre)}" data-edit-op-username="${escapeHtml(username)}" data-edit-op-location="${escapeHtml(op.location || "Monte Grande")}" data-edit-op-schedule="${escapeHtml(op.horario || "")}" title="Editar operador"`,
                   })}
                   ${actionDeleteButtonHtml({
                     ariaLabel: "Eliminar operador",
+                    actionClass: "delete-op-btn",
                     attrs: `data-delete-op-name="${escapeHtml(op.nombre)}" title="Eliminar operador"`,
                   })}
                 </div>
