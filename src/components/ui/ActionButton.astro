@@ -46,7 +46,7 @@ const sizeMap: Record<string, string> = {
   default: "btn-sm md:btn-md",
 };
 const variantClass = ghost ? "btn-ghost" : `btn-soft ${color}`;
-const btnClasses = `btn ${sizeMap[size] || sizeMap.default} ${variantClass} gap-2`;
+const btnClasses = `btn group ${sizeMap[size] || sizeMap.default} ${variantClass} gap-2`;
 const isXs = size === "xs";
 const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
 ---
