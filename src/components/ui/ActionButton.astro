@@ -26,7 +26,7 @@ const {
   ariaLabel,
   title,
   size = "xs",
-  iconSize = 13,
+  iconSize,
   color = "btn-secondary",
   type = "button",
   class: className = "",
@@ -40,7 +40,11 @@ const sizeMap: Record<string, string> = {
   default: "",
 };
 const sizeClass = sizeMap[size] || "";
-const baseClass = `btn ${sizeClass} btn-soft ${color} items-center justify-center gap-1.5 font-bold uppercase tracking-wider text-tiny`;
+const defaultIconSize =
+  size === "md" ? 18 : size === "default" ? 15 : 13;
+const resolvedIconSize = iconSize ?? defaultIconSize;
+const textSizeClass = size === "md" || size === "default" ? "text-sm" : "text-tiny";
+const baseClass = `btn ${sizeClass} btn-soft ${color} items-center justify-center gap-1.5 font-bold uppercase tracking-wider ${textSizeClass}`;
 ---
 
 <button
@@ -51,7 +55,7 @@ const baseClass = `btn ${sizeClass} btn-soft ${color} items-center justify-cente
   class:list={[baseClass, className]}
   {...attrs}
 >
-  {icon && <Icon name={icon} size={iconSize} />}
+  {icon && <Icon name={icon} size={resolvedIconSize} />}
   {
     shortLabel ? (
       <>

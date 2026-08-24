@@ -363,6 +363,8 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   icon="boxicons:calendar-plus-filled"
                   label="Agregar nuevo mes"
                   title="Agregar nuevo mes"
+                  size="md"
+                  iconSize={18}
                   class="ml-2 [&_span]:hidden xl:[&_span]:inline"
                 />
 
@@ -1260,9 +1262,9 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     <!-- Settings Trigger -->
     <button
       id="open-rules-settings"
-      class="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content gap-1.5 transition-colors"
+      class="btn btn-md btn-ghost text-base-content/60 hover:text-base-content gap-2 transition-colors text-sm"
     >
-      <Icon name="boxicons:cog-filled" size={14} />
+      <Icon name="boxicons:cog-filled" size={18} />
       Parámetros
     </button>
 
@@ -1271,10 +1273,10 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     <!-- Add Operator Trigger -->
     <button
       id="open-new-op-modal"
-      class="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content gap-1.5 transition-colors"
+      class="btn btn-md btn-ghost text-base-content/60 hover:text-base-content gap-2 transition-colors text-sm"
       type="button"
     >
-      <Icon name="boxicons:user-plus-filled" size={14} class="text-secondary" />
+      <Icon name="boxicons:user-plus-filled" size={18} class="text-secondary" />
       Agregar Operador
     </button>
 
@@ -1283,10 +1285,10 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     <!-- Manage Holidays Trigger -->
     <button
       id="open-holidays-modal"
-      class="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content gap-1.5 transition-colors"
+      class="btn btn-md btn-ghost text-base-content/60 hover:text-base-content gap-2 transition-colors text-sm"
       type="button"
     >
-      <Icon name="boxicons:calendar-star-filled" size={14} class="text-secondary" />
+      <Icon name="boxicons:calendar-star-filled" size={18} class="text-secondary" />
       Feriados
     </button>
 
@@ -1301,11 +1303,13 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       >
       <button
         id="discard-edits-btn"
-        class="btn btn-xs btn-outline border-base-300 text-base-content/50 hover:bg-base-200"
+        class="btn btn-md btn-outline border-base-300 text-base-content/50 hover:bg-base-200 text-sm"
         disabled>Descartar</button
       >
-      <button id="save-edits-btn" class="btn btn-xs btn-primary gap-1" disabled
-        >Guardar</button
+      <button
+        id="save-edits-btn"
+        class="btn btn-md btn-primary gap-1 text-sm"
+        disabled>Guardar</button
       >
     </div>
   </div>
