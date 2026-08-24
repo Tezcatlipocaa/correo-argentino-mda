@@ -46,6 +46,9 @@ El objetivo de este diseño es:
   barras posicionadas en `%` absoluto y su header puede no alinearse con el
   body; además el `overflow-x-auto` con `pb-1` puede capturar el gutter de
   scroll.
+- **Desplazamiento al cambiar de tab:** al conmutar entre vistas (mensual,
+  diaria, grupos, pasiva) la sección completa se mueve unos píxeles y la lista
+  de tabs se reacomoda, cuando sólo debería cambiar el panel de contenido.
 
 ## Diseño
 
@@ -58,10 +61,16 @@ El objetivo de este diseño es:
   consumen, eliminando la duplicación.
 - Unificar la clase base de ambos botones de copia a un mismo variant
   (evaluar `btn-secondary` como base) y agregar `select-none`.
-- Donde el cronograma use botones inline con estilos dispersos, introducir
-  tokens/clase compartida `.crono-btn` (altura, radio, espaciado) para mantener
-  consistencia visual. No se reescriben modales ya estandarizados
-  (`FormShell`/`ActionConfirm`).
+- **Referencia de estilo:** usar como fuente canónica las clases y tokens de
+  `@src/components/ui/ActionButton.astro` (y componentes UI similares). Su
+  `baseClass` es
+  `btn ${sizeClass} btn-soft ${color} gap-1.5 font-bold uppercase tracking-wider text-tiny`.
+  Los botones de acción del cronograma (copiar, exportar, importar, etc.)
+  deben seguir estos mismos tokens para mantener consistencia con el resto del
+  portal; migrar los botones de copia a `ActionButton.astro` cuando aplique.
+- Donde el cronograma use botones inline con estilos dispersos, alinearlos a
+  los tokens de `ActionButton.astro` en vez de inventar una clase `.crono-btn`.
+  No se reescriben modales ya estandarizados (`FormShell`/`ActionConfirm`).
 
 ### 2. Copia de imagen (fin de semana + extras) — Enfoque A: clone offscreen
 
@@ -98,6 +107,28 @@ El objetivo de este diseño es:
   del `overflow-x-auto` en la captura.
 - Auditoría general de alineación/overflow durante la implementación; corregir
   lo que se confirme como bug real.
+
+### 5b. Corrección de desplazamiento al cambiar de tab
+
+- **Síntoma:** al cambiar entre vistas (mensual, diaria, grupos, pasiva, etc.)
+  la sección completa de cronograma se desplaza unos píxeles; la lista de tabs
+  se mueve o cambia aunque debería ser un componente separado de la vista.
+- **Causa probable (auditar al implementar):** el cambio de vista altera la
+  altura del contenido o hace aparecer/desaparecer un scrollbar, lo que
+  reacomoda el flex-column y empuja la barra de tabs; o bien el estado
+  `active` del tab cambia su box-model (borde/peso de fuente) y la barra
+  cambia de alto.
+- **Fix:** estabilizar la barra de tabs para que no dependa del contenido:
+  - Reservar altura/espacio estable en el área de contenido (p.ej.
+    `min-height` o contenedor con altura controlada) para que el cambio de
+    vista no reacomode la página.
+  - Evitar el salto por scrollbar con `scrollbar-gutter: stable` o reservando
+    el espacio del scroll en el contenedor de la vista.
+  - Asegurar que el tab activo no cambie el tamaño de la barra (box-model
+    constante: mismo borde en reposo y activo, o usar `outline`/`ring` en vez
+    de borde que sume píxeles).
+- No debe moverse la lista de tabs ni el layout general al conmutar vistas;
+  sólo el panel de contenido.
 
 ### 5. Rendimiento / UX (auditoría y propuesta mínima)
 
@@ -136,6 +167,8 @@ click copy-btn
   que no se resalta el texto.
 - Manual: revisar alineación de columnas en tabla de rotación y timeline de
   extras.
+- Manual: cambiar entre todas las tabs (mensual/diaria/grupos/pasiva) y
+  confirmar que la barra de tabs y el layout NO se desplazan, sólo el contenido.
 - Regresión: los botones de copia mantienen feedback de carga/éxito.
 - (Opcional) Playwright smoke test si el harness lo permite sin mayor costo.
 
