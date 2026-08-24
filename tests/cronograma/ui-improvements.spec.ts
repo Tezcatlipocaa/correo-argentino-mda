@@ -26,6 +26,12 @@ async function loginAsAdmin(context: BrowserContext): Promise<void> {
       domain: "127.0.0.1",
       path: "/",
     },
+    {
+      name: "session_id",
+      value: signSessionId(adminSessionId),
+      domain: "localhost",
+      path: "/",
+    },
   ]);
 }
 
