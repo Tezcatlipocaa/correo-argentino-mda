@@ -342,6 +342,10 @@ export async function exportAsClipboardImage(
   host.style.pointerEvents = "none";
   host.className = "export-capture" + (compact ? " export-compact" : "");
   const clone = element.cloneNode(true) as HTMLElement;
+  clone.removeAttribute("id");
+  clone
+    .querySelectorAll("[id]")
+    .forEach((el) => el.removeAttribute("id"));
   host.appendChild(clone);
   document.body.appendChild(host);
 
