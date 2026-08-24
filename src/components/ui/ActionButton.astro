@@ -9,7 +9,8 @@ interface Props {
   labelId?: string;
   ariaLabel?: string;
   title?: string;
-  size?: "xs" | "sm" | "default";
+  size?: "xs" | "sm" | "md" | "default";
+  iconSize?: number;
   color?: string;
   type?: "button" | "submit";
   class?: string;
@@ -25,6 +26,7 @@ const {
   ariaLabel,
   title,
   size = "xs",
+  iconSize = 13,
   color = "btn-secondary",
   type = "button",
   class: className = "",
@@ -34,10 +36,11 @@ const {
 const sizeMap: Record<string, string> = {
   xs: "btn-xs",
   sm: "btn-sm",
+  md: "btn-md",
   default: "",
 };
 const sizeClass = sizeMap[size] || "";
-const baseClass = `btn ${sizeClass} btn-soft ${color} gap-1.5 font-bold uppercase tracking-wider text-tiny`;
+const baseClass = `btn ${sizeClass} btn-soft ${color} items-center justify-center gap-1.5 font-bold uppercase tracking-wider text-tiny`;
 ---
 
 <button
@@ -48,7 +51,7 @@ const baseClass = `btn ${sizeClass} btn-soft ${color} gap-1.5 font-bold uppercas
   class:list={[baseClass, className]}
   {...attrs}
 >
-  {icon && <Icon name={icon} size={13} />}
+  {icon && <Icon name={icon} size={iconSize} />}
   {
     shortLabel ? (
       <>
