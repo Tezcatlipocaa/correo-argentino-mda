@@ -33,11 +33,13 @@ Todo formulario de edición/creación de esta rama debe usar el componente
 7. **Formularios dentro de modal**: los modales no usan `FormShell` (es layout
    de página completa). Dentro del modal la barra de acciones va al pie
    (`justify-end`, separada con borde superior) con el mismo orden del estándar:
-   **Cancelar primero** — `ActionCancelButton` con `variant="error"`,
-   `icon="boxicons:x-filled"`, `size="sm"`, `type="button"` y
+   **Cancelar primero** — `ActionCancelButton` con `variant="error"` e
+   `icon="boxicons:x-filled"`, `type="button"` y
    `onclick="this.closest('dialog').close()"` — y luego `ActionConfirmButton`
-   `type="submit"` con ícono filled. Si el modal envía datos, usar
-   `data-async-form` + `<AsyncFormScript />`.
+   `type="submit"` con ícono filled. **Sin `size="sm"`**: los botones usan el
+   tamaño por defecto (`btn-sm md:btn-md`), igual que la barra de `FormShell`,
+   para que todas las barras de acciones tengan la misma altura. Si el modal
+   envía datos, usar `data-async-form` + `<AsyncFormScript />`.
 
    **Excepciones:** los botones de confirmación cuyo JavaScript reemplaza su
    `innerHTML` (spinners de carga, toggles de clase como `btn-warning`) se
