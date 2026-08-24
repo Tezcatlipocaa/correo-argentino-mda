@@ -49,6 +49,10 @@ El objetivo de este diseño es:
 - **Desplazamiento al cambiar de tab:** al conmutar entre vistas (mensual,
   diaria, grupos, pasiva) la sección completa se mueve unos píxeles y la lista
   de tabs se reacomoda, cuando sólo debería cambiar el panel de contenido.
+- **Fila de resumen de cobertura mal posicionada:** al buscar/filtrar
+  operadores (lo que reduce la cantidad de filas de horarios), la fila con el
+  resumen de cobertura se pega a la última fila filtrada en lugar de permanecer
+  fijada a la parte inferior del cronograma.
 
 ## Diseño
 
@@ -130,6 +134,20 @@ El objetivo de este diseño es:
 - No debe moverse la lista de tabs ni el layout general al conmutar vistas;
   sólo el panel de contenido.
 
+### 5c. Fila de resumen de cobertura fijada al fondo
+
+- **Síntoma:** al filtrar/buscar operadores, las filas de horarios se reducen y
+  la fila de resumen de cobertura queda adyacente a la última fila filtrada en
+  vez de estar anclada a la parte inferior del contenedor del cronograma.
+- **Fix:** separar la fila de resumen del flujo de las filas de datos.
+  - Opción A (recomendada): convertir la fila de resumen en un elemento
+    `sticky bottom-0` (o footer fuera del scroll del cuerpo de filas) dentro
+    del contenedor con `min-h-full`, de modo que siempre quede al fondo
+    visible del cronograma sin importar cuántas filas haya.
+  - Opción B: ubicar el resumen como footer del card contenedor, fuera del
+    `overflow` de la lista de filas.
+- Debe mantenerse visible y al fondo aunque el filtro deje 0 o pocas filas.
+
 ### 5. Rendimiento / UX (auditoría y propuesta mínima)
 
 - Revisar listeners de `cronograma:data-changed` / `cronograma:rules-changed`
@@ -169,6 +187,9 @@ click copy-btn
   extras.
 - Manual: cambiar entre todas las tabs (mensual/diaria/grupos/pasiva) y
   confirmar que la barra de tabs y el layout NO se desplazan, sólo el contenido.
+- Manual: filtrar/buscar operadores hasta dejar pocas filas y confirmar que la
+  fila de resumen de cobertura queda fijada al fondo del cronograma, no pegada
+  a la última fila.
 - Regresión: los botones de copia mantienen feedback de carga/éxito.
 - (Opcional) Playwright smoke test si el harness lo permite sin mayor costo.
 
