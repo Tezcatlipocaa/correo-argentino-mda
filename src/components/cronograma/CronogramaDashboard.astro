@@ -1209,14 +1209,14 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   <!-- Edit Mode Toolbar -->
   <div
     id="edit-mode-toolbar"
-    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 items-center gap-3 overflow-x-auto rounded-2xl border p-3 opacity-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-500"
+    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 flex-wrap items-center justify-center gap-2 rounded-2xl border p-2 opacity-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-500"
   >
     <!-- Brush Tools -->
     <div
-      class="bg-base-200/50 border-base-300/50 flex items-center gap-1.5 rounded-xl border p-1.5"
+      class="bg-base-200/50 border-base-300/50 flex items-center gap-1 rounded-xl border p-1"
     >
       <div
-        class="label-xxs text-base-content/50 px-2 tracking-widest select-none"
+        class="label-xxs text-base-content/50 hidden px-1.5 tracking-widest select-none sm:block"
       >
         Pincel:
       </div>
@@ -1259,7 +1259,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       >
     </div>
 
-    <div class="bg-base-300/60 h-8 w-px"></div>
+    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
 
     <!-- Settings Trigger -->
     <ActionButton
@@ -1267,10 +1267,9 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       icon="boxicons:cog-filled"
       label="Parámetros"
       size="md"
-      ghost
     />
 
-    <div class="bg-base-300/60 h-8 w-px"></div>
+    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
 
     <!-- Add Operator Trigger -->
     <ActionButton
@@ -1279,10 +1278,9 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       iconClass="text-secondary"
       label="Agregar Operador"
       size="md"
-      ghost
     />
 
-    <div class="bg-base-300/60 h-8 w-px"></div>
+    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
 
     <!-- Manage Holidays Trigger -->
     <ActionButton
@@ -1291,13 +1289,12 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       iconClass="text-secondary"
       label="Feriados"
       size="md"
-      ghost
     />
 
-    <div class="bg-base-300/60 h-8 w-px"></div>
+    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
 
     <!-- Save/Discard -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5">
       <span
         id="pending-edits-count"
         class="text-xxs text-base-content/50 w-16 text-center font-bold select-none"
@@ -1307,8 +1304,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         id="discard-edits-btn"
         label="Descartar"
         size="md"
-        ghost
-        class="text-base-content/50 hover:bg-base-200"
         disabled
       />
       <ActionButton
@@ -1324,7 +1319,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   <!-- Pasiva Edit Mode Toolbar -->
   <div
     id="pasiva-edit-toolbar"
-    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 items-center gap-3 rounded-2xl border p-3 opacity-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-500"
+    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 flex-wrap items-center justify-center gap-2 rounded-2xl border p-2 opacity-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-500"
   >
     <div class="flex items-center gap-2 px-1">
       <Icon
@@ -1345,8 +1340,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         id="pasiva-discard-btn"
         label="Descartar"
         size="md"
-        ghost
-        class="text-base-content/50 hover:bg-base-200"
       />
       <ActionButton
         id="pasiva-save-btn"
