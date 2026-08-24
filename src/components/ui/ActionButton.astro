@@ -3,6 +3,7 @@ import { Icon } from "astro-icon/components";
 
 interface Props {
   id?: string;
+  href?: string;
   icon?: string;
   label?: string;
   shortLabel?: string;
@@ -19,13 +20,14 @@ interface Props {
 
 const {
   id,
+  href,
   icon,
   label,
   shortLabel,
   labelId,
   ariaLabel,
   title,
-  size = "xs",
+  size = "default",
   iconSize,
   color = "btn-secondary",
   type = "button",
@@ -36,36 +38,56 @@ const {
 const sizeMap: Record<string, string> = {
   xs: "btn-xs",
   sm: "btn-sm",
-  md: "btn-md",
-  default: "",
+  md: "btn-sm md:btn-md",
+  default: "btn-sm md:btn-md",
 };
-const sizeClass = sizeMap[size] || "";
-const defaultIconSize =
-  size === "md" ? 18 : size === "default" ? 15 : 13;
-const resolvedIconSize = iconSize ?? defaultIconSize;
-const textSizeClass = size === "md" || size === "default" ? "text-sm" : "text-tiny";
-const baseClass = `btn ${sizeClass} btn-soft ${color} items-center justify-center gap-1.5 font-bold uppercase tracking-wider ${textSizeClass}`;
+const btnClasses = `btn ${sizeMap[size] || sizeMap.default} btn-soft ${color} gap-2`;
+const isXs = size === "xs";
+const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
 ---
 
-<button
-  type={type}
-  id={id}
-  title={title}
-  aria-label={ariaLabel}
-  class:list={[baseClass, className]}
-  {...attrs}
->
-  {icon && <Icon name={icon} size={resolvedIconSize} />}
-  {
-    shortLabel ? (
-      <>
-        <span class="inline xl:hidden">{shortLabel}</span>
-        <span id={labelId} class="hidden xl:inline">
-          {label}
-        </span>
-      </>
-    ) : (
-      label && <span id={labelId}>{label}</span>
-    )
-  }
-</button>
+{
+  href ? (
+    <a
+      href={href}
+      id={id}
+      title={title}
+      class:list={[btnClasses, className]}
+      aria-label={ariaLabel}
+      {...attrs}
+    >
+      {icon && <Icon name={icon} size={resolvedIconSize} />}
+      {shortLabel ? (
+        <>
+          <span class="inline xl:hidden">{shortLabel}</span>
+          <span id={labelId} class="hidden xl:inline">
+            {label}
+          </span>
+        </>
+      ) : (
+        label && <span id={labelId}>{label}</span>
+      )}
+    </a>
+  ) : (
+    <button
+      type={type}
+      id={id}
+      title={title}
+      class:list={[btnClasses, className]}
+      aria-label={ariaLabel}
+      {...attrs}
+    >
+      {icon && <Icon name={icon} size={resolvedIconSize} />}
+      {shortLabel ? (
+        <>
+          <span class="inline xl:hidden">{shortLabel}</span>
+          <span id={labelId} class="hidden xl:inline">
+            {label}
+          </span>
+        </>
+      ) : (
+        label && <span id={labelId}>{label}</span>
+      )}
+    </button>
+  )
+}
