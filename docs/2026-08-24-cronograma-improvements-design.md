@@ -53,6 +53,9 @@ El objetivo de este diseño es:
   operadores (lo que reduce la cantidad de filas de horarios), la fila con el
   resumen de cobertura se pega a la última fila filtrada en lugar de permanecer
   fijada a la parte inferior del cronograma.
+- **Iconos no filled:** la sección de cronograma mezcla iconos outlined con
+  filled; el estándar del proyecto (`docs/FORM_STANDARD.md`) prioriza la
+  variante `-filled` de `astro-icon`/`boxicons` para consistencia visual.
 
 ## Diseño
 
@@ -134,6 +137,16 @@ El objetivo de este diseño es:
 - No debe moverse la lista de tabs ni el layout general al conmutar vistas;
   sólo el panel de contenido.
 
+### 1b. Iconos `-filled` en toda la sección
+
+- El proyecto estandariza el uso de la variante `filled` de los iconos
+  (`astro-icon` con `boxicons:*-filled`, según `docs/FORM_STANDARD.md`).
+- Auditar los iconos de la sección de cronograma (tabs, botones de acción,
+  modales, timelines, drawer) y migrar los outlined a su variante `-filled`
+  correspondiente para mantener coherencia con el resto del portal.
+- Aplica tanto a los iconos nuevos (botones unificados) como a los existentes
+  que hoy usen la forma outlined.
+
 ### 5c. Fila de resumen de cobertura fijada al fondo
 
 - **Síntoma:** al filtrar/buscar operadores, las filas de horarios se reducen y
@@ -190,6 +203,8 @@ click copy-btn
 - Manual: filtrar/buscar operadores hasta dejar pocas filas y confirmar que la
   fila de resumen de cobertura queda fijada al fondo del cronograma, no pegada
   a la última fila.
+- Manual: revisar iconos de la sección y confirmar uso consistente de la
+  variante `-filled`.
 - Regresión: los botones de copia mantienen feedback de carga/éxito.
 - (Opcional) Playwright smoke test si el harness lo permite sin mayor costo.
 
