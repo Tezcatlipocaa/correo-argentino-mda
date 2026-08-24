@@ -23,6 +23,7 @@ import {
   LOCATION_FILTER_CONFIG,
 } from "./filters";
 import { showToast, showConfirm } from "./notifications";
+import { copyElementImageToClipboard } from "./copyButton";
 import {
   OperatorStatus,
   type OperatorData,
@@ -1765,53 +1766,20 @@ function setupEventListeners(): void {
     ) as HTMLButtonElement | null;
     const saturdayCard = document.getElementById("saturday-rotation-card");
     if (!copyBtn || !saturdayCard) return;
-
-    const originalBtnText = copyBtn.innerHTML;
-    try {
-      copyBtn.disabled = true;
-      copyBtn.innerHTML = `
-        <span class="loading loading-spinner loading-xs"></span>
-        <span>Copiando...</span>
-      `;
-
-      saturdayCard.classList.add("exporting-image");
-
-      const { exportAsClipboardImage } = await import("./exporters");
-      const targetEl =
-        document.getElementById("rotation-timeline-wrapper") || saturdayCard;
-      await exportAsClipboardImage(targetEl);
-
-      copyBtn.classList.remove("btn-secondary");
-      copyBtn.classList.add("btn-success");
-      copyBtn.innerHTML = `
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-        <span>¡Copiado!</span>
-      `;
-      showToast("Tabla de guardia copiada al portapapeles.", "success");
-
-      setTimeout(() => {
-        copyBtn.classList.remove("btn-success");
-        copyBtn.classList.add("btn-secondary");
-        copyBtn.disabled = false;
-        copyBtn.innerHTML = originalBtnText;
-      }, 2500);
-    } catch (error: any) {
-      console.error("Failed to copy table image:", error);
-      if (error?.message === "CLIPBOARD_UNAVAILABLE_DOWNLOADED") {
-        showToast(
+    const targetEl =
+      document.getElementById("rotation-timeline-wrapper") || saturdayCard;
+    await copyElementImageToClipboard(
+      copyBtn,
+      targetEl,
+      { padding: 16, compact: true },
+      {
+        success: "Tabla de guardia copiada al portapapeles.",
+        clipboardUnavailable:
           "El portapapeles requiere un sitio seguro (HTTPS). La imagen se descargó automáticamente.",
-          "warning",
-        );
-      } else {
-        showToast("Error al copiar la imagen.", "error");
-      }
-      copyBtn.disabled = false;
-      copyBtn.innerHTML = originalBtnText;
-    } finally {
-      saturdayCard.classList.remove("exporting-image");
-    }
+        error: "Error al copiar la imagen.",
+      },
+      "btn-secondary",
+    );
   }
 
   document
@@ -1824,53 +1792,20 @@ function setupEventListeners(): void {
     ) as HTMLButtonElement | null;
     const overtimeCard = document.getElementById("overtime-card");
     if (!copyBtn || !overtimeCard) return;
-
-    const originalBtnText = copyBtn.innerHTML;
-    try {
-      copyBtn.disabled = true;
-      copyBtn.innerHTML = `
-        <span class="loading loading-spinner loading-xs"></span>
-        <span>Copiando...</span>
-      `;
-
-      overtimeCard.classList.add("exporting-image");
-
-      const { exportAsClipboardImage } = await import("./exporters");
-      const targetEl =
-        document.getElementById("overtime-timeline-wrapper") || overtimeCard;
-      await exportAsClipboardImage(targetEl);
-
-      copyBtn.classList.remove("btn-ghost");
-      copyBtn.classList.add("btn-success");
-      copyBtn.innerHTML = `
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-        <span>¡Copiado!</span>
-      `;
-      showToast("Horas extras copiadas al portapapeles.", "success");
-
-      setTimeout(() => {
-        copyBtn.classList.remove("btn-success");
-        copyBtn.classList.add("btn-ghost");
-        copyBtn.disabled = false;
-        copyBtn.innerHTML = originalBtnText;
-      }, 2500);
-    } catch (error: any) {
-      console.error("Failed to copy overtime image:", error);
-      if (error?.message === "CLIPBOARD_UNAVAILABLE_DOWNLOADED") {
-        showToast(
+    const targetEl =
+      document.getElementById("overtime-timeline-wrapper") || overtimeCard;
+    await copyElementImageToClipboard(
+      copyBtn,
+      targetEl,
+      { padding: 16, compact: true },
+      {
+        success: "Horas extras copiadas al portapapeles.",
+        clipboardUnavailable:
           "El portapapeles requiere un sitio seguro (HTTPS). La imagen se descargó automáticamente.",
-          "warning",
-        );
-      } else {
-        showToast("Error al copiar la imagen.", "error");
-      }
-      copyBtn.disabled = false;
-      copyBtn.innerHTML = originalBtnText;
-    } finally {
-      overtimeCard.classList.remove("exporting-image");
-    }
+        error: "Error al copiar la imagen.",
+      },
+      "btn-secondary",
+    );
   }
 
   document
