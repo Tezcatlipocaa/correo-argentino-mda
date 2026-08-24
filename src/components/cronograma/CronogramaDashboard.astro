@@ -623,14 +623,15 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   required
                 />
               </div>
-              <button
-                type="submit"
-                id="save-rotation-config-btn"
-                class="btn btn-md btn-primary shrink-0 gap-2 font-bold uppercase text-sm"
-              >
-                <Icon name="boxicons:save-filled" size={18} />
-                Guardar Configuración
-              </button>
+            <ActionButton
+              type="submit"
+              id="save-rotation-config-btn"
+              icon="boxicons:save-filled"
+              label="Guardar Configuración"
+              color="btn-primary"
+              size="md"
+              class="shrink-0"
+            />
             </form>
           </div>
 
@@ -889,14 +890,15 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             class="no-export shrink-0"
           />
 
-          <button
+          <ActionButton
             type="button"
             id="save-overtime-referente-btn"
-            class="btn btn-md btn-warning no-export shrink-0 gap-2 font-bold text-sm"
-          >
-            <Icon name="boxicons:save-filled" size={18} />
-            Guardar Configuración
-          </button>
+            icon="boxicons:save-filled"
+            label="Guardar Configuración"
+            color="btn-warning"
+            size="md"
+            class="no-export shrink-0"
+          />
         </div>
       </div>
 
@@ -994,30 +996,30 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
             <input type="hidden" id="overtime-shift-edit-id" value="" />
             <div class="mt-2 flex items-center justify-between">
-              <button
-                type="button"
+              <ActionButton
                 id="overtime-shift-cancel-btn"
-                class="btn btn-md btn-ghost hidden font-bold text-sm"
-              >
-                Cancelar
-              </button>
+                label="Cancelar"
+                size="md"
+                ghost
+                class="hidden"
+              />
               <div class="ml-auto flex gap-2">
-                <button
-                  type="button"
+                <ActionButton
                   id="overtime-shift-delete-btn"
-                  class="btn btn-md btn-ghost text-error hidden gap-1.5 font-bold text-sm"
-                >
-                  <Icon name="boxicons:trash-filled" size={18} />
-                  Eliminar
-                </button>
-                <button
+                  icon="boxicons:trash-filled"
+                  label="Eliminar"
+                  size="md"
+                  ghost
+                  class="text-error hidden"
+                />
+                <ActionButton
                   type="submit"
                   id="overtime-shift-submit-btn"
-                  class="btn btn-md btn-warning gap-2 font-bold text-sm"
-                >
-                  <Icon name="boxicons:plus-circle-filled" size={18} />
-                  Agregar Turno
-                </button>
+                  icon="boxicons:plus-circle-filled"
+                  label="Agregar Turno"
+                  color="btn-warning"
+                  size="md"
+                />
               </div>
             </div>
           </form>
@@ -1260,37 +1262,37 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     <div class="bg-base-300/60 h-8 w-px"></div>
 
     <!-- Settings Trigger -->
-    <button
+    <ActionButton
       id="open-rules-settings"
-      class="btn btn-md btn-ghost text-base-content/60 hover:text-base-content gap-2 transition-colors text-sm"
-    >
-      <Icon name="boxicons:cog-filled" size={18} />
-      Parámetros
-    </button>
+      icon="boxicons:cog-filled"
+      label="Parámetros"
+      size="md"
+      ghost
+    />
 
     <div class="bg-base-300/60 h-8 w-px"></div>
 
     <!-- Add Operator Trigger -->
-    <button
+    <ActionButton
       id="open-new-op-modal"
-      class="btn btn-md btn-ghost text-base-content/60 hover:text-base-content gap-2 transition-colors text-sm"
-      type="button"
-    >
-      <Icon name="boxicons:user-plus-filled" size={18} class="text-secondary" />
-      Agregar Operador
-    </button>
+      icon="boxicons:user-plus-filled"
+      iconClass="text-secondary"
+      label="Agregar Operador"
+      size="md"
+      ghost
+    />
 
     <div class="bg-base-300/60 h-8 w-px"></div>
 
     <!-- Manage Holidays Trigger -->
-    <button
+    <ActionButton
       id="open-holidays-modal"
-      class="btn btn-md btn-ghost text-base-content/60 hover:text-base-content gap-2 transition-colors text-sm"
-      type="button"
-    >
-      <Icon name="boxicons:calendar-star-filled" size={18} class="text-secondary" />
-      Feriados
-    </button>
+      icon="boxicons:calendar-star-filled"
+      iconClass="text-secondary"
+      label="Feriados"
+      size="md"
+      ghost
+    />
 
     <div class="bg-base-300/60 h-8 w-px"></div>
 
@@ -1301,16 +1303,21 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         class="text-xxs text-base-content/50 w-16 text-center font-bold select-none"
         >0 cambios</span
       >
-      <button
+      <ActionButton
         id="discard-edits-btn"
-        class="btn btn-md btn-outline border-base-300 text-base-content/50 hover:bg-base-200 text-sm"
-        disabled>Descartar</button
-      >
-      <button
+        label="Descartar"
+        size="md"
+        ghost
+        class="text-base-content/50 hover:bg-base-200"
+        disabled
+      />
+      <ActionButton
         id="save-edits-btn"
-        class="btn btn-md btn-primary gap-1 text-sm"
-        disabled>Guardar</button
-      >
+        label="Guardar"
+        color="btn-primary"
+        size="md"
+        disabled
+      />
     </div>
   </div>
 
@@ -1334,16 +1341,19 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     <div class="bg-base-300/60 h-6 w-px"></div>
 
     <div class="flex items-center gap-2">
-      <button
+      <ActionButton
         id="pasiva-discard-btn"
-        class="btn btn-md btn-outline border-base-300 text-base-content/50 hover:bg-base-200 text-sm"
-        type="button">Descartar</button
-      >
-      <button
+        label="Descartar"
+        size="md"
+        ghost
+        class="text-base-content/50 hover:bg-base-200"
+      />
+      <ActionButton
         id="pasiva-save-btn"
-        class="btn btn-md btn-primary gap-1 text-sm"
-        type="button">Guardar</button
-      >
+        label="Guardar"
+        color="btn-primary"
+        size="md"
+      />
     </div>
   </div>
 

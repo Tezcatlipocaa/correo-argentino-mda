@@ -13,6 +13,8 @@ interface Props {
   size?: "xs" | "sm" | "md" | "default";
   iconSize?: number;
   color?: string;
+  ghost?: boolean;
+  iconClass?: string;
   type?: "button" | "submit";
   class?: string;
   [key: string]: any;
@@ -30,6 +32,8 @@ const {
   size = "default",
   iconSize,
   color = "btn-secondary",
+  ghost = false,
+  iconClass,
   type = "button",
   class: className = "",
   ...attrs
@@ -41,7 +45,8 @@ const sizeMap: Record<string, string> = {
   md: "btn-sm md:btn-md",
   default: "btn-sm md:btn-md",
 };
-const btnClasses = `btn ${sizeMap[size] || sizeMap.default} btn-soft ${color} gap-2`;
+const variantClass = ghost ? "btn-ghost" : `btn-soft ${color}`;
+const btnClasses = `btn ${sizeMap[size] || sizeMap.default} ${variantClass} gap-2`;
 const isXs = size === "xs";
 const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
 ---
@@ -56,7 +61,7 @@ const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
       aria-label={ariaLabel}
       {...attrs}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} />}
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} />}
       {shortLabel ? (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
@@ -77,7 +82,7 @@ const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
       aria-label={ariaLabel}
       {...attrs}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} />}
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} />}
       {shortLabel ? (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
