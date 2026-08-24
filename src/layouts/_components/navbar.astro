@@ -35,7 +35,7 @@ const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
 const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 ---
 
-<header class="border-base-300 bg-base-100/95 z-30 min-h-20 border-b">
+<header class="border-base-300 bg-base-100/95 z-30 mb-4 min-h-20 border-b">
   <nav
     class="navbar text-base-content/95 flex h-full w-full items-center justify-between pr-2 md:pr-8"
   >
@@ -78,9 +78,13 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
           data-open-about-project
           title="Acerca de este proyecto"
           aria-label="Acerca de este proyecto"
-          class="btn btn-ghost btn-circle"
+          class="btn btn-ghost btn-circle group"
         >
-          <Icon name="boxicons:help-circle-filled" size={24} />
+          <Icon
+            name="boxicons:help-circle-filled"
+            size={24}
+            class="transition-transform duration-200 ease-out group-hover:scale-110"
+          />
         </button>
 
         <!-- Divider -->
@@ -88,7 +92,7 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
       </div>
 
       <!-- Toggle dark mode -->
-      <label class="btn btn-ghost btn-circle swap swap-rotate">
+      <label class="btn btn-ghost btn-circle swap swap-rotate group">
         <input
           id="theme-toggle"
           type="checkbox"
@@ -101,13 +105,13 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 
         <Icon
           name="boxicons:sun-filled"
-          class="swap-off"
+          class="swap-off group-hover:[transform:scale(1.1)]"
           size={20}
           aria-hidden="true"
         />
         <Icon
           name="boxicons:moon-filled"
-          class="swap-on"
+          class="swap-on group-hover:[transform:scale(1.1)]"
           size={20}
           aria-hidden="true"
         />

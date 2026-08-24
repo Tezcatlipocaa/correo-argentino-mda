@@ -14,6 +14,7 @@ interface Props {
   subLevels: InvgateHelpdeskAndLevel[];
   isHidden?: boolean;
   adminOnly?: boolean;
+  categoryNames?: Record<string, string>;
 }
 
 const {
@@ -24,6 +25,7 @@ const {
   subLevels,
   isHidden = false,
   adminOnly = false,
+  categoryNames = {},
 } = Astro.props;
 const cleanBase = getCleanBase();
 const hdName = helpdesk.name || `Helpdesk #${helpdesk.id}`;
@@ -87,7 +89,6 @@ const searchableText = [
   parentName,
   ...legacyNames,
   topicsList.join(" "),
-  first?.contacts,
   first?.notes,
   ...sortedSubLevels.map((sl) => sl.name),
 ]
@@ -346,28 +347,11 @@ const searchableText = [
           </p>
           <div class="flex flex-wrap gap-1">
             {categoryIds.map((cid) => (
-              <span class="badge badge-xs badge-outline font-mono">
-                ID: {cid}
+              <span class="badge badge-xs badge-outline">
+                {categoryNames[String(cid)] ?? `ID: ${cid}`}
               </span>
             ))}
           </div>
-        </div>
-      )
-    }
-
-    {
-      first?.contacts && (
-        <div>
-          <p class="text-base-content/70 flex items-center gap-1 text-xs font-bold tracking-wider uppercase">
-            <Icon name="boxicons:phone-filled" size={16} aria-hidden="true" />
-            Contactos
-          </p>
-          <p
-            class="text-base-content/80 bg-base-200/30 border-base-200 mt-1 rounded-lg border p-2.5 text-sm whitespace-pre-wrap"
-            data-highlight-target
-          >
-            {first.contacts}
-          </p>
         </div>
       )
     }

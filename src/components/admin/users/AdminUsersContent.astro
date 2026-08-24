@@ -223,25 +223,23 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                           inputClass="input-sm"
                         />
                         <div class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3">
-                          <button
-                            type="submit"
-                            class="btn btn-secondary btn-sm gap-1"
-                          >
-                            <Icon name="boxicons:check-filled" size={14} />
-                            Guardar
-                          </button>
-                          <button
+                          <ActionCancelButton
                             type="button"
-                            class="btn btn-ghost btn-sm"
+                            label="Cancelar"
+                            icon="boxicons:x-filled"
+                            variant="error"
                             onclick="this.closest('dialog').close()"
-                          >
-                            Cancelar
-                          </button>
+                          />
+                          <ActionConfirmButton
+                            type="submit"
+                            color="btn-secondary"
+                            label="Guardar"
+                            icon="boxicons:check-filled"
+                          />
                         </div>
                       </form>
                     </Fragment>
                   </Modal>
-
                   <Modal id={`modal-reset-${u.id}`}>
                     <Fragment slot="content">
                       <h3 class="text-base-content mb-1 text-base font-semibold">
@@ -272,20 +270,19 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                           inputClass="input-sm"
                         />
                         <div class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3">
-                          <button
-                            type="submit"
-                            class="btn btn-warning btn-sm gap-1"
-                          >
-                            <Icon name="boxicons:lock-open-filled" size={14} />
-                            Blanquear
-                          </button>
-                          <button
+                          <ActionCancelButton
                             type="button"
-                            class="btn btn-ghost btn-sm"
+                            label="Cancelar"
+                            icon="boxicons:x-filled"
+                            variant="error"
                             onclick="this.closest('dialog').close()"
-                          >
-                            Cancelar
-                          </button>
+                          />
+                          <ActionConfirmButton
+                            type="submit"
+                            color="btn-warning"
+                            label="Blanquear"
+                            icon="boxicons:lock-open-filled"
+                          />
                         </div>
                       </form>
                     </Fragment>
@@ -407,18 +404,18 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
       <div
         class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3"
       >
+        <ActionCancelButton
+          type="button"
+          label="Cancelar"
+          icon="boxicons:x-filled"
+          variant="error"
+          onclick="this.closest('dialog').close()"
+        />
         <ActionConfirmButton
           type="submit"
           color="btn-primary"
           label="Guardar"
           icon="boxicons:check-filled"
-          size="sm"
-        />
-        <ActionCancelButton
-          type="button"
-          label="Cancelar"
-          size="sm"
-          onclick="this.closest('dialog').close()"
         />
       </div>
     </form>
@@ -474,13 +471,13 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                 <td class="bg-base-200/5 text-center">
                   {row.agent ? (
                     <Icon
-                      name="boxicons:check"
+                      name="boxicons:check-filled"
                       class="text-success inline-block"
                       size={24}
                     />
                   ) : (
                     <Icon
-                      name="boxicons:x"
+                      name="boxicons:x-filled"
                       class="text-error inline-block"
                       size={24}
                     />
@@ -489,13 +486,13 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                 <td class="bg-warning/5 text-center">
                   {row.referent ? (
                     <Icon
-                      name="boxicons:check"
+                      name="boxicons:check-filled"
                       class="text-success inline-block"
                       size={24}
                     />
                   ) : (
                     <Icon
-                      name="boxicons:x"
+                      name="boxicons:x-filled"
                       class="text-error inline-block"
                       size={24}
                     />
@@ -504,13 +501,13 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                 <td class="bg-accent/5 text-center">
                   {row.team_leader ? (
                     <Icon
-                      name="boxicons:check"
+                      name="boxicons:check-filled"
                       class="text-success inline-block"
                       size={24}
                     />
                   ) : (
                     <Icon
-                      name="boxicons:x"
+                      name="boxicons:x-filled"
                       class="text-error inline-block"
                       size={24}
                     />
@@ -519,13 +516,13 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                 <td class="bg-info/5 text-center">
                   {row.supervisor ? (
                     <Icon
-                      name="boxicons:check"
+                      name="boxicons:check-filled"
                       class="text-success inline-block"
                       size={24}
                     />
                   ) : (
                     <Icon
-                      name="boxicons:x"
+                      name="boxicons:x-filled"
                       class="text-error inline-block"
                       size={24}
                     />
@@ -534,13 +531,13 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                 <td class="bg-error/5 text-center">
                   {row.admin ? (
                     <Icon
-                      name="boxicons:check"
+                      name="boxicons:check-filled"
                       class="text-success inline-block"
                       size={24}
                     />
                   ) : (
                     <Icon
-                      name="boxicons:x"
+                      name="boxicons:x-filled"
                       class="text-error inline-block"
                       size={24}
                     />

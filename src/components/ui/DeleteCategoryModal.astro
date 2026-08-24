@@ -82,18 +82,20 @@ const config = {
           </div>
         </label>
       </div>
-      <div class="modal-action mt-6 flex-col gap-2 sm:flex-row">
+      <div class="modal-action mt-6 flex-col gap-3 sm:flex-row">
         <ActionCancelButton
           type="button"
           class="w-full sm:w-auto"
+          variant="error"
+          icon="boxicons:x-filled"
           onclick="document.getElementById('delete-category-modal').close()"
         />
         <ActionConfirmButton
           type="submit"
           color="btn-error"
-          class="ml-0 w-full sm:ml-2 sm:w-auto"
+          class="w-full sm:w-auto"
           label="Confirmar Eliminación"
-          icon="boxicons:trash"
+          icon="boxicons:trash-filled"
         />
       </div>
     </form>

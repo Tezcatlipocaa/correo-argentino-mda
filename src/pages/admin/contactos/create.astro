@@ -2,9 +2,6 @@
 import { db } from "@db/index";
 import { providerContacts, contactCategories } from "@db/schema";
 import { eq, asc } from "drizzle-orm";
-import BaseLayout from "@layouts/BaseLayout.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
@@ -16,8 +13,7 @@ import FormLegend from "@components/ui/forms/FormLegend.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { toastResponse } from "@lib/api/toastResponse";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import FormShell from "@components/ui/FormShell.astro";
 
 let errorMsg = "";
 
@@ -112,129 +108,100 @@ if (Astro.request.method === "POST") {
 }
 ---
 
-<BaseLayout title="Nuevo contacto">
-  <PageContainer>
-    <div class="text-base-content/60 flex items-center gap-2 text-sm">
-      <a
-        href={resolveUrl("/admin/contactos")}
-        class="hover:text-base-content flex items-center gap-1.5 transition-colors"
+<FormShell
+  backHref={resolveUrl("/admin/contactos")}
+  title="Nuevo contacto"
+  subtitle="Completá los datos para registrar un nuevo contacto útil."
+  formId="contact-form"
+  saveLabel="Crear contacto"
+  cancelLabel="Volver al listado"
+  async
+>
+  <script is:inline define:vars={{ errorMsg }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, "alert-error"),
+      );
+    }
+  </script>
+
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
       >
-        <Icon name="boxicons:chevron-left" size={16} />
-        Contactos
-      </a>
-      <span>/</span>
-      <span class="text-base-content truncate font-medium">Nuevo contacto</span>
-    </div>
+        <Icon name="boxicons:phone-filled" size={15} />
+      </span>
+      Datos del contacto
+    </h2>
 
-    <PageHeader
-      title="Nuevo contacto"
-      description="Completá los datos para registrar un nuevo contacto útil."
-    />
-
-    <script is:inline define:vars={{ errorMsg }}>
-      if (errorMsg) {
-        window.addEventListener("load", () =>
-          window.showToast?.(errorMsg, "alert-error"),
-        );
-      }
-    </script>
-
-    <form method="POST" id="contact-form" data-async-form class="space-y-4">
-      <SectionCard class="shadow-md">
-        <h2
-          class="text-base-content flex items-center gap-2 text-sm font-semibold"
-        >
-          <span
-            class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-          >
-            <Icon name="boxicons:phone-filled" size={15} />
-          </span>
-          Datos del contacto
-        </h2>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div class="space-y-3">
-            <FormField
-              id="input-provider"
-              name="provider"
-              label="Proveedor"
-              required
-              placeholder="ej: CORASA"
-              autocomplete="off"
-              inputClass="input-sm font-semibold"
-              autofocus
-            />
-
-            <FormField
-              id="input-service"
-              name="service"
-              label="Servicio"
-              required
-              placeholder="ej: Mesa de Ayuda"
-              autocomplete="off"
-              inputClass="input-sm"
-            />
-
-            <SelectField
-              id="select-categoryId"
-              name="categoryId"
-              label="Categoría"
-              selectClass="select-sm"
-            >
-              <option value=""> Ninguna </option>
-              {
-                allCategories.map((cat) => (
-                  <option value={cat.id}>{cat.title}</option>
-                ))
-              }
-            </SelectField>
-          </div>
-
-          <div class="space-y-3">
-            <FormTextarea
-              id="input-phones"
-              name="phones"
-              label="Teléfonos (uno por línea)"
-              textareaClass="textarea-sm font-mono text-xs"
-              rows={2}
-              placeholder="ej: 6316-1111
-0810-777-7787"
-            />
-            <FormTextarea
-              id="input-emails"
-              name="emails"
-              label="Correos electrónicos (uno por línea)"
-              textareaClass="textarea-sm font-mono text-xs"
-              rows={2}
-              placeholder="ej: soporte@correo.com.ar"
-            />
-            <FormTextarea
-              id="input-urls"
-              name="urls"
-              label="Enlaces web (uno por línea como: Etiqueta, URL)"
-              textareaClass="textarea-sm font-mono text-xs"
-              rows={2}
-              placeholder="ej: Portal, http://sm.correo.local
-http://www.google.com"
-            />
-          </div>
-        </div>
-      </SectionCard>
-
-      <div class="flex items-center justify-between gap-3 pt-1">
-        <ActionCancelButton
-          href={resolveUrl("/admin/contactos")}
-          label="Volver al listado"
-          icon="boxicons:arrow-left-filled"
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="space-y-3">
+        <FormField
+          id="input-provider"
+          name="provider"
+          label="Proveedor"
+          required
+          placeholder="ej: CORASA"
+          autocomplete="off"
+          inputClass="input-sm font-semibold"
+          autofocus
         />
-        <ActionConfirmButton
-          type="submit"
-          color="btn-secondary"
-          label="Crear contacto"
-          icon="boxicons:save-filled"
+
+        <FormField
+          id="input-service"
+          name="service"
+          label="Servicio"
+          required
+          placeholder="ej: Mesa de Ayuda"
+          autocomplete="off"
+          inputClass="input-sm"
+        />
+
+        <SelectField
+          id="select-categoryId"
+          name="categoryId"
+          label="Categoría"
+          selectClass="select-sm"
+        >
+          <option value=""> Ninguna </option>
+          {
+            allCategories.map((cat) => (
+              <option value={cat.id}>{cat.title}</option>
+            ))
+          }
+        </SelectField>
+      </div>
+
+      <div class="space-y-3">
+        <FormTextarea
+          id="input-phones"
+          name="phones"
+          label="Teléfonos (uno por línea)"
+          textareaClass="textarea-sm font-mono text-xs"
+          rows={2}
+          placeholder="ej: 6316-1111
+0810-777-7787"
+        />
+        <FormTextarea
+          id="input-emails"
+          name="emails"
+          label="Correos electrónicos (uno por línea)"
+          textareaClass="textarea-sm font-mono text-xs"
+          rows={2}
+          placeholder="ej: soporte@correo.com.ar"
+        />
+        <FormTextarea
+          id="input-urls"
+          name="urls"
+          label="Enlaces web (uno por línea como: Etiqueta, URL)"
+          textareaClass="textarea-sm font-mono text-xs"
+          rows={2}
+          placeholder="ej: Portal, http://sm.correo.local
+http://www.google.com"
         />
       </div>
-    </form>
-  </PageContainer>
-  <AsyncFormScript />
-</BaseLayout>
+    </div>
+  </SectionCard>
+</FormShell>
+<AsyncFormScript />

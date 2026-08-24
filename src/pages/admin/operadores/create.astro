@@ -2,20 +2,16 @@
 import { db } from "@db/index";
 import { agents, workLocations, schedules } from "@db/schema";
 
-import BaseLayout from "@layouts/BaseLayout.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import { Icon } from "astro-icon/components";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
+import FormShell from "@components/ui/FormShell.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { toastResponse } from "@lib/api/toastResponse";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 let errorMsg = "";
 
@@ -211,201 +207,170 @@ if (Astro.request.method === "POST") {
 const pageTitle = "Nuevo operador";
 ---
 
-<BaseLayout title={pageTitle}>
-  <PageContainer>
-    <div class="text-base-content/60 flex items-center gap-2 text-sm">
-      <a
-        href={resolveUrl("/admin/operadores")}
-        class="hover:text-base-content flex items-center gap-1.5 transition-colors"
+<FormShell
+  backHref={resolveUrl("/admin/operadores")}
+  title={pageTitle}
+  subtitle="Completá los datos y horarios para registrar un nuevo operador."
+  formId="operator-form"
+  async
+  saveLabel="Crear operador"
+  cancelLabel="Volver al listado"
+>
+  <script is:inline define:vars={{ errorMsg }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, "alert-error"),
+      );
+    }
+  </script>
+
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
       >
-        <Icon name="boxicons:chevron-left" size={16} />
-        Gestión de operadores
-      </a>
-      <span>/</span>
-      <span class="text-base-content truncate font-medium">{pageTitle}</span>
+        <Icon name="boxicons:user-id-card-filled" size={15} />
+      </span>
+      Datos del operador
+    </h2>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <FormField
+        id="input-id"
+        name="id"
+        label="ID de usuario"
+        required
+        value=""
+        placeholder="ej: jperez"
+        autocomplete="off"
+        inputClass="input-sm font-mono"
+        helpText="Identificador único de usuario del operador."
+      />
+
+      <FormField
+        id="input-name"
+        name="name"
+        label="Nombre completo"
+        required
+        value=""
+        placeholder="ej: Juan Pérez"
+        autocomplete="off"
+        inputClass="input-sm"
+      />
+
+      <SelectField
+        id="select-locationId"
+        name="locationId"
+        label="Ubicación presencial"
+        selectClass="select-sm"
+      >
+        <option value="" selected> Sin asignar </option>
+        {
+          allLocations.map((loc) => (
+            <option value={loc.id} selected={loc.id === "MGR"}>
+              {loc.name}
+            </option>
+          ))
+        }
+      </SelectField>
+
+      <FormField
+        id="input-status"
+        name="status"
+        label="Estado"
+        readonly
+        value="Disponible"
+        inputClass="input-sm input-disabled bg-base-200 cursor-not-allowed"
+        helpText="El estado de disponibilidad se calcula automáticamente basado en la matriz de horarios y Cronograma."
+      />
     </div>
+  </SectionCard>
 
-    <PageHeader
-      title={pageTitle}
-      description="Completá los datos y horarios para registrar un nuevo operador."
-    />
-
-    <script is:inline define:vars={{ errorMsg }}>
-      if (errorMsg) {
-        window.addEventListener("load", () =>
-          window.showToast?.(errorMsg, "alert-error"),
-        );
-      }
-    </script>
-
-    <form method="POST" id="operator-form" class="space-y-4" data-async-form>
-      <SectionCard class="shadow-md">
-        <h2
-          class="text-base-content flex items-center gap-2 text-sm font-semibold"
-        >
-          <span
-            class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-          >
-            <Icon name="boxicons:user-id-card-filled" size={15} />
-          </span>
-          Datos del operador
-        </h2>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <FormField
-            id="input-id"
-            name="id"
-            label="ID de usuario"
-            required
-            value=""
-            placeholder="ej: jperez"
-            autocomplete="off"
-            inputClass="input-sm font-mono"
-            helpText="Identificador único de usuario del operador."
-          />
-
-          <FormField
-            id="input-name"
-            name="name"
-            label="Nombre completo"
-            required
-            value=""
-            placeholder="ej: Juan Pérez"
-            autocomplete="off"
-            inputClass="input-sm"
-          />
-
-          <SelectField
-            id="select-locationId"
-            name="locationId"
-            label="Ubicación presencial"
-            selectClass="select-sm"
-          >
-            <option value="" selected> Sin asignar </option>
-            {
-              allLocations.map((loc) => (
-                <option value={loc.id} selected={loc.id === "MGR"}>
-                  {loc.name}
-                </option>
-              ))
-            }
-          </SelectField>
-
-          <FormField
-            id="input-status"
-            name="status"
-            label="Estado"
-            readonly
-            value="Disponible"
-            inputClass="input-sm input-disabled bg-base-200 cursor-not-allowed"
-            helpText="El estado de disponibilidad se calcula automáticamente basado en la matriz de horarios y Cronograma."
-          />
-        </div>
-      </SectionCard>
-
-      <SectionCard class="shadow-md">
-        <h2
-          class="text-base-content flex items-center gap-2 text-sm font-semibold"
-        >
-          <span
-            class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-          >
-            <Icon name="boxicons:calendar" size={15} />
-          </span>
-          Matriz de Horarios (Esquema Semanal)
-        </h2>
-        <div class="space-y-2">
-          {
-            daysOfWeek.map((day) => (
-              <div class="collapse-arrow border-base-300 bg-base-100 rounded-box collapse border">
-                <input type="checkbox" />
-                <div class="collapse-title text-sm font-medium">{day}</div>
-                <div class="collapse-content">
-                  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div class="space-y-3">
-                      <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
-                        <span>🏠</span> Home Office
-                      </h3>
-                      <div class="grid grid-cols-3 gap-2">
-                        <FormField
-                          id={`home_${day}_start`}
-                          type="time"
-                          name={`home_${day}_start`}
-                          label="Entrada"
-                          value=""
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`home_${day}_end`}
-                          type="time"
-                          name={`home_${day}_end`}
-                          label="Salida"
-                          value=""
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`home_${day}_break`}
-                          type="time"
-                          name={`home_${day}_break`}
-                          label="Break"
-                          value=""
-                          inputClass="input-sm"
-                        />
-                      </div>
-                    </div>
-                    <div class="space-y-3">
-                      <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
-                        <span>🏢</span> Presencial
-                      </h3>
-                      <div class="grid grid-cols-3 gap-2">
-                        <FormField
-                          id={`presencial_${day}_start`}
-                          type="time"
-                          name={`presencial_${day}_start`}
-                          label="Entrada"
-                          value=""
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`presencial_${day}_end`}
-                          type="time"
-                          name={`presencial_${day}_end`}
-                          label="Salida"
-                          value=""
-                          inputClass="input-sm"
-                        />
-                        <FormField
-                          id={`presencial_${day}_break`}
-                          type="time"
-                          name={`presencial_${day}_break`}
-                          label="Break"
-                          value=""
-                          inputClass="input-sm"
-                        />
-                      </div>
-                    </div>
+  <SectionCard class="shadow-md">
+    <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+      <span
+        class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+      >
+        <Icon name="boxicons:calendar-filled" size={15} />
+      </span>
+      Matriz de Horarios (Esquema Semanal)
+    </h2>
+    <div class="space-y-2">
+      {
+        daysOfWeek.map((day) => (
+          <div class="collapse-arrow border-base-300 bg-base-100 rounded-box collapse border">
+            <input type="checkbox" />
+            <div class="collapse-title text-sm font-medium">{day}</div>
+            <div class="collapse-content">
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="space-y-3">
+                  <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
+                    <span>🏠</span> Home Office
+                  </h3>
+                  <div class="grid grid-cols-3 gap-2">
+                    <FormField
+                      id={`home_${day}_start`}
+                      type="time"
+                      name={`home_${day}_start`}
+                      label="Entrada"
+                      value=""
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`home_${day}_end`}
+                      type="time"
+                      name={`home_${day}_end`}
+                      label="Salida"
+                      value=""
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`home_${day}_break`}
+                      type="time"
+                      name={`home_${day}_break`}
+                      label="Break"
+                      value=""
+                      inputClass="input-sm"
+                    />
+                  </div>
+                </div>
+                <div class="space-y-3">
+                  <h3 class="text-base-content/70 flex items-center gap-1 text-xs font-semibold uppercase">
+                    <span>🏢</span> Presencial
+                  </h3>
+                  <div class="grid grid-cols-3 gap-2">
+                    <FormField
+                      id={`presencial_${day}_start`}
+                      type="time"
+                      name={`presencial_${day}_start`}
+                      label="Entrada"
+                      value=""
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`presencial_${day}_end`}
+                      type="time"
+                      name={`presencial_${day}_end`}
+                      label="Salida"
+                      value=""
+                      inputClass="input-sm"
+                    />
+                    <FormField
+                      id={`presencial_${day}_break`}
+                      type="time"
+                      name={`presencial_${day}_break`}
+                      label="Break"
+                      value=""
+                      inputClass="input-sm"
+                    />
                   </div>
                 </div>
               </div>
-            ))
-          }
-        </div>
-      </SectionCard>
-
-      <div class="flex items-center justify-between gap-3 pt-1">
-        <ActionCancelButton
-          href={resolveUrl("/admin/operadores")}
-          label="Volver al listado"
-          icon="boxicons:arrow-left-filled"
-        />
-        <ActionConfirmButton
-          type="submit"
-          color="btn-primary"
-          label="Crear operador"
-          icon="boxicons:save-filled"
-        />
-      </div>
-    </form>
-  </PageContainer>
-  <AsyncFormScript />
-</BaseLayout>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </SectionCard>
+</FormShell>
+<AsyncFormScript />

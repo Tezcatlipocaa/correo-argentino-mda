@@ -1,6 +1,7 @@
 ---
 import Modal from "@components/ui/Modal.astro";
 import { Icon } from "astro-icon/components";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 
 interface Props {
   id?: string;
@@ -109,18 +110,16 @@ const { id = "agents-ticket-modal" } = Astro.props;
   </Fragment>
   <Fragment slot="actions">
     <div class="mt-6 flex justify-end gap-2">
-      <form method="dialog">
-        <button
-          type="button"
-          class="btn btn-ghost border-base-300 hover:bg-base-200 cursor-pointer border"
-          onclick="this.closest('dialog')?.close()"
-        >
-          Cancelar
-        </button>
-      </form>
+      <ActionCancelButton
+        type="button"
+        label="Cancelar"
+        icon="boxicons:x-filled"
+        variant="error"
+        onclick="this.closest('dialog')?.close()"
+      />
       <button
         id="confirm-agents-ticket-btn"
-        class="btn btn-primary cursor-pointer shadow-md"
+        class="btn btn-primary btn-sm md:btn-md cursor-pointer gap-2 shadow-md"
       >
         Crear Ticket
       </button>
@@ -190,15 +189,16 @@ const { id = "agents-ticket-modal" } = Astro.props;
   </Fragment>
   <Fragment slot="actions">
     <div class="mt-6 flex justify-end gap-2">
-      <form method="dialog">
-        <button
-          class="btn btn-ghost border-base-300 hover:bg-base-200 cursor-pointer border"
-          >Cancelar</button
-        >
-      </form>
+      <ActionCancelButton
+        type="button"
+        label="Cancelar"
+        icon="boxicons:x-filled"
+        variant="error"
+        onclick="this.closest('dialog')?.close()"
+      />
       <button
         id="confirm-create-ticket-btn"
-        class="btn btn-primary cursor-pointer shadow-md"
+        class="btn btn-primary btn-sm md:btn-md cursor-pointer gap-2 shadow-md"
       >
         Crear Ticket
       </button>
