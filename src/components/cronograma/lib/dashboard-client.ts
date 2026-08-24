@@ -1418,15 +1418,24 @@ function setupEventListeners(): void {
         Math.min(window.innerWidth - menuWidth - padding, left),
       );
 
-      // Never cover the sticky operator column (edit/delete buttons live there)
+      // Never cover the sticky columns (operator + day-counter cells; the
+      // edit/delete buttons and counters live there). Measure every
+      // left-pinned sticky cell via its computed `left` offset.
       const scrollContainer = trigger.closest<HTMLElement>(".overflow-x-auto");
       if (scrollContainer) {
         const containerLeft = scrollContainer.getBoundingClientRect().left;
-        const stickyCell = scrollContainer.querySelector<HTMLElement>(
-          "th.sticky, td.sticky",
-        );
-        const stickyWidth = stickyCell?.offsetWidth ?? 200;
-        const safeLeft = containerLeft + stickyWidth + 20;
+        let stickyZoneRight = containerLeft;
+        scrollContainer
+          .querySelectorAll<HTMLElement>(".sticky")
+          .forEach((cell) => {
+            const cs = window.getComputedStyle(cell);
+            if (cs.position !== "sticky" || cs.left === "auto") return;
+            const leftPx = Number.parseFloat(cs.left);
+            if (Number.isNaN(leftPx)) return;
+            const candidate = containerLeft + leftPx + cell.offsetWidth;
+            if (candidate > stickyZoneRight) stickyZoneRight = candidate;
+          });
+        const safeLeft = stickyZoneRight + 16;
         if (left < safeLeft) {
           left = Math.min(safeLeft, window.innerWidth - menuWidth - padding);
         }
