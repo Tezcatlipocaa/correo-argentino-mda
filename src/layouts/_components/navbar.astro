@@ -92,7 +92,7 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
       </div>
 
       <!-- Toggle dark mode -->
-      <label class="btn btn-ghost btn-circle swap swap-rotate">
+      <label class="btn btn-ghost btn-circle swap swap-rotate group">
         <input
           id="theme-toggle"
           type="checkbox"
@@ -105,13 +105,13 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 
         <Icon
           name="boxicons:sun-filled"
-          class="swap-off"
+          class="swap-off group-hover:[transform:scale(1.1)]"
           size={20}
           aria-hidden="true"
         />
         <Icon
           name="boxicons:moon-filled"
-          class="swap-on"
+          class="swap-on group-hover:[transform:scale(1.1)]"
           size={20}
           aria-hidden="true"
         />
