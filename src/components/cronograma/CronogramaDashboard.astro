@@ -2105,6 +2105,14 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     min-width: 11rem;
     max-width: 11rem;
   }
+
+  /* Prevent whole-section horizontal shift when switching views
+     toggles the page scrollbar */
+  @media (min-width: 768px) {
+    html {
+      scrollbar-gutter: stable;
+    }
+  }
 </style>
 
 <script
