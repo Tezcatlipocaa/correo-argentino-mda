@@ -319,58 +319,54 @@ export async function exportScheduleToExcel(
   URL.revokeObjectURL(url);
 }
 
+export interface ExportImageOptions {
+  padding?: number;
+  compact?: boolean;
+}
+
 export async function exportAsClipboardImage(
   element: HTMLElement,
+  options: ExportImageOptions = {},
   onStart?: () => void,
   onEnd?: () => void,
 ): Promise<void> {
   if (onStart) onStart();
+  const { padding = 0, compact = false } = options;
 
-  const originalWidth = element.style.width;
-  const originalHeight = element.style.height;
-  const originalMaxWidth = element.style.maxWidth;
-  const originalMaxHeight = element.style.maxHeight;
-  const originalOverflow = element.style.overflow;
+  // Offscreen clone so the live UI is never mutated and the margin is reliable.
+  const host = document.createElement("div");
+  host.style.position = "fixed";
+  host.style.left = "-99999px";
+  host.style.top = "0";
+  host.style.zIndex = "-1";
+  host.style.pointerEvents = "none";
+  host.className = "export-capture" + (compact ? " export-compact" : "");
+  const clone = element.cloneNode(true) as HTMLElement;
+  host.appendChild(clone);
+  document.body.appendChild(host);
 
   try {
-    // Configure container layout for high-fidelity snapshot
-    element.style.width = element.scrollWidth + "px";
-    element.style.height = element.scrollHeight + "px";
-    element.style.maxWidth = "none";
-    element.style.maxHeight = "none";
-    element.style.overflow = "visible";
-
-    // Force layout reflow
-    element.offsetHeight;
-
     const toPng = await getToPng();
     const computedBg =
-      window.getComputedStyle(element).backgroundColor || "#ffffff";
+      window.getComputedStyle(clone).backgroundColor || "#ffffff";
 
-    const dataUrl = await toPng(element, {
+    const dataUrl = await toPng(clone, {
       backgroundColor: computedBg,
       style: {
         transform: "scale(1)",
         transformOrigin: "top left",
-        width: element.scrollWidth + "px",
-        height: element.scrollHeight + "px",
+        width: clone.scrollWidth + "px",
+        height: clone.scrollHeight + "px",
+        padding: padding > 0 ? padding + "px" : "0",
+        margin: "0",
       },
       quality: 1.0,
       pixelRatio: 3,
     });
 
-    // Restore original styles
-    element.style.width = originalWidth;
-    element.style.height = originalHeight;
-    element.style.maxWidth = originalMaxWidth;
-    element.style.maxHeight = originalMaxHeight;
-    element.style.overflow = originalOverflow;
-
-    // Convert data URL to Blob
     const res = await fetch(dataUrl);
     const blob = await res.blob();
 
-    // Check if Clipboard API is supported (requires secure context HTTPS)
     if (
       !navigator.clipboard ||
       !navigator.clipboard.write ||
@@ -385,22 +381,11 @@ export async function exportAsClipboardImage(
       throw new Error("CLIPBOARD_UNAVAILABLE_DOWNLOADED");
     }
 
-    // Write blob to Clipboard
     await navigator.clipboard.write([
-      new ClipboardItem({
-        [blob.type]: blob,
-      }),
+      new ClipboardItem({ [blob.type]: blob }),
     ]);
-  } catch (error: unknown) {
-    // Ensure styles are restored on failure
-    element.style.width = originalWidth;
-    element.style.height = originalHeight;
-    element.style.maxWidth = originalMaxWidth;
-    element.style.maxHeight = originalMaxHeight;
-    element.style.overflow = originalOverflow;
-    console.error("Error copying image to clipboard:", error);
-    throw error;
   } finally {
+    if (host.parentNode) document.body.removeChild(host);
     if (onEnd) onEnd();
   }
 }
