@@ -400,7 +400,7 @@ export function renderDaily(): void {
       let breakBadgeHtml = "";
       if (breakStartHourStr && breakEndHourStr) {
         breakBadgeHtml = `
-          <span class="daily-break-badge px-1.5 py-0.5 rounded-full label-xxs bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1 shadow-sm shrink-0" title="Break: ${breakStartHourStr} - ${breakEndHourStr}">
+          <span class="daily-break-badge px-1.5 py-0.5 rounded-full label-xxs bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1 shadow-sm shrink-0 select-none" title="Break: ${breakStartHourStr} - ${breakEndHourStr}">
             <svg class="w-3 h-3 text-indigo-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
               <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
@@ -450,7 +450,7 @@ export function renderDaily(): void {
 
       // Helper for adding line-through to work bar spans
       const ganttSpanClass = (bg: string) =>
-        `relative z-10 text-tiny font-extrabold tracking-tight uppercase px-1.5 py-0.5 rounded ${bg} pointer-events-none ${isHoliday ? "line-through" : ""}`;
+        `relative z-10 text-tiny font-extrabold tracking-tight uppercase px-1.5 py-0.5 rounded ${bg} pointer-events-none select-none ${isHoliday ? "line-through" : ""}`;
       // Helper for adding line-through to inactive bar divs
       const ganttInactiveBarClass = (bg: string) =>
         `gantt-inactive-bar ${bg} ${isHoliday ? "line-through" : ""}`;
@@ -717,7 +717,7 @@ export function renderDaily(): void {
               </div>
               <div class="flex flex-col min-w-0">
                 <button 
-                  class="font-bold text-sm text-base-content truncate group-hover:text-secondary transition-colors text-left hover:underline underline-offset-4"
+                  class="font-bold text-sm text-base-content truncate group-hover:text-secondary transition-colors text-left hover:underline underline-offset-4 select-none"
                   data-op-profile="${op.nombre}"
                 >
                   ${op.nombre}

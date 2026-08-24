@@ -270,7 +270,7 @@ export function renderOvertimeTimeline(
           const lp = (startMin / TOTAL_MINUTES) * 100;
           const wp = ((cappedEndMin - startMin) / TOTAL_MINUTES) * 100;
           const dur = calcDuration(s.startTime, s.endTime);
-          return `<div class="absolute top-0.75 bottom-0.75 overflow-visible cursor-pointer overtime-timeline-bar pointer-events-auto" style="left:${lp.toFixed(4)}%;width:${wp.toFixed(4)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xs font-black text-warning-content truncate px-1">${dur}h</span></div></div>`;
+          return `<div class="absolute top-0.75 bottom-0.75 overflow-visible cursor-pointer overtime-timeline-bar pointer-events-auto" style="left:${lp.toFixed(4)}%;width:${wp.toFixed(4)}%;min-width:4px;" data-tip="${escapeHtml(op.nombre)}: ${s.startTime}-${s.endTime}" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}"><div class="w-full h-full rounded bg-warning/80 border border-warning flex items-center justify-center overflow-hidden hover:bg-warning/95"><span class="text-xs font-black text-warning-content truncate px-1 select-none">${dur}h</span></div></div>`;
         })
         .join("");
       return `
@@ -440,9 +440,9 @@ export function renderOvertimeShiftsList(
     return `
       <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-base-100/50 border border-base-300/40 group hover:bg-base-100 transition-all cursor-pointer overtime-shift-card" data-shift-id="${s.id}" data-agent-id="${s.agentId}" data-date="${s.date}" data-start="${s.startTime}" data-end="${s.endTime}">
         <div class="w-6 h-6 rounded-full bg-base-300/60 flex items-center justify-center text-xs font-black shrink-0">${initials}</div>
-        <span class="text-xs font-bold text-base-content truncate flex-1">${escapeHtml(op?.nombre || "#" + s.agentId)}</span>
-        <span class="font-mono text-xs font-extrabold text-base-content/85 shrink-0">${s.startTime}–${s.endTime}</span>
-        <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0">${dur}h</span>
+        <span class="text-xs font-bold text-base-content truncate flex-1 select-none">${escapeHtml(op?.nombre || "#" + s.agentId)}</span>
+        <span class="font-mono text-xs font-extrabold text-base-content/85 shrink-0 select-none">${s.startTime}–${s.endTime}</span>
+        <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0 select-none">${dur}h</span>
         <button type="button" class="btn btn-xs btn-ghost text-error opacity-0 group-hover:opacity-100 transition-opacity overtime-delete-shift-btn p-1 min-h-0 h-auto" data-shift-id="${s.id}" aria-label="Eliminar">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
