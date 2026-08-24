@@ -1783,7 +1783,6 @@ function setupEventListeners(): void {
           "El portapapeles requiere un sitio seguro (HTTPS). La imagen se descargó automáticamente.",
         error: "Error al copiar la imagen.",
       },
-      "btn-secondary",
     );
   }
 
@@ -1814,7 +1813,6 @@ function setupEventListeners(): void {
           "El portapapeles requiere un sitio seguro (HTTPS). La imagen se descargó automáticamente.",
         error: "Error al copiar la imagen.",
       },
-      "btn-secondary",
     );
   }
 

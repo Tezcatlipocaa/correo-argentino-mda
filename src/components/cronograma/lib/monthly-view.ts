@@ -885,7 +885,7 @@ export function renderHourly(dateStr: string): void {
         opNameBtnClass += " text-orange-600 dark:text-orange-400";
       }
 
-      let spanClass = `text-tiny ${isAbsent ? "text-error" : isFranco ? "text-base-content/40" : "text-base-content/60"} font-black tracking-widest uppercase truncate mt-0.5`;
+      let spanClass = `select-none text-tiny ${isAbsent ? "text-error" : isFranco ? "text-base-content/40" : "text-base-content/60"} font-black tracking-widest uppercase truncate mt-0.5`;
       if (isHoliday) {
         spanClass += " text-orange-600 dark:text-orange-400";
       }

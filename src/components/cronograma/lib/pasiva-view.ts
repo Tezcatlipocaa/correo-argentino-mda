@@ -275,7 +275,7 @@ export function populatePasivaWeekInputs(): void {
     if (isReadOnly) {
       const supervisorText = document.createElement("span");
       supervisorText.className =
-        "text-xs font-bold text-base-content/85 px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 min-h-9 flex items-center w-full";
+        "select-none text-xs font-bold text-base-content/85 px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 min-h-9 flex items-center w-full";
       supervisorText.textContent = w.supervisorName || "SIN ASIGNAR";
       tdSupervisor.appendChild(supervisorText);
     } else {
@@ -315,7 +315,7 @@ export function populatePasivaWeekInputs(): void {
     if (isReadOnly) {
       const referenteText = document.createElement("span");
       referenteText.className =
-        "text-xs font-bold text-base-content/85 px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 min-h-9 flex items-center w-full";
+        "select-none text-xs font-bold text-base-content/85 px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 min-h-9 flex items-center w-full";
       const selectedOp =
         state.cronoData.find((op) => op.id === w.referenteId) ||
         state.pasivaState.referentes.find((r) => r.id === w.referenteId);
@@ -375,7 +375,7 @@ export function populatePasivaWeekInputs(): void {
     if (isReadOnly) {
       const operatorText = document.createElement("span");
       operatorText.className =
-        "text-xs font-bold text-base-content/85 px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 min-h-9 flex items-center w-full";
+        "select-none text-xs font-bold text-base-content/85 px-3 py-2 bg-base-200/50 rounded-xl border border-base-300 min-h-9 flex items-center w-full";
       const selectedOp = state.cronoData.find((op) => op.id === w.operatorId);
       operatorText.textContent = selectedOp
         ? selectedOp.nombre
