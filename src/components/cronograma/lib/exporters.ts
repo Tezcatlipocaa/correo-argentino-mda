@@ -340,12 +340,43 @@ export async function exportAsClipboardImage(
   host.style.top = "0";
   host.style.zIndex = "-1";
   host.style.pointerEvents = "none";
-  host.className = "export-capture" + (compact ? " export-compact" : "");
   const clone = element.cloneNode(true) as HTMLElement;
   clone.removeAttribute("id");
   clone
     .querySelectorAll("[id]")
     .forEach((el) => el.removeAttribute("id"));
+
+  // html-to-image inlines live computed styles and ignores stylesheets,
+  // so compaction must be applied as inline overrides on the clone.
+  clone.style.background = "var(--color-base-100)";
+  const tightenStack = (selector: string, margin: string) => {
+    clone.querySelectorAll<HTMLElement>(selector).forEach((parent) => {
+      for (let i = 1; i < parent.children.length; i++) {
+        (parent.children[i] as HTMLElement).style.marginTop = margin;
+      }
+    });
+  };
+  if (compact && padding > 0) {
+    clone.querySelectorAll<HTMLElement>(".p-2").forEach((el) => {
+      el.style.padding = "0.25rem";
+    });
+    clone.querySelectorAll<HTMLElement>(".px-3").forEach((el) => {
+      el.style.paddingLeft = "0.5rem";
+      el.style.paddingRight = "0.5rem";
+    });
+    clone.querySelectorAll<HTMLElement>(".py-2, .py-2\\.5").forEach((el) => {
+      el.style.paddingTop = "0.25rem";
+      el.style.paddingBottom = "0.25rem";
+    });
+    clone.querySelectorAll<HTMLElement>(".gap-3").forEach((el) => {
+      el.style.gap = "0.375rem";
+    });
+    clone.querySelectorAll<HTMLElement>(".gap-2").forEach((el) => {
+      el.style.gap = "0.25rem";
+    });
+    tightenStack(".space-y-2", "0.25rem");
+    tightenStack(".space-y-3", "0.375rem");
+  }
   host.appendChild(clone);
   document.body.appendChild(host);
 
@@ -359,10 +390,11 @@ export async function exportAsClipboardImage(
       style: {
         transform: "scale(1)",
         transformOrigin: "top left",
-        width: clone.scrollWidth + "px",
-        height: clone.scrollHeight + "px",
-        padding: padding > 0 ? padding + "px" : "0",
+        width: clone.scrollWidth + padding * 2 + "px",
+        height: clone.scrollHeight + padding * 2 + "px",
+        padding: padding > 0 ? `${padding}px` : "0",
         margin: "0",
+        boxSizing: "content-box",
       },
       quality: 1.0,
       pixelRatio: 3,
