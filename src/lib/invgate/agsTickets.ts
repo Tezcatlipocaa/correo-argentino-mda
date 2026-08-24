@@ -1,7 +1,16 @@
 import { invgateGet, invgatePost } from "@lib/invgateClient";
-import type { InvgateIncident, InvgateByStatusResponse } from "@/types/invgate";
+import type { InvgateIncident, InvgateByStatusResponse, InvgateLocation } from "@/types/invgate";
 import { getCategoryMap, getLastCategoryName } from "./categoryCache";
 import { getFullUserMap } from "./userCache";
+import { getHelpdeskMemberIdSet, getHelpdeskMemberMap, type HelpdeskMemberUser } from "./helpdeskMembersCache";
+
+export interface CommentingOperator {
+  id: number;
+  name: string;
+  username: string;
+  comment_count: number;
+  last_comment_at?: number;
+}
 
 export interface UnassignedTicketsResult {
   ok: boolean;
@@ -15,6 +24,8 @@ export interface UnassignedTicketsResult {
       customer_name?: string;
       customer_username?: string;
       location_name?: string;
+      commenting_operators?: CommentingOperator[];
+      commenting_operators_count?: number;
     }
   >;
   error?: string;
@@ -74,11 +85,12 @@ export async function getUnassignedTicketsByHelpdesk(
     // Ordenar por fecha de creación (más antiguos primero)
     allUnassigned.sort((a, b) => a.created_at - b.created_at);
 
-    // Resolver nombres de categorías, usuarios y ubicaciones
-    const [catMap, fullUserMap, locRes] = await Promise.all([
+    // Resolver nombres de categorías, usuarios, ubicaciones y comentarios de los tickets en paralelo
+    const [catMap, fullUserMap, locRes, commentsResults] = await Promise.all([
       getCategoryMap(),
       getFullUserMap(),
       invgateGet<InvgateLocation[]>("locations"),
+      Promise.allSettled(allUnassigned.map((t) => getTicketComments(t.id, helpdeskId))),
     ]);
 
     const locMap = new Map<number, string>();
@@ -87,6 +99,17 @@ export async function getUnassignedTicketsByHelpdesk(
         locMap.set(loc.id, loc.name);
       }
     }
+
+    const commentsByTicketId = new Map<number, { commenting_operators: CommentingOperator[]; count: number }>();
+    commentsResults.forEach((res, index) => {
+      const ticketId = allUnassigned[index].id;
+      if (res.status === "fulfilled" && res.value.ok) {
+        commentsByTicketId.set(ticketId, {
+          commenting_operators: res.value.commenting_operators,
+          count: res.value.commenting_operators.length,
+        });
+      }
+    });
 
     const enrichedTickets = allUnassigned.map((t) => {
       const catFullName = t.category_id ? catMap.get(t.category_id) || "" : "";
@@ -107,6 +130,11 @@ export async function getUnassignedTicketsByHelpdesk(
 
       const locationName = t.location_id ? locMap.get(t.location_id) || `Ubicación #${t.location_id}` : "";
 
+      const commData = commentsByTicketId.get(t.id);
+      const rawCommentingOperators = commData?.commenting_operators || [];
+      const commentingOperators = rawCommentingOperators.filter((op) => op.id !== t.creator_id);
+      const commentingOperatorsCount = commentingOperators.length;
+
       return {
         ...t,
         category_name: catFullName,
@@ -116,6 +144,8 @@ export async function getUnassignedTicketsByHelpdesk(
         customer_name: customerName,
         customer_username: customerUsername,
         location_name: locationName,
+        commenting_operators: commentingOperators,
+        commenting_operators_count: commentingOperatorsCount,
       };
     });
 
@@ -252,6 +282,8 @@ export interface InvgateComment {
   incident_id: number;
   author_id: number;
   author_name?: string;
+  author_username?: string;
+  is_mda_agent?: boolean;
   message: string;
   created_at: number;
   customer_visible: boolean | number;
@@ -259,33 +291,71 @@ export interface InvgateComment {
 }
 
 /**
- * Obtiene los comentarios y notas internas de un ticket en InvGate.
+ * Obtiene los comentarios y notas internas de un ticket en InvGate enriquecidos con pertenencia a Mesa de Ayuda.
  * Endpoint: GET /incident.comment?request_id=X
  */
 export async function getTicketComments(
-  requestId: number
-): Promise<{ ok: boolean; comments: InvgateComment[]; message?: string }> {
+  requestId: number,
+  helpdeskId: number = 3950,
+  creatorId?: number
+): Promise<{
+  ok: boolean;
+  comments: InvgateComment[];
+  commenting_operators: CommentingOperator[];
+  message?: string;
+}> {
   try {
-    const [res, userMap] = await Promise.all([
+    const [res, userMap, mdaMemberIdSet, mdaMemberMap] = await Promise.all([
       invgateGet<any[]>(`incident.comment?request_id=${requestId}`),
       getFullUserMap().catch(() => new Map()),
+      getHelpdeskMemberIdSet(helpdeskId).catch(() => new Set<number>()),
+      getHelpdeskMemberMap(helpdeskId).catch(() => new Map<number, HelpdeskMemberUser>()),
     ]);
 
     if (!res.ok || !Array.isArray(res.data)) {
-      return { ok: false, comments: [], message: res.message || "Error al obtener comentarios de InvGate" };
+      return {
+        ok: false,
+        comments: [],
+        commenting_operators: [],
+        message: res.message || "Error al obtener comentarios de InvGate",
+      };
     }
+
+    const operatorMap = new Map<number, CommentingOperator>();
 
     const comments: InvgateComment[] = res.data.map((c) => {
       const author = userMap.get(c.author_id);
-      const authorFullName = author
+      const mdaMember = mdaMemberMap.get(c.author_id);
+      const isMdaAgent = mdaMemberIdSet.has(c.author_id);
+      const authorFullName = mdaMember?.fullName || (author
         ? `${author.name || ""} ${author.lastname || ""}`.trim() || author.username || `Usuario #${c.author_id}`
-        : `Usuario #${c.author_id}`;
+        : `Usuario #${c.author_id}`);
+      const cleanUsername = mdaMember?.username || (author?.username ? author.username.split("@")[0].toLowerCase().trim() : "");
+
+      const isCreator = creatorId !== undefined && c.author_id === creatorId;
+      if (isMdaAgent && !isCreator) {
+        const existing = operatorMap.get(c.author_id);
+        if (existing) {
+          existing.comment_count += 1;
+          existing.last_comment_at = Math.max(existing.last_comment_at || 0, c.created_at || 0);
+        } else {
+          operatorMap.set(c.author_id, {
+            id: c.author_id,
+            name: authorFullName,
+            username: cleanUsername,
+            comment_count: 1,
+            last_comment_at: c.created_at || 0,
+          });
+        }
+      }
 
       return {
         id: c.id,
         incident_id: c.incident_id,
         author_id: c.author_id,
         author_name: authorFullName,
+        author_username: cleanUsername,
+        is_mda_agent: isMdaAgent,
         message: c.message || "",
         created_at: c.created_at || 0,
         customer_visible: c.customer_visible,
@@ -295,11 +365,15 @@ export async function getTicketComments(
 
     // Ordenar de más reciente a más antiguo
     comments.sort((a, b) => b.created_at - a.created_at);
+    const commentingOperators = Array.from(operatorMap.values());
 
-    return { ok: true, comments };
+    return { ok: true, comments, commenting_operators: commentingOperators };
   } catch (err: any) {
-    return { ok: false, comments: [], message: err.message || "Error al conectar con InvGate" };
+    return {
+      ok: false,
+      comments: [],
+      commenting_operators: [],
+      message: err.message || "Error al conectar con InvGate",
+    };
   }
 }
-
-

@@ -469,6 +469,15 @@ function getInitials(name: string): string {
                             ⏱ {formatWait}
                           </span>
                         )}
+                        {t.commenting_operators_count > 0 && (
+                          <span
+                            class="badge badge-secondary font-bold text-xs px-2 py-0.5 shrink-0 gap-1 shadow-xs"
+                            title={`Operadores MDA que comentaron: ${(t.commenting_operators || []).map((o: any) => `${o.name} (${o.comment_count})`).join(', ')}`}
+                          >
+                            <Icon name="boxicons:message-circle-dots" size={13} class="shrink-0" />
+                            <span>+{t.commenting_operators_count} ops</span>
+                          </span>
+                        )}
                       </div>
                       <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">
                         {timeStr}
@@ -485,7 +494,6 @@ function getInitials(name: string): string {
                             <span class="truncate">
                               Generado por: <strong class={matchingAvailableOp ? "text-success font-bold text-sm" : "text-base-content/90 font-bold text-sm"}>{creatorStr}</strong>
                               {matchingAvailableOp && <span class="text-success text-xs font-semibold"> (Disponible)</span>}
-                              {customerStr && <span class="opacity-75"> • Cliente: <strong class="text-base-content/85 font-semibold">{customerStr}</strong></span>}
                             </span>
                           </>
                         ) : (
@@ -509,7 +517,7 @@ function getInitials(name: string): string {
                     </div>
                     {t.location_name && (
                       <div class="flex items-center gap-1.5 text-xs text-base-content/70 font-medium truncate">
-                        <Icon name="boxicons:map-pin" size={14} class="text-info opacity-75 shrink-0" />
+                        <Icon name="boxicons:location-pin" size={14} class="text-info opacity-75 shrink-0" />
                         <span class="truncate">Ubicación: <strong class="text-base-content/90 font-bold">{t.location_name}</strong></span>
                       </div>
                     )}
@@ -1095,6 +1103,18 @@ function getInitials(name: string): string {
               <h4 class="text-xs font-bold text-base-content/75 uppercase tracking-wider">Comentarios y Notas</h4>
             </div>
             <span id="ticket-modal-comments-count" class="badge badge-neutral badge-sm font-mono font-bold">0</span>
+          </div>
+
+          <!-- Operadores MDA Intervinientes -->
+          <div id="ticket-modal-mda-operators-container" class="hidden bg-secondary/10 border border-secondary/25 rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center gap-2">
+              <Icon name="boxicons:user-check" size={16} class="text-secondary" />
+              <span class="text-xs font-bold uppercase tracking-wider text-secondary">
+                Operadores MDA Intervinientes en Comentarios
+              </span>
+            </div>
+            <div id="ticket-modal-mda-operators-list" class="flex flex-wrap gap-2">
+            </div>
           </div>
 
           <!-- Loading state -->
@@ -2841,19 +2861,43 @@ function getInitials(name: string): string {
           const commentsError = document.getElementById("ticket-modal-comments-error");
           const commentsList = document.getElementById("ticket-modal-comments-list");
           const commentsCount = document.getElementById("ticket-modal-comments-count");
+          const mdaContainer = document.getElementById("ticket-modal-mda-operators-container");
+          const mdaList = document.getElementById("ticket-modal-mda-operators-list");
 
           if (commentsList) commentsList.innerHTML = "";
+          if (mdaList) mdaList.innerHTML = "";
+          if (mdaContainer) mdaContainer.classList.add("hidden");
           if (commentsLoading) commentsLoading.classList.remove("hidden");
           if (commentsEmpty) commentsEmpty.classList.add("hidden");
           if (commentsError) commentsError.classList.add("hidden");
           if (commentsCount) commentsCount.textContent = "0";
 
-          fetch(`/api/invgate/ticket-comments?request_id=${ticket.id}`)
+          const creatorQuery = ticket.creator_id ? `&creator_id=${ticket.creator_id}` : "";
+          fetch(`/api/invgate/ticket-comments?request_id=${ticket.id}${creatorQuery}`)
             .then((r) => r.json())
             .then((data) => {
               if (commentsLoading) commentsLoading.classList.add("hidden");
               const comments = data.comments || [];
+              const rawCommentingOps = data.commenting_operators || [];
+              const commentingOps = rawCommentingOps.filter((op: any) => op.id !== ticket.creator_id);
               if (commentsCount) commentsCount.textContent = String(comments.length);
+
+              if (commentingOps.length > 0) {
+                if (mdaList) {
+                  mdaList.innerHTML = commentingOps.map((op: any) => `
+                    <div class="inline-flex items-center gap-2 bg-base-100 border border-secondary/30 rounded-xl px-3 py-1.5 text-xs shadow-xs">
+                      <div class="avatar placeholder size-5 rounded-full bg-secondary text-secondary-content font-bold text-[10px] flex items-center justify-center">
+                        ${escapeHtml((op.name || "OP").substring(0, 2).toUpperCase())}
+                      </div>
+                      <strong class="text-base-content font-semibold">${escapeHtml(op.name)}</strong>
+                      <span class="badge badge-secondary badge-xs font-bold font-mono">${op.comment_count}</span>
+                    </div>
+                  `).join("");
+                }
+                if (mdaContainer) mdaContainer.classList.remove("hidden");
+              } else {
+                if (mdaContainer) mdaContainer.classList.add("hidden");
+              }
 
               if (comments.length === 0) {
                 if (commentsEmpty) commentsEmpty.classList.remove("hidden");
@@ -2883,6 +2927,10 @@ function getInitials(name: string): string {
                     typeBadge = `<span class="badge badge-warning/15 text-warning border border-warning/30 badge-sm text-xs font-bold px-2.5 py-0.5">Nota Interna</span>`;
                   }
 
+                  const mdaBadge = c.is_mda_agent
+                    ? `<span class="badge badge-secondary badge-sm text-xs font-bold px-2 py-0.5 gap-1"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>Operador MDA</span>`
+                    : "";
+
                   const parser = new DOMParser();
                   const doc = parser.parseFromString(c.message || "", "text/html");
                   doc.querySelectorAll("script, iframe, object, embed").forEach((node) => node.remove());
@@ -2898,12 +2946,13 @@ function getInitials(name: string): string {
                   return `
                     <div class="p-4 rounded-2xl ${cardClass} space-y-2.5">
                       <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <div class="flex items-center gap-2.5">
+                        <div class="flex items-center gap-2.5 flex-wrap">
                           <div class="avatar placeholder size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarClass}">
                             ${escapeHtml(initials)}
                           </div>
                           <span class="font-extrabold text-sm sm:text-base text-base-content">${escapeHtml(authorName)}</span>
                           ${typeBadge}
+                          ${mdaBadge}
                         </div>
                         <span class="text-xs font-mono text-base-content/70">${escapeHtml(timeStr)}</span>
                       </div>
@@ -2987,6 +3036,15 @@ function getInitials(name: string): string {
                 ? `<span class="badge badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
                 : "";
 
+              // MDA commenting operators badge
+              let commentsBadge = "";
+              if (t.commenting_operators_count > 0) {
+                const opTooltip = (t.commenting_operators || [])
+                  .map((o: any) => `${escapeHtml(o.name)} (${o.comment_count})`)
+                  .join(", ");
+                commentsBadge = `<span class="badge badge-secondary font-bold text-xs px-2 py-0.5 shrink-0 gap-1 shadow-xs" title="Operadores MDA que comentaron: ${opTooltip}"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>+${t.commenting_operators_count} ops</span></span>`;
+              }
+
               // Check if creator matches any available operator
               const creatorUsername = (t.creator_username || "").toLowerCase().trim();
               const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
@@ -3031,7 +3089,7 @@ function getInitials(name: string): string {
                 ? `
                   <svg class="size-3.5 ${matchingAvailableOp ? 'text-success' : 'opacity-60'} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                   <span class="truncate">
-                    Generado por: <strong class="${matchingAvailableOp ? 'text-success font-bold text-sm' : 'text-base-content/90 font-bold text-sm'}">${escapeHtml(creatorStr)}</strong> ${matchingAvailableOp ? '<span class="text-success text-xs font-semibold">(Disponible)</span>' : ''}${customerStr ? ` <span class="opacity-75">• Cliente: <strong class="text-base-content/85 font-semibold">${escapeHtml(customerStr)}</strong></span>` : ''}
+                    Generado por: <strong class="${matchingAvailableOp ? 'text-success font-bold text-sm' : 'text-base-content/90 font-bold text-sm'}">${escapeHtml(creatorStr)}</strong> ${matchingAvailableOp ? '<span class="text-success text-xs font-semibold">(Disponible)</span>' : ''}
                   </span>
                 `
                 : `<span class="opacity-50 italic text-xs">Sin creador especificado</span>`;
@@ -3062,6 +3120,7 @@ function getInitials(name: string): string {
                       ${catBadge}
                       ${slaBadge}
                       ${waitingBadge}
+                      ${commentsBadge}
                     </div>
                     <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
                   </div>

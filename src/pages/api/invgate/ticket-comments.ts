@@ -10,15 +10,17 @@ export const GET: APIRoute = async ({ url, locals }) => {
   try {
     const requestParam = url.searchParams.get("request_id") || url.searchParams.get("ticket_id");
     const requestId = requestParam ? parseInt(requestParam, 10) : 0;
+    const creatorParam = url.searchParams.get("creator_id");
+    const creatorId = creatorParam ? parseInt(creatorParam, 10) : undefined;
 
     if (!requestId || isNaN(requestId)) {
       return jsonResponse({ error: "request_id inválido o faltante" }, 400);
     }
 
-    const result = await getTicketComments(requestId);
+    const result = await getTicketComments(requestId, 3950, isNaN(creatorId as number) ? undefined : creatorId);
 
     if (!result.ok) {
-      return jsonResponse({ error: result.message || "Error al obtener comentarios", comments: [] }, 500);
+      return jsonResponse({ error: result.message || "Error al obtener comentarios", comments: [], commenting_operators: [] }, 500);
     }
 
     return jsonResponse(
@@ -26,6 +28,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         requestId,
         count: result.comments.length,
         comments: result.comments,
+        commenting_operators: result.commenting_operators || [],
       },
       200,
       "no-store"
