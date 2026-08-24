@@ -1771,7 +1771,12 @@ function setupEventListeners(): void {
     await copyElementImageToClipboard(
       copyBtn,
       targetEl,
-      { padding: 16, compact: true },
+      {
+        padding: 16,
+        compact: true,
+        onStart: () => saturdayCard.classList.add("exporting-image"),
+        onEnd: () => saturdayCard.classList.remove("exporting-image"),
+      },
       {
         success: "Tabla de guardia copiada al portapapeles.",
         clipboardUnavailable:
@@ -1797,7 +1802,12 @@ function setupEventListeners(): void {
     await copyElementImageToClipboard(
       copyBtn,
       targetEl,
-      { padding: 16, compact: true },
+      {
+        padding: 16,
+        compact: true,
+        onStart: () => overtimeCard.classList.add("exporting-image"),
+        onEnd: () => overtimeCard.classList.remove("exporting-image"),
+      },
       {
         success: "Horas extras copiadas al portapapeles.",
         clipboardUnavailable:

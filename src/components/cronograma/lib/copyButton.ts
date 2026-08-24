@@ -7,6 +7,8 @@ const SUCCESS = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="cu
 export interface CopyImageOptions {
   padding?: number;
   compact?: boolean;
+  onStart?: () => void;
+  onEnd?: () => void;
 }
 
 export interface CopyMessages {
@@ -27,7 +29,12 @@ export async function copyElementImageToClipboard(
   try {
     btn.disabled = true;
     btn.innerHTML = SPINNER;
-    await exportAsClipboardImage(target, opts);
+    await exportAsClipboardImage(
+      target,
+      opts,
+      opts.onStart,
+      opts.onEnd,
+    );
     btn.classList.remove(baseClass);
     btn.classList.add("btn-success");
     btn.innerHTML = SUCCESS;
@@ -39,6 +46,7 @@ export async function copyElementImageToClipboard(
       btn.innerHTML = original;
     }, 2500);
   } catch (error: any) {
+    console.error("copyElementImageToClipboard failed:", error);
     if (error?.message === "CLIPBOARD_UNAVAILABLE_DOWNLOADED") {
       showToast(messages.clipboardUnavailable, "warning");
     } else {
