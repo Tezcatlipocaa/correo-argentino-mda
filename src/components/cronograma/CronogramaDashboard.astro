@@ -668,15 +668,14 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <span class="label-xxs text-base-content/40 select-none"
                   >&nbsp;</span
                 >
-                <button
-                  type="button"
+                <ActionButton
                   id="copy-rotation-image-btn"
-                  class="btn btn-sm btn-outline btn-secondary h-8 min-h-8 cursor-pointer gap-2 px-3"
+                  icon="boxicons:clipboard-filled"
+                  label="Copiar Tabla"
                   title="Copiar tabla de guardia al portapapeles como imagen"
-                >
-                  <Icon name="boxicons:clipboard" size={14} />
-                  <span>Copiar Tabla</span>
-                </button>
+                  size="sm"
+                  color="btn-secondary"
+                />
               </div>
 
               <div class="flex flex-col gap-1">
@@ -866,15 +865,15 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         </div>
 
         <div class="flex shrink-0 items-end gap-2">
-          <button
-            type="button"
+          <ActionButton
             id="copy-overtime-image-btn"
-            class="btn btn-sm btn-ghost no-export shrink-0 cursor-pointer gap-1.5 font-bold"
+            icon="boxicons:clipboard-filled"
+            label="Copiar Tabla"
             title="Copiar horas extras al portapapeles como imagen"
-          >
-            <Icon name="boxicons:clipboard" size={14} />
-            Copiar Tabla
-          </button>
+            size="sm"
+            color="btn-secondary"
+            class="no-export shrink-0"
+          />
 
           <button
             type="button"
