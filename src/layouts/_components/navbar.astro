@@ -78,9 +78,13 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
           data-open-about-project
           title="Acerca de este proyecto"
           aria-label="Acerca de este proyecto"
-          class="btn btn-ghost btn-circle"
+          class="btn btn-ghost btn-circle group"
         >
-          <Icon name="boxicons:help-circle-filled" size={24} />
+          <Icon
+            name="boxicons:help-circle-filled"
+            size={24}
+            class="transition-transform duration-200 ease-out group-hover:scale-110"
+          />
         </button>
 
         <!-- Divider -->
