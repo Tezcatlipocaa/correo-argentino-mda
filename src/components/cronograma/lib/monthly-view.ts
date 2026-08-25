@@ -1118,9 +1118,9 @@ export function renderMonthly(): void {
 
   if (!state.isTotalsCollapsed) {
     theadHtml += `
-      <th class="sticky top-0 left-[200px] bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center" title="Presencial">P</th>
-      <th class="sticky top-0 left-[240px] bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center" title="Home Office">HO</th>
-      <th class="sticky top-0 left-[280px] bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]" title="Licencia/Vacaciones">L</th>
+      <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center" style="left: var(--op-w, 200px)" title="Presencial">P</th>
+      <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center" style="left: calc(var(--op-w, 200px) + 40px)" title="Home Office">HO</th>
+      <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]" style="left: calc(var(--op-w, 200px) + 80px)" title="Licencia/Vacaciones">L</th>
     `;
   }
 
@@ -1317,9 +1317,9 @@ export function renderMonthly(): void {
 
       if (!state.isTotalsCollapsed) {
         tbodyHtml += `
-          <td class="sticky left-[200px] bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-secondary group-hover:!bg-base-200 transition-colors">${stats.P}</td>
-          <td class="sticky left-[240px] bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-amber-700 dark:text-amber-400 group-hover:!bg-base-200 transition-colors">${stats.HO}</td>
-          <td class="sticky left-[280px] bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-error group-hover:!bg-base-200 transition-colors shadow-table-edge">${stats.L}</td>
+          <td class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-secondary group-hover:!bg-base-200 transition-colors" style="left: var(--op-w, 200px)">${stats.P}</td>
+          <td class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-amber-700 dark:text-amber-400 group-hover:!bg-base-200 transition-colors" style="left: calc(var(--op-w, 200px) + 40px)">${stats.HO}</td>
+          <td class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-error group-hover:!bg-base-200 transition-colors shadow-table-edge" style="left: calc(var(--op-w, 200px) + 80px)">${stats.L}</td>
         `;
       }
 
@@ -1548,9 +1548,9 @@ export function renderMonthly(): void {
 
   if (!state.isTotalsCollapsed) {
     tfootHtml += `
-      <td class="sticky left-[200px] bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/40" title="Total Operadores">${teamSize}</td>
-      <td class="sticky left-[240px] bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20">-</td>
-      <td class="sticky left-[280px] bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]">-</td>
+      <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/40" style="left: var(--op-w, 200px)" title="Total Operadores">${teamSize}</td>
+      <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20" style="left: calc(var(--op-w, 200px) + 40px)">-</td>
+      <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]" style="left: calc(var(--op-w, 200px) + 80px)">-</td>
     `;
   }
 
@@ -1590,6 +1590,16 @@ export function renderMonthly(): void {
 
   const tfoot = document.getElementById("monthly-tfoot");
   if (tfoot) tfoot.innerHTML = tfootHtml;
+
+  // Sync --op-w so the day-counter sticky columns always sit right after the
+  // operator column's REAL rendered width (content can exceed the 200px class).
+  const monthlyTable = document.getElementById("monthly-table");
+  const firstOpCell = monthlyTable?.querySelector<HTMLElement>(
+    "#monthly-tbody td.sticky.left-0",
+  );
+  if (monthlyTable && firstOpCell) {
+    monthlyTable.style.setProperty("--op-w", `${firstOpCell.offsetWidth}px`);
+  }
 
   // Auto-scroll horizontal bar to center today's column if viewing current month
   const todayHeader = document.querySelector(
