@@ -119,16 +119,13 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       </div>
 
       <!-- Daily View Section (Hidden by default) -->
-      <div
-        id="daily-view"
-        class="animate-in slide-in-from-bottom-2 fade-in hidden min-h-0 flex-1 duration-500"
-      >
+      <div id="daily-view" class="hidden min-h-0 flex-1">
         <div
           class="bg-base-100 border-base-300 flex h-full flex-col overflow-hidden rounded-2xl border shadow-md"
         >
           <div class="bg-base-200 border-base-300 relative z-60 border-b">
             <div
-              class="flex flex-col justify-between gap-4 px-6 py-3.5 lg:flex-row lg:items-center"
+              class="flex flex-col justify-between gap-3 px-6 py-3 lg:flex-row lg:items-center"
             >
               <!-- Left: Title -->
               <div class="flex shrink-0 flex-wrap items-center gap-3">
@@ -258,7 +255,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           </div>
           <!-- Daily View Footer / Status Filters -->
           <div
-            class="bg-base-200/40 border-base-300 no-print flex flex-col items-start justify-between gap-4 border-t px-6 py-3 md:flex-row md:items-center"
+            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-start justify-between gap-3 border-t px-6 py-3 lg:flex-row lg:items-center lg:min-h-16"
           >
             <div class="flex flex-wrap items-center gap-4">
               <!-- Status Filters -->
@@ -319,10 +316,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       </div>
 
       <!-- Monthly View Section (Shown by default) -->
-      <div
-        id="monthly-view"
-        class="animate-in slide-in-from-bottom-2 fade-in min-h-0 flex-1 duration-500"
-      >
+      <div id="monthly-view" class="min-h-0 flex-1">
         <div
           class="bg-base-100 border-base-300 flex h-full flex-col overflow-hidden rounded-2xl border shadow-md"
         >
@@ -330,7 +324,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             class="bg-base-200 border-base-300 relative z-60 shrink-0 border-b"
           >
             <div
-              class="flex flex-col justify-between gap-2 px-4 py-2 lg:flex-row lg:items-center"
+              class="flex flex-col justify-between gap-3 px-6 py-3 lg:flex-row lg:items-center"
             >
               <!-- Left: Title, Navigation & Maximize button -->
               <div class="flex shrink-0 flex-wrap items-center gap-3">
@@ -407,6 +401,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           </div>
           <div class="flex min-h-0 flex-1 flex-col p-1.5">
             <div
+              id="monthly-scroll-area"
               class="scrollbar-thin border-base-200 bg-base-100 min-h-0 flex-1 overflow-x-auto overflow-y-auto rounded-xl border"
             >
               <!-- Simplified container skeleton -- removed by renderMonthly() on first call -->
@@ -423,11 +418,19 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <div class="skeleton h-12 w-full rounded-lg opacity-50"></div>
               </div>
               <table
-                class="w-full min-h-full border-separate border-spacing-0 text-left text-sm"
+                class="w-full border-separate border-spacing-0 text-left text-sm"
                 id="monthly-table"
               >
                 <thead class="bg-base-100" id="monthly-thead"> </thead>
                 <tbody id="monthly-tbody"> </tbody>
+                <!-- Invisible filler: JS sizes it so the coverage summary
+                     (tfoot) stays pinned to the bottom when there are few
+                     rows, without stretching data rows. -->
+                <tbody id="monthly-filler-row" aria-hidden="true">
+                  <tr>
+                    <td class="border-0 p-0"></td>
+                  </tr>
+                </tbody>
                 <tfoot
                   id="monthly-tfoot"
                   class="bg-base-100/95 border-base-300 sticky bottom-0 z-40 border-t-2 backdrop-blur-md"
@@ -438,7 +441,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
           </div>
           <div
-            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-stretch justify-between gap-4 border-t px-6 py-3 lg:flex-row lg:items-center"
+            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-stretch justify-between gap-3 border-t px-6 py-3 lg:flex-row lg:items-center lg:min-h-16"
           >
             <div class="flex flex-wrap items-center gap-4">
               <!-- Status Filters Container -->
@@ -623,15 +626,15 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   required
                 />
               </div>
-            <ActionButton
-              type="submit"
-              id="save-rotation-config-btn"
-              icon="boxicons:save-filled"
-              label="Guardar Configuración"
-              color="btn-primary"
-              size="md"
-              class="shrink-0"
-            />
+              <ActionButton
+                type="submit"
+                id="save-rotation-config-btn"
+                icon="boxicons:save-filled"
+                label="Guardar Configuración"
+                color="btn-primary"
+                size="md"
+                class="shrink-0"
+              />
             </form>
           </div>
 
@@ -739,7 +742,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               class="border-base-300 bg-base-200/30 overflow-x-auto rounded-xl border"
             >
               <table
-                class="table-compact table w-full min-w-[600px] border-collapse table-fixed"
+                class="table-compact table w-full min-w-[600px] table-fixed border-collapse"
                 id="rotation-timeline-table"
               >
                 <thead>
@@ -813,7 +816,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           <div
             class="bg-warning/15 flex h-8 w-8 items-center justify-center rounded-xl"
           >
-            <Icon name="boxicons:clock-5-filled" size={18} class="text-warning" />
+            <Icon
+              name="boxicons:clock-5-filled"
+              size={18}
+              class="text-warning"
+            />
           </div>
           <div>
             <h2
@@ -1259,7 +1266,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       >
     </div>
 
-    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
+    <div class="divider divider-horizontal m-0"></div>
 
     <!-- Settings Trigger -->
     <ActionButton
@@ -1270,30 +1277,28 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       size="sm"
     />
 
-    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
+    <div class="divider divider-horizontal m-0"></div>
 
     <!-- Add Operator Trigger -->
     <ActionButton
       id="open-new-op-modal"
       icon="boxicons:user-plus-filled"
-      iconClass="text-secondary transition-colors group-hover:text-base-content"
       ariaLabel="Agregar Operador"
       title="Agregar Operador"
       size="sm"
     />
 
-    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
+    <div class="divider divider-horizontal m-0"></div>
 
     <!-- Manage Holidays Trigger -->
     <ActionButton
       id="open-holidays-modal"
       icon="boxicons:calendar-star-filled"
-      iconClass="text-secondary transition-colors group-hover:text-base-content"
       label="Feriados"
       size="sm"
     />
 
-    <div class="bg-base-300/60 hidden h-8 w-px lg:block"></div>
+    <div class="divider divider-horizontal m-0"></div>
 
     <!-- Save/Discard -->
     <div class="flex items-center gap-1.5">
@@ -1338,11 +1343,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     <div class="bg-base-300/60 h-6 w-px"></div>
 
     <div class="flex items-center gap-2">
-      <ActionButton
-        id="pasiva-discard-btn"
-        label="Descartar"
-        size="md"
-      />
+      <ActionButton id="pasiva-discard-btn" label="Descartar" size="md" />
       <ActionButton
         id="pasiva-save-btn"
         label="Guardar"
@@ -2103,6 +2104,29 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     html {
       scrollbar-gutter: stable;
     }
+  }
+
+  /* Full-cell hover tint for monthly day cells (rows are JS-injected, so
+     this must be global). Tints the whole td box incl. its borders, which
+     previously stayed un-tinted because only the inner button pill changed. */
+  #monthly-tbody td:has(.monthly-cell-button):hover {
+    background-color: color-mix(
+      in oklab,
+      var(--color-secondary) 8%,
+      transparent
+    );
+    border-color: color-mix(
+      in oklab,
+      var(--color-secondary) 40%,
+      transparent
+    );
+  }
+  #monthly-tbody td:has(.monthly-cell-button):hover .monthly-cell-button {
+    border-color: color-mix(
+      in oklab,
+      var(--color-secondary) 45%,
+      transparent
+    );
   }
 </style>
 
