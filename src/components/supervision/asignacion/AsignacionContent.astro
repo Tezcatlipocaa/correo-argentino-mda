@@ -149,11 +149,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const PRIORITY_LABELS: Record<number, { label: string; badgeClass: string }> = {
-  1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
-  2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
-  3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
-  4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
-  5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
+  1: { label: "Baja", badgeClass: "badge-soft badge-neutral text-base-content/70 font-medium" },
+  2: { label: "Media", badgeClass: "badge-soft badge-neutral text-base-content/70 font-medium" },
+  3: { label: "Alta", badgeClass: "badge-soft badge-warning text-warning font-semibold" },
+  4: { label: "Urgente", badgeClass: "badge-soft badge-warning text-warning font-bold" },
+  5: { label: "Crítica", badgeClass: "badge-soft badge-error text-error font-bold" },
 };
 
 const breakdown: Record<string, number> = {
@@ -355,25 +355,24 @@ function getInitials(name: string): string {
     <!-- Workspace Panel Dividido / IDE Style (0 Cajas Flotantes) -->
     <div class="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-xs flex flex-col">
       <!-- Header Superior de Acción -->
-      <div id="action-bar-header" class="border-b border-base-300 bg-base-200/40 p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-300">
-        <div class="flex items-center gap-3.5 min-w-0">
-          <div class={`p-3 rounded-2xl shrink-0 transition-colors ${!isReadOnly ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content/40"}`}>
-            <Icon name={!isReadOnly ? "boxicons:user-check" : "boxicons:lock"} size={26} />
+      <div id="action-bar-header" class="border-b border-base-300 bg-base-200/30 p-3.5 sm:p-4 flex flex-col md:flex-row items-center justify-between gap-3 transition-all duration-300">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class={`p-2.5 rounded-xl shrink-0 transition-colors ${!isReadOnly ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content/40"}`}>
+            <Icon name={!isReadOnly ? "boxicons:user-check" : "boxicons:lock"} size={22} />
           </div>
-          <div class="min-w-0">
-            <h2 class="font-black text-base sm:text-lg uppercase tracking-wider text-base-content flex items-center gap-2.5 flex-wrap">
-              Asignación de Autogestión
-              {isReadOnly && (
-                <span class="badge badge-neutral badge-sm font-bold uppercase text-xs tracking-wider">Modo Lectura</span>
-              )}
-            </h2>
-            <p id="action-bar-subtitle" class="text-xs sm:text-sm text-base-content/70 font-medium mt-0.5 truncate">
-              {!isReadOnly ? (
-                <>{unassignedCount} autogestiones sin asignar • {availableOperators.length} operadores disponibles</>
-              ) : (
-                <>Tomá el control desde el indicador de estado para habilitar la asignación.</>
-              )}
-            </p>
+          <div class="min-w-0 flex flex-col gap-0.5">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class={`badge badge-sm font-bold uppercase text-xs tracking-wider ${!isReadOnly ? "badge-soft badge-success" : "badge-soft badge-neutral"}`}>
+                {!isReadOnly ? "Control Activo" : "Modo Lectura"}
+              </span>
+              <p id="action-bar-subtitle" class="text-xs sm:text-sm text-base-content/70 font-medium truncate">
+                {!isReadOnly ? (
+                  <>{unassignedCount} autogestiones sin asignar • {availableOperators.length} operadores disponibles</>
+                ) : (
+                  <>Tomá el control desde el indicador de estado para habilitar la asignación.</>
+                )}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -437,63 +436,63 @@ function getInitials(name: string): string {
                 const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
 
                 return (
-                  <div data-ticket-id={t.id} class="p-4 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-2 cursor-pointer group min-w-[480px] sm:min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                        <div class="-ml-4 pl-4 pr-3.5 py-1 bg-primary text-primary-content font-mono font-black text-xs sm:text-sm shadow-xs [clip-path:polygon(0_0,100%_0,calc(100%-8px)_50%,100%_100%,0_100%)] shrink-0 flex items-center">
-                          <span>{t.pretty_id || `#${t.id}`}</span>
-                        </div>
-                        {t.priority_id && (
-                          <span class={`badge badge-sm font-bold text-xs tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-neutral'}`}>
-                            {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
-                          </span>
-                        )}
-                        {t.category_last_name && (
-                          <span class="badge badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title={t.category_name || t.category_last_name}>
-                            {t.category_last_name}
-                          </span>
-                        )}
-                        {t.sla_incident_first_reply && (
-                          <span class="badge badge-outline badge-info badge-sm font-mono text-xs shrink-0" title="SLA de respuesta">
-                            SLA: {t.sla_incident_first_reply}
-                          </span>
-                        )}
-                        {t.created_at && (
-                          <span class={`badge badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${
-                            elapsedMin >= 60
-                              ? "bg-error/15 text-error border-none font-bold"
-                              : elapsedMin >= 30
-                              ? "bg-warning/15 text-warning border-none font-semibold"
-                              : "bg-base-200 text-base-content/70 border-none"
-                          }`} title="Tiempo de espera en cola">
-                            ⏱ {formatWait}
-                          </span>
-                        )}
-                        {t.commenting_operators_count > 0 && (
-                          <span
-                            class="badge badge-secondary font-bold text-xs px-2 py-0.5 shrink-0 gap-1 shadow-xs"
-                            title={`Operadores MDA que comentaron: ${(t.commenting_operators || []).map((o: any) => `${o.name} (${o.comment_count})`).join(', ')}`}
-                          >
-                            <Icon name="boxicons:message-circle-dots" size={13} class="shrink-0" />
-                            <span>+{t.commenting_operators_count} ops</span>
-                          </span>
-                        )}
+                  <div data-ticket-id={t.id} class="p-4 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-2.5 cursor-pointer group min-w-[480px] sm:min-w-0">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-primary transition-colors truncate pr-1" title={t.title}>
+                        <span class="font-mono font-bold text-base-content/60 mr-1.5">{t.pretty_id || `#${t.id}`}</span>
+                        <span>{t.title}</span>
                       </div>
-                      <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">
+                      <span class="text-xs text-base-content/50 font-mono font-semibold shrink-0 mt-0.5">
                         {timeStr}
                       </span>
                     </div>
-                    <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors max-w-[65%] truncate pr-2" title={t.title}>
-                      {t.title}
+                    <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                      {t.priority_id && (
+                        <span class={`badge badge-sm font-bold text-xs tracking-wider uppercase shrink-0 ${PRIORITY_LABELS[t.priority_id]?.badgeClass || 'badge-soft badge-neutral'}`}>
+                          {PRIORITY_LABELS[t.priority_id]?.label || `P${t.priority_id}`}
+                        </span>
+                      )}
+                      {t.category_last_name && (
+                        <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title={t.category_name || t.category_last_name}>
+                          {t.category_last_name}
+                        </span>
+                      )}
+                      {t.sla_incident_first_reply && (
+                        <span class="badge badge-soft badge-info badge-sm font-mono text-xs shrink-0" title="SLA de respuesta">
+                          SLA: {t.sla_incident_first_reply}
+                        </span>
+                      )}
+                      {t.created_at && (
+                        <span class={`badge badge-soft badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${
+                          elapsedMin >= 60
+                            ? "badge-error text-error font-bold"
+                            : elapsedMin >= 30
+                            ? "badge-warning text-warning font-semibold"
+                            : "badge-neutral text-base-content/70"
+                        }`} title="Tiempo de espera en cola">
+                          ⏱ {formatWait}
+                        </span>
+                      )}
+                      {t.commenting_operators_count > 0 && (
+                        <span
+                          class="badge badge-soft badge-secondary font-mono font-bold text-xs px-2 py-0.5 shrink-0 gap-1"
+                          title={`Operadores MDA que comentaron: ${(t.commenting_operators || []).map((o: any) => `${o.name} (${o.comment_count})`).join(', ')}`}
+                        >
+                          <Icon name="boxicons:message-circle-dots" size={13} class="shrink-0" />
+                          <span>+{t.commenting_operators_count} ops</span>
+                        </span>
+                      )}
                     </div>
-                    <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-1">
-                      <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/75">
+                    <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-0.5">
+                      <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/70">
                         {creatorStr ? (
                           <>
-                            <Icon name="boxicons:user" size={15} class={matchingAvailableOp ? "text-success shrink-0" : "opacity-60 shrink-0"} />
-                            <span class="truncate">
-                              Generado por: <strong class={matchingAvailableOp ? "text-success font-bold text-sm" : "text-base-content/90 font-bold text-sm"}>{creatorStr}</strong>
-                              {matchingAvailableOp && <span class="text-success text-xs font-semibold"> (Disponible)</span>}
+                            <Icon name="boxicons:user" size={15} class="opacity-60 shrink-0" />
+                            <span class="truncate flex items-center gap-1.5">
+                              Generado por: <strong class="text-base-content/90 font-bold">{creatorStr}</strong>
+                              {matchingAvailableOp && (
+                                <span class="inline-block size-2 rounded-full bg-success shrink-0" title="Operador disponible"></span>
+                              )}
                             </span>
                           </>
                         ) : (
@@ -516,9 +515,9 @@ function getInitials(name: string): string {
                       </div>
                     </div>
                     {t.location_name && (
-                      <div class="flex items-center gap-1.5 text-xs text-base-content/70 font-medium truncate">
+                      <div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium truncate">
                         <Icon name="boxicons:location-pin" size={14} class="text-info opacity-75 shrink-0" />
-                        <span class="truncate">Ubicación: <strong class="text-base-content/90 font-bold">{t.location_name}</strong></span>
+                        <span class="truncate">Ubicación: <strong class="text-base-content/85 font-semibold">{t.location_name}</strong></span>
                       </div>
                     )}
                   </div>
@@ -566,9 +565,11 @@ function getInitials(name: string): string {
                           {idx === 0 && (
                             <span class="badge badge-primary text-primary-content badge-sm font-bold uppercase text-xs shrink-0">Siguiente</span>
                           )}
-                          <span class="badge badge-success/15 text-success border border-success/30 badge-sm font-bold text-xs shrink-0">
-                            {op.disponible ? "Disponible" : (op.motivo || "No disponible")}
-                          </span>
+                          {!op.disponible && (
+                            <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">
+                              {op.motivo || "No disponible"}
+                            </span>
+                          )}
                         </div>
                         <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
                           <span class="uppercase font-semibold text-xs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}</span>
@@ -597,10 +598,10 @@ function getInitials(name: string): string {
 
                     {unassignedTickets[idx] && (
                       <div
-                        class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 cursor-help"
+                        class="badge badge-soft badge-neutral font-mono text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 text-base-content/70 cursor-help"
                         title={`Si se asigna en orden, recibirá: ${unassignedTickets[idx].title}`}
                       >
-                        <span class="text-warning font-sans font-bold">↳</span>
+                        <span class="opacity-50 font-sans font-bold">↳</span>
                         <span>{unassignedTickets[idx].pretty_id || `#${unassignedTickets[idx].id}`}</span>
                       </div>
                     )}
@@ -1752,11 +1753,12 @@ function getInitials(name: string): string {
 
             const projTicket = latestUnassignedTickets[idx];
             const projBadge = projTicket
-              ? `<div class="badge badge-warning/15 border border-warning/30 text-warning-content font-mono font-bold text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="text-warning font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
+              ? `<div class="badge badge-soft badge-neutral font-mono text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 text-base-content/70 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="opacity-50 font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
               : "";
 
-            const statusText = op.disponible ? "Disponible" : (op.motivo || "No disponible");
-            const statusBadgeClass = op.disponible ? "badge-success/15 text-success border border-success/30" : "badge-neutral opacity-70";
+            const statusBadge = !op.disponible
+              ? `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">${escapeHtml(op.motivo || "No disponible")}</span>`
+              : "";
 
             let scheduleBadge = "";
             if (op.salidaInminente) {
@@ -1785,7 +1787,7 @@ function getInitials(name: string): string {
                         ${escapeHtml(op.nombre)}
                       </span>
                       ${isFirst ? '<span class="badge badge-primary text-primary-content badge-sm font-bold uppercase text-xs shrink-0">Siguiente</span>' : ''}
-                      <span class="badge ${statusBadgeClass} badge-sm font-bold text-xs shrink-0">${escapeHtml(statusText)}</span>
+                      ${statusBadge}
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
                       <span class="uppercase font-semibold text-xs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
@@ -2996,11 +2998,11 @@ function getInitials(name: string): string {
         if (listEl) {
           if (data.tickets && data.tickets.length > 0) {
             const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
-              1: { label: "Baja", badgeClass: "bg-base-200 text-base-content/60 border-none font-medium" },
-              2: { label: "Media", badgeClass: "bg-info/15 text-info border-none font-medium" },
-              3: { label: "Alta", badgeClass: "bg-warning/15 text-warning border-none font-semibold" },
-              4: { label: "Urgente", badgeClass: "bg-warning/20 text-warning border-none font-bold" },
-              5: { label: "Crítica", badgeClass: "bg-error/15 text-error border-none font-bold" },
+              1: { label: "Baja", badgeClass: "badge-soft badge-neutral text-base-content/70 font-medium" },
+              2: { label: "Media", badgeClass: "badge-soft badge-neutral text-base-content/70 font-medium" },
+              3: { label: "Alta", badgeClass: "badge-soft badge-warning text-warning font-semibold" },
+              4: { label: "Urgente", badgeClass: "badge-soft badge-warning text-warning font-bold" },
+              5: { label: "Crítica", badgeClass: "badge-soft badge-error text-error font-bold" },
             };
 
             listEl.innerHTML = data.tickets.map((t: any) => {
@@ -3010,30 +3012,30 @@ function getInitials(name: string): string {
               let waitingBadge = "";
               if (t.created_at) {
                 const elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
-                let colorClass = "bg-base-200 text-base-content/70 border-none";
+                let colorClass = "badge-neutral text-base-content/70";
                 if (elapsedMin >= 60) {
-                  colorClass = "bg-error/15 text-error border-none font-bold";
+                  colorClass = "badge-error text-error font-bold";
                 } else if (elapsedMin >= 30) {
-                  colorClass = "bg-warning/15 text-warning border-none font-semibold";
+                  colorClass = "badge-warning text-warning font-semibold";
                 }
                 const formatWait = elapsedMin >= 60 
                   ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
                   : `${elapsedMin}m`;
-                waitingBadge = `<span class="badge badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
+                waitingBadge = `<span class="badge badge-soft badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
               }
 
               // SLA first reply badge
               let slaBadge = "";
               if (t.sla_incident_first_reply) {
-                slaBadge = `<span class="badge badge-outline badge-info badge-sm font-mono text-xs shrink-0" title="SLA de respuesta">SLA: ${escapeHtml(t.sla_incident_first_reply)}</span>`;
+                slaBadge = `<span class="badge badge-soft badge-info badge-sm font-mono text-xs shrink-0" title="SLA de respuesta">SLA: ${escapeHtml(t.sla_incident_first_reply)}</span>`;
               }
 
-              const prioInfo = PRIORITY_MAP[t.priority_id] || (t.priority_id ? { label: `P${t.priority_id}`, badgeClass: "badge-neutral" } : null);
+              const prioInfo = PRIORITY_MAP[t.priority_id] || (t.priority_id ? { label: `P${t.priority_id}`, badgeClass: "badge-soft badge-neutral" } : null);
               const prioBadge = prioInfo
                 ? `<span class="badge badge-sm font-bold text-xs tracking-wider uppercase shrink-0 ${prioInfo.badgeClass}">${escapeHtml(prioInfo.label)}</span>`
                 : "";
               const catBadge = t.category_last_name
-                ? `<span class="badge badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
+                ? `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
                 : "";
 
               // MDA commenting operators badge
@@ -3042,7 +3044,7 @@ function getInitials(name: string): string {
                 const opTooltip = (t.commenting_operators || [])
                   .map((o: any) => `${escapeHtml(o.name)} (${o.comment_count})`)
                   .join(", ");
-                commentsBadge = `<span class="badge badge-secondary font-bold text-xs px-2 py-0.5 shrink-0 gap-1 shadow-xs" title="Operadores MDA que comentaron: ${opTooltip}"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>+${t.commenting_operators_count} ops</span></span>`;
+                commentsBadge = `<span class="badge badge-soft badge-secondary font-mono font-bold text-xs px-2 py-0.5 shrink-0 gap-1" title="Operadores MDA que comentaron: ${opTooltip}"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>+${t.commenting_operators_count} ops</span></span>`;
               }
 
               // Check if creator matches any available operator
@@ -3062,7 +3064,6 @@ function getInitials(name: string): string {
               });
 
               const creatorStr = t.creator_name || t.customer_name || "";
-              const customerStr = t.customer_name && t.creator_name && t.customer_name !== t.creator_name ? t.customer_name : "";
 
               const lockIndicator = document.getElementById("lock-indicator");
               const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
@@ -3087,16 +3088,16 @@ function getInitials(name: string): string {
 
               const creatorContent = creatorStr
                 ? `
-                  <svg class="size-3.5 ${matchingAvailableOp ? 'text-success' : 'opacity-60'} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                  <span class="truncate">
-                    Generado por: <strong class="${matchingAvailableOp ? 'text-success font-bold text-sm' : 'text-base-content/90 font-bold text-sm'}">${escapeHtml(creatorStr)}</strong> ${matchingAvailableOp ? '<span class="text-success text-xs font-semibold">(Disponible)</span>' : ''}
+                  <svg class="size-3.5 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  <span class="truncate flex items-center gap-1.5">
+                    Generado por: <strong class="text-base-content/90 font-bold">${escapeHtml(creatorStr)}</strong> ${matchingAvailableOp ? '<span class="inline-block size-2 rounded-full bg-success shrink-0" title="Operador disponible"></span>' : ''}
                   </span>
                 `
                 : `<span class="opacity-50 italic text-xs">Sin creador especificado</span>`;
 
               const userRow = `
-                <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-1">
-                  <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/75">
+                <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-0.5">
+                  <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/70">
                     ${creatorContent}
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0">
@@ -3106,25 +3107,25 @@ function getInitials(name: string): string {
               `;
 
               const locationRow = t.location_name
-                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/70 font-medium truncate"><svg class="size-3.5 text-info opacity-75 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/90 font-bold">${escapeHtml(t.location_name)}</strong></span></div>`
+                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium truncate"><svg class="size-3.5 text-info opacity-75 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/85 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
                 : "";
 
               return `
-                <div data-ticket-id="${t.id}" class="p-4 hover:bg-base-200/60 transition-colors duration-150 flex flex-col gap-2 cursor-pointer group min-w-[480px] sm:min-w-0">
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                      <div class="-ml-4 pl-4 pr-3.5 py-1 bg-primary text-primary-content font-mono font-black text-xs sm:text-sm shadow-xs [clip-path:polygon(0_0,100%_0,calc(100%-8px)_50%,100%_100%,0_100%)] shrink-0 flex items-center">
-                        <span>${escapeHtml(t.pretty_id || '#' + t.id)}</span>
-                      </div>
-                      ${prioBadge}
-                      ${catBadge}
-                      ${slaBadge}
-                      ${waitingBadge}
-                      ${commentsBadge}
+                <div data-ticket-id="${t.id}" class="p-4 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-2.5 cursor-pointer group min-w-[480px] sm:min-w-0">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-primary transition-colors truncate pr-1" title="${escapeHtml(t.title)}">
+                      <span class="font-mono font-bold text-base-content/60 mr-1.5">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
+                      <span>${escapeHtml(t.title)}</span>
                     </div>
-                    <span class="text-xs sm:text-sm text-base-content/60 font-mono font-semibold shrink-0">${timeStr}</span>
+                    <span class="text-xs text-base-content/50 font-mono font-semibold shrink-0 mt-0.5">${timeStr}</span>
                   </div>
-                  <div class="font-bold text-base-content text-sm sm:text-base leading-snug group-hover:text-primary transition-colors max-w-[65%] truncate pr-2" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+                  <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                    ${prioBadge}
+                    ${catBadge}
+                    ${slaBadge}
+                    ${waitingBadge}
+                    ${commentsBadge}
+                  </div>
                   ${userRow}
                   ${locationRow}
                 </div>
