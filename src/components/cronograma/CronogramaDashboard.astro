@@ -97,7 +97,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         <!-- Date Picker (hidden by default) -->
         <div
           id="date-picker-container"
-          class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 relative hidden h-[38px] min-w-40 items-center gap-2.5 rounded-xl border px-4 shadow-sm focus-within:ring-2"
+          class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 relative hidden h-9.5 min-w-40 items-center gap-2.5 rounded-xl border px-4 shadow-sm focus-within:ring-2"
         >
           <Icon
             name="boxicons:calendar-filled"
@@ -128,8 +128,10 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               class="flex flex-col justify-between gap-3 px-6 py-3 lg:flex-row lg:items-center"
             >
               <!-- Center: Search & Sort inputs -->
-              <div class="mx-0 flex w-full max-w-xs min-w-40 flex-1 gap-2 lg:mx-4">
-                <SearchBar id="daily-search" />
+              <div
+                class="mx-0 flex w-full max-w-xs flex-1 gap-2 lg:mx-4"
+              >
+                <SearchBar id="daily-search" class="min-w-48 flex-1" />
                 <SortDropdown id="daily-sort" current="alphabetical" />
               </div>
 
@@ -154,7 +156,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               </div>
             </div>
           </div>
-          <div class="flex min-h-0 flex-1 flex-col p-3">
+          <div class="flex min-h-0 flex-1 flex-col p-1.5">
             <div
               class="scrollbar-thin border-base-200 bg-base-100 min-h-0 flex-1 overflow-x-auto overflow-y-auto rounded-xl border"
             >
@@ -245,7 +247,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           </div>
           <!-- Daily View Footer / Status Filters -->
           <div
-            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-start justify-between gap-3 border-t px-6 py-3 lg:flex-row lg:items-center lg:min-h-16"
+            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-start justify-between gap-3 border-t px-6 py-3 lg:min-h-16 lg:flex-row lg:items-center"
           >
             <div class="flex flex-wrap items-center gap-4">
               <!-- Status Filters -->
@@ -366,8 +368,10 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               </div>
 
               <!-- Center: Search & Sort inputs -->
-              <div class="mx-0 flex w-full max-w-md min-w-40 flex-1 gap-2 lg:mx-4">
-                <SearchBar id="monthly-search" />
+              <div
+                class="mx-0 flex w-full max-w-md flex-1 gap-2 lg:mx-4"
+              >
+                <SearchBar id="monthly-search" class="min-w-48 flex-1" />
                 <SortDropdown id="monthly-sort" current="alphabetical" />
               </div>
 
@@ -431,7 +435,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
           </div>
           <div
-            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-stretch justify-between gap-3 border-t px-6 py-3 lg:flex-row lg:items-center lg:min-h-16"
+            class="bg-base-200/40 border-base-300 no-print flex shrink-0 flex-col items-stretch justify-between gap-3 border-t px-6 py-3 lg:min-h-16 lg:flex-row lg:items-center"
           >
             <div class="flex flex-wrap items-center gap-4">
               <!-- Status Filters Container -->
@@ -729,7 +733,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               class="border-base-300 bg-base-200/30 overflow-x-auto rounded-xl border"
             >
               <table
-                class="table-compact table w-full min-w-[600px] table-fixed border-collapse"
+                class="table-compact table w-full min-w-150 table-fixed border-collapse"
                 id="rotation-timeline-table"
               >
                 <thead>
@@ -786,260 +790,262 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 
       <!-- ===== OVERTIME VIEW ===== -->
       <div id="overtime-view" class="hidden">
-    <div
-      id="overtime-card"
-      class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
-    >
-      <!-- Header -->
-      <div
-        class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="bg-warning/15 flex h-8 w-8 items-center justify-center rounded-xl"
-          >
-            <Icon
-              name="boxicons:clock-5-filled"
-              size={18}
-              class="text-warning"
-            />
-          </div>
-          <div>
-            <h2
-              class="text-base-content text-sm font-black tracking-wider uppercase"
-            >
-              Horas Extras – Fin de Semana
-            </h2>
-            <p class="text-small text-base-content/50">
-              Sábado y Domingo — 24 hs
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Weekend selector + referente config -->
-      <div
-        class="bg-base-200/50 border-base-300/60 flex flex-col justify-between gap-4 rounded-xl border p-4 lg:flex-row lg:items-end"
-      >
         <div
-          class="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-end"
+          id="overtime-card"
+          class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
-          <div class="flex shrink-0 flex-col gap-1.5">
-            <label class="label-xxs text-base-content/40">Fin de Semana</label>
-            <button
-              type="button"
-              id="preview-month-btn"
-              class="btn btn-sm bg-base-100 hover:bg-base-200 border-base-300 text-base-content w-56 justify-between font-bold shadow-sm"
-              title="Seleccionar fin de semana..."
-            >
-              <span class="flex min-w-0 items-center gap-2">
+          <!-- Header -->
+          <div
+            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="bg-warning/15 flex h-8 w-8 items-center justify-center rounded-xl"
+              >
                 <Icon
-                  name="boxicons:calendar-filled"
-                  size={14}
-                  class="text-warning shrink-0"
+                  name="boxicons:clock-5-filled"
+                  size={18}
+                  class="text-warning"
                 />
-                <span
-                  id="overtime-weekend-date-display"
-                  class="truncate text-xs tabular-nums"
-                  >Seleccionar fin de semana...</span
+              </div>
+              <div>
+                <h2
+                  class="text-base-content text-sm font-black tracking-wider uppercase"
                 >
-              </span>
-              <Icon
-                name="boxicons:chevron-down-filled"
-                size={14}
-                class="text-base-content/40 shrink-0"
-              />
-            </button>
-          </div>
-
-          <div class="flex min-w-40 flex-col gap-1.5">
-            <label class="label-xxs text-base-content/40">Referente</label>
-            <select
-              id="overtime-referente-select"
-              class="select select-sm select-bordered text-base-content w-full cursor-pointer font-bold"
-            >
-              <option value="">Sin asignar</option>
-            </select>
-            <span
-              id="overtime-referente-text"
-              class="text-base-content bg-base-200/50 border-base-300 flex hidden min-h-9 items-center rounded-xl border px-3 py-2 text-xs font-bold"
-            ></span>
-          </div>
-        </div>
-
-        <div class="flex shrink-0 items-end gap-2">
-          <ActionButton
-            id="copy-overtime-image-btn"
-            icon="boxicons:clipboard-filled"
-            label="Copiar Tabla"
-            title="Copiar horas extras al portapapeles como imagen"
-            size="md"
-            iconSize={18}
-            color="btn-secondary"
-            class="no-export shrink-0"
-          />
-
-          <ActionButton
-            type="button"
-            id="save-overtime-referente-btn"
-            icon="boxicons:save-filled"
-            label="Guardar Configuración"
-            color="btn-warning"
-            size="md"
-            class="no-export shrink-0"
-          />
-        </div>
-      </div>
-
-      <!-- Visual timeline -->
-      <div class="space-y-2">
-        <p class="label-xxs text-base-content/40">
-          Línea de Tiempo del Fin de Semana
-        </p>
-        <div
-          id="overtime-timeline-wrapper"
-          class="border-base-300 bg-base-200/30 scrollbar-thin relative overflow-x-auto rounded-xl border pb-1"
-        >
-          <!-- Time header labels row -->
-          <div
-            id="overtime-timeline-header"
-            class="border-base-300 bg-base-200/60 flex min-w-[1200px] border-b"
-          >
-            <div
-              class="text-base-content/80 border-base-300 flex w-36 shrink-0 items-center border-r px-3 py-2 text-xs font-bold tracking-wider uppercase"
-            >
-              Operador
-            </div>
-            <div id="overtime-timeline-hours" class="relative flex flex-1">
-              <!-- JS renders hour labels here -->
-            </div>
-          </div>
-          <!-- Timeline body -->
-          <div
-            id="overtime-timeline-body"
-            class="divide-base-300/40 min-w-[1200px] divide-y"
-          >
-            <div
-              id="overtime-timeline-placeholder"
-              class="text-base-content/30 flex items-center justify-center gap-2 py-12 text-xs font-bold tracking-wider uppercase"
-            >
-              <Icon name="boxicons:calendar-x-filled" size={20} />
-              Seleccioná un sábado para ver la línea de tiempo
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gestión de Turnos (form + lista side-by-side) -->
-      <div class="no-export grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <!-- Columna 1: Formulario -->
-        <div
-          class="bg-base-200/40 border-base-300/60 space-y-4 self-start rounded-xl border p-4"
-        >
-          <p
-            class="text-xxs text-base-content/50 border-base-300/50 border-b pb-2 font-black tracking-wider uppercase"
-          >
-            Gestión de Turnos
-          </p>
-          <form id="overtime-shift-form" class="flex flex-col gap-3">
-            <div class="flex flex-col gap-1.5">
-              <label class="label-xxs text-base-content/40">Operador</label>
-              <select
-                id="overtime-shift-agent"
-                class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
-                required
-              >
-                <option value="">Seleccionar operador...</option>
-              </select>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <label class="label-xxs text-base-content/40">Día</label>
-              <select
-                id="overtime-shift-day"
-                class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
-                required
-              >
-                <option value="saturday">Sábado</option>
-                <option value="sunday">Domingo</option>
-              </select>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="flex flex-col gap-1.5">
-                <label class="label-xxs text-base-content/40">Inicio</label>
-                <input
-                  type="time"
-                  id="overtime-shift-start"
-                  class="input input-sm input-bordered font-mono font-bold"
-                  required
-                />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="label-xxs text-base-content/40">Fin</label>
-                <input
-                  type="time"
-                  id="overtime-shift-end"
-                  class="input input-sm input-bordered font-mono font-bold"
-                  required
-                />
+                  Horas Extras – Fin de Semana
+                </h2>
+                <p class="text-small text-base-content/50">
+                  Sábado y Domingo — 24 hs
+                </p>
               </div>
             </div>
-            <input type="hidden" id="overtime-shift-edit-id" value="" />
-            <div class="mt-2 flex items-center justify-between">
+          </div>
+
+          <!-- Weekend selector + referente config -->
+          <div
+            class="bg-base-200/50 border-base-300/60 flex flex-col justify-between gap-4 rounded-xl border p-4 lg:flex-row lg:items-end"
+          >
+            <div
+              class="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-end"
+            >
+              <div class="flex shrink-0 flex-col gap-1.5">
+                <label class="label-xxs text-base-content/40"
+                  >Fin de Semana</label
+                >
+                <button
+                  type="button"
+                  id="preview-month-btn"
+                  class="btn btn-sm bg-base-100 hover:bg-base-200 border-base-300 text-base-content w-56 justify-between font-bold shadow-sm"
+                  title="Seleccionar fin de semana..."
+                >
+                  <span class="flex min-w-0 items-center gap-2">
+                    <Icon
+                      name="boxicons:calendar-filled"
+                      size={14}
+                      class="text-warning shrink-0"
+                    />
+                    <span
+                      id="overtime-weekend-date-display"
+                      class="truncate text-xs tabular-nums"
+                      >Seleccionar fin de semana...</span
+                    >
+                  </span>
+                  <Icon
+                    name="boxicons:chevron-down-filled"
+                    size={14}
+                    class="text-base-content/40 shrink-0"
+                  />
+                </button>
+              </div>
+
+              <div class="flex min-w-40 flex-col gap-1.5">
+                <label class="label-xxs text-base-content/40">Referente</label>
+                <select
+                  id="overtime-referente-select"
+                  class="select select-sm select-bordered text-base-content w-full cursor-pointer font-bold"
+                >
+                  <option value="">Sin asignar</option>
+                </select>
+                <span
+                  id="overtime-referente-text"
+                  class="text-base-content bg-base-200/50 border-base-300 flex hidden min-h-9 items-center rounded-xl border px-3 py-2 text-xs font-bold"
+                ></span>
+              </div>
+            </div>
+
+            <div class="flex shrink-0 items-end gap-2">
               <ActionButton
-                id="overtime-shift-cancel-btn"
-                label="Cancelar"
+                id="copy-overtime-image-btn"
+                icon="boxicons:clipboard-filled"
+                label="Copiar Tabla"
+                title="Copiar horas extras al portapapeles como imagen"
                 size="md"
-                ghost
-                class="hidden"
+                iconSize={18}
+                color="btn-secondary"
+                class="no-export shrink-0"
               />
-              <div class="ml-auto flex gap-2">
-                <ActionButton
-                  id="overtime-shift-delete-btn"
-                  icon="boxicons:trash-filled"
-                  label="Eliminar"
-                  size="md"
-                  ghost
-                  class="text-error hidden"
-                />
-                <ActionButton
-                  type="submit"
-                  id="overtime-shift-submit-btn"
-                  icon="boxicons:plus-circle-filled"
-                  label="Agregar Turno"
-                  color="btn-warning"
-                  size="md"
-                />
+
+              <ActionButton
+                type="button"
+                id="save-overtime-referente-btn"
+                icon="boxicons:save-filled"
+                label="Guardar Configuración"
+                color="btn-warning"
+                size="md"
+                class="no-export shrink-0"
+              />
+            </div>
+          </div>
+
+          <!-- Visual timeline -->
+          <div class="space-y-2">
+            <p class="label-xxs text-base-content/40">
+              Línea de Tiempo del Fin de Semana
+            </p>
+            <div
+              id="overtime-timeline-wrapper"
+              class="border-base-300 bg-base-200/30 scrollbar-thin relative overflow-x-auto rounded-xl border pb-1"
+            >
+              <!-- Time header labels row -->
+              <div
+                id="overtime-timeline-header"
+                class="border-base-300 bg-base-200/60 flex min-w-300 border-b"
+              >
+                <div
+                  class="text-base-content/80 border-base-300 flex w-36 shrink-0 items-center border-r px-3 py-2 text-xs font-bold tracking-wider uppercase"
+                >
+                  Operador
+                </div>
+                <div id="overtime-timeline-hours" class="relative flex flex-1">
+                  <!-- JS renders hour labels here -->
+                </div>
+              </div>
+              <!-- Timeline body -->
+              <div
+                id="overtime-timeline-body"
+                class="divide-base-300/40 min-w-300 divide-y"
+              >
+                <div
+                  id="overtime-timeline-placeholder"
+                  class="text-base-content/30 flex items-center justify-center gap-2 py-12 text-xs font-bold tracking-wider uppercase"
+                >
+                  <Icon name="boxicons:calendar-x-filled" size={20} />
+                  Seleccioná un sábado para ver la línea de tiempo
+                </div>
               </div>
             </div>
-          </form>
-        </div>
+          </div>
 
-        <!-- Columna 2+3: Lista compacta -->
-        <div
-          class="bg-base-200/40 border-base-300/60 space-y-3 rounded-xl border p-4 lg:col-span-2"
-        >
-          <p
-            class="text-xxs text-base-content/50 border-base-300/50 border-b pb-2 font-black tracking-wider uppercase"
-          >
-            Turnos Guardados
-          </p>
-          <div id="overtime-shifts-list">
+          <!-- Gestión de Turnos (form + lista side-by-side) -->
+          <div class="no-export grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <!-- Columna 1: Formulario -->
             <div
-              class="text-base-content/20 flex flex-col items-center justify-center gap-2 py-10"
+              class="bg-base-200/40 border-base-300/60 space-y-4 self-start rounded-xl border p-4"
             >
-              <Icon name="boxicons:briefcase-alt-2-filled" size={32} />
-              <p class="text-xs font-bold tracking-wider uppercase">
-                No hay turnos guardados
+              <p
+                class="text-xxs text-base-content/50 border-base-300/50 border-b pb-2 font-black tracking-wider uppercase"
+              >
+                Gestión de Turnos
               </p>
+              <form id="overtime-shift-form" class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <label class="label-xxs text-base-content/40">Operador</label>
+                  <select
+                    id="overtime-shift-agent"
+                    class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                    required
+                  >
+                    <option value="">Seleccionar operador...</option>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="label-xxs text-base-content/40">Día</label>
+                  <select
+                    id="overtime-shift-day"
+                    class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                    required
+                  >
+                    <option value="saturday">Sábado</option>
+                    <option value="sunday">Domingo</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1.5">
+                    <label class="label-xxs text-base-content/40">Inicio</label>
+                    <input
+                      type="time"
+                      id="overtime-shift-start"
+                      class="input input-sm input-bordered font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <label class="label-xxs text-base-content/40">Fin</label>
+                    <input
+                      type="time"
+                      id="overtime-shift-end"
+                      class="input input-sm input-bordered font-mono font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+                <input type="hidden" id="overtime-shift-edit-id" value="" />
+                <div class="mt-2 flex items-center justify-between">
+                  <ActionButton
+                    id="overtime-shift-cancel-btn"
+                    label="Cancelar"
+                    size="md"
+                    ghost
+                    class="hidden"
+                  />
+                  <div class="ml-auto flex gap-2">
+                    <ActionButton
+                      id="overtime-shift-delete-btn"
+                      icon="boxicons:trash-filled"
+                      label="Eliminar"
+                      size="md"
+                      ghost
+                      class="text-error hidden"
+                    />
+                    <ActionButton
+                      type="submit"
+                      id="overtime-shift-submit-btn"
+                      icon="boxicons:plus-circle-filled"
+                      label="Agregar Turno"
+                      color="btn-warning"
+                      size="md"
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <!-- Columna 2+3: Lista compacta -->
+            <div
+              class="bg-base-200/40 border-base-300/60 space-y-3 rounded-xl border p-4 lg:col-span-2"
+            >
+              <p
+                class="text-xxs text-base-content/50 border-base-300/50 border-b pb-2 font-black tracking-wider uppercase"
+              >
+                Turnos Guardados
+              </p>
+              <div id="overtime-shifts-list">
+                <div
+                  class="text-base-content/20 flex flex-col items-center justify-center gap-2 py-10"
+                >
+                  <Icon name="boxicons:briefcase-alt-2-filled" size={32} />
+                  <p class="text-xs font-bold tracking-wider uppercase">
+                    No hay turnos guardados
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- ===== PASIVA VIEW ===== -->
-  <div id="pasiva-view" class="hidden">
+      <!-- ===== PASIVA VIEW ===== -->
+      <div id="pasiva-view" class="hidden">
         <div
           class="bg-base-100 border-base-300 overflow-hidden rounded-2xl border shadow-md"
         >
@@ -1090,15 +1096,14 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
           </div>
         </div>
-  </div>
-
+      </div>
     </div>
   </div>
 
   <!-- Quick Edit Context Menu -->
   <div
     id="quick-edit-menu"
-    class="bg-base-100/90 border-base-300 animate-in fade-in zoom-in-95 fixed z-100 hidden min-w-[160px] rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl duration-100"
+    class="bg-base-100/90 border-base-300 animate-in fade-in zoom-in-95 fixed z-100 hidden min-w-40 rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl duration-100"
   >
     <div class="border-base-200 mb-1 border-b px-3 py-2">
       <p
@@ -1154,7 +1159,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     class="animate-in slide-in-from-right-10 fade-in fixed right-6 bottom-6 z-50 hidden duration-300"
   >
     <div
-      class="bg-warning/10 border-warning/30 text-base-content flex max-w-md min-w-[380px] items-center gap-5 rounded-3xl border-2 px-6 py-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-xl"
+      class="bg-warning/10 border-warning/30 text-base-content flex max-w-md min-w-95 items-center gap-5 rounded-3xl border-2 px-6 py-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-xl"
     >
       <div
         class="bg-warning/15 text-warning border-warning/20 flex h-10 w-10 shrink-0 animate-pulse items-center justify-center rounded-2xl border"
