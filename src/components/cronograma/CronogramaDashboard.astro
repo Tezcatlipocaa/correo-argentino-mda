@@ -2091,33 +2091,12 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   }
 
   /* Full-cell hover tint for monthly day cells (rows are JS-injected, so
-     this must be global). Tints the whole td box incl. its borders, which
-     previously stayed un-tinted because only the inner button pill changed. */
+     this must be global). Background-only: no border tint, so no outline
+     effect around the cell. */
   #monthly-tbody td:has(.monthly-cell-button):hover {
     background-color: color-mix(
       in oklab,
       var(--color-secondary) 8%,
-      transparent
-    );
-    border-color: color-mix(
-      in oklab,
-      var(--color-secondary) 40%,
-      transparent
-    );
-  }
-  #monthly-tbody td:has(.monthly-cell-button):hover .monthly-cell-button {
-    border-color: color-mix(
-      in oklab,
-      var(--color-secondary) 45%,
-      transparent
-    );
-  }
-
-  /* Day-header cells: tint borders on hover too (button fills via h-16) */
-  #monthly-thead th:hover {
-    border-color: color-mix(
-      in oklab,
-      var(--color-secondary) 45%,
       transparent
     );
   }
