@@ -7,6 +7,7 @@ const SUCCESS = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="cu
 export interface CopyImageOptions {
   padding?: number;
   compact?: boolean;
+  width?: number;
   onStart?: () => void;
   onEnd?: () => void;
 }

@@ -22,12 +22,7 @@ export function showOvertimeView(): void {
   if (overtimeView) overtimeView.classList.remove("hidden");
   if (pasivaView) pasivaView.classList.add("hidden");
 
-  if (datePickerContainer) {
-    datePickerContainer.classList.add("is-faded");
-    setTimeout(() => {
-      datePickerContainer.classList.add("hidden");
-    }, 300);
-  }
+  if (datePickerContainer) datePickerContainer.classList.add("hidden");
 
   renderOvertimeView();
 }

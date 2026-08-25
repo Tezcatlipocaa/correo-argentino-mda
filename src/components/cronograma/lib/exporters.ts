@@ -322,6 +322,8 @@ export async function exportScheduleToExcel(
 export interface ExportImageOptions {
   padding?: number;
   compact?: boolean;
+  /** Fixed render width in CSS px (e.g. 1034, 1388). When set, height is measured after layout so text reflows correctly. */
+  width?: number;
 }
 
 export async function exportAsClipboardImage(
@@ -331,7 +333,13 @@ export async function exportAsClipboardImage(
   onEnd?: () => void,
 ): Promise<void> {
   if (onStart) onStart();
-  const { padding = 0, compact = false } = options;
+  const { padding = 0, compact = false, width: fixedWidth } = options;
+
+  // Fixed width mode: render at a device-independent width (e.g. 1034 / 1388)
+  // so the captured image looks identical regardless of the viewer's viewport.
+  // When fixedWidth is absent we fall back to the live element's scroll size.
+  const liveWidth = element.scrollWidth;
+  const targetWidth = fixedWidth ?? liveWidth;
 
   // Offscreen clone so the live UI is never mutated and the margin is reliable.
   const host = document.createElement("div");
@@ -345,6 +353,13 @@ export async function exportAsClipboardImage(
   clone
     .querySelectorAll("[id]")
     .forEach((el) => el.removeAttribute("id"));
+
+  // Pin the clone to the target width so w-full children can't expand to
+  // max-content (which exploded to 101k px and corrupted the canvas).
+  // Height is left auto so it reflows correctly at the fixed width.
+  clone.style.width = `${targetWidth}px`;
+  clone.style.maxWidth = "none";
+  clone.style.overflow = "visible";
 
   // html-to-image inlines live computed styles and ignores stylesheets,
   // so compaction must be applied as inline overrides on the clone.
@@ -385,19 +400,25 @@ export async function exportAsClipboardImage(
     const computedBg =
       window.getComputedStyle(clone).backgroundColor || "#ffffff";
 
+    // Height depends on width (text reflow), so measure after the clone is
+    // laid out at targetWidth.
+    const targetHeight = clone.scrollHeight;
+
     const dataUrl = await toPng(clone, {
       backgroundColor: computedBg,
       style: {
         transform: "scale(1)",
         transformOrigin: "top left",
-        width: clone.scrollWidth + padding * 2 + "px",
-        height: clone.scrollHeight + padding * 2 + "px",
         padding: padding > 0 ? `${padding}px` : "0",
         margin: "0",
         boxSizing: "content-box",
       },
       quality: 1.0,
       pixelRatio: 3,
+      // html-to-image expects NUMBERS here; strings with units break the
+      // canvas sizing and silently drop the padding.
+      width: targetWidth + padding * 2,
+      height: targetHeight + padding * 2,
     });
 
     const res = await fetch(dataUrl);

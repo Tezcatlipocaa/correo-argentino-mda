@@ -59,6 +59,29 @@ export const LOCATION_FILTER_CONFIG: FilterButtonConfig = {
   inactiveClass: INACTIVE,
 };
 
+export const STATUS_FILTER_OPTIONS: Array<{
+  value: string;
+  label: string;
+  color?: "primary" | "secondary" | "accent" | "info" | "success" | "warning" | "error";
+  dotColor?: string;
+}> = [
+  {
+    value: "Presencial Monte Grande",
+    label: "MG",
+    color: "primary",
+    dotColor: "bg-amber-500",
+  },
+  {
+    value: "Presencial Parque Patricios",
+    label: "PP",
+    color: "primary",
+    dotColor: "bg-purple-500",
+  },
+  { value: "Home Office", label: "HO", color: "secondary", dotColor: "bg-secondary" },
+  { value: "Licencia", label: "Lic", color: "error", dotColor: "bg-error" },
+  { value: "Vacaciones", label: "Vac", color: "success", dotColor: "bg-success" },
+];
+
 export function updateButtonGroupState(
   buttons: { el: HTMLElement | null; value: string }[],
   activeValue: string,

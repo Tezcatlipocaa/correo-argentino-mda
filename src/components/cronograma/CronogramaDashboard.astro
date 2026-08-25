@@ -14,6 +14,9 @@ import NewMonthModal from "./subcomponents/NewMonthModal.astro";
 import OperatorFormModal from "./subcomponents/OperatorFormModal.astro";
 import HolidaysModal from "./subcomponents/HolidaysModal.astro";
 import GroupCard from "./subcomponents/GroupCard.astro";
+import CronoCardHeader from "./subcomponents/CronoCardHeader.astro";
+import CronoDatePicker from "./subcomponents/CronoDatePicker.astro";
+import { STATUS_FILTER_OPTIONS } from "./lib/filters";
 
 interface Props {
   userRole?: string;
@@ -38,9 +41,9 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     id="cronograma-container"
     class="animate-in fade-in scrollbar-thin flex min-h-0 w-full flex-1 flex-col overflow-y-auto pb-2 duration-700"
   >
-    <div class="flex min-h-0 w-full flex-1 flex-col gap-4">
+    <div class="flex min-h-0 w-full flex-1 flex-col">
       <div
-        class="sticky top-0 z-40 flex shrink-0 flex-col justify-between gap-4 bg-base-100/95 backdrop-blur-sm md:flex-row md:items-center"
+        class="bg-base-100/95 sticky top-0 z-40 flex shrink-0 flex-col justify-between pb-4 backdrop-blur-sm md:flex-row md:items-center"
       >
         <div
           id="view-switcher"
@@ -94,28 +97,14 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           </div>
         </div>
 
-        <!-- Date Picker (hidden by default) -->
-        <div
+        <CronoDatePicker
           id="date-picker-container"
-          class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 relative hidden h-9.5 min-w-40 items-center gap-2.5 rounded-xl border px-4 shadow-sm focus-within:ring-2"
-        >
-          <Icon
-            name="boxicons:calendar-filled"
-            size={18}
-            class="text-base-content/40"
-          />
-          <label for="date-input" class="sr-only">Seleccionar fecha</label>
-          <span
-            id="date-input-display"
-            class="text-base-content pointer-events-none text-sm font-semibold tabular-nums"
-          >
-          </span>
-          <input
-            type="date"
-            id="date-input"
-            class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none border-0 opacity-0"
-          />
-        </div>
+          displayId="date-input-display"
+          inputId="date-input"
+          variant="top"
+          minW="min-w-40"
+          class="hidden"
+        />
       </div>
 
       <!-- Daily View Section (Hidden by default) -->
@@ -128,9 +117,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               class="flex flex-col justify-between gap-3 px-6 py-3 lg:flex-row lg:items-center"
             >
               <!-- Center: Search & Sort inputs -->
-              <div
-                class="mx-0 flex w-full max-w-xs flex-1 gap-2 lg:mx-4"
-              >
+              <div class="mx-0 flex w-full max-w-xs flex-1 gap-2 lg:mx-4">
                 <SearchBar id="daily-search" class="min-w-48 flex-1" />
                 <SortDropdown id="daily-sort" current="alphabetical" />
               </div>
@@ -253,38 +240,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               <!-- Status Filters -->
               <FilterButtonBar
                 id="filter-daily-status"
-                options={[
-                  {
-                    value: "Presencial Monte Grande",
-                    label: "MG",
-                    color: "primary",
-                    dotColor: "bg-amber-500",
-                  },
-                  {
-                    value: "Presencial Parque Patricios",
-                    label: "PP",
-                    color: "primary",
-                    dotColor: "bg-purple-500",
-                  },
-                  {
-                    value: "Home Office",
-                    label: "HO",
-                    color: "secondary",
-                    dotColor: "bg-secondary",
-                  },
-                  {
-                    value: "Licencia",
-                    label: "Lic",
-                    color: "error",
-                    dotColor: "bg-error",
-                  },
-                  {
-                    value: "Vacaciones",
-                    label: "Vac",
-                    color: "success",
-                    dotColor: "bg-success",
-                  },
-                ]}
+                options={STATUS_FILTER_OPTIONS}
                 prefix="Estado:"
                 allLabel="Todos"
                 attribute="data-filter"
@@ -368,9 +324,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               </div>
 
               <!-- Center: Search & Sort inputs -->
-              <div
-                class="mx-0 flex w-full max-w-md flex-1 gap-2 lg:mx-4"
-              >
+              <div class="mx-0 flex w-full max-w-md flex-1 gap-2 lg:mx-4">
                 <SearchBar id="monthly-search" class="min-w-48 flex-1" />
                 <SortDropdown id="monthly-sort" current="alphabetical" />
               </div>
@@ -441,38 +395,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               <!-- Status Filters Container -->
               <FilterButtonBar
                 id="filter-monthly-status"
-                options={[
-                  {
-                    value: "Presencial Monte Grande",
-                    label: "MG",
-                    color: "primary",
-                    dotColor: "bg-amber-500",
-                  },
-                  {
-                    value: "Presencial Parque Patricios",
-                    label: "PP",
-                    color: "primary",
-                    dotColor: "bg-purple-500",
-                  },
-                  {
-                    value: "Home Office",
-                    label: "HO",
-                    color: "secondary",
-                    dotColor: "bg-secondary",
-                  },
-                  {
-                    value: "Licencia",
-                    label: "Lic",
-                    color: "error",
-                    dotColor: "bg-error",
-                  },
-                  {
-                    value: "Vacaciones",
-                    label: "Vac",
-                    color: "success",
-                    dotColor: "bg-success",
-                  },
-                ]}
+                options={STATUS_FILTER_OPTIONS}
                 prefix="Estado:"
                 allLabel="Todos"
                 attribute="data-filter"
@@ -539,33 +462,13 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         <div
           class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
-          <div
-            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
+          <CronoCardHeader
+            icon="boxicons:group-filled"
+            title="Configuración de Grupos"
+            subtitle="Establece la rotación y horarios de sábados aplicados únicamente al mes seleccionado."
           >
-            <div class="flex items-center gap-3">
-              <div
-                class="bg-secondary/15 flex h-8 w-8 items-center justify-center rounded-xl"
-              >
-                <Icon
-                  name="boxicons:group-filled"
-                  size={18}
-                  class="text-secondary"
-                />
-              </div>
-              <div>
-                <h2
-                  class="text-base-content text-sm font-black tracking-wider uppercase"
-                >
-                  Configuración de Grupos
-                </h2>
-                <p class="text-small text-base-content/50">
-                  Establece la rotación y horarios de sábados aplicados
-                  únicamente al mes seleccionado.
-                </p>
-              </div>
-            </div>
             <MonthSelect id="groups-month-selector" class="shrink-0" />
-          </div>
+          </CronoCardHeader>
           <!-- Configuration form -->
           <div
             id="rotation-config-card"
@@ -579,27 +482,13 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <label class="label-xxs text-base-content/40"
                   >Fecha de Inicio (Sábado)</label
                 >
-                <div
+                <CronoDatePicker
                   id="rotation-start-date-wrapper"
-                  class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 relative flex h-8 min-w-36 cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 shadow-sm transition-colors duration-200 focus-within:ring-2"
-                >
-                  <Icon
-                    name="boxicons:calendar-filled"
-                    size={14}
-                    class="text-base-content/40 pointer-events-none"
-                  />
-                  <span
-                    id="rotation-start-date-display"
-                    class="text-base-content pointer-events-none text-xs font-semibold tabular-nums"
-                    >dd/mm/yy</span
-                  >
-                  <input
-                    type="date"
-                    id="rotation-start-date"
-                    class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none border-0 opacity-0"
-                    required
-                  />
-                </div>
+                  displayId="rotation-start-date-display"
+                  inputId="rotation-start-date"
+                  placeholder="dd/mm/yy"
+                  required
+                />
               </div>
               <div class="flex shrink-0 flex-col gap-1.5">
                 <label class="label-xxs text-base-content/40"
@@ -654,88 +543,51 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           id="saturday-rotation-card"
           class="bg-base-100 border-base-300 mt-6 space-y-6 rounded-2xl border p-6 shadow-md"
         >
-          <div
-            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
+          <CronoCardHeader
+            icon="boxicons:calendar-filled"
+            title="Horarios de Guardia – Sábados 7 a 13"
+            subtitle="Línea de tiempo de guardias del grupo activo"
           >
-            <div class="flex items-center gap-3">
-              <div
-                class="bg-secondary/15 flex h-8 w-8 items-center justify-center rounded-xl"
+            <div class="no-export flex flex-col gap-1">
+              <span class="label-xxs text-base-content/40 select-none"
+                >&nbsp;</span
               >
-                <Icon
-                  name="boxicons:calendar-filled"
-                  size={18}
-                  class="text-secondary"
-                />
-              </div>
-              <div>
-                <h2
-                  class="text-base-content text-sm font-black tracking-wider uppercase"
-                >
-                  Horarios de Guardia – Sábados 7 a 13
-                </h2>
-                <p class="text-small text-base-content/50">
-                  Línea de tiempo de guardias del grupo activo
-                </p>
-              </div>
+              <ActionButton
+                id="copy-rotation-image-btn"
+                icon="boxicons:clipboard-filled"
+                label="Copiar Tabla"
+                title="Copiar tabla de guardia al portapapeles como imagen"
+                size="md"
+                iconSize={18}
+                color="btn-secondary"
+              />
             </div>
 
-            <!-- Saturday selector + Active group display -->
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <!-- New Copy to Clipboard Button -->
-              <div class="no-export flex flex-col gap-1">
-                <span class="label-xxs text-base-content/40 select-none"
-                  >&nbsp;</span
-                >
-                <ActionButton
-                  id="copy-rotation-image-btn"
-                  icon="boxicons:clipboard-filled"
-                  label="Copiar Tabla"
-                  title="Copiar tabla de guardia al portapapeles como imagen"
-                  size="md"
-                  iconSize={18}
-                  color="btn-secondary"
-                />
-              </div>
+            <div class="flex flex-col gap-1">
+              <label class="label-xxs text-base-content/40"
+                >Sábado de Guardia</label
+              >
+              <CronoDatePicker
+                id="rotation-timeline-date-wrapper"
+                displayId="rotation-timeline-date-display"
+                inputId="rotation-timeline-date"
+                placeholder="Seleccionar sábado..."
+                minW="min-w-44"
+              />
+            </div>
 
-              <div class="flex flex-col gap-1">
-                <label class="label-xxs text-base-content/40"
-                  >Sábado de Guardia</label
-                >
-                <div
-                  id="rotation-timeline-date-wrapper"
-                  class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 relative flex h-8 min-w-44 cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 shadow-sm transition-colors duration-200 focus-within:ring-2"
-                >
-                  <Icon
-                    name="boxicons:calendar-filled"
-                    size={14}
-                    class="text-base-content/40 pointer-events-none"
-                  />
-                  <span
-                    id="rotation-timeline-date-display"
-                    class="text-base-content pointer-events-none text-xs font-semibold tabular-nums"
-                    >Seleccionar sábado...</span
-                  >
-                  <input
-                    type="date"
-                    id="rotation-timeline-date"
-                    class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none border-0 opacity-0"
-                  />
-                </div>
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <label class="label-xxs text-base-content/40"
-                  >Grupo Activo</label
-                >
-                <div
-                  class="bg-secondary/10 border-secondary/20 text-secondary flex h-8 items-center rounded-lg border px-3 py-1.5 text-xs font-bold shadow-sm select-none"
-                  id="rotation-active-group-display"
-                >
-                  Grupo -
-                </div>
+            <div class="flex flex-col gap-1">
+              <label class="label-xxs text-base-content/40"
+                >Grupo Activo</label
+              >
+              <div
+                class="bg-secondary/10 border-secondary/20 text-secondary flex h-8 items-center rounded-lg border px-3 py-1.5 text-xs font-bold shadow-sm select-none"
+                id="rotation-active-group-display"
+              >
+                Grupo -
               </div>
             </div>
-          </div>
+          </CronoCardHeader>
 
           <!-- Visual timeline grid -->
           <div class="space-y-2">
@@ -805,32 +657,13 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           id="overtime-card"
           class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
-          <!-- Header -->
-          <div
-            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="bg-warning/15 flex h-8 w-8 items-center justify-center rounded-xl"
-              >
-                <Icon
-                  name="boxicons:clock-5-filled"
-                  size={18}
-                  class="text-warning"
-                />
-              </div>
-              <div>
-                <h2
-                  class="text-base-content text-sm font-black tracking-wider uppercase"
-                >
-                  Horas Extras – Fin de Semana
-                </h2>
-                <p class="text-small text-base-content/50">
-                  Sábado y Domingo — 24 hs
-                </p>
-              </div>
-            </div>
-          </div>
+          <CronoCardHeader
+            icon="boxicons:clock-5-filled"
+            title="Horas Extras – Fin de Semana"
+            subtitle="Sábado y Domingo — 24 hs"
+            iconBg="bg-warning/15"
+            iconColor="text-warning"
+          />
 
           <!-- Weekend selector + referente config -->
           <div
@@ -1060,51 +893,32 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         <div
           class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
-          <!-- Header -->
-          <div
-            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
+          <CronoCardHeader
+            icon="boxicons:shield-filled"
+            title="Guardia Pasiva Semanal"
+            subtitle="Planificación de supervisores, referentes y operadores por semana"
+            iconBg="bg-info/15"
+            iconColor="text-info"
           >
-            <div class="flex items-center gap-3">
-              <div
-                class="bg-info/15 flex h-8 w-8 items-center justify-center rounded-xl"
-              >
-                <Icon
-                  name="boxicons:shield-filled"
-                  size={18}
-                  class="text-info"
-                />
-              </div>
-              <div>
-                <h2
-                  class="text-base-content text-sm font-black tracking-wider uppercase"
-                >
-                  Guardia Pasiva Semanal
-                </h2>
-                <p class="text-small text-base-content/50">
-                  Planificación de supervisores, referentes y operadores por
-                  semana
-                </p>
-              </div>
-            </div>
             <MonthSelect id="pasiva-month-selector" class="shrink-0" />
-          </div>
+          </CronoCardHeader>
           <div class="overflow-x-auto">
-              <table
-                class="w-full table-fixed border-separate border-spacing-y-2.5 text-left"
-              >
-                <thead>
-                  <tr class="label-xxs text-base-content/40 tracking-widest">
-                    <th class="w-44 pb-1 pl-2">Semana</th>
-                    <th class="w-1/3 pb-1">Supervisor</th>
-                    <th class="w-1/3 pb-1">Referente</th>
-                    <th class="w-1/3 pr-2 pb-1">Operador de la Semana</th>
-                  </tr>
-                </thead>
-                <tbody id="pasiva-weeks-tbody">
-                  <!-- Injected dynamically -->
-                </tbody>
-              </table>
-            </div>
+            <table
+              class="w-full table-fixed border-separate border-spacing-y-2.5 text-left"
+            >
+              <thead>
+                <tr class="label-xxs text-base-content/40 tracking-widest">
+                  <th class="w-44 pb-1 pl-2">Semana</th>
+                  <th class="w-1/3 pb-1">Supervisor</th>
+                  <th class="w-1/3 pb-1">Referente</th>
+                  <th class="w-1/3 pr-2 pb-1">Operador de la Semana</th>
+                </tr>
+              </thead>
+              <tbody id="pasiva-weeks-tbody">
+                <!-- Injected dynamically -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

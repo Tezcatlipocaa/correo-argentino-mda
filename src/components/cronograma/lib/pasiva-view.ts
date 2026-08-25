@@ -184,12 +184,7 @@ export function showPasivaView(): void {
   if (overtimeView) overtimeView.classList.add("hidden");
   if (pasivaView) pasivaView.classList.remove("hidden");
 
-  if (datePickerContainer) {
-    datePickerContainer.classList.add("is-faded");
-    setTimeout(() => {
-      datePickerContainer.classList.add("hidden");
-    }, 300);
-  }
+  if (datePickerContainer) datePickerContainer.classList.add("hidden");
 
   renderPasivaView();
 }

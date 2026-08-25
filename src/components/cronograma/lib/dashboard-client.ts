@@ -548,21 +548,19 @@ function showDailyView(): void {
   const pasivaView = document.getElementById("pasiva-view");
   const datePickerContainer = document.getElementById("date-picker-container");
 
-  renderDaily();
-  updateViewSwitcherUI("daily");
-
+  // Show immediately (stale content is still valid), re-render off the
+  // critical path so the tab switch paints instantly instead of blocking.
   if (dailyView) dailyView.classList.remove("hidden");
   if (monthlyView) monthlyView.classList.add("hidden");
   if (groupsView) groupsView.classList.add("hidden");
   if (overtimeView) overtimeView.classList.add("hidden");
   if (pasivaView) pasivaView.classList.add("hidden");
 
-  if (datePickerContainer) {
-    datePickerContainer.classList.remove("hidden");
-    setTimeout(() => {
-      datePickerContainer.classList.remove("is-faded");
-    }, 50);
-  }
+  updateViewSwitcherUI("daily");
+
+  if (datePickerContainer) datePickerContainer.classList.remove("hidden");
+
+  requestAnimationFrame(() => renderDaily());
 }
 
 function showMonthlyView(): void {
@@ -573,21 +571,17 @@ function showMonthlyView(): void {
   const pasivaView = document.getElementById("pasiva-view");
   const datePickerContainer = document.getElementById("date-picker-container");
 
-  renderMonthly();
-  updateViewSwitcherUI("monthly");
-
   if (dailyView) dailyView.classList.add("hidden");
   if (monthlyView) monthlyView.classList.remove("hidden");
   if (groupsView) groupsView.classList.add("hidden");
   if (overtimeView) overtimeView.classList.add("hidden");
   if (pasivaView) pasivaView.classList.add("hidden");
 
-  if (datePickerContainer) {
-    datePickerContainer.classList.add("is-faded");
-    setTimeout(() => {
-      datePickerContainer.classList.add("hidden");
-    }, 300);
-  }
+  updateViewSwitcherUI("monthly");
+
+  if (datePickerContainer) datePickerContainer.classList.add("hidden");
+
+  requestAnimationFrame(() => renderMonthly());
 }
 
 export function showGroupsView(): void {
@@ -607,12 +601,7 @@ export function showGroupsView(): void {
   if (overtimeView) overtimeView.classList.add("hidden");
   if (pasivaView) pasivaView.classList.add("hidden");
 
-  if (datePickerContainer) {
-    datePickerContainer.classList.add("is-faded");
-    setTimeout(() => {
-      datePickerContainer.classList.add("hidden");
-    }, 300);
-  }
+  if (datePickerContainer) datePickerContainer.classList.add("hidden");
 }
 
 export async function renderGroupsView(): Promise<void> {
@@ -1797,6 +1786,7 @@ function setupEventListeners(): void {
       {
         padding: 16,
         compact: true,
+        width: 1034,
         onStart: () => saturdayCard.classList.add("exporting-image"),
         onEnd: () => saturdayCard.classList.remove("exporting-image"),
       },
@@ -1827,6 +1817,7 @@ function setupEventListeners(): void {
       {
         padding: 16,
         compact: true,
+        width: 1388,
         onStart: () => overtimeCard.classList.add("exporting-image"),
         onEnd: () => overtimeCard.classList.remove("exporting-image"),
       },
