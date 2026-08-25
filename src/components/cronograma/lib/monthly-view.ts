@@ -1171,7 +1171,7 @@ export function renderMonthly(): void {
       <th class="${pd.thClass} p-0"${thTitle}${pd.isToday ? ' data-today-header="true"' : ""}>
         <button
           type="button"
-          class="w-full h-full flex flex-col items-center justify-center py-2 gap-0.5 cursor-pointer hover:bg-base-content/5 active:bg-base-content/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 rounded-none border-0"
+          class="w-full h-full flex flex-col items-center justify-center py-2 gap-0.5 cursor-pointer hover:bg-base-content/5 active:bg-base-content/10 transition-colors focus-visible:outline-none rounded-none border-0"
           data-click-day="${pd.str}"
           title="${tooltipText}"
           aria-label="${tooltipText}"
@@ -1384,7 +1384,7 @@ export function renderMonthly(): void {
         if (isLicenseOverlap) totalInconsistencies++;
 
         const isFrancoCell = status === OperatorStatus.Franco || !status;
-        let cellClass = `relative p-0 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
+        let cellClass = `p-1 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
         if (isTodayCell) {
           cellClass += isFrancoCell
             ? " bg-base-200/80 dark:bg-base-300/20"
@@ -1406,7 +1406,7 @@ export function renderMonthly(): void {
           : "";
 
         if (isFrancoCell) {
-          let francoBtnClass = `monthly-cell-button block w-full h-full flex flex-col items-center justify-center hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
+          let francoBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center relative hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
           if (isHoliday) {
             francoBtnClass +=
               " line-through opacity-60 !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
@@ -1455,7 +1455,7 @@ export function renderMonthly(): void {
         else if (status === OperatorStatus.Licencia) initials = "L";
         else if (status === OperatorStatus.Vacaciones) initials = "V";
 
-        let statusBtnClass = `monthly-cell-button block w-full h-full flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+        let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
 
         let tooltipAttrs = "";
         const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
