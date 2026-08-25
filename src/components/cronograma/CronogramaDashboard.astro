@@ -540,18 +540,29 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
           <div
-            class="border-base-300 flex items-center justify-between border-b pb-3"
+            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
           >
-            <div>
-              <h2
-                class="text-base-content text-base font-black tracking-wide uppercase"
+            <div class="flex items-center gap-3">
+              <div
+                class="bg-secondary/15 flex h-8 w-8 items-center justify-center rounded-xl"
               >
-                Configuración de Grupos
-              </h2>
-              <p class="text-base-content/50 text-xs">
-                Establece la rotación y horarios de sábados aplicados únicamente
-                al mes seleccionado.
-              </p>
+                <Icon
+                  name="boxicons:group-filled"
+                  size={18}
+                  class="text-secondary"
+                />
+              </div>
+              <div>
+                <h2
+                  class="text-base-content text-sm font-black tracking-wider uppercase"
+                >
+                  Configuración de Grupos
+                </h2>
+                <p class="text-small text-base-content/50">
+                  Establece la rotación y horarios de sábados aplicados
+                  únicamente al mes seleccionado.
+                </p>
+              </div>
             </div>
             <MonthSelect id="groups-month-selector" class="shrink-0" />
           </div>
