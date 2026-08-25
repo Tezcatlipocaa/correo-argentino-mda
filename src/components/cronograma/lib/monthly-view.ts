@@ -1089,7 +1089,7 @@ export function renderMonthly(): void {
     const isHoliday = !!feriadoName;
 
     let thClass =
-      "sticky top-0 z-40 text-center min-w-[4rem] px-0 border-r border-b border-base-200 transition-colors bg-base-100";
+      "sticky top-0 z-40 text-center min-w-[4rem] h-16 px-0 border-r border-b border-base-200 transition-colors bg-base-100";
     if (isToday)
       thClass +=
         " bg-secondary text-secondary-content border-b-secondary border-b-2 z-45";
@@ -1138,7 +1138,7 @@ export function renderMonthly(): void {
     : "";
 
   let theadHtml = `<tr>
-    <th class="sticky top-0 left-0 bg-base-100 z-50 w-[200px] min-w-[200px] border-r border-b border-base-200 px-6 py-4 font-black text-xs uppercase tracking-widest text-base-content/85 ${thShadowClass}">
+    <th class="sticky top-0 left-0 bg-base-100 z-50 w-[200px] min-w-[200px] h-16 border-r border-b border-base-200 px-6 py-4 font-black text-xs uppercase tracking-widest text-base-content/85 ${thShadowClass}">
       <div class="flex items-center justify-between gap-1.5">
         <span>Operador</span>
         <button
@@ -1346,8 +1346,8 @@ export function renderMonthly(): void {
                   })}
                 </div>
               </div>
-              ${showHOViolation ? `<span class="text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 inline-block w-fit shadow-sm">⚠️ Exceso de HO (${maxConsecutiveHO}d)</span>` : ""}
-              ${showPWeekViolation ? `<span class="text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 inline-block w-fit shadow-sm">⚠️ Faltan días P.</span>` : ""}
+              ${showHOViolation ? `<span class="inline-flex items-center gap-1 text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 w-fit shadow-sm" title="Exceso de HO: ${maxConsecutiveHO} días consecutivos"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.87 2.51c-.35-.63-1.4-.63-1.75 0l-9.99 18c-.17.31-.17.69.01.99c.18.31.51.49.86.49h20c.35 0 .68-.19.86-.49a1 1 0 0 0 .01-.99zM13 19h-2v-2h2zm0-4h-2V9h2z"/></svg>Exceso de HO (${maxConsecutiveHO}d)</span>` : ""}
+              ${showPWeekViolation ? `<span class="inline-flex items-center gap-1 text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 w-fit shadow-sm" title="Faltan días presenciales esta semana"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.87 2.51c-.35-.63-1.4-.63-1.75 0l-9.99 18c-.17.31-.17.69.01.99c.18.31.51.49.86.49h20c.35 0 .68-.19.86-.49a1 1 0 0 0 .01-.99zM13 19h-2v-2h2zm0-4h-2V9h2z"/></svg>Faltan días P.</span>` : ""}
             </div>
           </div>
         </td>
@@ -1406,7 +1406,7 @@ export function renderMonthly(): void {
           : "";
 
         if (isFrancoCell) {
-          let francoBtnClass = `monthly-cell-button absolute inset-0 w-full h-full flex flex-col items-center justify-center hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
+          let francoBtnClass = `monthly-cell-button block w-full h-full flex flex-col items-center justify-center hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
           if (isHoliday) {
             francoBtnClass +=
               " line-through opacity-60 !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
@@ -1455,7 +1455,7 @@ export function renderMonthly(): void {
         else if (status === OperatorStatus.Licencia) initials = "L";
         else if (status === OperatorStatus.Vacaciones) initials = "V";
 
-        let statusBtnClass = `monthly-cell-button absolute inset-0 w-full h-full flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+        let statusBtnClass = `monthly-cell-button block w-full h-full flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
 
         let tooltipAttrs = "";
         const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";

@@ -60,7 +60,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             <button
               type="button"
               id="switch-to-daily-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase transition-all duration-200"
+              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
             >
               Diario
             </button>
@@ -73,21 +73,21 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             <button
               type="button"
               id="switch-to-groups-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase transition-all duration-200"
+              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
             >
               Grupos
             </button>
             <button
               type="button"
               id="switch-to-overtime-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase transition-all duration-200"
+              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
             >
               Extras
             </button>
             <button
               type="button"
               id="switch-to-pasiva-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase transition-all duration-200"
+              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
             >
               Pasivas
             </button>
@@ -97,7 +97,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         <!-- Date Picker (hidden by default) -->
         <div
           id="date-picker-container"
-          class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 is-faded relative hidden min-w-40 items-center gap-2.5 rounded-xl border px-4 py-2.5 shadow-sm transition-colors duration-200 focus-within:ring-2"
+          class="bg-base-100 border-base-300 hover:border-secondary/40 focus-within:ring-secondary/20 relative hidden h-[38px] min-w-40 items-center gap-2.5 rounded-xl border px-4 shadow-sm focus-within:ring-2"
         >
           <Icon
             name="boxicons:calendar-filled"
@@ -541,10 +541,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         </div>
       </div>
 
-      <div
-        id="groups-view"
-        class="animate-in slide-in-from-bottom-2 fade-in hidden duration-500"
-      >
+      <div id="groups-view" class="hidden">
         <div
           class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
@@ -796,14 +793,9 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- ===== OVERTIME VIEW ===== -->
-  <div
-    id="overtime-view"
-    class="animate-in slide-in-from-bottom-2 fade-in hidden duration-500"
-  >
+      <!-- ===== OVERTIME VIEW ===== -->
+      <div id="overtime-view" class="hidden">
     <div
       id="overtime-card"
       class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
@@ -1057,17 +1049,12 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   </div>
 
   <!-- ===== PASIVA VIEW ===== -->
-  <div
-    id="pasiva-view"
-    class="animate-in slide-in-from-bottom-2 fade-in hidden duration-500"
-  >
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-      <div class="lg:col-span-12">
+  <div id="pasiva-view" class="hidden">
         <div
           class="bg-base-100 border-base-300 overflow-hidden rounded-2xl border shadow-md"
         >
           <div
-            class="bg-base-200 border-base-300 flex flex-col justify-between gap-3 border-b px-6 py-3.5 md:flex-row md:items-center"
+            class="bg-base-200 border-base-300 flex flex-col justify-between gap-3 border-b px-6 py-3 md:flex-row md:items-center"
           >
             <div class="flex items-center gap-2.5">
               <div
@@ -1113,7 +1100,8 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
           </div>
         </div>
-      </div>
+  </div>
+
     </div>
   </div>
 
@@ -1532,10 +1520,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 
   #date-picker-container.hidden {
     display: none !important;
-  }
-
-  #date-picker-container.is-faded {
-    opacity: 0;
   }
 
   /* Prevent browser native date input text, highlights, or selection fields from showing */
@@ -2122,6 +2106,15 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     );
   }
   #monthly-tbody td:has(.monthly-cell-button):hover .monthly-cell-button {
+    border-color: color-mix(
+      in oklab,
+      var(--color-secondary) 45%,
+      transparent
+    );
+  }
+
+  /* Day-header cells: tint borders on hover too (button fills via h-16) */
+  #monthly-thead th:hover {
     border-color: color-mix(
       in oklab,
       var(--color-secondary) 45%,
