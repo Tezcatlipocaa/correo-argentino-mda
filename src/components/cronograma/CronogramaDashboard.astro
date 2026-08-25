@@ -1790,25 +1790,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     transform: translateX(-50%) rotate(45deg);
   }
 
-  .scrollbar-thin {
-    overscroll-behavior: contain;
-  }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: color-mix(
-      in oklab,
-      var(--color-base-content) 20%,
-      transparent
-    );
-    border-radius: 20px;
-  }
-
   /* Gantt Layout Styles */
   .gantt-container {
     position: relative;
