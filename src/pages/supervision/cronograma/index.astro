@@ -36,4 +36,12 @@ const role = normalizeRole(user.role);
     flex: 1;
     min-height: 0;
   }
+
+  body:has(#groups-view:not(.hidden)) #cronograma-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  body:has(#groups-view:not(.hidden)) #cronograma-container::-webkit-scrollbar {
+    display: none;
+  }
 </style>
