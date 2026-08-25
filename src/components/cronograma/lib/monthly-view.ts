@@ -957,6 +957,44 @@ export function renderHourly(dateStr: string): void {
 
   if (tfoot)
     tfoot.innerHTML = `<tr><td colspan="${hours.length + 1}" class="bg-base-200 py-3 text-center border-t border-base-300 text-xxs font-black text-base-content/30 uppercase tracking-[0.2em]">Fin del reporte diario</td></tr>`;
+
+  syncMonthlyFillerRow();
+  installFillerObserver();
+}
+
+/**
+ * Sizes #monthly-filler-row so that, when the rendered rows don't fill the
+ * scroll area vertically, the empty space is absorbed by the invisible filler
+ * instead of being distributed across the data rows. This keeps every data
+ * row at its natural height and pins the coverage summary (tfoot) to the
+ * bottom of the container.
+ */
+export function syncMonthlyFillerRow(): void {
+  const scroller = document.getElementById("monthly-scroll-area");
+  const fillerRow = document.querySelector<HTMLElement>(
+    "#monthly-filler-row tr",
+  );
+  const thead = document.getElementById("monthly-thead");
+  const tbody = document.getElementById("monthly-tbody");
+  const tfoot = document.getElementById("monthly-tfoot");
+  if (!scroller || !fillerRow || !thead || !tbody || !tfoot) return;
+
+  // Temporarily reset so measurements exclude the previous filler height.
+  fillerRow.style.height = "0px";
+  const used =
+    thead.offsetHeight + tbody.offsetHeight + tfoot.offsetHeight;
+  const target = Math.max(0, Math.floor(scroller.clientHeight - used));
+  fillerRow.style.height = `${target}px`;
+}
+
+let fillerObserverInstalled = false;
+function installFillerObserver(): void {
+  if (fillerObserverInstalled) return;
+  if (typeof ResizeObserver === "undefined") return;
+  const scroller = document.getElementById("monthly-scroll-area");
+  if (!scroller) return;
+  fillerObserverInstalled = true;
+  new ResizeObserver(() => syncMonthlyFillerRow()).observe(scroller);
 }
 
 export function renderMonthly(): void {
@@ -1346,7 +1384,7 @@ export function renderMonthly(): void {
         if (isLicenseOverlap) totalInconsistencies++;
 
         const isFrancoCell = status === OperatorStatus.Franco || !status;
-        let cellClass = `p-1 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
+        let cellClass = `relative p-0 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
         if (isTodayCell) {
           cellClass += isFrancoCell
             ? " bg-base-200/80 dark:bg-base-300/20"
@@ -1368,7 +1406,7 @@ export function renderMonthly(): void {
           : "";
 
         if (isFrancoCell) {
-          let francoBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center relative hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
+          let francoBtnClass = `monthly-cell-button absolute inset-0 w-full h-full flex flex-col items-center justify-center hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
           if (isHoliday) {
             francoBtnClass +=
               " line-through opacity-60 !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
@@ -1417,7 +1455,7 @@ export function renderMonthly(): void {
         else if (status === OperatorStatus.Licencia) initials = "L";
         else if (status === OperatorStatus.Vacaciones) initials = "V";
 
-        let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+        let statusBtnClass = `monthly-cell-button absolute inset-0 w-full h-full flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
 
         let tooltipAttrs = "";
         const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
@@ -1600,6 +1638,9 @@ export function renderMonthly(): void {
   if (monthlyTable && firstOpCell) {
     monthlyTable.style.setProperty("--op-w", `${firstOpCell.offsetWidth}px`);
   }
+
+  syncMonthlyFillerRow();
+  installFillerObserver();
 
   // Auto-scroll horizontal bar to center today's column if viewing current month
   const todayHeader = document.querySelector(
