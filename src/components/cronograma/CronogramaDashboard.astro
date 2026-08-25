@@ -1058,37 +1058,37 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       <!-- ===== PASIVA VIEW ===== -->
       <div id="pasiva-view" class="hidden">
         <div
-          class="bg-base-100 border-base-300 overflow-hidden rounded-2xl border shadow-md"
+          class="bg-base-100 border-base-300 space-y-6 rounded-2xl border p-6 shadow-md"
         >
+          <!-- Header -->
           <div
-            class="bg-base-200 border-base-300 flex flex-col justify-between gap-3 border-b px-6 py-3 md:flex-row md:items-center"
+            class="flex flex-col justify-between gap-4 md:flex-row md:items-center"
           >
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-3">
               <div
-                class="bg-secondary/10 text-secondary flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                class="bg-info/15 flex h-8 w-8 items-center justify-center rounded-xl"
               >
-                <Icon name="boxicons:calendar-filled" size={18} />
+                <Icon
+                  name="boxicons:shield-filled"
+                  size={18}
+                  class="text-info"
+                />
               </div>
               <div>
-                <h3
-                  class="text-base-content text-xs font-black tracking-wider uppercase"
+                <h2
+                  class="text-base-content text-sm font-black tracking-wider uppercase"
                 >
                   Guardia Pasiva Semanal
-                </h3>
-                <p class="text-xxs text-base-content/50">
+                </h2>
+                <p class="text-small text-base-content/50">
                   Planificación de supervisores, referentes y operadores por
                   semana
                 </p>
               </div>
             </div>
-
-            <div class="flex items-center gap-2">
-              <MonthSelect id="pasiva-month-selector" class="shrink-0" />
-            </div>
+            <MonthSelect id="pasiva-month-selector" class="shrink-0" />
           </div>
-
-          <div class="p-6">
-            <div class="overflow-x-auto">
+          <div class="overflow-x-auto">
               <table
                 class="w-full table-fixed border-separate border-spacing-y-2.5 text-left"
               >
@@ -1105,7 +1105,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 </tbody>
               </table>
             </div>
-          </div>
         </div>
       </div>
     </div>
