@@ -249,6 +249,11 @@ export function sortOperators(
   });
 }
 
+function isViewVisible(id: string): boolean {
+  const el = document.getElementById(id);
+  return !!el && !el.classList.contains("hidden");
+}
+
 export async function reloadDataForActiveMonth(
   targetMonth?: string,
 ): Promise<void> {
@@ -270,8 +275,14 @@ export async function reloadDataForActiveMonth(
     await loadRotationConfig(monthToLoad);
 
     clearParsedDatesCache();
-    renderDaily();
-    renderMonthly();
+    // Solo re-renderizar las vistas visibles: la vista oculta se actualiza
+    // al entrar (showDailyView/showMonthlyView re-renderizan via rAF).
+    if (isViewVisible("daily-view")) {
+      renderDaily();
+    }
+    if (isViewVisible("monthly-view")) {
+      renderMonthly();
+    }
     renderMonthSelect();
     updateMonthDisplay();
 
@@ -888,8 +899,14 @@ async function discardChanges(): Promise<void> {
     if (saveIndicator) saveIndicator.classList.add("hidden");
 
     clearParsedDatesCache();
-    renderDaily();
-    renderMonthly();
+    // Mismo gating que reloadDataForActiveMonth: la vista oculta se
+    // re-renderiza al entrar via showDailyView/showMonthlyView.
+    if (isViewVisible("daily-view")) {
+      renderDaily();
+    }
+    if (isViewVisible("monthly-view")) {
+      renderMonthly();
+    }
   } catch (err: unknown) {
     console.error("Error discarding/reloading data:", err);
     showToast("Error al recargar el cronograma", "error");
