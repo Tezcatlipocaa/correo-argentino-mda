@@ -55,6 +55,7 @@ import {
   renderDaily,
   renderHourly,
   renderMonthly,
+  clearParsedDatesCache,
 } from "./monthly-view";
 
 export function isWeekend(dateStr: string): boolean {
@@ -268,6 +269,7 @@ export async function reloadDataForActiveMonth(
 
     await loadRotationConfig(monthToLoad);
 
+    clearParsedDatesCache();
     renderDaily();
     renderMonthly();
     renderMonthSelect();
@@ -805,6 +807,7 @@ function updateCellStatus(cell: HTMLElement, newStatus: string): void {
 
     op.asistencia[date] = newStatus as OperatorStatus;
     updateOperatorDailyHorario(op, date, newStatus);
+    clearParsedDatesCache();
 
     const postCoverage = countDailyCoverage(date);
     const postActive = postCoverage.pmg + postCoverage.ppp + postCoverage.ho;
@@ -884,6 +887,7 @@ async function discardChanges(): Promise<void> {
     const saveIndicator = document.getElementById("save-indicator");
     if (saveIndicator) saveIndicator.classList.add("hidden");
 
+    clearParsedDatesCache();
     renderDaily();
     renderMonthly();
   } catch (err: unknown) {
@@ -1577,6 +1581,7 @@ function setupEventListeners(): void {
           const data = await fetchCronogramaData(currentMonth);
           state.cronoData = data;
 
+          clearParsedDatesCache();
           renderMonthly();
           renderDaily();
           showToast(`Operador "${opName}" eliminado con éxito.`, "success");
@@ -1940,6 +1945,7 @@ function setupEventListeners(): void {
         updateDateInputDisplay();
         updateMonthDisplay();
         renderMonthSelect();
+        clearParsedDatesCache();
         renderDaily();
         renderMonthly();
         showToast(
@@ -2053,6 +2059,7 @@ function setupEventListeners(): void {
 
           if (appliedCount > 0) {
             updatePendingEditsUI();
+            clearParsedDatesCache();
             renderMonthly();
             showToast(
               `¡Se cargaron ${appliedCount} cambios desde el CSV! Revise y guarde.`,
@@ -2392,6 +2399,7 @@ function setupEventListeners(): void {
       try {
         await saveEdits(editsToSave);
 
+        clearParsedDatesCache();
         state.pendingEdits = {};
         state.modifiedSchedules = [];
         updatePendingEditsUI();
@@ -2873,12 +2881,14 @@ document.addEventListener("cronograma:month-created", async (e: any) => {
 });
 
 document.addEventListener("cronograma:rules-changed", () => {
+  clearParsedDatesCache();
   renderMonthly();
   renderDaily();
   showToast("Reglas de control actualizadas", "success");
 });
 
 document.addEventListener("cronograma:feriados-updated", () => {
+  clearParsedDatesCache();
   renderMonthly();
   renderDaily();
 });

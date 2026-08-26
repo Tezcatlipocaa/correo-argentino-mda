@@ -997,76 +997,28 @@ function installFillerObserver(): void {
   new ResizeObserver(() => syncMonthlyFillerRow()).observe(scroller);
 }
 
-export function renderMonthly(): void {
-  // Remove container skeleton -- persists only until first render
-  document.getElementById("monthly-view-skeleton")?.remove();
+type ParsedDate = {
+  str: string;
+  dateObj: Date;
+  isToday: boolean;
+  day: number;
+  isWeekend: boolean;
+  isCritical: boolean;
+  thClass: string;
+  dayName: string;
+  dateNum: number;
+  monthName: string;
+  feriadoName?: string;
+  isHoliday: boolean;
+  activeGroup: ReturnType<typeof getActiveGroupForDate>;
+};
 
-  if (state.focusedDateStr) {
-    renderHourly(state.focusedDateStr);
-    return;
-  }
-
-  const container = document.getElementById("cronograma-app-container");
-  const userRole = container?.dataset.userRole || "agent";
-  const currentUsername = (container?.dataset.currentUsername || "")
-    .trim()
-    .toLowerCase();
-  const currentUserIdStr = container?.dataset.currentUserId || "";
-  const currentUserId = currentUserIdStr
-    ? parseInt(currentUserIdStr, 10)
-    : null;
-  const isReadOnly = ["agent", "referent"].includes(userRole);
-  const hideComments = isReadOnly;
-  const hideTotals = isReadOnly;
-
-  if (hideTotals) {
-    state.isTotalsCollapsed = true;
-  }
-  if (isReadOnly) {
-    state.isCoverageMinimized = true;
-  }
-
-  const thead = document.getElementById("monthly-thead");
-  const tbody = document.getElementById("monthly-tbody");
-  const dateInput = document.getElementById(
-    "date-input",
-  ) as HTMLInputElement | null;
-  const selectedDateStr = dateInput?.value || formatYMD(new Date());
-
-  const [yearStr, monthStr] = selectedDateStr.split("-");
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10) - 1;
-  const daysInMonth = getDaysInMonth(year, month);
-  const currentMonthPrefix = `${yearStr}-${monthStr}`;
-
-  const dates = Array.from(
-    { length: daysInMonth },
-    (_, i) => `${currentMonthPrefix}-${(i + 1).toString().padStart(2, "0")}`,
-  );
+function computeParsedDates(
+  dates: string[],
+  coveragePerDay: Record<string, { total: number; licenses: number }>,
+): ParsedDate[] {
   const todayStr = formatYMD(new Date());
-
-  // --- RULE: Coverage Pre-calculation ---
-  const coveragePerDay: Record<string, { total: number; licenses: number }> =
-    {};
-  dates.forEach((d) => {
-    let active = 0;
-    let lics = 0;
-    state.cronoData.forEach((op) => {
-      const s = op.asistencia[d];
-      if (
-        s === OperatorStatus.PresencialMonteGrande ||
-        s === OperatorStatus.PresencialParquePatricios ||
-        s === OperatorStatus.HomeOffice
-      )
-        active++;
-      if (s === OperatorStatus.Licencia || s === OperatorStatus.Vacaciones)
-        lics++;
-    });
-    coveragePerDay[d] = { total: active, licenses: lics };
-  });
-
   const teamSize = state.cronoData.length;
-  let totalInconsistencies = 0;
 
   const shortDayFormatter = new Intl.DateTimeFormat("es-AR", {
     weekday: "short",
@@ -1075,7 +1027,7 @@ export function renderMonthly(): void {
     month: "long",
   });
 
-  const parsedDates = dates.map((date) => {
+  return dates.map((date) => {
     const d = new Date(date + "T12:00:00");
     const isToday = date === todayStr;
     const day = d.getDay();
@@ -1128,6 +1080,103 @@ export function renderMonthly(): void {
       activeGroup,
     };
   });
+}
+
+let _parsedDatesCache: {
+  key: string;
+  dates: ReturnType<typeof computeParsedDates>;
+} | null = null;
+
+export function getParsedDates(
+  dates: string[],
+  monthKey: string,
+  coveragePerDay: Record<string, { total: number; licenses: number }>,
+): ReturnType<typeof computeParsedDates> {
+  if (_parsedDatesCache?.key === monthKey) return _parsedDatesCache.dates;
+  const result = computeParsedDates(dates, coveragePerDay);
+  _parsedDatesCache = { key: monthKey, dates: result };
+  return result;
+}
+
+export function clearParsedDatesCache(): void {
+  _parsedDatesCache = null;
+}
+
+export function renderMonthly(): void {
+  // Remove container skeleton -- persists only until first render
+  document.getElementById("monthly-view-skeleton")?.remove();
+
+  if (state.focusedDateStr) {
+    renderHourly(state.focusedDateStr);
+    return;
+  }
+
+  const container = document.getElementById("cronograma-app-container");
+  const userRole = container?.dataset.userRole || "agent";
+  const currentUsername = (container?.dataset.currentUsername || "")
+    .trim()
+    .toLowerCase();
+  const currentUserIdStr = container?.dataset.currentUserId || "";
+  const currentUserId = currentUserIdStr
+    ? parseInt(currentUserIdStr, 10)
+    : null;
+  const isReadOnly = ["agent", "referent"].includes(userRole);
+  const hideComments = isReadOnly;
+  const hideTotals = isReadOnly;
+
+  if (hideTotals) {
+    state.isTotalsCollapsed = true;
+  }
+  if (isReadOnly) {
+    state.isCoverageMinimized = true;
+  }
+
+  const thead = document.getElementById("monthly-thead");
+  const tbody = document.getElementById("monthly-tbody");
+  const dateInput = document.getElementById(
+    "date-input",
+  ) as HTMLInputElement | null;
+  const selectedDateStr = dateInput?.value || formatYMD(new Date());
+
+  const [yearStr, monthStr] = selectedDateStr.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10) - 1;
+  const daysInMonth = getDaysInMonth(year, month);
+  const currentMonthPrefix = `${yearStr}-${monthStr}`;
+
+  const dates = Array.from(
+    { length: daysInMonth },
+    (_, i) => `${currentMonthPrefix}-${(i + 1).toString().padStart(2, "0")}`,
+  );
+
+  // --- RULE: Coverage Pre-calculation ---
+  const coveragePerDay: Record<string, { total: number; licenses: number }> =
+    {};
+  dates.forEach((d) => {
+    let active = 0;
+    let lics = 0;
+    state.cronoData.forEach((op) => {
+      const s = op.asistencia[d];
+      if (
+        s === OperatorStatus.PresencialMonteGrande ||
+        s === OperatorStatus.PresencialParquePatricios ||
+        s === OperatorStatus.HomeOffice
+      )
+        active++;
+      if (s === OperatorStatus.Licencia || s === OperatorStatus.Vacaciones)
+        lics++;
+    });
+    coveragePerDay[d] = { total: active, licenses: lics };
+  });
+
+  const teamSize = state.cronoData.length;
+  let totalInconsistencies = 0;
+
+  const parsedDates = getParsedDates(
+    dates,
+    currentMonthPrefix,
+    coveragePerDay,
+  );
 
   const totalsToggleIcon = state.isTotalsCollapsed
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>`
