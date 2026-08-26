@@ -30,6 +30,30 @@ import {
   resolveOperatorStatusAndHorario,
 } from "./dashboard-client";
 
+let _dailyDateFormatter: Intl.DateTimeFormat | null = null;
+function getDailyDateFormatter(): Intl.DateTimeFormat {
+  if (!_dailyDateFormatter) {
+    _dailyDateFormatter = new Intl.DateTimeFormat("es-AR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }
+  return _dailyDateFormatter;
+}
+
+let _hourlyDateFormatter: Intl.DateTimeFormat | null = null;
+function getHourlyDateFormatter(): Intl.DateTimeFormat {
+  if (!_hourlyDateFormatter) {
+    _hourlyDateFormatter = new Intl.DateTimeFormat("es-AR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+    });
+  }
+  return _hourlyDateFormatter;
+}
+
 export function isWorkingAtHour(horario: string, hourStr: string): boolean {
   if (!horario || horario === "-" || horario === "Franco") return false;
   const parts = horario.split(" - ");
@@ -259,11 +283,7 @@ export function renderDaily(): void {
   const feriadoName = getFeriadoName(selectedDateStr);
 
   if (dateDisplay) {
-    const formatter = new Intl.DateTimeFormat("es-AR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
+    const formatter = getDailyDateFormatter();
     const dateObj = new Date(selectedDateStr + "T12:00:00");
     let displayText = formatter.format(dateObj);
     if (isHoliday && feriadoName) {
@@ -763,11 +783,7 @@ export function renderHourly(dateStr: string): void {
     { length: 24 },
     (_, i) => `${i.toString().padStart(2, "0")}:00`,
   );
-  const formatter = new Intl.DateTimeFormat("es-AR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
+  const formatter = getHourlyDateFormatter();
   let formattedDate = formatter
     .format(new Date(dateStr + "T12:00:00"))
     .toUpperCase();
