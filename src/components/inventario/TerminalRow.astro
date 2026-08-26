@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import type { TerminalItem } from "@lib/terminalQueries";
 import { getTerminalColorClass, type OsFamily } from "@lib/terminalHelpers";
+import CopyButton from "@components/ui/CopyButton.astro";
 
 type BoxiconName = `boxicons:${string}`;
 
@@ -32,6 +33,15 @@ const rowIcons: Record<
   location: "boxicons:location-pin-filled",
   contact: "boxicons:clock-filled",
 };
+
+const copyValue = [
+  `Hostname: ${terminal.hostname}`,
+  `Dirección IPv4: ${terminal.ip}`,
+  ``,
+  `Marca: ${terminal.manufacturer}`,
+  `Modelo: ${terminal.model}`,
+  `SN: ${terminal.serial}`,
+].join("\n");
 ---
 
 <article
@@ -50,7 +60,7 @@ const rowIcons: Record<
   data-sort-location={terminal.branch}
   class:list={[
     terminalRowGridClass,
-    "border-base-300 hover:bg-base-300/40 border-b px-4 py-3 transition-colors last:border-b-0",
+    "group border-base-300 hover:bg-base-300/40 border-b px-4 py-3 transition-colors last:border-b-0",
   ]}
 >
   <div class="col-span-2 flex flex-row gap-4">
@@ -84,18 +94,21 @@ const rowIcons: Record<
     </div>
   </div>
 
-  <div class="col-span-3 flex flex-row gap-1.5">
+  <div class="relative col-span-3 flex flex-row gap-1.5">
     <Icon
       name={rowIcons.hardware}
       size={16}
       class="text-base-content/60 mt-0.5 shrink-0"
     />
 
-    <div class="flex w-full flex-col gap-1">
-      <span class="text-base-content text-sm text-wrap" data-highlight-target>
+    <div class="flex w-full min-w-0 flex-col gap-1">
+      <span class="text-base-content truncate text-sm" data-highlight-target>
         {terminal.manufacturer}
       </span>
-      <span class="text-base-content text-xs font-medium" data-highlight-target>
+      <span
+        class="text-base-content truncate text-xs font-medium"
+        data-highlight-target
+      >
         {terminal.model}
       </span>
       <span class="text-base-content/50 truncate font-mono text-xs">
@@ -107,6 +120,18 @@ const rowIcons: Record<
           {terminal.ram}
         </span>
       </span>
+    </div>
+    <div
+      class="pointer-events-none absolute top-1.5 right-1.5 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
+    >
+      <CopyButton
+        value={copyValue}
+        variant="icon"
+        appearance="ghost"
+        size="sm"
+        ariaLabel="Copiar datos del equipo"
+        tooltipText="Copiar datos del equipo"
+      />
     </div>
   </div>
 
