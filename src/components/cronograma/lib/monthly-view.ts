@@ -709,7 +709,7 @@ export function renderDaily(): void {
         : "";
 
       rowsHtml += `
-        <tr class="hover:bg-base-200/40 transition-colors duration-200 group border-b border-base-200/50 last:border-0">
+        <tr data-operator-id="${op.id}" class="hover:bg-base-200/40 transition-colors duration-200 group border-b border-base-200/50 last:border-0">
           <td class="sticky left-0 bg-base-100 z-40 w-64 min-w-[16rem] px-6 py-4 border-r border-base-300/40 relative group-hover:bg-base-200 transition-colors">
             <div class="flex items-center gap-4">
               <div class="relative w-10 h-10 shrink-0">
