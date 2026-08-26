@@ -356,11 +356,9 @@ function showOvertimeTooltip(bar: HTMLElement): void {
 
   const tipRect = tip.getBoundingClientRect();
   let top = rect.top - tipRect.height - 8;
-  let isBelow = false;
 
   if (top < 8) {
     top = rect.bottom + 8;
-    isBelow = true;
     tip.classList.add("tooltip-below");
   }
 
@@ -488,12 +486,30 @@ export function renderOvertimeShiftsList(
         ${suns.length ? suns.map(renderRow).join("") : '<p class="text-xxs text-base-content/30 text-center py-4">Sin turnos</p>'}
       </div>
     </div>`;
+}
 
-  container.querySelectorAll(".overtime-shift-card").forEach((card) => {
-    card.addEventListener("click", (e) => {
-      if ((e.target as HTMLElement).closest(".overtime-delete-shift-btn"))
-        return;
-      const ds = (e.currentTarget as HTMLElement).dataset;
+let _shiftsListDelegationInstalled = false;
+
+export function installShiftsListDelegation(): void {
+  if (_shiftsListDelegationInstalled) return;
+  _shiftsListDelegationInstalled = true;
+
+  const container = document.getElementById("overtime-shifts-list");
+  if (!container) return;
+
+  container.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+
+    const deleteBtn = target.closest<HTMLElement>(".overtime-delete-shift-btn");
+    if (deleteBtn) {
+      e.stopPropagation();
+      await handleDeleteShift(deleteBtn.dataset.shiftId);
+      return;
+    }
+
+    const card = target.closest<HTMLElement>(".overtime-shift-card");
+    if (card) {
+      const ds = card.dataset;
       loadShiftIntoForm(
         {
           id: Number(ds.shiftId),
@@ -502,48 +518,46 @@ export function renderOvertimeShiftsList(
           startTime: String(ds.start),
           endTime: String(ds.end),
         },
-        weekendDate,
+        state.overtimeSelectedWeekend || "",
       );
-    });
+    }
   });
+}
 
-  container.querySelectorAll(".overtime-delete-shift-btn").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      const shiftId = (e.currentTarget as HTMLElement).dataset.shiftId;
-      if (!shiftId || !state.overtimeSelectedWeekend) return;
-      if (!(await showConfirm("¿Eliminar este turno de hora extra?"))) return;
-      try {
-        const res = await fetch(
-          `/api/cronograma/overtime/shifts?id=${shiftId}`,
-          { method: "DELETE" },
-        );
-        if (!res.ok) throw new Error();
-        showToast("Turno eliminado", "success");
-        const form = document.getElementById(
-          "overtime-shift-form",
-        ) as HTMLFormElement | null;
-        if (form) form.reset();
-        (
-          document.getElementById("overtime-shift-edit-id") as HTMLInputElement
-        ).value = "";
-        document
-          .getElementById("overtime-shift-cancel-btn")
-          ?.classList.add("hidden");
-        document
-          .getElementById("overtime-shift-delete-btn")
-          ?.classList.add("hidden");
-        const submitBtn = document.getElementById("overtime-shift-submit-btn");
-        if (submitBtn) submitBtn.textContent = "Agregar Turno";
-        await refreshOvertimeForWeekend(state.overtimeSelectedWeekend);
-      } catch {
-        showToast("Error al eliminar turno", "error");
-      }
-    });
-  });
+async function handleDeleteShift(shiftId: string | undefined): Promise<void> {
+  if (!shiftId || !state.overtimeSelectedWeekend) return;
+  if (!(await showConfirm("¿Eliminar este turno de hora extra?"))) return;
+  try {
+    const res = await fetch(
+      `/api/cronograma/overtime/shifts?id=${shiftId}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new Error();
+    showToast("Turno eliminado", "success");
+    const form = document.getElementById(
+      "overtime-shift-form",
+    ) as HTMLFormElement | null;
+    if (form) form.reset();
+    (
+      document.getElementById("overtime-shift-edit-id") as HTMLInputElement
+    ).value = "";
+    document
+      .getElementById("overtime-shift-cancel-btn")
+      ?.classList.add("hidden");
+    document
+      .getElementById("overtime-shift-delete-btn")
+      ?.classList.add("hidden");
+    const submitBtn = document.getElementById("overtime-shift-submit-btn");
+    if (submitBtn) submitBtn.textContent = "Agregar Turno";
+    await refreshOvertimeForWeekend(state.overtimeSelectedWeekend);
+  } catch {
+    showToast("Error al eliminar turno", "error");
+  }
 }
 
 export function setupOvertimeEventListeners(): void {
   installOvertimeDelegation();
+  installShiftsListDelegation();
 
   document
     .getElementById("switch-to-overtime-btn")
