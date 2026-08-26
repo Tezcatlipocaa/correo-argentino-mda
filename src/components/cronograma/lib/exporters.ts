@@ -341,7 +341,9 @@ export async function exportAsClipboardImage(
   const liveWidth = element.scrollWidth;
   const targetWidth = fixedWidth ?? liveWidth;
 
-  // Offscreen clone so the live UI is never mutated and the margin is reliable.
+  // Offscreen host so the live UI is never mutated. It acts as a BFC
+  // (flow-root) that CONTAINS the clone's margin, so the final canvas is
+  // exactly clone + margin ring and nothing gets cropped.
   const host = document.createElement("div");
   host.style.position = "fixed";
   host.style.left = "-99999px";
@@ -357,13 +359,17 @@ export async function exportAsClipboardImage(
   // Pin the clone to the target width so w-full children can't expand to
   // max-content (which exploded to 101k px and corrupted the canvas).
   // Height is left auto so it reflows correctly at the fixed width.
+  // Breathing room is a real MARGIN on the wrapper (keeps its rounded
+  // border intact), NOT canvas padding which clipped the corners.
   clone.style.width = `${targetWidth}px`;
   clone.style.maxWidth = "none";
   clone.style.overflow = "visible";
-
-  // html-to-image inlines live computed styles and ignores stylesheets,
-  // so compaction must be applied as inline overrides on the clone.
-  clone.style.background = "var(--color-base-100)";
+  if (padding > 0) {
+    clone.style.margin = `${padding}px`;
+  }
+  host.style.width = `${targetWidth + padding * 2}px`;
+  host.style.display = "flow-root";
+  host.style.background = "var(--color-base-100)";
   const tightenStack = (selector: string, margin: string) => {
     clone.querySelectorAll<HTMLElement>(selector).forEach((parent) => {
       for (let i = 1; i < parent.children.length; i++) {
@@ -398,27 +404,26 @@ export async function exportAsClipboardImage(
   try {
     const toPng = await getToPng();
     const computedBg =
-      window.getComputedStyle(clone).backgroundColor || "#ffffff";
+      window.getComputedStyle(host).backgroundColor || "#ffffff";
 
     // Height depends on width (text reflow), so measure after the clone is
-    // laid out at targetWidth.
-    const targetHeight = clone.scrollHeight;
+    // laid out at targetWidth. flow-root on the host makes scrollHeight
+    // include the clone's margin box.
+    const captureWidth = targetWidth + padding * 2;
+    const captureHeight = host.scrollHeight;
 
-    const dataUrl = await toPng(clone, {
+    const dataUrl = await toPng(host, {
       backgroundColor: computedBg,
       style: {
         transform: "scale(1)",
         transformOrigin: "top left",
-        padding: padding > 0 ? `${padding}px` : "0",
-        margin: "0",
-        boxSizing: "content-box",
       },
       quality: 1.0,
       pixelRatio: 3,
       // html-to-image expects NUMBERS here; strings with units break the
-      // canvas sizing and silently drop the padding.
-      width: targetWidth + padding * 2,
-      height: targetHeight + padding * 2,
+      // canvas sizing.
+      width: captureWidth,
+      height: captureHeight,
     });
 
     const res = await fetch(dataUrl);
