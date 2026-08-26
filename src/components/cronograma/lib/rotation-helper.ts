@@ -10,8 +10,16 @@ export let activeRotationConfig: {
   rotationOrder: string;
   disabledGroups?: string;
 } | null = null;
+
+const _activeGroupCache = new Map<string, string | null>();
+
+export function clearActiveGroupCache(): void {
+  _activeGroupCache.clear();
+}
+
 export function setActiveRotationConfig(val: typeof activeRotationConfig) {
   activeRotationConfig = val;
+  _activeGroupCache.clear();
 }
 
 export let rotationTimelineSelectedDate: string | null = null;
@@ -47,6 +55,10 @@ export function getActiveGroupForDate(
   dateStr: string,
   ignoreDisabled?: boolean,
 ): string | null {
+  const cacheKey = `${ignoreDisabled ? "1" : "0"}|${dateStr}`;
+  if (_activeGroupCache.has(cacheKey)) {
+    return _activeGroupCache.get(cacheKey) ?? null;
+  }
   if (!activeRotationConfig) return null;
   const { startDate, startGroup, rotationOrder, disabledGroups } =
     activeRotationConfig;
@@ -70,14 +82,16 @@ export function getActiveGroupForDate(
   const activeIndex = (((idx + weeksDiff) % N) + N) % N;
   const activeGroup = groups[activeIndex];
 
+  let result: string | null = activeGroup;
   if (!ignoreDisabled) {
     const disabledList = (disabledGroups || "")
       .split(",")
       .map((g) => g.trim())
       .filter(Boolean);
-    if (disabledList.includes(activeGroup)) return null;
+    if (disabledList.includes(activeGroup)) result = null;
   }
-  return activeGroup;
+  _activeGroupCache.set(cacheKey, result);
+  return result;
 }
 
 export function getNextSaturdayForGroup(targetGroup: string): string | null {
@@ -135,13 +149,13 @@ export async function loadRotationConfig(month: string): Promise<void> {
       `/api/cronograma/rotation-config?month=${month}`,
     );
     if (rotRes.ok) {
-      activeRotationConfig = await rotRes.json();
+      setActiveRotationConfig(await rotRes.json());
     } else {
-      activeRotationConfig = null;
+      setActiveRotationConfig(null);
     }
   } catch (err) {
     console.warn("Failed to load rotation config:", err);
-    activeRotationConfig = null;
+    setActiveRotationConfig(null);
   }
 }
 
