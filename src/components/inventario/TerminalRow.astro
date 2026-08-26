@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import type { TerminalItem } from "@lib/terminalQueries";
 import { getTerminalColorClass, type OsFamily } from "@lib/terminalHelpers";
+import CopyButton from "@components/ui/CopyButton.astro";
 
 type BoxiconName = `boxicons:${string}`;
 
@@ -32,6 +33,15 @@ const rowIcons: Record<
   location: "boxicons:location-pin-filled",
   contact: "boxicons:clock-filled",
 };
+
+const copyValue = [
+  `Hostname: ${terminal.hostname}`,
+  `Dirección IPv4: ${terminal.ip}`,
+  ``,
+  `Marca: ${terminal.manufacturer}`,
+  `Modelo: ${terminal.model}`,
+  `SN: ${terminal.serial}`,
+].join("\n");
 ---
 
 <article
@@ -172,6 +182,15 @@ const rowIcons: Record<
       name={rowIcons.contact}
       size={16}
       class="text-base-content/60 mt-0.5 shrink-0"
+    />
+    <CopyButton
+      value={copyValue}
+      variant="icon"
+      appearance="ghost"
+      size="sm"
+      ariaLabel="Copiar datos del equipo"
+      tooltipText="Al hacer clic se copiarán los datos importantes del equipo"
+      class="-mt-0.5"
     />
   </div>
 </article>
