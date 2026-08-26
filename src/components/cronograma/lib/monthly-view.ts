@@ -1255,6 +1255,7 @@ export function renderMonthly(): void {
           stats.L++;
       });
 
+      // NOTE: keep in sync with hasRuleViolations() in dashboard-client.ts (targeted cell update path)
       // --- RULE: Consecutive HO Check & Min Presencial Check ---
       const opMaxHO =
         op.maxConsecutiveHO !== undefined && op.maxConsecutiveHO !== null
@@ -1361,6 +1362,7 @@ export function renderMonthly(): void {
         `;
       }
 
+      // NOTE: keep in sync with buildMonthlyCellHtml() in dashboard-client.ts (targeted cell update path)
       parsedDates.forEach((pd) => {
         const date = pd.str;
         const { status, horario: dailyHorario } =

@@ -431,6 +431,7 @@ function countDailyCoverage(date: string): {
   return { pmg, ppp, ho, licenses };
 }
 
+// NOTE: keep in sync with the HO/P-week violation checks in renderMonthly() (monthly-view.ts)
 function hasRuleViolations(op: OperatorData): boolean {
   const dates = getDatesArrayForCurrentMonth();
   const opMaxHO =
@@ -483,11 +484,12 @@ function hasRuleViolations(op: OperatorData): boolean {
   return maxConsecutiveHO > opMaxHO || pWeekViolation;
 }
 
+// NOTE: keep in sync with the day-cell markup generated inside renderMonthly() (monthly-view.ts)
 function buildMonthlyCellHtml(
   op: OperatorData,
   date: string,
   rowIndex: number,
-): string | null {
+): string {
   const container = document.getElementById("cronograma-app-container");
   const userRole = container?.dataset.userRole || "agent";
   const hideComments = ["agent", "referent"].includes(userRole);
@@ -664,6 +666,20 @@ function buildMonthlyCellHtml(
         `;
 }
 
+function findLiveMonthlyCell(
+  tbody: HTMLElement | null,
+  operator: string | undefined,
+  date: string | undefined,
+): HTMLElement | null {
+  if (!tbody || !operator || !date) return null;
+  for (const el of Array.from(
+    tbody.querySelectorAll<HTMLElement>("[data-monthly-detail]"),
+  )) {
+    if (el.dataset.operator === operator && el.dataset.date === date) return el;
+  }
+  return null;
+}
+
 function updateMonthlyCellDisplay(
   cell: HTMLElement,
   op: OperatorData,
@@ -679,10 +695,6 @@ function updateMonthlyCellDisplay(
   }
 
   const html = buildMonthlyCellHtml(op, date, tr.sectionRowIndex);
-  if (html === null) {
-    renderMonthly();
-    return;
-  }
   const tpl = document.createElement("template");
   tpl.innerHTML = html.trim();
   const fresh = tpl.content.firstElementChild as HTMLElement | null;
@@ -1587,9 +1599,15 @@ function setupEventListeners(): void {
     );
     if (rowHeader && state.isEditMode && state.activeBrush) {
       const tr = rowHeader.closest("tr");
-      tr?.querySelectorAll("[data-monthly-detail]").forEach((cell) =>
-        applyBrushToCell(cell as HTMLElement),
-      );
+      const tbody = document.getElementById("monthly-tbody");
+      tr?.querySelectorAll("[data-monthly-detail]").forEach((cell) => {
+        const live = findLiveMonthlyCell(
+          tbody,
+          (cell as HTMLElement).dataset.operator,
+          (cell as HTMLElement).dataset.date,
+        );
+        if (live) applyBrushToCell(live);
+      });
       return;
     }
 
@@ -2223,10 +2241,18 @@ function setupEventListeners(): void {
     if (clickDayBtn) {
       if (state.isEditMode && state.activeBrush) {
         const dateVal = clickDayBtn.dataset.clickDay;
-        document
-          .getElementById("monthly-tbody")
-          ?.querySelectorAll(`[data-date="${dateVal}"]`)
-          .forEach((cell) => applyBrushToCell(cell as HTMLElement));
+        const tbody = document.getElementById("monthly-tbody");
+        tbody
+          ?.querySelectorAll<HTMLElement>("[data-monthly-detail]")
+          .forEach((entry) => {
+            if (entry.dataset.date !== dateVal) return;
+            const live = findLiveMonthlyCell(
+              tbody,
+              entry.dataset.operator,
+              entry.dataset.date,
+            );
+            if (live) applyBrushToCell(live);
+          });
         return;
       }
       const dateVal = clickDayBtn.dataset.clickDay;
