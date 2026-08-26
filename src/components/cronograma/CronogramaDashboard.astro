@@ -1249,6 +1249,15 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     white-space: pre-line !important;
   }
 
+  /* Tooltip de dia feriado: fondo naranja representativo, opaco */
+  .tooltip.tooltip-holiday {
+    --tt-bg: var(--color-orange-500);
+  }
+  .tooltip.tooltip-holiday[data-tip]::before,
+  .tooltip.tooltip-holiday > .tooltip-content {
+    color: var(--color-orange-950);
+  }
+
   .overtime-custom-tooltip {
     position: fixed;
     z-index: 9999;

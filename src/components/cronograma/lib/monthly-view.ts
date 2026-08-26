@@ -1476,12 +1476,12 @@ export function renderMonthly(): void {
           let francoBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center relative hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
           if (isHoliday) {
             francoBtnClass +=
-              " line-through opacity-60 !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
+              " line-through !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
           }
           let tooltipAttrs = "";
           if (dayOvertime) {
             const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
-            francoBtnClass += ` tooltip ${tooltipDir} tooltip-neutral`;
+            francoBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
             tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
           }
           let francoAria = `Ver detalle de ${safeName} el ${safeDate}: Franco`;
@@ -1532,14 +1532,14 @@ export function renderMonthly(): void {
           status === OperatorStatus.PresencialParquePatricios ||
           status === OperatorStatus.HomeOffice
         ) {
-          statusBtnClass += ` tooltip ${tooltipDir} tooltip-neutral`;
+          statusBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
           let tipText = safeHorario;
           if (dayOvertime) {
             tipText += `\nHE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}`;
           }
           tooltipAttrs = `data-tip="${tipText}"`;
         } else if (dayOvertime) {
-          statusBtnClass += ` tooltip ${tooltipDir} tooltip-neutral`;
+          statusBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
           tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
         }
 
@@ -1558,7 +1558,7 @@ export function renderMonthly(): void {
 
         if (isHoliday) {
           statusBtnClass +=
-            " line-through opacity-60 !bg-orange-200 dark:!bg-orange-600 !text-orange-800 dark:!text-orange-100 !border-orange-300 dark:!border-orange-500 !shadow-none";
+            " line-through !bg-orange-200 dark:!bg-orange-600 !text-orange-800 dark:!text-orange-100 !border-orange-300 dark:!border-orange-500 !shadow-none";
         }
 
         let statusTitle = `${op.nombre} - ${date}: ${status} ${isLicenseOverlap ? "(Solapamiento Crítico)" : ""}`;
