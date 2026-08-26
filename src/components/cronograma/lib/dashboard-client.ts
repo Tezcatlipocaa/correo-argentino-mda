@@ -410,6 +410,349 @@ function updateOperatorDailyHorario(
   }
 }
 
+function countDailyCoverage(date: string): {
+  pmg: number;
+  ppp: number;
+  ho: number;
+  licenses: number;
+} {
+  let pmg = 0;
+  let ppp = 0;
+  let ho = 0;
+  let licenses = 0;
+  state.cronoData.forEach((o) => {
+    const s = o.asistencia[date];
+    if (s === OperatorStatus.PresencialMonteGrande) pmg++;
+    else if (s === OperatorStatus.PresencialParquePatricios) ppp++;
+    else if (s === OperatorStatus.HomeOffice) ho++;
+    if (s === OperatorStatus.Licencia || s === OperatorStatus.Vacaciones)
+      licenses++;
+  });
+  return { pmg, ppp, ho, licenses };
+}
+
+function hasRuleViolations(op: OperatorData): boolean {
+  const dates = getDatesArrayForCurrentMonth();
+  const opMaxHO =
+    op.maxConsecutiveHO !== undefined && op.maxConsecutiveHO !== null
+      ? op.maxConsecutiveHO
+      : state.maxConsecutiveHOLimit;
+  const opMinPWeek =
+    op.minPWeek !== undefined && op.minPWeek !== null
+      ? op.minPWeek
+      : state.minPWeekLimit;
+
+  let maxConsecutiveHO = 0;
+  let currentHO = 0;
+  let pWeekViolation = false;
+  let currentWeekP = 0;
+  let currentWeekDays = 0;
+
+  dates.forEach((d, i) => {
+    const s = op.asistencia[d];
+    const day = new Date(d + "T12:00:00").getDay();
+    if (s === OperatorStatus.HomeOffice) {
+      currentHO++;
+      maxConsecutiveHO = Math.max(maxConsecutiveHO, currentHO);
+    } else if (s !== OperatorStatus.Franco && s) {
+      currentHO = 0;
+    }
+    if (
+      s === OperatorStatus.PresencialMonteGrande ||
+      s === OperatorStatus.PresencialParquePatricios
+    ) {
+      currentWeekP++;
+    }
+    if (
+      s !== OperatorStatus.Franco &&
+      s !== OperatorStatus.Licencia &&
+      s !== OperatorStatus.Vacaciones &&
+      s
+    ) {
+      currentWeekDays++;
+    }
+    if (day === 0 || i === dates.length - 1) {
+      if (currentWeekDays >= 5 && currentWeekP < opMinPWeek) {
+        pWeekViolation = true;
+      }
+      currentWeekP = 0;
+      currentWeekDays = 0;
+    }
+  });
+
+  return maxConsecutiveHO > opMaxHO || pWeekViolation;
+}
+
+function buildMonthlyCellHtml(
+  op: OperatorData,
+  date: string,
+  rowIndex: number,
+): string | null {
+  const container = document.getElementById("cronograma-app-container");
+  const userRole = container?.dataset.userRole || "agent";
+  const hideComments = ["agent", "referent"].includes(userRole);
+
+  const dayOfWeek = new Date(date + "T12:00:00").getDay();
+  const activeGroup = getActiveGroupForDate(date);
+  const { status, horario: dailyHorario } = resolveOperatorStatusAndHorario(
+    op,
+    date,
+    dayOfWeek,
+    activeGroup,
+  );
+  const isTodayCell = date === formatYMD(new Date());
+  const feriadoName = getFeriadoName(date);
+  const isHoliday = !!feriadoName;
+  const isSaturday = dayOfWeek === 6;
+
+  const coverage = countDailyCoverage(date);
+  const isLicenseOverlap =
+    (status === OperatorStatus.Licencia ||
+      status === OperatorStatus.Vacaciones) &&
+    coverage.licenses > state.maxLicenseOverlapLimit;
+
+  const isFrancoCell = status === OperatorStatus.Franco || !status;
+  let cellClass = `p-1 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
+  if (isTodayCell) {
+    cellClass += isFrancoCell
+      ? " bg-base-200/80 dark:bg-base-300/20"
+      : " bg-secondary/10";
+  }
+  if (isLicenseOverlap)
+    cellClass += " ring-1 ring-inset ring-error/30 bg-error/[0.03]";
+  if (isHoliday) cellClass += " bg-orange-100 dark:bg-orange-950";
+
+  const safeName = escapeHtml(op.nombre);
+  const safeDate = escapeHtml(date);
+  const safeStatus = escapeHtml(status || "Franco");
+  const safeHorario = escapeHtml(dailyHorario);
+  const username = op.username || "";
+  const breakInicio = (op.breaks_inicio && op.breaks_inicio[date]) || "";
+  const breakFin = (op.breaks_fin && op.breaks_fin[date]) || "";
+  const hasComment = !hideComments && !!(op.comentarios && op.comentarios[date]);
+  const dayOvertime = (op.weekendOvertimes || []).find(
+    (s) => s.date === date,
+  );
+  const otAttr = dayOvertime
+    ? `data-overtime="${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`
+    : "";
+
+  if (isFrancoCell) {
+    let francoBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center relative hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
+    if (isHoliday) {
+      francoBtnClass +=
+        " line-through opacity-60 !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
+    }
+    let tooltipAttrs = "";
+    if (dayOvertime) {
+      const tooltipDir = rowIndex === 0 ? "tooltip-bottom" : "tooltip-top";
+      francoBtnClass += ` tooltip ${tooltipDir} tooltip-neutral`;
+      tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
+    }
+    let francoAria = `Ver detalle de ${safeName} el ${safeDate}: Franco`;
+    if (isHoliday && feriadoName) {
+      francoAria += ` (Feriado: ${feriadoName})`;
+    }
+
+    return `<td class="${cellClass}">
+            <button
+              type="button"
+              class="${francoBtnClass}"
+              data-monthly-detail
+              data-operator="${safeName}"
+              data-date="${safeDate}"
+              data-status="Franco"
+              data-horario="${safeHorario}"
+              data-username="${escapeHtml(username)}"
+              data-comment="${hideComments ? "" : escapeHtml(op.comentarios?.[date] || "")}"
+              data-break-inicio="${escapeHtml(breakInicio)}"
+              data-break-fin="${escapeHtml(breakFin)}"
+              aria-label="${francoAria}"
+              ${otAttr}
+              ${isHoliday && feriadoName && !dayOvertime ? `title="Franco (Feriado: ${feriadoName})"` : ""}
+              ${tooltipAttrs}
+            >
+              ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight">HE: ${dayOvertime.startTime}</span>` : ""}
+              ${hasComment ? `<div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ${dayOvertime ? "mt-0.5" : ""}" title="Tiene comentario"></div>` : ""}
+            </button>
+          </td>`;
+  }
+
+  let initials = "";
+  if (status === OperatorStatus.PresencialMonteGrande) initials = "MG";
+  else if (status === OperatorStatus.PresencialParquePatricios) initials = "PP";
+  else if (status === OperatorStatus.HomeOffice) initials = "HO";
+  else if (status === OperatorStatus.Licencia) initials = "L";
+  else if (status === OperatorStatus.Vacaciones) initials = "V";
+
+  const styles = getStatusStyles(status);
+
+  let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+
+  let tooltipAttrs = "";
+  const tooltipDir = rowIndex === 0 ? "tooltip-bottom" : "tooltip-top";
+
+  if (
+    status === OperatorStatus.PresencialMonteGrande ||
+    status === OperatorStatus.PresencialParquePatricios ||
+    status === OperatorStatus.HomeOffice
+  ) {
+    statusBtnClass += ` tooltip ${tooltipDir} tooltip-neutral`;
+    let tipText = safeHorario;
+    if (dayOvertime) {
+      tipText += `\nHE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}`;
+    }
+    tooltipAttrs = `data-tip="${tipText}"`;
+  } else if (dayOvertime) {
+    statusBtnClass += ` tooltip ${tooltipDir} tooltip-neutral`;
+    tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
+  }
+
+  const isRotationCell = !!(
+    isSaturday &&
+    op.saturdayGroup &&
+    op.saturdayGroup === activeGroup &&
+    !(op.overrides && op.overrides[date])
+  );
+
+  if (isRotationCell) {
+    statusBtnClass +=
+      " ring-1 ring-inset ring-secondary/35 border-secondary/40 hover:ring-secondary/50";
+  }
+
+  if (isHoliday) {
+    statusBtnClass +=
+      " line-through opacity-60 !bg-orange-200 dark:!bg-orange-600 !text-orange-800 dark:!text-orange-100 !border-orange-300 dark:!border-orange-500 !shadow-none";
+  }
+
+  let statusTitle = `${op.nombre} - ${date}: ${status} ${isLicenseOverlap ? "(Solapamiento Crítico)" : ""}`;
+  if (isRotationCell) {
+    statusTitle += ` (Rotación Sábado Grupo ${op.saturdayGroup})`;
+  }
+  let statusAria = `Ver detalle de ${safeName} el ${safeDate}: ${safeStatus}`;
+  if (isHoliday && feriadoName) {
+    statusTitle += ` (Feriado: ${feriadoName})`;
+    statusAria += ` (Feriado: ${feriadoName})`;
+  }
+
+  return `
+          <td class="${cellClass}">
+            <button
+              type="button"
+              class="${statusBtnClass}"
+              ${tooltipAttrs ? "" : `title="${statusTitle}"`}
+              data-monthly-detail
+              data-operator="${safeName}"
+              data-date="${safeDate}"
+              data-status="${safeStatus}"
+              data-horario="${safeHorario}"
+              data-username="${escapeHtml(username)}"
+              data-comment="${hideComments ? "" : escapeHtml(op.comentarios?.[date] || "")}"
+              data-break-inicio="${escapeHtml(breakInicio)}"
+              data-break-fin="${escapeHtml(breakFin)}"
+              aria-label="${statusAria}"
+              ${otAttr}
+              ${isRotationCell ? `data-saturday-rotation="true" data-rotation-horario="${escapeHtml(op.saturdayHorario || "07:00 - 13:00")}"` : ""}
+              ${tooltipAttrs}
+            >
+              <span class="font-black text-xs tracking-tight">${initials}</span>
+              ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight mt-0.5 scale-90">HE: ${dayOvertime.startTime}</span>` : ""}
+              ${isLicenseOverlap ? '<div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-error border border-base-100"></div>' : ""}
+              ${hasComment ? `<div class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 border border-base-100" title="Tiene comentario"></div>` : ""}
+            </button>
+          </td>
+        `;
+}
+
+function updateMonthlyCellDisplay(
+  cell: HTMLElement,
+  op: OperatorData,
+  date: string,
+): void {
+  // Targeted update of a single monthly cell after a status change.
+  // Must reflect exactly what renderMonthly() would produce for this cell.
+  const td = cell.closest("td");
+  const tr = td?.closest("tr");
+  if (!td || !tr) {
+    renderMonthly();
+    return;
+  }
+
+  const html = buildMonthlyCellHtml(op, date, tr.sectionRowIndex);
+  if (html === null) {
+    renderMonthly();
+    return;
+  }
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html.trim();
+  const fresh = tpl.content.firstElementChild as HTMLElement | null;
+  if (!fresh) {
+    renderMonthly();
+    return;
+  }
+  td.replaceWith(fresh);
+
+  const dates = getDatesArrayForCurrentMonth();
+
+  if (!state.isTotalsCollapsed && tr.children.length >= 4) {
+    const stats = { P: 0, HO: 0, L: 0 };
+    dates.forEach((d) => {
+      const s = op.asistencia[d];
+      if (
+        s === OperatorStatus.PresencialMonteGrande ||
+        s === OperatorStatus.PresencialParquePatricios
+      )
+        stats.P++;
+      else if (s === OperatorStatus.HomeOffice) stats.HO++;
+      else if (
+        s === OperatorStatus.Licencia ||
+        s === OperatorStatus.Vacaciones
+      )
+        stats.L++;
+    });
+    (tr.children[1] as HTMLElement).textContent = String(stats.P);
+    (tr.children[2] as HTMLElement).textContent = String(stats.HO);
+    (tr.children[3] as HTMLElement).textContent = String(stats.L);
+  }
+
+  const tfoot = document.getElementById("monthly-tfoot");
+  const offset = 1 + (state.isTotalsCollapsed ? 0 : 3);
+  const dayOfMonth = parseInt(date.slice(-2), 10);
+  const coverageCell = tfoot?.children[offset + dayOfMonth - 1] as
+    | HTMLElement
+    | undefined;
+  if (coverageCell) {
+    const c = countDailyCoverage(date);
+    const teamSize = state.cronoData.length;
+    const hoPercent = teamSize > 0 ? (c.ho / teamSize) * 100 : 0;
+    const pmgPercent = teamSize > 0 ? (c.pmg / teamSize) * 100 : 0;
+    const pppPercent = teamSize > 0 ? (c.ppp / teamSize) * 100 : 0;
+    const totalPercent =
+      teamSize > 0 ? ((c.pmg + c.ppp + c.ho) / teamSize) * 100 : 0;
+    const isLowCoverage = totalPercent < 40;
+    const cellPyClass = state.isCoverageMinimized ? "py-1 px-1" : "py-2 px-1";
+
+    coverageCell.className = `${cellPyClass} border-r border-base-200/50 min-w-16 ${isLowCoverage ? "bg-error/5" : ""}`;
+    coverageCell.innerHTML = `<div class="flex flex-col items-center gap-1.5">
+           ${
+             state.isCoverageMinimized
+               ? ""
+               : `
+           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+               <div class="bg-purple-500 w-full transition-[height] duration-500" style="height: ${pppPercent}%" title="P. Parque Patricios: ${c.ppp}"></div>
+               <div class="bg-amber-500 w-full transition-[height] duration-500" style="height: ${pmgPercent}%" title="P. Monte Grande: ${c.pmg}"></div>
+               <div class="bg-secondary w-full transition-[height] duration-500" style="height: ${hoPercent}%" title="HO: ${c.ho}"></div>
+           </div>
+           `
+           }
+           <div class="flex flex-col items-center">
+              <span class="text-xxs font-black ${isLowCoverage ? "text-error" : "text-base-content/60"}">${c.pmg + c.ppp + c.ho}</span>
+              <span class="text-micro font-black uppercase opacity-30">Activos</span>
+           </div>
+        </div>`;
+  }
+}
+
 function updateCellStatus(cell: HTMLElement, newStatus: string): void {
   const operator = cell.dataset.operator;
   const date = cell.dataset.date;
@@ -440,9 +783,39 @@ function updateCellStatus(cell: HTMLElement, newStatus: string): void {
 
   const opIndex = state.cronoData.findIndex((o) => o.nombre === operator);
   if (opIndex !== -1) {
-    state.cronoData[opIndex].asistencia[date] = newStatus as OperatorStatus;
-    updateOperatorDailyHorario(state.cronoData[opIndex], date, newStatus);
-    renderMonthly();
+    const op = state.cronoData[opIndex];
+    const teamSize = state.cronoData.length;
+    const prevCoverage = countDailyCoverage(date);
+    const prevActive = prevCoverage.pmg + prevCoverage.ppp + prevCoverage.ho;
+    const prevCritical =
+      teamSize > 0 && prevActive / teamSize < state.minCoveragePercent / 100;
+    const prevViolations = hasRuleViolations(op);
+
+    op.asistencia[date] = newStatus as OperatorStatus;
+    updateOperatorDailyHorario(op, date, newStatus);
+
+    const postCoverage = countDailyCoverage(date);
+    const postActive = postCoverage.pmg + postCoverage.ppp + postCoverage.ho;
+    const postCritical =
+      teamSize > 0 && postActive / teamSize < state.minCoveragePercent / 100;
+    const postViolations = hasRuleViolations(op);
+
+    const otherLicensed = state.cronoData.some(
+      (o) =>
+        o.nombre !== operator &&
+        (o.asistencia[date] === OperatorStatus.Licencia ||
+          o.asistencia[date] === OperatorStatus.Vacaciones),
+    );
+    const overlapCrossed =
+      otherLicensed &&
+      (prevCoverage.licenses > state.maxLicenseOverlapLimit) !==
+        (postCoverage.licenses > state.maxLicenseOverlapLimit);
+
+    if (overlapCrossed || prevCritical !== postCritical || prevViolations !== postViolations) {
+      renderMonthly();
+    } else {
+      updateMonthlyCellDisplay(cell, op, date);
+    }
   }
 
   if (state.isEditMode) {
