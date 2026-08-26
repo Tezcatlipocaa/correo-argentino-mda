@@ -285,65 +285,98 @@ export function renderOvertimeTimeline(
       </div>`;
     })
     .join("");
+}
 
-  bodyContainer.querySelectorAll(".overtime-timeline-bar").forEach((bar) => {
-    bar.addEventListener("mouseenter", (e) => {
-      document.getElementById("overtime-custom-tooltip")?.remove();
-      const target = e.currentTarget as HTMLElement;
-      const tipText = target.dataset.tip;
-      if (!tipText) return;
+let _overtimeDelegationInstalled = false;
 
-      const rect = target.getBoundingClientRect();
-      const tip = document.createElement("div");
-      tip.id = "overtime-custom-tooltip";
-      tip.className = "overtime-custom-tooltip";
-      tip.textContent = tipText;
-      document.body.appendChild(tip);
+export function installOvertimeDelegation(): void {
+  if (_overtimeDelegationInstalled) return;
+  _overtimeDelegationInstalled = true;
 
-      const tipRect = tip.getBoundingClientRect();
-      let top = rect.top - tipRect.height - 8;
-      let isBelow = false;
+  const bodyContainer = document.getElementById("overtime-timeline-body");
+  if (!bodyContainer) return;
 
-      if (top < 8) {
-        top = rect.bottom + 8;
-        isBelow = true;
-        tip.classList.add("tooltip-below");
-      }
+  const removeTip = () =>
+    document.getElementById("overtime-custom-tooltip")?.remove();
+  window.addEventListener("scroll", removeTip, { passive: true });
+  window.addEventListener("resize", removeTip, { passive: true });
 
-      let left = rect.left + rect.width / 2;
-      const halfWidth = tipRect.width / 2;
-      if (left - halfWidth < 8) left = halfWidth + 8;
-      if (left + halfWidth > window.innerWidth - 8)
-        left = window.innerWidth - halfWidth - 8;
-
-      tip.style.top = `${top}px`;
-      tip.style.left = `${left}px`;
-      tip.style.transform = "translateX(-50%)";
-    });
-
-    bar.addEventListener("mouseleave", () => {
-      document.getElementById("overtime-custom-tooltip")?.remove();
-    });
-
-    bar.addEventListener("click", (e) => {
-      document.getElementById("overtime-custom-tooltip")?.remove();
-      document
-        .querySelectorAll(".overtime-timeline-bar.selected")
-        .forEach((b) => b.classList.remove("selected"));
-      (e.currentTarget as HTMLElement).classList.add("selected");
-      const dataset = (e.currentTarget as HTMLElement).dataset;
-      loadShiftIntoForm(
-        {
-          id: Number(dataset.shiftId),
-          agentId: Number(dataset.agentId),
-          date: String(dataset.date),
-          startTime: String(dataset.start),
-          endTime: String(dataset.end),
-        },
-        weekendDate,
-      );
-    });
+  bodyContainer.addEventListener("mouseover", (e) => {
+    const bar = (e.target as HTMLElement).closest<HTMLElement>(
+      ".overtime-timeline-bar",
+    );
+    if (!bar) return;
+    showOvertimeTooltip(bar);
   });
+
+  bodyContainer.addEventListener("mouseout", (e) => {
+    const bar = (e.target as HTMLElement).closest<HTMLElement>(
+      ".overtime-timeline-bar",
+    );
+    if (!bar) return;
+    if (bar.contains(e.relatedTarget as Node)) return;
+    hideOvertimeTooltip();
+  });
+
+  bodyContainer.addEventListener("click", (e) => {
+    const bar = (e.target as HTMLElement).closest<HTMLElement>(
+      ".overtime-timeline-bar",
+    );
+    if (!bar) return;
+    document
+      .querySelectorAll(".overtime-timeline-bar.selected")
+      .forEach((b) => b.classList.remove("selected"));
+    bar.classList.add("selected");
+    const ds = bar.dataset;
+    hideOvertimeTooltip();
+    loadShiftIntoForm(
+      {
+        id: Number(ds.shiftId),
+        agentId: Number(ds.agentId),
+        date: String(ds.date),
+        startTime: String(ds.start),
+        endTime: String(ds.end),
+      },
+      state.overtimeSelectedWeekend || "",
+    );
+  });
+}
+
+function showOvertimeTooltip(bar: HTMLElement): void {
+  document.getElementById("overtime-custom-tooltip")?.remove();
+  const tipText = bar.dataset.tip;
+  if (!tipText) return;
+
+  const rect = bar.getBoundingClientRect();
+  const tip = document.createElement("div");
+  tip.id = "overtime-custom-tooltip";
+  tip.className = "overtime-custom-tooltip";
+  tip.textContent = tipText;
+  document.body.appendChild(tip);
+
+  const tipRect = tip.getBoundingClientRect();
+  let top = rect.top - tipRect.height - 8;
+  let isBelow = false;
+
+  if (top < 8) {
+    top = rect.bottom + 8;
+    isBelow = true;
+    tip.classList.add("tooltip-below");
+  }
+
+  let left = rect.left + rect.width / 2;
+  const halfWidth = tipRect.width / 2;
+  if (left - halfWidth < 8) left = halfWidth + 8;
+  if (left + halfWidth > window.innerWidth - 8)
+    left = window.innerWidth - halfWidth - 8;
+
+  tip.style.top = `${top}px`;
+  tip.style.left = `${left}px`;
+  tip.style.transform = "translateX(-50%)";
+}
+
+function hideOvertimeTooltip(): void {
+  document.getElementById("overtime-custom-tooltip")?.remove();
 }
 
 export function loadShiftIntoForm(
@@ -510,6 +543,8 @@ export function renderOvertimeShiftsList(
 }
 
 export function setupOvertimeEventListeners(): void {
+  installOvertimeDelegation();
+
   document
     .getElementById("switch-to-overtime-btn")
     ?.addEventListener("click", () => {
@@ -549,11 +584,6 @@ export function setupOvertimeEventListeners(): void {
         showToast("Error al guardar la configuración", "error");
       }
     });
-
-  const removeTip = () =>
-    document.getElementById("overtime-custom-tooltip")?.remove();
-  window.addEventListener("scroll", removeTip, { passive: true });
-  window.addEventListener("resize", removeTip, { passive: true });
 
   const overtimeShiftForm = document.getElementById(
     "overtime-shift-form",
