@@ -12,6 +12,7 @@ test.describe("Terminal row copy button", () => {
 
     const row = page.locator("[data-terminal-row]").first();
     const copyBtn = row.locator("[data-copy-control]").first();
+    await row.hover();
     await expect(copyBtn).toBeVisible();
 
     const expected = (await copyBtn.getAttribute("data-copy-value")) ?? "";
@@ -50,8 +51,6 @@ test.describe("Terminal row copy button", () => {
     const tooltip = copyBtn.locator(
       "xpath=ancestor::div[contains(@class,'tooltip')]//*[contains(@class,'tooltip-content')]",
     );
-    await expect(tooltip).toContainText(
-      "Al hacer clic se copiarán los datos importantes del equipo",
-    );
+    await expect(tooltip).toContainText("Copiar datos del equipo");
   });
 });
