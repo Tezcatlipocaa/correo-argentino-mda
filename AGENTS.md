@@ -48,6 +48,7 @@
 - **Frontmatter**: keep all `import` statements at the top of `.astro` frontmatter (mid-block imports break the build)
 - **Toasts**: server redirects pass `?toast_msg=&toast_type=success|error|warning|info`; client `showToast()` from `@lib/toastClient.ts`
 - **DataTable sorting**: wrap in `data-table-sort-root`, rows `data-table-row` + `data-sort-*` (master-detail uses `data-master-detail-sort-item`)
+- **API routes**: usar `jsonResponse`/`jsonError` (`@lib/apiResponse`), `requireWriteAccess`/`requireReadAccess` (`@lib/rbac-middleware`), `logAdminFromAstro`; ver sección "API routes" en `docs/CONTEXT.md`
 
 ## Auth & RBAC
 

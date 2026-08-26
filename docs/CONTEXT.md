@@ -210,6 +210,15 @@ BaseLayout (flex flex-col min-h-screen)
 
 `PageHeader` resuelve el titulo automaticamente via `getSectionTitle()` + `getResolvedPathname()`.
 
+### 13. API routes (endpoints en `src/pages/api/`)
+
+- Devolver siempre `jsonResponse(data, status?)` / `jsonError(msg, status?)` desde `@lib/apiResponse`. En produccion envolver errores internos con `sanitizeError(err)` para no filtrar detalles.
+- Control de acceso: invocar `requireWriteAccess(locals, "modulo")` / `requireReadAccess(locals, "modulo")` desde `@lib/rbac-middleware`. Retorna `null` si OK, o un `Response` 401/403 si denegado — hacer `return denied` temprano.
+- El nombre de modulo (`"cronograma"`, `"asistencia"`, `"usuarios"`, `"asignacion_ag"`, etc.) debe coincidir con `getModulePermissions` en `src/lib/rbac.ts`.
+- Toda mutacion debe auditar con `logAdminFromAstro(locals, msg)` (`@lib/auditLogger`).
+- Reordenamiento masivo: usar `handleReorder(request, locals, table, auditMsg)` desde `@lib/reorderHandler` (ya hace transaccion + auditoria).
+- Escrituras batch: envolver en `db.transaction(tx => { ... })` de Drizzle. Validar siempre el body antes de tocar la DB.
+
 ---
 
 ## Sistema de diseno y UX aprobado
