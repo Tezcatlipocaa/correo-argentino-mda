@@ -1091,15 +1091,18 @@ const inventoryTabs = [
     const isTerminales = activeValue === "terminales";
     const isCubics = activeValue === "cubics";
     const isMediterranea = activeValue === "mediterranea";
+    const isTTSTS = activeValue === "ttsts";
 
     viewTerminales?.classList.toggle("hidden", !isTerminales);
     viewCubics?.classList.toggle("hidden", !isCubics);
     viewMediterranea?.classList.toggle("hidden", !isMediterranea);
+    viewTT?.classList.toggle("hidden", !isTTSTS);
 
     if (isTerminales) {
       searchTerminales?.classList.remove("hidden");
       searchCubics?.classList.add("hidden");
       searchMediterranea?.classList.add("hidden");
+      searchTT?.classList.add("hidden");
 
       rightTerminales?.classList.remove("hidden");
       rightTerminales?.classList.add("flex");
@@ -1109,10 +1112,14 @@ const inventoryTabs = [
 
       rightMediterranea?.classList.add("hidden");
       rightMediterranea?.classList.remove("flex");
+
+      rightTT?.classList.add("hidden");
+      rightTT?.classList.remove("flex");
     } else if (isCubics) {
       searchTerminales?.classList.add("hidden");
       searchCubics?.classList.remove("hidden");
       searchMediterranea?.classList.add("hidden");
+      searchTT?.classList.add("hidden");
 
       rightTerminales?.classList.add("hidden");
       rightTerminales?.classList.remove("flex");
@@ -1122,10 +1129,14 @@ const inventoryTabs = [
 
       rightMediterranea?.classList.add("hidden");
       rightMediterranea?.classList.remove("flex");
-    } else {
+
+      rightTT?.classList.add("hidden");
+      rightTT?.classList.remove("flex");
+    } else if (isMediterranea) {
       searchTerminales?.classList.add("hidden");
       searchCubics?.classList.add("hidden");
       searchMediterranea?.classList.remove("hidden");
+      searchTT?.classList.add("hidden");
 
       rightTerminales?.classList.add("hidden");
       rightTerminales?.classList.remove("flex");
@@ -1135,6 +1146,26 @@ const inventoryTabs = [
 
       rightMediterranea?.classList.remove("hidden");
       rightMediterranea?.classList.add("flex");
+
+      rightTT?.classList.add("hidden");
+      rightTT?.classList.remove("flex");
+    } else {
+      searchTerminales?.classList.add("hidden");
+      searchCubics?.classList.add("hidden");
+      searchMediterranea?.classList.add("hidden");
+      searchTT?.classList.remove("hidden");
+
+      rightTerminales?.classList.add("hidden");
+      rightTerminales?.classList.remove("flex");
+
+      rightCubics?.classList.add("hidden");
+      rightCubics?.classList.remove("flex");
+
+      rightMediterranea?.classList.add("hidden");
+      rightMediterranea?.classList.remove("flex");
+
+      rightTT?.classList.remove("hidden");
+      rightTT?.classList.add("flex");
     }
   };
 
@@ -1147,6 +1178,10 @@ const inventoryTabs = [
     ) {
       mediCurrentPage = 1;
       fetchMediterranea(true);
+    }
+    if (e.detail.value === "ttsts" && ttContainer?.children.length === 0) {
+      ttCurrentPage = 1;
+      fetchTT(true);
     }
   });
 
@@ -1210,6 +1245,29 @@ const inventoryTabs = [
   );
   const mediExportCsvBtn = document.getElementById("export-csv-medi-btn");
 
+  const viewTT = document.getElementById("view-ttsts");
+  const searchTT = document.getElementById("header-search-ttsts");
+  const rightTT = document.getElementById("header-right-ttsts");
+  const ttSearchInput =
+    document.querySelector<HTMLInputElement>("#tt-search");
+  const ttStatusRadioInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>("[data-tt-status]"),
+  );
+  const ttSentinel = document.getElementById("scroll-sentinel-ttsts");
+  const ttSpinner = document.getElementById("loading-spinner-ttsts");
+  const ttContainer = document.getElementById("table-ttsts-body");
+  const ttTotalCountBadge = document.getElementById(
+    "total-count-badge-ttsts",
+  );
+  const ttExportCsvBtn = document.getElementById("export-csv-tt-btn");
+
+  let ttCurrentPage = 1;
+  let ttCurrentSearch = ttSearchInput?.value.trim() || "";
+  let ttCurrentStatus =
+    ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
+  let ttHasMore = false;
+  let ttIsLoading = false;
+
   let mediCurrentPage = 1;
   let mediCurrentSearch = mediSearchInput?.value.trim() || "";
   let mediCurrentType = mediTypeSelect?.value || "all";
@@ -1265,6 +1323,27 @@ const inventoryTabs = [
         search: mediCurrentSearch,
         mediterraneaType: mediCurrentType,
         status: mediCurrentStatus,
+      };
+
+      for (const [key, val] of Object.entries(filters)) {
+        if (val && val !== "all") {
+          params.set(key, val);
+        } else {
+          params.delete(key);
+        }
+      }
+    } else if (activeTab === "ttsts") {
+      params.delete("os");
+      params.delete("osVariant");
+      params.delete("architecture");
+      params.delete("brand");
+      params.delete("ram");
+      params.delete("model");
+      params.delete("mediterraneaType");
+
+      const filters: Record<string, string> = {
+        search: ttCurrentSearch,
+        status: ttCurrentStatus,
       };
 
       for (const [key, val] of Object.entries(filters)) {
@@ -1333,6 +1412,18 @@ const inventoryTabs = [
       if (mediCurrentStatus && mediCurrentStatus !== "all")
         queryParams.set("status", mediCurrentStatus);
       mediExportCsvBtn.setAttribute(
+        "href",
+        `${baseUrl}api/export/terminals${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
+      );
+    }
+
+    if (ttExportCsvBtn) {
+      const queryParams = new URLSearchParams();
+      queryParams.set("isTT", "true");
+      if (ttCurrentSearch) queryParams.set("search", ttCurrentSearch);
+      if (ttCurrentStatus && ttCurrentStatus !== "all")
+        queryParams.set("status", ttCurrentStatus);
+      ttExportCsvBtn.setAttribute(
         "href",
         `${baseUrl}api/export/terminals${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
       );
@@ -1633,6 +1724,153 @@ const inventoryTabs = [
     );
     observer.observe(mediSentinel);
   }
+
+  const fetchTT = async (isNewSearch: boolean, showLoadingUI = true) => {
+    if (ttIsLoading) return;
+    ttIsLoading = true;
+    if (showLoadingUI) ttSpinner?.classList.remove("hidden");
+
+    try {
+      const params = new URLSearchParams();
+      params.set("isTT", "true");
+      params.set("page", ttCurrentPage.toString());
+      params.set("limit", "50");
+      if (ttCurrentSearch) params.set("search", ttCurrentSearch);
+      if (ttCurrentStatus && ttCurrentStatus !== "all")
+        params.set("status", ttCurrentStatus);
+      if (currentSortBy) {
+        params.set("sortBy", currentSortBy);
+        if (currentSortOrder) params.set("sortOrder", currentSortOrder);
+      }
+
+      const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/terminals?${params.toString()}`,
+      );
+      if (!response.ok) throw new Error("API call failed");
+
+      const html = await response.text();
+      const newHasMore = response.headers.get("X-Has-More") === "true";
+      const totalCount = response.headers.get("X-Total-Count") || "0";
+
+      ttHasMore = newHasMore;
+
+      if (ttTotalCountBadge) {
+        ttTotalCountBadge.textContent = `${totalCount} equipos`;
+      }
+
+      if (ttContainer) {
+        if (isNewSearch) {
+          ttContainer.innerHTML = html;
+        } else {
+          ttContainer.insertAdjacentHTML("beforeend", html);
+        }
+      }
+
+      const rowCount =
+        ttContainer?.querySelectorAll("[data-terminal-row]").length ?? 0;
+      const noResultsState = document.getElementById(
+        "no-results-state-ttsts",
+      );
+      const tableWrapper = document.getElementById("ttsts-table-wrapper");
+
+      if (noResultsState && tableWrapper) {
+        if (rowCount === 0) {
+          noResultsState.classList.remove("hidden");
+          noResultsState.classList.add("flex");
+          tableWrapper.classList.add("hidden");
+        } else {
+          noResultsState.classList.add("hidden");
+          noResultsState.classList.remove("flex");
+          tableWrapper.classList.remove("hidden");
+        }
+      }
+
+      if (ttCurrentSearch && ttContainer) {
+        const newArticles = Array.from(
+          ttContainer.querySelectorAll<HTMLElement>("[data-terminal-row]"),
+        );
+        newArticles.forEach((item) => {
+          highlightSearchTargets(item, ttCurrentSearch);
+        });
+      }
+
+      if (!ttHasMore) {
+        ttSentinel?.classList.add("hidden");
+      } else {
+        ttSentinel?.classList.remove("hidden");
+      }
+    } catch (err) {
+      console.error("Error fetching T&T & STS:", err);
+    } finally {
+      ttIsLoading = false;
+      if (showLoadingUI) ttSpinner?.classList.add("hidden");
+    }
+  };
+
+  if (ttSentinel) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !ttIsLoading && ttHasMore) {
+          ttCurrentPage++;
+          fetchTT(false);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(ttSentinel);
+  }
+
+  let ttDebounceTimeout: number;
+  const triggerTTSearch = () => {
+    clearTimeout(ttDebounceTimeout);
+    ttDebounceTimeout = window.setTimeout(() => {
+      ttCurrentPage = 1;
+      ttCurrentSearch = ttSearchInput?.value.trim() || "";
+      ttCurrentStatus =
+        ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
+      fetchTT(true);
+      syncFiltersToURL();
+    }, 300);
+  };
+
+  ttSearchInput?.addEventListener("input", triggerTTSearch);
+  ttStatusRadioInputs.forEach((radio) =>
+    radio.addEventListener("change", triggerTTSearch),
+  );
+
+  const btnClearTT = document.getElementById("btn-clear-filters-ttsts");
+  btnClearTT?.addEventListener("click", () => {
+    if (ttSearchInput) ttSearchInput.value = "";
+    ttStatusRadioInputs.forEach((radio, idx) => {
+      radio.checked = idx === 0;
+    });
+    ttCurrentPage = 1;
+    ttCurrentSearch = "";
+    ttCurrentStatus = "all";
+    fetchTT(true);
+    syncFiltersToURL();
+  });
+
+  const btnClearEmptyTT = document.getElementById("btn-clear-empty-ttsts");
+  btnClearEmptyTT?.addEventListener("click", () => {
+    btnClearTT?.click();
+  });
+
+  const ttTable = document.getElementById("table-ttsts");
+  ttTable?.addEventListener("table-sort-change", (e: any) => {
+    const { sortKey, direction } = e.detail;
+    currentSortBy = direction === "none" ? null : sortKey;
+    currentSortOrder =
+      direction === "ascending"
+        ? "asc"
+        : direction === "descending"
+          ? "desc"
+          : null;
+    ttCurrentPage = 1;
+    fetchTT(true, false);
+    syncFiltersToURL();
+  });
 
   let debounceTimeout: number;
   const triggerSearch = () => {
@@ -2048,6 +2286,21 @@ const inventoryTabs = [
     }
 
     fetchMediterranea(true);
+  }
+
+  if (initialActiveTab === "ttsts") {
+    if (ttSearchInput && initialUrlParams.has("search")) {
+      ttSearchInput.value = initialUrlParams.get("search") || "";
+      ttCurrentSearch = ttSearchInput.value.trim();
+    }
+    if (initialUrlParams.has("status")) {
+      const statusVal = initialUrlParams.get("status") || "all";
+      ttStatusRadioInputs.forEach((radio) => {
+        radio.checked = radio.dataset.ttStatus === statusVal;
+      });
+      ttCurrentStatus = statusVal;
+    }
+    fetchTT(true);
   }
 </script>
 <script
