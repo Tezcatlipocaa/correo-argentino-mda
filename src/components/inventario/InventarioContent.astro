@@ -37,8 +37,6 @@ const canExport = user
   ? ["team_leader", "supervisor", "admin"].includes(user.role)
   : false;
 
-const showCubicsTab = true;
-
 const terminalHeaderGridClass = "grid-cols-12 gap-4";
 const terminalRowGridClass = "grid grid-cols-12 items-start gap-4";
 
@@ -162,9 +160,7 @@ const inventoryTabs = [
     value: "ttsts",
     icon: "boxicons:cpu-filled",
   },
-  ...(showCubicsTab
-    ? [{ label: "Cúbics", value: "cubics", icon: "boxicons:server-filled" }]
-    : []),
+  { label: "Cúbics", value: "cubics", icon: "boxicons:server-filled" },
 ];
 ---
 
@@ -186,10 +182,7 @@ const inventoryTabs = [
       activeValue={activeTab}
       name="inventory_tabs"
       id="inventory-view-switcher"
-      class:list={[
-        "grid w-full",
-        showCubicsTab ? "grid-cols-4" : "grid-cols-3",
-      ]}
+      class="grid w-full grid-cols-4"
       containerClass="w-full"
     />
   </div>
@@ -2248,6 +2241,25 @@ const inventoryTabs = [
       mediterraneaTable.dataset.tableSortKey = currentSortBy;
       mediterraneaTable.dataset.tableSortDirection = dir;
       const control = mediterraneaTable.querySelector(
+        `[data-table-sort-key="${currentSortBy}"]`,
+      );
+      if (control) {
+        control.setAttribute("data-table-sort-direction", dir);
+        control.setAttribute("aria-sort", dir);
+        control
+          .querySelectorAll("[data-table-sort-icon]")
+          .forEach((icon: any) => {
+            const shouldShow = icon.dataset.tableSortIcon === dir;
+            icon.classList.toggle("hidden", !shouldShow);
+            icon.classList.toggle("opacity-0", !shouldShow);
+          });
+      }
+    }
+
+    if (ttTable) {
+      ttTable.dataset.tableSortKey = currentSortBy;
+      ttTable.dataset.tableSortDirection = dir;
+      const control = ttTable.querySelector(
         `[data-table-sort-key="${currentSortBy}"]`,
       );
       if (control) {

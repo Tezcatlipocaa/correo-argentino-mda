@@ -465,7 +465,9 @@ export async function getTTGroups(
 
   const whereClause = and(...filters);
 
-  // Fase 1: filas mínimas para agrupar y paginar por grupo en JS
+  // Fase 1: filas mínimas para agrupar y paginar por grupo en JS.
+  // Carga todas las filas coincidentes en memoria; aceptable mientras el
+  // parque Debian/Ubuntu/TT sea acotado (miles, no millones).
   const minimalRows = await db
     .select({
       id: terminals.id,
