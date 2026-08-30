@@ -1,0 +1,8 @@
+---
+import type { TerminalItem } from "@lib/terminalQueries";
+interface Props { terminal: TerminalItem; base: string; terminalRowGridClass?: string; }
+const { terminal, base } = Astro.props;
+---
+<article data-tt-vm-row data-hostname={terminal.hostname} data-ip={terminal.ip}>
+  <span>{terminal.hostname}</span>
+</article>
