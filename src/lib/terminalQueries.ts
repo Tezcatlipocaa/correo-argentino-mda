@@ -27,6 +27,8 @@ import {
   type TTPairState,
 } from "@lib/ttGroups";
 
+export type { TTPairState };
+
 export type TerminalSortKey = "hostname" | "hardware" | "os" | "location";
 export type SortOrder = "asc" | "desc";
 
