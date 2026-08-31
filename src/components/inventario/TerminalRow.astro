@@ -126,24 +126,28 @@ const copyValue = [
     />
 
     <div class="flex w-full min-w-0 flex-col gap-1">
-      <span class="text-base-content truncate text-sm" data-highlight-target>
-        {terminal.manufacturer}
-      </span>
-      <span
-        class="text-base-content truncate text-xs font-medium"
-        data-highlight-target
-      >
-        {terminal.model}
-      </span>
-      <span class="text-base-content/50 truncate font-mono text-xs">
-        SN: <span data-highlight-target>{terminal.serial}</span>
-      </span>
-      <span class="text-base-content/70 truncate text-xs">
-        RAM:{" "}
-        <span class="text-base-content font-medium" data-highlight-target>
-          {terminal.ram}
-        </span>
-      </span>
+      {!pairState && (
+        <>
+          <span class="text-base-content truncate text-sm" data-highlight-target>
+            {terminal.manufacturer}
+          </span>
+          <span
+            class="text-base-content truncate text-xs font-medium"
+            data-highlight-target
+          >
+            {terminal.model}
+          </span>
+          <span class="text-base-content/50 truncate font-mono text-xs">
+            SN: <span data-highlight-target>{terminal.serial}</span>
+          </span>
+          <span class="text-base-content/70 truncate text-xs">
+            RAM:{" "}
+            <span class="text-base-content font-medium" data-highlight-target>
+              {terminal.ram}
+            </span>
+          </span>
+        </>
+      )}
     </div>
     <div
       class="pointer-events-none absolute top-1.5 right-1.5 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
