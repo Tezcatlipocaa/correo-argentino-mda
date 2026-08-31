@@ -69,6 +69,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const isMediterranea = url.searchParams.get("isMediterranea") === "true";
   const mediterraneaType = url.searchParams.get("mediterraneaType") || "all";
   const isTT = url.searchParams.get("isTT") === "true";
+  const ttType = url.searchParams.get("ttType") || "all";
 
   // Build SQL dynamically
   const selectCols = SQL_COLUMNS.map((col) => `t.${col} AS ${col}`).join(", ");
@@ -97,6 +98,16 @@ export const GET: APIRoute = async ({ locals, url }) => {
     // Exclusión explícita de Mediterránea
     conditions.push("t.hostname NOT LIKE ? AND t.hostname NOT LIKE ?");
     queryParams.push("TMEDI%", "TVMEDI%");
+  }
+
+  if (isTT && ttType === "tyt") {
+    conditions.push("t.hostname LIKE ?");
+    queryParams.push("TT_____P");
+  } else if (isTT && ttType === "sts") {
+    conditions.push(
+      "(LOWER(t.operating_system) LIKE ? OR LOWER(t.operating_system) LIKE ?) AND t.hostname NOT LIKE ?",
+    );
+    queryParams.push("%debian%", "%ubuntu%", "TT_____P");
   }
 
   if (search && search.trim() !== "") {

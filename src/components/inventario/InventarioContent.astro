@@ -505,6 +505,34 @@ const inventoryTabs = [
             data-tt-status="offline"
           />
         </div>
+        <div
+          class="tabs tabs-box"
+          role="radiogroup"
+          aria-label="Filtrar por tipo T&T / STS"
+        >
+          <input
+            type="radio"
+            name="tt_type"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Todos"
+            checked
+            data-tt-type="all"
+          />
+          <input
+            type="radio"
+            name="tt_type"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Solo T&T"
+            data-tt-type="tyt"
+          />
+          <input
+            type="radio"
+            name="tt_type"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Solo STS"
+            data-tt-type="sts"
+          />
+        </div>
         <button
           id="btn-clear-filters-ttsts"
           class="btn btn-outline btn-error gap-2 font-semibold"
@@ -1253,11 +1281,16 @@ const inventoryTabs = [
     "total-count-badge-ttsts",
   );
   const ttExportCsvBtn = document.getElementById("export-csv-tt-btn");
+  const ttTypeRadioInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>("[data-tt-type]"),
+  );
 
   let ttCurrentPage = 1;
   let ttCurrentSearch = ttSearchInput?.value.trim() || "";
   let ttCurrentStatus =
     ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
+  let ttCurrentType =
+    ttTypeRadioInputs.find((r) => r.checked)?.dataset.ttType || "all";
   let ttHasMore = false;
   let ttIsLoading = false;
 
@@ -1337,6 +1370,7 @@ const inventoryTabs = [
       const filters: Record<string, string> = {
         search: ttCurrentSearch,
         status: ttCurrentStatus,
+        ttType: ttCurrentType,
       };
 
       for (const [key, val] of Object.entries(filters)) {
@@ -1416,6 +1450,8 @@ const inventoryTabs = [
       if (ttCurrentSearch) queryParams.set("search", ttCurrentSearch);
       if (ttCurrentStatus && ttCurrentStatus !== "all")
         queryParams.set("status", ttCurrentStatus);
+      if (ttCurrentType && ttCurrentType !== "all")
+        queryParams.set("ttType", ttCurrentType);
       ttExportCsvBtn.setAttribute(
         "href",
         `${baseUrl}api/export/terminals${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
@@ -1731,6 +1767,8 @@ const inventoryTabs = [
       if (ttCurrentSearch) params.set("search", ttCurrentSearch);
       if (ttCurrentStatus && ttCurrentStatus !== "all")
         params.set("status", ttCurrentStatus);
+      if (ttCurrentType && ttCurrentType !== "all")
+        params.set("ttType", ttCurrentType);
       if (currentSortBy) {
         params.set("sortBy", currentSortBy);
         if (currentSortOrder) params.set("sortOrder", currentSortOrder);
@@ -1822,6 +1860,8 @@ const inventoryTabs = [
       ttCurrentSearch = ttSearchInput?.value.trim() || "";
       ttCurrentStatus =
         ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
+      ttCurrentType =
+        ttTypeRadioInputs.find((r) => r.checked)?.dataset.ttType || "all";
       fetchTT(true);
       syncFiltersToURL();
     }, 300);
@@ -1831,6 +1871,9 @@ const inventoryTabs = [
   ttStatusRadioInputs.forEach((radio) =>
     radio.addEventListener("change", triggerTTSearch),
   );
+  ttTypeRadioInputs.forEach((radio) =>
+    radio.addEventListener("change", triggerTTSearch),
+  );
 
   const btnClearTT = document.getElementById("btn-clear-filters-ttsts");
   btnClearTT?.addEventListener("click", () => {
@@ -1838,9 +1881,13 @@ const inventoryTabs = [
     ttStatusRadioInputs.forEach((radio, idx) => {
       radio.checked = idx === 0;
     });
+    ttTypeRadioInputs.forEach((radio, idx) => {
+      radio.checked = idx === 0;
+    });
     ttCurrentPage = 1;
     ttCurrentSearch = "";
     ttCurrentStatus = "all";
+    ttCurrentType = "all";
     fetchTT(true);
     syncFiltersToURL();
   });
@@ -2311,6 +2358,13 @@ const inventoryTabs = [
         radio.checked = radio.dataset.ttStatus === statusVal;
       });
       ttCurrentStatus = statusVal;
+    }
+    if (initialUrlParams.has("ttType")) {
+      const typeVal = initialUrlParams.get("ttType") || "all";
+      ttTypeRadioInputs.forEach((radio) => {
+        radio.checked = radio.dataset.ttType === typeVal;
+      });
+      ttCurrentType = typeVal;
     }
     fetchTT(true);
   }
