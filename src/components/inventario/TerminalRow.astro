@@ -95,11 +95,15 @@ const copyValue = [
       >
         {terminal.ip}
       </span>
-      {pairState && (
+      {pairState && !(pairState === "missing-vm" && terminal.isTelegrafia) && (
         <span
           class:list={[
             "badge badge-soft badge-xs w-fit",
-            pairState === "complete" ? "badge-success" : "badge-warning",
+            pairState === "complete"
+              ? "badge-success"
+              : pairState === "missing-vm"
+                ? "badge-error"
+                : "badge-warning",
           ]}
         >
           {pairStateCopy[pairState]}
