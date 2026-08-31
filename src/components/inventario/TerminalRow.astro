@@ -10,19 +10,15 @@ interface Props {
   terminal: TerminalItem;
   terminalRowGridClass?: string;
   pairState?: TTPairState;
+  paired?: boolean;
 }
 
 const {
   terminal,
   terminalRowGridClass = "grid grid-cols-12 items-start",
   pairState,
+  paired,
 } = Astro.props;
-
-const pairStateCopy = {
-  complete: "Operativa",
-  "missing-vm": "VM sin reportar",
-  "missing-physical": "Física sin reportar",
-} as const;
 
 const getRowColorClass = (item: TerminalItem): string => {
   return getTerminalColorClass(item.osName, item.isTelegrafia);
@@ -70,7 +66,8 @@ const copyValue = [
   data-sort-location={terminal.branch}
   class:list={[
     terminalRowGridClass,
-    "group border-base-300 hover:bg-base-300/40 border-b px-4 py-3 transition-colors last:border-b-0",
+    "border-base-300 hover:bg-base-300/40 px-4 py-3 transition-colors last:border-b-0",
+    !paired && "border-b",
   ]}
 >
   <div class="col-span-2 flex flex-row gap-4">
@@ -95,18 +92,9 @@ const copyValue = [
       >
         {terminal.ip}
       </span>
-      {pairState && !(pairState === "missing-vm" && terminal.isTelegrafia) && (
-        <span
-          class:list={[
-            "badge badge-soft badge-xs w-fit",
-            pairState === "complete"
-              ? "badge-success"
-              : pairState === "missing-vm"
-                ? "badge-error"
-                : "badge-warning",
-          ]}
-        >
-          {pairStateCopy[pairState]}
+      {pairState === "missing-vm" && !terminal.isTelegrafia && (
+        <span class="badge badge-soft badge-warning badge-xs w-fit">
+          Sin VM
         </span>
       )}
       <span
@@ -126,28 +114,24 @@ const copyValue = [
     />
 
     <div class="flex w-full min-w-0 flex-col gap-1">
-      {!pairState && (
-        <>
-          <span class="text-base-content truncate text-sm" data-highlight-target>
-            {terminal.manufacturer}
-          </span>
-          <span
-            class="text-base-content truncate text-xs font-medium"
-            data-highlight-target
-          >
-            {terminal.model}
-          </span>
-          <span class="text-base-content/50 truncate font-mono text-xs">
-            SN: <span data-highlight-target>{terminal.serial}</span>
-          </span>
-          <span class="text-base-content/70 truncate text-xs">
-            RAM:{" "}
-            <span class="text-base-content font-medium" data-highlight-target>
-              {terminal.ram}
-            </span>
-          </span>
-        </>
-      )}
+      <span class="text-base-content truncate text-sm" data-highlight-target>
+        {terminal.manufacturer}
+      </span>
+      <span
+        class="text-base-content truncate text-xs font-medium"
+        data-highlight-target
+      >
+        {terminal.model}
+      </span>
+      <span class="text-base-content/50 truncate font-mono text-xs">
+        SN: <span data-highlight-target>{terminal.serial}</span>
+      </span>
+      <span class="text-base-content/70 truncate text-xs">
+        RAM:{" "}
+        <span class="text-base-content font-medium" data-highlight-target>
+          {terminal.ram}
+        </span>
+      </span>
     </div>
     <div
       class="pointer-events-none absolute top-1.5 right-1.5 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100"
@@ -194,12 +178,6 @@ const copyValue = [
       <span class="text-base-content truncate text-sm" data-highlight-target>
         {terminal.branch}
       </span>
-      {terminal.isTelegrafia && (
-        <span class="badge badge-soft badge-success badge-xs w-fit gap-1">
-          <Icon name="boxicons:location-pin-filled" size={12} />
-          Telegrafía
-        </span>
-      )}
       <span class="flex w-full flex-row items-center gap-1">
         <div
           class="badge badge-sm badge-soft badge-neutral max-w-full truncate font-mono text-xs"

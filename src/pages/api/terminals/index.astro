@@ -59,8 +59,9 @@ Astro.response.headers.set("Cache-Control", "private, max-age=300");
   ttResult.groups.map((group) => (
     <>
       <TerminalRow
-        terminal={group.primary}
+        terminal={group.displayPrimary}
         pairState={group.pairState}
+        paired={!!group.vm}
       />
       {group.vm && <TerminalVmRow terminal={group.vm} base={group.base} />}
     </>

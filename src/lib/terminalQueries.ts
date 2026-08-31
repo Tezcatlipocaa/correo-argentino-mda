@@ -176,6 +176,7 @@ export interface GetTerminalsParams {
   sortOrder?: SortOrder;
   isMediterranea?: boolean;
   mediterraneaType?: string;
+  ttType?: "all" | "tyt" | "sts";
 }
 
 export async function getTerminals(params: GetTerminalsParams = {}) {
@@ -404,6 +405,7 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
 export interface TTGroupResultItem {
   base: string;
   primary: TerminalItem;
+  displayPrimary: TerminalItem;
   vm: TerminalItem | null;
   pairState: TTPairState;
 }
@@ -463,6 +465,20 @@ export async function getTTGroups(
     ),
   );
 
+  if (params.ttType === "tyt") {
+    filters.push(like(terminals.hostname, "TT_____P"));
+  } else if (params.ttType === "sts") {
+    filters.push(
+      and(
+        or(
+          like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
+          like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+        ),
+        notLike(terminals.hostname, "TT_____P"),
+      ),
+    );
+  }
+
   const whereClause = and(...filters);
 
   // Fase 1: filas mínimas para agrupar y paginar por grupo en JS.
@@ -513,7 +529,26 @@ export async function getTTGroups(
     const primary = itemsById.get(g.primaryId)!;
     const vmRow = g.rows.find((r) => r.id !== g.primaryId);
     const vm = vmRow ? (itemsById.get(vmRow.id) ?? null) : null;
-    return { base: g.base, primary, vm, pairState: g.pairState };
+
+    // Cuando existe VM, mostrar el hardware de la VM en la fila física
+    // para que la columna de hardware siempre tenga datos reales (Debian 12).
+    const displayPrimary: TerminalItem = vm
+      ? {
+          ...primary,
+          manufacturer: vm.manufacturer,
+          model: vm.model,
+          serial: vm.serial,
+          ram: vm.ram,
+        }
+      : primary;
+
+    return {
+      base: g.base,
+      primary,
+      displayPrimary,
+      vm,
+      pairState: g.pairState,
+    };
   });
 
   return { groups, count, hasMore };
