@@ -47,9 +47,7 @@ test.describe("Inventario T&T & STS", () => {
     }
   });
 
-  test("el badge Operativa aparece en masters de pares completos", async ({
-    page,
-  }) => {
+  test("equipo sin VM muestra badge Sin VM", async ({ page }) => {
     await page.goto("/inventario-terminales");
     await page.getByRole("radio", { name: "T&T & STS" }).check();
     await page
@@ -61,13 +59,33 @@ test.describe("Inventario T&T & STS", () => {
     const badges = page.locator(
       "#table-ttsts-body [data-terminal-row]:not([data-tt-vm-row]) .badge",
     );
-    const texts = await badges.allTextContents();
-    const hasOperativa = texts.some((t) => t.trim() === "Operativa");
-    const hasWarning =
-      texts.some((t) => t.trim() === "VM sin reportar") ||
-      texts.some((t) => t.trim() === "Física sin reportar");
-    if (texts.length > 0) {
-      expect(hasOperativa || hasWarning).toBe(true);
+    const count = await badges.count();
+    if (count > 0) {
+      const texts = await badges.allTextContents();
+      expect(texts.some((t) => t.trim() === "Sin VM")).toBe(true);
+    }
+  });
+
+  test("el filtro Solo T&T aplica el param ttType=tyt", async ({ page }) => {
+    await page.goto("/inventario-terminales");
+    await page.getByRole("radio", { name: "T&T & STS" }).check();
+    await page.waitForSelector("#view-ttsts:not(.hidden)");
+
+    const initialCount = await page
+      .locator("#table-ttsts-body [data-terminal-row]")
+      .count();
+
+    await page.getByRole("radio", { name: "Solo T&T" }).check();
+    await page.waitForTimeout(500);
+
+    const params = new URL(page.url()).searchParams;
+    expect(params.get("ttType")).toBe("tyt");
+
+    const filteredCount = await page
+      .locator("#table-ttsts-body [data-terminal-row]")
+      .count();
+    if (initialCount > 0) {
+      expect(filteredCount).toBeLessThanOrEqual(initialCount);
     }
   });
 
