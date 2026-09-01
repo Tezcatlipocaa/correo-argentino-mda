@@ -3,6 +3,8 @@ import { terminals, offices, provinces, regions } from "@db/schema";
 import {
   eq,
   like,
+  notLike,
+  inArray,
   or,
   and,
   sql,
@@ -16,6 +18,16 @@ import { normalizeSearchValue } from "@lib/clientSearch";
 
 import { type OsFamily, toOsFamily } from "@lib/terminalHelpers";
 export type { OsFamily };
+
+import {
+  groupTTDevices,
+  sortTTGroups,
+  type TTMinimalRow,
+  type TTGroup,
+  type TTPairState,
+} from "@lib/ttGroups";
+
+export type { TTPairState };
 
 export type TerminalSortKey = "hostname" | "hardware" | "os" | "location";
 export type SortOrder = "asc" | "desc";
@@ -48,6 +60,77 @@ export interface TerminalItem {
   lastContactTime: string;
   osFamily: OsFamily;
   isTelegrafia: boolean;
+}
+
+const telegrafiaExists = sql<number>`EXISTS (
+  SELECT 1
+  FROM office_assets oa
+  JOIN offices o ON oa.office_id = o.id
+  WHERE o.type = 'TELEGRAFIA'
+    AND (oa.hostname = ${terminals.hostname} OR oa.ip = ${terminals.ipAddress})
+)`;
+
+const fullTerminalSelect = () =>
+  db
+    .select({
+      terminal: terminals,
+      officeName: offices.name,
+      provinceCode: offices.provinceCode,
+      provinceName: provinces.name,
+      regionName: regions.name,
+      isTelegrafia: telegrafiaExists,
+    })
+    .from(terminals)
+    .leftJoin(offices, eq(terminals.nis, offices.code))
+    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
+    .leftJoin(regions, eq(provinces.regionId, regions.id));
+
+interface TerminalQueryRow {
+  terminal: typeof terminals.$inferSelect;
+  officeName: string | null;
+  provinceCode: string | null;
+  provinceName: string | null;
+  regionName: string | null;
+  isTelegrafia: number;
+}
+
+function mapTerminalQueryRow(row: TerminalQueryRow): TerminalItem {
+  const t = row.terminal;
+  const lastContact = parseLastContact(t.lastContact || "");
+
+  let architecture = "--";
+  if (t.osArchitecture) {
+    if (t.osArchitecture.includes("64")) {
+      architecture = "64 bits";
+    } else if (
+      t.osArchitecture.includes("32") ||
+      t.osArchitecture.includes("86")
+    ) {
+      architecture = "32 bits";
+    } else {
+      architecture = t.osArchitecture;
+    }
+  }
+
+  return {
+    hostname: t.hostname || "--",
+    ip: t.ipAddress || "--",
+    mac: t.macAddress || "--",
+    manufacturer: t.manufacturer || "--",
+    model: t.model || "--",
+    ram: t.ram || "--",
+    serial: t.serialNumber || "--",
+    osName: t.operatingSystem || "--",
+    architecture,
+    branch: row.officeName || "--",
+    province: row.provinceName || "--",
+    region: row.regionName || "--",
+    nis: t.nis || "--",
+    lastContactDate: lastContact.date,
+    lastContactTime: lastContact.time,
+    osFamily: toOsFamily(t.operatingSystem || ""),
+    isTelegrafia: row.isTelegrafia === 1,
+  };
 }
 
 const monthLabels = [
@@ -93,6 +176,8 @@ export interface GetTerminalsParams {
   sortOrder?: SortOrder;
   isMediterranea?: boolean;
   mediterraneaType?: string;
+  ttType?: "all" | "tyt" | "sts";
+  withVm?: boolean;
 }
 
 export async function getTerminals(params: GetTerminalsParams = {}) {
@@ -100,26 +185,7 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
   const limit = params.limit || 50;
   const offset = (page - 1) * limit;
 
-  let queryBuilder = db
-    .select({
-      terminal: terminals,
-      officeName: offices.name,
-      provinceCode: offices.provinceCode,
-      provinceName: provinces.name,
-      regionName: regions.name,
-      isTelegrafia: sql<number>`EXISTS (
-        SELECT 1 
-        FROM office_assets oa 
-        JOIN offices o ON oa.office_id = o.id 
-        WHERE o.type = 'TELEGRAFIA' 
-          AND (oa.hostname = ${terminals.hostname} OR oa.ip = ${terminals.ipAddress})
-      )`,
-    })
-    .from(terminals)
-    .leftJoin(offices, eq(terminals.nis, offices.code))
-    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
-    .leftJoin(regions, eq(provinces.regionId, regions.id))
-    .$dynamic();
+  let queryBuilder = fullTerminalSelect().$dynamic();
 
   const filters = [];
 
@@ -328,52 +394,173 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
   }
 
   // Mapeamos al formato requerido por TerminalRow.astro
-  const data: TerminalItem[] = rows.map((row) => {
-    const t = row.terminal;
-    const lastContact = parseLastContact(t.lastContact || "");
-
-    let architecture = "--";
-    if (t.osArchitecture) {
-      if (t.osArchitecture.includes("64")) {
-        architecture = "64 bits";
-      } else if (
-        t.osArchitecture.includes("32") ||
-        t.osArchitecture.includes("86")
-      ) {
-        architecture = "32 bits";
-      } else {
-        architecture = t.osArchitecture;
-      }
-    }
-
-    const osName = t.operatingSystem || "--";
-
-    return {
-      hostname: t.hostname || "--",
-      ip: t.ipAddress || "--",
-      mac: t.macAddress || "--",
-      manufacturer: t.manufacturer || "--",
-      model: t.model || "--",
-      ram: t.ram || "--",
-      serial: t.serialNumber || "--",
-      osName,
-      architecture,
-      branch: row.officeName || "--",
-      province: row.provinceName || "--",
-      region: row.regionName || "--",
-      nis: t.nis || "--",
-      lastContactDate: lastContact.date,
-      lastContactTime: lastContact.time,
-      osFamily: toOsFamily(t.operatingSystem || ""),
-      isTelegrafia: row.isTelegrafia === 1,
-    };
-  });
+  const data: TerminalItem[] = rows.map(mapTerminalQueryRow);
 
   return {
     data,
     count,
     hasMore,
   };
+}
+
+export interface TTGroupResultItem {
+  base: string;
+  primary: TerminalItem;
+  displayPrimary: TerminalItem;
+  vm: TerminalItem | null;
+  pairState: TTPairState;
+}
+
+export interface TTGroupResult {
+  groups: TTGroupResultItem[];
+  count: number;
+  hasMore: boolean;
+}
+
+export async function getTTGroups(
+  params: GetTerminalsParams = {},
+): Promise<TTGroupResult> {
+  const page = params.page || 1;
+  const limit = params.limit || 50;
+  const offset = (page - 1) * limit;
+
+  const filters = [];
+
+  if (params.search && params.search !== "") {
+    const normalizedSearch = normalizeSearchValue(params.search).trim();
+    filters.push(
+      or(
+        like(terminals.searchableText, `%${normalizedSearch}%`),
+        like(offices.searchableText, `%${normalizedSearch}%`),
+      ),
+    );
+  }
+
+  if (params.status && params.status !== "all") {
+    const thresholdDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .replace("T", " ")
+      .substring(0, 19);
+
+    if (params.status === "online") {
+      filters.push(gte(terminals.lastContact, thresholdDate));
+    } else if (params.status === "offline") {
+      filters.push(
+        or(
+          lt(terminals.lastContact, thresholdDate),
+          isNull(terminals.lastContact),
+          eq(terminals.lastContact, ""),
+        ),
+      );
+    }
+  }
+
+  // Unión: Debian/Ubuntu O hostname TT_____P. Exclusión explícita de Mediterránea.
+  filters.push(
+    notLike(terminals.hostname, "TMEDI%"),
+    notLike(terminals.hostname, "TVMEDI%"),
+    or(
+      like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
+      like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+      like(terminals.hostname, "TT_____P"),
+    ),
+  );
+
+  if (params.ttType === "tyt" || params.ttType === "sts") {
+    // T&T se detecta por base (hostname sin sufijo -D), igual que computeTTBase.
+    const ttBaseExpr = sql`CASE WHEN ${terminals.hostname} LIKE '%-D' THEN substr(${terminals.hostname}, 1, length(${terminals.hostname}) - 2) ELSE ${terminals.hostname} END`;
+
+    if (params.ttType === "tyt") {
+      filters.push(like(ttBaseExpr, "TT_____P"));
+    } else {
+      filters.push(
+        and(
+          or(
+            like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
+            like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+          ),
+          notLike(ttBaseExpr, "TT_____P"),
+        ),
+      );
+    }
+  }
+
+  const whereClause = and(...filters);
+
+  // Fase 1: filas mínimas para agrupar y paginar por grupo en JS.
+  // Carga todas las filas coincidentes en memoria; aceptable mientras el
+  // parque Debian/Ubuntu/TT sea acotado (miles, no millones).
+  const minimalRows = await db
+    .select({
+      id: terminals.id,
+      hostname: terminals.hostname ?? "",
+      operatingSystem: terminals.operatingSystem,
+      manufacturer: terminals.manufacturer,
+      model: terminals.model,
+      nis: terminals.nis,
+    })
+    .from(terminals)
+    .leftJoin(offices, eq(terminals.nis, offices.code))
+    .where(whereClause)
+    .all();
+
+  let allGroups = sortTTGroups(
+    groupTTDevices(minimalRows),
+    params.sortBy,
+    params.sortOrder,
+  );
+  if (params.withVm) {
+    allGroups = allGroups.filter((g) => g.pairState === "complete");
+  }
+  const count = allGroups.length;
+  const pageGroups = allGroups.slice(offset, offset + limit + 1);
+  const hasMore = pageGroups.length > limit;
+  const visibleGroups: TTGroup[] = hasMore
+    ? pageGroups.slice(0, limit)
+    : pageGroups;
+
+  if (visibleGroups.length === 0) {
+    return { groups: [], count, hasMore };
+  }
+
+  // Fase 2: datos completos de las filas de los grupos visibles
+  const rowIds = visibleGroups.flatMap((g) => g.rows.map((r) => r.id));
+  const fullRows = await fullTerminalSelect()
+    .where(inArray(terminals.id, rowIds))
+    .all();
+
+  const itemsById = new Map<number, TerminalItem>();
+  for (const row of fullRows) {
+    itemsById.set(row.terminal.id, mapTerminalQueryRow(row));
+  }
+
+  const groups: TTGroupResultItem[] = visibleGroups.map((g) => {
+    const primary = itemsById.get(g.primaryId)!;
+    const vmRow = g.rows.find((r) => r.id !== g.primaryId);
+    const vm = vmRow ? (itemsById.get(vmRow.id) ?? null) : null;
+
+    // Cuando existe VM, mostrar el hardware de la VM en la fila física
+    // para que la columna de hardware siempre tenga datos reales (Debian 12).
+    const displayPrimary: TerminalItem = vm
+      ? {
+          ...primary,
+          manufacturer: vm.manufacturer,
+          model: vm.model,
+          serial: vm.serial,
+          ram: vm.ram,
+        }
+      : primary;
+
+    return {
+      base: g.base,
+      primary,
+      displayPrimary,
+      vm,
+      pairState: g.pairState,
+    };
+  });
+
+  return { groups, count, hasMore };
 }
 
 const knownBrandConditions = or(

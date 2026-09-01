@@ -155,6 +155,11 @@ const inventoryTabs = [
     value: "mediterranea",
     icon: "boxicons:tv",
   },
+  {
+    label: "T&T & STS",
+    value: "ttsts",
+    icon: "boxicons:cpu-filled",
+  },
   { label: "Cúbics", value: "cubics", icon: "boxicons:server-filled" },
 ];
 ---
@@ -177,7 +182,7 @@ const inventoryTabs = [
       activeValue={activeTab}
       name="inventory_tabs"
       id="inventory-view-switcher"
-      class="grid w-full grid-cols-3"
+      class="grid w-full grid-cols-4"
       containerClass="w-full"
     />
   </div>
@@ -463,6 +468,94 @@ const inventoryTabs = [
           Limpiar filtros
         </button>
       </div>
+
+      <!-- Filtros para T&T & STS -->
+      <div
+        id="header-right-ttsts"
+        class:list={[
+          "w-full flex-wrap items-center gap-3 transition-opacity duration-300",
+          activeTab === "ttsts" ? "flex" : "hidden",
+        ]}
+      >
+        <div
+          class="tabs tabs-box"
+          role="radiogroup"
+          aria-label="Filtrar por tipo T&T / STS"
+        >
+          <input
+            type="radio"
+            name="tt_type"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Todos"
+            checked
+            data-tt-type="all"
+          />
+          <input
+            type="radio"
+            name="tt_type"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Solo T&T"
+            data-tt-type="tyt"
+          />
+          <input
+            type="radio"
+            name="tt_type"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Solo STS"
+            data-tt-type="sts"
+          />
+        </div>
+        <label
+          id="tt-with-vm-wrapper"
+          class="hidden cursor-pointer items-center gap-2"
+        >
+          <input
+            type="checkbox"
+            id="tt-with-vm"
+            class="toggle toggle-sm"
+            data-tt-with-vm
+          />
+          <span class="text-sm font-medium">Solo con VM</span>
+        </label>
+        <div
+          class="tabs tabs-box"
+          role="radiogroup"
+          aria-label="Estado de conexión T&T & STS"
+        >
+          <input
+            type="radio"
+            name="tt_status"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Todas"
+            checked
+            data-tt-status="all"
+          />
+          <input
+            type="radio"
+            name="tt_status"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Online"
+            data-tt-status="online"
+          />
+          <input
+            type="radio"
+            name="tt_status"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Offline"
+            data-tt-status="offline"
+          />
+        </div>
+        <button
+          id="btn-clear-filters-ttsts"
+          class="btn btn-outline btn-error gap-2 font-semibold"
+          type="button"
+          aria-label="Limpiar todos los filtros de T&T & STS"
+          title="Limpiar todos los filtros"
+        >
+          <Icon name="boxicons:trash" size={16} />
+          Limpiar filtros
+        </button>
+      </div>
     </div>
 
     <!-- Contenedor de Búsqueda (Fila Inferior) -->
@@ -544,6 +637,39 @@ const inventoryTabs = [
                   getCleanBase() + "api/export/terminals?isMediterranea=true"
                 }
                 ariaLabel="Exportar Mediterránea a CSV"
+              />
+            )
+          }
+        </div>
+      </div>
+
+      <div
+        id="header-search-ttsts"
+        class:list={[
+          "w-full transition-opacity duration-300",
+          activeTab !== "ttsts" && "hidden",
+        ]}
+      >
+        <div class="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
+          <div class="w-full">
+            <SearchBar
+              id="tt-search"
+              placeholder="Buscar por hostname, IP o sucursal"
+            />
+          </div>
+          <div
+            class="badge badge-neutral badge-lg whitespace-nowrap"
+            aria-label="Cantidad de equipos T&T & STS"
+          >
+            <Icon name="boxicons:eye-filled" size={16} />
+            <span id="total-count-badge-ttsts">0 equipos</span>
+          </div>
+          {
+            canExport && (
+              <ExportCsvButton
+                id="export-csv-tt-btn"
+                href={getCleanBase() + "api/export/terminals?isTT=true"}
+                ariaLabel="Exportar T&T & STS a CSV"
               />
             )
           }
@@ -889,6 +1015,88 @@ const inventoryTabs = [
       />
     </section>
   </div>
+
+  <div
+    id="view-ttsts"
+    class:list={["space-y-6", activeTab !== "ttsts" && "hidden"]}
+  >
+    <div class="collapse collapse-arrow bg-secondary text-secondary-content has-checked:bg-accent has-checked:text-accent-content">
+      <input type="checkbox" />
+      <div class="collapse-title text-sm font-medium">
+        ¿Qué equipo me corresponde para conexión remota?
+      </div>
+      <div class="collapse-content text-sm">
+        <p>
+          En los equipos T&T y STS, la terminal operativa es la física
+          (Debian 10, hostname sin sufijo <code class="font-mono">-D</code>):
+          a ella se conecta el soporte remoto en caso de incidencia. El
+          registro con sufijo <code class="font-mono">-D</code> es la máquina
+          virtual (Debian 12) del mismo equipo. Los equipos de Telegrafía no
+          siguen esta convención.
+        </p>
+      </div>
+    </div>
+
+    <section class="space-y-3">
+      <div id="ttsts-table-wrapper">
+        <DataTable
+          id="table-ttsts"
+          ariaLabel="Inventario de equipos T&T & STS"
+          minWidthClass="min-w-280"
+          headerGridClass={terminalHeaderGridClass}
+          rowGridClass={terminalRowGridClass}
+          serverSideSort={true}
+        >
+          <div slot="header" class="col-span-2">
+            <DataTableHeaderCell sortKey="hostname">
+              Hostname
+            </DataTableHeaderCell>
+          </div>
+          <div slot="header" class="col-span-3">
+            <DataTableHeaderCell sortKey="hardware">
+              Hardware
+            </DataTableHeaderCell>
+          </div>
+          <div slot="header" class="col-span-3">
+            <DataTableHeaderCell sortKey="os">
+              Sistema operativo
+            </DataTableHeaderCell>
+          </div>
+          <div slot="header" class="col-span-2">
+            <DataTableHeaderCell sortKey="location">
+              Ubicación
+            </DataTableHeaderCell>
+          </div>
+          <div slot="header" class="col-span-2">
+            <DataTableHeaderCell align="right">
+              Último contacto
+            </DataTableHeaderCell>
+          </div>
+          <div id="table-ttsts-body" class="contents"></div>
+        </DataTable>
+
+        <div
+          id="scroll-sentinel-ttsts"
+          class:list={["flex justify-center py-8 text-center", "hidden"]}
+          data-has-more="false"
+        >
+          <span
+            class="loading loading-spinner loading-md text-primary"
+            id="loading-spinner-ttsts"></span>
+        </div>
+      </div>
+
+      <SearchEmptyState
+        id="no-results-state-ttsts"
+        class="hidden"
+        title="No hay coincidencias"
+        description="No hemos podido encontrar equipos T&T & STS que coincidan con los filtros seleccionados. Probá modificando los criterios o limpiando los filtros."
+        showClearButton={true}
+        clearButtonId="btn-clear-empty-ttsts"
+        clearButtonText="Limpiar filtros"
+      />
+    </section>
+  </div>
 </PageContainer>
 
 <script>
@@ -916,15 +1124,18 @@ const inventoryTabs = [
     const isTerminales = activeValue === "terminales";
     const isCubics = activeValue === "cubics";
     const isMediterranea = activeValue === "mediterranea";
+    const isTTSTS = activeValue === "ttsts";
 
     viewTerminales?.classList.toggle("hidden", !isTerminales);
     viewCubics?.classList.toggle("hidden", !isCubics);
     viewMediterranea?.classList.toggle("hidden", !isMediterranea);
+    viewTT?.classList.toggle("hidden", !isTTSTS);
 
     if (isTerminales) {
       searchTerminales?.classList.remove("hidden");
       searchCubics?.classList.add("hidden");
       searchMediterranea?.classList.add("hidden");
+      searchTT?.classList.add("hidden");
 
       rightTerminales?.classList.remove("hidden");
       rightTerminales?.classList.add("flex");
@@ -934,10 +1145,14 @@ const inventoryTabs = [
 
       rightMediterranea?.classList.add("hidden");
       rightMediterranea?.classList.remove("flex");
+
+      rightTT?.classList.add("hidden");
+      rightTT?.classList.remove("flex");
     } else if (isCubics) {
       searchTerminales?.classList.add("hidden");
       searchCubics?.classList.remove("hidden");
       searchMediterranea?.classList.add("hidden");
+      searchTT?.classList.add("hidden");
 
       rightTerminales?.classList.add("hidden");
       rightTerminales?.classList.remove("flex");
@@ -947,10 +1162,14 @@ const inventoryTabs = [
 
       rightMediterranea?.classList.add("hidden");
       rightMediterranea?.classList.remove("flex");
-    } else {
+
+      rightTT?.classList.add("hidden");
+      rightTT?.classList.remove("flex");
+    } else if (isMediterranea) {
       searchTerminales?.classList.add("hidden");
       searchCubics?.classList.add("hidden");
       searchMediterranea?.classList.remove("hidden");
+      searchTT?.classList.add("hidden");
 
       rightTerminales?.classList.add("hidden");
       rightTerminales?.classList.remove("flex");
@@ -960,6 +1179,26 @@ const inventoryTabs = [
 
       rightMediterranea?.classList.remove("hidden");
       rightMediterranea?.classList.add("flex");
+
+      rightTT?.classList.add("hidden");
+      rightTT?.classList.remove("flex");
+    } else {
+      searchTerminales?.classList.add("hidden");
+      searchCubics?.classList.add("hidden");
+      searchMediterranea?.classList.add("hidden");
+      searchTT?.classList.remove("hidden");
+
+      rightTerminales?.classList.add("hidden");
+      rightTerminales?.classList.remove("flex");
+
+      rightCubics?.classList.add("hidden");
+      rightCubics?.classList.remove("flex");
+
+      rightMediterranea?.classList.add("hidden");
+      rightMediterranea?.classList.remove("flex");
+
+      rightTT?.classList.remove("hidden");
+      rightTT?.classList.add("flex");
     }
   };
 
@@ -972,6 +1211,10 @@ const inventoryTabs = [
     ) {
       mediCurrentPage = 1;
       fetchMediterranea(true);
+    }
+    if (e.detail.value === "ttsts" && ttContainer?.children.length === 0) {
+      ttCurrentPage = 1;
+      fetchTT(true);
     }
   });
 
@@ -1035,6 +1278,37 @@ const inventoryTabs = [
   );
   const mediExportCsvBtn = document.getElementById("export-csv-medi-btn");
 
+  const viewTT = document.getElementById("view-ttsts");
+  const searchTT = document.getElementById("header-search-ttsts");
+  const rightTT = document.getElementById("header-right-ttsts");
+  const ttSearchInput =
+    document.querySelector<HTMLInputElement>("#tt-search");
+  const ttStatusRadioInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>("[data-tt-status]"),
+  );
+  const ttSentinel = document.getElementById("scroll-sentinel-ttsts");
+  const ttSpinner = document.getElementById("loading-spinner-ttsts");
+  const ttContainer = document.getElementById("table-ttsts-body");
+  const ttTotalCountBadge = document.getElementById(
+    "total-count-badge-ttsts",
+  );
+  const ttExportCsvBtn = document.getElementById("export-csv-tt-btn");
+  const ttTypeRadioInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>("[data-tt-type]"),
+  );
+  const ttWithVmToggle = document.getElementById("tt-with-vm");
+  const ttWithVmWrapper = document.getElementById("tt-with-vm-wrapper");
+
+  let ttCurrentPage = 1;
+  let ttCurrentSearch = ttSearchInput?.value.trim() || "";
+  let ttCurrentStatus =
+    ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
+  let ttCurrentType =
+    ttTypeRadioInputs.find((r) => r.checked)?.dataset.ttType || "all";
+  let ttWithVm = false;
+  let ttHasMore = false;
+  let ttIsLoading = false;
+
   let mediCurrentPage = 1;
   let mediCurrentSearch = mediSearchInput?.value.trim() || "";
   let mediCurrentType = mediTypeSelect?.value || "all";
@@ -1090,6 +1364,29 @@ const inventoryTabs = [
         search: mediCurrentSearch,
         mediterraneaType: mediCurrentType,
         status: mediCurrentStatus,
+      };
+
+      for (const [key, val] of Object.entries(filters)) {
+        if (val && val !== "all") {
+          params.set(key, val);
+        } else {
+          params.delete(key);
+        }
+      }
+    } else if (activeTab === "ttsts") {
+      params.delete("os");
+      params.delete("osVariant");
+      params.delete("architecture");
+      params.delete("brand");
+      params.delete("ram");
+      params.delete("model");
+      params.delete("mediterraneaType");
+
+      const filters: Record<string, string> = {
+        search: ttCurrentSearch,
+        status: ttCurrentStatus,
+        ttType: ttCurrentType,
+        withVm: ttWithVm ? "true" : "",
       };
 
       for (const [key, val] of Object.entries(filters)) {
@@ -1158,6 +1455,21 @@ const inventoryTabs = [
       if (mediCurrentStatus && mediCurrentStatus !== "all")
         queryParams.set("status", mediCurrentStatus);
       mediExportCsvBtn.setAttribute(
+        "href",
+        `${baseUrl}api/export/terminals${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
+      );
+    }
+
+    if (ttExportCsvBtn) {
+      const queryParams = new URLSearchParams();
+      queryParams.set("isTT", "true");
+      if (ttCurrentSearch) queryParams.set("search", ttCurrentSearch);
+      if (ttCurrentStatus && ttCurrentStatus !== "all")
+        queryParams.set("status", ttCurrentStatus);
+      if (ttCurrentType && ttCurrentType !== "all")
+        queryParams.set("ttType", ttCurrentType);
+      if (ttWithVm) queryParams.set("withVm", "true");
+      ttExportCsvBtn.setAttribute(
         "href",
         `${baseUrl}api/export/terminals${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
       );
@@ -1458,6 +1770,184 @@ const inventoryTabs = [
     );
     observer.observe(mediSentinel);
   }
+
+  const fetchTT = async (isNewSearch: boolean, showLoadingUI = true) => {
+    if (ttIsLoading) return;
+    ttIsLoading = true;
+    if (showLoadingUI) ttSpinner?.classList.remove("hidden");
+
+    try {
+      const params = new URLSearchParams();
+      params.set("isTT", "true");
+      params.set("page", ttCurrentPage.toString());
+      params.set("limit", "50");
+      if (ttCurrentSearch) params.set("search", ttCurrentSearch);
+      if (ttCurrentStatus && ttCurrentStatus !== "all")
+        params.set("status", ttCurrentStatus);
+      if (ttCurrentType && ttCurrentType !== "all")
+        params.set("ttType", ttCurrentType);
+      if (ttWithVm) params.set("withVm", "true");
+      if (currentSortBy) {
+        params.set("sortBy", currentSortBy);
+        if (currentSortOrder) params.set("sortOrder", currentSortOrder);
+      }
+
+      const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/terminals?${params.toString()}`,
+      );
+      if (!response.ok) throw new Error("API call failed");
+
+      const html = await response.text();
+      const newHasMore = response.headers.get("X-Has-More") === "true";
+      const totalCount = response.headers.get("X-Total-Count") || "0";
+
+      ttHasMore = newHasMore;
+
+      if (ttTotalCountBadge) {
+        ttTotalCountBadge.textContent = `${totalCount} equipos`;
+      }
+
+      if (ttContainer) {
+        if (isNewSearch) {
+          ttContainer.innerHTML = html;
+        } else {
+          ttContainer.insertAdjacentHTML("beforeend", html);
+        }
+      }
+
+      const rowCount =
+        ttContainer?.querySelectorAll("[data-terminal-row]").length ?? 0;
+      const noResultsState = document.getElementById(
+        "no-results-state-ttsts",
+      );
+      const tableWrapper = document.getElementById("ttsts-table-wrapper");
+
+      if (noResultsState && tableWrapper) {
+        if (rowCount === 0) {
+          noResultsState.classList.remove("hidden");
+          noResultsState.classList.add("flex");
+          tableWrapper.classList.add("hidden");
+        } else {
+          noResultsState.classList.add("hidden");
+          noResultsState.classList.remove("flex");
+          tableWrapper.classList.remove("hidden");
+        }
+      }
+
+      if (ttCurrentSearch && ttContainer) {
+        const newArticles = Array.from(
+          ttContainer.querySelectorAll<HTMLElement>("[data-terminal-row]"),
+        );
+        newArticles.forEach((item) => {
+          highlightSearchTargets(item, ttCurrentSearch);
+        });
+      }
+
+      if (!ttHasMore) {
+        ttSentinel?.classList.add("hidden");
+      } else {
+        ttSentinel?.classList.remove("hidden");
+      }
+    } catch (err) {
+      console.error("Error fetching T&T & STS:", err);
+    } finally {
+      ttIsLoading = false;
+      if (showLoadingUI) ttSpinner?.classList.add("hidden");
+    }
+  };
+
+  if (ttSentinel) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !ttIsLoading && ttHasMore) {
+          ttCurrentPage++;
+          fetchTT(false);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(ttSentinel);
+  }
+
+  const syncTtWithVmVisibility = () => {
+    if (!ttWithVmWrapper || !ttWithVmToggle) return;
+    if (ttCurrentType === "tyt") {
+      ttWithVmWrapper.classList.remove("hidden");
+      ttWithVmWrapper.classList.add("flex");
+    } else {
+      ttWithVmWrapper.classList.add("hidden");
+      ttWithVmWrapper.classList.remove("flex");
+      if (ttWithVmToggle.checked) ttWithVmToggle.checked = false;
+      ttWithVm = false;
+    }
+  };
+
+  let ttDebounceTimeout: number;
+  const triggerTTSearch = () => {
+    clearTimeout(ttDebounceTimeout);
+    ttDebounceTimeout = window.setTimeout(() => {
+      ttCurrentPage = 1;
+      ttCurrentSearch = ttSearchInput?.value.trim() || "";
+      ttCurrentStatus =
+        ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
+      ttCurrentType =
+        ttTypeRadioInputs.find((r) => r.checked)?.dataset.ttType || "all";
+      ttWithVm = ttWithVmToggle?.checked ?? false;
+      syncTtWithVmVisibility();
+      fetchTT(true);
+      syncFiltersToURL();
+    }, 300);
+  };
+
+  ttSearchInput?.addEventListener("input", triggerTTSearch);
+  ttStatusRadioInputs.forEach((radio) =>
+    radio.addEventListener("change", triggerTTSearch),
+  );
+  ttTypeRadioInputs.forEach((radio) =>
+    radio.addEventListener("change", triggerTTSearch),
+  );
+  ttWithVmToggle?.addEventListener("change", triggerTTSearch);
+
+  const btnClearTT = document.getElementById("btn-clear-filters-ttsts");
+  btnClearTT?.addEventListener("click", () => {
+    if (ttSearchInput) ttSearchInput.value = "";
+    ttStatusRadioInputs.forEach((radio, idx) => {
+      radio.checked = idx === 0;
+    });
+    ttTypeRadioInputs.forEach((radio, idx) => {
+      radio.checked = idx === 0;
+    });
+    if (ttWithVmToggle) ttWithVmToggle.checked = false;
+    ttCurrentPage = 1;
+    ttCurrentSearch = "";
+    ttCurrentStatus = "all";
+    ttCurrentType = "all";
+    ttWithVm = false;
+    syncTtWithVmVisibility();
+    fetchTT(true);
+    syncFiltersToURL();
+  });
+
+  const btnClearEmptyTT = document.getElementById("btn-clear-empty-ttsts");
+  btnClearEmptyTT?.addEventListener("click", () => {
+    btnClearTT?.click();
+  });
+
+  const ttTable = document.getElementById("table-ttsts");
+  ttTable?.addEventListener("table-sort-change", (e: any) => {
+    const { sortKey, direction } = e.detail;
+    currentSortBy = direction === "none" ? null : sortKey;
+    currentSortOrder =
+      direction === "ascending"
+        ? "asc"
+        : direction === "descending"
+          ? "desc"
+          : null;
+    ttCurrentPage = 1;
+    fetchTT(true, false);
+    syncFiltersToURL();
+  });
 
   let debounceTimeout: number;
   const triggerSearch = () => {
@@ -1849,6 +2339,25 @@ const inventoryTabs = [
           });
       }
     }
+
+    if (ttTable) {
+      ttTable.dataset.tableSortKey = currentSortBy;
+      ttTable.dataset.tableSortDirection = dir;
+      const control = ttTable.querySelector(
+        `[data-table-sort-key="${currentSortBy}"]`,
+      );
+      if (control) {
+        control.setAttribute("data-table-sort-direction", dir);
+        control.setAttribute("aria-sort", dir);
+        control
+          .querySelectorAll("[data-table-sort-icon]")
+          .forEach((icon: any) => {
+            const shouldShow = icon.dataset.tableSortIcon === dir;
+            icon.classList.toggle("hidden", !shouldShow);
+            icon.classList.toggle("opacity-0", !shouldShow);
+          });
+      }
+    }
   }
 
   const initialUrlParams = new URLSearchParams(window.location.search);
@@ -1873,6 +2382,33 @@ const inventoryTabs = [
     }
 
     fetchMediterranea(true);
+  }
+
+  if (initialActiveTab === "ttsts") {
+    if (ttSearchInput && initialUrlParams.has("search")) {
+      ttSearchInput.value = initialUrlParams.get("search") || "";
+      ttCurrentSearch = ttSearchInput.value.trim();
+    }
+    if (initialUrlParams.has("status")) {
+      const statusVal = initialUrlParams.get("status") || "all";
+      ttStatusRadioInputs.forEach((radio) => {
+        radio.checked = radio.dataset.ttStatus === statusVal;
+      });
+      ttCurrentStatus = statusVal;
+    }
+    if (initialUrlParams.has("ttType")) {
+      const typeVal = initialUrlParams.get("ttType") || "all";
+      ttTypeRadioInputs.forEach((radio) => {
+        radio.checked = radio.dataset.ttType === typeVal;
+      });
+      ttCurrentType = typeVal;
+    }
+    if (initialUrlParams.get("withVm") === "true" && ttWithVmToggle) {
+      ttWithVmToggle.checked = true;
+      ttWithVm = true;
+    }
+    syncTtWithVmVisibility();
+    fetchTT(true);
   }
 </script>
 <script
