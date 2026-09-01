@@ -480,34 +480,6 @@ const inventoryTabs = [
         <div
           class="tabs tabs-box"
           role="radiogroup"
-          aria-label="Estado de conexión T&T & STS"
-        >
-          <input
-            type="radio"
-            name="tt_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label="Todas"
-            checked
-            data-tt-status="all"
-          />
-          <input
-            type="radio"
-            name="tt_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label="Online"
-            data-tt-status="online"
-          />
-          <input
-            type="radio"
-            name="tt_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label="Offline"
-            data-tt-status="offline"
-          />
-        </div>
-        <div
-          class="tabs tabs-box"
-          role="radiogroup"
           aria-label="Filtrar por tipo T&T / STS"
         >
           <input
@@ -545,6 +517,34 @@ const inventoryTabs = [
           />
           <span class="text-sm font-medium">Solo con VM</span>
         </label>
+        <div
+          class="tabs tabs-box"
+          role="radiogroup"
+          aria-label="Estado de conexión T&T & STS"
+        >
+          <input
+            type="radio"
+            name="tt_status"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Todas"
+            checked
+            data-tt-status="all"
+          />
+          <input
+            type="radio"
+            name="tt_status"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Online"
+            data-tt-status="online"
+          />
+          <input
+            type="radio"
+            name="tt_status"
+            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+            aria-label="Offline"
+            data-tt-status="offline"
+          />
+        </div>
         <button
           id="btn-clear-filters-ttsts"
           class="btn btn-outline btn-error gap-2 font-semibold"
