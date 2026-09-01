@@ -533,6 +533,18 @@ const inventoryTabs = [
             data-tt-type="sts"
           />
         </div>
+        <label
+          id="tt-with-vm-wrapper"
+          class="hidden cursor-pointer items-center gap-2"
+        >
+          <input
+            type="checkbox"
+            id="tt-with-vm"
+            class="toggle toggle-sm"
+            data-tt-with-vm
+          />
+          <span class="text-sm font-medium">Solo con VM</span>
+        </label>
         <button
           id="btn-clear-filters-ttsts"
           class="btn btn-outline btn-error gap-2 font-semibold"
@@ -1284,6 +1296,8 @@ const inventoryTabs = [
   const ttTypeRadioInputs = Array.from(
     document.querySelectorAll<HTMLInputElement>("[data-tt-type]"),
   );
+  const ttWithVmToggle = document.getElementById("tt-with-vm");
+  const ttWithVmWrapper = document.getElementById("tt-with-vm-wrapper");
 
   let ttCurrentPage = 1;
   let ttCurrentSearch = ttSearchInput?.value.trim() || "";
@@ -1291,6 +1305,7 @@ const inventoryTabs = [
     ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
   let ttCurrentType =
     ttTypeRadioInputs.find((r) => r.checked)?.dataset.ttType || "all";
+  let ttWithVm = false;
   let ttHasMore = false;
   let ttIsLoading = false;
 
@@ -1371,6 +1386,7 @@ const inventoryTabs = [
         search: ttCurrentSearch,
         status: ttCurrentStatus,
         ttType: ttCurrentType,
+        withVm: ttWithVm ? "true" : "",
       };
 
       for (const [key, val] of Object.entries(filters)) {
@@ -1452,6 +1468,7 @@ const inventoryTabs = [
         queryParams.set("status", ttCurrentStatus);
       if (ttCurrentType && ttCurrentType !== "all")
         queryParams.set("ttType", ttCurrentType);
+      if (ttWithVm) queryParams.set("withVm", "true");
       ttExportCsvBtn.setAttribute(
         "href",
         `${baseUrl}api/export/terminals${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
@@ -1769,6 +1786,7 @@ const inventoryTabs = [
         params.set("status", ttCurrentStatus);
       if (ttCurrentType && ttCurrentType !== "all")
         params.set("ttType", ttCurrentType);
+      if (ttWithVm) params.set("withVm", "true");
       if (currentSortBy) {
         params.set("sortBy", currentSortBy);
         if (currentSortOrder) params.set("sortOrder", currentSortOrder);
@@ -1852,6 +1870,19 @@ const inventoryTabs = [
     observer.observe(ttSentinel);
   }
 
+  const syncTtWithVmVisibility = () => {
+    if (!ttWithVmWrapper || !ttWithVmToggle) return;
+    if (ttCurrentType === "tyt") {
+      ttWithVmWrapper.classList.remove("hidden");
+      ttWithVmWrapper.classList.add("flex");
+    } else {
+      ttWithVmWrapper.classList.add("hidden");
+      ttWithVmWrapper.classList.remove("flex");
+      if (ttWithVmToggle.checked) ttWithVmToggle.checked = false;
+      ttWithVm = false;
+    }
+  };
+
   let ttDebounceTimeout: number;
   const triggerTTSearch = () => {
     clearTimeout(ttDebounceTimeout);
@@ -1862,6 +1893,8 @@ const inventoryTabs = [
         ttStatusRadioInputs.find((r) => r.checked)?.dataset.ttStatus || "all";
       ttCurrentType =
         ttTypeRadioInputs.find((r) => r.checked)?.dataset.ttType || "all";
+      ttWithVm = ttWithVmToggle?.checked ?? false;
+      syncTtWithVmVisibility();
       fetchTT(true);
       syncFiltersToURL();
     }, 300);
@@ -1874,6 +1907,7 @@ const inventoryTabs = [
   ttTypeRadioInputs.forEach((radio) =>
     radio.addEventListener("change", triggerTTSearch),
   );
+  ttWithVmToggle?.addEventListener("change", triggerTTSearch);
 
   const btnClearTT = document.getElementById("btn-clear-filters-ttsts");
   btnClearTT?.addEventListener("click", () => {
@@ -1884,10 +1918,13 @@ const inventoryTabs = [
     ttTypeRadioInputs.forEach((radio, idx) => {
       radio.checked = idx === 0;
     });
+    if (ttWithVmToggle) ttWithVmToggle.checked = false;
     ttCurrentPage = 1;
     ttCurrentSearch = "";
     ttCurrentStatus = "all";
     ttCurrentType = "all";
+    ttWithVm = false;
+    syncTtWithVmVisibility();
     fetchTT(true);
     syncFiltersToURL();
   });
@@ -2366,6 +2403,11 @@ const inventoryTabs = [
       });
       ttCurrentType = typeVal;
     }
+    if (initialUrlParams.get("withVm") === "true" && ttWithVmToggle) {
+      ttWithVmToggle.checked = true;
+      ttWithVm = true;
+    }
+    syncTtWithVmVisibility();
     fetchTT(true);
   }
 </script>

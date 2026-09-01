@@ -177,6 +177,7 @@ export interface GetTerminalsParams {
   isMediterranea?: boolean;
   mediterraneaType?: string;
   ttType?: "all" | "tyt" | "sts";
+  withVm?: boolean;
 }
 
 export async function getTerminals(params: GetTerminalsParams = {}) {
@@ -503,11 +504,14 @@ export async function getTTGroups(
     .where(whereClause)
     .all();
 
-  const allGroups = sortTTGroups(
+  let allGroups = sortTTGroups(
     groupTTDevices(minimalRows),
     params.sortBy,
     params.sortOrder,
   );
+  if (params.withVm) {
+    allGroups = allGroups.filter((g) => g.pairState === "complete");
+  }
   const count = allGroups.length;
   const pageGroups = allGroups.slice(offset, offset + limit + 1);
   const hasMore = pageGroups.length > limit;

@@ -28,6 +28,7 @@ const ttType = (searchParams.get("ttType") || "all") as
   | "all"
   | "tyt"
   | "sts";
+const withVm = searchParams.get("withVm") === "true";
 
 const ttResult = isTT
   ? await getTTGroups({
@@ -38,6 +39,7 @@ const ttResult = isTT
       sortBy,
       sortOrder,
       ttType,
+      withVm,
     })
   : null;
 const regular = !isTT

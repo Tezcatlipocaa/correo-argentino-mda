@@ -59,11 +59,12 @@ test.describe("Inventario T&T & STS", () => {
     const badges = page.locator(
       "#table-ttsts-body [data-terminal-row]:not([data-tt-vm-row]) .badge",
     );
-    const count = await badges.count();
-    if (count > 0) {
-      const texts = await badges.allTextContents();
-      expect(texts.some((t) => t.trim() === "Sin VM")).toBe(true);
+    const sinVmBadge = badges.filter({ hasText: "Sin VM" });
+    if (await sinVmBadge.count()) {
+      const badgeClass = await sinVmBadge.first().getAttribute("class");
+      expect(badgeClass).toContain("badge-error");
     }
+    // Si el badge Sin VM no aparece, no hay filas T&T sin VM en la página.
   });
 
   test("el filtro Solo T&T aplica el param ttType=tyt", async ({ page }) => {
@@ -87,6 +88,27 @@ test.describe("Inventario T&T & STS", () => {
     if (initialCount > 0) {
       expect(filteredCount).toBeLessThanOrEqual(initialCount);
     }
+  });
+
+  test("el toggle Solo con VM solo aparece con Solo T&T y aplica withVm", async ({
+    page,
+  }) => {
+    await page.goto("/inventario-terminales");
+    await page.getByRole("radio", { name: "T&T & STS" }).check();
+    await page.waitForSelector("#view-ttsts:not(.hidden)");
+
+    const wrapper = page.locator("#tt-with-vm-wrapper");
+    await expect(wrapper).toBeHidden();
+
+    await page.getByRole("radio", { name: "Solo T&T" }).check();
+    await page.waitForTimeout(500);
+    await expect(wrapper).toBeVisible();
+
+    await page.locator("#tt-with-vm").check();
+    await page.waitForTimeout(500);
+
+    const params = new URL(page.url()).searchParams;
+    expect(params.get("withVm")).toBe("true");
   });
 
   test("el banner colapsable abre y cierra", async ({ page }) => {

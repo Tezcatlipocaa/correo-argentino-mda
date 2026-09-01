@@ -70,6 +70,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const mediterraneaType = url.searchParams.get("mediterraneaType") || "all";
   const isTT = url.searchParams.get("isTT") === "true";
   const ttType = url.searchParams.get("ttType") || "all";
+  const withVm = url.searchParams.get("withVm") === "true";
 
   // Build SQL dynamically
   const selectCols = SQL_COLUMNS.map((col) => `t.${col} AS ${col}`).join(", ");
@@ -110,6 +111,12 @@ export const GET: APIRoute = async ({ locals, url }) => {
       "(LOWER(t.operating_system) LIKE ? OR LOWER(t.operating_system) LIKE ?) AND t.hostname NOT LIKE ? AND t.hostname NOT LIKE ?",
     );
     queryParams.push("%debian%", "%ubuntu%", "TT_____P", "TT_____P-D");
+  }
+
+  if (isTT && withVm) {
+    conditions.push(
+      "EXISTS (SELECT 1 FROM terminals t2 WHERE t2.hostname = CASE WHEN t.hostname LIKE '%-D' THEN substr(t.hostname, 1, length(t.hostname) - 2) ELSE t.hostname END || '-D')",
+    );
   }
 
   if (search && search.trim() !== "") {
