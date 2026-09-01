@@ -101,13 +101,15 @@ export const GET: APIRoute = async ({ locals, url }) => {
   }
 
   if (isTT && ttType === "tyt") {
-    conditions.push("t.hostname LIKE ?");
-    queryParams.push("TT_____P");
+    conditions.push(
+      "(t.hostname LIKE ? OR t.hostname LIKE ?)",
+    );
+    queryParams.push("TT_____P", "TT_____P-D");
   } else if (isTT && ttType === "sts") {
     conditions.push(
-      "(LOWER(t.operating_system) LIKE ? OR LOWER(t.operating_system) LIKE ?) AND t.hostname NOT LIKE ?",
+      "(LOWER(t.operating_system) LIKE ? OR LOWER(t.operating_system) LIKE ?) AND t.hostname NOT LIKE ? AND t.hostname NOT LIKE ?",
     );
-    queryParams.push("%debian%", "%ubuntu%", "TT_____P");
+    queryParams.push("%debian%", "%ubuntu%", "TT_____P", "TT_____P-D");
   }
 
   if (search && search.trim() !== "") {

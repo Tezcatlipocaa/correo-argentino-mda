@@ -41,13 +41,16 @@ const { terminal, base, terminalRowGridClass = "grid grid-cols-12 items-start" }
       >
         {terminal.ip}
       </span>
+      <span
+        class="text-base-content/50 truncate font-mono text-xs"
+        data-highlight-target
+      >
+        {terminal.mac}
+      </span>
     </div>
   </div>
 
   <div class="flex min-w-0 flex-col gap-0.5 col-span-3">
-    <span class="text-base-content/80 truncate text-xs" data-highlight-target>
-      {terminal.manufacturer} {terminal.model}
-    </span>
     <span class="badge badge-soft badge-info badge-xs w-fit gap-1">
       VM de
       <span class="ml-0.5 font-mono" data-highlight-target>{base}</span>
@@ -69,14 +72,12 @@ const { terminal, base, terminalRowGridClass = "grid grid-cols-12 items-start" }
     </span>
   </div>
 
-  <div class="col-span-2 flex flex-row items-center justify-end font-mono">
+  <div class="col-span-2 flex flex-col items-end justify-center font-mono">
     <span class="text-base-content/70 truncate text-xs">
       {terminal.lastContactDate}
     </span>
-    <Icon
-      name="boxicons:clock-filled"
-      size={12}
-      class="text-base-content/40 ml-1.5 shrink-0"
-    />
+    <span class="text-base-content/50 truncate text-xs">
+      {terminal.lastContactTime}
+    </span>
   </div>
 </article>

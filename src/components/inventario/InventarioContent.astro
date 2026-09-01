@@ -1008,12 +1008,12 @@ const inventoryTabs = [
     id="view-ttsts"
     class:list={["space-y-6", activeTab !== "ttsts" && "hidden"]}
   >
-    <div class="collapse collapse-arrow bg-info/10 border-info/20 rounded-box border">
+    <div class="collapse collapse-arrow bg-secondary text-secondary-content has-checked:bg-accent has-checked:text-accent-content">
       <input type="checkbox" />
-      <div class="collapse-title text-sm font-medium text-info-content">
+      <div class="collapse-title text-sm font-medium">
         ¿Qué equipo me corresponde para conexión remota?
       </div>
-      <div class="collapse-content text-sm text-base-content/70">
+      <div class="collapse-content text-sm">
         <p>
           En los equipos T&T y STS, la terminal operativa es la física
           (Debian 10, hostname sin sufijo <code class="font-mono">-D</code>):

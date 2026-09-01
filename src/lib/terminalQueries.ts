@@ -465,18 +465,23 @@ export async function getTTGroups(
     ),
   );
 
-  if (params.ttType === "tyt") {
-    filters.push(like(terminals.hostname, "TT_____P"));
-  } else if (params.ttType === "sts") {
-    filters.push(
-      and(
-        or(
-          like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
-          like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+  if (params.ttType === "tyt" || params.ttType === "sts") {
+    // T&T se detecta por base (hostname sin sufijo -D), igual que computeTTBase.
+    const ttBaseExpr = sql`CASE WHEN ${terminals.hostname} LIKE '%-D' THEN substr(${terminals.hostname}, 1, length(${terminals.hostname}) - 2) ELSE ${terminals.hostname} END`;
+
+    if (params.ttType === "tyt") {
+      filters.push(like(ttBaseExpr, "TT_____P"));
+    } else {
+      filters.push(
+        and(
+          or(
+            like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
+            like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+          ),
+          notLike(ttBaseExpr, "TT_____P"),
         ),
-        notLike(terminals.hostname, "TT_____P"),
-      ),
-    );
+      );
+    }
   }
 
   const whereClause = and(...filters);

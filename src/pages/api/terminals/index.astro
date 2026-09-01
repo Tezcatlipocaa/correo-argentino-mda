@@ -24,9 +24,21 @@ const sortOrder = (searchParams.get("sortOrder") || undefined) as
 const isMediterranea = searchParams.get("isMediterranea") === "true";
 const mediterraneaType = searchParams.get("mediterraneaType") || "all";
 const isTT = searchParams.get("isTT") === "true";
+const ttType = (searchParams.get("ttType") || "all") as
+  | "all"
+  | "tyt"
+  | "sts";
 
 const ttResult = isTT
-  ? await getTTGroups({ page, limit, search, status, sortBy, sortOrder })
+  ? await getTTGroups({
+      page,
+      limit,
+      search,
+      status,
+      sortBy,
+      sortOrder,
+      ttType,
+    })
   : null;
 const regular = !isTT
   ? await getTerminals({
