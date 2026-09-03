@@ -12,8 +12,15 @@ const nis = Astro.params.nis;
 if (!nis) return new Response(null, { status: 400 });
 
 const SENIOR_KEYWORDS = [
-  "jefe", "supervisor", "gerente", "director", "coordinador",
-  "subgerente", "responsable", "lider", "líder",
+  "jefe",
+  "supervisor",
+  "gerente",
+  "director",
+  "coordinador",
+  "subgerente",
+  "responsable",
+  "lider",
+  "líder",
 ];
 
 function isSenior(position: string | null): boolean {
@@ -67,7 +74,11 @@ if (results.length === 0) {
 
 const senior = results
   .filter((r) => isSenior(r.position))
-  .sort((a, b) => (a.position ?? "").localeCompare(b.position ?? "") || (a.fullname ?? "").localeCompare(b.fullname ?? ""));
+  .sort(
+    (a, b) =>
+      (a.position ?? "").localeCompare(b.position ?? "") ||
+      (a.fullname ?? "").localeCompare(b.fullname ?? ""),
+  );
 
 let display;
 if (senior.length > 0) {
@@ -75,7 +86,11 @@ if (senior.length > 0) {
 } else {
   const others = results
     .filter((r) => !isSenior(r.position))
-    .sort((a, b) => (a.position ?? "").localeCompare(b.position ?? "") || (a.fullname ?? "").localeCompare(b.fullname ?? ""));
+    .sort(
+      (a, b) =>
+        (a.position ?? "").localeCompare(b.position ?? "") ||
+        (a.fullname ?? "").localeCompare(b.fullname ?? ""),
+    );
   display = others.slice(0, 10);
 }
 

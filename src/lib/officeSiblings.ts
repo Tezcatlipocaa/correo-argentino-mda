@@ -42,8 +42,7 @@ export function buildSiblingMap(
         .map((o) => ({ code: o.code, name: o.name, type: o.type }))
         .sort(
           (a, b) =>
-            a.type.localeCompare(b.type) ||
-            a.code.localeCompare(b.code),
+            a.type.localeCompare(b.type) || a.code.localeCompare(b.code),
         );
       result.set(item.code, siblings);
     }

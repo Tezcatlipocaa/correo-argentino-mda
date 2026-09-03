@@ -317,7 +317,7 @@ export async function getTicketComments(
         ok: false,
         comments: [],
         commenting_operators: [],
-        message: res.message || "Error al obtener comentarios de InvGate",
+        message: (!res.ok ? res.message : undefined) || "Error al obtener comentarios de InvGate",
       };
     }
 

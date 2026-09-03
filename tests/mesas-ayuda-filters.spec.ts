@@ -1,16 +1,16 @@
-import 'dotenv/config';
-import { test, expect } from '@playwright/test';
+import "dotenv/config";
+import { test, expect } from "@playwright/test";
 import {
   createTestUserAndSession,
   cleanupTestUser,
   setSessionCookie,
   type TestUser,
-} from './helpers/auth';
+} from "./helpers/auth";
 
 let adminUser: TestUser;
 
 test.beforeAll(async () => {
-  adminUser = await createTestUserAndSession('admin');
+  adminUser = await createTestUserAndSession("admin");
 });
 
 test.afterAll(async () => {
@@ -21,20 +21,22 @@ test.beforeEach(async ({ context }) => {
   await setSessionCookie(context, adminUser.signedSessionId);
 });
 
-test('La barra de busqueda y las acciones ocupan la segunda fila', async ({ page }) => {
-  await page.goto('/mesas-de-ayuda');
+test("La barra de busqueda y las acciones ocupan la segunda fila", async ({
+  page,
+}) => {
+  await page.goto("/mesas-de-ayuda");
 
-  const searchInput = page.locator('#soportes-search');
+  const searchInput = page.locator("#soportes-search");
   await expect(searchInput).toBeVisible();
   await expect(searchInput).toHaveAttribute(
-    'placeholder',
-    'Buscar por nombre SM, Invgate, tópico…',
+    "placeholder",
+    "Buscar por nombre SM, Invgate, tópico…",
   );
 
   const searchBar = page.locator('label[for="soportes-search"]');
   const searchBox = await searchBar.boundingBox();
-  const statusBox = await page.locator('#filter-status').boundingBox();
-  const clearBox = await page.locator('#clear-filters').boundingBox();
+  const statusBox = await page.locator("#filter-status").boundingBox();
+  const clearBox = await page.locator("#clear-filters").boundingBox();
   expect(searchBox).not.toBeNull();
   expect(statusBox).not.toBeNull();
   expect(clearBox).not.toBeNull();
@@ -44,17 +46,19 @@ test('La barra de busqueda y las acciones ocupan la segunda fila', async ({ page
   expect(Math.abs(searchBox!.y - clearBox!.y)).toBeLessThanOrEqual(10);
 });
 
-test('Los selects de filtro permanecen en la fila superior', async ({ page }) => {
-  await page.goto('/mesas-de-ayuda');
-  await expect(page.locator('#soportes-search')).toBeVisible();
+test("Los selects de filtro permanecen en la fila superior", async ({
+  page,
+}) => {
+  await page.goto("/mesas-de-ayuda");
+  await expect(page.locator("#soportes-search")).toBeVisible();
 
-  const statusBox = await page.locator('#filter-status').boundingBox();
-  const sortBox = await page.locator('#sort-by').boundingBox();
+  const statusBox = await page.locator("#filter-status").boundingBox();
+  const sortBox = await page.locator("#sort-by").boundingBox();
   expect(statusBox).not.toBeNull();
   expect(sortBox).not.toBeNull();
   expect(Math.abs(statusBox!.y - sortBox!.y)).toBeLessThanOrEqual(10);
 
-  const parentSelect = page.locator('#filter-parent');
+  const parentSelect = page.locator("#filter-parent");
   if ((await parentSelect.count()) > 0) {
     const parentBox = await parentSelect.boundingBox();
     expect(parentBox).not.toBeNull();
@@ -62,11 +66,11 @@ test('Los selects de filtro permanecen en la fila superior', async ({ page }) =>
   }
 });
 
-test('En pantallas angostas el placeholder sigue visible', async ({ page }) => {
+test("En pantallas angostas el placeholder sigue visible", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 800 });
-  await page.goto('/mesas-de-ayuda');
+  await page.goto("/mesas-de-ayuda");
 
-  const searchInput = page.locator('#soportes-search');
+  const searchInput = page.locator("#soportes-search");
   await expect(searchInput).toBeVisible();
 
   const searchBar = page.locator('label[for="soportes-search"]');

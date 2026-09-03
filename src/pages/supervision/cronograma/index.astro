@@ -19,16 +19,29 @@ const role = normalizeRole(user.role);
 
 <style is:global>
   body:has(#monthly-view:not(.hidden)) main,
-  body:has(#daily-view:not(.hidden)) main {
+  body:has(#daily-view:not(.hidden)) main,
+  body:has(#groups-view:not(.hidden)) main,
+  body:has(#overtime-view:not(.hidden)) main,
+  body:has(#pasiva-view:not(.hidden)) main {
     overflow-y: hidden !important;
     display: flex !important;
     flex-direction: column !important;
-    padding-top: 0.5rem !important;
   }
 
   body:has(#monthly-view:not(.hidden)) #crono-page-container,
-  body:has(#daily-view:not(.hidden)) #crono-page-container {
+  body:has(#daily-view:not(.hidden)) #crono-page-container,
+  body:has(#groups-view:not(.hidden)) #crono-page-container,
+  body:has(#overtime-view:not(.hidden)) #crono-page-container,
+  body:has(#pasiva-view:not(.hidden)) #crono-page-container {
     flex: 1;
     min-height: 0;
+  }
+
+  body:has(#groups-view:not(.hidden)) #cronograma-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  body:has(#groups-view:not(.hidden)) #cronograma-container::-webkit-scrollbar {
+    display: none;
   }
 </style>

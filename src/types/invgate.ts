@@ -34,7 +34,6 @@ export interface InvgateUser {
   fax?: string | null;
 }
 
-
 export interface InvgateIncident {
   id: number;
   title: string;
@@ -110,6 +109,12 @@ export interface InvgateKbCategory {
   parent_id?: number | null;
 }
 
+export interface InvgateCategory {
+  id: number;
+  name: string;
+  parent_category_id?: number | null;
+}
+
 export interface InvgateGroup {
   id: number;
   name: string;
@@ -160,10 +165,18 @@ export interface InvgateUsersGroupsEntry {
   id: number;
   username?: string;
   email?: string;
-  groups?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
-  companies?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
-  helpdesks?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
-  locations?: Record<string, InvgateUserGroupRef> | (InvgateUserGroupRef | string | number)[];
+  groups?:
+    | Record<string, InvgateUserGroupRef>
+    | (InvgateUserGroupRef | string | number)[];
+  companies?:
+    | Record<string, InvgateUserGroupRef>
+    | (InvgateUserGroupRef | string | number)[];
+  helpdesks?:
+    | Record<string, InvgateUserGroupRef>
+    | (InvgateUserGroupRef | string | number)[];
+  locations?:
+    | Record<string, InvgateUserGroupRef>
+    | (InvgateUserGroupRef | string | number)[];
   observed?: number[];
 }
 
@@ -173,4 +186,3 @@ export interface InvgateCompany {
   id: number;
   name: string;
 }
-

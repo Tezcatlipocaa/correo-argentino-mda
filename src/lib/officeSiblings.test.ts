@@ -47,11 +47,17 @@ test("buildSiblingMap groups offices sharing address+region+province", () => {
   assert.equal(map.get("O7906")?.length, 2);
   assert.equal(map.get("I5135")?.length, 2);
   assert.deepEqual(
-    map.get("S0000")?.map((s) => s.code).sort(),
+    map
+      .get("S0000")
+      ?.map((s) => s.code)
+      .sort(),
     ["I5135", "O7906"],
   );
   assert.deepEqual(
-    map.get("O7906")?.map((s) => s.type).sort(),
+    map
+      .get("O7906")
+      ?.map((s) => s.type)
+      .sort(),
     ["SUCURSAL_AUTOMATIZADA", "TELEGRAFIA"],
   );
   assert.equal(map.has("X9999"), false);
@@ -83,8 +89,14 @@ test("buildSiblingMap groups addresses after shared canonicalization", () => {
 
   const map = buildSiblingMap(items);
 
-  assert.deepEqual(map.get("A1")?.map((office) => office.code), ["B1"]);
-  assert.deepEqual(map.get("B1")?.map((office) => office.code), ["A1"]);
+  assert.deepEqual(
+    map.get("A1")?.map((office) => office.code),
+    ["B1"],
+  );
+  assert.deepEqual(
+    map.get("B1")?.map((office) => office.code),
+    ["A1"],
+  );
 });
 
 test("buildSiblingMap sorts siblings by type then NIS", () => {

@@ -14,10 +14,12 @@ export const POST = createDeleteHandler({
       .returning({ code: offices.code, name: offices.name });
     return deleted ?? null;
   },
-  successMessage: (d) => d
-    ? `Oficina "${(d as any).name}" (${(d as any).code}) eliminada con éxito.`
-    : "Oficina eliminada con éxito.",
+  successMessage: (d) =>
+    d
+      ? `Oficina "${(d as any).name}" (${(d as any).code}) eliminada con éxito.`
+      : "Oficina eliminada con éxito.",
   notFoundMessage: "La oficina no existe.",
   errorMessage: () => "Error al eliminar la oficina",
-  logMessage: (d) => `Eliminó la oficina "${(d as any)?.name}" (${(d as any)?.code})`,
+  logMessage: (d) =>
+    `Eliminó la oficina "${(d as any)?.name}" (${(d as any)?.code})`,
 });

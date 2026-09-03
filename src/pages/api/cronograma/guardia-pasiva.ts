@@ -1,6 +1,12 @@
 import type { APIRoute } from "astro";
 import { db } from "@db/index";
-import { monthlyGuardiaPasivaOperator, weeklyGuardiaPasivaAssignments, users, employees, agents } from "@db/schema";
+import {
+  monthlyGuardiaPasivaOperator,
+  weeklyGuardiaPasivaAssignments,
+  users,
+  employees,
+  agents,
+} from "@db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { requireWriteAccess } from "@lib/rbac-middleware";
 import { jsonResponse } from "@lib/apiResponse";
@@ -78,17 +84,20 @@ export const GET: APIRoute = async ({ url }) => {
     const weeks = getWeeksForMonth(month);
 
     // 3. Obtener asignaciones guardadas para estas semanas
-    const startDates = weeks.map(w => w.startDate);
-    const savedAssignments = startDates.length > 0
-      ? await db
-          .select()
-          .from(weeklyGuardiaPasivaAssignments)
-          .where(inArray(weeklyGuardiaPasivaAssignments.startDate, startDates))
-      : [];
+    const startDates = weeks.map((w) => w.startDate);
+    const savedAssignments =
+      startDates.length > 0
+        ? await db
+            .select()
+            .from(weeklyGuardiaPasivaAssignments)
+            .where(
+              inArray(weeklyGuardiaPasivaAssignments.startDate, startDates),
+            )
+        : [];
 
     // 4. Mapear datos
-    const weeksWithData = weeks.map(w => {
-      const saved = savedAssignments.find(s => s.startDate === w.startDate);
+    const weeksWithData = weeks.map((w) => {
+      const saved = savedAssignments.find((s) => s.startDate === w.startDate);
       let sName = saved?.supervisorName || DEFAULT_SUPERVISOR;
       if (sName === "Otomasi") sName = "Tomasi Alejandro";
       if (sName === "Farce") sName = "Arce Franco";
@@ -110,14 +119,20 @@ export const GET: APIRoute = async ({ url }) => {
         empFullname: employees.fullname,
       })
       .from(users)
-      .leftJoin(agents, sql`lower(${agents.username}) = lower(${users.username})`)
-      .leftJoin(employees, sql`lower(${employees.username}) = lower(${users.username})`)
+      .leftJoin(
+        agents,
+        sql`lower(${agents.username}) = lower(${users.username})`,
+      )
+      .leftJoin(
+        employees,
+        sql`lower(${employees.username}) = lower(${users.username})`,
+      )
       .where(inArray(users.role, ["admin", "supervisor", "team_leader"]));
 
     const supervisorNamesSet = new Set<string>();
     supervisorNamesSet.add(DEFAULT_SUPERVISOR);
 
-    supervisorsList.forEach(u => {
+    supervisorsList.forEach((u) => {
       let name = u.agentName;
       if (!name && u.empFullname) {
         const parts = u.empFullname.trim().split(/\s+/);
@@ -137,7 +152,9 @@ export const GET: APIRoute = async ({ url }) => {
       }
     });
 
-    const supervisors = Array.from(supervisorNamesSet).sort((a, b) => a.localeCompare(b));
+    const supervisors = Array.from(supervisorNamesSet).sort((a, b) =>
+      a.localeCompare(b),
+    );
 
     // 6. Obtener lista de referentes (agentes con rol referent, supervisor, team_leader, admin)
     const referentesList = await db
@@ -146,11 +163,25 @@ export const GET: APIRoute = async ({ url }) => {
         name: agents.name,
       })
       .from(agents)
-      .innerJoin(users, sql`lower(${agents.username}) = lower(${users.username})`)
-      .where(inArray(users.role, ["referent", "supervisor", "team_leader", "admin"]))
+      .innerJoin(
+        users,
+        sql`lower(${agents.username}) = lower(${users.username})`,
+      )
+      .where(
+        inArray(users.role, ["referent", "supervisor", "team_leader", "admin"]),
+      )
       .orderBy(agents.name);
 
-    return jsonResponse({ operatorId, weeks: weeksWithData, supervisors, referentes: referentesList }, 200, "no-store, no-cache, must-revalidate");
+    return jsonResponse(
+      {
+        operatorId,
+        weeks: weeksWithData,
+        supervisors,
+        referentes: referentesList,
+      },
+      200,
+      "no-store, no-cache, must-revalidate",
+    );
   } catch (error: any) {
     console.error("GET Guardia Pasiva Error:", error);
     return jsonResponse({ error: "Error interno del servidor" }, 500);
@@ -174,13 +205,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Actualizar, guardar o eliminar Asignaciones Semanales
       if (Array.isArray(weeklyAssignments)) {
         for (const item of weeklyAssignments) {
-          const { startDate, endDate, supervisorName, referenteId, operatorId } = item;
+          const {
+            startDate,
+            endDate,
+            supervisorName,
+            referenteId,
+            operatorId,
+          } = item;
           if (!startDate) continue;
 
-          const refId = referenteId ? (typeof referenteId === "string" ? parseInt(referenteId, 10) : referenteId) : null;
-          const opId = operatorId ? (typeof operatorId === "string" ? parseInt(operatorId, 10) : operatorId) : null;
+          const refId = referenteId
+            ? typeof referenteId === "string"
+              ? parseInt(referenteId, 10)
+              : referenteId
+            : null;
+          const opId = operatorId
+            ? typeof operatorId === "string"
+              ? parseInt(operatorId, 10)
+              : operatorId
+            : null;
 
-          if (!refId && !opId && (!supervisorName || supervisorName === DEFAULT_SUPERVISOR)) {
+          if (
+            !refId &&
+            !opId &&
+            (!supervisorName || supervisorName === DEFAULT_SUPERVISOR)
+          ) {
             tx.delete(weeklyGuardiaPasivaAssignments)
               .where(eq(weeklyGuardiaPasivaAssignments.startDate, startDate))
               .run();

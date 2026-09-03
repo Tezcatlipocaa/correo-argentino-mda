@@ -1,5 +1,10 @@
 import type { APIRoute } from "astro";
-import { asignarSiguienteAutogestion, getDisponibilidadHoy, ensureHasLock, resetAssignmentLock } from "@lib/disponibilidad";
+import {
+  asignarSiguienteAutogestion,
+  getDisponibilidadHoy,
+  ensureHasLock,
+  resetAssignmentLock,
+} from "@lib/disponibilidad";
 import { requireWriteAccess } from "@lib/rbac-middleware";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 
@@ -12,9 +17,14 @@ export const POST: APIRoute = async ({ locals }) => {
 
   try {
     const assignedBy = locals.user?.username || "Sistema";
-    const userClean = locals.user?.username ? locals.user.username.split("@")[0].toLowerCase().trim() : "";
+    const userClean = locals.user?.username
+      ? locals.user.username.split("@")[0].toLowerCase().trim()
+      : "";
     const list = await getDisponibilidadHoy();
-    const loggedOp = list.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
+    const loggedOp = list.find(
+      (op) =>
+        op.username && op.username.split("@")[0].toLowerCase().trim() === userClean,
+    );
     const authorInvgateId = loggedOp?.invgateId;
 
     const result = await asignarSiguienteAutogestion(assignedBy, authorInvgateId);

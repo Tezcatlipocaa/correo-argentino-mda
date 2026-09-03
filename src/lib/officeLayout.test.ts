@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getDetailColumnLayout } from "./officeLayout";
 
-const flags = (overrides: Partial<Parameters<typeof getDetailColumnLayout>[0]> = {}) => ({
+const flags = (
+  overrides: Partial<Parameters<typeof getDetailColumnLayout>[0]> = {},
+) => ({
   hasInvgate: false,
   hasInfo: false,
   contactsCount: 0,
@@ -12,7 +14,9 @@ const flags = (overrides: Partial<Parameters<typeof getDetailColumnLayout>[0]> =
 });
 
 test("3-column layout: left + center + right → flex 1.75/2/2.25, compact assets", () => {
-  const l = getDetailColumnLayout(flags({ hasInfo: true, hasSiblings: true, hasAssets: true }));
+  const l = getDetailColumnLayout(
+    flags({ hasInfo: true, hasSiblings: true, hasAssets: true }),
+  );
   assert.equal(l.hasLeft, true);
   assert.equal(l.hasCenter, true);
   assert.equal(l.hasRight, true);
@@ -38,7 +42,9 @@ test("left + center only → flex 3/2", () => {
 });
 
 test("center + right only → flex 2/3", () => {
-  const l = getDetailColumnLayout(flags({ hasSiblings: true, hasAssets: true }));
+  const l = getDetailColumnLayout(
+    flags({ hasSiblings: true, hasAssets: true }),
+  );
   assert.equal(l.hasLeft, false);
   assert.equal(l.centerClass, "lg:flex-[2]");
   assert.equal(l.rightClass, "lg:flex-[3]");
@@ -67,7 +73,9 @@ test("single column: only info → left w-full", () => {
 });
 
 test("contacts > 5 moves contacts to center and enables compact assets only with center", () => {
-  const l = getDetailColumnLayout(flags({ hasInfo: true, contactsCount: 6, hasAssets: true }));
+  const l = getDetailColumnLayout(
+    flags({ hasInfo: true, contactsCount: 6, hasAssets: true }),
+  );
   assert.equal(l.hasCenter, true);
   assert.equal(l.contactsToCenter, true);
   assert.equal(l.compactAssets, true);
@@ -75,14 +83,18 @@ test("contacts > 5 moves contacts to center and enables compact assets only with
 });
 
 test("contacts === 5 stays in left, no center", () => {
-  const l = getDetailColumnLayout(flags({ hasInfo: true, contactsCount: 5, hasAssets: true }));
+  const l = getDetailColumnLayout(
+    flags({ hasInfo: true, contactsCount: 5, hasAssets: true }),
+  );
   assert.equal(l.contactsToCenter, false);
   assert.equal(l.hasCenter, false);
   assert.equal(l.compactAssets, false);
 });
 
 test("left does not render when only siblings exist", () => {
-  const l = getDetailColumnLayout(flags({ hasSiblings: true, hasAssets: true }));
+  const l = getDetailColumnLayout(
+    flags({ hasSiblings: true, hasAssets: true }),
+  );
   assert.equal(l.hasLeft, false);
 });
 

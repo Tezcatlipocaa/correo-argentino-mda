@@ -11,7 +11,9 @@ const username = `test_addr_${Date.now()}`;
 const password = "TestPass1234";
 let hashedPassword: string;
 let createdOfficeCode: string | undefined;
-let cachedSessionCookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
+let cachedSessionCookies: Awaited<
+  ReturnType<BrowserContext["cookies"]>
+> | null = null;
 
 test.beforeAll(async () => {
   hashedPassword = await bcrypt.hash(password, 4);
@@ -24,7 +26,10 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (createdOfficeCode) {
-    await db.delete(offices).where(eq(offices.code, createdOfficeCode)).catch(() => {});
+    await db
+      .delete(offices)
+      .where(eq(offices.code, createdOfficeCode))
+      .catch(() => {});
   }
   if (!testUserId) return;
   await db.delete(sessions).where(eq(sessions.userId, testUserId));
@@ -41,7 +46,9 @@ async function loginAsAdmin(page: Page) {
   });
   expect(response.ok()).toBeTruthy();
   cachedSessionCookies = await page.context().cookies();
-  expect(cachedSessionCookies.some((c) => c.name === "session_id")).toBeTruthy();
+  expect(
+    cachedSessionCookies.some((c) => c.name === "session_id"),
+  ).toBeTruthy();
 }
 
 function deriveAddressQuery(address: string): string {
@@ -69,21 +76,30 @@ async function selectSharedAddressSuggestion(page: Page): Promise<number> {
   const suggestionsResponse = await page.request.get(
     `/api/offices/search-address?q=${encodeURIComponent(query)}&provinceCode=${encodeURIComponent(office[0]?.provinceCode ?? "")}&excludeId=${officeId}`,
   );
-  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
+  const suggestions = (await suggestionsResponse.json()) as {
+    address: string;
+    offices: unknown[];
+  }[];
   const withOffices = suggestions.find((s) => s.offices.length > 0);
   test.skip(!withOffices, "No shared-address offices in current DB");
 
   await page.goto(`/oficinas/edit/${officeId}`);
   const input = page.locator("#input-address");
   await input.fill(query);
-  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
+  const option = page
+    .locator("#address-suggestions [role=option]", {
+      hasText: withOffices!.address,
+    })
+    .first();
   await expect(option).toBeVisible();
   await option.click();
 
   return officeId;
 }
 
-test("address suggestions return unique canonical addresses", async ({ page }) => {
+test("address suggestions return unique canonical addresses", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
 
   const officeRows = await db
@@ -136,16 +152,22 @@ test("returns empty array for query shorter than 3 chars", async ({ page }) => {
   expect(data).toEqual([]);
 });
 
-test("selecting existing address shows same-building preview below input", async ({ page }) => {
+test("selecting existing address shows same-building preview below input", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
   await selectSharedAddressSuggestion(page);
 
   await expect(page.locator("#address-building-preview")).toBeVisible();
   await expect(page.locator("#address-building-confirmed")).toBeVisible();
-  await expect(page.locator("#address-building-preview [data-sibling-office]").first()).toBeVisible();
+  await expect(
+    page.locator("#address-building-preview [data-sibling-office]").first(),
+  ).toBeVisible();
 });
 
-test("blocks save until shared-site confirmation is checked", async ({ page }) => {
+test("blocks save until shared-site confirmation is checked", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
   const officeId = await selectSharedAddressSuggestion(page);
 
@@ -159,7 +181,9 @@ test("blocks save until shared-site confirmation is checked", async ({ page }) =
   );
 });
 
-test("changing to unmatched address hides shared-site preview", async ({ page }) => {
+test("changing to unmatched address hides shared-site preview", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
   await selectSharedAddressSuggestion(page);
 
@@ -193,7 +217,10 @@ test("confirmed same-building save proceeds on create", async ({ page }) => {
   const suggestionsResponse = await page.request.get(
     `/api/offices/search-address?q=${encodeURIComponent(query)}&provinceCode=${encodeURIComponent(province)}`,
   );
-  const suggestions = (await suggestionsResponse.json()) as { address: string; offices: unknown[] }[];
+  const suggestions = (await suggestionsResponse.json()) as {
+    address: string;
+    offices: unknown[];
+  }[];
   const withOffices = suggestions.find((s) => s.offices.length > 0);
   test.skip(!withOffices, "No shared-address offices in current DB");
 
@@ -207,7 +234,11 @@ test("confirmed same-building save proceeds on create", async ({ page }) => {
 
   const input = page.locator("#input-address");
   await input.fill(query);
-  const option = page.locator("#address-suggestions [role=option]", { hasText: withOffices!.address }).first();
+  const option = page
+    .locator("#address-suggestions [role=option]", {
+      hasText: withOffices!.address,
+    })
+    .first();
   await expect(option).toBeVisible();
   await option.click();
 
@@ -217,12 +248,18 @@ test("confirmed same-building save proceeds on create", async ({ page }) => {
   await page.locator("#office-form button[type=submit]").first().click();
 
   await expect(page).toHaveURL(/\/oficinas$/);
-  await expect(page.locator("#global-toast-container")).toContainText("Oficina creada con éxito.");
+  await expect(page.locator("#global-toast-container")).toContainText(
+    "Oficina creada con éxito.",
+  );
 });
 
-test("API failure shows non-blocking message and keeps manual entry", async ({ page }) => {
+test("API failure shows non-blocking message and keeps manual entry", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
-  await page.route("**/api/offices/search-address*", (route) => route.fulfill({ status: 500, body: "{}" }));
+  await page.route("**/api/offices/search-address*", (route) =>
+    route.fulfill({ status: 500, body: "{}" }),
+  );
   await page.goto("/oficinas/create");
   await page.locator("#input-address").fill("SANTA");
   await expect(page.locator("#address-autocomplete-error")).toBeVisible();
@@ -230,7 +267,9 @@ test("API failure shows non-blocking message and keeps manual entry", async ({ p
   await expect(input).toBeEnabled();
 });
 
-test("single-office suggestion shows NIS, name and province in label", async ({ page }) => {
+test("single-office suggestion shows NIS, name and province in label", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
 
   const officeRows = await db
@@ -242,12 +281,32 @@ test("single-office suggestion shows NIS, name and province in label", async ({ 
   const officeId = officeRows[0].id;
   const province = officeRows[0].provinceCode;
 
-  let target: { address: string; provinceName: string; offices: { code: string; name: string }[] } | undefined;
-  for (const token of ["1 DE MAYO", "SANTA", "GENERAL", "RIVADAVIA", "BELGRANO", "AV SANTA"]) {
-    const params = new URLSearchParams({ q: token, excludeId: String(officeId) });
+  let target:
+    | {
+        address: string;
+        provinceName: string;
+        offices: { code: string; name: string }[];
+      }
+    | undefined;
+  for (const token of [
+    "1 DE MAYO",
+    "SANTA",
+    "GENERAL",
+    "RIVADAVIA",
+    "BELGRANO",
+    "AV SANTA",
+  ]) {
+    const params = new URLSearchParams({
+      q: token,
+      excludeId: String(officeId),
+    });
     if (province) params.set("provinceCode", province);
     const res = await page.request.get(`/api/offices/search-address?${params}`);
-    const data = (await res.json()) as { address: string; provinceName: string; offices: { code: string; name: string }[] }[];
+    const data = (await res.json()) as {
+      address: string;
+      provinceName: string;
+      offices: { code: string; name: string }[];
+    }[];
     const found = (data || []).find((s) => s.offices.length === 1);
     if (found) {
       target = found;
@@ -259,16 +318,24 @@ test("single-office suggestion shows NIS, name and province in label", async ({ 
   await page.goto(`/oficinas/edit/${officeId}`);
   const input = page.locator("#input-address");
   await input.fill(target!.address);
-  const option = page.locator("#address-suggestions [role=option]", { hasText: target!.offices[0].code }).first();
+  const option = page
+    .locator("#address-suggestions [role=option]", {
+      hasText: target!.offices[0].code,
+    })
+    .first();
   await expect(option).toBeVisible();
   await expect(option).toContainText(target!.offices[0].name);
   await expect(option).toContainText(target!.provinceName);
 });
 
-test("selecting a suggestion without province auto-fills the province select", async ({ page }) => {
+test("selecting a suggestion without province auto-fills the province select", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
 
-  const res = await page.request.get("/api/offices/search-address?q=1%20DE%20MAYO");
+  const res = await page.request.get(
+    "/api/offices/search-address?q=1%20DE%20MAYO",
+  );
   const suggestions = (await res.json()) as {
     address: string;
     provinceCode: string;
@@ -282,15 +349,21 @@ test("selecting a suggestion without province auto-fills the province select", a
   const input = page.locator("#input-address");
   await input.fill(target!.address);
   const option = page
-    .locator("#address-suggestions [role=option]", { hasText: `${target!.address} · ${target!.provinceName}` })
+    .locator("#address-suggestions [role=option]", {
+      hasText: `${target!.address} · ${target!.provinceName}`,
+    })
     .first();
   await expect(option).toBeVisible();
   await option.click();
 
-  await expect(page.locator("#select-provinceCode")).toHaveValue(target!.provinceCode);
+  await expect(page.locator("#select-provinceCode")).toHaveValue(
+    target!.provinceCode,
+  );
 });
 
-test("shows no-results feedback when province is selected", async ({ page }) => {
+test("shows no-results feedback when province is selected", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
   const officeRows = await db
     .select({ provinceCode: offices.provinceCode })
@@ -309,7 +382,9 @@ test("shows no-results feedback when province is selected", async ({ page }) => 
   await expect(noResults).toContainText("región/provincia seleccionada");
 });
 
-test("shows no-results feedback without province using shorter message", async ({ page }) => {
+test("shows no-results feedback without province using shorter message", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
 
   await page.goto("/oficinas/create");
@@ -317,11 +392,15 @@ test("shows no-results feedback without province using shorter message", async (
 
   const noResults = page.locator("#address-no-results");
   await expect(noResults).toBeVisible();
-  await expect(noResults).toContainText("No se encontraron oficinas con esta dirección.");
+  await expect(noResults).toContainText(
+    "No se encontraron oficinas con esta dirección.",
+  );
   await expect(noResults).not.toContainText("cambiá región/provincia");
 });
 
-test("does not show no-results feedback when suggestions exist", async ({ page }) => {
+test("does not show no-results feedback when suggestions exist", async ({
+  page,
+}) => {
   await loginAsAdmin(page);
   const officeRows = await db
     .select({ address: offices.address, provinceCode: offices.provinceCode })
@@ -337,5 +416,7 @@ test("does not show no-results feedback when suggestions exist", async ({ page }
   await page.locator("#input-address").fill(query);
 
   await expect(page.locator("#address-no-results")).toBeHidden();
-  await expect(page.locator("#address-suggestions [role=option]").first()).toBeVisible();
+  await expect(
+    page.locator("#address-suggestions [role=option]").first(),
+  ).toBeVisible();
 });

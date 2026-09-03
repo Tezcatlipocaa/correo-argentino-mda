@@ -34,7 +34,7 @@ async function invgateRequest<T>(
   const credentials = btoa(apiUsername + ":" + apiKey);
 
   const headers: Record<string, string> = {
-    "Authorization": `Basic ${credentials}`,
+    Authorization: `Basic ${credentials}`,
     "Content-Type": "application/json",
   };
 
@@ -75,7 +75,8 @@ async function invgateRequest<T>(
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido";
+    const message =
+      error instanceof Error ? error.message : "Error desconocido";
     return {
       ok: false,
       status: lastStatus,
@@ -86,18 +87,32 @@ async function invgateRequest<T>(
   }
 }
 
-export async function invgateGet<T>(endpoint: string, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgateGet<T>(
+  endpoint: string,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("GET", endpoint, undefined, timeoutMs);
 }
 
-export async function invgatePost<T>(endpoint: string, body: unknown, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgatePost<T>(
+  endpoint: string,
+  body: unknown,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("POST", endpoint, body, timeoutMs);
 }
 
-export async function invgatePut<T>(endpoint: string, body: unknown, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgatePut<T>(
+  endpoint: string,
+  body: unknown,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("PUT", endpoint, body, timeoutMs);
 }
 
-export async function invgateDelete<T>(endpoint: string, timeoutMs?: number): Promise<InvgateResult<T>> {
+export async function invgateDelete<T>(
+  endpoint: string,
+  timeoutMs?: number,
+): Promise<InvgateResult<T>> {
   return invgateRequest<T>("DELETE", endpoint, undefined, timeoutMs);
 }

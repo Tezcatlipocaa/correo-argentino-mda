@@ -2,9 +2,15 @@ import type { APIRoute } from "astro";
 import { jsonResponse, jsonError, sanitizeError } from "@lib/apiResponse";
 import ldap from "ldapjs";
 
-const LDAP_SERVER = import.meta.env.LDAP_SERVER || process.env.LDAP_SERVER || "ldap://correo.local";
+const LDAP_SERVER =
+  import.meta.env.LDAP_SERVER ||
+  process.env.LDAP_SERVER ||
+  "ldap://correo.local";
 const LDAP_PORT = import.meta.env.LDAP_PORT || process.env.LDAP_PORT || 389;
-const LDAP_BASE_DN = import.meta.env.LDAP_BASE_DN || process.env.LDAP_BASE_DN || "DC=correo,DC=local";
+const LDAP_BASE_DN =
+  import.meta.env.LDAP_BASE_DN ||
+  process.env.LDAP_BASE_DN ||
+  "DC=correo,DC=local";
 const LDAP_USER = import.meta.env.LDAP_USER || process.env.LDAP_USER;
 const LDAP_PASS = import.meta.env.LDAP_PASS || process.env.LDAP_PASS;
 if (!LDAP_USER || !LDAP_PASS) {
@@ -14,7 +20,8 @@ if (!LDAP_USER || !LDAP_PASS) {
 const TIMEZONE_AR = "America/Argentina/Buenos_Aires";
 
 function convertFiletime(filetime: number): string | null {
-  if (!filetime || filetime === 0 || filetime >= 9223372036854770000) return null;
+  if (!filetime || filetime === 0 || filetime >= 9223372036854770000)
+    return null;
   // Windows Filetime is 100-nanosecond intervals since 1601-01-01
   const epoch = 11644473600000; // difference between 1601 and 1970 in ms
   const adjusted = Math.floor(filetime / 10000) - epoch;
@@ -32,11 +39,21 @@ function parseGeneralizedTime(gt: string | undefined | null): string | null {
 }
 
 function formatOutput(data: {
-  username: string; fullname: string; title: string; mail: string;
-  employee_number: string; physical_office: string; telephone_number: string;
-  manager_name: string; department: string; description: string;
-  pwd_last_set: string; last_logon: string; when_created: string;
-  account_expires: string; groups: string[];
+  username: string;
+  fullname: string;
+  title: string;
+  mail: string;
+  employee_number: string;
+  physical_office: string;
+  telephone_number: string;
+  manager_name: string;
+  department: string;
+  description: string;
+  pwd_last_set: string;
+  last_logon: string;
+  when_created: string;
+  account_expires: string;
+  groups: string[];
 }): string {
   const lines = [
     "Información del usuario en Active Directory",
@@ -66,7 +83,6 @@ function formatOutput(data: {
 }
 
 export const GET: APIRoute = async ({ request }) => {
-
   try {
     const url = new URL(request.url);
     const username = url.searchParams.get("username")?.trim();
@@ -94,8 +110,15 @@ export const GET: APIRoute = async ({ request }) => {
       client.bind(LDAP_USER, LDAP_PASS, (err) => {
         if (err) {
           console.error("[NetUser] LDAP Bind Error detallado:", err);
-          console.error("[NetUser] LDAP Bind Error código:", err.code || err.name);
-          reject(new Error(`Error de autenticación LDAP: ${err.message || err.code || JSON.stringify(err)}`));
+          console.error(
+            "[NetUser] LDAP Bind Error código:",
+            err.code || err.name,
+          );
+          reject(
+            new Error(
+              `Error de autenticación LDAP: ${err.message || err.code || JSON.stringify(err)}`,
+            ),
+          );
         } else {
           resolve();
         }
@@ -103,17 +126,36 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
     // Escape special LDAP filter characters
-    const escapedUsername = username.replace(/[*()\\\0]/g, (c) => '\\' + c.charCodeAt(0).toString(16).padStart(2, '0'));
+    const escapedUsername = username.replace(
+      /[*()\\\0]/g,
+      (c) => "\\" + c.charCodeAt(0).toString(16).padStart(2, "0"),
+    );
     const searchFilter = `(&(objectClass=user)(sAMAccountName=${escapedUsername}))`;
     const opts = {
       filter: searchFilter,
       scope: "sub" as const,
       attributes: [
-        "dn", "cn", "sAMAccountName", "displayName", "title", "mail",
-        "employeeNumber", "employeeType", "physicalDeliveryOfficeName", "telephoneNumber",
-        "manager", "department", "description", "memberOf",
-        "pwdLastSet", "lastLogon", "lastLogonTimestamp", "whenCreated",
-        "accountExpires", "badPwdCount", "lockoutTime",
+        "dn",
+        "cn",
+        "sAMAccountName",
+        "displayName",
+        "title",
+        "mail",
+        "employeeNumber",
+        "employeeType",
+        "physicalDeliveryOfficeName",
+        "telephoneNumber",
+        "manager",
+        "department",
+        "description",
+        "memberOf",
+        "pwdLastSet",
+        "lastLogon",
+        "lastLogonTimestamp",
+        "whenCreated",
+        "accountExpires",
+        "badPwdCount",
+        "lockoutTime",
       ],
     };
 
@@ -152,12 +194,19 @@ export const GET: APIRoute = async ({ request }) => {
         res.on("searchEntry", (entry) => {
           const flat: Record<string, unknown> = {};
           console.log("[NetUser] entry.pojo keys:", Object.keys(entry.pojo));
-          console.log("[NetUser] entry.pojo.attributes length:", entry.pojo.attributes?.length);
+          console.log(
+            "[NetUser] entry.pojo.attributes length:",
+            entry.pojo.attributes?.length,
+          );
           for (const a of entry.pojo.attributes) {
-            console.log(`[NetUser] attr: "${a.type}" type=${typeof a.values[0]} length=${a.values.length} val=`, a.values[0]);
+            console.log(
+              `[NetUser] attr: "${a.type}" type=${typeof a.values[0]} length=${a.values.length} val=`,
+              a.values[0],
+            );
           }
           for (const attr of entry.pojo.attributes) {
-            flat[attr.type] = attr.values.length === 1 ? attr.values[0] : attr.values;
+            flat[attr.type] =
+              attr.values.length === 1 ? attr.values[0] : attr.values;
           }
           entries.push(flat as LdapUserEntry);
         });
@@ -193,7 +242,9 @@ export const GET: APIRoute = async ({ request }) => {
     // Resolve manager name if present
     let managerName: string | null = null;
     if (adUser.manager) {
-      const managerDn = Array.isArray(adUser.manager) ? adUser.manager[0] : adUser.manager;
+      const managerDn = Array.isArray(adUser.manager)
+        ? adUser.manager[0]
+        : adUser.manager;
       if (typeof managerDn === "string" && managerDn.includes("CN=")) {
         const cnMatch = managerDn.match(/CN=([^,]+)/);
         if (cnMatch) managerName = cnMatch[1];
@@ -203,7 +254,9 @@ export const GET: APIRoute = async ({ request }) => {
     // Parse groups from memberOf
     const groups: string[] = [];
     if (adUser.memberOf) {
-      const members = Array.isArray(adUser.memberOf) ? adUser.memberOf : [adUser.memberOf];
+      const members = Array.isArray(adUser.memberOf)
+        ? adUser.memberOf
+        : [adUser.memberOf];
       for (const member of members) {
         const cnMatch = String(member).match(/CN=([^,]+)/);
         if (cnMatch) groups.push(cnMatch[1]);
@@ -222,9 +275,13 @@ export const GET: APIRoute = async ({ request }) => {
       department: String(adUser.department || ""),
       description: String(adUser.description || ""),
       pwd_last_set: convertFiletime(Number(adUser.pwdLastSet)) || "",
-      last_logon: convertFiletime(Number(adUser.lastLogon || adUser.lastLogonTimestamp)) || "",
+      last_logon:
+        convertFiletime(
+          Number(adUser.lastLogon || adUser.lastLogonTimestamp),
+        ) || "",
       when_created: parseGeneralizedTime(adUser.whenCreated) || "",
-      account_expires: convertFiletime(Number(adUser.accountExpires)) || "Nunca",
+      account_expires:
+        convertFiletime(Number(adUser.accountExpires)) || "Nunca",
       bad_pwd_count: String(adUser.badPwdCount || "0"),
       lockout_time: convertFiletime(Number(adUser.lockoutTime)),
       groups,

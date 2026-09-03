@@ -16,7 +16,9 @@ test.describe("Office detail dropdown dynamic layout", () => {
     );
 
     await article.locator("[data-chevron-toggle]").click();
-    await expect(article.locator("[data-sibling-office]").first()).toBeVisible();
+    await expect(
+      article.locator("[data-sibling-office]").first(),
+    ).toBeVisible();
 
     await expect(article.locator("[data-siblings-section]")).toBeVisible();
 
@@ -33,13 +35,12 @@ test.describe("Office detail dropdown dynamic layout", () => {
 
     // Compact cards are vertical: a font-mono hostname line precedes the
     // IP copy control inside the same card.
-    const firstCompactCard = compactAssets
-      .first()
-      .locator("> div")
-      .first();
+    const firstCompactCard = compactAssets.first().locator("> div").first();
     await expect(
       firstCompactCard.locator("p.font-mono:not([data-copy-control])").first(),
     ).toBeVisible();
-    await expect(firstCompactCard.locator("[data-copy-control]").first()).toBeVisible();
+    await expect(
+      firstCompactCard.locator("[data-copy-control]").first(),
+    ).toBeVisible();
   });
 });

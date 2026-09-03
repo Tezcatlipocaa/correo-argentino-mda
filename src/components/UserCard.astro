@@ -3,7 +3,6 @@ import CopyButton from "@components/ui/CopyButton.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionInvGateButton from "@components/ui/ActionInvGateButton.astro";
 import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
-import { Icon } from "astro-icon/components";
 
 const userRole = Astro.locals.user?.role || "";
 const isAdmin = userRole === "admin";
@@ -11,37 +10,37 @@ const isAdmin = userRole === "admin";
 
 <template id="user-card-template">
   <div
-    class="card bg-base-100 border border-base-300 shadow-md hover:border-base-content/20 transition-all duration-300"
+    class="card bg-base-100 border-base-300 hover:border-base-content/20 border shadow-md transition-all duration-300"
   >
-    <div class="card-body p-4 gap-4">
-      <div class="flex items-center gap-4 min-w-0">
+    <div class="card-body gap-4 p-4">
+      <div class="flex min-w-0 items-center gap-4">
         <div class="avatar placeholder shrink-0">
           <div
-            class="rounded-full size-12 flex items-center justify-center font-bold text-lg"
+            class="flex size-12 items-center justify-center rounded-full text-lg font-bold"
             data-user-avatar-bg
             data-user-initials
           >
             ??
           </div>
         </div>
-        <div class="flex-1 min-w-0">
+        <div class="min-w-0 flex-1">
           <h3
-            class="font-bold text-base truncate text-base-content"
+            class="text-base-content truncate text-base font-bold"
             data-user-nombre
           >
             Nombre Completo
           </h3>
-          <div class="flex items-center gap-1.5 mt-1">
+          <div class="mt-1 flex items-center gap-1.5">
             <span data-invgate-badge></span>
           </div>
         </div>
       </div>
 
-      <div class="flex flex-col grow gap-4">
-        <div class="grid grid-cols-2 gap-4 py-3 border-y border-base-200">
+      <div class="flex grow flex-col gap-4">
+        <div class="border-base-200 grid grid-cols-2 gap-4 border-y py-3">
           <div class="flex flex-col gap-1">
             <span
-              class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+              class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
               >Usuario</span
             >
             <CopyButton
@@ -56,7 +55,7 @@ const isAdmin = userRole === "admin";
           </div>
           <div class="flex flex-col gap-1">
             <span
-              class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+              class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
               >Legajo</span
             >
             <CopyButton
@@ -71,7 +70,7 @@ const isAdmin = userRole === "admin";
           </div>
           <div class="flex flex-col gap-1">
             <span
-              class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+              class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
               >DNI</span
             >
             <CopyButton
@@ -86,7 +85,7 @@ const isAdmin = userRole === "admin";
           </div>
           <div class="flex flex-col gap-1">
             <span
-              class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+              class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
               >Interno</span
             >
             <CopyButton
@@ -101,7 +100,7 @@ const isAdmin = userRole === "admin";
           </div>
           <div class="flex flex-col gap-1">
             <span
-              class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+              class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
               >Teléfono</span
             >
             <CopyButton
@@ -118,7 +117,7 @@ const isAdmin = userRole === "admin";
 
         <div class="flex flex-col gap-1">
           <span
-            class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+            class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
             >Email</span
           >
           <CopyButton
@@ -134,10 +133,10 @@ const isAdmin = userRole === "admin";
 
         <div class="flex flex-col gap-1">
           <span
-            class="text-xxs uppercase font-bold text-base-content/40 tracking-wider"
+            class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
             >Ubicación</span
           >
-          <div class="flex flex-wrap gap-1.5 user-card-sucursal-wrap">
+          <div class="user-card-sucursal-wrap flex flex-wrap gap-1.5">
             <CopyButton
               value=""
               variant="value"
@@ -152,7 +151,7 @@ const isAdmin = userRole === "admin";
       </div>
 
       <div
-        class="card-actions justify-end mt-2 pt-3 border-t border-base-200 w-full flex items-center gap-2"
+        class="card-actions border-base-200 mt-2 flex w-full items-center justify-end gap-2 border-t pt-3"
       >
         <ActionNetUserButton data-net-user-btn ariaLabel="Ver grupos de red" />
         <ActionEditButton data-edit-user-btn ariaLabel="Editar contacto" />

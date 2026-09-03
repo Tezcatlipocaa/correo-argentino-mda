@@ -7,10 +7,7 @@ export async function getUnassignedFeedbackCount(): Promise<number> {
     .select({ value: count() })
     .from(feedback)
     .where(
-      and(
-        isNull(feedback.assignedToId),
-        eq(feedback.status, "pendiente")
-      )
+      and(isNull(feedback.assignedToId), eq(feedback.status, "pendiente")),
     );
   return result[0]?.value ?? 0;
 }

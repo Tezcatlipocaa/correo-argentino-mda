@@ -99,13 +99,13 @@ const modulesGroupInvgate: AdminModule[] = [
 
     <SyncDashboard />
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-4">
+    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
       <AdminInvGateQAStatusCard />
       <AdminWiseCxStatusCard />
     </div>
 
     <div
-      class="card bg-base-100 border border-base-300 divide-y divide-base-200 overflow-hidden"
+      class="card bg-base-100 border-base-300 divide-base-200 divide-y overflow-hidden border"
     >
       {
         modulesGroup1.map((mod) => {
@@ -119,7 +119,7 @@ const modulesGroupInvgate: AdminModule[] = [
             return (
               <a
                 href={resolveUrl(mod.href)}
-                class="flex items-center gap-4 px-6 py-5 hover:bg-base-200 transition-colors duration-150 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 aria-label={`Ir a ${mod.title}`}
               >
                 <Icon
@@ -128,13 +128,14 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0 transition-colors", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content flex flex-wrap items-center gap-2">
+                <span class="text-base-content flex flex-1 flex-wrap items-center gap-2 text-base font-semibold md:text-lg">
                   {mod.title}
-                  {mod.href === "/admin/feedback" && unassignedFeedbackCount > 0 && (
-                    <span class="badge badge-error badge-sm font-semibold text-xs py-0.5 px-2 rounded-md">
-                      {unassignedFeedbackCount} solicitudes sin asignar
-                    </span>
-                  )}
+                  {mod.href === "/admin/feedback" &&
+                    unassignedFeedbackCount > 0 && (
+                      <span class="badge badge-error badge-sm rounded-md px-2 py-0.5 text-xs font-semibold">
+                        {unassignedFeedbackCount} solicitudes sin asignar
+                      </span>
+                    )}
                 </span>
                 <Icon
                   name="boxicons:arrow-right-stroke-circle-filled"
@@ -149,7 +150,7 @@ const modulesGroupInvgate: AdminModule[] = [
               <div
                 aria-disabled="true"
                 title={isLocked ? "Acceso restringido por rol" : "Próximamente"}
-                class="flex items-center gap-4 px-6 py-5 opacity-40 cursor-not-allowed select-none"
+                class="flex cursor-not-allowed items-center gap-4 px-6 py-5 opacity-40 select-none"
               >
                 <Icon
                   name={mod.icon}
@@ -157,7 +158,7 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content">
+                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
                   {mod.title}
                 </span>
                 {isLocked ? (
@@ -180,7 +181,7 @@ const modulesGroupInvgate: AdminModule[] = [
     </div>
 
     <div
-      class="card bg-base-100 border border-base-300 divide-y divide-base-200 overflow-hidden"
+      class="card bg-base-100 border-base-300 divide-base-200 divide-y overflow-hidden border"
     >
       {
         modulesGroup2.map((mod) => {
@@ -188,7 +189,7 @@ const modulesGroupInvgate: AdminModule[] = [
             return (
               <a
                 href={resolveUrl(mod.href)}
-                class="flex items-center gap-4 px-6 py-5 hover:bg-base-200 transition-colors duration-150 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 aria-label={`Ir a ${mod.title}`}
               >
                 <Icon
@@ -197,7 +198,7 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0 transition-colors", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content">
+                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
                   {mod.title}
                 </span>
                 <Icon
@@ -213,7 +214,7 @@ const modulesGroupInvgate: AdminModule[] = [
               <div
                 aria-disabled="true"
                 title="Próximamente"
-                class="flex items-center gap-4 px-6 py-5 opacity-40 cursor-not-allowed select-none"
+                class="flex cursor-not-allowed items-center gap-4 px-6 py-5 opacity-40 select-none"
               >
                 <Icon
                   name={mod.icon}
@@ -221,7 +222,7 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content">
+                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
                   {mod.title}
                 </span>
                 <span class="badge badge-ghost badge-sm font-medium">
@@ -235,7 +236,7 @@ const modulesGroupInvgate: AdminModule[] = [
     </div>
 
     <div
-      class="card bg-base-100 border border-base-300 divide-y divide-base-200 overflow-hidden"
+      class="card bg-base-100 border-base-300 divide-base-200 divide-y overflow-hidden border"
     >
       {
         modulesGroupInvgate.map((mod) => {
@@ -247,7 +248,7 @@ const modulesGroupInvgate: AdminModule[] = [
             return (
               <a
                 href={resolveUrl(mod.href)}
-                class="flex items-center gap-4 px-6 py-5 hover:bg-base-200 transition-colors duration-150 group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 aria-label={`Ir a ${mod.title}`}
               >
                 <Icon
@@ -256,7 +257,7 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0 transition-colors", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content">
+                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
                   {mod.title}
                 </span>
                 <Icon
@@ -272,7 +273,7 @@ const modulesGroupInvgate: AdminModule[] = [
               <div
                 aria-disabled="true"
                 title={isLocked ? "Acceso restringido por rol" : "Próximamente"}
-                class="flex items-center gap-4 px-6 py-5 opacity-40 cursor-not-allowed select-none"
+                class="flex cursor-not-allowed items-center gap-4 px-6 py-5 opacity-40 select-none"
               >
                 <Icon
                   name={mod.icon}
@@ -280,7 +281,7 @@ const modulesGroupInvgate: AdminModule[] = [
                   class:list={["shrink-0", mod.iconTone]}
                   aria-hidden="true"
                 />
-                <span class="flex-1 text-base md:text-lg font-semibold text-base-content">
+                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
                   {mod.title}
                 </span>
                 {isLocked ? (

@@ -1,5 +1,11 @@
 import { db } from "@db/index";
-import { provinces, regions, offices, officeAssets, officeInvgateLinks } from "@db/schema";
+import {
+  provinces,
+  regions,
+  offices,
+  officeAssets,
+  officeInvgateLinks,
+} from "@db/schema";
 import { eq, or, and, sql, inArray, asc, desc, like } from "drizzle-orm";
 import type {
   OfficeDirectoryItem,
@@ -9,13 +15,23 @@ import type {
 } from "@/types/offices";
 import { normalizeSearchValue } from "@lib/clientSearch";
 import { buildSiblingMap } from "@lib/officeSiblings";
-import { getOfficeAddressKey, normalizeOfficeAddress } from "@lib/officeAddress";
+import {
+  getOfficeAddressKey,
+  normalizeOfficeAddress,
+} from "@lib/officeAddress";
 
 let manualHostnamesCache: Set<string> | null = null;
 let manualHostnamesCacheTime = 0;
 const MANUAL_HOSTNAMES_TTL_MS = 60_000;
 
-export type OfficeSortKey = "code" | "name" | "parent-nis" | "address" | "type" | "region" | "cost-center";
+export type OfficeSortKey =
+  | "code"
+  | "name"
+  | "parent-nis"
+  | "address"
+  | "type"
+  | "region"
+  | "cost-center";
 export type SortOrder = "asc" | "desc";
 
 const officeSortColumns = {
@@ -189,7 +205,8 @@ export async function getOffices(params: GetOfficesParams) {
     .leftJoin(regions, eq(provinces.regionId, regions.id))
     .orderBy(regions.name, provinces.name);
 
-  const provincesByRegion: Record<string, { code: string; name: string }[]> = {};
+  const provincesByRegion: Record<string, { code: string; name: string }[]> =
+    {};
   for (const p of allProvincesWithRegion) {
     const rName = p.regionName ?? "Sin región";
     if (!provincesByRegion[rName]) provincesByRegion[rName] = [];
@@ -212,7 +229,10 @@ export async function getOffices(params: GetOfficesParams) {
   if (typeFilter !== "all") {
     if (typeFilter === "SUCURSAL_AUTOMATIZADA") {
       whereConditions.push(
-        and(eq(offices.type, "SUCURSAL"), eq(offices.officeType, "AUTOMATIZADA")),
+        and(
+          eq(offices.type, "SUCURSAL"),
+          eq(offices.officeType, "AUTOMATIZADA"),
+        ),
       );
     } else if (typeFilter === "SUCURSAL_NO_AUTOMATIZADA") {
       whereConditions.push(
@@ -255,12 +275,12 @@ export async function getOffices(params: GetOfficesParams) {
           sql`EXISTS (
             SELECT 1 FROM terminals t
             WHERE t.nis = ${offices.code}
-              AND t.ip_address LIKE ${trimmedSearch + '%'}
+              AND t.ip_address LIKE ${trimmedSearch + "%"}
           )`,
           sql`EXISTS (
             SELECT 1 FROM office_assets oa
             WHERE oa.office_id = ${offices.id}
-              AND oa.ip LIKE ${trimmedSearch + '%'}
+              AND oa.ip LIKE ${trimmedSearch + "%"}
           )`,
           ...hostnameConditions,
         ),
@@ -323,10 +343,7 @@ export async function getOffices(params: GetOfficesParams) {
   // No address filter
   if (params.noAddress === true) {
     whereConditions.push(
-      or(
-        sql`${offices.address} IS NULL`,
-        sql`${offices.address} = ''`,
-      ),
+      or(sql`${offices.address} IS NULL`, sql`${offices.address} = ''`),
     );
   }
 
@@ -336,7 +353,6 @@ export async function getOffices(params: GetOfficesParams) {
   } else if (params.status === "active") {
     whereConditions.push(eq(offices.active, true));
   }
-
 
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -372,13 +388,18 @@ export async function getOffices(params: GetOfficesParams) {
 
   // Cached: fetch all manual hostnames globally to deduplicate terminals
   const now = Date.now();
-  if (!manualHostnamesCache || now - manualHostnamesCacheTime > MANUAL_HOSTNAMES_TTL_MS) {
+  if (
+    !manualHostnamesCache ||
+    now - manualHostnamesCacheTime > MANUAL_HOSTNAMES_TTL_MS
+  ) {
     const allManualHostnamesRows = await db
       .select({ hostname: officeAssets.hostname })
       .from(officeAssets)
-      .where(sql`${officeAssets.hostname} IS NOT NULL AND ${officeAssets.hostname} != ''`);
+      .where(
+        sql`${officeAssets.hostname} IS NOT NULL AND ${officeAssets.hostname} != ''`,
+      );
     manualHostnamesCache = new Set(
-      allManualHostnamesRows.map((r) => r.hostname?.toLowerCase())
+      allManualHostnamesRows.map((r) => r.hostname?.toLowerCase()),
     );
     manualHostnamesCacheTime = now;
   }
@@ -386,80 +407,83 @@ export async function getOffices(params: GetOfficesParams) {
 
   const siblingMap = await loadSiblingMap();
 
-  const officeDirectoryItems: OfficeDirectoryItem[] = dbOffices.map((office) => {
-    let mappedType = office.type;
-    if (office.type === "SUCURSAL") {
-      mappedType =
-        office.officeType === "AUTOMATIZADA"
-          ? "SUCURSAL_AUTOMATIZADA"
-          : "SUCURSAL_NO_AUTOMATIZADA";
-    }
-    return {
-      id: `office-${office.code.toLowerCase()}`,
-      dbId: office.id,
-      type: mappedType as OfficeType,
-      code: office.code,
-      name: office.name,
-      provinceCode: office.provinceCode,
-      provinceName: office.province?.name ?? "",
-      location: office.province?.name ?? "",
-      costCenter: [
-        office.cctAdminOffice,
-        office.ccCommercial,
-        office.ccCommercialCorp,
-        office.ccElectoral,
-        office.ccNetworkMgmt,
-        office.ccOperations,
-        office.ccOperational,
-        office.ccHr,
-        office.ccSecurity,
-        office.ccAdmin,
-        office.ccAdmission,
-        office.ccCtp,
-        office.ccCtt,
-        office.ccTransport,
-        office.ccLogistics
-      ].find((val) => val && val.trim() !== "") || "—",
-      postalCode: "",
-      region: office.province?.region?.name ?? "",
-      address: office.address ?? "",
-      email: office.email ?? "",
-      notes: office.notes ?? "",
-      officeType: office.officeType,
-      parentNis: office.parentNis,
-      contacts: office.contacts.map((oc) => ({
-        name: oc.contact.name,
-        phone: oc.contact.phone ?? "",
-        timeSlot: oc.timeSlot ?? "",
-      })),
-      assets: office.assets.map((a) => ({
-        type: a.type as OfficeAssetType,
-        hostname: a.hostname ?? "",
-        ip: a.ip ?? "",
-      })),
-      invgateLinked: !!office.invgateLink,
-      invgateDisplayName: office.invgateLink?.invgateDisplayName ?? null,
-      invgateCp: office.invgateLink?.invgateCp ?? null,
-      invgateCc: office.invgateLink?.invgateCc ?? null,
-      invgateAddress: office.invgateLink?.invgateAddress ?? null,
-      invgateParentName: office.invgateLink?.invgateParentName ?? null,
-      invgateDuplicateCount: office.invgateLink?.invgateDuplicateCount ?? 0,
-      invgateUserTotal: office.invgateLink?.invgateUserTotal ?? 0,
-      terminals: (office.terminals ?? [])
-        .filter((t) => {
-          if (!t.hostname) return true;
-          return !manualHostnames.has(t.hostname.toLowerCase());
-        })
-        .map((t) => ({
-          hostname: t.hostname ?? "",
-          ipAddress: t.ipAddress ?? "",
-          operatingSystem: t.operatingSystem ?? "",
+  const officeDirectoryItems: OfficeDirectoryItem[] = dbOffices.map(
+    (office) => {
+      let mappedType = office.type;
+      if (office.type === "SUCURSAL") {
+        mappedType =
+          office.officeType === "AUTOMATIZADA"
+            ? "SUCURSAL_AUTOMATIZADA"
+            : "SUCURSAL_NO_AUTOMATIZADA";
+      }
+      return {
+        id: `office-${office.code.toLowerCase()}`,
+        dbId: office.id,
+        type: mappedType as OfficeType,
+        code: office.code,
+        name: office.name,
+        provinceCode: office.provinceCode,
+        provinceName: office.province?.name ?? "",
+        location: office.province?.name ?? "",
+        costCenter:
+          [
+            office.cctAdminOffice,
+            office.ccCommercial,
+            office.ccCommercialCorp,
+            office.ccElectoral,
+            office.ccNetworkMgmt,
+            office.ccOperations,
+            office.ccOperational,
+            office.ccHr,
+            office.ccSecurity,
+            office.ccAdmin,
+            office.ccAdmission,
+            office.ccCtp,
+            office.ccCtt,
+            office.ccTransport,
+            office.ccLogistics,
+          ].find((val) => val && val.trim() !== "") || "—",
+        postalCode: "",
+        region: office.province?.region?.name ?? "",
+        address: office.address ?? "",
+        email: office.email ?? "",
+        notes: office.notes ?? "",
+        officeType: office.officeType,
+        parentNis: office.parentNis,
+        contacts: office.contacts.map((oc) => ({
+          name: oc.contact.name,
+          phone: oc.contact.phone ?? "",
+          timeSlot: oc.timeSlot ?? "",
         })),
-      active: office.active ?? true,
-      closedReason: office.closedReason,
-      siblings: siblingMap.get(office.code) ?? [],
-    };
-  });
+        assets: office.assets.map((a) => ({
+          type: a.type as OfficeAssetType,
+          hostname: a.hostname ?? "",
+          ip: a.ip ?? "",
+        })),
+        invgateLinked: !!office.invgateLink,
+        invgateDisplayName: office.invgateLink?.invgateDisplayName ?? null,
+        invgateCp: office.invgateLink?.invgateCp ?? null,
+        invgateCc: office.invgateLink?.invgateCc ?? null,
+        invgateAddress: office.invgateLink?.invgateAddress ?? null,
+        invgateParentName: office.invgateLink?.invgateParentName ?? null,
+        invgateDuplicateCount: office.invgateLink?.invgateDuplicateCount ?? 0,
+        invgateUserTotal: office.invgateLink?.invgateUserTotal ?? 0,
+        terminals: (office.terminals ?? [])
+          .filter((t) => {
+            if (!t.hostname) return true;
+            return !manualHostnames.has(t.hostname.toLowerCase());
+          })
+          .map((t) => ({
+            hostname: t.hostname ?? "",
+            ipAddress: t.ipAddress ?? "",
+            operatingSystem: t.operatingSystem ?? "",
+          })),
+        active: office.active ?? true,
+        closedReason: office.closedReason,
+        siblings: siblingMap.get(office.code) ?? [],
+      };
+    },
+  );
 
   const hasMore = offset + dbOffices.length < count;
 

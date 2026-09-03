@@ -18,12 +18,12 @@ const userRole = Astro.locals.user?.role || "";
 
 <PageContainer>
   <!-- Contenedor Principal Optimizado (Grilla) -->
-  <div class="grid lg:grid-cols-3 gap-6 mb-8">
+  <div class="mb-8 grid gap-6 lg:grid-cols-3">
     <!-- Sección de Búsqueda -->
     <section
-      class="lg:col-span-2 py-8 px-6 md:px-8 rounded-2xl bg-base-200/50 border border-base-300 shadow-md flex flex-col justify-center"
+      class="bg-base-200/50 border-base-300 flex flex-col justify-center rounded-2xl border px-6 py-8 shadow-md md:px-8 lg:col-span-2"
     >
-      <div class="flex items-start justify-between mb-6 gap-4">
+      <div class="mb-6 flex items-start justify-between gap-4">
         <PageHeader
           description="Acceso rápido a contacto, internos y dependencias de todo el personal."
           class="flex-1 text-left"
@@ -31,7 +31,7 @@ const userRole = Astro.locals.user?.role || "";
         />
         <button
           id="sync-invgate-btn"
-          class="btn btn-accent btn-outline btn-sm gap-2 hidden shrink-0 mt-1 w-46.25"
+          class="btn btn-accent btn-outline btn-sm mt-1 hidden w-46.25 shrink-0 gap-2"
         >
           <span id="sync-invgate-icon" class="inline-flex items-center">
             <Icon
@@ -41,17 +41,17 @@ const userRole = Astro.locals.user?.role || "";
             />
             <Icon
               name="boxicons:check"
-              class="size-4 hidden"
+              class="hidden size-4"
               id="sync-icon-success"
             />
             <Icon
               name="boxicons:x"
-              class="size-4 hidden"
+              class="hidden size-4"
               id="sync-icon-error"
             />
             <span
               id="sync-icon-spinner"
-              class="loading loading-spinner loading-xs text-current hidden"
+              class="loading loading-spinner loading-xs hidden text-current"
             ></span>
           </span>
           <span id="sync-invgate-text">Sincronizar InvGate</span>
@@ -64,21 +64,21 @@ const userRole = Astro.locals.user?.role || "";
         ariaLabel="Buscar usuarios por nombre, apellido o DNI"
       />
 
-      <div class="flex flex-col gap-2 mt-6">
+      <div class="mt-6 flex flex-col gap-2">
         <div
-          class="flex items-center gap-2 text-xs sm:text-sm text-base-content/50"
+          class="text-base-content/50 flex items-center gap-2 text-xs sm:text-sm"
           id="search-status"
         >
           <span>Listo para buscar.</span>
         </div>
         <div
-          class="text-xxs sm:text-xs text-base-content/40 flex items-center gap-1"
+          class="text-xxs text-base-content/40 flex items-center gap-1 sm:text-xs"
           id="sync-status"
         >
         </div>
       </div>
       <!-- Botón de sincronización InvGate (solo visible para admin) -->
-      <button id="sync-invgate-btn" class="btn btn-ghost btn-xs gap-1.5 hidden">
+      <button id="sync-invgate-btn" class="btn btn-ghost btn-xs hidden gap-1.5">
         <Icon name="boxicons:refresh-ccw" class="size-3.5" />
         <span>Sincronizar con InvGate</span>
       </button>
@@ -89,8 +89,8 @@ const userRole = Astro.locals.user?.role || "";
   </div>
 
   <section>
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold flex items-center gap-2" id="results-title">
+    <div class="mb-6 flex items-center justify-between">
+      <h2 class="flex items-center gap-2 text-xl font-bold" id="results-title">
         Usuarios sugeridos <span
           class="badge badge-sm badge-neutral"
           id="results-count">0</span
@@ -98,17 +98,17 @@ const userRole = Astro.locals.user?.role || "";
       </h2>
       <div id="loading-indicator" class="hidden">
         <span class="loading loading-spinner loading-sm text-primary"></span>
-        <span class="text-sm text-base-content/60 ml-2">Buscando...</span>
+        <span class="text-base-content/60 ml-2 text-sm">Buscando...</span>
       </div>
     </div>
 
-    <div id="results-skeleton" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div id="results-skeleton" class="grid grid-cols-1 gap-6 md:grid-cols-2">
       {[1, 2, 3, 4, 5, 6].map(() => <SkeletonCard type="user" />)}
     </div>
 
     <div
       id="results-grid"
-      class="hidden grid-cols-1 md:grid-cols-2 gap-6 opacity-0 transition-opacity duration-500"
+      class="hidden grid-cols-1 gap-6 opacity-0 transition-opacity duration-500 md:grid-cols-2"
     >
     </div>
 
@@ -142,21 +142,21 @@ const userRole = Astro.locals.user?.role || "";
 <!-- Modal de Confirmación de Ticket InvGate -->
 <Modal
   id="invgate-ticket-modal"
-  title="Crear Ticket en InvGate"
+  title="Crear solicitud en InvGate"
   icon="boxicons:user-plus-filled"
   size="md"
 >
   <Fragment slot="content">
-    <p class="text-sm text-base-content/80">
+    <p class="text-base-content/80 text-sm">
       ¿Estás seguro que deseas crear un ticket solicitando acceso a InvGate para
       el usuario <strong id="modal-user-name"></strong>?
     </p>
   </Fragment>
   <Fragment slot="actions">
-    <div class="flex justify-end gap-2 mt-6">
+    <div class="mt-6 flex justify-end gap-2">
       <form method="dialog">
         <button
-          class="btn btn-ghost border border-base-300 hover:bg-base-200 cursor-pointer"
+          class="btn btn-ghost border-base-300 hover:bg-base-200 cursor-pointer border"
           >Cancelar</button
         >
       </form>
@@ -174,6 +174,7 @@ const userRole = Astro.locals.user?.role || "";
 
 <script>
   import { showToast } from "@lib/toastClient";
+  import { GROUP_DESCRIPTIONS } from "@lib/groupDescriptions";
 
   let isLoaded = false;
   let currentUsers: any[] = [];
@@ -269,7 +270,6 @@ const userRole = Astro.locals.user?.role || "";
   const saveEditBtn = document.getElementById(
     "save-edit-btn",
   ) as HTMLButtonElement | null;
-  const saveBtnSpinner = document.getElementById("save-btn-spinner");
 
   // Referencias del modal de terminal (net user)
   const terminalModal = document.getElementById("terminal-modal") as any;
@@ -374,13 +374,23 @@ const userRole = Astro.locals.user?.role || "";
   const invgateManager = document.getElementById("invgate-manager");
   const invgateOpenTickets = document.getElementById("invgate-open-tickets");
   const invgateTicketsList = document.getElementById("invgate-tickets-list");
-  const btnCopyInvgateFullname = document.getElementById("btn-copy-invgate-fullname");
+  const btnCopyInvgateFullname = document.getElementById(
+    "btn-copy-invgate-fullname",
+  );
   const btnCopyInvgateEmail = document.getElementById("btn-copy-invgate-email");
   const btnCopyInvgateRole = document.getElementById("btn-copy-invgate-role");
-  const btnCopyInvgatePosition = document.getElementById("btn-copy-invgate-position");
-  const btnCopyInvgateManager = document.getElementById("btn-copy-invgate-manager");
-  const btnCopyInvgateUserid = document.getElementById("btn-copy-invgate-userid");
-  const btnSearchInvgateManager = document.getElementById("btn-search-invgate-manager");
+  const btnCopyInvgatePosition = document.getElementById(
+    "btn-copy-invgate-position",
+  );
+  const btnCopyInvgateManager = document.getElementById(
+    "btn-copy-invgate-manager",
+  );
+  const btnCopyInvgateUserid = document.getElementById(
+    "btn-copy-invgate-userid",
+  );
+  const btnSearchInvgateManager = document.getElementById(
+    "btn-search-invgate-manager",
+  );
   let invgateLoaded = false;
   let currentInvgateUsername = "";
 
@@ -388,7 +398,9 @@ const userRole = Astro.locals.user?.role || "";
   const copyAllGroupsBtn = document.getElementById("copy-all-groups-btn");
   const btnViewGrid = document.getElementById("btn-view-grid");
   const btnViewList = document.getElementById("btn-view-list");
-  const clearGroupSearch = document.getElementById("clear-terminal-groups-search");
+  const clearGroupSearch = document.getElementById(
+    "clear-terminal-groups-search",
+  );
   let currentSelectedCategory = "all";
   let currentViewMode = "grid";
   let currentUsername = "";
@@ -405,12 +417,19 @@ const userRole = Astro.locals.user?.role || "";
       .then((res) => res.json())
       .then((data) => {
         pendingLegajoFetches.delete(key);
-        const legajoVal = data.status === "success" && data.employee_number ? data.employee_number : "-";
+        const legajoVal =
+          data.status === "success" && data.employee_number
+            ? data.employee_number
+            : "-";
         netUserCache.set(key, legajoVal);
 
-        const card = resultsGrid?.querySelector(`[data-user-card-username="${CSS.escape(key)}"]`);
+        const card = resultsGrid?.querySelector(
+          `[data-user-card-username="${CSS.escape(key)}"]`,
+        );
         if (card) {
-          const btn = card.querySelector(".user-card-legajo-btn") as HTMLElement | null;
+          const btn = card.querySelector(
+            ".user-card-legajo-btn",
+          ) as HTMLElement | null;
           if (btn) {
             btn.setAttribute("data-copy-value", legajoVal);
             btn.setAttribute("data-copy-label-default", legajoVal);
@@ -508,6 +527,8 @@ const userRole = Astro.locals.user?.role || "";
     if (q && searchInput) {
       searchInput.value = q;
       handleSearch();
+    } else if (searchInput) {
+      searchInput.focus();
     }
 
     fetchSyncStatus();
@@ -788,7 +809,10 @@ const userRole = Astro.locals.user?.role || "";
 
       if (usernameKey) {
         if (netUserCache.has(usernameKey)) {
-          updateCardCopyButton(".user-card-legajo-btn", netUserCache.get(usernameKey) || "-");
+          updateCardCopyButton(
+            ".user-card-legajo-btn",
+            netUserCache.get(usernameKey) || "-",
+          );
         } else {
           updateCardCopyButton(".user-card-legajo-btn", "...");
           fetchLegajoForUser(usernameKey);
@@ -899,7 +923,6 @@ const userRole = Astro.locals.user?.role || "";
       } else if (netUserBtn) {
         netUserBtn.classList.add("hidden");
       }
-
 
       const createTicketBtn = clone.querySelector(
         "[data-invgate-create-ticket-btn]",
@@ -1051,7 +1074,7 @@ const userRole = Astro.locals.user?.role || "";
           showToast(
             "Ticket creado con éxito y abierto en una nueva pestaña.",
             "alert-success",
-            6000
+            6000,
           );
         } else {
           showToast("Ticket creado con éxito.", "alert-success");
@@ -1100,21 +1123,17 @@ const userRole = Astro.locals.user?.role || "";
 
   editForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (
-      !editDni ||
-      !editInterno ||
-      !editTelefono ||
-      !saveEditBtn ||
-      !saveBtnSpinner
-    )
-      return;
+    if (!editDni || !editInterno || !editTelefono || !saveEditBtn) return;
 
     const dni = editDni.value;
     const interno = editInterno.value.trim();
     const telefono = editTelefono.value.trim();
 
     saveEditBtn.disabled = true;
-    saveBtnSpinner.classList.remove("hidden");
+    saveEditBtn.insertAdjacentHTML(
+      "afterbegin",
+      '<span class="loading loading-spinner loading-xs" data-save-spinner></span>',
+    );
 
     try {
       const url = `/api/usuarios/${dni}`;
@@ -1161,7 +1180,7 @@ const userRole = Astro.locals.user?.role || "";
       alert(err.message || "Error al conectar con la base de datos.");
     } finally {
       saveEditBtn.disabled = false;
-      saveBtnSpinner.classList.add("hidden");
+      saveEditBtn.querySelector("[data-save-spinner]")?.remove();
     }
   });
 
@@ -1359,7 +1378,11 @@ const userRole = Astro.locals.user?.role || "";
         }
 
         updateCategoryCounts(currentLdapGroups);
-        renderGroups(currentLdapGroups, terminalGroupsSearch?.value || "", currentSelectedCategory);
+        renderGroups(
+          currentLdapGroups,
+          terminalGroupsSearch?.value || "",
+          currentSelectedCategory,
+        );
       } else {
         const errorMsg = "Error: " + (result.error || "Ocurrió un problema.");
         terminalOutput.textContent = errorMsg;
@@ -1383,11 +1406,16 @@ const userRole = Astro.locals.user?.role || "";
     }
   }
 
-  function setInvText(el: HTMLElement | null, value: unknown, copyBtn: HTMLElement | null) {
+  function setInvText(
+    el: HTMLElement | null,
+    value: unknown,
+    copyBtn: HTMLElement | null,
+  ) {
     const has = value != null && value !== "";
     const text = has ? String(value) : "No especificado";
     if (el) el.textContent = text;
-    if (copyBtn) copyBtn.setAttribute("data-copy-value", has ? String(value) : "");
+    if (copyBtn)
+      copyBtn.setAttribute("data-copy-value", has ? String(value) : "");
   }
 
   function renderInvChips(container: HTMLElement | null, refs: any[]) {
@@ -1419,7 +1447,9 @@ const userRole = Astro.locals.user?.role || "";
       ["Oficina", u.office],
       ["Otro", u.other],
       ["Fax", u.fax],
-    ].filter(([, value]) => value != null && value !== "") as Array<[string, string]>;
+    ].filter(([, value]) => value != null && value !== "") as Array<
+      [string, string]
+    >;
     if (phones.length === 0) {
       invgatePhones.innerHTML =
         '<span class="text-base-content/40 text-xs font-sans col-span-full">Sin datos</span>';
@@ -1462,7 +1492,8 @@ const userRole = Astro.locals.user?.role || "";
     renderInvChips(invgateLocations, data.org?.locations);
 
     const managerName = data.manager?.fullname || null;
-    if (invgateManager) invgateManager.textContent = managerName || "No especificado";
+    if (invgateManager)
+      invgateManager.textContent = managerName || "No especificado";
     if (btnCopyInvgateManager) {
       btnCopyInvgateManager.setAttribute("data-copy-value", managerName || "");
     }
@@ -1693,56 +1724,74 @@ const userRole = Astro.locals.user?.role || "";
     const fragment = document.createDocumentFragment();
     filtered.forEach((group) => {
       const categoryInfo = getGroupCategory(group);
+      const licenses = GROUP_DESCRIPTIONS[group];
       const item = document.createElement("div");
       // Alto estandarizado h-11 para tamaño fijo independientemente de la cantidad
       item.className = `flex items-center justify-between gap-2.5 px-3 h-11 rounded-lg border transition-all font-sans relative group ${categoryInfo.colorClass}`;
+
+      const licenseIcons = Array.isArray(licenses)
+        ? licenses
+            .map(
+              (lic) => `
+            <div class="tooltip tooltip-top tooltip-neutral">
+              <div class="tooltip-content max-w-xs whitespace-normal text-left">
+                <span class="block text-xs font-bold">${escapeHTML(lic.name)}</span>
+                <span class="block text-xs">${escapeHTML(lic.description)}</span>
+                <span class="mt-1 block text-xs text-base-content/70">Recomendación: ${escapeHTML(lic.recommendation)}</span>
+              </div>
+              <button type="button" class="btn btn-ghost btn-xs p-0.5 shrink-0 cursor-pointer" aria-label="Información de licencia ${escapeHTML(lic.name)}">
+                <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
+              </button>
+            </div>`,
+            )
+            .join("")
+        : "";
 
       item.innerHTML = `
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <span class="size-4 shrink-0 select-none flex items-center justify-center">${categoryInfo.icon}</span>
             <span class="font-semibold truncate text-small select-all text-base-content" title="${escapeHTML(group)}">${highlightGroupText(group, filterText)}</span>
-            <button type="button" class="btn btn-ghost btn-xs p-0.5 cursor-pointer shrink-0" title="Ver información del grupo" aria-label="Ver información del grupo">
-              <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
-            </button>
+            ${licenseIcons}
           </div>
           <button type="button" class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer shrink-0" data-copy-control data-copy-value="${escapeHTML(group)}" data-copy-label-default="Copiar grupo" data-copy-label-success="Copiado" data-copy-replace-label="false" title="Copiar nombre de grupo">
             <svg class="size-3.5" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-default><rect width="14" height="14" x="8" y="2" rx="2" ry="2"/><path d="M8.5 18A2.5 2.5 0 0 1 6 15.5V8H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-2z"/></svg>
             <svg class="size-3.5 hidden opacity-0 scale-75 text-success transition-all duration-200" viewBox="0 0 24 24" fill="currentColor" data-copy-icon-success><path d="M9 15.59L4.71 11.3L3.3 12.71l5 5c.2.2.45.29.71.29s.51-.1.71-.29l11-11l-1.41-1.41L9.02 15.59Z"/></svg>
           </button>
         `;
-      const infoBtn = item.querySelector("button[title='Ver información del grupo']") as HTMLButtonElement | null;
-      if (infoBtn) {
-        infoBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          showGroupInfo(group);
+      const copyBtn = item.querySelector(
+        "button[data-copy-control]",
+      ) as HTMLButtonElement | null;
+      if (copyBtn) {
+        copyBtn.addEventListener("click", async () => {
+          const copied = await copyText(group);
+          if (!copied) return;
+          const defaultIcons = Array.from(
+            copyBtn.querySelectorAll("[data-copy-icon-default]"),
+          );
+          const successIcons = Array.from(
+            copyBtn.querySelectorAll("[data-copy-icon-success]"),
+          );
+          defaultIcons.forEach((icon) =>
+            icon.classList.add("hidden", "opacity-0", "scale-75"),
+          );
+          successIcons.forEach((icon) => {
+            icon.classList.remove("hidden", "opacity-0", "scale-75");
+            icon.classList.add("scale-100", "opacity-100");
+          });
+          setTimeout(() => {
+            defaultIcons.forEach((icon) =>
+              icon.classList.remove("hidden", "opacity-0", "scale-75"),
+            );
+            successIcons.forEach((icon) => {
+              icon.classList.add("hidden", "opacity-0", "scale-75");
+              icon.classList.remove("scale-100", "opacity-100");
+            });
+          }, 1800);
         });
       }
       fragment.appendChild(item);
     });
     terminalGroupsList.appendChild(fragment);
-  }
-
-  function showGroupInfo(groupName: string) {
-    const cat = getGroupCategory(groupName);
-    const lower = groupName.toLowerCase();
-    let type = "Grupo de acceso";
-    if (
-      lower.startsWith("dl_") ||
-      lower.includes("lista") ||
-      lower.includes("distribution")
-    ) {
-      type = "Lista de distribución";
-    } else if (
-      lower.includes("admin") ||
-      lower.includes("security") ||
-      lower.includes("seguridad")
-    ) {
-      type = "Grupo de seguridad";
-    }
-    showToast(
-      `${groupName} · Categoría: ${cat.label} · Tipo: ${type}`,
-      "alert-info",
-    );
   }
 
   function closeTerminalModal() {
@@ -1874,7 +1923,8 @@ const userRole = Astro.locals.user?.role || "";
     refreshTerminalIcon?.classList.add("animate-spin");
     refreshTerminalBtn.disabled = true;
     try {
-      const invgateActive = viewInvgate && !viewInvgate.classList.contains("hidden");
+      const invgateActive =
+        viewInvgate && !viewInvgate.classList.contains("hidden");
       if (invgateActive) {
         terminalLoading?.classList.add("hidden");
         terminalLoading?.classList.remove("flex");
@@ -1924,7 +1974,10 @@ const userRole = Astro.locals.user?.role || "";
 
   tabInvgateBtn?.addEventListener("click", () => {
     tabInvgateBtn.classList.add("border-secondary", "text-secondary");
-    tabInvgateBtn.classList.remove("border-transparent", "text-base-content/60");
+    tabInvgateBtn.classList.remove(
+      "border-transparent",
+      "text-base-content/60",
+    );
     tabPanelBtn?.classList.remove("border-secondary", "text-secondary");
     tabPanelBtn?.classList.add("border-transparent", "text-base-content/60");
     tabConsoleBtn?.classList.remove("border-secondary", "text-secondary");

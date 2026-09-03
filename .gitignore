@@ -87,6 +87,21 @@ opencode.jsonc
 # skills
 .superpowers/sdd
 
+# Agent tooling & internal artifacts
+.opencode/
+.aider*
+.claude/
+.cursor/
+.windsurf/
+.continue/
+audit/
+.tmp-*/
+*.err
+mk-session.tmp.ts
+
+# Superpowers agent-generated plans/specs (new files)
+docs/superpowers/
+
 # generated reports and db backups
 scripts/reports
 scripts/backups

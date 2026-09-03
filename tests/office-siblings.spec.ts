@@ -69,7 +69,10 @@ test.describe("Oficinas en el mismo edificio", () => {
     await page.waitForSelector("[data-office-id]", { timeout: 15000 });
 
     const sibling = page.locator("[data-sibling-office]").first();
-    test.skip((await sibling.count()) === 0, "No shared-address offices in the current DB");
+    test.skip(
+      (await sibling.count()) === 0,
+      "No shared-address offices in the current DB",
+    );
     await expect(sibling).toHaveAttribute("data-sibling-code", /.+/);
   });
 });
