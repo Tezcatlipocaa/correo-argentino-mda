@@ -52,6 +52,7 @@ export interface TerminalItem {
   serial: string;
   osName: string;
   architecture: string;
+  lastContactRaw: string;
   branch: string;
   province: string;
   region: string;
@@ -126,6 +127,7 @@ function mapTerminalQueryRow(row: TerminalQueryRow): TerminalItem {
     province: row.provinceName || "--",
     region: row.regionName || "--",
     nis: t.nis || "--",
+    lastContactRaw: t.lastContact || "",
     lastContactDate: lastContact.date,
     lastContactTime: lastContact.time,
     osFamily: toOsFamily(t.operatingSystem || ""),
@@ -177,7 +179,9 @@ export interface GetTerminalsParams {
   isMediterranea?: boolean;
   mediterraneaType?: string;
   ttType?: "all" | "tyt" | "sts";
-  withVm?: boolean;
+  vmFilter?: "all" | "with" | "without";
+  duplicates?: boolean;
+  orphans?: boolean;
 }
 
 export async function getTerminals(params: GetTerminalsParams = {}) {
@@ -352,6 +356,20 @@ export async function getTerminals(params: GetTerminalsParams = {}) {
     filters.push(eq(terminals.model, params.model));
   }
 
+  if (params.duplicates) {
+    // Hostname o IP repetidos: síntoma de equipos que dejaron de reportar
+    // pero persisten en el inventario legacy.
+    filters.push(
+      sql`(${terminals.hostname} IN (SELECT hostname FROM terminals WHERE hostname IS NOT NULL AND hostname != '' GROUP BY hostname HAVING COUNT(*) > 1)
+        OR ${terminals.ipAddress} IN (SELECT ip_address FROM terminals WHERE ip_address IS NOT NULL AND ip_address != '' GROUP BY ip_address HAVING COUNT(*) > 1))`,
+    );
+  }
+
+  if (params.orphans) {
+    // NIS que no matchea ninguna oficina registrada.
+    filters.push(isNull(offices.code));
+  }
+
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
   const [{ count }] = await db
@@ -417,6 +435,70 @@ export interface TTGroupResult {
   hasMore: boolean;
 }
 
+// Unión TT: Debian/Ubuntu O hostname TT_____P, excluyendo Mediterránea.
+const ttUnionConditions = () => [
+  notLike(terminals.hostname, "TMEDI%"),
+  notLike(terminals.hostname, "TVMEDI%"),
+  or(
+    like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
+    like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
+    like(terminals.hostname, "TT_____P"),
+  ),
+];
+
+const statusThresholdDate = () =>
+  new Date(Date.now() - 24 * 60 * 60 * 1000)
+    .toISOString()
+    .replace("T", " ")
+    .substring(0, 19);
+
+export interface StatusCounts {
+  online: number;
+  offline: number;
+}
+
+export async function getTerminalStatusCounts(): Promise<StatusCounts> {
+  const threshold = statusThresholdDate();
+  const [online] = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(terminals)
+    .where(gte(terminals.lastContact, threshold));
+  const [offline] = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(terminals)
+    .where(
+      or(
+        lt(terminals.lastContact, threshold),
+        isNull(terminals.lastContact),
+        eq(terminals.lastContact, ""),
+      ),
+    );
+  return { online: online.c, offline: offline.c };
+}
+
+export async function getTTStatusCounts(): Promise<StatusCounts> {
+  const threshold = statusThresholdDate();
+  const base = and(...ttUnionConditions());
+  const [online] = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(terminals)
+    .where(and(base, gte(terminals.lastContact, threshold)));
+  const [offline] = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(terminals)
+    .where(
+      and(
+        base,
+        or(
+          lt(terminals.lastContact, threshold),
+          isNull(terminals.lastContact),
+          eq(terminals.lastContact, ""),
+        ),
+      ),
+    );
+  return { online: online.c, offline: offline.c };
+}
+
 export async function getTTGroups(
   params: GetTerminalsParams = {},
 ): Promise<TTGroupResult> {
@@ -456,15 +538,7 @@ export async function getTTGroups(
   }
 
   // Unión: Debian/Ubuntu O hostname TT_____P. Exclusión explícita de Mediterránea.
-  filters.push(
-    notLike(terminals.hostname, "TMEDI%"),
-    notLike(terminals.hostname, "TVMEDI%"),
-    or(
-      like(sql`lower(${terminals.operatingSystem})`, "%debian%"),
-      like(sql`lower(${terminals.operatingSystem})`, "%ubuntu%"),
-      like(terminals.hostname, "TT_____P"),
-    ),
-  );
+  filters.push(...ttUnionConditions());
 
   if (params.ttType === "tyt" || params.ttType === "sts") {
     // T&T se detecta por base (hostname sin sufijo -D), igual que computeTTBase.
@@ -509,8 +583,10 @@ export async function getTTGroups(
     params.sortBy,
     params.sortOrder,
   );
-  if (params.withVm) {
+  if (params.vmFilter === "with") {
     allGroups = allGroups.filter((g) => g.pairState === "complete");
+  } else if (params.vmFilter === "without") {
+    allGroups = allGroups.filter((g) => g.pairState === "missing-vm");
   }
   const count = allGroups.length;
   const pageGroups = allGroups.slice(offset, offset + limit + 1);

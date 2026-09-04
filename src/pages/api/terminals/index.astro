@@ -28,7 +28,12 @@ const ttType = (searchParams.get("ttType") || "all") as
   | "all"
   | "tyt"
   | "sts";
-const withVm = searchParams.get("withVm") === "true";
+const vmFilter = (searchParams.get("vmFilter") || "all") as
+  | "all"
+  | "with"
+  | "without";
+const duplicates = searchParams.get("duplicates") === "true";
+const orphans = searchParams.get("orphans") === "true";
 
 const ttResult = isTT
   ? await getTTGroups({
@@ -39,7 +44,7 @@ const ttResult = isTT
       sortBy,
       sortOrder,
       ttType,
-      withVm,
+      vmFilter,
     })
   : null;
 const regular = !isTT
@@ -58,6 +63,8 @@ const regular = !isTT
       sortOrder,
       isMediterranea,
       mediterraneaType,
+      duplicates,
+      orphans,
     })
   : null;
 
