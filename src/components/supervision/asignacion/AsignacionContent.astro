@@ -564,17 +564,17 @@ function getInitials(name: string): string {
                   >
                     <div class="flex items-center gap-3.5 min-w-0 flex-1">
                       <div class={`avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${
-                        idx === 0 ? "bg-primary text-primary-content shadow-xs" : "bg-base-300 text-base-content/70"
+                        idx === 0 ? "bg-primary/25 text-primary border-2 border-primary/45 shadow-xs font-black" : "bg-base-300 text-base-content/70"
                       }`}>
                         {getInitials(op.nombre)}
                       </div>
                       <div class="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <span class={`truncate font-extrabold text-sm ${idx === 0 ? "text-base-content font-black" : "text-base-content/85"}`}>
+                          <span class={`truncate font-extrabold text-sm ${idx === 0 ? "text-base-content" : "text-base-content/85"}`}>
                             {op.nombre}
                           </span>
                           {idx === 0 && (
-                            <span class="badge badge-primary text-primary-content badge-sm font-bold uppercase text-xs shrink-0">Siguiente</span>
+                            <span class="badge badge-sm bg-primary/20 text-primary border border-primary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
                           )}
                           {!op.disponible && (
                             <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">
@@ -593,14 +593,12 @@ function getInitials(name: string): string {
                             <span class="font-mono text-base-content/75">{op.horarioHoy}</span>
                           )}
                           {op.breakInminente ? (
-                            <span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Entra en break en ${op.breakInminenteMin || 1} min`}>
-                              <Icon name="boxicons:cup-hot" size={12} class="shrink-0" />
+                            <span class="badge badge-soft badge-warning text-warning font-bold text-xxs px-2 py-0.5 shadow-xs" title={`Entra en break en ${op.breakInminenteMin || 1} min`}>
                               <span>Break en {op.breakInminenteMin}m ({op.breakInicioHoy})</span>
                             </span>
                           ) : op.breakInicioHoy && op.breakFinHoy && (
-                            <span class="flex items-center gap-1 font-mono text-base-content/75">
-                              <Icon name="boxicons:cup-hot" size={13} class="opacity-60 shrink-0 text-warning" />
-                              <span>Break: {op.breakInicioHoy} - {op.breakFinHoy}</span>
+                            <span class="font-mono text-base-content/75">
+                              Break: {op.breakInicioHoy} - {op.breakFinHoy}
                             </span>
                           )}
                         </div>
@@ -1752,9 +1750,9 @@ function getInitials(name: string): string {
         if (sortedQueue.length > 0) {
           queueContainer.innerHTML = sortedQueue.map((op, idx) => {
             const isFirst = idx === 0;
-            const avatarBg = isFirst ? "bg-primary text-primary-content shadow-xs" : "bg-base-300 text-base-content/70";
+            const avatarBg = isFirst ? "bg-primary/25 text-primary border-2 border-primary/45 shadow-xs font-black" : "bg-base-300 text-base-content/70";
             const containerClass = isFirst ? "bg-primary/5" : "";
-            const titleClass = isFirst ? "text-base-content font-black" : "text-base-content/85";
+            const titleClass = isFirst ? "text-base-content font-extrabold" : "text-base-content/85";
 
             const projTicket = latestUnassignedTickets[idx];
             const projBadge = projTicket
@@ -1775,9 +1773,9 @@ function getInitials(name: string): string {
 
             let breakStr = "";
             if (op.breakInminente) {
-              breakStr = `<span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Entra en break en ${op.breakInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break en ${op.breakInminenteMin}m (${escapeHtml(op.breakInicioHoy)})</span></span>`;
+              breakStr = `<span class="badge badge-soft badge-warning text-warning font-bold text-xxs px-2 py-0.5 shadow-xs" title="Entra en break en ${op.breakInminenteMin || 1} min"><span>Break en ${op.breakInminenteMin}m (${escapeHtml(op.breakInicioHoy)})</span></span>`;
             } else if (op.breakInicioHoy && op.breakFinHoy) {
-              breakStr = `<span class="flex items-center gap-1 font-mono text-base-content/75"><svg class="size-3.5 text-warning opacity-70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span></span>`;
+              breakStr = `<span class="font-mono text-base-content/75">Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}</span>`;
             }
 
             return `
@@ -1791,7 +1789,7 @@ function getInitials(name: string): string {
                       <span class="truncate font-extrabold text-sm ${titleClass}">
                         ${escapeHtml(op.nombre)}
                       </span>
-                      ${isFirst ? '<span class="badge badge-primary text-primary-content badge-sm font-bold uppercase text-xs shrink-0">Siguiente</span>' : ''}
+                      ${isFirst ? '<span class="badge badge-sm bg-primary/20 text-primary border border-primary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>' : ''}
                       ${statusBadge}
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
