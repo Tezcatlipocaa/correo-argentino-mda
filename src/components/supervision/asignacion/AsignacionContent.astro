@@ -412,7 +412,7 @@ function getInitials(name: string): string {
               <button
                 type="button"
                 id="btn-refresh-general"
-                class="btn btn-ghost btn-xs text-base-content/70 hover:text-primary hover:bg-primary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
+                class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
                 title="Actualizar tickets y disponibilidad de operadores ahora"
               >
                 <Icon name="boxicons:refresh-ccw" size={16} id="btn-refresh-general-icon" class="shrink-0 transition-transform" />
@@ -454,7 +454,7 @@ function getInitials(name: string): string {
                 return (
                   <div data-ticket-id={t.id} class="p-4 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-2.5 cursor-pointer group min-w-[480px] sm:min-w-0">
                     <div class="flex items-start justify-between gap-3">
-                      <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-primary transition-colors truncate pr-1" title={t.title}>
+                      <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-secondary transition-colors truncate pr-1" title={t.title}>
                         <span class="font-mono font-bold text-base-content/60 mr-1.5">{t.pretty_id || `#${t.id}`}</span>
                         <span>{t.title}</span>
                       </div>
@@ -513,8 +513,10 @@ function getInitials(name: string): string {
                       <div class="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
-                          class={`btn btn-ghost btn-xs px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs text-base-content/70 hover:text-primary hover:bg-primary/10 ${
-                            isReadOnly ? "btn-disabled opacity-40 cursor-not-allowed text-base-content/40" : ""
+                          class={`btn btn-xs shrink-0 gap-1.5 text-xs px-2.5 h-7 min-h-0 font-bold transition-colors ${
+                            isReadOnly
+                              ? "btn-ghost btn-disabled opacity-40 cursor-not-allowed text-base-content/40"
+                              : "btn-primary shadow-sm"
                           }`}
                           data-action-assign-to={t.id}
                           title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar ticket #${t.pretty_id || t.id} a un operador...`}
@@ -556,25 +558,19 @@ function getInitials(name: string): string {
                 nextSuggestedOperators.map((op, idx) => (
                   <div
                     data-agent-id={op.agentId}
-                    class={`flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0 ${
-                      idx === 0
-                        ? "bg-primary/5"
-                        : ""
-                    }`}
+                    class="flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0"
                   >
                     <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                      <div class={`avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${
-                        idx === 0 ? "bg-primary/25 text-primary border-2 border-primary/45 shadow-xs font-black" : "bg-base-300 text-base-content/70"
-                      }`}>
+                      <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm bg-base-300 text-base-content/70">
                         {getInitials(op.nombre)}
                       </div>
                       <div class="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <span class={`truncate font-extrabold text-sm ${idx === 0 ? "text-base-content" : "text-base-content/85"}`}>
+                          <span class="truncate font-extrabold text-sm text-base-content">
                             {op.nombre}
                           </span>
                           {idx === 0 && (
-                            <span class="badge badge-sm bg-primary/20 text-primary border border-primary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
+                            <span class="badge badge-sm border bg-warning/20 text-warning border-warning/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
                           )}
                           {!op.disponible && (
                             <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">
@@ -1750,9 +1746,6 @@ function getInitials(name: string): string {
         if (sortedQueue.length > 0) {
           queueContainer.innerHTML = sortedQueue.map((op, idx) => {
             const isFirst = idx === 0;
-            const avatarBg = isFirst ? "bg-primary/25 text-primary border-2 border-primary/45 shadow-xs font-black" : "bg-base-300 text-base-content/70";
-            const containerClass = isFirst ? "bg-primary/5" : "";
-            const titleClass = isFirst ? "text-base-content font-extrabold" : "text-base-content/85";
 
             const projTicket = latestUnassignedTickets[idx];
             const projBadge = projTicket
@@ -1779,17 +1772,17 @@ function getInitials(name: string): string {
             }
 
             return `
-              <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0 ${containerClass}">
+              <div data-agent-id="${op.agentId}" class="flex items-center justify-between gap-3.5 p-3.5 transition-colors hover:bg-base-200/60 cursor-default min-w-[360px] sm:min-w-0">
                 <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm ${avatarBg}">
+                  <div class="avatar placeholder size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm bg-base-300 text-base-content/70">
                     ${escapeHtml(getInitialsJs(op.nombre))}
                   </div>
                   <div class="min-w-0 flex-1 flex flex-col gap-0.5">
                     <div class="flex items-center gap-2 flex-wrap">
-                      <span class="truncate font-extrabold text-sm ${titleClass}">
+                      <span class="truncate font-extrabold text-sm text-base-content">
                         ${escapeHtml(op.nombre)}
                       </span>
-                      ${isFirst ? '<span class="badge badge-sm bg-primary/20 text-primary border border-primary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>' : ''}
+                      ${isFirst ? '<span class="badge badge-sm border bg-warning/20 text-warning border-warning/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>' : ''}
                       ${statusBadge}
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
@@ -3054,8 +3047,8 @@ function getInitials(name: string): string {
               const clientIsReadOnly = !clientHasLock;
               const clientIsDisabled = clientIsReadOnly ? 'disabled="true"' : "";
               const clientAssignToClass = clientIsReadOnly
-                ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
-                : "btn btn-ghost btn-xs text-base-content/70 hover:text-primary hover:bg-primary/10 px-2.5 py-0 h-6.5 min-h-0 font-bold shrink-0 gap-1.5 text-xs";
+                ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 h-7 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
+                : "btn btn-primary btn-xs font-bold shadow-sm px-2.5 h-7 min-h-0 shrink-0 gap-1.5 text-xs";
 
               const assignButtons = `
                 <button
@@ -3084,7 +3077,7 @@ function getInitials(name: string): string {
                   data-ticket-id="${t.id}"
                 >
                   <div class="flex items-start justify-between gap-3">
-                    <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-primary transition-colors truncate min-w-0 flex-1 pr-1" title="${escapeHtml(t.title)}">
+                    <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-secondary transition-colors truncate min-w-0 flex-1 pr-1" title="${escapeHtml(t.title)}">
                       <span class="font-mono font-bold text-base-content/60 mr-1.5">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
                       <span>${escapeHtml(t.title)}</span>
                     </div>
@@ -3206,6 +3199,22 @@ function getInitials(name: string): string {
         indicator.removeAttribute("data-has-lock");
       }
       updateActionBarSubtitle();
+
+      // Actualizar todos los botones "Asignar a..." en las tarjetas de tickets en tiempo real
+      document.querySelectorAll("#unassigned-tickets-list [data-action-assign-to]").forEach((btnEl) => {
+        const btn = btnEl as HTMLButtonElement;
+        if (hasLock) {
+          btn.disabled = false;
+          btn.removeAttribute("disabled");
+          btn.className = "btn btn-primary btn-xs font-bold shadow-sm px-2.5 h-7 min-h-0 shrink-0 gap-1.5 text-xs";
+          btn.title = "Asignar este ticket a un operador específico";
+        } else {
+          btn.disabled = true;
+          btn.setAttribute("disabled", "true");
+          btn.className = "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 h-7 min-h-0 font-bold shrink-0 gap-1.5 text-xs";
+          btn.title = "Solo el supervisor con control puede asignar";
+        }
+      });
 
       let dotColor = "bg-base-content/30";
       let statusText = "Sin asignador";
