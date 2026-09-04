@@ -238,6 +238,18 @@ function getInitials(name: string): string {
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+function formatWaitTime(elapsedMin: number): string {
+  if (elapsedMin >= 1440) {
+    const days = Math.floor(elapsedMin / 1440);
+    const hours = Math.floor((elapsedMin % 1440) / 60);
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  }
+  if (elapsedMin >= 60) {
+    return `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
+  }
+  return `${elapsedMin}m`;
+}
 ---
 
 <PageContainer>
@@ -430,9 +442,7 @@ function getInitials(name: string): string {
                 if (t.created_at) {
                   elapsedMin = Math.floor((Date.now() - t.created_at * 1000) / 60000);
                 }
-                const formatWait = elapsedMin >= 60 
-                  ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
-                  : `${elapsedMin}m`;
+                const formatWait = formatWaitTime(elapsedMin);
 
                 const creatorUsername = (t.creator_username || "").toLowerCase().trim();
                 const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
@@ -490,7 +500,7 @@ function getInitials(name: string): string {
                           title={`Operadores MDA que comentaron: ${(t.commenting_operators || []).map((o: any) => `${o.name} (${o.comment_count})`).join(', ')}`}
                         >
                           <Icon name="boxicons:message-circle-dots" size={13} class="shrink-0" />
-                          <span>+{t.commenting_operators_count} ops</span>
+                          <span>+{t.commenting_operators_count}</span>
                         </span>
                       )}
                     </div>
@@ -642,17 +652,17 @@ function getInitials(name: string): string {
 
             <div id="stat-last-assigned-container">
               {lastAssignedOperator ? (
-                <div class="text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2.5 bg-base-100 p-3.5 rounded-xl border border-base-300/60">
-                  <div class="flex items-center gap-4">
-                    <span class="text-base-content/70">
+                <div class="text-xs flex items-center justify-between gap-2 bg-base-100 px-3 py-2 rounded-xl border border-base-300/60 min-w-0">
+                  <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 truncate">
+                    <span class="text-base-content/70 shrink-0">
                       De: <strong class="text-info font-bold" id="stat-last-assigned-by">{lastAssignedOperator.lastAutogestionAssignedBy || "Sistema"}</strong>
                     </span>
-                    <span class="text-base-content/70">
+                    <span class="text-base-content/70 truncate">
                       Para: <strong class="text-base-content font-bold" id="stat-last-assigned-to">{lastAssignedOperator.nombre}</strong>
                     </span>
                   </div>
-                  <span class="text-xs text-base-content/50 font-mono" id="stat-last-assigned-time">
-                    Hora: {new Date(lastAssignedOperator.lastAutogestionAssignedAt!).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                  <span class="text-xs text-base-content/50 font-mono shrink-0 whitespace-nowrap ml-2" id="stat-last-assigned-time" title="Hora de asignación">
+                    {new Date(lastAssignedOperator.lastAutogestionAssignedAt!).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
               ) : (
@@ -1268,7 +1278,7 @@ function getInitials(name: string): string {
 
   <!-- Modal Historial de Asignaciones -->
   <dialog id="modal-historial-asignaciones" class="modal modal-bottom sm:modal-middle">
-    <div class="modal-box sm:max-w-4xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div class="modal-box w-11/12 max-w-6xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
       <!-- Header -->
       <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/40 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -1300,12 +1310,12 @@ function getInitials(name: string): string {
           <table class="table table-md w-full text-sm">
             <thead>
               <tr class="bg-base-200/40 text-base-content/70 uppercase text-xs font-mono font-bold tracking-wider border-b border-base-300">
-                <th>Fecha y Hora</th>
+                <th class="w-44 whitespace-nowrap">Fecha y Hora</th>
                 <th>Operador Asignado</th>
-                <th>Ticket InvGate</th>
-                <th>Tipo</th>
-                <th>Asignado Por</th>
-                <th class="text-right">Acción</th>
+                <th class="w-40">Ticket InvGate</th>
+                <th class="w-32">Tipo</th>
+                <th class="w-48">Asignado Por</th>
+                <th class="w-28 text-right">Acción</th>
               </tr>
             </thead>
             <tbody id="historial-rows" class="divide-y divide-base-200">
@@ -1509,6 +1519,18 @@ function getInitials(name: string): string {
       return `${minutes}:${seconds.toString().padStart(2, "0")}`;
     };
 
+    const formatWaitTime = (elapsedMin: number): string => {
+      if (elapsedMin >= 1440) {
+        const days = Math.floor(elapsedMin / 1440);
+        const hours = Math.floor((elapsedMin % 1440) / 60);
+        return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+      }
+      if (elapsedMin >= 60) {
+        return `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
+      }
+      return `${elapsedMin}m`;
+    };
+
     const stopCountdown = () => {
       if (countdownInterval) {
         clearInterval(countdownInterval);
@@ -1704,17 +1726,17 @@ function getInitials(name: string): string {
             minute: "2-digit",
           });
           lastAssignedContainer.innerHTML = `
-            <div class="text-xs flex flex-wrap items-center justify-between gap-2 bg-base-100 p-3 rounded-xl border border-base-300/60">
-              <div class="flex items-center gap-4">
-                <span class="text-base-content/70">
-                  De: <strong class="text-info" id="stat-last-assigned-by">${escapeHtml(lastAssignedOp.lastAutogestionAssignedBy || "Sistema")}</strong>
+            <div class="text-xs flex items-center justify-between gap-2 bg-base-100 px-3 py-2 rounded-xl border border-base-300/60 min-w-0">
+              <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 truncate">
+                <span class="text-base-content/70 shrink-0">
+                  De: <strong class="text-info font-bold" id="stat-last-assigned-by">${escapeHtml(lastAssignedOp.lastAutogestionAssignedBy || "Sistema")}</strong>
                 </span>
-                <span class="text-base-content/70">
-                  Para: <strong class="text-base-content" id="stat-last-assigned-to">${escapeHtml(lastAssignedOp.nombre)}</strong>
+                <span class="text-base-content/70 truncate">
+                  Para: <strong class="text-base-content font-bold" id="stat-last-assigned-to">${escapeHtml(lastAssignedOp.nombre)}</strong>
                 </span>
               </div>
-              <span class="text-xxs text-base-content/50 font-mono" id="stat-last-assigned-time">
-                Hora: ${timeStr}
+              <span class="text-xs text-base-content/50 font-mono shrink-0 whitespace-nowrap ml-2" id="stat-last-assigned-time" title="Hora de asignación">
+                ${timeStr}
               </span>
             </div>
           `;
@@ -2069,8 +2091,14 @@ function getInitials(name: string): string {
       updateVisibility();
     };
 
-    const showAlert = (type: "success" | "error", message: string) => {
-      showToast(message, type === "success" ? "alert-success" : "alert-error");
+    const showAlert = (type: "success" | "error" | "warning" | "info", message: string) => {
+      const typeMap = {
+        success: "alert-success",
+        error: "alert-error",
+        warning: "alert-warning",
+        info: "alert-info",
+      } as const;
+      showToast(message, typeMap[type]);
     };
 
     const getBadgeColorClient = (status: string, disponible: boolean): string => {
@@ -2815,9 +2843,7 @@ function getInitials(name: string): string {
           if (elWait) {
             if (ticket.created_at) {
               const elapsedMin = Math.floor((Date.now() - ticket.created_at * 1000) / 60000);
-              const formatWait = elapsedMin >= 60 
-                ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
-                : `${elapsedMin}m`;
+              const formatWait = formatWaitTime(elapsedMin);
               elWait.textContent = formatWait;
               elWait.className = `text-xs font-mono font-bold ${
                 elapsedMin >= 60 ? "text-error" : elapsedMin >= 30 ? "text-warning" : "text-base-content/80"
@@ -3019,9 +3045,7 @@ function getInitials(name: string): string {
                 } else if (elapsedMin >= 30) {
                   colorClass = "badge-warning text-warning font-semibold";
                 }
-                const formatWait = elapsedMin >= 60 
-                  ? `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m` 
-                  : `${elapsedMin}m`;
+                const formatWait = formatWaitTime(elapsedMin);
                 waitingBadge = `<span class="badge badge-soft badge-sm font-mono text-xs px-2 py-0.5 shrink-0 ${colorClass}" title="Tiempo de espera en cola">⏱ ${formatWait}</span>`;
               }
 
@@ -3039,7 +3063,7 @@ function getInitials(name: string): string {
                 const opTooltip = (t.commenting_operators || [])
                   .map((o: any) => `${escapeHtml(o.name)} (${o.comment_count})`)
                   .join(", ");
-                commentsBadge = `<span class="badge badge-soft badge-secondary font-mono font-bold text-xs px-2 py-0.5 shrink-0 gap-1" title="Operadores MDA que comentaron: ${opTooltip}"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>+${t.commenting_operators_count} ops</span></span>`;
+                commentsBadge = `<span class="badge badge-soft badge-secondary font-mono font-bold text-xs px-2 py-0.5 shrink-0 gap-1" title="Operadores MDA que comentaron: ${opTooltip}"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>+${t.commenting_operators_count}</span></span>`;
               }
 
               const lockIndicator = document.getElementById("lock-indicator");
@@ -3315,7 +3339,7 @@ function getInitials(name: string): string {
               if (tableContainer) tableContainer.classList.remove("hidden");
               if (rowsEl) {
                 rowsEl.innerHTML = data.history.map((item: any) => {
-                  const dateStr = item.assignedAt ? new Date(item.assignedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "medium" }) : "-";
+                  const dateStr = item.assignedAt ? new Date(item.assignedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" }) : "-";
                   const typeInfo = TYPE_MAP[item.type] || { label: item.type || "Asignación", badgeClass: "badge-soft badge-neutral font-semibold" };
                   const ticketBadge = item.ticketNumber
                     ? `<span class="badge badge-soft badge-neutral font-mono font-bold text-sm px-2.5 py-1">${escapeHtml(item.ticketNumber)}</span>`
@@ -3328,10 +3352,10 @@ function getInitials(name: string): string {
                   return `
                     <tr class="hover:bg-base-200/40 transition-colors">
                       <td class="font-mono text-xs font-semibold text-base-content/75 whitespace-nowrap">${escapeHtml(dateStr)}</td>
-                      <td class="font-bold text-sm text-base-content whitespace-nowrap">${escapeHtml(item.agentName)}</td>
+                      <td class="font-bold text-sm text-base-content">${escapeHtml(item.agentName)}</td>
                       <td>${ticketBadge}</td>
                       <td><span class="badge badge-sm ${typeInfo.badgeClass}">${escapeHtml(typeInfo.label)}</span></td>
-                      <td class="font-medium text-sm text-base-content/80 whitespace-nowrap">${escapeHtml(item.assignedBy || "Sistema")}</td>
+                      <td class="font-medium text-sm text-base-content/80">${escapeHtml(item.assignedBy || "Sistema")}</td>
                       <td class="text-right">${actionBtn}</td>
                     </tr>
                   `;
