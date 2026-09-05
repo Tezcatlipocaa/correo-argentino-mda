@@ -329,10 +329,6 @@ export const agents = sqliteTable("agents", {
   lastAutogestionAssignedAt: integer("last_autogestion_assigned_at"),
   lastAutogestionAssignedBy: text("last_autogestion_assigned_by"),
   lastAutogestionUndo: integer("last_autogestion_undo"),
-  estadoExcepcional: text("estado_excepcional"),
-  estadoExcepcionalMotivo: text("estado_excepcional_motivo"),
-  estadoExcepcionalAt: integer("estado_excepcional_at"),
-  estadoExcepcionalMinutos: integer("estado_excepcional_minutos"),
   saturdayGroup: text("saturday_group"),
   saturdayHorario: text("saturday_horario"),
 });

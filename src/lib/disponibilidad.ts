@@ -34,10 +34,6 @@ export interface AgentDisponibilidad {
   lastAutogestionAssignedBy?: string | null;
   lastAutogestionUndo?: number | null;
   modalidadHoy?: string; // "Presencial", "Home Office", "Horas Extras", "Franco", etc.
-  estadoExcepcional?: string; // Tipo de excepción activa: "devolucion_supervisor" | "break_extendido" | "problema_tecnico"
-  estadoExcepcionalMotivo?: string; // Comentario del supervisor
-  estadoExcepcionalAt?: number; // Timestamp
-  estadoExcepcionalMinutos?: number | null; // Tiempo extra para break extendido en minutos
   // Wise CX Estados en Vivo
   wiseCxStatus?: string;
   wiseCxCategory?: WiseCxStatusCategory;
@@ -47,12 +43,6 @@ export interface AgentDisponibilidad {
   wiseCxSince?: string;
   wiseCxInCall?: boolean;
 }
-
-export const EXCEPTION_LABELS: Record<string, string> = {
-  devolucion_supervisor: "Devolución Supervisor",
-  break_extendido: "Break Extendido",
-  problema_tecnico: "Problema Técnico",
-};
 
 // Format date as YYYY-MM-DD using local time
 export function getLocalDateString(date: Date = new Date()): string {
@@ -248,10 +238,6 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt,
       lastAutogestionAssignedBy: agents.lastAutogestionAssignedBy,
       lastAutogestionUndo: agents.lastAutogestionUndo,
-      estadoExcepcional: agents.estadoExcepcional,
-      estadoExcepcionalMotivo: agents.estadoExcepcionalMotivo,
-      estadoExcepcionalAt: agents.estadoExcepcionalAt,
-      estadoExcepcionalMinutos: agents.estadoExcepcionalMinutos,
     })
     .from(agents);
 
@@ -429,32 +415,18 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       lastAutogestionAssignedBy: agent.lastAutogestionAssignedBy,
       lastAutogestionUndo: agent.lastAutogestionUndo,
       modalidadHoy: status,
-      estadoExcepcional: agent.estadoExcepcional || undefined,
-      estadoExcepcionalMotivo: agent.estadoExcepcionalMotivo || undefined,
-      estadoExcepcionalAt: agent.estadoExcepcionalAt || undefined,
-      estadoExcepcionalMinutos: agent.estadoExcepcionalMinutos,
-    };
-
-    const applyOverride = () => {
-      if (agent.estadoExcepcional) {
-        info.disponible = false;
-        info.motivo =
-          EXCEPTION_LABELS[agent.estadoExcepcional] || agent.estadoExcepcional;
-      }
     };
 
     // If status is not a working status, they are unavailable
     if (!workingStatuses.includes(status)) {
       info.disponible = false;
       info.motivo = status; // "Franco", "Vacaciones", "Licencia"
-      applyOverride();
     } else {
       // Parse the shift hours
       const parts = horario.split(" - ");
       if (parts.length !== 2) {
         info.disponible = false;
         info.motivo = "Fuera de horario";
-        applyOverride();
       } else {
         const [startStr, endStr] = parts;
         const [hS, mS] = startStr.split(":").map(Number);
@@ -463,7 +435,6 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
         if (isNaN(hS) || isNaN(mS) || isNaN(hE) || isNaN(mE)) {
           info.disponible = false;
           info.motivo = "Fuera de horario";
-          applyOverride();
         } else {
           const startTime = new Date(now);
           startTime.setHours(hS, mS, 0, 0);
@@ -508,47 +479,6 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
               breakEnd = new Date(breakStart.getTime() + 60 * 60000);
             }
 
-            // Auto-cleanup of break_extendido if it expired
-            if (agent.estadoExcepcional === "break_extendido") {
-              if (agent.estadoExcepcionalMinutos !== null && agent.estadoExcepcionalMinutos !== undefined) {
-                const extraMinutes = agent.estadoExcepcionalMinutos;
-                const extendedBreakEnd = new Date(breakEnd.getTime() + extraMinutes * 60000);
-                if (now >= extendedBreakEnd) {
-                  // Clear in DB asynchronously
-                  db.update(agents)
-                    .set({
-                      estadoExcepcional: null,
-                      estadoExcepcionalMotivo: null,
-                      estadoExcepcionalAt: null,
-                      estadoExcepcionalMinutos: null,
-                    })
-                    .where(eq(agents.id, agent.id))
-                    .catch((err) =>
-                      console.error(`Error auto-clearing break_extendido state for agent ${agent.id}:`, err)
-                    );
-
-                  // Mutate local object and info so we don't apply the override in this render
-                  agent.estadoExcepcional = null;
-                  agent.estadoExcepcionalMotivo = null;
-                  agent.estadoExcepcionalAt = null;
-                  agent.estadoExcepcionalMinutos = null;
-                  
-                  info.estadoExcepcional = undefined;
-                  info.estadoExcepcionalMotivo = undefined;
-                  info.estadoExcepcionalAt = undefined;
-                  info.estadoExcepcionalMinutos = undefined;
-                } else {
-                  // Format return time
-                  const retHours = String(extendedBreakEnd.getHours()).padStart(2, "0");
-                  const retMins = String(extendedBreakEnd.getMinutes()).padStart(2, "0");
-                  info.retornoEstimado = `${retHours}:${retMins}`;
-                }
-              } else {
-                // Manual / No auto-cleanup
-                info.retornoEstimado = "Manual";
-              }
-            }
-
             // Check if currently in break
             if (now >= breakStart && now <= breakEnd) {
               info.disponible = false;
@@ -560,11 +490,9 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
                 const retMins = String(breakEnd.getMinutes()).padStart(2, "0");
                 info.retornoEstimado = `${retHours}:${retMins}`;
               }
-              applyOverride();
             } else {
               // If we passed all checks, agent is available
               info.disponible = true;
-              applyOverride();
             }
           }
         }
@@ -582,53 +510,50 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       info.wiseCxSince = wisePresence.userStatusDate;
       info.wiseCxInCall = wisePresence.inCall;
 
-      // Si el operador no tiene excepción manual de supervisor
-      if (!agent.estadoExcepcional) {
-        if (wisePresence.inCall) {
-          // Regla confirmada: En llamada pueden recibir AGS (se encolan)
-          info.disponible = true;
-          delete info.motivo;
-          delete info.retornoEstimado;
-          if (!workingStatuses.includes(status)) {
-            info.modalidadHoy = "Guardia";
-          }
-        } else if (wisePresence.statusCategory === "disponible") {
-          // Operador disponible en Wise CX (prioridad en vivo sobre cronograma)
-          info.disponible = true;
-          delete info.motivo;
-          delete info.retornoEstimado;
-          if (!workingStatuses.includes(status)) {
-            info.modalidadHoy = "Guardia";
-          }
-        } else if (wisePresence.statusCategory === "desconectado") {
-          // Si estaba dentro de horario laboral, desconectado lo bloquea
-          if (workingStatuses.includes(status)) {
-            info.disponible = false;
-            info.motivo = "Desconectado";
-          }
-        } else if (wisePresence.statusCategory === "invisible") {
-          // Si estaba dentro de horario laboral, invisible lo bloquea
-          if (workingStatuses.includes(status)) {
-            info.disponible = false;
-            info.motivo = "Invisible (Wise CX)";
-          }
-        } else if (wisePresence.statusCategory === "bloqueado") {
-          // Administrativo, Almuerzo, Baño, Devolución Supervisión, Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
+      if (wisePresence.inCall) {
+        // Regla confirmada: En llamada pueden recibir AGS (se encolan)
+        info.disponible = true;
+        delete info.motivo;
+        delete info.retornoEstimado;
+        if (!workingStatuses.includes(status)) {
+          info.modalidadHoy = "Guardia";
+        }
+      } else if (wisePresence.statusCategory === "disponible") {
+        // Operador disponible en Wise CX (prioridad en vivo sobre cronograma)
+        info.disponible = true;
+        delete info.motivo;
+        delete info.retornoEstimado;
+        if (!workingStatuses.includes(status)) {
+          info.modalidadHoy = "Guardia";
+        }
+      } else if (wisePresence.statusCategory === "desconectado") {
+        // Si estaba dentro de horario laboral, desconectado lo bloquea
+        if (workingStatuses.includes(status)) {
           info.disponible = false;
-          info.motivo = wisePresence.motivoBloqueo || `${wisePresence.status} (Wise CX)`;
-          if (!workingStatuses.includes(status)) {
-            info.modalidadHoy = "Guardia";
-          }
+          info.motivo = "Desconectado";
+        }
+      } else if (wisePresence.statusCategory === "invisible") {
+        // Si estaba dentro de horario laboral, invisible lo bloquea
+        if (workingStatuses.includes(status)) {
+          info.disponible = false;
+          info.motivo = "Invisible (Wise CX)";
+        }
+      } else if (wisePresence.statusCategory === "bloqueado") {
+        // Administrativo, Almuerzo, Baño, Devolución Supervisión, Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
+        info.disponible = false;
+        info.motivo = wisePresence.motivoBloqueo || `${wisePresence.status} (Wise CX)`;
+        if (!workingStatuses.includes(status)) {
+          info.modalidadHoy = "Guardia";
+        }
 
-          if (wisePresence.status.toLowerCase().includes("almuerzo") && wisePresence.userStatusDate) {
-            const startUtc = new Date(wisePresence.userStatusDate.replace(" ", "T") + "Z").getTime();
-            if (!isNaN(startUtc)) {
-              // Estimar fin de almuerzo (+45 min desde que ingresó)
-              const estEnd = new Date(startUtc + 45 * 60000);
-              const rH = String(estEnd.getHours()).padStart(2, "0");
-              const rM = String(estEnd.getMinutes()).padStart(2, "0");
-              info.retornoEstimado = `${rH}:${rM}`;
-            }
+        if (wisePresence.status.toLowerCase().includes("almuerzo") && wisePresence.userStatusDate) {
+          const startUtc = new Date(wisePresence.userStatusDate.replace(" ", "T") + "Z").getTime();
+          if (!isNaN(startUtc)) {
+            // Estimar fin de almuerzo (+45 min desde que ingresó)
+            const estEnd = new Date(startUtc + 45 * 60000);
+            const rH = String(estEnd.getHours()).padStart(2, "0");
+            const rM = String(estEnd.getMinutes()).padStart(2, "0");
+            info.retornoEstimado = `${rH}:${rM}`;
           }
         }
       }
@@ -677,7 +602,7 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       horario,
       breakFin,
       info.retornoEstimado,
-      info.motivo === "En break" || agent.estadoExcepcional === "break_extendido",
+      info.motivo === "En break",
       info.disponible,
       now
     );
@@ -1226,53 +1151,6 @@ export async function asignarTodasEnCola(
     items: results,
     error: assignedCount === 0 ? "No se pudo asignar ninguna autogestión en cola." : undefined,
   };
-}
-
-export async function marcarEstadoExcepcional(
-  agentId: number,
-  tipo: string,
-  motivo?: string,
-  tiempoExtra?: number | null,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await db
-      .update(agents)
-      .set({
-        estadoExcepcional: tipo,
-        estadoExcepcionalMotivo: motivo || null,
-        estadoExcepcionalAt: Date.now(),
-        estadoExcepcionalMinutos: tiempoExtra || null,
-      })
-      .where(eq(agents.id, agentId));
-    return { success: true };
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err?.message || "Error al marcar estado excepcional",
-    };
-  }
-}
-
-export async function limpiarEstadoExcepcional(
-  agentId: number,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await db
-      .update(agents)
-      .set({
-        estadoExcepcional: null,
-        estadoExcepcionalMotivo: null,
-        estadoExcepcionalAt: null,
-        estadoExcepcionalMinutos: null,
-      })
-      .where(eq(agents.id, agentId));
-    return { success: true };
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err?.message || "Error al limpiar estado excepcional",
-    };
-  }
 }
 
 export async function deshacerAsignacion(): Promise<{

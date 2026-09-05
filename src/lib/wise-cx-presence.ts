@@ -155,11 +155,12 @@ function calculateMinutesInStatus(utcDateStr: string): number {
 }
 
 function getEnv(key: string): string {
+  if (process.env[key]) return process.env[key]!;
   if (typeof import.meta !== "undefined" && import.meta.env) {
     const val = (import.meta.env as any)[key];
     if (val && typeof val === "string") return val;
   }
-  return process.env[key] || "";
+  return "";
 }
 
 /**
