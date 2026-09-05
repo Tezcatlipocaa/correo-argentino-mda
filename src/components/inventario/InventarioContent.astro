@@ -22,6 +22,7 @@ import {
   getTerminalModelsByBrand,
   getTerminalStatusCounts,
   getTTStatusCounts,
+  getMediterraneaStatusCounts,
 } from "@lib/terminalQueries";
 import type { TerminalSortKey, SortOrder } from "@lib/terminalQueries";
 import { and, eq } from "drizzle-orm";
@@ -44,6 +45,7 @@ const canExport = user
 
 const terminalStatusCounts = await getTerminalStatusCounts();
 const ttStatusCounts = await getTTStatusCounts();
+const mediStatusCounts = await getMediterraneaStatusCounts();
 
 const terminalHeaderGridClass = "grid-cols-12 gap-4";
 const terminalRowGridClass = "grid grid-cols-12 items-start gap-4";
@@ -210,163 +212,163 @@ const inventoryTabs = [
       >
         <!-- Fila A: filtros de atributos -->
         <div class="grid w-full grid-cols-3 gap-3 md:grid-cols-6">
-        <div class="form-control grow">
-          <select
-            id="filter-os"
-            class="select select-bordered text-base-content/80 w-full font-medium"
-            aria-label="Filtrar por sistema operativo"
-          >
-            <option value="all">Sist. Op. (Todos)</option>
-            <option value="win11">Windows 11</option>
-            <option value="win10">Windows 10</option>
-            <option value="win7">Windows 7</option>
-            <option value="winxp">Windows XP</option>
-            <option value="winserver">Windows Server</option>
-            <option value="ubuntu">Ubuntu</option>
-            <option value="debian">Debian</option>
-          </select>
-        </div>
-        <div class="form-control grow">
-          <select
-            id="filter-os-variant"
-            class="select select-bordered text-base-content/80 w-full font-medium"
-            aria-label="Filtrar por variante de sistema operativo"
-            disabled
-          >
-            <option value="all">Variante (Todas)</option>
-          </select>
-        </div>
-        <div class="form-control grow">
-          <select
-            id="filter-arch"
-            class="select select-bordered text-base-content/80 w-full font-medium"
-            aria-label="Filtrar por arquitectura"
-          >
-            <option value="all">Arquitectura (Todas)</option>
-            <option value="64 bits">64 bits</option>
-            <option value="32 bits">32 bits</option>
-          </select>
-        </div>
-        <div class="form-control grow">
-          <select
-            id="filter-brand"
-            class="select select-bordered text-base-content/80 w-full font-medium"
-            aria-label="Filtrar por marca"
-          >
-            <option value="all">Marca (Todas)</option>
-            <option value="dell">Dell</option>
-            <option value="lenovo">Lenovo</option>
-            <option value="hp">HP</option>
-            <option value="bangho">Banghó</option>
-            <option value="coradir">Coradir</option>
-          </select>
-        </div>
-        <div class="form-control grow">
-          <select
-            id="filter-model"
-            class="select select-bordered text-base-content/80 w-full font-medium"
-            aria-label="Filtrar por modelo de terminal"
-          >
-            <option value="all">Modelo (Todos)</option>
-            {
-              terminalModelsByBrand.map((entry) => (
-                <option value={entry.model} data-brand={entry.brand}>
-                  {entry.model}
-                </option>
-              ))
-            }
-          </select>
-        </div>
-        <div class="form-control grow">
-          <select
-            id="filter-ram"
-            class="select select-bordered text-base-content/80 w-full font-medium"
-            aria-label="Filtrar por memoria RAM"
-          >
-            <option value="all">RAM (Todas)</option>
-            <option value="<=1gb">&le; 1 GB</option>
-            <option value="2gb">2 GB</option>
-            <option value="4gb">4 GB</option>
-            <option value="8gb">8 GB</option>
-            <option value=">=16gb">&ge; 16 GB</option>
-          </select>
-        </div>
+          <div class="form-control grow">
+            <select
+              id="filter-os"
+              class="select select-bordered text-base-content/80 w-full font-medium"
+              aria-label="Filtrar por sistema operativo"
+            >
+              <option value="all">Sist. Op. (Todos)</option>
+              <option value="win11">Windows 11</option>
+              <option value="win10">Windows 10</option>
+              <option value="win7">Windows 7</option>
+              <option value="winxp">Windows XP</option>
+              <option value="winserver">Windows Server</option>
+              <option value="ubuntu">Ubuntu</option>
+              <option value="debian">Debian</option>
+            </select>
+          </div>
+          <div class="form-control grow">
+            <select
+              id="filter-os-variant"
+              class="select select-bordered text-base-content/80 w-full font-medium"
+              aria-label="Filtrar por variante de sistema operativo"
+              disabled
+            >
+              <option value="all">Variante (Todas)</option>
+            </select>
+          </div>
+          <div class="form-control grow">
+            <select
+              id="filter-arch"
+              class="select select-bordered text-base-content/80 w-full font-medium"
+              aria-label="Filtrar por arquitectura"
+            >
+              <option value="all">Arquitectura (Todas)</option>
+              <option value="64 bits">64 bits</option>
+              <option value="32 bits">32 bits</option>
+            </select>
+          </div>
+          <div class="form-control grow">
+            <select
+              id="filter-brand"
+              class="select select-bordered text-base-content/80 w-full font-medium"
+              aria-label="Filtrar por marca"
+            >
+              <option value="all">Marca (Todas)</option>
+              <option value="dell">Dell</option>
+              <option value="lenovo">Lenovo</option>
+              <option value="hp">HP</option>
+              <option value="bangho">Banghó</option>
+              <option value="coradir">Coradir</option>
+            </select>
+          </div>
+          <div class="form-control grow">
+            <select
+              id="filter-model"
+              class="select select-bordered text-base-content/80 w-full font-medium"
+              aria-label="Filtrar por modelo de terminal"
+            >
+              <option value="all">Modelo (Todos)</option>
+              {
+                terminalModelsByBrand.map((entry) => (
+                  <option value={entry.model} data-brand={entry.brand}>
+                    {entry.model}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+          <div class="form-control grow">
+            <select
+              id="filter-ram"
+              class="select select-bordered text-base-content/80 w-full font-medium"
+              aria-label="Filtrar por memoria RAM"
+            >
+              <option value="all">RAM (Todas)</option>
+              <option value="<=1gb">&le; 1 GB</option>
+              <option value="2gb">2 GB</option>
+              <option value="4gb">4 GB</option>
+              <option value="8gb">8 GB</option>
+              <option value=">=16gb">&ge; 16 GB</option>
+            </select>
+          </div>
         </div>
 
         <!-- Fila B: estado, toggles y limpiar -->
         <div class="flex w-full flex-wrap items-center gap-3">
-        <div
-          class="tabs tabs-box"
-          role="radiogroup"
-          aria-label="Estado de conexión"
-        >
-          <input
-            type="radio"
-            name="terminal_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label="Todas"
-            checked
-            data-terminal-status="all"
-          />
-          <label
-            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          <div
+            class="tabs tabs-box"
+            role="radiogroup"
+            aria-label="Estado de conexión"
           >
             <input
               type="radio"
               name="terminal_status"
-              data-terminal-status="online"
+              class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
+              aria-label="Todas"
+              checked
+              data-terminal-status="all"
             />
-            <span class="flex items-center gap-1">
-              Online
-              <span class="badge badge-soft badge-xs font-mono"
-                >{terminalStatusCounts.online}</span
-              >
-            </span>
-          </label>
-          <label
-            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
-          >
+            <label
+              class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+            >
+              <input
+                type="radio"
+                name="terminal_status"
+                data-terminal-status="online"
+              />
+              <span class="flex items-center gap-1">
+                Online
+                <span class="badge badge-soft badge-xs font-mono"
+                  >{terminalStatusCounts.online}</span
+                >
+              </span>
+            </label>
+            <label
+              class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+            >
+              <input
+                type="radio"
+                name="terminal_status"
+                data-terminal-status="offline"
+              />
+              <span class="flex items-center gap-1">
+                Offline
+                <span class="badge badge-soft badge-xs font-mono"
+                  >{terminalStatusCounts.offline}</span
+                >
+              </span>
+            </label>
+          </div>
+          <label class="flex cursor-pointer items-center gap-2">
             <input
-              type="radio"
-              name="terminal_status"
-              data-terminal-status="offline"
+              type="checkbox"
+              id="filter-duplicates"
+              class="toggle toggle-sm"
+              data-terminal-duplicates
             />
-            <span class="flex items-center gap-1">
-              Offline
-              <span class="badge badge-soft badge-xs font-mono"
-                >{terminalStatusCounts.offline}</span
-              >
-            </span>
+            <span class="text-sm font-medium">Duplicados</span>
           </label>
-        </div>
-        <label class="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            id="filter-duplicates"
-            class="toggle toggle-sm"
-            data-terminal-duplicates
-          />
-          <span class="text-sm font-medium">Duplicados</span>
-        </label>
-        <label class="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            id="filter-orphans"
-            class="toggle toggle-sm"
-            data-terminal-orphans
-          />
-          <span class="text-sm font-medium">Huérfanos</span>
-        </label>
-        <button
-          id="btn-clear-filters-terminales"
-          class="btn btn-outline btn-error gap-2 font-semibold"
-          type="button"
-          aria-label="Limpiar todos los filtros de terminales"
-          title="Limpiar todos los filtros"
-        >
-          <Icon name="boxicons:trash" class="size-4" />
-          Limpiar filtros
-        </button>
+          <label class="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              id="filter-orphans"
+              class="toggle toggle-sm"
+              data-terminal-orphans
+            />
+            <span class="text-sm font-medium">Sin ubicación</span>
+          </label>
+          <button
+            id="btn-clear-filters-terminales"
+            class="btn btn-outline btn-error gap-2 font-semibold"
+            type="button"
+            aria-label="Limpiar todos los filtros de terminales"
+            title="Limpiar todos los filtros"
+          >
+            <Icon name="boxicons:trash" class="size-4" />
+            Limpiar filtros
+          </button>
         </div>
       </div>
 
@@ -500,20 +502,28 @@ const inventoryTabs = [
             checked
             data-medi-status="all"
           />
-          <input
-            type="radio"
-            name="medi_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label="Online"
-            data-medi-status="online"
-          />
-          <input
-            type="radio"
-            name="medi_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label="Offline"
-            data-medi-status="offline"
-          />
+          <label
+            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          >
+            <input type="radio" name="medi_status" data-medi-status="online" />
+            <span class="flex items-center gap-1">
+              Online
+              <span class="badge badge-soft badge-xs font-mono"
+                >{mediStatusCounts.online}</span
+              >
+            </span>
+          </label>
+          <label
+            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          >
+            <input type="radio" name="medi_status" data-medi-status="offline" />
+            <span class="flex items-center gap-1">
+              Offline
+              <span class="badge badge-soft badge-xs font-mono"
+                >{mediStatusCounts.offline}</span
+              >
+            </span>
+          </label>
         </div>
         <button
           id="btn-clear-filters-medi"
@@ -563,10 +573,7 @@ const inventoryTabs = [
             data-tt-type="sts"
           />
         </div>
-        <label
-          id="tt-vm-filter-wrapper"
-          class="hidden"
-        >
+        <label id="tt-vm-filter-wrapper" class="hidden">
           <div
             class="tabs tabs-box"
             role="radiogroup"
@@ -647,7 +654,7 @@ const inventoryTabs = [
       <!-- Chips de filtros activos (render client-side) -->
       <div
         id="active-filter-chips"
-        class="hidden w-full flex-wrap items-center gap-2"
+        class="mt-3 hidden w-full flex-wrap items-center gap-2"
       >
       </div>
     </div>
@@ -1114,19 +1121,20 @@ const inventoryTabs = [
     id="view-ttsts"
     class:list={["space-y-6", activeTab !== "ttsts" && "hidden"]}
   >
-    <div class="collapse collapse-arrow bg-secondary text-secondary-content has-checked:bg-accent has-checked:text-accent-content">
+    <div
+      class="collapse-arrow bg-secondary text-secondary-content has-checked:bg-accent has-checked:text-accent-content collapse"
+    >
       <input type="checkbox" />
       <div class="collapse-title text-sm font-medium">
         ¿Qué equipo me corresponde para conexión remota?
       </div>
       <div class="collapse-content text-sm">
         <p>
-          En los equipos T&T y STS, la terminal operativa es la física
-          (Debian 10, hostname sin sufijo <code class="font-mono">-D</code>):
-          a ella se conecta el soporte remoto en caso de incidencia. El
-          registro con sufijo <code class="font-mono">-D</code> es la máquina
-          virtual (Debian 12) del mismo equipo. Los equipos de Telegrafía no
-          siguen esta convención.
+          En los equipos T&T y STS, la terminal operativa es la física (Debian
+          10, hostname sin sufijo <code class="font-mono">-D</code>): a ella se
+          conecta el soporte remoto en caso de incidencia. El registro con
+          sufijo <code class="font-mono">-D</code> es la máquina virtual (Debian 12)
+          del mismo equipo. Los equipos de Telegrafía no siguen esta convención.
         </p>
       </div>
     </div>
@@ -1379,17 +1387,14 @@ const inventoryTabs = [
   const viewTT = document.getElementById("view-ttsts");
   const searchTT = document.getElementById("header-search-ttsts");
   const rightTT = document.getElementById("header-right-ttsts");
-  const ttSearchInput =
-    document.querySelector<HTMLInputElement>("#tt-search");
+  const ttSearchInput = document.querySelector<HTMLInputElement>("#tt-search");
   const ttStatusRadioInputs = Array.from(
     document.querySelectorAll<HTMLInputElement>("[data-tt-status]"),
   );
   const ttSentinel = document.getElementById("scroll-sentinel-ttsts");
   const ttSpinner = document.getElementById("loading-spinner-ttsts");
   const ttContainer = document.getElementById("table-ttsts-body");
-  const ttTotalCountBadge = document.getElementById(
-    "total-count-badge-ttsts",
-  );
+  const ttTotalCountBadge = document.getElementById("total-count-badge-ttsts");
   const ttExportCsvBtn = document.getElementById("export-csv-tt-btn");
   const ttTypeRadioInputs = Array.from(
     document.querySelectorAll<HTMLInputElement>("[data-tt-type]"),
@@ -1715,7 +1720,7 @@ const inventoryTabs = [
         );
       if (currentOrphans)
         chips.push(
-          makeFilterChip("Huérfanos", () => {
+          makeFilterChip("Sin ubicación", () => {
             if (orphansToggle) orphansToggle.checked = false;
             triggerSearch();
           }),
@@ -2131,9 +2136,7 @@ const inventoryTabs = [
 
       const rowCount =
         ttContainer?.querySelectorAll("[data-terminal-row]").length ?? 0;
-      const noResultsState = document.getElementById(
-        "no-results-state-ttsts",
-      );
+      const noResultsState = document.getElementById("no-results-state-ttsts");
       const tableWrapper = document.getElementById("ttsts-table-wrapper");
 
       if (noResultsState && tableWrapper) {

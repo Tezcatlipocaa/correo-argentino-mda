@@ -499,6 +499,32 @@ export async function getTTStatusCounts(): Promise<StatusCounts> {
   return { online: online.c, offline: offline.c };
 }
 
+export async function getMediterraneaStatusCounts(): Promise<StatusCounts> {
+  const threshold = statusThresholdDate();
+  const base = or(
+    like(terminals.hostname, "TMEDI%"),
+    like(terminals.hostname, "TVMEDI%"),
+  );
+  const [online] = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(terminals)
+    .where(and(base, gte(terminals.lastContact, threshold)));
+  const [offline] = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(terminals)
+    .where(
+      and(
+        base,
+        or(
+          lt(terminals.lastContact, threshold),
+          isNull(terminals.lastContact),
+          eq(terminals.lastContact, ""),
+        ),
+      ),
+    );
+  return { online: online.c, offline: offline.c };
+}
+
 export async function getTTGroups(
   params: GetTerminalsParams = {},
 ): Promise<TTGroupResult> {
