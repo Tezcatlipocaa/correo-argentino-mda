@@ -792,34 +792,26 @@ function formatWaitTime(elapsedMin: number): string {
       </div>
     </div>
 
-    <!-- Control Bar: Toggle + Undo -->
-    <div class="flex items-center justify-between gap-4">
+    <!-- Control Bar: Toggle -->
+    <div class="flex items-center justify-start gap-4">
       <label class="label cursor-pointer justify-start gap-3 bg-base-200/40 hover:bg-base-200/80 px-4 py-2.5 rounded-xl border border-base-300/45 transition-colors duration-250">
         <input type="checkbox" id="toggle-disponibles" class="toggle toggle-primary toggle-sm" />
         <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/70">
           Solo disponibles
         </span>
       </label>
-
-      {!isReadOnly && (
-        <button id="btn-undo" type="button" class="btn btn-secondary btn-outline btn-sm shadow-sm" disabled>
-          <Icon name="boxicons:undo" size={18} aria-hidden="true" />
-          <span id="btn-undo-text">Deshacer</span>
-        </button>
-      )}
     </div>
 
     <!-- Tabla de Operadores -->
     <DataTable
-      ariaLabel="Lista de operadores para asignación de autogestiones"
-      headerGridClass={isReadOnly ? "grid-cols-[1.8fr_1.5fr_1.2fr] gap-2 md:gap-4" : "grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] gap-2 md:gap-4"}
-      rowGridClass={isReadOnly ? "grid grid-cols-[1.8fr_1.5fr_1.2fr] items-center gap-2 md:gap-4" : "grid grid-cols-[1.8fr_1.5fr_1.2fr_minmax(100px,auto)] items-center gap-2 md:gap-4"}
+      ariaLabel="Lista de operadores para monitoreo de estado"
+      headerGridClass="grid-cols-[1.8fr_1.5fr_1.2fr] gap-2 md:gap-4"
+      rowGridClass="grid grid-cols-[1.8fr_1.5fr_1.2fr] items-center gap-2 md:gap-4"
     >
       <Fragment slot="header">
         <DataTableHeaderCell sortKey="nombre">Operador</DataTableHeaderCell>
         <DataTableHeaderCell>Horario / Modo</DataTableHeaderCell>
         <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
-        {!isReadOnly && <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>}
       </Fragment>
 
       {
@@ -977,64 +969,6 @@ function formatWaitTime(elapsedMin: number): string {
                   </div>
                 )}
               </div>
-
-              {/* Botones de acción */}
-              {!isReadOnly && (
-                <div
-                  class="flex items-center justify-end gap-2"
-                  data-op-actions={op.agentId}
-                >
-                  <>
-                    <div class="m-0">
-                      <button
-                        type="button"
-                        class="btn btn-secondary btn-xs btn-soft font-bold uppercase tracking-wider"
-                        data-op-assign-btn={op.agentId}
-                        title={`Asignar autogestión a ${op.nombre}`}
-                        disabled={!op.disponible}
-                      >
-                        Asignar
-                      </button>
-                    </div>
-
-                    <div data-op-exception-container={op.agentId} class="relative">
-                      {op.estadoExcepcional ? (
-                        <button
-                          type="button"
-                          class="btn btn-error btn-xs btn-outline font-bold uppercase tracking-wider"
-                          data-action-lift-exception={op.agentId}
-                          title="Levantar estado excepcional"
-                        >
-                          Levantar
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          class="btn btn-ghost btn-xs text-base-content/60 hover:text-secondary hover:bg-secondary/10 px-1"
-                          data-action-open-exception-modal={op.agentId}
-                          data-op-nombre={op.nombre}
-                          title="Marcar estado excepcional"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="size-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </>
-                </div>
-              )}
             </div>
           );
         })
@@ -1249,7 +1183,7 @@ function formatWaitTime(elapsedMin: number): string {
             <div class="flex items-center gap-2">
               <span class="size-2 rounded-full bg-base-content/30"></span>
               <h4 class="text-xs font-bold uppercase tracking-wider text-base-content/50">
-                Operadores No Disponibles / En Pausa / Franco
+                Operadores No Disponibles
               </h4>
             </div>
             <span id="modal-assign-to-unavailable-count" class="badge badge-soft badge-neutral badge-sm font-mono font-bold text-base-content/70">
@@ -1605,19 +1539,6 @@ function formatWaitTime(elapsedMin: number): string {
     // Dynamic UI Update from API Response
     const updateUI = (data: any[]) => {
       latestDisponibilidadData = data || [];
-      // Update Undo button state
-      const opWithUndo = data.find(op => op.lastAutogestionUndo !== null && op.lastAutogestionUndo !== undefined);
-      const btnUndo = document.getElementById("btn-undo") as HTMLButtonElement | null;
-      const btnUndoText = document.getElementById("btn-undo-text") as HTMLElement | null;
-      if (btnUndo && btnUndoText) {
-        if (opWithUndo) {
-          btnUndo.disabled = false;
-          btnUndoText.innerText = `Deshacer: ${opWithUndo.nombre}`;
-        } else {
-          btnUndo.disabled = true;
-          btnUndoText.innerText = "Deshacer";
-        }
-      }
 
       // 1. Calculate highlights (the one with the latest assignment)
       let maxAssignedTime = 0;
@@ -2023,39 +1944,6 @@ function formatWaitTime(elapsedMin: number): string {
           statusCell.innerHTML = `${badgeHtml}${commentHtml}`;
         }
 
-        // Update actions container
-        const exceptionContainer = row.querySelector(
-          `[data-op-exception-container="${op.agentId}"]`,
-        );
-        if (exceptionContainer) {
-          if (op.estadoExcepcional) {
-            exceptionContainer.innerHTML = `
-              <button
-                type="button"
-                class="btn btn-error btn-xs btn-outline font-bold uppercase tracking-wider"
-                data-action-lift-exception="${op.agentId}"
-                title="Levantar estado excepcional"
-              >
-                Levantar
-              </button>
-            `;
-          } else {
-            exceptionContainer.innerHTML = `
-              <button
-                type="button"
-                class="btn btn-ghost btn-xs text-base-content/60 hover:text-secondary hover:bg-secondary/10 px-1"
-                data-action-open-exception-modal="${op.agentId}"
-                data-op-nombre="${op.nombre}"
-                title="Marcar estado excepcional"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-            `;
-          }
-        }
-
         // Update Last Assigned text
         const lastAssignedEl = row.querySelector(
           `[data-op-last-assigned-container]`,
@@ -2076,14 +1964,6 @@ function formatWaitTime(elapsedMin: number): string {
           } else {
             lastAssignedEl.innerHTML = `<span class="text-tiny text-base-content/40 bg-base-200/40 rounded px-1.5 py-0.5 inline-block italic mt-0.5">Nunca asignado</span>`;
           }
-        }
-
-        // Update assign button disabled state
-        const assignBtn = row.querySelector(
-          `[data-op-assign-btn="${op.agentId}"]`,
-        ) as HTMLButtonElement | null;
-        if (assignBtn) {
-          assignBtn.disabled = !op.disponible;
         }
       });
 
@@ -2692,34 +2572,6 @@ function formatWaitTime(elapsedMin: number): string {
         return;
       }
 
-      // 9. Deshacer assign
-      const btnUndoEl = target.closest("#btn-undo");
-      if (btnUndoEl && !btnUndoEl.hasAttribute("disabled")) {
-        btnUndoEl.setAttribute("disabled", "true");
-        try {
-          const res = await fetch("/api/disponibilidad/deshacer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }
-          });
-          const resData = await res.json();
-          if (res.status === 423) {
-            showAlert("error", resData.error || "Perdiste el control de asignación. Recargando...");
-            setTimeout(() => window.location.reload(), 1500);
-            return;
-          }
-          if (res.ok && resData.success) {
-            showAlert("success", `Asignación de ${resData.agentName} deshecha.`);
-            await refreshGeneral();
-          } else {
-            showAlert("error", resData.error || "No se pudo deshacer la asignación.");
-          }
-        } catch (err: any) {
-          console.error(err);
-          showAlert("error", `Ocurrió un error al deshacer: ${err.message || err}`);
-        }
-        return;
-      }
-
       // 10. Open unassigned ticket detail modal (only from main list, never from inside dialogs)
       const ticketCard = target.closest("[data-ticket-id]");
       if (ticketCard && !target.closest("dialog")) {
@@ -3087,26 +2939,50 @@ function formatWaitTime(elapsedMin: number): string {
                 </button>
               `;
 
+              const creatorUsername = (t.creator_username || "").toLowerCase().trim();
+              const creatorNameNorm = (t.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+              const matchingAvailableOp = (latestDisponibilidadData || []).find((op: any) => {
+                if (!op.disponible) return false;
+                if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+                if (op.nombre && creatorNameNorm) {
+                  const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+                  if (opNameNorm === creatorNameNorm) return true;
+                  const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+                  if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+                }
+                return false;
+              });
+
               const creatorStr = t.creator_name || t.customer_name || "";
-              const userRow = creatorStr
-                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/70 truncate"><svg class="size-3 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate">${escapeHtml(creatorStr)}</span></div>`
-                : "";
+              const creatorContent = creatorStr
+                ? `<svg class="size-3.5 opacity-60 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span class="truncate flex items-center gap-1.5">Generado por: <strong class="text-base-content/90 font-bold">${escapeHtml(creatorStr)}</strong>${matchingAvailableOp ? '<span class="inline-block size-2 rounded-full bg-success shrink-0" title="Operador disponible"></span>' : ''}</span>`
+                : `<span class="opacity-50 italic text-xs">Sin creador especificado</span>`;
+
+              const userAndActionRow = `
+                <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-0.5">
+                  <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/70">
+                    ${creatorContent}
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    ${assignButtons}
+                  </div>
+                </div>
+              `;
+
               const locationRow = t.location_name
-                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/70 truncate"><svg class="size-3 shrink-0 text-base-content/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">${escapeHtml(t.location_name)}</span></div>`
+                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium truncate"><svg class="size-3.5 text-info opacity-75 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/85 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
                 : "";
 
               return `
                 <div
-                  class="p-4 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-2.5 cursor-pointer group min-w-[480px] sm:min-w-0 border-b border-base-200/80 last:border-b-0"
+                  class="p-4 hover:bg-base-200/50 transition-colors duration-150 flex flex-col gap-2.5 cursor-pointer group min-w-[480px] sm:min-w-0"
                   data-ticket-id="${t.id}"
                 >
                   <div class="flex items-start justify-between gap-3">
                     <div class="font-extrabold text-sm sm:text-base text-base-content leading-snug group-hover:text-secondary transition-colors truncate min-w-0 flex-1 pr-1" title="${escapeHtml(t.title)}">
                       <span class="font-mono font-bold text-base-content/60 mr-1.5">${escapeHtml(t.pretty_id || '#' + t.id)}</span>
                       <span>${escapeHtml(t.title)}</span>
-                    </div>
-                    <div class="flex items-center gap-1 shrink-0">
-                      ${assignButtons}
                     </div>
                     <span class="text-xs text-base-content/50 font-mono font-semibold shrink-0 mt-0.5">${timeStr}</span>
                   </div>
@@ -3116,7 +2992,7 @@ function formatWaitTime(elapsedMin: number): string {
                     ${waitingBadge}
                     ${commentsBadge}
                   </div>
-                  ${userRow}
+                  ${userAndActionRow}
                   ${locationRow}
                 </div>
               `;
