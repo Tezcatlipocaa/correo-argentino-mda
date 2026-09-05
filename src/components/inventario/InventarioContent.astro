@@ -204,10 +204,12 @@ const inventoryTabs = [
       <div
         id="header-right-terminales"
         class:list={[
-          "flex w-full flex-wrap items-center gap-3 transition-opacity duration-300",
+          "flex w-full flex-col gap-3 transition-opacity duration-300",
           activeTab === "terminales" ? "flex" : "hidden",
         ]}
       >
+        <!-- Fila A: filtros de atributos -->
+        <div class="grid w-full grid-cols-3 gap-3 md:grid-cols-6">
         <div class="form-control grow">
           <select
             id="filter-os"
@@ -289,6 +291,10 @@ const inventoryTabs = [
             <option value=">=16gb">&ge; 16 GB</option>
           </select>
         </div>
+        </div>
+
+        <!-- Fila B: estado, toggles y limpiar -->
+        <div class="flex w-full flex-wrap items-center gap-3">
         <div
           class="tabs tabs-box"
           role="radiogroup"
@@ -302,20 +308,36 @@ const inventoryTabs = [
             checked
             data-terminal-status="all"
           />
-          <input
-            type="radio"
-            name="terminal_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label={`Online (${terminalStatusCounts.online})`}
-            data-terminal-status="online"
-          />
-          <input
-            type="radio"
-            name="terminal_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label={`Offline (${terminalStatusCounts.offline})`}
-            data-terminal-status="offline"
-          />
+          <label
+            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          >
+            <input
+              type="radio"
+              name="terminal_status"
+              data-terminal-status="online"
+            />
+            <span class="flex items-center gap-1">
+              Online
+              <span class="badge badge-soft badge-xs font-mono"
+                >{terminalStatusCounts.online}</span
+              >
+            </span>
+          </label>
+          <label
+            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          >
+            <input
+              type="radio"
+              name="terminal_status"
+              data-terminal-status="offline"
+            />
+            <span class="flex items-center gap-1">
+              Offline
+              <span class="badge badge-soft badge-xs font-mono"
+                >{terminalStatusCounts.offline}</span
+              >
+            </span>
+          </label>
         </div>
         <label class="flex cursor-pointer items-center gap-2">
           <input
@@ -345,6 +367,7 @@ const inventoryTabs = [
           <Icon name="boxicons:trash" class="size-4" />
           Limpiar filtros
         </button>
+        </div>
       </div>
 
       <!-- Filtros para Cúbics -->
@@ -397,15 +420,6 @@ const inventoryTabs = [
             <Icon name="boxicons:trash" class="size-4" />
             Limpiar filtros
           </button>
-          {
-            canExport && (
-              <ExportCsvButton
-                id="export-csv-cubics-btn"
-                href={getCleanBase() + "api/export/cubics"}
-                ariaLabel="Exportar cúbics a CSV"
-              />
-            )
-          }
         </div>
 
         <div class="flex flex-row items-center gap-3">
@@ -441,6 +455,15 @@ const inventoryTabs = [
                   <span class="sm:hidden">Registrar</span>
                 </a>
               </div>
+            )
+          }
+          {
+            canExport && (
+              <ExportCsvButton
+                id="export-csv-cubics-btn"
+                href={getCleanBase() + "api/export/cubics"}
+                ariaLabel="Exportar cúbics a CSV"
+              />
             )
           }
         </div>
@@ -586,20 +609,28 @@ const inventoryTabs = [
             checked
             data-tt-status="all"
           />
-          <input
-            type="radio"
-            name="tt_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label={`Online (${ttStatusCounts.online})`}
-            data-tt-status="online"
-          />
-          <input
-            type="radio"
-            name="tt_status"
-            class="tab text-base-content/70 checked:text-primary-content checked:[--tab-bg:var(--color-primary)]"
-            aria-label={`Offline (${ttStatusCounts.offline})`}
-            data-tt-status="offline"
-          />
+          <label
+            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          >
+            <input type="radio" name="tt_status" data-tt-status="online" />
+            <span class="flex items-center gap-1">
+              Online
+              <span class="badge badge-soft badge-xs font-mono"
+                >{ttStatusCounts.online}</span
+              >
+            </span>
+          </label>
+          <label
+            class="tab has-checked:text-primary-content has-checked:[--tab-bg:var(--color-primary)]"
+          >
+            <input type="radio" name="tt_status" data-tt-status="offline" />
+            <span class="flex items-center gap-1">
+              Offline
+              <span class="badge badge-soft badge-xs font-mono"
+                >{ttStatusCounts.offline}</span
+              >
+            </span>
+          </label>
         </div>
         <button
           id="btn-clear-filters-ttsts"
