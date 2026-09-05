@@ -2,9 +2,10 @@ import type { APIRoute } from "astro";
 import { getDisponibilidadHoy } from "@lib/disponibilidad";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ url }) => {
   try {
-    const list = await getDisponibilidadHoy();
+    const forceRefresh = url.searchParams.get("force_refresh") === "true";
+    const list = await getDisponibilidadHoy(forceRefresh);
     return jsonResponse(list, 200, "no-store, no-cache, must-revalidate");
   } catch (error: any) {
     console.error("GET /api/disponibilidad Error:", error);

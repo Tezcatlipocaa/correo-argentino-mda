@@ -3,6 +3,12 @@ import { agents, schedules, assignmentLock, assignmentHistory } from "@db/schema
 import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
 import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment } from "@/lib/invgate/agsTickets";
+import {
+  getWiseCxPresenceMap,
+  findWiseCxPresenceForAgent,
+  type WiseCxBadgeVariant,
+  type WiseCxStatusCategory,
+} from "@/lib/wise-cx-presence";
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
 
@@ -32,6 +38,14 @@ export interface AgentDisponibilidad {
   estadoExcepcionalMotivo?: string; // Comentario del supervisor
   estadoExcepcionalAt?: number; // Timestamp
   estadoExcepcionalMinutos?: number | null; // Tiempo extra para break extendido en minutos
+  // Wise CX Estados en Vivo
+  wiseCxStatus?: string;
+  wiseCxCategory?: WiseCxStatusCategory;
+  wiseCxBadgeVariant?: WiseCxBadgeVariant;
+  wiseCxFieldColor?: string;
+  wiseCxMinutesInStatus?: number;
+  wiseCxSince?: string;
+  wiseCxInCall?: boolean;
 }
 
 export const EXCEPTION_LABELS: Record<string, string> = {
@@ -190,7 +204,7 @@ export function calcularProximoTurnoDisponible(
   return {};
 }
 
-export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
+export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentDisponibilidad[]> {
   const todayStr = getLocalDateString();
   const now = new Date();
 
@@ -280,7 +294,10 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     .from(schedules)
     .where(and(gte(schedules.date, todayStr), lte(schedules.date, endDate14Str)));
 
-  // 3. Process each agent
+  // 3. Consultar presencia en tiempo real de Wise CX (Wallboard Analytics)
+  const wiseCxPresenceList = await getWiseCxPresenceMap(forceRefresh);
+
+  // 4. Process each agent
   const list: AgentDisponibilidad[] = dbAgents.map((agent) => {
     const workingStatuses = [
       "Presencial Monte Grande",
@@ -548,6 +565,69 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
               // If we passed all checks, agent is available
               info.disponible = true;
               applyOverride();
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Cruzar con presencia en tiempo real de Wise CX (Prioridad operativa en vivo)
+    const wisePresence = findWiseCxPresenceForAgent(agent.name, wiseCxPresenceList);
+    if (wisePresence) {
+      info.wiseCxStatus = wisePresence.status;
+      info.wiseCxCategory = wisePresence.statusCategory;
+      info.wiseCxBadgeVariant = wisePresence.badgeVariant;
+      info.wiseCxFieldColor = wisePresence.fieldColor;
+      info.wiseCxMinutesInStatus = wisePresence.statusCategory === "desconectado" ? undefined : wisePresence.minutesInStatus;
+      info.wiseCxSince = wisePresence.userStatusDate;
+      info.wiseCxInCall = wisePresence.inCall;
+
+      // Si el operador no tiene excepción manual de supervisor
+      if (!agent.estadoExcepcional) {
+        if (wisePresence.inCall) {
+          // Regla confirmada: En llamada pueden recibir AGS (se encolan)
+          info.disponible = true;
+          delete info.motivo;
+          delete info.retornoEstimado;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
+        } else if (wisePresence.statusCategory === "disponible") {
+          // Operador disponible en Wise CX (prioridad en vivo sobre cronograma)
+          info.disponible = true;
+          delete info.motivo;
+          delete info.retornoEstimado;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
+        } else if (wisePresence.statusCategory === "desconectado") {
+          // Si estaba dentro de horario laboral, desconectado lo bloquea
+          if (workingStatuses.includes(status)) {
+            info.disponible = false;
+            info.motivo = "Desconectado";
+          }
+        } else if (wisePresence.statusCategory === "invisible") {
+          // Si estaba dentro de horario laboral, invisible lo bloquea
+          if (workingStatuses.includes(status)) {
+            info.disponible = false;
+            info.motivo = "Invisible (Wise CX)";
+          }
+        } else if (wisePresence.statusCategory === "bloqueado") {
+          // Administrativo, Almuerzo, Baño, Devolución Supervisión, Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
+          info.disponible = false;
+          info.motivo = wisePresence.motivoBloqueo || `${wisePresence.status} (Wise CX)`;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
+
+          if (wisePresence.status.toLowerCase().includes("almuerzo") && wisePresence.userStatusDate) {
+            const startUtc = new Date(wisePresence.userStatusDate.replace(" ", "T") + "Z").getTime();
+            if (!isNaN(startUtc)) {
+              // Estimar fin de almuerzo (+45 min desde que ingresó)
+              const estEnd = new Date(startUtc + 45 * 60000);
+              const rH = String(estEnd.getHours()).padStart(2, "0");
+              const rM = String(estEnd.getMinutes()).padStart(2, "0");
+              info.retornoEstimado = `${rH}:${rM}`;
             }
           }
         }

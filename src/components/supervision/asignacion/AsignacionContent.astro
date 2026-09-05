@@ -31,7 +31,8 @@ const invgateWebBase = invgateApiBase
 const user = Astro.locals.user;
 const role = normalizeRole(user.role);
 
-const initialTab = Astro.url.searchParams.get("tab") === "monitoreo" ? "monitoreo" : "asignacion";
+const tabParam = Astro.url.searchParams.get("tab");
+const initialTab = tabParam === "monitoreo" ? "monitoreo" : tabParam === "automatizacion" ? "automatizacion" : "asignacion";
 
 const lockStatus = await getLockStatus();
 let hasLock = false;
@@ -181,23 +182,23 @@ noDisponiblesList.forEach((op) => {
 });
 
 const getBadgeColor = (status: string, disponible: boolean): string => {
-  if (disponible) return "badge-success text-success-content shadow-sm shadow-success/20";
+  if (disponible) return "badge-soft badge-success text-success shadow-xs";
   switch (status) {
     case "En break":
-      return "badge-warning text-warning-content shadow-sm shadow-warning/20";
+      return "badge-soft badge-warning text-warning shadow-xs";
     case "Fuera de horario":
     case "Franco":
-      return "badge-neutral text-neutral-content/75 opacity-70";
+      return "badge-soft badge-neutral text-base-content/60";
     case "Licencia":
-      return "badge-error text-error-content shadow-sm shadow-error/20";
+      return "badge-soft badge-error text-error shadow-xs";
     case "Vacaciones":
-      return "badge-info text-info-content shadow-sm shadow-info/20";
+      return "badge-soft badge-info text-info shadow-xs";
     case "Devolución Supervisor":
     case "Break Extendido":
     case "Problema Técnico":
-      return "badge-secondary text-secondary-content shadow-sm shadow-secondary/20";
+      return "badge-soft badge-secondary text-secondary shadow-xs";
     default:
-      return "badge-neutral";
+      return "badge-soft badge-neutral text-base-content/70";
   }
 };
 
@@ -249,6 +250,21 @@ function formatWaitTime(elapsedMin: number): string {
     return `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
   }
   return `${elapsedMin}m`;
+}
+
+function formatWiseMinutes(min: number | undefined | null): string {
+  if (!min || min <= 0) return "";
+  if (min >= 1440) {
+    const d = Math.floor(min / 1440);
+    const h = Math.floor((min % 1440) / 60);
+    return h > 0 ? `${d}d ${h}h` : `${d}d`;
+  }
+  if (min >= 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${min}m`;
 }
 ---
 
@@ -343,12 +359,12 @@ function formatWaitTime(elapsedMin: number): string {
       </button>
       <button
         type="button"
-        disabled
-        class="tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl flex items-center gap-2 opacity-50 cursor-not-allowed text-base-content/40 hover:text-base-content/40 select-none"
-        title="Asignación de tareas bloqueada"
+        id="tab-btn-automatizacion"
+        data-tab-target="panel-automatizacion"
+        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'automatizacion' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
-        <Icon name="boxicons:lock" size={18} />
-        <span>Asignación de Tareas</span>
+        <Icon name="boxicons:cog" size={18} />
+        Automatización
       </button>
       <button
         type="button"
@@ -556,11 +572,22 @@ function formatWaitTime(elapsedMin: number): string {
         <div class="lg:col-span-5 flex flex-col divide-y divide-base-300 bg-base-100 h-full overflow-hidden">
           <!-- Sección: Próximos en Cola -->
           <div class="flex-1 flex flex-col overflow-hidden">
-            <div class="p-4 sm:p-4.5 bg-base-200/40 border-b border-base-300 flex items-center gap-2.5 shrink-0">
-              <Icon name="boxicons:sparkles" size={22} class="text-primary" />
-              <h3 class="font-extrabold text-sm uppercase tracking-wider text-base-content/80">
-                Próximos en Cola
-              </h3>
+            <div class="p-3.5 sm:p-4 bg-base-200/40 border-b border-base-300 flex items-center justify-between gap-2.5 shrink-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <Icon name="boxicons:sparkles" size={20} class="text-primary shrink-0" />
+                <h3 class="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-base-content/80 truncate">
+                  Próximos en Cola
+                </h3>
+              </div>
+              <button
+                type="button"
+                id="btn-refresh-queue"
+                class="btn btn-ghost btn-xs text-base-content/70 hover:text-primary hover:bg-primary/10 font-bold gap-1 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg shrink-0"
+                title="Actualizar estado de operadores y cola ahora"
+              >
+                <Icon name="boxicons:refresh-ccw" size={15} id="btn-refresh-queue-icon" class="shrink-0 transition-transform" />
+                <span>Actualizar</span>
+              </button>
             </div>
 
             <div id="queue-container" class="divide-y divide-base-200/80 flex-1 overflow-y-auto overflow-x-auto">
@@ -582,16 +609,34 @@ function formatWaitTime(elapsedMin: number): string {
                           {idx === 0 && (
                             <span class="badge badge-sm border bg-warning/20 text-warning border-warning/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
                           )}
-                          {!op.disponible && (
+                          {op.wiseCxStatus && (
+                            <span
+                              class={`badge badge-soft badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs ${
+                                op.wiseCxInCall
+                                  ? "badge-warning text-warning animate-pulse"
+                                  : op.wiseCxBadgeVariant === "success"
+                                  ? "badge-success text-success"
+                                  : op.wiseCxBadgeVariant === "error"
+                                  ? "badge-error text-error"
+                                  : "badge-neutral text-base-content/70"
+                              }`}
+                              title={op.wiseCxStatus === "Desconectado" ? "Wise CX: Desconectado" : `Wise CX: ${op.wiseCxStatus} (${formatWiseMinutes(op.wiseCxMinutesInStatus) || '0m'})`}
+                            >
+                              <span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>
+                              {op.wiseCxInCall ? "En llamada" : op.wiseCxStatus}
+                              {op.wiseCxStatus !== "Desconectado" && op.wiseCxMinutesInStatus ? ` ${formatWiseMinutes(op.wiseCxMinutesInStatus)}` : ""}
+                            </span>
+                          )}
+                          {!op.disponible && (!op.wiseCxStatus || (op.wiseCxStatus !== "Desconectado" && op.motivo !== op.wiseCxStatus && op.motivo !== "Desconectado")) && (
                             <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">
                               {op.motivo || "No disponible"}
                             </span>
                           )}
                         </div>
                         <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
-                          <span class="uppercase font-semibold text-xs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial"}</span>
+                          <span class="uppercase font-semibold text-xs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : op.modalidadHoy === "Guardia" ? "Guardia" : "Presencial"}</span>
                           {op.salidaInminente ? (
-                            <span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Termina su jornada en ${op.salidaInminenteMin || 1} min`}>
+                            <span class="badge badge-soft badge-error text-error font-bold text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Termina su jornada en ${op.salidaInminenteMin || 1} min`}>
                               <Icon name="boxicons:arrow-out-right-square-half" size={12} class="shrink-0" />
                               <span>Salida en {op.salidaInminenteMin}m ({op.horarioHoy?.split(" - ")[1]})</span>
                             </span>
@@ -874,7 +919,7 @@ function formatWaitTime(elapsedMin: number): string {
                   {op.horarioHoy ? (
                     <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-small text-base-content/70">
                       {op.salidaInminente ? (
-                        <span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Termina su jornada en ${op.salidaInminenteMin || 1} min`}>
+                        <span class="badge badge-soft badge-error text-error font-bold text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Termina su jornada en ${op.salidaInminenteMin || 1} min`}>
                           <Icon name="boxicons:arrow-out-right-square-half" size={12} class="shrink-0" />
                           <span>Salida en {op.salidaInminenteMin}m ({op.horarioHoy.split(" - ")[1]})</span>
                         </span>
@@ -889,7 +934,7 @@ function formatWaitTime(elapsedMin: number): string {
                         </span>
                       )}
                       {op.breakInminente ? (
-                        <span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Entra en break en ${op.breakInminenteMin || 1} min`}>
+                        <span class="badge badge-soft badge-warning text-warning font-bold text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title={`Entra en break en ${op.breakInminenteMin || 1} min`}>
                           <Icon name="boxicons:cup-hot" size={12} class="shrink-0" />
                           <span>Break en {op.breakInminenteMin}m ({op.breakInicioHoy})</span>
                         </span>
@@ -912,7 +957,7 @@ function formatWaitTime(elapsedMin: number): string {
                 <div data-op-modalidad>
                   {op.modalidadHoy && op.modalidadHoy !== "Franco" && (
                     <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
-                      {op.modalidadHoy === "Home Office" ? "Home" : "Presencial"}
+                      {op.modalidadHoy === "Home Office" ? "Home" : op.modalidadHoy === "Guardia" ? "Guardia" : "Presencial"}
                     </span>
                   )}
                 </div>
@@ -947,17 +992,39 @@ function formatWaitTime(elapsedMin: number): string {
                     class={`badge ${getBadgeColor(op.motivo || "", op.disponible)} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
                   >
                     {op.disponible && (
-                      <span class="size-1.5 rounded-full bg-success-content animate-ping" />
+                      <span class="size-1.5 rounded-full bg-success animate-ping" />
                     )}
                     {!op.disponible && op.motivo === "En break" && (
-                      <span class="size-1.5 rounded-full bg-warning-content/75 animate-pulse" />
+                      <span class="size-1.5 rounded-full bg-warning animate-pulse" />
                     )}
                     {op.disponible
                       ? "Disponible"
                       : op.motivo === "En break"
                         ? `En break - vuelve ${op.retornoEstimado || ""}`
-                        : op.motivo || "Franco"}
+                        : op.motivo === "Desconectado (Wise CX)" || op.motivo === "Desconectado" || (!op.disponible && op.wiseCxStatus === "Desconectado" && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
+                          ? "Desconectado"
+                          : op.motivo || "Franco"}
                   </span>
+                )}
+                {op.wiseCxStatus && op.wiseCxStatus !== "Desconectado" && (
+                  <div class="mt-0.5 flex items-center gap-1">
+                    <span
+                      class={`badge badge-soft badge-xs font-bold text-xxs py-1.5 px-2 ${
+                        op.wiseCxInCall
+                          ? "badge-warning text-warning animate-pulse"
+                          : op.wiseCxBadgeVariant === "success"
+                          ? "badge-success text-success"
+                          : op.wiseCxBadgeVariant === "error"
+                          ? "badge-error text-error"
+                          : "badge-neutral text-base-content/70"
+                      }`}
+                      title={`Wise CX: ${op.wiseCxStatus} (${formatWiseMinutes(op.wiseCxMinutesInStatus) || '0m'})`}
+                    >
+                      <span class="inline-block size-1 rounded-full bg-current mr-1"></span>
+                      {op.wiseCxInCall ? "En llamada" : op.wiseCxStatus}
+                      {op.wiseCxMinutesInStatus ? ` (${formatWiseMinutes(op.wiseCxMinutesInStatus)})` : ""}
+                    </span>
+                  </div>
                 )}
                 {op.estadoExcepcional && op.estadoExcepcionalMotivo && (
                   <div
@@ -974,6 +1041,32 @@ function formatWaitTime(elapsedMin: number): string {
         })
       }
     </DataTable>
+  </div>
+
+  <!-- Pestaña 3: Automatización -->
+  <div id="panel-automatizacion" class={initialTab === "automatizacion" ? "flex flex-col gap-6" : "flex flex-col gap-6 hidden"}>
+    <div class="card bg-base-100 border border-base-300 rounded-2xl shadow-xs overflow-hidden">
+      <div class="p-5 border-b border-base-300 bg-base-200/30 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-primary/10 text-primary">
+            <Icon name="boxicons:cog" size={22} />
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-base-content">Módulo de Automatización</h3>
+            <p class="text-xs text-base-content/60">Configuración y reglas de asignación automática de tickets</p>
+          </div>
+        </div>
+      </div>
+      <div class="p-8 flex flex-col items-center justify-center text-center py-16 gap-3">
+        <div class="p-4 rounded-2xl bg-base-200/60 text-base-content/40 mb-1">
+          <Icon name="boxicons:cog" size={36} />
+        </div>
+        <h4 class="font-bold text-base text-base-content">Panel de Automatización Listo</h4>
+        <p class="text-xs text-base-content/60 max-w-md">
+          Pestaña operativa conectada. Lista para incorporar los controles y reglas correspondientes.
+        </p>
+      </div>
+    </div>
   </div>
 
   <!-- Modal Detalle de Ticket Sin Asignar -->
@@ -1389,12 +1482,14 @@ function formatWaitTime(elapsedMin: number): string {
         btn.classList.add("tab-active", "bg-primary", "text-primary-content", "shadow-sm");
         btn.classList.remove("text-base-content/70", "hover:text-base-content");
 
-        const isAsignacion = targetId === "panel-asignacion";
-        document.getElementById("panel-asignacion")?.classList.toggle("hidden", !isAsignacion);
-        document.getElementById("panel-monitoreo")?.classList.toggle("hidden", isAsignacion);
+        const panels = ["panel-asignacion", "panel-monitoreo", "panel-automatizacion"];
+        panels.forEach((pId) => {
+          document.getElementById(pId)?.classList.toggle("hidden", pId !== targetId);
+        });
 
+        const tabKey = targetId === "panel-monitoreo" ? "monitoreo" : targetId === "panel-automatizacion" ? "automatizacion" : "asignacion";
         const url = new URL(window.location.href);
-        url.searchParams.set("tab", isAsignacion ? "asignacion" : "monitoreo");
+        url.searchParams.set("tab", tabKey);
         window.history.replaceState({}, "", url.toString());
       });
     });
@@ -1463,6 +1558,21 @@ function formatWaitTime(elapsedMin: number): string {
         return `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
       }
       return `${elapsedMin}m`;
+    };
+
+    const formatWiseMinutesJs = (min: number | undefined | null): string => {
+      if (!min || min <= 0) return "";
+      if (min >= 1440) {
+        const d = Math.floor(min / 1440);
+        const h = Math.floor((min % 1440) / 60);
+        return h > 0 ? `${d}d ${h}h` : `${d}d`;
+      }
+      if (min >= 60) {
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+      }
+      return `${min}m`;
     };
 
     const stopCountdown = () => {
@@ -1695,14 +1805,29 @@ function formatWaitTime(elapsedMin: number): string {
               ? `<div class="badge badge-soft badge-neutral font-mono text-xs px-2.5 py-1 flex items-center gap-1 shrink-0 text-base-content/70 cursor-help" title="Si se asigna en orden, recibirá: ${escapeHtml(projTicket.title)}"><span class="opacity-50 font-sans font-bold">↳</span><span>${escapeHtml(projTicket.pretty_id || '#' + projTicket.id)}</span></div>`
               : "";
 
-            const statusBadge = !op.disponible
-              ? `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">${escapeHtml(op.motivo || "No disponible")}</span>`
-              : "";
+            let statusBadge = "";
+            const isDesconectado = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+
+            if (op.wiseCxStatus) {
+              let variantClass = "badge-neutral text-base-content/70";
+              if (op.wiseCxInCall) variantClass = "badge-warning text-warning animate-pulse";
+              else if (op.wiseCxBadgeVariant === "success") variantClass = "badge-success text-success";
+              else if (op.wiseCxBadgeVariant === "error") variantClass = "badge-error text-error";
+
+              const durStr = isDesconectado ? "" : formatWiseMinutesJs(op.wiseCxMinutesInStatus);
+              const minLabel = durStr ? ` ${durStr}` : "";
+              const label = op.wiseCxInCall ? "En llamada" : (isDesconectado ? "Desconectado" : op.wiseCxStatus);
+              const titleAttr = isDesconectado ? "Wise CX: Desconectado" : `Wise CX: ${escapeHtml(op.wiseCxStatus)}${durStr ? ' hace ' + durStr : ''}`;
+              statusBadge += `<span class="badge badge-soft ${variantClass} badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs" title="${titleAttr}"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>${escapeHtml(label)}${minLabel}</span>`;
+            }
+            if (!op.disponible && (!op.wiseCxStatus || (!isDesconectado && op.motivo !== op.wiseCxStatus && op.motivo !== "Desconectado"))) {
+              statusBadge += `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">${escapeHtml(op.motivo || "No disponible")}</span>`;
+            }
 
             let scheduleBadge = "";
             if (op.salidaInminente) {
               const endHour = op.horarioHoy ? op.horarioHoy.split(" - ")[1] : "";
-              scheduleBadge = `<span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Termina su jornada en ${op.salidaInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Salida en ${op.salidaInminenteMin}m (${escapeHtml(endHour)})</span></span>`;
+              scheduleBadge = `<span class="badge badge-soft badge-error text-error font-bold text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Termina su jornada en ${op.salidaInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Salida en ${op.salidaInminenteMin}m (${escapeHtml(endHour)})</span></span>`;
             } else if (op.horarioHoy) {
               scheduleBadge = `<span class="font-mono text-base-content/75">${escapeHtml(op.horarioHoy)}</span>`;
             }
@@ -1729,7 +1854,7 @@ function formatWaitTime(elapsedMin: number): string {
                       ${statusBadge}
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
-                      <span class="uppercase font-semibold text-xs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial")}</span>
+                      <span class="uppercase font-semibold text-xs opacity-75">${escapeHtml(op.modalidadHoy === "Home Office" ? "Home Office" : op.modalidadHoy === "Guardia" ? "Guardia" : "Presencial")}</span>
                       ${scheduleBadge}
                       ${breakStr}
                     </div>
@@ -1807,7 +1932,7 @@ function formatWaitTime(elapsedMin: number): string {
             let scheduleSpan = "";
             if (op.salidaInminente) {
               const endHour = op.horarioHoy.split(" - ")[1] || "";
-              scheduleSpan = `<span class="badge badge-error text-error-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Termina su jornada en ${op.salidaInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Salida en ${op.salidaInminenteMin}m (${escapeHtml(endHour)})</span></span>`;
+              scheduleSpan = `<span class="badge badge-soft badge-error text-error font-bold text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Termina su jornada en ${op.salidaInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Salida en ${op.salidaInminenteMin}m (${escapeHtml(endHour)})</span></span>`;
             } else {
               scheduleSpan = `
                 <span class="flex items-center gap-1 font-semibold">
@@ -1819,7 +1944,7 @@ function formatWaitTime(elapsedMin: number): string {
 
             let breakHtml = "";
             if (op.breakInminente) {
-              breakHtml = `<span class="badge badge-warning text-warning-content font-black text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Entra en break en ${op.breakInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break en ${op.breakInminenteMin}m (${escapeHtml(op.breakInicioHoy)})</span></span>`;
+              breakHtml = `<span class="badge badge-soft badge-warning text-warning font-bold text-xxs px-2 py-0.5 flex items-center gap-1 shadow-xs" title="Entra en break en ${op.breakInminenteMin || 1} min"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg><span>Break en ${op.breakInminenteMin}m (${escapeHtml(op.breakInicioHoy)})</span></span>`;
             } else if (op.breakInicioHoy && op.breakFinHoy) {
               breakHtml = `
                 <span class="flex items-center gap-1 opacity-70">
@@ -1847,7 +1972,7 @@ function formatWaitTime(elapsedMin: number): string {
             const isHome = op.modalidadHoy === "Home Office";
             modEl.innerHTML = `
               <span class="text-xxs font-bold opacity-60 uppercase tracking-tight">
-                ${isHome ? "Home" : "Presencial"}
+                ${isHome ? "Home" : op.modalidadHoy === "Guardia" ? "Guardia" : "Presencial"}
               </span>
             `;
           } else {
@@ -1865,7 +1990,7 @@ function formatWaitTime(elapsedMin: number): string {
 
           if (op.estadoExcepcional) {
             const badgeClass =
-              "badge-secondary text-secondary-content shadow-sm shadow-secondary/20";
+              "badge-soft badge-secondary text-secondary shadow-xs";
             let shortLabel = "⚠ Excepción";
             if (op.estadoExcepcional === "devolucion_supervisor")
               shortLabel = "⚠ Dev. Supervisor";
@@ -1906,29 +2031,53 @@ function formatWaitTime(elapsedMin: number): string {
               `;
             }
           } else {
-            let badgeClass = "badge-neutral";
+            let badgeClass = "badge-soft badge-neutral text-base-content/70";
             let badgeText = op.motivo || "Franco";
             let dotHtml = "";
 
+            const isDesconectado = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+
             if (op.disponible) {
               badgeClass =
-                "badge-success text-success-content shadow-sm shadow-success/20";
+                "badge-soft badge-success text-success shadow-xs";
               badgeText = "Disponible";
-              dotHtml = `<span class="size-1.5 rounded-full bg-success-content animate-ping"></span>`;
+              dotHtml = `<span class="size-1.5 rounded-full bg-success animate-ping"></span>`;
             } else if (op.motivo === "En break") {
               badgeClass =
-                "badge-warning text-warning-content shadow-sm shadow-warning/20";
+                "badge-soft badge-warning text-warning shadow-xs";
               badgeText = `En break - vuelve ${op.retornoEstimado || ""}`;
-              dotHtml = `<span class="size-1.5 rounded-full bg-warning-content/75 animate-pulse"></span>`;
+              dotHtml = `<span class="size-1.5 rounded-full bg-warning animate-pulse"></span>`;
+            } else if (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario") {
+              badgeClass = "badge-soft badge-neutral text-base-content/70";
+              badgeText = "Desconectado";
             } else if (op.motivo === "Fuera de horario") {
-              badgeClass = "badge-neutral text-neutral-content/75 opacity-70";
+              badgeClass = "badge-soft badge-neutral text-base-content/60";
               badgeText = "Fuera de horario";
             } else if (op.motivo === "Licencia") {
-              badgeClass = "badge-error text-error-content shadow-sm shadow-error/20";
+              badgeClass = "badge-soft badge-error text-error shadow-xs";
             } else if (op.motivo === "Vacaciones") {
-              badgeClass = "badge-info text-info-content shadow-sm shadow-info/20";
+              badgeClass = "badge-soft badge-info text-info shadow-xs";
             } else if (op.motivo === "Franco") {
-              badgeClass = "badge-neutral text-neutral-content/50";
+              badgeClass = "badge-soft badge-neutral text-base-content/50";
+            }
+
+            if (op.wiseCxStatus && !isDesconectado) {
+              let wiseColorClass = "badge-neutral text-base-content/70";
+              if (op.wiseCxInCall) wiseColorClass = "badge-warning text-warning animate-pulse";
+              else if (op.wiseCxBadgeVariant === "success") wiseColorClass = "badge-success text-success";
+              else if (op.wiseCxBadgeVariant === "error") wiseColorClass = "badge-error text-error";
+
+              const durStr = formatWiseMinutesJs(op.wiseCxMinutesInStatus);
+              const minText = durStr ? ` (${durStr})` : "";
+              const wiseLabel = op.wiseCxInCall ? "En llamada" : op.wiseCxStatus;
+              commentHtml += `
+                <div class="mt-0.5 flex items-center gap-1">
+                  <span class="badge badge-soft ${wiseColorClass} badge-xs font-bold text-xxs py-1.5 px-2" title="Wise CX: ${escapeHtml(op.wiseCxStatus)}${durStr ? ' hace ' + durStr : ''}">
+                    <span class="size-1 rounded-full bg-current inline-block mr-1"></span>
+                    ${escapeHtml(wiseLabel)}${minText}
+                  </span>
+                </div>
+              `;
             }
 
             badgeHtml = `
@@ -2014,17 +2163,24 @@ function formatWaitTime(elapsedMin: number): string {
     const renderModalOpItem = (op: any, ticketId: number, isReadOnly: boolean, isCreator: boolean = false): string => {
       const isAvailable = !!op.disponible;
       const initials = getInitialsClient(op.nombre);
-      const badgeColor = getBadgeColorClient(op.motivo || "", isAvailable);
+      const isDesconectado = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+
+      const badgeColor = (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
+        ? "badge-soft badge-neutral text-base-content/70"
+        : getBadgeColorClient(op.motivo || "", isAvailable);
+
       const statusLabel = isAvailable 
         ? "Disponible" 
-        : (op.motivo === "En break" && op.retornoEstimado 
-            ? `En break (vuelve ${escapeHtml(op.retornoEstimado)})` 
-            : escapeHtml(op.motivo || "Franco"));
+        : (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
+          ? "Desconectado"
+          : (op.motivo === "En break" && op.retornoEstimado 
+              ? `En break (vuelve ${escapeHtml(op.retornoEstimado)})` 
+              : escapeHtml(op.motivo || "Franco"));
 
       let scheduleInfo = op.horarioHoy ? escapeHtml(op.horarioHoy) : "Sin horario";
       if (op.salidaInminente) {
         const endHour = op.horarioHoy ? op.horarioHoy.split(" - ")[1] : "";
-        scheduleInfo = `<span class="badge badge-soft badge-error font-bold text-xxs px-1.5 py-0.5">Salida en ${op.salidaInminenteMin || 1}m (${escapeHtml(endHour)})</span>`;
+        scheduleInfo = `<span class="badge badge-soft badge-error font-bold text-xxs px-1.5 py-0.5">Salida en ${op.salidaInminenteMin || 1} min (${escapeHtml(endHour)})</span>`;
       }
 
       let breakInfo = "";
@@ -2033,7 +2189,7 @@ function formatWaitTime(elapsedMin: number): string {
       } else if (op.breakInicioHoy && op.breakFinHoy) {
         breakInfo = ` • Break: ${escapeHtml(op.breakInicioHoy)} - ${escapeHtml(op.breakFinHoy)}`;
       }
-      const modality = op.modalidadHoy === "Home Office" ? "Home Office" : "Presencial";
+      const modality = op.modalidadHoy === "Home Office" ? "Home Office" : op.modalidadHoy === "Guardia" ? "Guardia" : "Presencial";
 
       const btnDisabled = isReadOnly ? 'disabled="true"' : "";
 
@@ -2091,6 +2247,7 @@ function formatWaitTime(elapsedMin: number): string {
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-extrabold text-sm text-base-content truncate">${escapeHtml(op.nombre)}</span>
                 ${creatorBadge}
+                ${op.wiseCxStatus && !isDesconectado ? `<span class="badge badge-soft ${op.wiseCxInCall ? 'badge-warning text-warning animate-pulse' : op.wiseCxBadgeVariant === 'success' ? 'badge-success text-success' : op.wiseCxBadgeVariant === 'error' ? 'badge-error text-error' : 'badge-neutral text-base-content/70'} badge-xs font-bold px-1.5 py-0.5" title="Wise CX: ${escapeHtml(op.wiseCxStatus)}${formatWiseMinutesJs(op.wiseCxMinutesInStatus) ? ' hace ' + formatWiseMinutesJs(op.wiseCxMinutesInStatus) : ''}"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>${escapeHtml(op.wiseCxInCall ? 'En llamada' : op.wiseCxStatus)}${formatWiseMinutesJs(op.wiseCxMinutesInStatus) ? ' ' + formatWiseMinutesJs(op.wiseCxMinutesInStatus) : ''}</span>` : ''}
                 <span class="badge ${badgeColor} badge-sm text-xs font-semibold px-2 py-0.5">${statusLabel}</span>
               </div>
               <div class="text-xs text-base-content/60 font-medium truncate mt-0.5">
@@ -3008,10 +3165,11 @@ function formatWaitTime(elapsedMin: number): string {
       }
     };
 
-    // Fetch availability data (local SQLite)
-    const fetchDisponibilidad = async () => {
+    // Fetch availability data (local SQLite + Wise CX en tiempo real)
+    const fetchDisponibilidad = async (forceRefresh = false) => {
       try {
-        const res = await fetch("/api/disponibilidad");
+        const url = forceRefresh ? "/api/disponibilidad?force_refresh=true" : "/api/disponibilidad";
+        const res = await fetch(url);
         if (!res.ok) throw new Error("Error fetching availability");
         const data = await res.json();
         updateUI(data);
@@ -3046,7 +3204,7 @@ function formatWaitTime(elapsedMin: number): string {
       try {
         await Promise.allSettled([
           fetchUnassignedTickets(),
-          fetchDisponibilidad(),
+          fetchDisponibilidad(true),
           fetchLockStatus().then(updateLockBanner),
         ]);
       } catch (err) {
@@ -3063,6 +3221,24 @@ function formatWaitTime(elapsedMin: number): string {
     if (refreshGeneralBtn) {
       refreshGeneralBtn.addEventListener("click", () => {
         refreshGeneral();
+      });
+    }
+
+    // Listener para botón de refresco manual en la cola de operadores
+    const refreshQueueBtn = document.getElementById("btn-refresh-queue");
+    const refreshQueueIcon = document.getElementById("btn-refresh-queue-icon");
+    if (refreshQueueBtn) {
+      refreshQueueBtn.addEventListener("click", async () => {
+        if (refreshQueueIcon) refreshQueueIcon.classList.add("animate-spin");
+        (refreshQueueBtn as HTMLButtonElement).disabled = true;
+        try {
+          await fetchDisponibilidad(true);
+        } finally {
+          setTimeout(() => {
+            if (refreshQueueIcon) refreshQueueIcon.classList.remove("animate-spin");
+            (refreshQueueBtn as HTMLButtonElement).disabled = false;
+          }, 350);
+        }
       });
     }
 

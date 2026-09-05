@@ -56,6 +56,9 @@ INVGATE_QA_API_USERNAME     — Usuario para autenticacion InvGate QA
 WISE_CX_API_KEY             — API key de Wise CX
 WISE_CX_BASE_URL            — URL base de Wise CX API
 WISE_CX_API_USER            — Usuario para autenticacion Wise CX
+WISE_CX_WALLBOARD_COMPANY   — Codigo de compania para Wallboard de presencia Wise CX
+WISE_CX_WALLBOARD_TAB_GUID  — GUID del tablero de presencia en vivo de Wise CX
+WISE_CX_WALLBOARD_WIDGET_ID — ID del widget de presencia de agentes en Wise CX
 EXTERNAL_STORAGE_DIR        — Directorio raiz para archivos subidos (apps, iconos, PDFs)
 ```
 
