@@ -307,17 +307,27 @@ function formatWiseMinutes(min: number | undefined | null): string {
           </div>
         </div>
 
-        <!-- Lock Status Indicator a la derecha -->
-        {role !== "agent" && (
-          <div class="flex items-center gap-3 shrink-0">
+        <!-- Acciones y Lock a la derecha -->
+        <div class="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            id="btn-refresh-general"
+            class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
+            title="Actualizar tickets y disponibilidad de operadores ahora"
+          >
+            <Icon name="boxicons:refresh-ccw" size={16} id="btn-refresh-general-icon" class="shrink-0 transition-transform" />
+            <span>Actualizar</span>
+          </button>
+
+          {role !== "agent" && (
             <div id="lock-indicator"
                  data-user-id={user?.id}
                  data-user-username={user?.username}
                  data-lock-timeout={10 * 60 * 1000}
                  class="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs font-semibold text-base-content/70">
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <!-- Grid de Paneles Divididos (60% Tickets / 40% Cola) -->
@@ -338,17 +348,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
               >
                 {unassignedCount}
               </span>
-
-              <!-- Botón de Refresco General Manual -->
-              <button
-                type="button"
-                id="btn-refresh-general"
-                class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
-                title="Actualizar tickets y disponibilidad de operadores ahora"
-              >
-                <Icon name="boxicons:refresh-ccw" size={16} id="btn-refresh-general-icon" class="shrink-0 transition-transform" />
-                <span>Actualizar</span>
-              </button>
             </div>
           </div>
 
@@ -413,15 +412,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
                           ⏱ {formatWait}
                         </span>
                       )}
-                      {t.commenting_operators_count > 0 && (
-                        <span
-                          class="badge badge-soft badge-secondary font-mono font-bold text-xs px-2 py-0.5 shrink-0 gap-1"
-                          title={`Operadores MDA que comentaron: ${(t.commenting_operators || []).map((o: any) => `${o.name} (${o.comment_count})`).join(', ')}`}
-                        >
-                          <Icon name="boxicons:message-circle-dots" size={13} class="shrink-0" />
-                          <span>+{t.commenting_operators_count}</span>
-                        </span>
-                      )}
                     </div>
                     <div class="flex items-center justify-between gap-2 text-xs font-medium truncate mt-0.5">
                       <div class="flex items-center gap-1.5 min-w-0 truncate text-base-content/70">
@@ -482,15 +472,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
                   Próximos en Cola
                 </h3>
               </div>
-              <button
-                type="button"
-                id="btn-refresh-queue"
-                class="btn btn-ghost btn-xs text-base-content/70 hover:text-primary hover:bg-primary/10 font-bold gap-1 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg shrink-0"
-                title="Actualizar estado de operadores y cola ahora"
-              >
-                <Icon name="boxicons:refresh-ccw" size={15} id="btn-refresh-queue-icon" class="shrink-0 transition-transform" />
-                <span>Actualizar</span>
-              </button>
             </div>
 
             <div id="queue-container" class="divide-y divide-base-200/80 flex-1 overflow-y-auto overflow-x-auto">
@@ -512,29 +493,44 @@ function formatWiseMinutes(min: number | undefined | null): string {
                           {idx === 0 && (
                             <span class="badge badge-sm border bg-warning/20 text-warning border-warning/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
                           )}
-                          {op.wiseCxStatus && (
-                            <span
-                              class={`badge badge-soft badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs ${
-                                op.wiseCxInCall
-                                  ? "badge-warning text-warning animate-pulse"
-                                  : op.wiseCxBadgeVariant === "success"
-                                  ? "badge-success text-success"
-                                  : op.wiseCxBadgeVariant === "error"
-                                  ? "badge-error text-error"
-                                  : "badge-neutral text-base-content/70"
-                              }`}
-                              title={op.wiseCxStatus === "Desconectado" ? "Wise CX: Desconectado" : `Wise CX: ${op.wiseCxStatus} (${formatWiseMinutes(op.wiseCxMinutesInStatus) || '0m'})`}
-                            >
-                              <span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>
-                              {op.wiseCxInCall ? "En llamada" : op.wiseCxStatus}
-                              {op.wiseCxStatus !== "Desconectado" && op.wiseCxMinutesInStatus ? ` ${formatWiseMinutes(op.wiseCxMinutesInStatus)}` : ""}
-                            </span>
-                          )}
-                          {!op.disponible && (!op.wiseCxStatus || (op.wiseCxStatus !== "Desconectado" && op.motivo !== op.wiseCxStatus && op.motivo !== "Desconectado")) && (
-                            <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">
-                              {op.motivo || "No disponible"}
-                            </span>
-                          )}
+                          {(() => {
+                            const isDescon = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+                            const dur = isDescon ? "" : formatWiseMinutes(op.wiseCxMinutesInStatus);
+                            const durLabel = dur ? ` (${dur})` : "";
+
+                            if (op.wiseCxInCall) {
+                              return (
+                                <span class="badge badge-soft badge-warning text-warning animate-pulse badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs" title="En llamada">
+                                  <span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>
+                                  En llamada{durLabel}
+                                </span>
+                              );
+                            }
+                            if (op.wiseCxStatus && !isDescon) {
+                              const variant = op.wiseCxBadgeVariant === "success"
+                                ? "badge-success text-success"
+                                : op.wiseCxBadgeVariant === "error"
+                                ? "badge-error text-error"
+                                : "badge-neutral text-base-content/70";
+                              return (
+                                <span class={`badge badge-soft ${variant} badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs`} title={`Wise CX: ${op.wiseCxStatus}${dur ? ' hace ' + dur : ''}`}>
+                                  <span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>
+                                  {op.wiseCxStatus}{durLabel}
+                                </span>
+                              );
+                            }
+                            if (!op.disponible) {
+                              const cleanMotivo = (isDescon && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
+                                ? "Desconectado"
+                                : (op.motivo || "No disponible").replace(/\s*\(Wise\s*CX\)$/i, "").trim();
+                              return (
+                                <span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">
+                                  {cleanMotivo}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
                           <span class="uppercase font-semibold text-xs opacity-75">{op.modalidadHoy === "Home Office" ? "Home Office" : op.modalidadHoy === "Guardia" ? "Guardia" : "Presencial"}</span>
@@ -868,55 +864,54 @@ function formatWiseMinutes(min: number | undefined | null): string {
                 data-op-status-cell={op.agentId}
                 class="flex flex-col items-start gap-1"
               >
-                <span
-                  data-op-status-badge={op.agentId}
-                  class={`badge ${
-                    op.wiseCxInCall
-                      ? "badge-soft badge-warning text-warning shadow-xs animate-pulse"
-                      : getBadgeColor(op.motivo || "", op.disponible)
-                  } gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
-                >
-                  {op.disponible && (
-                    <span class="size-1.5 rounded-full bg-success animate-ping" />
-                  )}
-                  {op.wiseCxInCall && (
-                    <span class="size-1.5 rounded-full bg-warning animate-pulse" />
-                  )}
-                  {!op.disponible && !op.wiseCxInCall && op.motivo === "En break" && (
-                    <span class="size-1.5 rounded-full bg-warning animate-pulse" />
-                  )}
-                  {op.disponible
-                    ? (op.wiseCxStatus
-                        ? (op.wiseCxInCall
-                            ? `En llamada${op.wiseCxMinutesInStatus ? ` (${formatWiseMinutes(op.wiseCxMinutesInStatus)})` : ""}`
-                            : `${op.wiseCxStatus}${op.wiseCxMinutesInStatus ? ` (${formatWiseMinutes(op.wiseCxMinutesInStatus)})` : ""}`)
-                        : "Disponible")
-                    : op.motivo === "En break"
-                      ? `En break - vuelve ${op.retornoEstimado || ""}`
-                      : op.motivo === "Desconectado (Wise CX)" || op.motivo === "Desconectado" || (!op.disponible && op.wiseCxStatus === "Desconectado" && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
-                        ? "Desconectado"
-                        : op.motivo || "Franco"}
-                </span>
-                {op.wiseCxStatus && op.wiseCxStatus !== "Desconectado" && !op.disponible && (
-                  <div class="mt-0.5 flex items-center gap-1">
+                {(() => {
+                  const isDescon = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+                  const dur = isDescon ? "" : formatWiseMinutes(op.wiseCxMinutesInStatus);
+                  const durLabel = dur ? ` (${dur})` : "";
+                  
+                  let badgeColorClass = getBadgeColor(op.motivo || "", op.disponible);
+                  let badgeContent = "Disponible";
+                  let dotType = "";
+
+                  if (op.wiseCxInCall) {
+                    badgeColorClass = "badge-soft badge-warning text-warning shadow-xs animate-pulse";
+                    badgeContent = `En llamada${durLabel}`;
+                    dotType = "warning";
+                  } else if (op.disponible) {
+                    badgeColorClass = "badge-soft badge-success text-success shadow-xs";
+                    badgeContent = op.wiseCxStatus ? `${op.wiseCxStatus}${durLabel}` : "Disponible";
+                    dotType = "success";
+                  } else if (op.motivo === "En break") {
+                    badgeColorClass = "badge-soft badge-warning text-warning shadow-xs";
+                    badgeContent = `En break - vuelve ${op.retornoEstimado || ""}`;
+                    dotType = "warning";
+                  } else if (op.wiseCxStatus && !isDescon) {
+                    badgeColorClass = op.wiseCxBadgeVariant === "error"
+                      ? "badge-soft badge-error text-error shadow-xs"
+                      : "badge-soft badge-neutral text-base-content/70";
+                    badgeContent = `${op.wiseCxStatus}${durLabel}`;
+                    if (op.wiseCxBadgeVariant === "error") dotType = "error";
+                  } else if (isDescon && op.motivo !== "Franco" && op.motivo !== "Fuera de horario") {
+                    badgeColorClass = "badge-soft badge-neutral text-base-content/70";
+                    badgeContent = "Desconectado";
+                  } else {
+                    const cleanMotivo = (op.motivo || "Franco").replace(/\s*\(Wise\s*CX\)$/i, "").trim();
+                    badgeColorClass = getBadgeColor(cleanMotivo, false);
+                    badgeContent = cleanMotivo;
+                  }
+
+                  return (
                     <span
-                      class={`badge badge-soft badge-xs font-bold text-xxs py-1.5 px-2 ${
-                        op.wiseCxInCall
-                          ? "badge-warning text-warning animate-pulse"
-                          : op.wiseCxBadgeVariant === "success"
-                          ? "badge-success text-success"
-                          : op.wiseCxBadgeVariant === "error"
-                          ? "badge-error text-error"
-                          : "badge-neutral text-base-content/70"
-                      }`}
-                      title={`Wise CX: ${op.wiseCxStatus} (${formatWiseMinutes(op.wiseCxMinutesInStatus) || '0m'})`}
+                      data-op-status-badge={op.agentId}
+                      class={`badge ${badgeColorClass} gap-1.5 badge-xs font-semibold uppercase text-tiny tracking-wider py-2`}
                     >
-                      <span class="inline-block size-1 rounded-full bg-current mr-1"></span>
-                      {op.wiseCxInCall ? "En llamada" : op.wiseCxStatus}
-                      {op.wiseCxMinutesInStatus ? ` (${formatWiseMinutes(op.wiseCxMinutesInStatus)})` : ""}
+                      {dotType === "success" && <span class="size-1.5 rounded-full bg-success animate-ping" />}
+                      {dotType === "warning" && <span class="size-1.5 rounded-full bg-warning animate-pulse" />}
+                      {dotType === "error" && <span class="size-1.5 rounded-full bg-error" />}
+                      {badgeContent}
                     </span>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           );
@@ -1020,13 +1015,25 @@ function formatWiseMinutes(min: number | undefined | null): string {
         </div>
 
         <!-- Sección de Comentarios y Notas -->
-        <div class="space-y-3 pt-1">
+        <div class="space-y-3 pt-1" id="ticket-modal-comments-section">
           <div class="flex items-center justify-between gap-2 border-b border-base-300 pb-2">
             <div class="flex items-center gap-2">
               <Icon name="boxicons:message-circle-detail" size={18} class="text-base-content/60" />
               <h4 class="text-xs font-bold text-base-content/75 uppercase tracking-wider">Comentarios y Notas</h4>
             </div>
-            <span id="ticket-modal-comments-count" class="badge badge-soft badge-neutral badge-sm font-mono font-bold">0</span>
+            <span id="ticket-modal-comments-count" class="badge badge-soft badge-neutral badge-sm font-mono font-bold">-</span>
+          </div>
+
+          <!-- Botón de Carga Diferida (Click-to-Load) -->
+          <div id="ticket-modal-comments-trigger-container" class="py-2">
+            <button
+              type="button"
+              id="ticket-modal-load-comments-btn"
+              class="btn btn-sm btn-outline btn-secondary w-full gap-2 text-xs font-semibold"
+            >
+              <Icon name="boxicons:message-circle-dots" size={16} />
+              <span>Ver comentarios y notas (Click para cargar)</span>
+            </button>
           </div>
 
           <!-- Operadores MDA Intervinientes -->
@@ -1042,8 +1049,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
           </div>
 
           <!-- Loading state -->
-          <div id="ticket-modal-comments-loading" class="flex items-center justify-center gap-2 py-6 text-base-content/50 text-xs font-medium">
-            <span class="loading loading-spinner loading-xs text-primary"></span>
+          <div id="ticket-modal-comments-loading" class="hidden flex items-center justify-center gap-2 py-6 text-base-content/50 text-xs font-medium">
+            <span class="loading loading-spinner loading-xs text-secondary"></span>
             <span>Cargando comentarios...</span>
           </div>
 
@@ -1058,7 +1065,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           </div>
 
           <!-- List container -->
-          <div id="ticket-modal-comments-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          <div id="ticket-modal-comments-list" class="hidden space-y-2.5 max-h-72 overflow-y-auto pr-1">
           </div>
         </div>
       </div>
@@ -1344,6 +1351,10 @@ function formatWiseMinutes(min: number | undefined | null): string {
   let countdownInterval: any = null;
   let heartbeatInterval: any = null;
   let checkReady: any = null;
+  let autoPollTimer: any = null;
+  let idleTimer: any = null;
+  let ticketsAbortController: AbortController | null = null;
+  let disponibilidadAbortController: AbortController | null = null;
 
   const init = () => {
     const toggle = document.getElementById(
@@ -1379,8 +1390,11 @@ function formatWiseMinutes(min: number | undefined | null): string {
     let lockExpiresAt = 0;
     let lockTimeoutMs = 300000;
     let currentLockStatus: any = null;
+    let clientHasLock = false;
     let latestUnassignedTickets: any[] = [];
     let latestDisponibilidadData: any[] = [];
+    let loadedCommentsByTicket = new Map<number, any>();
+    let currentModalTicket: any = null;
 
     const rawTicketsEl = document.getElementById("initial-unassigned-data");
     if (rawTicketsEl && rawTicketsEl.textContent) {
@@ -1428,6 +1442,132 @@ function formatWiseMinutes(min: number | undefined | null): string {
         return m > 0 ? `${h}h ${m}m` : `${h}h`;
       }
       return `${min}m`;
+    };
+
+    const removeTicketCardOptimistically = (ticketId: number | undefined) => {
+      if (!ticketId) return;
+      const cardEl = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (cardEl) {
+        cardEl.remove();
+      }
+      latestUnassignedTickets = latestUnassignedTickets.filter((t) => t.id !== ticketId);
+      const countEl = document.getElementById("stat-unassigned-count");
+      const currentCount = parseInt(countEl?.textContent || "0", 10);
+      const newCount = Math.max(0, (isNaN(currentCount) ? 0 : currentCount) - 1);
+      if (countEl) {
+        countEl.textContent = String(newCount);
+        countEl.className = `badge badge-md border ${newCount > 0 ? "bg-warning/20 text-warning border-warning/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
+      }
+      updateActionBarSubtitle();
+      const listEl = document.getElementById("unassigned-tickets-list");
+      if (listEl && newCount === 0) {
+        listEl.innerHTML = '<div class="text-sm text-base-content/40 italic py-16 text-center">No hay tickets sin asignar</div>';
+      }
+    };
+
+    const renderModalComments = (data: any, ticket: any) => {
+      const commentsLoading = document.getElementById("ticket-modal-comments-loading");
+      const commentsEmpty = document.getElementById("ticket-modal-comments-empty");
+      const commentsError = document.getElementById("ticket-modal-comments-error");
+      const commentsList = document.getElementById("ticket-modal-comments-list");
+      const commentsCount = document.getElementById("ticket-modal-comments-count");
+      const mdaContainer = document.getElementById("ticket-modal-mda-operators-container");
+      const mdaList = document.getElementById("ticket-modal-mda-operators-list");
+      const triggerContainer = document.getElementById("ticket-modal-comments-trigger-container");
+
+      if (triggerContainer) triggerContainer.classList.add("hidden");
+      if (commentsLoading) commentsLoading.classList.add("hidden");
+      if (commentsError) commentsError.classList.add("hidden");
+
+      const comments = data?.comments || [];
+      const rawCommentingOps = data?.commenting_operators || [];
+      const commentingOps = rawCommentingOps.filter((op: any) => op.id !== ticket?.creator_id);
+      if (commentsCount) commentsCount.textContent = String(comments.length);
+
+      if (commentingOps.length > 0) {
+        if (mdaList) {
+          mdaList.innerHTML = commentingOps.map((op: any) => `
+            <div class="inline-flex items-center gap-2 bg-base-100 border border-base-300 rounded-lg px-2.5 py-1 text-xs">
+              <div class="avatar placeholder size-5 rounded-full bg-secondary/15 text-secondary font-bold text-xxs flex items-center justify-center">
+                ${escapeHtml((op.name || "OP").substring(0, 2).toUpperCase())}
+              </div>
+              <span class="text-base-content font-medium">${escapeHtml(op.name)}</span>
+              <span class="badge badge-soft badge-secondary badge-xs font-bold font-mono">${op.comment_count}</span>
+            </div>
+          `).join("");
+        }
+        if (mdaContainer) mdaContainer.classList.remove("hidden");
+      } else {
+        if (mdaContainer) mdaContainer.classList.add("hidden");
+      }
+
+      if (comments.length === 0) {
+        if (commentsEmpty) commentsEmpty.classList.remove("hidden");
+        if (commentsList) commentsList.classList.add("hidden");
+        return;
+      }
+
+      if (commentsEmpty) commentsEmpty.classList.add("hidden");
+      if (commentsList) {
+        commentsList.classList.remove("hidden");
+        commentsList.innerHTML = comments.map((c: any) => {
+          const isInternal = c.customer_visible === false || c.customer_visible === 0;
+          const authorName = c.author_name || `Usuario #${c.author_id}`;
+          const authorParts = authorName.trim().split(/\s+/);
+          const initials = authorParts.length >= 2
+            ? (authorParts[0][0] + authorParts[authorParts.length - 1][0]).toUpperCase()
+            : authorName.substring(0, 2).toUpperCase();
+
+          const timeStr = c.created_at
+            ? new Date(c.created_at * 1000).toLocaleString("es-AR", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })
+            : "";
+
+          let typeBadge = `<span class="badge badge-soft badge-neutral badge-xs font-semibold px-2 py-0.5">Público</span>`;
+          if (c.is_solution) {
+            typeBadge = `<span class="badge badge-soft badge-success badge-xs font-bold px-2 py-0.5">Solución</span>`;
+          } else if (isInternal) {
+            typeBadge = `<span class="badge badge-soft badge-warning badge-xs font-bold px-2 py-0.5">Nota Interna</span>`;
+          }
+
+          const mdaBadge = c.is_mda_agent
+            ? `<span class="badge badge-soft badge-secondary badge-xs font-medium px-2 py-0.5 gap-1"><svg class="size-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>Operador MDA</span>`
+            : "";
+
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(c.message || "", "text/html");
+          doc.querySelectorAll("script, iframe, object, embed").forEach((node) => node.remove());
+          const safeMessage = doc.body.innerHTML;
+
+          const cardClass = isInternal
+            ? "bg-warning/5 border border-warning/20"
+            : "bg-base-100 border border-base-200/90";
+          const avatarClass = isInternal
+            ? "bg-warning/15 text-warning"
+            : "bg-primary/10 text-primary";
+
+          return `
+            <div class="p-3.5 sm:p-4 rounded-xl ${cardClass} space-y-2">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <div class="avatar placeholder size-7 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarClass}">
+                    ${escapeHtml(initials)}
+                  </div>
+                  <span class="font-bold text-xs sm:text-sm text-base-content">${escapeHtml(authorName)}</span>
+                  ${typeBadge}
+                  ${mdaBadge}
+                </div>
+                <span class="text-xs font-mono text-base-content/60">${escapeHtml(timeStr)}</span>
+              </div>
+              <div class="text-xs sm:text-sm text-base-content/85 whitespace-pre-wrap leading-relaxed pl-9">
+                ${safeMessage}
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
     };
 
     const stopCountdown = () => {
@@ -1662,21 +1802,22 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
             let statusBadge = "";
             const isDesconectado = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+            const durStr = isDesconectado ? "" : formatWiseMinutesJs(op.wiseCxMinutesInStatus);
+            const durLabel = durStr ? ` (${durStr})` : "";
 
-            if (op.wiseCxStatus) {
+            if (op.wiseCxInCall) {
+              statusBadge = `<span class="badge badge-soft badge-warning text-warning animate-pulse badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs" title="En llamada"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>En llamada${durLabel}</span>`;
+            } else if (op.wiseCxStatus && !isDesconectado) {
               let variantClass = "badge-neutral text-base-content/70";
-              if (op.wiseCxInCall) variantClass = "badge-warning text-warning animate-pulse";
-              else if (op.wiseCxBadgeVariant === "success") variantClass = "badge-success text-success";
+              if (op.wiseCxBadgeVariant === "success") variantClass = "badge-success text-success";
               else if (op.wiseCxBadgeVariant === "error") variantClass = "badge-error text-error";
-
-              const durStr = isDesconectado ? "" : formatWiseMinutesJs(op.wiseCxMinutesInStatus);
-              const minLabel = durStr ? ` ${durStr}` : "";
-              const label = op.wiseCxInCall ? "En llamada" : (isDesconectado ? "Desconectado" : op.wiseCxStatus);
-              const titleAttr = isDesconectado ? "Wise CX: Desconectado" : `Wise CX: ${escapeHtml(op.wiseCxStatus)}${durStr ? ' hace ' + durStr : ''}`;
-              statusBadge += `<span class="badge badge-soft ${variantClass} badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs" title="${titleAttr}"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>${escapeHtml(label)}${minLabel}</span>`;
-            }
-            if (!op.disponible && (!op.wiseCxStatus || (!isDesconectado && op.motivo !== op.wiseCxStatus && op.motivo !== "Desconectado"))) {
-              statusBadge += `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">${escapeHtml(op.motivo || "No disponible")}</span>`;
+              const titleAttr = `Wise CX: ${escapeHtml(op.wiseCxStatus)}${durStr ? ' hace ' + durStr : ''}`;
+              statusBadge = `<span class="badge badge-soft ${variantClass} badge-sm font-bold text-xxs px-2 py-0.5 shrink-0 shadow-xs" title="${titleAttr}"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>${escapeHtml(op.wiseCxStatus)}${durLabel}</span>`;
+            } else if (!op.disponible) {
+              const cleanMotivo = (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
+                ? "Desconectado"
+                : (op.motivo || "No disponible").replace(/\s*\(Wise\s*CX\)$/i, "").trim();
+              statusBadge = `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs shrink-0">${escapeHtml(cleanMotivo)}</span>`;
             }
 
             let scheduleBadge = "";
@@ -1840,28 +1981,29 @@ function formatWiseMinutes(min: number | undefined | null): string {
           let dotHtml = "";
 
           const isDesconectado = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+          const durStr = isDesconectado ? "" : formatWiseMinutesJs(op.wiseCxMinutesInStatus);
+          const durLabel = durStr ? ` (${durStr})` : "";
 
-          if (op.disponible) {
-            if (op.wiseCxInCall) {
-              badgeClass = "badge-soft badge-warning text-warning shadow-xs animate-pulse";
-              const durStr = formatWiseMinutesJs(op.wiseCxMinutesInStatus);
-              badgeText = `En llamada${durStr ? ` (${durStr})` : ""}`;
-              dotHtml = `<span class="size-1.5 rounded-full bg-warning animate-pulse"></span>`;
-            } else if (op.wiseCxStatus) {
-              badgeClass = "badge-soft badge-success text-success shadow-xs";
-              const durStr = formatWiseMinutesJs(op.wiseCxMinutesInStatus);
-              badgeText = `${op.wiseCxStatus}${durStr ? ` (${durStr})` : ""}`;
-              dotHtml = `<span class="size-1.5 rounded-full bg-success animate-ping"></span>`;
-            } else {
-              badgeClass = "badge-soft badge-success text-success shadow-xs";
-              badgeText = "Disponible";
-              dotHtml = `<span class="size-1.5 rounded-full bg-success animate-ping"></span>`;
-            }
+          if (op.wiseCxInCall) {
+            badgeClass = "badge-soft badge-warning text-warning shadow-xs animate-pulse";
+            badgeText = `En llamada${durLabel}`;
+            dotHtml = `<span class="size-1.5 rounded-full bg-warning animate-pulse"></span>`;
+          } else if (op.disponible) {
+            badgeClass = "badge-soft badge-success text-success shadow-xs";
+            badgeText = op.wiseCxStatus ? `${op.wiseCxStatus}${durLabel}` : "Disponible";
+            dotHtml = `<span class="size-1.5 rounded-full bg-success animate-ping"></span>`;
           } else if (op.motivo === "En break") {
-            badgeClass =
-              "badge-soft badge-warning text-warning shadow-xs";
+            badgeClass = "badge-soft badge-warning text-warning shadow-xs";
             badgeText = `En break - vuelve ${op.retornoEstimado || ""}`;
             dotHtml = `<span class="size-1.5 rounded-full bg-warning animate-pulse"></span>`;
+          } else if (op.wiseCxStatus && !isDescon) {
+            badgeClass = op.wiseCxBadgeVariant === "error"
+              ? "badge-soft badge-error text-error shadow-xs"
+              : "badge-soft badge-neutral text-base-content/70";
+            badgeText = `${op.wiseCxStatus}${durLabel}`;
+            if (op.wiseCxBadgeVariant === "error") {
+              dotHtml = `<span class="size-1.5 rounded-full bg-error"></span>`;
+            }
           } else if (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario") {
             badgeClass = "badge-soft badge-neutral text-base-content/70";
             badgeText = "Desconectado";
@@ -1874,25 +2016,10 @@ function formatWiseMinutes(min: number | undefined | null): string {
             badgeClass = "badge-soft badge-info text-info shadow-xs";
           } else if (op.motivo === "Franco") {
             badgeClass = "badge-soft badge-neutral text-base-content/50";
-          }
-
-          if (op.wiseCxStatus && !isDesconectado && !op.disponible) {
-            let wiseColorClass = "badge-neutral text-base-content/70";
-            if (op.wiseCxInCall) wiseColorClass = "badge-warning text-warning animate-pulse";
-            else if (op.wiseCxBadgeVariant === "success") wiseColorClass = "badge-success text-success";
-            else if (op.wiseCxBadgeVariant === "error") wiseColorClass = "badge-error text-error";
-
-            const durStr = formatWiseMinutesJs(op.wiseCxMinutesInStatus);
-            const minText = durStr ? ` (${durStr})` : "";
-            const wiseLabel = op.wiseCxInCall ? "En llamada" : op.wiseCxStatus;
-            commentHtml += `
-              <div class="mt-0.5 flex items-center gap-1">
-                <span class="badge badge-soft ${wiseColorClass} badge-xs font-bold text-xxs py-1.5 px-2" title="Wise CX: ${escapeHtml(op.wiseCxStatus)}${durStr ? ' hace ' + durStr : ''}">
-                  <span class="size-1 rounded-full bg-current inline-block mr-1"></span>
-                  ${escapeHtml(wiseLabel)}${minText}
-                </span>
-              </div>
-            `;
+          } else {
+            const cleanMotivo = (op.motivo || "Franco").replace(/\s*\(Wise\s*CX\)$/i, "").trim();
+            badgeText = cleanMotivo;
+            badgeClass = getBadgeColorClient(cleanMotivo, false);
           }
 
           badgeHtml = `
@@ -1978,18 +2105,32 @@ function formatWiseMinutes(min: number | undefined | null): string {
       const isAvailable = !!op.disponible;
       const initials = getInitialsClient(op.nombre);
       const isDesconectado = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
+      const durStr = isDesconectado ? "" : formatWiseMinutesJs(op.wiseCxMinutesInStatus);
+      const durLabel = durStr ? ` (${durStr})` : "";
 
-      const badgeColor = (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
-        ? "badge-soft badge-neutral text-base-content/70"
-        : getBadgeColorClient(op.motivo || "", isAvailable);
-
-      const statusLabel = isAvailable 
-        ? "Disponible" 
-        : (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario")
-          ? "Desconectado"
-          : (op.motivo === "En break" && op.retornoEstimado 
-              ? `En break (vuelve ${escapeHtml(op.retornoEstimado)})` 
-              : escapeHtml(op.motivo || "Franco"));
+      let statusBadge = "";
+      if (op.wiseCxInCall) {
+        statusBadge = `<span class="badge badge-soft badge-warning text-warning animate-pulse badge-xs font-bold px-1.5 py-0.5 shrink-0" title="En llamada"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>En llamada${durLabel}</span>`;
+      } else if (isAvailable) {
+        statusBadge = `<span class="badge badge-soft badge-success text-success badge-sm text-xs font-semibold px-2 py-0.5 shrink-0">Disponible</span>`;
+      } else if (op.wiseCxStatus && !isDesconectado) {
+        const variantClass = op.wiseCxBadgeVariant === "error"
+          ? "badge-error text-error"
+          : op.wiseCxBadgeVariant === "success"
+          ? "badge-success text-success"
+          : "badge-neutral text-base-content/70";
+        const titleAttr = `Wise CX: ${escapeHtml(op.wiseCxStatus)}${durStr ? ' hace ' + durStr : ''}`;
+        statusBadge = `<span class="badge badge-soft ${variantClass} badge-xs font-bold px-1.5 py-0.5 shrink-0" title="${titleAttr}"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>${escapeHtml(op.wiseCxStatus)}${durLabel}</span>`;
+      } else if (isDesconectado && op.motivo !== "Franco" && op.motivo !== "Fuera de horario") {
+        statusBadge = `<span class="badge badge-soft badge-neutral text-base-content/70 badge-sm text-xs font-semibold px-2 py-0.5 shrink-0" title="Wise CX: Desconectado">Desconectado</span>`;
+      } else if (op.motivo === "En break") {
+        const breakText = op.retornoEstimado ? `En break (vuelve ${escapeHtml(op.retornoEstimado)})` : "En break";
+        statusBadge = `<span class="badge badge-soft badge-warning text-warning badge-sm text-xs font-semibold px-2 py-0.5 shrink-0">${breakText}</span>`;
+      } else {
+        const cleanMotivo = (op.motivo || "Franco").replace(/\s*\(Wise\s*CX\)$/i, "").trim();
+        const badgeColor = getBadgeColorClient(cleanMotivo, false);
+        statusBadge = `<span class="badge ${badgeColor} badge-sm text-xs font-semibold px-2 py-0.5 shrink-0">${escapeHtml(cleanMotivo)}</span>`;
+      }
 
       let scheduleInfo = op.horarioHoy ? escapeHtml(op.horarioHoy) : "Sin horario";
       if (op.salidaInminente) {
@@ -2060,9 +2201,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-extrabold text-sm text-base-content truncate">${escapeHtml(op.nombre)}</span>
-                ${creatorBadge}
-                ${op.wiseCxStatus && !isDesconectado ? `<span class="badge badge-soft ${op.wiseCxInCall ? 'badge-warning text-warning animate-pulse' : op.wiseCxBadgeVariant === 'success' ? 'badge-success text-success' : op.wiseCxBadgeVariant === 'error' ? 'badge-error text-error' : 'badge-neutral text-base-content/70'} badge-xs font-bold px-1.5 py-0.5" title="Wise CX: ${escapeHtml(op.wiseCxStatus)}${formatWiseMinutesJs(op.wiseCxMinutesInStatus) ? ' hace ' + formatWiseMinutesJs(op.wiseCxMinutesInStatus) : ''}"><span class="inline-block size-1.5 rounded-full bg-current mr-1"></span>${escapeHtml(op.wiseCxInCall ? 'En llamada' : op.wiseCxStatus)}${formatWiseMinutesJs(op.wiseCxMinutesInStatus) ? ' ' + formatWiseMinutesJs(op.wiseCxMinutesInStatus) : ''}</span>` : ''}
-                ${(!isAvailable || !op.wiseCxStatus) ? `<span class="badge ${badgeColor} badge-sm text-xs font-semibold px-2 py-0.5">${statusLabel}</span>` : ''}
+                ${creatorBadge ? `${creatorBadge} <span class="text-base-content/40 text-xs select-none">•</span>` : ""}
+                ${statusBadge}
               </div>
               <div class="text-xs text-base-content/60 font-medium truncate mt-0.5">
                 <span class="font-semibold text-base-content/75">${modality}</span> • <span class="font-mono">${scheduleInfo}${breakInfo}</span>
@@ -2330,7 +2470,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
             const dStr = new Date(datetimeInput.value).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
             const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
             showAlert("success", `Autogestión${tNumStr} asignada a ${data.agentName || `ID ${agentId}`} y pospuesta hasta ${dStr}.`);
-            await refreshGeneral();
+            removeTicketCardOptimistically(ticketId);
+            fetchDisponibilidad(false);
           } else {
             showAlert("error", data.error || "No se pudo posponer la autogestión.");
           }
@@ -2376,7 +2517,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
               }
               const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
               showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
-              await refreshGeneral();
+              removeTicketCardOptimistically(ticketId);
+              fetchDisponibilidad(false);
             } else {
               showAlert("error", data.error || "No se pudo realizar la asignación manual.");
             }
@@ -2549,7 +2691,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
             }
           }
 
-          // Cargar comentarios y notas del ticket
+          // Configuración diferida de comentarios (Zero API cost al abrir modal)
+          currentModalTicket = ticket;
           const commentsLoading = document.getElementById("ticket-modal-comments-loading");
           const commentsEmpty = document.getElementById("ticket-modal-comments-empty");
           const commentsError = document.getElementById("ticket-modal-comments-error");
@@ -2557,112 +2700,24 @@ function formatWiseMinutes(min: number | undefined | null): string {
           const commentsCount = document.getElementById("ticket-modal-comments-count");
           const mdaContainer = document.getElementById("ticket-modal-mda-operators-container");
           const mdaList = document.getElementById("ticket-modal-mda-operators-list");
+          const triggerContainer = document.getElementById("ticket-modal-comments-trigger-container");
 
-          if (commentsList) commentsList.innerHTML = "";
+          if (commentsList) {
+            commentsList.innerHTML = "";
+            commentsList.classList.add("hidden");
+          }
           if (mdaList) mdaList.innerHTML = "";
           if (mdaContainer) mdaContainer.classList.add("hidden");
-          if (commentsLoading) commentsLoading.classList.remove("hidden");
+          if (commentsLoading) commentsLoading.classList.add("hidden");
           if (commentsEmpty) commentsEmpty.classList.add("hidden");
           if (commentsError) commentsError.classList.add("hidden");
-          if (commentsCount) commentsCount.textContent = "0";
 
-          const creatorQuery = ticket.creator_id ? `&creator_id=${ticket.creator_id}` : "";
-          fetch(`/api/invgate/ticket-comments?request_id=${ticket.id}${creatorQuery}`)
-            .then((r) => r.json())
-            .then((data) => {
-              if (commentsLoading) commentsLoading.classList.add("hidden");
-              const comments = data.comments || [];
-              const rawCommentingOps = data.commenting_operators || [];
-              const commentingOps = rawCommentingOps.filter((op: any) => op.id !== ticket.creator_id);
-              if (commentsCount) commentsCount.textContent = String(comments.length);
-
-              if (commentingOps.length > 0) {
-                if (mdaList) {
-                  mdaList.innerHTML = commentingOps.map((op: any) => `
-                    <div class="inline-flex items-center gap-2 bg-base-100 border border-base-300 rounded-lg px-2.5 py-1 text-xs">
-                      <div class="avatar placeholder size-5 rounded-full bg-secondary/15 text-secondary font-bold text-xxs flex items-center justify-center">
-                        ${escapeHtml((op.name || "OP").substring(0, 2).toUpperCase())}
-                      </div>
-                      <span class="text-base-content font-medium">${escapeHtml(op.name)}</span>
-                      <span class="badge badge-soft badge-secondary badge-xs font-bold font-mono">${op.comment_count}</span>
-                    </div>
-                  `).join("");
-                }
-                if (mdaContainer) mdaContainer.classList.remove("hidden");
-              } else {
-                if (mdaContainer) mdaContainer.classList.add("hidden");
-              }
-
-              if (comments.length === 0) {
-                if (commentsEmpty) commentsEmpty.classList.remove("hidden");
-                return;
-              }
-
-              if (commentsList) {
-                commentsList.innerHTML = comments.map((c: any) => {
-                  const isInternal = c.customer_visible === false || c.customer_visible === 0;
-                  const authorName = c.author_name || `Usuario #${c.author_id}`;
-                  const authorParts = authorName.trim().split(/\s+/);
-                  const initials = authorParts.length >= 2
-                    ? (authorParts[0][0] + authorParts[authorParts.length - 1][0]).toUpperCase()
-                    : authorName.substring(0, 2).toUpperCase();
-
-                  const timeStr = c.created_at
-                    ? new Date(c.created_at * 1000).toLocaleString("es-AR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })
-                    : "";
-
-                  let typeBadge = `<span class="badge badge-soft badge-neutral badge-xs font-semibold px-2 py-0.5">Público</span>`;
-                  if (c.is_solution) {
-                    typeBadge = `<span class="badge badge-soft badge-success badge-xs font-bold px-2 py-0.5">Solución</span>`;
-                  } else if (isInternal) {
-                    typeBadge = `<span class="badge badge-soft badge-warning badge-xs font-bold px-2 py-0.5">Nota Interna</span>`;
-                  }
-
-                  const mdaBadge = c.is_mda_agent
-                    ? `<span class="badge badge-soft badge-secondary badge-xs font-medium px-2 py-0.5 gap-1"><svg class="size-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>Operador MDA</span>`
-                    : "";
-
-                  const parser = new DOMParser();
-                  const doc = parser.parseFromString(c.message || "", "text/html");
-                  doc.querySelectorAll("script, iframe, object, embed").forEach((node) => node.remove());
-                  const safeMessage = doc.body.innerHTML;
-
-                  const cardClass = isInternal
-                    ? "bg-warning/5 border border-warning/20"
-                    : "bg-base-100 border border-base-200/90";
-                  const avatarClass = isInternal
-                    ? "bg-warning/15 text-warning"
-                    : "bg-primary/10 text-primary";
-
-                  return `
-                    <div class="p-3.5 sm:p-4 rounded-xl ${cardClass} space-y-2">
-                      <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <div class="avatar placeholder size-7 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${avatarClass}">
-                            ${escapeHtml(initials)}
-                          </div>
-                          <span class="font-bold text-xs sm:text-sm text-base-content">${escapeHtml(authorName)}</span>
-                          ${typeBadge}
-                          ${mdaBadge}
-                        </div>
-                        <span class="text-xs font-mono text-base-content/60">${escapeHtml(timeStr)}</span>
-                      </div>
-                      <div class="text-xs sm:text-sm text-base-content/85 whitespace-pre-wrap leading-relaxed pl-9">
-                        ${safeMessage}
-                      </div>
-                    </div>
-                  `;
-                }).join("");
-              }
-            })
-            .catch((err) => {
-              console.error("Error fetching comments:", err);
-              if (commentsLoading) commentsLoading.classList.add("hidden");
-              if (commentsError) commentsError.classList.remove("hidden");
-            });
+          if (loadedCommentsByTicket.has(ticket.id)) {
+            renderModalComments(loadedCommentsByTicket.get(ticket.id), ticket);
+          } else {
+            if (triggerContainer) triggerContainer.classList.remove("hidden");
+            if (commentsCount) commentsCount.textContent = "-";
+          }
 
           modal.showModal();
         }
@@ -2670,15 +2725,48 @@ function formatWiseMinutes(min: number | undefined | null): string {
       }
     });
 
-    // Fetch unassigned tickets for Helpdesk 3950 (con timer & refresco manual)
-    // Fetch unassigned tickets for Helpdesk 3950
+    // Carga de comentarios bajo demanda al clickear el botón del modal
+    const loadCommentsBtn = document.getElementById("ticket-modal-load-comments-btn");
+    if (loadCommentsBtn) {
+      loadCommentsBtn.addEventListener("click", async () => {
+        if (!currentModalTicket) return;
+        const triggerContainer = document.getElementById("ticket-modal-comments-trigger-container");
+        const commentsLoading = document.getElementById("ticket-modal-comments-loading");
+        const commentsError = document.getElementById("ticket-modal-comments-error");
+
+        if (triggerContainer) triggerContainer.classList.add("hidden");
+        if (commentsLoading) commentsLoading.classList.remove("hidden");
+        if (commentsError) commentsError.classList.add("hidden");
+
+        try {
+          const creatorQuery = currentModalTicket.creator_id ? `&creator_id=${currentModalTicket.creator_id}` : "";
+          const r = await fetch(`/api/invgate/ticket-comments?request_id=${currentModalTicket.id}${creatorQuery}`);
+          if (!r.ok) throw new Error("Error fetching comments");
+          const data = await r.json();
+          loadedCommentsByTicket.set(currentModalTicket.id, data);
+          renderModalComments(data, currentModalTicket);
+        } catch (err) {
+          console.error("Error fetching comments on demand:", err);
+          if (commentsLoading) commentsLoading.classList.add("hidden");
+          if (commentsError) commentsError.classList.remove("hidden");
+          if (triggerContainer) triggerContainer.classList.remove("hidden");
+        }
+      });
+    }
+
+    // Fetch unassigned tickets for Helpdesk 3950 (con abort controller & anti-solapamiento)
     let isFetchingTickets = false;
     const fetchUnassignedTickets = async () => {
       if (isFetchingTickets) return;
       isFetchingTickets = true;
 
+      if (ticketsAbortController) ticketsAbortController.abort();
+      ticketsAbortController = new AbortController();
+
       try {
-        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3950");
+        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3950", {
+          signal: ticketsAbortController.signal,
+        });
         if (!res.ok) return;
         const data = await res.json();
         latestUnassignedTickets = data.tickets || [];
@@ -2693,6 +2781,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           countEl.className = `badge badge-md border ${count > 0 ? "bg-warning/20 text-warning border-warning/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
         }
         if (listEl) {
+          const prevScroll = listEl.scrollTop;
           if (data.tickets && data.tickets.length > 0) {
             const PRIORITY_MAP: Record<number, { label: string; badgeClass: string }> = {
               1: { label: "Baja", badgeClass: "badge-soft badge-neutral text-base-content/70 font-medium" },
@@ -2726,15 +2815,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
               const catBadge = t.category_last_name
                 ? `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs tracking-tight max-w-[170px] truncate shrink-0" title="${escapeHtml(t.category_name || t.category_last_name)}">${escapeHtml(t.category_last_name)}</span>`
                 : "";
-
-              // MDA commenting operators badge
-              let commentsBadge = "";
-              if (t.commenting_operators_count > 0) {
-                const opTooltip = (t.commenting_operators || [])
-                  .map((o: any) => `${escapeHtml(o.name)} (${o.comment_count})`)
-                  .join(", ");
-                commentsBadge = `<span class="badge badge-soft badge-secondary font-mono font-bold text-xs px-2 py-0.5 shrink-0 gap-1" title="Operadores MDA que comentaron: ${opTooltip}"><svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>+${t.commenting_operators_count}</span></span>`;
-              }
 
               const lockIndicator = document.getElementById("lock-indicator");
               const clientHasLock = lockIndicator ? lockIndicator.getAttribute("data-has-lock") === "true" : false;
@@ -2808,7 +2888,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
                     ${prioBadge}
                     ${catBadge}
                     ${waitingBadge}
-                    ${commentsBadge}
                   </div>
                   ${userAndActionRow}
                   ${locationRow}
@@ -2818,24 +2897,36 @@ function formatWiseMinutes(min: number | undefined | null): string {
           } else {
             listEl.innerHTML = '<div class="text-sm text-base-content/40 italic py-16 text-center">No hay tickets sin asignar</div>';
           }
+          listEl.scrollTop = prevScroll;
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.name === "AbortError") return;
         console.error("Error fetching unassigned tickets:", err);
       } finally {
         isFetchingTickets = false;
       }
     };
 
-    // Fetch availability data (local SQLite + Wise CX en tiempo real)
+    // Fetch availability data (local SQLite + Wise CX en tiempo real con abort controller & anti-solapamiento)
+    let isFetchingDisponibilidad = false;
     const fetchDisponibilidad = async (forceRefresh = false) => {
+      if (isFetchingDisponibilidad) return;
+      isFetchingDisponibilidad = true;
+
+      if (disponibilidadAbortController) disponibilidadAbortController.abort();
+      disponibilidadAbortController = new AbortController();
+
       try {
         const url = forceRefresh ? "/api/disponibilidad?force_refresh=true" : "/api/disponibilidad";
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: disponibilidadAbortController.signal });
         if (!res.ok) throw new Error("Error fetching availability");
         const data = await res.json();
         updateUI(data);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === "AbortError") return;
         console.error("Failed to sync availability data:", error);
+      } finally {
+        isFetchingDisponibilidad = false;
       }
     };
 
@@ -2885,23 +2976,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
       });
     }
 
-    // Listener para botón de refresco manual en la cola de operadores
-    const refreshQueueBtn = document.getElementById("btn-refresh-queue");
-    const refreshQueueIcon = document.getElementById("btn-refresh-queue-icon");
-    if (refreshQueueBtn) {
-      refreshQueueBtn.addEventListener("click", async () => {
-        if (refreshQueueIcon) refreshQueueIcon.classList.add("animate-spin");
-        (refreshQueueBtn as HTMLButtonElement).disabled = true;
-        try {
-          await fetchDisponibilidad(true);
-        } finally {
-          setTimeout(() => {
-            if (refreshQueueIcon) refreshQueueIcon.classList.remove("animate-spin");
-            (refreshQueueBtn as HTMLButtonElement).disabled = false;
-          }, 350);
-        }
-      });
-    }
 
     // Dynamic lock banner UI update
     const updateLockBanner = (lockStatus: any) => {
@@ -3014,6 +3088,11 @@ function formatWiseMinutes(min: number | undefined | null): string {
         startHeartbeat();
       } else {
         stopHeartbeat();
+      }
+
+      if (hasLock !== clientHasLock || !autoPollTimer) {
+        clientHasLock = hasLock;
+        setupAutoPolling(hasLock);
       }
     };
 
@@ -3162,6 +3241,52 @@ function formatWiseMinutes(min: number | undefined | null): string {
       }
     };
 
+    // Auto-polling adaptativo y detección de inactividad
+    let isUserIdle = false;
+    const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos de inactividad
+
+    const resetIdleTimer = () => {
+      isUserIdle = false;
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        isUserIdle = true;
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    ["mousemove", "keydown", "touchstart", "scroll"].forEach((evt) => {
+      window.addEventListener(evt, resetIdleTimer, { passive: true });
+    });
+    resetIdleTimer();
+
+    const executeAutoPoll = async () => {
+      if (document.hidden) return;
+      if (isUserIdle) return;
+      const panelAsignacion = document.getElementById("panel-asignacion");
+      if (panelAsignacion && panelAsignacion.classList.contains("hidden")) return;
+
+      // Limpieza de caché de comentarios en el cliente para el nuevo ciclo
+      loadedCommentsByTicket.clear();
+
+      await Promise.allSettled([
+        fetchDisponibilidad(false),
+        fetchUnassignedTickets(),
+        fetchLockStatus().then(updateLockBanner),
+      ]);
+    };
+
+    const setupAutoPolling = (hasLock: boolean) => {
+      if (autoPollTimer) clearInterval(autoPollTimer);
+      const intervalMs = hasLock ? 30 * 1000 : 120 * 1000;
+      autoPollTimer = setInterval(executeAutoPoll, intervalMs);
+    };
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        resetIdleTimer();
+        executeAutoPoll();
+      }
+    });
+
     // Event delegation on #lock-indicator
     const bannerEl = document.getElementById("lock-indicator");
     if (bannerEl) {
@@ -3265,8 +3390,12 @@ function formatWiseMinutes(min: number | undefined | null): string {
     // Initial fetch of lock status immediately
     fetchLockStatus().then(updateLockBanner);
 
-    // Release lock on page unload using fetch with keepalive: true
+    // Release lock and clean timers on page unload using fetch with keepalive: true
     window.addEventListener("beforeunload", () => {
+      if (autoPollTimer) clearInterval(autoPollTimer);
+      if (idleTimer) clearTimeout(idleTimer);
+      if (ticketsAbortController) ticketsAbortController.abort();
+      if (disponibilidadAbortController) disponibilidadAbortController.abort();
       const indicator = document.getElementById("lock-indicator");
       if (indicator && indicator.getAttribute("data-has-lock") === "true") {
         fetch("/api/disponibilidad/lock", { method: "DELETE", keepalive: true });
@@ -3292,6 +3421,10 @@ function formatWiseMinutes(min: number | undefined | null): string {
     if (countdownInterval) clearInterval(countdownInterval);
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     if (checkReady) clearInterval(checkReady);
+    if (autoPollTimer) clearInterval(autoPollTimer);
+    if (idleTimer) clearTimeout(idleTimer);
+    if (ticketsAbortController) ticketsAbortController.abort();
+    if (disponibilidadAbortController) disponibilidadAbortController.abort();
   });
 </script>
 

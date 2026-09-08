@@ -47,7 +47,7 @@ const MANUAL_ALIASES: Record<string, string[]> = {
 
 // Cache en memoria
 let presenceCache: { data: Map<string, WiseCxPresence>; timestamp: number } | null = null;
-const CACHE_TTL_MS = 15 * 1000; // 15 segundos
+const CACHE_TTL_MS = 30 * 1000; // 30 segundos
 
 /**
  * Normaliza una cadena de texto quitando tildes, signos de puntuación y espacios extras
@@ -106,29 +106,29 @@ export function classifyWiseCxStatus(
       statusCategory: "invisible",
       badgeVariant: "neutral",
       canReceiveAgs: false,
-      motivoBloqueo: "Invisible (Wise CX)",
+      motivoBloqueo: "Invisible",
     };
   }
 
   // Estados bloqueantes (indicador rojo): Administrativo, Almuerzo, Baño, Devolución Supervisión,
   // Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
-  let motivo = `${statusRaw.trim()} (Wise CX)`;
+  let motivo = statusRaw.trim();
   if (norm.includes("almuerzo")) {
-    motivo = "En almuerzo (Wise CX)";
+    motivo = "En almuerzo";
   } else if (norm.includes("reunion") || norm.includes("reunión")) {
-    motivo = "En reunión (Wise CX)";
+    motivo = "En reunión";
   } else if (norm.includes("bano") || norm.includes("baño")) {
-    motivo = "En pausa/baño (Wise CX)";
+    motivo = "En pausa/baño";
   } else if (norm.includes("devolucion") || norm.includes("devolución")) {
-    motivo = "Devolución Supervisión (Wise CX)";
+    motivo = "Devolución Supervisión";
   } else if (norm.includes("administrativo")) {
-    motivo = "En tarea administrativa (Wise CX)";
+    motivo = "En tarea administrativa";
   } else if (norm.includes("saliente")) {
-    motivo = "En llamada saliente (Wise CX)";
+    motivo = "En llamada saliente";
   } else if (norm.includes("sin atender")) {
-    motivo = "Llamada sin atender (Wise CX)";
+    motivo = "Llamada sin atender";
   } else if (norm.includes("no disponible")) {
-    motivo = "No disponible (Wise CX)";
+    motivo = "No disponible";
   }
 
   return {

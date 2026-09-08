@@ -1,8 +1,9 @@
 import { invgateGet, invgatePost } from "@lib/invgateClient";
-import type { InvgateIncident, InvgateByStatusResponse, InvgateLocation } from "@/types/invgate";
+import type { InvgateIncident, InvgateByStatusResponse } from "@/types/invgate";
 import { getCategoryMap, getLastCategoryName } from "./categoryCache";
 import { getFullUserMap } from "./userCache";
 import { getHelpdeskMemberIdSet, getHelpdeskMemberMap, type HelpdeskMemberUser } from "./helpdeskMembersCache";
+import { getLocationsMap } from "./locationsMapCache";
 
 export interface CommentingOperator {
   id: number;
@@ -31,12 +32,27 @@ export interface UnassignedTicketsResult {
   error?: string;
 }
 
+let unassignedTicketsCache: { data: UnassignedTicketsResult; timestamp: number } | null = null;
+const UNASSIGNED_CACHE_TTL_MS = 25 * 1000; // 25 segundos
+
+/**
+ * Invalida el caché en memoria de tickets sin asignar de la mesa 3950.
+ */
+export function invalidateUnassignedTicketsCache(): void {
+  unassignedTicketsCache = null;
+}
+
 /**
  * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 3950).
  */
 export async function getUnassignedTicketsByHelpdesk(
   helpdeskId: number = 3950
 ): Promise<UnassignedTicketsResult> {
+  const now = Date.now();
+  if (helpdeskId === 3950 && unassignedTicketsCache && now - unassignedTicketsCache.timestamp < UNASSIGNED_CACHE_TTL_MS) {
+    return unassignedTicketsCache.data;
+  }
+
   try {
     // 1. Obtener IDs de incidentes abiertos de la mesa de ayuda
     const helpdeskRes = await invgateGet<InvgateByStatusResponse>(
@@ -54,11 +70,15 @@ export async function getUnassignedTicketsByHelpdesk(
 
     const requestIds = helpdeskRes.data.requestIds ?? [];
     if (requestIds.length === 0) {
-      return {
+      const emptyResult: UnassignedTicketsResult = {
         ok: true,
         helpdeskId,
         tickets: [],
       };
+      if (helpdeskId === 3950) {
+        unassignedTicketsCache = { data: emptyResult, timestamp: now };
+      }
+      return emptyResult;
     }
 
     // 2. Batch fetch de objetos completos de incidentes via PHP array params (?ids[]=1&ids[]=2...)
@@ -85,31 +105,12 @@ export async function getUnassignedTicketsByHelpdesk(
     // Ordenar por fecha de creación (más antiguos primero)
     allUnassigned.sort((a, b) => a.created_at - b.created_at);
 
-    // Resolver nombres de categorías, usuarios, ubicaciones y comentarios de los tickets en paralelo
-    const [catMap, fullUserMap, locRes, commentsResults] = await Promise.all([
+    // Resolver nombres de categorías, usuarios y ubicaciones en paralelo (sin N+1 de comentarios)
+    const [catMap, fullUserMap, locMap] = await Promise.all([
       getCategoryMap(),
       getFullUserMap(),
-      invgateGet<InvgateLocation[]>("locations"),
-      Promise.allSettled(allUnassigned.map((t) => getTicketComments(t.id, helpdeskId))),
+      getLocationsMap(),
     ]);
-
-    const locMap = new Map<number, string>();
-    if (locRes.ok && Array.isArray(locRes.data)) {
-      for (const loc of locRes.data) {
-        locMap.set(loc.id, loc.name);
-      }
-    }
-
-    const commentsByTicketId = new Map<number, { commenting_operators: CommentingOperator[]; count: number }>();
-    commentsResults.forEach((res, index) => {
-      const ticketId = allUnassigned[index].id;
-      if (res.status === "fulfilled" && res.value.ok) {
-        commentsByTicketId.set(ticketId, {
-          commenting_operators: res.value.commenting_operators,
-          count: res.value.commenting_operators.length,
-        });
-      }
-    });
 
     const enrichedTickets = allUnassigned.map((t) => {
       const catFullName = t.category_id ? catMap.get(t.category_id) || "" : "";
@@ -130,11 +131,6 @@ export async function getUnassignedTicketsByHelpdesk(
 
       const locationName = t.location_id ? locMap.get(t.location_id) || `Ubicación #${t.location_id}` : "";
 
-      const commData = commentsByTicketId.get(t.id);
-      const rawCommentingOperators = commData?.commenting_operators || [];
-      const commentingOperators = rawCommentingOperators.filter((op) => op.id !== t.creator_id);
-      const commentingOperatorsCount = commentingOperators.length;
-
       return {
         ...t,
         category_name: catFullName,
@@ -144,16 +140,20 @@ export async function getUnassignedTicketsByHelpdesk(
         customer_name: customerName,
         customer_username: customerUsername,
         location_name: locationName,
-        commenting_operators: commentingOperators,
-        commenting_operators_count: commentingOperatorsCount,
       };
     });
 
-    return {
+    const result: UnassignedTicketsResult = {
       ok: true,
       helpdeskId,
       tickets: enrichedTickets,
     };
+
+    if (helpdeskId === 3950) {
+      unassignedTicketsCache = { data: result, timestamp: Date.now() };
+    }
+
+    return result;
   } catch (err: any) {
     return {
       ok: false,
@@ -290,6 +290,16 @@ export interface InvgateComment {
   is_solution?: boolean;
 }
 
+export interface TicketCommentsResult {
+  ok: boolean;
+  comments: InvgateComment[];
+  commenting_operators: CommentingOperator[];
+  message?: string;
+}
+
+const ticketCommentsCache = new Map<string, { data: TicketCommentsResult; timestamp: number }>();
+const COMMENTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
 /**
  * Obtiene los comentarios y notas internas de un ticket en InvGate enriquecidos con pertenencia a Mesa de Ayuda.
  * Endpoint: GET /incident.comment?request_id=X
@@ -298,12 +308,14 @@ export async function getTicketComments(
   requestId: number,
   helpdeskId: number = 3950,
   creatorId?: number
-): Promise<{
-  ok: boolean;
-  comments: InvgateComment[];
-  commenting_operators: CommentingOperator[];
-  message?: string;
-}> {
+): Promise<TicketCommentsResult> {
+  const cacheKey = `${requestId}_${creatorId || 0}`;
+  const now = Date.now();
+  const cached = ticketCommentsCache.get(cacheKey);
+  if (cached && now - cached.timestamp < COMMENTS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   try {
     const [res, userMap, mdaMemberIdSet, mdaMemberMap] = await Promise.all([
       invgateGet<any[]>(`incident.comment?request_id=${requestId}`),
@@ -367,7 +379,9 @@ export async function getTicketComments(
     comments.sort((a, b) => b.created_at - a.created_at);
     const commentingOperators = Array.from(operatorMap.values());
 
-    return { ok: true, comments, commenting_operators: commentingOperators };
+    const result: TicketCommentsResult = { ok: true, comments, commenting_operators: commentingOperators };
+    ticketCommentsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
   } catch (err: any) {
     return {
       ok: false,

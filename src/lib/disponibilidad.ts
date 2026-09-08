@@ -2,7 +2,7 @@ import { db } from "@db/index";
 import { agents, schedules, assignmentLock, assignmentHistory } from "@db/schema";
 import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
-import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment } from "@/lib/invgate/agsTickets";
+import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment, invalidateUnassignedTicketsCache } from "@/lib/invgate/agsTickets";
 import {
   getWiseCxPresenceMap,
   findWiseCxPresenceForAgent,
@@ -447,11 +447,9 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
             info.disponible = false;
             info.motivo = "Fuera de horario";
             info.retornoEstimado = startStr;
-            applyOverride();
           } else if (now > endTime) {
             info.disponible = false;
             info.motivo = "Fuera de horario";
-            applyOverride();
           } else {
             // Check break times
             let breakStart: Date;
@@ -536,12 +534,12 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
         // Si estaba dentro de horario laboral, invisible lo bloquea
         if (workingStatuses.includes(status)) {
           info.disponible = false;
-          info.motivo = "Invisible (Wise CX)";
+          info.motivo = "Invisible";
         }
       } else if (wisePresence.statusCategory === "bloqueado") {
         // Administrativo, Almuerzo, Baño, Devolución Supervisión, Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
         info.disponible = false;
-        info.motivo = wisePresence.motivoBloqueo || `${wisePresence.status} (Wise CX)`;
+        info.motivo = wisePresence.motivoBloqueo || wisePresence.status;
         if (!workingStatuses.includes(status)) {
           info.modalidadHoy = "Guardia";
         }
@@ -718,6 +716,9 @@ export async function asignarSiguienteAutogestion(
   } catch (historyErr) {
     console.error("Error saving assignment history:", historyErr);
   }
+
+  invalidateUnassignedTicketsCache();
+
   return {
     success: true,
     agent: winner,
@@ -812,6 +813,8 @@ export async function asignarManual(
   } catch (historyErr) {
     console.error("Error saving assignment history:", historyErr);
   }
+
+  invalidateUnassignedTicketsCache();
 
   return { success: true, ticketNumber: ticketAssigned };
 }
@@ -912,6 +915,8 @@ export async function asignarYPosponer(
   } catch (historyErr) {
     console.error("Error guardando historial de asignación pospuesta:", historyErr);
   }
+
+  invalidateUnassignedTicketsCache();
 
   return { success: true, ticketNumber: ticketAssigned, postponeDate };
 }
@@ -1039,6 +1044,10 @@ export async function asignarSugeridasAutogestion(
     }
   }
 
+  if (assignedCount > 0) {
+    invalidateUnassignedTicketsCache();
+  }
+
   return {
     success: assignedCount > 0,
     assignedCount,
@@ -1142,6 +1151,10 @@ export async function asignarTodasEnCola(
         error: reassignRes.message,
       });
     }
+  }
+
+  if (assignedCount > 0) {
+    invalidateUnassignedTicketsCache();
   }
 
   return {
