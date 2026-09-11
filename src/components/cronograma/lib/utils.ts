@@ -61,26 +61,17 @@ export function isCurrentlyWorking(
     if (isWeekend) {
       return { status: "online", text: "En servicio" };
     }
-    let breakStart: Date;
-    let breakEnd: Date;
-
     if (breakInicio && breakFin) {
       const [bhS, bmS] = breakInicio.split(":").map(Number);
       const [bhE, bmE] = breakFin.split(":").map(Number);
-      breakStart = new Date(now);
+      const breakStart = new Date(now);
       breakStart.setHours(bhS, bmS, 0);
-      breakEnd = new Date(now);
+      const breakEnd = new Date(now);
       breakEnd.setHours(bhE, bmE, 0);
-    } else {
-      const shiftDuration = endTime.getTime() - startTime.getTime();
-      breakStart = new Date(
-        startTime.getTime() + shiftDuration / 2 - 30 * 60000,
-      );
-      breakEnd = new Date(breakStart.getTime() + 60 * 60000);
-    }
 
-    if (now >= breakStart && now <= breakEnd) {
-      return { status: "break", text: "En descanso" };
+      if (now >= breakStart && now <= breakEnd) {
+        return { status: "break", text: "En descanso" };
+      }
     }
     return { status: "online", text: "En servicio" };
   }

@@ -1,0 +1,687 @@
+---
+// BreaksDrawer.astro
+import { Icon } from "astro-icon/components";
+---
+
+<!-- Overlay backdrop -->
+<div
+  id="breaks-drawer-overlay"
+  class="bg-base-content/40 fixed inset-0 z-120 hidden opacity-0 backdrop-blur-xs transition-opacity duration-300"
+  aria-hidden="true"
+>
+  <!-- Drawer Panel (slide-over from right) -->
+  <aside
+    id="breaks-drawer"
+    class="bg-base-100 border-base-300 fixed top-0 right-0 z-130 flex h-full w-full max-w-md translate-x-full flex-col border-l shadow-2xl transition-transform duration-300 ease-out"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Gestión de Breaks"
+  >
+    <!-- Header -->
+    <div
+      class="border-base-200 bg-base-200/40 flex shrink-0 items-center justify-between border-b p-5"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="bg-secondary/15 text-secondary border-secondary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm"
+        >
+          <Icon name="boxicons:cup-hot-filled" size={20} />
+        </div>
+        <div>
+          <h2
+            class="text-base-content flex items-center gap-2 text-base font-black tracking-tight uppercase"
+          >
+            Horarios de Breaks
+          </h2>
+          <p
+            id="breaks-drawer-date"
+            class="text-base-content/60 text-xs font-semibold capitalize tabular-nums"
+          >
+          </p>
+        </div>
+      </div>
+      <button
+        id="close-breaks-drawer-btn"
+        type="button"
+        class="btn btn-ghost btn-sm btn-circle hover:bg-base-300"
+        title="Cerrar panel"
+        aria-label="Cerrar panel"
+      >
+        <Icon name="boxicons:x-filled" size={22} />
+      </button>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div
+      class="border-base-200 bg-base-200/20 flex shrink-0 items-center justify-between border-b px-5 py-2.5 text-xs"
+    >
+      <div class="flex items-center gap-2">
+        <span
+          class="badge badge-soft badge-secondary text-xxs font-bold tracking-wide"
+        >
+          <span id="breaks-total-count" class="mr-1">0</span> con break
+        </span>
+        <span
+          class="badge badge-soft badge-ghost text-xxs font-bold tracking-wide"
+        >
+          <span id="breaks-slots-count" class="mr-1">0</span> franjas
+        </span>
+      </div>
+      <button
+        id="breaks-no-break-alert-btn"
+        type="button"
+        class="badge badge-soft badge-warning text-xxs hidden cursor-pointer font-bold tracking-wide transition-transform hover:scale-105"
+        title="Ver operadores sin break asignado"
+      >
+        <span id="breaks-no-break-count" class="mr-1">0</span> sin break
+      </button>
+    </div>
+
+    <!-- Controls & Filters Section -->
+    <div class="border-base-200 bg-base-100 shrink-0 space-y-3 border-b p-4">
+      <!-- Search Input -->
+      <div class="relative w-full">
+        <input
+          type="text"
+          id="breaks-search-input"
+          class="input input-sm input-bordered w-full pr-8 pl-8 text-xs font-semibold"
+          placeholder="Buscar operador por nombre..."
+        />
+        <Icon
+          name="boxicons:search"
+          size={16}
+          class="text-base-content/40 pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+        />
+        <button
+          id="breaks-clear-search-btn"
+          type="button"
+          class="text-base-content/40 hover:text-base-content absolute top-1/2 right-2.5 hidden -translate-y-1/2"
+          title="Limpiar búsqueda"
+        >
+          <Icon name="boxicons:x" size={14} />
+        </button>
+      </div>
+
+      <!-- Time Filters Grid -->
+      <div class="grid grid-cols-2 gap-2">
+        <!-- From Hour Filter -->
+        <div>
+          <label
+            class="text-tiny text-base-content/50 mb-1 block font-black tracking-wider uppercase"
+            for="breaks-start-filter"
+          >
+            Desde hora
+          </label>
+          <select
+            id="breaks-start-filter"
+            class="select select-sm select-bordered w-full text-xs font-bold"
+          >
+            <option value="all">Todas</option>
+          </select>
+        </div>
+
+        <!-- End Hour Filter -->
+        <div>
+          <label
+            class="text-tiny text-base-content/50 mb-1 block font-black tracking-wider uppercase"
+            for="breaks-end-filter"
+          >
+            Salen a las
+          </label>
+          <select
+            id="breaks-end-filter"
+            class="select select-sm select-bordered w-full text-xs font-bold"
+          >
+            <option value="all">Todas</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Sort & Reset Row -->
+      <div class="flex items-center justify-between pt-0.5">
+        <div class="flex items-center gap-1.5">
+          <span
+            class="text-tiny text-base-content/50 font-black tracking-wider uppercase"
+            >Orden:</span
+          >
+          <select
+            id="breaks-sort-select"
+            class="select select-xs select-ghost text-xs font-bold focus:outline-none"
+          >
+            <option value="asc">Primero a último (12:00 → 16:00)</option>
+            <option value="desc">Último a primero (16:00 → 12:00)</option>
+          </select>
+        </div>
+        <button
+          id="breaks-reset-filters-btn"
+          type="button"
+          class="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content gap-1 font-bold"
+        >
+          <Icon name="boxicons:pizza-alt" size={12} />
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Area: Grouped Slots -->
+    <div
+      id="breaks-list-container"
+      class="scrollbar-thin bg-base-200/20 flex-1 space-y-3 overflow-y-auto p-4"
+    >
+      <!-- Injected by JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div
+      id="breaks-empty-state"
+      class="text-base-content/40 hidden flex-1 flex-col items-center justify-center space-y-2 p-8 text-center"
+    >
+      <Icon name="boxicons:calendar-x-filled" size={40} class="opacity-40" />
+      <p class="text-sm font-bold">No se encontraron operadores</p>
+      <p class="max-w-xs text-xs">
+        Probá cambiando los filtros de hora o el término de búsqueda.
+      </p>
+    </div>
+  </aside>
+</div>
+
+<script>
+  import { state } from "../lib/state";
+  import { timeToMinutes, formatYMD, formatDetailDate } from "../lib/utils";
+  import { getStatusStyles } from "../lib/styles";
+  import { OperatorStatus } from "../lib/types";
+
+  interface BreakOperatorItem {
+    id: number | string;
+    nombre: string;
+    username: string;
+    initials: string;
+    status: OperatorStatus;
+    horario: string;
+    breakInicio: string;
+    breakFin: string;
+    hasBreak: boolean;
+  }
+
+  interface SlotGroup {
+    key: string;
+    start: string;
+    end: string;
+    startMinutes: number;
+    endMinutes: number;
+    operators: BreakOperatorItem[];
+  }
+
+  let isDrawerOpen = false;
+  let cachedOperators: BreakOperatorItem[] = [];
+
+  const overlay = document.getElementById("breaks-drawer-overlay");
+  const drawer = document.getElementById("breaks-drawer");
+  const closeBtn = document.getElementById("close-breaks-drawer-btn");
+  const dateDisplay = document.getElementById("breaks-drawer-date");
+  const totalCountEl = document.getElementById("breaks-total-count");
+  const slotsCountEl = document.getElementById("breaks-slots-count");
+  const noBreakAlertBtn = document.getElementById("breaks-no-break-alert-btn");
+  const noBreakCountEl = document.getElementById("breaks-no-break-count");
+  const searchInput = document.getElementById(
+    "breaks-search-input",
+  ) as HTMLInputElement | null;
+  const clearSearchBtn = document.getElementById("breaks-clear-search-btn");
+  const startFilter = document.getElementById(
+    "breaks-start-filter",
+  ) as HTMLSelectElement | null;
+  const endFilter = document.getElementById(
+    "breaks-end-filter",
+  ) as HTMLSelectElement | null;
+  const sortSelect = document.getElementById(
+    "breaks-sort-select",
+  ) as HTMLSelectElement | null;
+  const resetFiltersBtn = document.getElementById("breaks-reset-filters-btn");
+  const listContainer = document.getElementById("breaks-list-container");
+  const emptyState = document.getElementById("breaks-empty-state");
+
+  function getSelectedDateStr(): string {
+    const dateInput = document.getElementById(
+      "date-input",
+    ) as HTMLInputElement | null;
+    return dateInput?.value || formatYMD(new Date());
+  }
+
+  function computeBreakTimes(
+    dailyHorario: string,
+    customInicio?: string,
+    customFin?: string,
+  ): { start: string; end: string; hasBreak: boolean } {
+    if (customInicio && customFin) {
+      return { start: customInicio, end: customFin, hasBreak: true };
+    }
+    return { start: "", end: "", hasBreak: false };
+  }
+
+  function loadDayOperators(): BreakOperatorItem[] {
+    const dateStr = getSelectedDateStr();
+    const data = state.cronoData || [];
+
+    const result: BreakOperatorItem[] = [];
+
+    data.forEach((op) => {
+      const status =
+        (op.asistencia && op.asistencia[dateStr]) || OperatorStatus.Franco;
+      const isFranco = status === OperatorStatus.Franco;
+      const isAbsent =
+        status === OperatorStatus.Licencia ||
+        status === OperatorStatus.Vacaciones;
+
+      // Exclude off-duty or absent operators from active breaks list
+      if (isFranco || isAbsent) return;
+
+      const dailyHorario =
+        (op.horarios_dias && op.horarios_dias[dateStr]) || op.horario || "";
+      const customBreakInicio = op.breaks_inicio?.[dateStr] || "";
+      const customBreakFin = op.breaks_fin?.[dateStr] || "";
+
+      const { start, end, hasBreak } = computeBreakTimes(
+        dailyHorario,
+        customBreakInicio,
+        customBreakFin,
+      );
+
+      const initials = (op.nombre || "")
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase();
+
+      result.push({
+        id: op.id,
+        nombre: op.nombre,
+        username: op.username || "",
+        initials,
+        status: status as OperatorStatus,
+        horario: dailyHorario,
+        breakInicio: start,
+        breakFin: end,
+        hasBreak,
+      });
+    });
+
+    return result;
+  }
+
+  function populateTimeFilterOptions(operators: BreakOperatorItem[]): void {
+    if (!startFilter || !endFilter) return;
+
+    const currentStartVal = startFilter.value;
+    const currentEndVal = endFilter.value;
+
+    const startHours = new Set<string>();
+    const endHours = new Set<string>();
+
+    operators.forEach((op) => {
+      if (op.hasBreak && op.breakInicio && op.breakFin) {
+        startHours.add(op.breakInicio);
+        endHours.add(op.breakFin);
+      }
+    });
+
+    const sortedStart = Array.from(startHours).sort(
+      (a, b) => timeToMinutes(a) - timeToMinutes(b),
+    );
+    const sortedEnd = Array.from(endHours).sort(
+      (a, b) => timeToMinutes(a) - timeToMinutes(b),
+    );
+
+    startFilter.innerHTML = '<option value="all">Todas</option>';
+    sortedStart.forEach((h) => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = `${h} hs en adelante`;
+      startFilter.appendChild(opt);
+    });
+
+    endFilter.innerHTML = '<option value="all">Todas</option>';
+    sortedEnd.forEach((h) => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = `Salen a las ${h} hs`;
+      endFilter.appendChild(opt);
+    });
+
+    if (sortedStart.includes(currentStartVal)) {
+      startFilter.value = currentStartVal;
+    }
+    if (sortedEnd.includes(currentEndVal)) {
+      endFilter.value = currentEndVal;
+    }
+  }
+
+  function renderDrawerContent(): void {
+    if (!listContainer || !emptyState) return;
+
+    const searchTerm = (searchInput?.value || "").trim().toLowerCase();
+    const startHourVal = startFilter?.value || "all";
+    const endHourVal = endFilter?.value || "all";
+    const sortVal = sortSelect?.value || "asc";
+
+    // Filter operators
+    const filtered = cachedOperators.filter((op) => {
+      if (searchTerm) {
+        const matchesName = op.nombre.toLowerCase().includes(searchTerm);
+        const matchesUser = op.username.toLowerCase().includes(searchTerm);
+        if (!matchesName && !matchesUser) return false;
+      }
+
+      if (op.hasBreak) {
+        if (
+          startHourVal !== "all" &&
+          timeToMinutes(op.breakInicio) < timeToMinutes(startHourVal)
+        ) {
+          return false;
+        }
+        if (endHourVal !== "all" && op.breakFin !== endHourVal) {
+          return false;
+        }
+      } else {
+        // If hour filters active, exclude operators with no break
+        if (startHourVal !== "all" || endHourVal !== "all") {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Separate into with-break and without-break
+    const withBreak = filtered.filter((op) => op.hasBreak);
+    const withoutBreak = filtered.filter((op) => !op.hasBreak);
+
+    // Group with-break by slot
+    const slotMap = new Map<string, SlotGroup>();
+    withBreak.forEach((op) => {
+      const key = `${op.breakInicio} - ${op.breakFin}`;
+      if (!slotMap.has(key)) {
+        slotMap.set(key, {
+          key,
+          start: op.breakInicio,
+          end: op.breakFin,
+          startMinutes: timeToMinutes(op.breakInicio),
+          endMinutes: timeToMinutes(op.breakFin),
+          operators: [],
+        });
+      }
+      slotMap.get(key)!.operators.push(op);
+    });
+
+    const slots = Array.from(slotMap.values());
+    slots.sort((a, b) => {
+      if (sortVal === "desc") {
+        return b.startMinutes - a.startMinutes;
+      }
+      return a.startMinutes - b.startMinutes;
+    });
+
+    // Update stats bar
+    if (totalCountEl) totalCountEl.textContent = String(withBreak.length);
+    if (slotsCountEl) slotsCountEl.textContent = String(slots.length);
+
+    if (noBreakAlertBtn && noBreakCountEl) {
+      noBreakCountEl.textContent = String(withoutBreak.length);
+      if (withoutBreak.length > 0) {
+        noBreakAlertBtn.classList.remove("hidden");
+      } else {
+        noBreakAlertBtn.classList.add("hidden");
+      }
+    }
+
+    if (slots.length === 0 && withoutBreak.length === 0) {
+      listContainer.innerHTML = "";
+      listContainer.classList.add("hidden");
+      emptyState.classList.remove("hidden");
+      emptyState.classList.add("flex");
+      return;
+    }
+
+    listContainer.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+    emptyState.classList.remove("flex");
+
+    let html = "";
+
+    // Find max count for slot saturation highlighting
+    const maxSlotCount = Math.max(...slots.map((s) => s.operators.length), 0);
+
+    // Render Slots
+    slots.forEach((slot) => {
+      const isHighSaturation =
+        slot.operators.length >= 5 ||
+        (maxSlotCount > 3 && slot.operators.length === maxSlotCount);
+      const countBadgeClass = isHighSaturation
+        ? "badge-warning font-black shadow-xs"
+        : "badge-soft badge-secondary font-bold";
+
+      html += `
+        <div class="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-xs transition-all duration-200 hover:border-secondary/30">
+          <div class="bg-base-200/50 px-4 py-3 border-b border-base-200 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="text-secondary flex items-center">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 8h1a4 4 0 1 1 0 8h-1" />
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+                  <line x1="6" y1="2" x2="6" y2="4" />
+                  <line x1="10" y1="2" x2="10" y2="4" />
+                  <line x1="14" y1="2" x2="14" y2="4" />
+                </svg>
+              </span>
+              <span class="font-mono text-sm font-black text-base-content tracking-tight">
+                ${slot.start} - ${slot.end}
+              </span>
+            </div>
+            <span class="badge ${countBadgeClass} text-xxs tracking-wide">
+              ${slot.operators.length} ${slot.operators.length === 1 ? "operador" : "operadores"}
+            </span>
+          </div>
+          <div class="p-2 divide-y divide-base-200/60">
+      `;
+
+      slot.operators.forEach((op) => {
+        const styles = getStatusStyles(op.status);
+        html += `
+          <div class="py-2 px-2.5 flex items-center justify-between gap-3 hover:bg-base-200/40 rounded-xl transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center text-xs font-black text-base-content/80 shrink-0 border border-base-300">
+                ${op.initials}
+              </div>
+              <div class="min-w-0 flex flex-col">
+                <span class="text-xs font-bold text-base-content truncate">
+                  ${op.nombre}
+                </span>
+                <span class="text-tiny font-bold text-base-content/40 truncate uppercase">
+                  ${op.username || "-"}
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-tiny font-mono font-semibold text-base-content/70 bg-base-200/80 px-2 py-0.5 rounded-md border border-base-300/40">
+                ${op.horario || "-"}
+              </span>
+              <span class="${styles.badge} text-[10px] py-0.5 px-2">
+                ${op.status}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    });
+
+    // Render Without Break Section (if any and not filtered out)
+    if (withoutBreak.length > 0) {
+      html += `
+        <div id="breaks-no-break-section" class="bg-warning/5 border border-warning/30 rounded-2xl overflow-hidden shadow-xs mt-4">
+          <div class="bg-warning/15 px-4 py-3 border-b border-warning/20 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-warning-content">
+              <svg class="w-4 h-4 text-warning" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              </svg>
+              <span class="text-xs font-black uppercase tracking-wider text-base-content">
+                Sin break asignado
+              </span>
+            </div>
+            <span class="badge badge-warning text-xxs font-black">
+              ${withoutBreak.length} ${withoutBreak.length === 1 ? "operador" : "operadores"}
+            </span>
+          </div>
+          <div class="p-2 divide-y divide-warning/10">
+      `;
+
+      withoutBreak.forEach((op) => {
+        const styles = getStatusStyles(op.status);
+        html += `
+          <div class="py-2 px-2.5 flex items-center justify-between gap-3 hover:bg-warning/10 rounded-xl transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-warning/20 text-warning-content flex items-center justify-center text-xs font-black shrink-0">
+                ${op.initials}
+              </div>
+              <div class="min-w-0 flex flex-col">
+                <span class="text-xs font-bold text-base-content truncate">
+                  ${op.nombre}
+                </span>
+                <span class="text-tiny font-bold text-base-content/40 truncate uppercase">
+                  ${op.username || "-"}
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-tiny font-mono font-semibold text-base-content/70 bg-base-200/80 px-2 py-0.5 rounded-md border border-base-300/40">
+                ${op.horario || "-"}
+              </span>
+              <span class="${styles.badge} text-[10px] py-0.5 px-2">
+                ${op.status}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    listContainer.innerHTML = html;
+  }
+
+  export function openBreaksDrawer(): void {
+    if (!overlay || !drawer) return;
+
+    const dateStr = getSelectedDateStr();
+    if (dateDisplay) {
+      dateDisplay.textContent = formatDetailDate(dateStr);
+    }
+
+    cachedOperators = loadDayOperators();
+    populateTimeFilterOptions(cachedOperators);
+    renderDrawerContent();
+
+    overlay.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    isDrawerOpen = true;
+
+    requestAnimationFrame(() => {
+      overlay.classList.remove("opacity-0");
+      drawer.classList.remove("translate-x-full");
+    });
+  }
+
+  export function closeBreaksDrawer(): void {
+    if (!overlay || !drawer) return;
+
+    overlay.classList.add("opacity-0");
+    drawer.classList.add("translate-x-full");
+    document.body.style.overflow = "";
+    isDrawerOpen = false;
+
+    setTimeout(() => {
+      overlay.classList.add("hidden");
+    }, 300);
+  }
+
+  // Bind Open Trigger
+  function bindOpenTrigger(): void {
+    const breaksBtn = document.getElementById("daily-breaks-btn");
+    breaksBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openBreaksDrawer();
+    });
+  }
+
+  // Event Listeners
+  closeBtn?.addEventListener("click", closeBreaksDrawer);
+
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      closeBreaksDrawer();
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isDrawerOpen) {
+      closeBreaksDrawer();
+    }
+  });
+
+  searchInput?.addEventListener("input", () => {
+    if (clearSearchBtn) {
+      if (searchInput.value) {
+        clearSearchBtn.classList.remove("hidden");
+      } else {
+        clearSearchBtn.classList.add("hidden");
+      }
+    }
+    renderDrawerContent();
+  });
+
+  clearSearchBtn?.addEventListener("click", () => {
+    if (searchInput) {
+      searchInput.value = "";
+      clearSearchBtn.classList.add("hidden");
+      renderDrawerContent();
+      searchInput.focus();
+    }
+  });
+
+  startFilter?.addEventListener("change", renderDrawerContent);
+  endFilter?.addEventListener("change", renderDrawerContent);
+  sortSelect?.addEventListener("change", renderDrawerContent);
+
+  resetFiltersBtn?.addEventListener("click", () => {
+    if (searchInput) searchInput.value = "";
+    if (clearSearchBtn) clearSearchBtn.classList.add("hidden");
+    if (startFilter) startFilter.value = "all";
+    if (endFilter) endFilter.value = "all";
+    if (sortSelect) sortSelect.value = "asc";
+    renderDrawerContent();
+  });
+
+  noBreakAlertBtn?.addEventListener("click", () => {
+    const targetSection = document.getElementById("breaks-no-break-section");
+    targetSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  // Re-render drawer if date changes while open
+  const dateInput = document.getElementById("date-input");
+  dateInput?.addEventListener("change", () => {
+    if (isDrawerOpen) {
+      openBreaksDrawer();
+    }
+  });
+
+  // Init trigger binding
+  bindOpenTrigger();
+</script>

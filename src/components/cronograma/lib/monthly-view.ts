@@ -395,29 +395,9 @@ export function renderDaily(): void {
       let breakStartHourStr = "";
       let breakEndHourStr = "";
       if (!isAbsent && !isFranco && !isWeekend) {
-        const times = dailyHorario.split(" - ");
-        if (times.length === 2) {
-          if (customBreakInicio && customBreakFin) {
-            breakStartHourStr = customBreakInicio;
-            breakEndHourStr = customBreakFin;
-          } else {
-            const startMin = timeToMinutes(times[0]);
-            const endMin = timeToMinutes(times[1]);
-            const totalMin =
-              endMin >= startMin ? endMin - startMin : 1440 - startMin + endMin;
-            const breakStartMin = (startMin + totalMin / 2 - 30) % 1440;
-            breakStartHourStr = `${Math.floor(breakStartMin / 60)
-              .toString()
-              .padStart(2, "0")}:${Math.floor(breakStartMin % 60)
-              .toString()
-              .padStart(2, "0")}`;
-            const breakEndMin = (breakStartMin + 60) % 1440;
-            breakEndHourStr = `${Math.floor(breakEndMin / 60)
-              .toString()
-              .padStart(2, "0")}:${Math.floor(breakEndMin % 60)
-              .toString()
-              .padStart(2, "0")}`;
-          }
+        if (customBreakInicio && customBreakFin) {
+          breakStartHourStr = customBreakInicio;
+          breakEndHourStr = customBreakFin;
         }
       }
 
@@ -523,71 +503,50 @@ export function renderDaily(): void {
             if (!yIsWeekend) {
               const yBreakInicio = op.breaks_inicio?.[prevDateStr] || "";
               const yBreakFin = op.breaks_fin?.[prevDateStr] || "";
-              let yBreakStartHourStr = "";
-              let yBreakEndHourStr = "";
               if (yBreakInicio && yBreakFin) {
-                yBreakStartHourStr = yBreakInicio;
-                yBreakEndHourStr = yBreakFin;
-              } else {
-                const startMin = timeToMinutes(yTimes[0]);
-                const endMin = timeToMinutes(yTimes[1]);
-                const totalMin =
-                  endMin >= startMin
-                    ? endMin - startMin
-                    : 1440 - startMin + endMin;
-                const breakStartMin = (startMin + totalMin / 2 - 30) % 1440;
-                yBreakStartHourStr = `${Math.floor(breakStartMin / 60)
-                  .toString()
-                  .padStart(2, "0")}:${Math.floor(breakStartMin % 60)
-                  .toString()
-                  .padStart(2, "0")}`;
-                const breakEndMin = (breakStartMin + 60) % 1440;
-                yBreakEndHourStr = `${Math.floor(breakEndMin / 60)
-                  .toString()
-                  .padStart(2, "0")}:${Math.floor(breakEndMin % 60)
-                  .toString()
-                  .padStart(2, "0")}`;
-              }
-              const yBStartPct = getPct(yBreakStartHourStr);
-              const yBEndPct = getPct(yBreakEndHourStr);
+                const yBreakStartHourStr = yBreakInicio;
+                const yBreakEndHourStr = yBreakFin;
+                const yBStartPct = getPct(yBreakStartHourStr);
+                const yBEndPct = getPct(yBreakEndHourStr);
 
-              if (yBStartPct < yStartPct) {
-                if (yBStartPct <= yBEndPct) {
-                  const bWidth = Math.min(
-                    yBEndPct - yBStartPct,
-                    yEndPct - yBStartPct,
-                  );
-                  if (bWidth > 0) {
-                    breakBars.push(
-                      `<div class="gantt-bar-break relative z-20" style="left: ${yBStartPct}%; width: ${bWidth}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
+                if (yBStartPct < yStartPct) {
+                  if (yBStartPct <= yBEndPct) {
+                    const bWidth = Math.min(
+                      yBEndPct - yBStartPct,
+                      yEndPct - yBStartPct,
                     );
+                    if (bWidth > 0) {
+                      breakBars.push(
+                        `<div class="gantt-bar-break relative z-20" style="left: ${yBStartPct}%; width: ${bWidth}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
+                      );
+                    }
+                  } else {
+                    // Break crosses midnight
+                    const bWidth1 = 100 - yBStartPct;
+                    const bWidth2 = yBEndPct;
+                    if (yBStartPct < yEndPct) {
+                      const w = Math.min(bWidth1, yEndPct - yBStartPct);
+                      breakBars.push(
+                        `<div class="gantt-bar-break relative z-20" style="left: ${yBStartPct}%; width: ${w}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
+                      );
+                    }
+                    if (bWidth2 > 0) {
+                      const w = Math.min(bWidth2, yEndPct);
+                      breakBars.push(
+                        `<div class="gantt-bar-break relative z-20" style="left: 0%; width: ${w}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
+                      );
+                    }
                   }
                 } else {
-                  // Break crosses midnight
-                  const bWidth1 = 100 - yBStartPct;
-                  const bWidth2 = yBEndPct;
                   if (yBStartPct < yEndPct) {
-                    const w = Math.min(bWidth1, yEndPct - yBStartPct);
+                    const w = Math.min(
+                      yBEndPct - yBStartPct,
+                      yEndPct - yBStartPct,
+                    );
                     breakBars.push(
                       `<div class="gantt-bar-break relative z-20" style="left: ${yBStartPct}%; width: ${w}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
                     );
                   }
-                  if (bWidth2 > 0) {
-                    const w = Math.min(bWidth2, yEndPct);
-                    breakBars.push(
-                      `<div class="gantt-bar-break relative z-20" style="left: 0%; width: ${w}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
-                    );
-                  }
-                }
-              } else {
-                if (yBStartPct < yEndPct) {
-                  const w = Math.min(
-                    yBEndPct - yBStartPct,
-                    yEndPct - yBStartPct,
-                  );
-                  breakBars.push(
-                    `<div class="gantt-bar-break relative z-20" style="left: ${yBStartPct}%; width: ${w}%;" title="Descanso: ${yBreakStartHourStr} - ${yBreakEndHourStr}"></div>`,
-                  );
                 }
               }
             }
@@ -873,29 +832,9 @@ export function renderHourly(dateStr: string): void {
       let breakStart = "";
       let breakEnd = "";
       if (!isAbsent && !isFranco && !isWeekend) {
-        const times = horario.split(" - ");
-        if (times.length === 2) {
-          if (customBreakInicio && customBreakFin) {
-            breakStart = customBreakInicio;
-            breakEnd = customBreakFin;
-          } else {
-            const startMin = timeToMinutes(times[0]);
-            const endMin = timeToMinutes(times[1]);
-            const totalMin =
-              endMin >= startMin ? endMin - startMin : 1440 - startMin + endMin;
-            const breakStartMin = (startMin + totalMin / 2 - 30) % 1440;
-            breakStart = `${Math.floor(breakStartMin / 60)
-              .toString()
-              .padStart(2, "0")}:${Math.floor(breakStartMin % 60)
-              .toString()
-              .padStart(2, "0")}`;
-            const breakEndMin = (breakStartMin + 60) % 1440;
-            breakEnd = `${Math.floor(breakEndMin / 60)
-              .toString()
-              .padStart(2, "0")}:${Math.floor(breakEndMin % 60)
-              .toString()
-              .padStart(2, "0")}`;
-          }
+        if (customBreakInicio && customBreakFin) {
+          breakStart = customBreakInicio;
+          breakEnd = customBreakFin;
         }
       }
 
