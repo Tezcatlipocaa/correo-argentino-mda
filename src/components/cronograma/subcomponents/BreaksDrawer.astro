@@ -23,19 +23,19 @@ import { Icon } from "astro-icon/components";
     >
       <div class="flex items-center gap-3">
         <div
-          class="bg-secondary/15 text-secondary border-secondary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm"
+          class="bg-secondary/15 text-secondary border-secondary/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-sm"
         >
-          <Icon name="boxicons:cup-hot-filled" size={20} />
+          <Icon name="boxicons:cup-hot-filled" size={24} />
         </div>
         <div>
           <h2
-            class="text-base-content flex items-center gap-2 text-base font-black tracking-tight uppercase"
+            class="text-base-content flex items-center gap-2 text-lg font-black tracking-tight uppercase"
           >
             Horarios de Breaks
           </h2>
           <p
             id="breaks-drawer-date"
-            class="text-base-content/60 text-xs font-semibold capitalize tabular-nums"
+            class="text-base-content/60 text-sm font-semibold capitalize tabular-nums"
           >
           </p>
         </div>
@@ -47,22 +47,22 @@ import { Icon } from "astro-icon/components";
         title="Cerrar panel"
         aria-label="Cerrar panel"
       >
-        <Icon name="boxicons:x-filled" size={22} />
+        <Icon name="boxicons:x-filled" size={24} />
       </button>
     </div>
 
     <!-- Quick Stats Bar -->
     <div
-      class="border-base-200 bg-base-200/20 flex shrink-0 items-center justify-between border-b px-5 py-2.5 text-xs"
+      class="border-base-200 bg-base-200/20 flex shrink-0 items-center justify-between border-b px-5 py-2.5 text-sm"
     >
       <div class="flex items-center gap-2">
         <span
-          class="badge badge-soft badge-secondary text-xxs font-bold tracking-wide"
+          class="badge badge-soft badge-secondary text-xs font-bold tracking-wide"
         >
           <span id="breaks-total-count" class="mr-1">0</span> con break
         </span>
         <span
-          class="badge badge-soft badge-ghost text-xxs font-bold tracking-wide"
+          class="badge badge-soft badge-ghost text-xs font-bold tracking-wide"
         >
           <span id="breaks-slots-count" class="mr-1">0</span> franjas
         </span>
@@ -70,7 +70,7 @@ import { Icon } from "astro-icon/components";
       <button
         id="breaks-no-break-alert-btn"
         type="button"
-        class="badge badge-soft badge-warning text-xxs hidden cursor-pointer font-bold tracking-wide transition-transform hover:scale-105"
+        class="badge bg-primary/10 text-amber-700 dark:text-amber-400 border-primary/20 text-xs hidden cursor-pointer font-bold tracking-wide transition-transform hover:scale-105 shadow-xs"
         title="Ver operadores sin break asignado"
       >
         <span id="breaks-no-break-count" class="mr-1">0</span> sin break
@@ -84,12 +84,12 @@ import { Icon } from "astro-icon/components";
         <input
           type="text"
           id="breaks-search-input"
-          class="input input-sm input-bordered w-full pr-8 pl-8 text-xs font-semibold"
+          class="input input-sm input-bordered w-full pr-8 pl-8 text-sm font-semibold"
           placeholder="Buscar operador por nombre..."
         />
         <Icon
           name="boxicons:search"
-          size={16}
+          size={18}
           class="text-base-content/40 pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
         />
         <button
@@ -98,7 +98,7 @@ import { Icon } from "astro-icon/components";
           class="text-base-content/40 hover:text-base-content absolute top-1/2 right-2.5 hidden -translate-y-1/2"
           title="Limpiar búsqueda"
         >
-          <Icon name="boxicons:x" size={14} />
+          <Icon name="boxicons:x" size={16} />
         </button>
       </div>
 
@@ -107,14 +107,14 @@ import { Icon } from "astro-icon/components";
         <!-- From Hour Filter -->
         <div>
           <label
-            class="text-tiny text-base-content/50 mb-1 block font-black tracking-wider uppercase"
+            class="text-xs text-base-content/60 mb-1 block font-black tracking-wider uppercase"
             for="breaks-start-filter"
           >
             Desde hora
           </label>
           <select
             id="breaks-start-filter"
-            class="select select-sm select-bordered w-full text-xs font-bold"
+            class="select select-sm select-bordered w-full text-sm font-bold"
           >
             <option value="all">Todas</option>
           </select>
@@ -123,14 +123,14 @@ import { Icon } from "astro-icon/components";
         <!-- End Hour Filter -->
         <div>
           <label
-            class="text-tiny text-base-content/50 mb-1 block font-black tracking-wider uppercase"
+            class="text-xs text-base-content/60 mb-1 block font-black tracking-wider uppercase"
             for="breaks-end-filter"
           >
             Salen a las
           </label>
           <select
             id="breaks-end-filter"
-            class="select select-sm select-bordered w-full text-xs font-bold"
+            class="select select-sm select-bordered w-full text-sm font-bold"
           >
             <option value="all">Todas</option>
           </select>
@@ -141,12 +141,12 @@ import { Icon } from "astro-icon/components";
       <div class="flex items-center justify-between pt-0.5">
         <div class="flex items-center gap-1.5">
           <span
-            class="text-tiny text-base-content/50 font-black tracking-wider uppercase"
+            class="text-xs text-base-content/60 font-black tracking-wider uppercase"
             >Orden:</span
           >
           <select
             id="breaks-sort-select"
-            class="select select-xs select-ghost text-xs font-bold focus:outline-none"
+            class="select select-xs select-ghost text-sm font-bold focus:outline-none"
           >
             <option value="asc">Primero a último (12:00 → 16:00)</option>
             <option value="desc">Último a primero (16:00 → 12:00)</option>
@@ -155,9 +155,9 @@ import { Icon } from "astro-icon/components";
         <button
           id="breaks-reset-filters-btn"
           type="button"
-          class="btn btn-ghost btn-xs text-base-content/50 hover:text-base-content gap-1 font-bold"
+          class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content gap-1 text-xs font-bold"
         >
-          <Icon name="boxicons:pizza-alt" size={12} />
+          <Icon name="boxicons:broom" size={14} />
           Limpiar
         </button>
       </div>
@@ -176,9 +176,9 @@ import { Icon } from "astro-icon/components";
       id="breaks-empty-state"
       class="text-base-content/40 hidden flex-1 flex-col items-center justify-center space-y-2 p-8 text-center"
     >
-      <Icon name="boxicons:calendar-x-filled" size={40} class="opacity-40" />
-      <p class="text-sm font-bold">No se encontraron operadores</p>
-      <p class="max-w-xs text-xs">
+      <Icon name="boxicons:calendar-x-filled" size={44} class="opacity-40" />
+      <p class="text-base font-bold">No se encontraron operadores</p>
+      <p class="max-w-xs text-sm">
         Probá cambiando los filtros de hora o el término de búsqueda.
       </p>
     </div>
@@ -188,7 +188,7 @@ import { Icon } from "astro-icon/components";
 <script>
   import { state } from "../lib/state";
   import { timeToMinutes, formatYMD, formatDetailDate } from "../lib/utils";
-  import { getStatusStyles } from "../lib/styles";
+  import { getStatusStyles, getShortStatus } from "../lib/styles";
   import { OperatorStatus } from "../lib/types";
 
   interface BreakOperatorItem {
@@ -448,18 +448,8 @@ import { Icon } from "astro-icon/components";
 
     let html = "";
 
-    // Find max count for slot saturation highlighting
-    const maxSlotCount = Math.max(...slots.map((s) => s.operators.length), 0);
-
     // Render Slots
     slots.forEach((slot) => {
-      const isHighSaturation =
-        slot.operators.length >= 5 ||
-        (maxSlotCount > 3 && slot.operators.length === maxSlotCount);
-      const countBadgeClass = isHighSaturation
-        ? "badge-warning font-black shadow-xs"
-        : "badge-soft badge-secondary font-bold";
-
       html += `
         <div class="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-xs transition-all duration-200 hover:border-secondary/30">
           <div class="bg-base-200/50 px-4 py-3 border-b border-base-200 flex items-center justify-between">
@@ -473,11 +463,11 @@ import { Icon } from "astro-icon/components";
                   <line x1="14" y1="2" x2="14" y2="4" />
                 </svg>
               </span>
-              <span class="font-mono text-sm font-black text-base-content tracking-tight">
+              <span class="font-mono text-base font-normal text-base-content tracking-tight">
                 ${slot.start} - ${slot.end}
               </span>
             </div>
-            <span class="badge ${countBadgeClass} text-xxs tracking-wide">
+            <span class="badge badge-soft badge-neutral text-xs font-bold tracking-wide">
               ${slot.operators.length} ${slot.operators.length === 1 ? "operador" : "operadores"}
             </span>
           </div>
@@ -486,27 +476,28 @@ import { Icon } from "astro-icon/components";
 
       slot.operators.forEach((op) => {
         const styles = getStatusStyles(op.status);
+        const shortStatus = getShortStatus(op.status);
         html += `
-          <div class="py-2 px-2.5 flex items-center justify-between gap-3 hover:bg-base-200/40 rounded-xl transition-colors">
+          <div class="py-2.5 px-3 flex items-center justify-between gap-3 hover:bg-base-200/40 rounded-xl transition-colors">
             <div class="flex items-center gap-3 min-w-0">
-              <div class="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center text-xs font-black text-base-content/80 shrink-0 border border-base-300">
+              <div class="w-9 h-9 rounded-full bg-base-200 flex items-center justify-center text-sm font-black text-base-content/80 shrink-0 border border-base-300">
                 ${op.initials}
               </div>
               <div class="min-w-0 flex flex-col">
-                <span class="text-xs font-bold text-base-content truncate">
+                <span class="text-sm font-bold text-base-content truncate">
                   ${op.nombre}
                 </span>
-                <span class="text-tiny font-bold text-base-content/40 truncate uppercase">
+                <span class="text-xs font-bold text-base-content/50 truncate uppercase">
                   ${op.username || "-"}
                 </span>
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="text-tiny font-mono font-semibold text-base-content/70 bg-base-200/80 px-2 py-0.5 rounded-md border border-base-300/40">
+              <span class="text-xs font-mono font-normal text-base-content/75 bg-base-200/80 px-2.5 py-1 rounded-md border border-base-300/40">
                 ${op.horario || "-"}
               </span>
-              <span class="${styles.badge} text-[10px] py-0.5 px-2">
-                ${op.status}
+              <span class="${styles.badge} text-xs py-0.5 px-2" title="${op.status}">
+                ${shortStatus}
               </span>
             </div>
           </div>
@@ -528,11 +519,11 @@ import { Icon } from "astro-icon/components";
               <svg class="w-4 h-4 text-warning" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
               </svg>
-              <span class="text-xs font-black uppercase tracking-wider text-base-content">
+              <span class="text-sm font-black uppercase tracking-wider text-base-content">
                 Sin break asignado
               </span>
             </div>
-            <span class="badge badge-warning text-xxs font-black">
+            <span class="badge badge-soft badge-neutral text-xs font-bold tracking-wide">
               ${withoutBreak.length} ${withoutBreak.length === 1 ? "operador" : "operadores"}
             </span>
           </div>
@@ -541,27 +532,28 @@ import { Icon } from "astro-icon/components";
 
       withoutBreak.forEach((op) => {
         const styles = getStatusStyles(op.status);
+        const shortStatus = getShortStatus(op.status);
         html += `
-          <div class="py-2 px-2.5 flex items-center justify-between gap-3 hover:bg-warning/10 rounded-xl transition-colors">
+          <div class="py-2.5 px-3 flex items-center justify-between gap-3 hover:bg-warning/10 rounded-xl transition-colors">
             <div class="flex items-center gap-3 min-w-0">
-              <div class="w-8 h-8 rounded-full bg-warning/20 text-warning-content flex items-center justify-center text-xs font-black shrink-0">
+              <div class="w-9 h-9 rounded-full bg-warning/20 text-warning-content flex items-center justify-center text-sm font-black shrink-0">
                 ${op.initials}
               </div>
               <div class="min-w-0 flex flex-col">
-                <span class="text-xs font-bold text-base-content truncate">
+                <span class="text-sm font-bold text-base-content truncate">
                   ${op.nombre}
                 </span>
-                <span class="text-tiny font-bold text-base-content/40 truncate uppercase">
+                <span class="text-xs font-bold text-base-content/50 truncate uppercase">
                   ${op.username || "-"}
                 </span>
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="text-tiny font-mono font-semibold text-base-content/70 bg-base-200/80 px-2 py-0.5 rounded-md border border-base-300/40">
+              <span class="text-xs font-mono font-normal text-base-content/75 bg-base-200/80 px-2.5 py-1 rounded-md border border-base-300/40">
                 ${op.horario || "-"}
               </span>
-              <span class="${styles.badge} text-[10px] py-0.5 px-2">
-                ${op.status}
+              <span class="${styles.badge} text-xs py-0.5 px-2" title="${op.status}">
+                ${shortStatus}
               </span>
             </div>
           </div>

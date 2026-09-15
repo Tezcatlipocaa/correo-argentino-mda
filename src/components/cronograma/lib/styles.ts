@@ -95,3 +95,22 @@ export function getDetailIndicatorClass(status: string): string {
   if (status === OperatorStatus.Vacaciones) return "bg-success";
   return "bg-base-300";
 }
+
+export function getShortStatus(status: string | undefined): string {
+  switch (status) {
+    case OperatorStatus.PresencialMonteGrande:
+      return "MG";
+    case OperatorStatus.PresencialParquePatricios:
+      return "PP";
+    case OperatorStatus.HomeOffice:
+      return "HO";
+    case OperatorStatus.Franco:
+      return "F";
+    case OperatorStatus.Licencia:
+      return "L";
+    case OperatorStatus.Vacaciones:
+      return "V";
+    default:
+      return status || "-";
+  }
+}
