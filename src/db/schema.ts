@@ -6,6 +6,7 @@ import {
   primaryKey,
   index,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
 import { relations, sql } from "drizzle-orm";
@@ -947,3 +948,171 @@ export const titles = sqliteTable("titles", {
     () => new Date(),
   ),
 });
+
+// 18. AUTOMATIZACIONES — ETAPAS DEL WORKFLOW (plantilla global configurada por admin)
+
+export const workflowStages = sqliteTable(
+  "workflow_stages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    description: text("description"),
+    /**
+     * Tipo de automatización a la que aplica la etapa. `workflow` = flujo
+     * AUTSUC nuevo; `legacy` = casos manuales anteriores a Luis Guillón.
+     */
+    scope: text("scope").notNull().default("workflow"),
+    /** Orden de la etapa en la vista. */
+    position: integer("position").notNull().default(0),
+    /**
+     * Gate opcional: ticket de otra etapa que habilita esta etapa.
+     * Null = la etapa siempre está habilitada (solo agrupación).
+     */
+    gateItemId: integer("gate_item_id").references(
+      (): AnySQLiteColumn => workflowStageTickets.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(
+      () => new Date(),
+    ),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$onUpdateFn(
+      () => new Date(),
+    ),
+  },
+  (table) => ({
+    positionIdx: index("workflow_stages_position_idx").on(table.position),
+  }),
+);
+
+export const workflowStageTickets = sqliteTable(
+  "workflow_stage_tickets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    stageId: integer("stage_id")
+      .notNull()
+      .references(() => workflowStages.id, { onDelete: "cascade" }),
+    /**
+     * Texto esperado del step label del ticket hijo de InvGate
+     * (parte del título previa al primer " - ", ej: "Solicitud de equipamiento").
+     * El match se hace normalizado (casing/acentos/ordinales).
+     */
+    matchLabel: text("match_label").notNull(),
+    /**
+     * Labels alternativos que también matchean esta card (además de matchLabel).
+     * Permite agrupar variantes reales de InvGate en una sola tarjeta, ej:
+     * "Configuración de equipo" dentro de "Configuración de server".
+     */
+    aliases: text("aliases", { mode: "json" }).$type<string[]>().default([]),
+    /**
+     * Frases clave de la descripción del ticket que también matchean esta card.
+     * Se evalúan SOLO cuando el label no matchea (títulos duplicados, ej: los
+     * dos "Instalaciones para AUTSUC…" de relevamiento y visita técnica).
+     */
+    matchDescription: text("match_description", { mode: "json" })
+      .$type<string[]>()
+      .default([]),
+    /** Etiqueta display si difiere del matchLabel; cae al matchLabel si es null. */
+    displayName: text("display_name"),
+    /** false = ticket informativo/registro (no bloquea la etapa). */
+    blocking: integer("blocking", { mode: "boolean" }).notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(
+      () => new Date(),
+    ),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$onUpdateFn(
+      () => new Date(),
+    ),
+  },
+  (table) => ({
+    stagePosIdx: index("workflow_stage_tickets_stage_pos_idx").on(
+      table.stageId,
+      table.position,
+    ),
+  }),
+);
+
+export const workflowStagesRelations = relations(
+  workflowStages,
+  ({ many, one }) => ({
+    tickets: many(workflowStageTickets),
+    gateItem: one(workflowStageTickets, {
+      fields: [workflowStages.gateItemId],
+      references: [workflowStageTickets.id],
+    }),
+  }),
+);
+
+export const workflowStageTicketsRelations = relations(
+  workflowStageTickets,
+  ({ one }) => ({
+    stage: one(workflowStages, {
+      fields: [workflowStageTickets.stageId],
+      references: [workflowStages.id],
+    }),
+  }),
+);
+
+/**
+ * Cache key/value persistido para resoluciones costosas de InvGate
+ * (category_id, queue_ids, snapshot de discovery). Sobrevive a los restarts
+ * del proceso para no repetir los escaneos completos en la primera carga.
+ */
+export const invgateCache = sqliteTable("invgate_cache", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
+/**
+ * Cierres locales de automatizaciones: el portal marca un caso como finalizado
+ * sin impactar en InvGate (donde el padre puede seguir Abierto). `kind` es
+ * "manual" (admin) o "auto" (flujo al 100%). Reabrir = borrar la fila.
+ */
+export const automationClosures = sqliteTable("automation_closures", {
+  automationId: integer("automation_id").primaryKey(),
+  kind: text("kind").notNull(),
+  reason: text("reason").notNull(),
+  percent: integer("percent").notNull(),
+  closedBy: text("closed_by").notNull(),
+  closedAt: integer("closed_at").notNull(),
+});
+
+/**
+ * Padres de automatización vistos alguna vez como activos (categoría 3023).
+ * El workflow los reasigna a otras mesas y salen de las colas resueltas; este
+ * tracking los mantiene en el portal aunque cambien de `assigned_group_id`.
+ * Solo guarda activos: se poda al finalizar.
+ */
+export const automationTrackedParents = sqliteTable("automation_tracked_parents", {
+  automationId: integer("automation_id").primaryKey(),
+  lastStatusId: integer("last_status_id").notNull(),
+  firstSeenAt: integer("first_seen_at").notNull(),
+  lastSeenAt: integer("last_seen_at").notNull(),
+});
+
+/**
+ * Historial completo de padres de automatización vistos alguna vez por el
+ * scan. A diferencia de `automation_tracked_parents` (que poda al finalizar),
+ * esta tabla NUNCA poda: alimenta el listado "todos los tickets padres creados
+ * hasta el momento" y el buscador por NIS/nombre de sucursal.
+ */
+export const automationParents = sqliteTable(
+  "automation_parents",
+  {
+    automationId: integer("automation_id").primaryKey(),
+    prettyId: text("pretty_id").notNull(),
+    displayName: text("display_name").notNull(),
+    branchCode: text("branch_code"),
+    branchName: text("branch_name"),
+    statusId: integer("status_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    closedAt: integer("closed_at"),
+    firstSeenAt: integer("first_seen_at").notNull(),
+    lastSeenAt: integer("last_seen_at").notNull(),
+  },
+  (table) => ({
+    createdAtIdx: index("automation_parents_created_at_idx").on(table.createdAt),
+    updatedAtIdx: index("automation_parents_updated_at_idx").on(table.updatedAt),
+  }),
+);

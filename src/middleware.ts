@@ -204,12 +204,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // Redirigir si no está autenticado e intenta acceder a supervisión o admin (insensible a mayúsculas/minúsculas)
+  // Redirigir si no está autenticado e intenta acceder a supervisión, admin o automatizaciones (insensible a mayúsculas/minúsculas)
   if (
     lowerPath === "/supervision" ||
     lowerPath.startsWith("/supervision/") ||
     lowerPath === "/admin" ||
-    lowerPath.startsWith("/admin/")
+    lowerPath.startsWith("/admin/") ||
+    lowerPath === "/automatizaciones" ||
+    lowerPath.startsWith("/automatizaciones/")
   ) {
     if (currentUser.id === 0) {
       return redirect(resolveUrl("/login"));

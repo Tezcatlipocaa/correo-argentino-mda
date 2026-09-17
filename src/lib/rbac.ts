@@ -32,6 +32,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/admin/usuarios-sin-ubicacion", roles: ["admin"] },
   { path: "/admin/usuarios", roles: ["admin"] },
   { path: "/admin/auditoria", roles: ["admin"] },
+  { path: "/admin/automatizaciones/etapas", roles: ["admin"] },
   {
     path: "/admin/invgate/ubicaciones",
     roles: ["admin", "supervisor", "team_leader"],
@@ -147,6 +148,11 @@ export function getModulePermissions(
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
   } else if (moduleName === "usuarios") {
     // Solo lectura por defecto, escritura solo para admin
+    perm.canRead = true;
+    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
+  } else if (moduleName === "automatizaciones") {
+    // Monitoreo de automatizaciones InvGate: lectura para todos los roles.
+    // Escritura (cierre/reapertura local de casos) solo para admin.
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   }

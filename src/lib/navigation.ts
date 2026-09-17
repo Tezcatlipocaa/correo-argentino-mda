@@ -90,6 +90,11 @@ export const navSections: NavSection[] = [
         label: "Mesas de Ayuda",
         icon: "boxicons:headphone-mic",
       },
+      {
+        href: "/automatizaciones",
+        label: "Automatizaciones",
+        icon: "boxicons:rocket-filled",
+      },
     ],
   },
   {
@@ -146,6 +151,11 @@ export const navSections: NavSection[] = [
             href: "/admin/invgate/ubicaciones",
             label: "Ubicaciones InvGate",
             icon: "boxicons:location-alt-filled",
+          },
+          {
+            href: "/admin/automatizaciones/etapas",
+            label: "Etapas Workflow",
+            icon: "boxicons:list-ul-filled",
           },
           {
             href: "/admin/feedback",
