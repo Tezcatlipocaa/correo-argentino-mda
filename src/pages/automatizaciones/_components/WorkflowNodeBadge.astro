@@ -1,0 +1,27 @@
+---
+import { NODE_LIFECYCLE_LABELS } from "@lib/workflow/node-status";
+import type { WorkflowNodeLifecycle } from "@lib/workflow/node-status";
+
+interface Props {
+  lifecycle: WorkflowNodeLifecycle;
+  class?: string;
+}
+
+const { lifecycle, class: className = "" } = Astro.props;
+
+const badgeClassByLifecycle: Record<WorkflowNodeLifecycle, string> = {
+  completed: "badge-success",
+  in_progress: "badge-info",
+  pending: "badge-warning",
+  blocked: "badge-error",
+  skipped: "badge-neutral badge-outline italic",
+  not_applicable: "badge-neutral badge-outline line-through",
+  unknown: "badge-neutral",
+};
+---
+
+<span
+  class:list={["badge py-0 rounded shrink-0", badgeClassByLifecycle[lifecycle], className]}
+>
+  {NODE_LIFECYCLE_LABELS[lifecycle]}
+</span>

@@ -1,0 +1,54 @@
+---
+import type { AutomationSummary } from "@lib/workflow/discovery";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
+import AutomationLink from "./AutomationLink.astro";
+
+interface Props {
+  items: readonly AutomationSummary[];
+  emptyMessage: string;
+}
+
+const { items, emptyMessage } = Astro.props;
+
+/** Título simplificado: quita el prefijo "Automatización " del displayName. */
+const shortTitle = (displayName: string): string =>
+  displayName.replace(/^Automatización\s+/i, "");
+---
+
+{
+    items.length === 0 ? (
+      <AutomationEmptyState message={emptyMessage} />
+    ) : (
+    <ul class="bg-base-100 border-base-300 divide-base-300 flex flex-col rounded-xl border shadow-sm divide-y lg:h-full lg:overflow-y-auto">
+      {items.map((item) => (
+        <li class="flex flex-col lg:flex-1">
+          <AutomationLink
+            automationId={item.id}
+            class="hover:bg-base-200/50 flex flex-1 flex-col justify-center gap-1 px-4 py-2.5 transition-colors"
+          >
+            <div class="flex min-w-0 items-baseline gap-2 overflow-hidden">
+              <code class="bg-base-200 text-base-content/80 shrink-0 rounded px-1.5 py-0.5 font-mono text-xs">
+                {item.prettyId}
+              </code>
+              <span class="text-base-content min-w-0 truncate text-sm">
+                {shortTitle(item.displayName)}
+              </span>
+            </div>
+            <div class="text-base-content/50 flex items-center gap-x-1.5 overflow-hidden text-xs whitespace-nowrap">
+              <span class="min-w-0 truncate">
+                Actualizada el {formatEpochDateTime(item.updatedAt)}
+              </span>
+              <span class="shrink-0" aria-hidden="true">-</span>
+              <AutomationLifecycleLabel
+                statusId={item.statusId}
+                class="shrink-0"
+              />
+            </div>
+          </AutomationLink>
+        </li>
+      ))}
+    </ul>
+  )
+}

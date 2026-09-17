@@ -1,0 +1,250 @@
+---
+import type { AutomationNode } from "@lib/workflow/resolver";
+import type {
+  StageGrouping,
+  StageGroup,
+  StageItemGroup,
+} from "@lib/workflow/stages";
+import { resolveNodeDisplayLabel } from "@lib/workflow/node-display";
+import AutomationNodeCard from "./AutomationNodeCard.astro";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+
+interface Props {
+  nodes: readonly AutomationNode[];
+  /** Agrupación por etapas (null = plantilla sin configurar → timeline plana). */
+  stages: StageGrouping | null;
+  /** Mostrar nodos fantasma de templates sin ticket (false en finalizadas). */
+  showMissing?: boolean;
+  /** Mostrar la sección "Sin etapa" (false en legacy: vista simplificada). */
+  showStageless?: boolean;
+}
+
+const { nodes, stages, showMissing = true, showStageless = true } = Astro.props;
+
+const flatMode = !stages || stages.groups.length === 0;
+
+interface PlannedCard {
+  kind: "ticket" | "missing" | "registration";
+  node: AutomationNode;
+  /** Etiqueta amigable: template de etapa o derivada del título. */
+  displayLabel?: string;
+  stepNumber: number;
+  isLast: boolean;
+}
+
+interface PlannedItemGroup {
+  cards: PlannedCard[];
+}
+
+interface PlannedSection {
+  name: string;
+  description: string | null;
+  status: "waiting" | "in_progress" | "completed";
+  /** Label del gate SOLO cuando todavía no está satisfecho. */
+  gateLabel: string | null;
+  completedBlocking: number;
+  totalBlocking: number;
+  items: PlannedItemGroup[];
+}
+
+interface PlannedRender {
+  sections: PlannedSection[];
+  stageless: PlannedCard[];
+}
+
+/** Nodo placeholder para tarjetas fantasma (la card no lee campos reales). */
+function ghostNode(stepLabel: string): AutomationNode {
+  return {
+    kind: "task",
+    refId: 0,
+    prettyId: null,
+    stepLabel,
+    title: stepLabel,
+    description: "",
+    lifecycle: "pending",
+    rawStatusId: 0,
+    createdAt: null,
+    invgateUrl: "",
+    activity: [],
+    solution: null,
+    solutionAuthorName: null,
+    tasks: [],
+  };
+}
+
+/**
+ * Estructura de render precalculada: por etapa, cada ticket esperado aporta
+ * sus nodos reales (numerados) y, si no matchea ninguno, un nodo fantasma.
+ */
+function planGrouping(grouping: StageGrouping): PlannedRender {
+  const sections: PlannedSection[] = grouping.groups.map(
+    (group: StageGroup): PlannedSection => {
+      let stepCounter = 0;
+      const items: PlannedItemGroup[] = group.items.map(
+        (item: StageItemGroup): PlannedItemGroup => {
+          const cards: PlannedCard[] = item.nodes.map((node) => {
+            stepCounter += 1;
+            return {
+              kind: "ticket" as const,
+              node,
+              displayLabel: item.label,
+              stepNumber: stepCounter,
+              isLast: false,
+            };
+          });
+          if (item.missing && showMissing) {
+            stepCounter += 1;
+            cards.push({
+              kind: item.blocking ? "missing" : "registration",
+              node: ghostNode(item.label),
+              stepNumber: stepCounter,
+              isLast: false,
+            });
+          }
+          return { cards };
+        },
+      );
+
+      const lastItem = items.at(-1);
+      if (lastItem && lastItem.cards.length > 0) {
+        lastItem.cards.at(-1)!.isLast = true;
+      }
+
+      return {
+        name: group.template.name,
+        description: group.template.description ?? null,
+        status: group.status,
+        gateLabel: group.gateSatisfied ? null : group.gateLabel,
+        completedBlocking: group.completedBlocking,
+        totalBlocking: group.totalBlocking,
+        items,
+      };
+    },
+  );
+
+  const stageless: PlannedCard[] = grouping.stagelessNodes.map(
+    (node, index) => ({
+      kind: "ticket" as const,
+      node,
+      displayLabel: resolveNodeDisplayLabel(node.title, node.stepLabel),
+      stepNumber: index + 1,
+      isLast: index === grouping.stagelessNodes.length - 1,
+    }),
+  );
+
+  return { sections, stageless };
+}
+
+const planned = flatMode ? null : planGrouping(stages!);
+
+const stageStatusBadgeClass = {
+  waiting: "badge-warning badge-outline",
+  in_progress: "badge-info",
+  completed: "badge-success",
+} as const;
+
+const stageStatusLabel = {
+  waiting: "En espera",
+  in_progress: "En curso",
+  completed: "Completa",
+} as const;
+---
+
+{
+  nodes.length === 0 && flatMode ? (
+    <AutomationEmptyState message="Este proceso no tiene pasos vinculados ni tareas internas." />
+  ) : (
+    <div class="flex flex-col gap-6">
+      {!flatMode &&
+        planned!.sections.map((section) => (
+          <section class="border-base-300 bg-base-100/60 rounded-xl border p-4">
+            <header class="mb-4 flex flex-col gap-0.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-base-content text-sm font-semibold">
+                  {section.name}
+                </h3>
+                <span
+                  class:list={[
+                    "badge py-0 rounded shrink-0",
+                    stageStatusBadgeClass[section.status],
+                  ]}
+                >
+                  {stageStatusLabel[section.status]}
+                </span>
+                {section.totalBlocking > 0 && (
+                  <span class="badge badge-ghost text-base-content/70 font-mono py-0 rounded text-xs">
+                    {section.completedBlocking}/{section.totalBlocking}
+                  </span>
+                )}
+              </div>
+              {section.gateLabel && (
+                <p class="text-warning mt-0.5 text-xs">
+                  Se habilita al completarse: {section.gateLabel}
+                </p>
+              )}
+            </header>
+
+            {section.items.length === 0 ? (
+              <p class="text-base-content/50 text-xs italic">
+                Esta etapa no tiene tickets esperados configurados todavía.
+              </p>
+            ) : (
+              <ol class="flex flex-col">
+                {section.items.flatMap((item) => item.cards).map((card) => (
+                  <AutomationNodeCard
+                    node={card.node}
+                    stepNumber={card.stepNumber}
+                    displayLabel={card.displayLabel}
+                    ghost={
+                      card.kind === "ticket"
+                        ? undefined
+                        : {
+                            label: card.node.stepLabel,
+                            variant: card.kind === "missing" ? "missing" : "registration",
+                          }
+                    }
+                    isLast={card.isLast}
+                  />
+                ))}
+              </ol>
+            )}
+          </section>
+        ))}
+
+      {!flatMode && showStageless && planned!.stageless.length > 0 && (
+        <section class="border-base-300 rounded-xl border border-dashed p-4">
+          <header class="mb-4">
+            <h3 class="text-base-content/70 text-sm font-semibold">
+              Sin etapa asignada
+            </h3>
+            <p class="text-base-content/50 text-xs">
+              Tickets vinculados que no corresponden a ninguna etapa configurada.
+            </p>
+          </header>
+          <ol class="flex flex-col">
+            {planned!.stageless.map((card) => (
+              <AutomationNodeCard
+                node={card.node}
+                stepNumber={card.stepNumber}
+                isLast={card.isLast}
+              />
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {flatMode && (
+        <ol class="flex flex-col">
+          {nodes.map((node, index) => (
+            <AutomationNodeCard
+              node={node}
+              stepNumber={index + 1}
+              displayLabel={resolveNodeDisplayLabel(node.title, node.stepLabel)}
+              isLast={index === nodes.length - 1}
+            />
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}

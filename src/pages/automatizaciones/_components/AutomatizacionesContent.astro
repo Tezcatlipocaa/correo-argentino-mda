@@ -1,0 +1,214 @@
+---
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
+import AutomationActiveList from "./AutomationActiveList.astro";
+import AutomationRecentList from "./AutomationRecentList.astro";
+import AutomationParentsList from "./AutomationParentsList.astro";
+import { discoverAutomations } from "@lib/workflow/discovery";
+import type {
+  AutomationDiscoveryResult,
+  AutomationSummary,
+} from "@lib/workflow/discovery";
+import { listAutomationParents } from "@lib/workflow/parent-history";
+import { getIncidentStatuses } from "@lib/invgate/automation/statuses";
+import { buildStatusNameLookup } from "@lib/workflow/automation-status";
+import { formatEpochDateTime } from "@lib/format/datetime";
+
+const user = Astro.locals.user;
+const canQuery = user.id !== 0;
+
+let discovery: AutomationDiscoveryResult | null = null;
+let statusNames: Record<number, string> = {};
+let loadError = "";
+
+if (canQuery) {
+  try {
+    const [result, statuses] = await Promise.all([
+      discoverAutomations(),
+      getIncidentStatuses(),
+    ]);
+    discovery = result;
+    statusNames = buildStatusNameLookup(statuses.ok ? statuses.data : null);
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : "Error desconocido";
+  }
+}
+
+const errorMessage =
+  loadError || (discovery !== null && !discovery.ok ? discovery.message : "");
+
+/**
+ * El listado completo sale del historial persistente. Si todavía no hay filas
+ * (primer render con snapshot en cache y DB vacía), se usa el snapshot de
+ * discovery como fallback para no mostrar la vista vacía.
+ */
+let parents: AutomationSummary[] = listAutomationParents();
+if (parents.length === 0 && discovery !== null && discovery.ok) {
+  const fallback = new Map<number, AutomationSummary>();
+  const seed = [
+    ...(discovery.current ? [discovery.current] : []),
+    ...discovery.otherActive,
+    ...discovery.recentFinalized,
+  ];
+  for (const item of seed) {
+    fallback.set(item.id, item);
+  }
+  parents = [...fallback.values()];
+}
+
+const byUpdatedAtDesc = [...parents].sort(
+  (a, b) => b.updatedAt - a.updatedAt || b.createdAt - a.createdAt,
+);
+const byCreatedAtDesc = [...parents].sort(
+  (a, b) => b.createdAt - a.createdAt || b.id - a.id,
+);
+
+const featured = byUpdatedAtDesc[0] ?? null;
+/** 3 recientes, excluyendo la destacada para no duplicarla. */
+const recent = byUpdatedAtDesc.slice(1, 4);
+const allParents = byCreatedAtDesc;
+
+const statusFilters = [
+  { key: "all", label: "Todas" },
+  { key: "active", label: "En curso" },
+  { key: "finalized", label: "Terminadas" },
+] as const;
+---
+
+<PageContainer width="xl" data-automation-filter-root>
+  <PageHeader
+    title="Automatizaciones"
+    description="Monitoreo de automatizaciones de sucursales manuales ejecutadas en InvGate Service Management."
+  />
+
+  {
+    !canQuery ? (
+      <div role="alert" class="alert alert-warning">
+        <span>
+          Sesión no iniciada. Iniciá sesión para consultar las automatizaciones.
+        </span>
+      </div>
+    ) : errorMessage ? (
+      <div role="alert" class="alert alert-error">
+        <div>
+          <h3 class="font-medium">No se pudo consultar InvGate</h3>
+          <p class="text-sm opacity-80">{errorMessage}</p>
+        </div>
+      </div>
+    ) : parents.length === 0 ? (
+      <p class="border-base-300 text-base-content/60 rounded-lg border border-dashed px-4 py-10 text-center text-sm">
+        No hay automatizaciones en curso ni recientes registradas en la
+        categoría de automatización de sucursales.
+      </p>
+    ) : (
+      <>
+        <div
+          class="mb-2 flex flex-wrap items-center justify-between gap-3 px-4"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              class="badge badge-ghost badge-lg text-base-content font-semibold"
+              data-automation-count
+            >
+              {allParents.length}
+            </span>
+            <span class="text-base-content/60 text-sm">
+              automatizaciones registradas
+            </span>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <SearchBar
+              id="automatizaciones-search"
+              placeholder="Buscar por NIS o sucursal..."
+              ariaLabel="Buscar automatización por NIS o nombre de sucursal"
+              class="w-full sm:w-72"
+              clearable
+            />
+            <div
+              class="join"
+              role="group"
+              aria-label="Filtrar automatizaciones por estado"
+            >
+              {statusFilters.map((filter, index) => (
+                <button
+                  type="button"
+                  aria-pressed={index === 0 ? "true" : "false"}
+                  class:list={[
+                    "join-item border border-base-300 bg-base-200 px-3 py-1.5 text-sm font-medium text-base-content/70",
+                    "cursor-pointer transition-colors duration-200",
+                    "hover:border-steel-azure-700 hover:bg-steel-azure-700 hover:text-white",
+                    "aria-pressed:border-secondary aria-pressed:bg-secondary aria-pressed:text-white",
+                    "aria-pressed:hover:border-steel-azure-700 aria-pressed:hover:bg-steel-azure-700",
+                  ]}
+                  data-status-filter={filter.key}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <section class="flex flex-col gap-3 lg:col-span-2" data-automation-overview>
+            <div class="flex flex-wrap items-baseline gap-x-2">
+              {featured?.isActive && (
+                <span class="relative mr-1 flex size-2 self-center">
+                  <span class="bg-secondary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                  <span class="bg-secondary relative inline-flex size-2 rounded-full" />
+                </span>
+              )}
+              <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+                Última actualización
+              </h2>
+              {featured && (
+                <span class="text-base-content/50 text-xs">
+                  {formatEpochDateTime(featured.updatedAt)}
+                </span>
+              )}
+            </div>
+            {featured && (
+              <AutomationActiveList
+                items={[featured]}
+                statusNames={statusNames}
+                defaultOpenId={featured.id}
+                collapsible={false}
+              />
+            )}
+          </section>
+
+          <section class="flex flex-col gap-3" data-automation-overview>
+            <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+              Actualizadas recientemente
+            </h2>
+            {/*
+              En lg la lista toma exactamente el alto de la card destacada:
+              el wrapper flexible no aporta altura intrínseca (min-h-0) y la
+              lista se posiciona absoluta dentro, con scroll propio si sobra.
+            */}
+            <div class="lg:relative lg:min-h-0 lg:flex-1">
+              <div class="lg:absolute lg:inset-0">
+                <AutomationRecentList
+                  items={recent}
+                  emptyMessage="Sin automatizaciones recientes."
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="flex flex-col gap-3">
+          <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+            Todas las automatizaciones
+          </h2>
+          <AutomationParentsList
+            items={allParents}
+            statusNames={statusNames}
+            emptyMessage="No hay automatizaciones registradas todavía."
+          />
+        </section>
+      </>
+    )
+  }
+</PageContainer>
