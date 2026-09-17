@@ -19,7 +19,7 @@ digraph invgate_query {
     "Need many by status?" [shape=diamond];
     "GET /incident?id=X" [shape=box];
     "GET /incidents?ids[]=X&ids[]=Y\n(response: {id: object})" [shape=box];
-    "GET /incidents.by.status\n?status_id=X\n(IDs only, open only)" [shape=box];
+    "GET /incidents.by.status\n?status_id=X\n(IDs only)" [shape=box];
     "GET /incidents.by.agent?id=X\nor by.customer / by.helpdesk\n(full objects, keyset page, open only)" [shape=box];
     "Need full details\nby custom view?" [shape=diamond];
     "GET /incidents.details.by.view\n?view_id=X\n(full objects, keyset page)" [shape=box];
@@ -33,12 +33,12 @@ digraph invgate_query {
     "Need full objects?" -> "Need many by status?" [label="by status"];
     "Need full objects?" -> "GET /incidents.details.by.view\n?view_id=X\n(full objects, keyset page)" [label="by view"];
     "Need full objects?" -> "GET /incidents.last.hour\n(resp: {data[], next_page_key})" [label="last hour"];
-    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only, open only)" [label="then batch GET /incidents\n?ids[]=... for full"];
-    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only, open only)" [label="IDs enough"];
+    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only)" [label="then batch GET /incidents\n?ids[]=... for full"];
+    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only)" [label="IDs enough"];
 }
 ```
 
-**Note:** `by.agent`, `by.customer`, `by.helpdesk`, and `by.status` only return **open** requests. For closed/completed incidents, use `/incident?id=X` (if you know the ID) or build a saved view in InvGate and use `incidents.details.by.view`.
+**Note:** `by.agent` and `by.customer` only return **open** requests. `by.status` returns closed/finalized requests too (**verified in production 2026-09**: s5=998, s6=73025, s8=1368). `by.helpdesk` expects the helpdesk **level** id (helpdesksandlevels `type_id=1`), not the helpdesk id — with the helpdesk id it returns an empty list; its response has no `total` field. Whether `by.helpdesk` returns closed requests is unconfirmed (the verified queue contained only active tickets). For closed/completed incidents also consider a saved view + `incidents.by.view` / `incidents.details.by.view`.
 
 **Tip:** After getting IDs from `by.status` or `by.view`, batch-fetch full objects with `/incidents?ids[]=id1&ids[]=id2&...` instead of individual `/incident?id=X` calls.
 

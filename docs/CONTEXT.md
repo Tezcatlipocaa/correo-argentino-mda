@@ -265,6 +265,7 @@ BaseLayout (flex flex-col min-h-screen)
 | 8   | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
+| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Cierre local (portal, no InvGate) por admin desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes |
 
 ### Supervision (sub-rutas)
 
@@ -335,6 +336,9 @@ BaseLayout (flex flex-col min-h-screen)
 | Astro SSR             | 4321   | Servidor principal (node dist/server/entry.mjs)       |
 | ping-worker           | —      | ICMP ping segmentado a cubics (batch 5→3, 3min gap)   |
 | sync-legacy-inventory | —      | Sincroniza inventario de terminales desde PHP externo |
+| sync-users            | —      | Sincroniza empleados via MidPoint (02:00)             |
+| sync-office-links     | —      | Sincroniza links de oficinas (03:00)                  |
+| reconcile-automation-parents | — | Reconcilia tracking de padres de /automatizaciones por categoría, todas las mesas (04:00) |
 
 ### Scripts clave (`scripts/`)
 
@@ -346,6 +350,8 @@ BaseLayout (flex flex-col min-h-screen)
 | `sync-legacy-inventory.ts` | Worker PM2 de sincronizacion de inventario   |
 | `sync-users.ts`            | Sincronizacion de empleados via MidPoint     |
 | `toggle-mode.ts`           | Script de alternancia de tema light/dark     |
+| `warm-automations.ts`      | Pre-warm del cache de /automatizaciones (scan InvGate + snapshot persistido + reconciliacion de padres) |
+| `reconcile-automation-parents.ts` | Recupera padres de /automatizaciones reasignados a otras mesas (barrido por estado + categoría) |
 
 ### Base de datos
 
