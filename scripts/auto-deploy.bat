@@ -17,4 +17,7 @@ call npm run build
 echo 5. Reiniciando el proceso en PM2...
 call pm2 start ecosystem.config.cjs
 
+echo 6. Precalentando cache de automatizaciones (InvGate)...
+call node --import tsx scripts/warm-automations.ts
+
 echo [MDA Auto-Deploy] Actualizacion completada con exito!

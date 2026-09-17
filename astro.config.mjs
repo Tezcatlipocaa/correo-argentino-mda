@@ -45,6 +45,11 @@ export default defineConfig({
   output: "server",
   integrations: [icon(), react()],
 
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: "hover",
+  },
+
   adapter: node({
     mode: "middleware",
   }),

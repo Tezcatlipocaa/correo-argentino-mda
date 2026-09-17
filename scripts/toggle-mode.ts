@@ -1,36 +1,29 @@
-import { themeChange } from "theme-change";
+const savedTheme = localStorage.getItem("theme");
+const initialTheme =
+  savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
 
-(() => {
-  const savedTheme = localStorage.getItem("theme");
-  const theme =
-    savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
+document.documentElement.setAttribute("data-theme", initialTheme);
 
-  document.documentElement.setAttribute("data-theme", theme);
-})();
-
-themeChange();
-
-const themeToggle = document.getElementById(
-  "theme-toggle",
-) as HTMLInputElement | null;
-
+/**
+ * El toggle activa/desactiva via delegación en BaseLayout (survive a los
+ * swaps de view transitions); este script sincroniza estado visual y
+ * aria-label del input vivo tras cada cambio o navegación.
+ */
 const updateThemeToggle = (): void => {
-  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const themeToggle = document.getElementById(
+    "theme-toggle",
+  ) as HTMLInputElement | null;
 
-  if (themeToggle) {
-    themeToggle.checked = isDark;
-    themeToggle.setAttribute(
-      "aria-label",
-      isDark ? "Activar modo claro" : "Activar modo oscuro",
-    );
-  }
+  if (!themeToggle) return;
+
+  const isDark =
+    document.documentElement.getAttribute("data-theme") === "dark";
+  themeToggle.checked = isDark;
+  themeToggle.setAttribute(
+    "aria-label",
+    isDark ? "Activar modo claro" : "Activar modo oscuro",
+  );
 };
-
-themeToggle?.addEventListener("change", () => {
-  window.setTimeout(() => {
-    updateThemeToggle();
-  }, 0);
-});
 
 const themeObserver = new MutationObserver(() => {
   updateThemeToggle();
@@ -42,3 +35,5 @@ themeObserver.observe(document.documentElement, {
 });
 
 updateThemeToggle();
+
+document.addEventListener("astro:after-swap", updateThemeToggle);
