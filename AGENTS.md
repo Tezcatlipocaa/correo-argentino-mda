@@ -21,6 +21,7 @@
 
 - `npx playwright test` — all E2E tests in `tests/`
 - Workers: 1 (serial). Requires dev server at `http://localhost:4321`.
+- `npm run test:unit -- tests/unit` — vitest unit tests. Bare `npm run test:unit` also globs Playwright specs and stale `*.mjs` asserts (pre-existing failures) — always scope to `tests/unit`.
 - No CI — tests run manually.
 
 ## DB & Drizzle
@@ -33,7 +34,7 @@
 
 ## Stack & style
 
-- **Astro SSR** (`output: "server"`) with `@astrojs/node` standalone adapter
+- **Astro SSR** (`output: "server"`) with `@astrojs/node` in `middleware` mode, served by `server.mjs` (Express: static + compression) — not standalone
 - **Tailwind v4** (config-free) + **DaisyUI v5** — use DaisyUI token colors only, never hardcode hex
 - **React islands** via `@astrojs/react` — interactive only; prefer `.astro` for static content
 - **Icons**: `astro-icon` with `@iconify-json/boxicons`
@@ -94,3 +95,10 @@
 - `ecosystem.config.cjs` — 5 processes: Astro SSR (port 4321), mda-ping-cubics, sync-legacy-inventory, sync-users, sync-office-links
 - `scripts/auto-deploy.bat` — git pull → pm2 kill → npm install → build (verify-build) → pm2 start
 - `scripts/backup-db.bat` — copies `database/mda.db` to backup directory
+
+## HTTPS / reverse proxy (Apache XAMPP)
+
+- TLS termina en Apache (`:443`) con proxy a `127.0.0.1:4321`; `:80` redirige a `https://mda.correo.local/`. Runbook: `docs/deploy-produccion.md` §5.3.
+- `@astrojs/node` en modo `middleware` **ignora `X-Forwarded-Proto`** (solo detecta `req.socket.encrypted`): detrás del proxy `Astro.url.origin` queda en `http://`. Nunca usar `Astro.url.origin` para self-fetch server-side — usar `getInternalOrigin()` (`@lib/internalOrigin`, loopback directo a Express). Client-side `window.location.origin` sí es confiable.
+- Cookie de sesión `Secure` vía `SESSION_COOKIE_SECURE` (runtime `process.env` gana sobre build-time `import.meta.env`; en prod se define en `ecosystem.config.cjs`). `navigator.clipboard` exige contexto seguro (HTTPS).
+- Nunca commitear material de certificados (`.cer/.crt/.key/.pem/.pfx` ya gitignored). El CA corporativo debe estar en el trust store de los clientes; si no, browser warning y clipboard sigue bloqueado.

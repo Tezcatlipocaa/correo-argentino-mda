@@ -187,3 +187,13 @@ Cada entrada sigue este formato:
 **Solucion:** Detener todo Node/PM2 -> renombrar `node_modules` -> `npm ci` limpio -> `npm run build` -> verificar `findstr /C:"rootDir" dist\server\entry.mjs` (debe apuntar a `file:///...`) -> `pm2 start`. El deploy automatico se re-creo con `WorkingDirectory` correcto (`scripts/`) y orden corregido (`pm2 kill` antes de `npm install`).
 **Regla:** Nunca ejecutar `npm install`/`npm audit fix` con procesos PM2/Node vivos (lock de modulos `.node` nativos). Despues de todo build validar `rootDir` en `dist/server/entry.mjs`; el guard `scripts/verify-build.mjs` (enchufado a `npm run build`) aborta el deploy si falta. En tasks programados, "Iniciar en" debe ser un directorio, nunca un archivo.
 **Archivos afectados:** scripts/auto-deploy.bat, scripts/verify-build.mjs, package.json, dist/server/entry.mjs, AGENTS.md, docs/deploy-produccion.md
+
+---
+
+### 2026-09-21 — HTTPS detrás de proxy: adapter en modo middleware ignora X-Forwarded-Proto
+
+**Problema:** Al habilitar TLS en Apache (redirect 80→443 + proxy a Astro) aparecían dos fallas silenciosas: (1) los self-fetch server-side a `Astro.url.origin` (`UbicacionesContent.astro`, `rows.astro`) habrían salido por Apache en http y fallado la validación TLS de Node contra la CA corporativa; (2) la cookie de sesión quedaba sin flag `Secure` (hardcodeado `false`).
+**Causa:** `@astrojs/node` 11.x en modo `middleware` construye el Request tomando el protocolo solo de `req.socket.encrypted` (`astro/dist/core/app/node.js`), ignorando `X-Forwarded-Proto`. Detrás del proxy el socket es HTTP → `Astro.url.origin` = `http://`. Además el flag `Secure` no era configurable y `import.meta.env` (build-time) podía pisar el env de runtime de PM2.
+**Solucion:** Helper `getInternalOrigin()` (`@lib/internalOrigin`): `INTERNAL_ORIGIN` o default `http://127.0.0.1:${PORT||4321}` para self-fetch directo a Express; `SESSION_COOKIE_SECURE` con runtime-first (`process.env` || `import.meta.env`) seteados en `ecosystem.config.cjs`; `site` a `https://mda.correo.local`; runbook de Apache 443 en `docs/deploy-produccion.md` §5.3.
+**Regla:** En modo middleware detrás de un proxy TLS no confiar en `Astro.url.origin`/`protocol` para self-fetch: ir directo al loopback. Los flags de seguridad por env deben priorizar runtime (`process.env`) sobre build-time (`import.meta.env`) para poder cambiarse sin rebuild. Material de certificados nunca al repo.
+**Archivos afectados:** src/lib/internalOrigin.ts, src/lib/session.ts, src/components/admin/invgate/UbicacionesContent.astro, src/pages/api/invgate/locations/rows.astro, astro.config.mjs, ecosystem.config.cjs, docs/deploy-produccion.md, .env.example, .gitignore, AGENTS.md
