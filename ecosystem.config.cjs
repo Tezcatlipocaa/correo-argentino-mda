@@ -6,6 +6,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 4321,
+        SESSION_COOKIE_SECURE: "true",
       },
     },
     {
