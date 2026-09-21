@@ -43,7 +43,7 @@ export function generateSessionId(): string {
 
 export function isSessionCookieSecure(): boolean {
   const value =
-    import.meta.env?.SESSION_COOKIE_SECURE ?? process.env.SESSION_COOKIE_SECURE;
+    process.env.SESSION_COOKIE_SECURE || import.meta.env?.SESSION_COOKIE_SECURE;
   return value === "true";
 }
 
