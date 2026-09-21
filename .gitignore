@@ -105,3 +105,10 @@ docs/superpowers/
 # generated reports and db backups
 scripts/reports
 scripts/backups
+
+# Certificados (nunca versionar)
+*.cer
+*.crt
+*.key
+*.pem
+*.pfx

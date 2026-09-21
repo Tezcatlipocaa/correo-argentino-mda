@@ -49,6 +49,7 @@ Completá las 6 variables en `.env`. En producción prestá atención a:
 | `INVGATE_BASE_URL`     | `https://correoargentino.sd.cloud.invgate.net/api/v1/`                     |
 | `INVGATE_API_USERNAME` | `portalmda`                                                                |
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
+| `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
@@ -132,17 +133,91 @@ El VirtualHost ya existe en `C:\xampp\apache\conf\extra\httpd-vhosts.conf`. En u
 </VirtualHost>
 ```
 
-> **Nota:** El `ServerName` real de tu servidor es `portal-mda.correo.local`. Asegurate de que `astro.config.mjs` tenga `site: "http://portal-mda.correo.local"` si usás URLs absolutas.
+> **Nota:** El hostname canónico es mda.correo.local (debe coincidir con el SAN del certificado). astro.config.mjs ya usa site: "https://mda.correo.local".
 
-Tu servidor ya tiene SSL cargado via:
+### 5.3. Habilitar HTTPS (certificado corporativo)
+
+Certificados en `C:\xampp\apache\conf\ssl\`:
+
+- `mda.correo.local.fullchain.crt` (leaf + intermedios)
+- `mda.correo.local.key`
+
+En `httpd.conf`, verificar/descomentar:
 
 ```apache
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+LoadModule headers_module modules/mod_headers.so
 Include conf/extra/httpd-ssl.conf
 ```
 
-Si querés HTTPS, agregá el mismo bloque en `*:443` dentro de `httpd-ssl.conf` con las directivas SSLCertificateFile y SSLCertificateKeyFile.
+> `httpd-ssl.conf` trae un vhost default (`<VirtualHost _default_:443>`) con el certificado dummy de XAMPP. Comentá ese bloque para que no responda antes que el vhost de MDA, y verificá la selección de vhosts con:
+>
+> ```powershell
+> C:\xampp\apache\bin\httpd.exe -S
+> ```
+>
+> Esperado: un vhost `*:443` con `mda.correo.local`.
 
-### 5.3. Verificar el archivo hosts (para pruebas locales)
+En `conf/extra/httpd-vhosts.conf`, reemplazar el vhost `*:80` por estos dos, y agregar el vhost `*:443`:
+
+```apache
+<VirtualHost *:80>
+    ServerName mda.correo.local
+    ServerAlias portal-mda.correo.local
+    Redirect permanent / https://mda.correo.local/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName localhost
+    ServerAlias 127.0.0.1
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:4321/
+    ProxyPassReverse / http://127.0.0.1:4321/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName mda.correo.local
+    ServerAlias portal-mda.correo.local
+
+    SSLEngine on
+    SSLCertificateFile "C:/xampp/apache/conf/ssl/mda.correo.local.fullchain.crt"
+    SSLCertificateKeyFile "C:/xampp/apache/conf/ssl/mda.correo.local.key"
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+
+    ProxyPreserveHost On
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "443"
+    ProxyPass / http://127.0.0.1:4321/
+    ProxyPassReverse / http://127.0.0.1:4321/
+
+    ErrorLog "logs/mda-ssl-error.log"
+    CustomLog "logs/mda-ssl-access.log" common
+</VirtualHost>
+```
+
+Firewall (PowerShell admin):
+
+```powershell
+New-NetFirewallRule -DisplayName "Apache HTTPS (443)" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443
+```
+
+Validar y reiniciar:
+
+```powershell
+C:\xampp\apache\bin\httpd.exe -t
+C:\xampp\apache\bin\httpd.exe -k restart
+```
+
+Verificar:
+
+```powershell
+C:\xampp\apache\bin\openssl.exe s_client -connect mda.correo.local:443 -servername mda.correo.local
+curl.exe -sI http://mda.correo.local/login
+curl.exe -sI https://mda.correo.local/login
+```
+
+### 5.4. Verificar el archivo hosts (para pruebas locales)
 
 Si accedés por nombre de dominio local:
 
@@ -150,7 +225,7 @@ Si accedés por nombre de dominio local:
 127.0.0.1  mda.correo.local
 ```
 
-### 5.4. Reiniciar Apache
+### 5.5. Reiniciar Apache
 
 ```powershell
 C:\xampp\apache\bin\httpd.exe -k restart
