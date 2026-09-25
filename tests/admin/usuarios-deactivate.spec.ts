@@ -134,8 +134,18 @@ test.describe("Baja de usuarios (soft-delete)", () => {
         path: "/",
       },
     ]);
-    await page.goto("/");
+    const response = await page.goto("/");
     await expect(page).toHaveURL(/\/login/);
+    expect(response?.url()).toContain("toast_type=warning");
+
+    const remaining = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId));
+    expect(remaining).toHaveLength(0);
+
+    const cookiesAfter = await page.context().cookies();
+    expect(cookiesAfter.find((c) => c.name === "session_id")).toBeUndefined();
 
     await db.delete(sessions).where(eq(sessions.id, sessionId));
     await db.delete(users).where(eq(users.id, inactive.id));

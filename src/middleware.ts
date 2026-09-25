@@ -192,6 +192,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
           // Cuenta desactivada por un admin: se invalida la sesión y se expulsa.
           deleteSessionCookie(cookies);
           await db.delete(sessions).where(eq(sessions.id, sessionId));
+          sessionId = null;
           if (relativePath !== "/login") {
             return redirect(
               resolveUrl(
