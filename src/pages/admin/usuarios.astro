@@ -61,20 +61,25 @@ if (Astro.request.method === "POST") {
     // Task B3 usa mesaRow para sanitizar participaciones
     let mesaRow: typeof mesas.$inferSelect | undefined;
     if (!username || !password || !role || !name) {
-      errorMsg = "Nombre completo, nombre de red, contraseña y rol son obligatorios.";
+      errorMsg =
+        "Nombre completo, nombre de red, contraseña y rol son obligatorios.";
     } else if (!isValidRole(role)) {
       errorMsg = `Rol inválido: "${role}".`;
     } else if (helpdeskId == null || !helpdeskName) {
       errorMsg = "La mesa de ayuda es obligatoria: seleccioná una de la lista.";
     } else {
-      const [row] = await db.select().from(mesas).where(eq(mesas.invgateId, helpdeskId));
+      const [row] = await db
+        .select()
+        .from(mesas)
+        .where(eq(mesas.invgateId, helpdeskId));
       mesaRow = row;
       if (
         !mesaRow ||
         !mesaRow.active ||
         (!mesaRow.assignable && mesaRow.name !== MDA_TI_HELPDESK)
       ) {
-        errorMsg = "La mesa de ayuda seleccionada no existe o no está habilitada.";
+        errorMsg =
+          "La mesa de ayuda seleccionada no existe o no está habilitada.";
       } else if (
         normalizeRole(role) === "admin" &&
         mesaRow.name !== MDA_TI_HELPDESK
@@ -96,7 +101,13 @@ if (Astro.request.method === "POST") {
       } else {
         const finalParticipaciones = mesaHasParticipaciones(mesaRow?.name)
           ? participaciones
-          : { enCronograma: false, enAsistencia: false, asignableCubic: false, incluidoCalidad: false, asignableAgs: false };
+          : {
+              enCronograma: false,
+              enAsistencia: false,
+              asignableCubic: false,
+              incluidoCalidad: false,
+              asignableAgs: false,
+            };
         // Un supervisor no figura en el cronograma como operador (forzado).
         if (normalizeRole(role) === "supervisor") {
           finalParticipaciones.enCronograma = false;
@@ -129,9 +140,7 @@ if (Astro.request.method === "POST") {
             const existingAgent = tx
               .select({ id: agents.id, userId: agents.userId })
               .from(agents)
-              .where(
-                sql`lower(coalesce(${agents.username}, '')) = ${username}`,
-              )
+              .where(sql`lower(coalesce(${agents.username}, '')) = ${username}`)
               .get();
 
             if (existingAgent) {
@@ -140,7 +149,9 @@ if (Astro.request.method === "POST") {
                   name,
                   // Vincula por id solo si la fila aún no tiene vínculo (respeta
                   // un vínculo previo distinto: posible anomalía de datos).
-                  ...(existingAgent.userId == null ? { userId: newUser.id } : {}),
+                  ...(existingAgent.userId == null
+                    ? { userId: newUser.id }
+                    : {}),
                   ...finalParticipaciones,
                 })
                 .where(eq(agents.id, existingAgent.id))
@@ -172,8 +183,7 @@ if (Astro.request.method === "POST") {
           if (msg.includes("users.username")) {
             errorMsg = "Error: El nombre de usuario ya existe.";
           } else if (msg.includes("agents.name")) {
-            errorMsg =
-              "Error: Ya existe un agente con ese nombre completo.";
+            errorMsg = "Error: Ya existe un agente con ese nombre completo.";
           } else {
             errorMsg = "Error al crear el usuario.";
           }
@@ -182,7 +192,11 @@ if (Astro.request.method === "POST") {
     }
   } else if (action === "update-user") {
     const userId = Number(formData.get("userId"));
-    const newUsername = formData.get("username")?.toString().trim().toLowerCase();
+    const newUsername = formData
+      .get("username")
+      ?.toString()
+      .trim()
+      .toLowerCase();
     const newName = formData.get("name")?.toString().trim();
     const newRole = formData.get("newRole")?.toString();
     const rawHelpdesk = formData.get("helpdesk")?.toString() ?? "";
@@ -243,7 +257,11 @@ if (Astro.request.method === "POST") {
           let mesaName: string | null = null;
           if (helpdeskId != null) {
             const mesa = tx
-              .select({ name: mesas.name, active: mesas.active, assignable: mesas.assignable })
+              .select({
+                name: mesas.name,
+                active: mesas.active,
+                assignable: mesas.assignable,
+              })
               .from(mesas)
               .where(eq(mesas.invgateId, helpdeskId))
               .get();
@@ -252,7 +270,8 @@ if (Astro.request.method === "POST") {
               !mesa.active ||
               (!mesa.assignable && mesa.name !== MDA_TI_HELPDESK)
             ) {
-              errorMsg = "La mesa de ayuda seleccionada no existe o no está habilitada.";
+              errorMsg =
+                "La mesa de ayuda seleccionada no existe o no está habilitada.";
               return;
             }
             if (
@@ -321,7 +340,8 @@ if (Astro.request.method === "POST") {
           // Flags efectivos: mesa no participativa o supervisor fuerzan false.
           const mesaParticipativa = mesaHasParticipaciones(mesaName);
           const isSupervisor = normalizeRole(newRole) === "supervisor";
-          const cronogramaOn = mesaParticipativa && !isSupervisor && submitted.enCronograma;
+          const cronogramaOn =
+            mesaParticipativa && !isSupervisor && submitted.enCronograma;
           const finalFlags = {
             enCronograma: cronogramaOn,
             // Invariante: asistencia ⊆ cronograma.
@@ -356,7 +376,12 @@ if (Astro.request.method === "POST") {
           } else {
             // Self-heal: usuarios sin fila agents se crean en el mismo submit.
             tx.insert(agents)
-              .values({ name: newName, username: newUsername, userId, ...finalFlags })
+              .values({
+                name: newName,
+                username: newUsername,
+                userId,
+                ...finalFlags,
+              })
               .run();
           }
 
@@ -378,12 +403,18 @@ if (Astro.request.method === "POST") {
           } else if (agentRow.name !== newName) {
             changes.push(`nombre visible "${agentRow.name}" → "${newName}"`);
           }
-          const changedFlags = (Object.keys(FLAG_LABELS) as (keyof typeof FLAG_LABELS)[])
-            .filter((flag) => (agentRow ? agentRow[flag] : false) !== finalFlags[flag]);
+          const changedFlags = (
+            Object.keys(FLAG_LABELS) as (keyof typeof FLAG_LABELS)[]
+          ).filter(
+            (flag) => (agentRow ? agentRow[flag] : false) !== finalFlags[flag],
+          );
           if (changedFlags.length > 0) {
             changes.push(
               `participaciones: ${changedFlags
-                .map((flag) => `${FLAG_LABELS[flag]}=${finalFlags[flag] ? "sí" : "no"}`)
+                .map(
+                  (flag) =>
+                    `${FLAG_LABELS[flag]}=${finalFlags[flag] ? "sí" : "no"}`,
+                )
                 .join(", ")}`,
             );
           }
@@ -423,7 +454,11 @@ if (Astro.request.method === "POST") {
       try {
         db.transaction((tx) => {
           const target = tx
-            .select({ username: users.username, role: users.role, active: users.active })
+            .select({
+              username: users.username,
+              role: users.role,
+              active: users.active,
+            })
             .from(users)
             .where(eq(users.id, userId))
             .get();
@@ -444,7 +479,13 @@ if (Astro.request.method === "POST") {
             const otherAdmins = tx
               .select({ id: users.id })
               .from(users)
-              .where(and(eq(users.role, "admin"), eq(users.active, true), sql`${users.id} <> ${userId}`))
+              .where(
+                and(
+                  eq(users.role, "admin"),
+                  eq(users.active, true),
+                  sql`${users.id} <> ${userId}`,
+                ),
+              )
               .all();
             if (otherAdmins.length === 0) {
               errorMsg = "No podés desactivar al último administrador activo.";
@@ -466,7 +507,7 @@ if (Astro.request.method === "POST") {
 
         if (!errorMsg) {
           successMsg = "Usuario desactivado con éxito.";
-          await logAdminFromAstro(Astro.locals, audit!);
+          if (audit) await logAdminFromAstro(Astro.locals, audit);
         }
       } catch (e) {
         console.error("[usuarios] Error al desactivar usuario:", e);
