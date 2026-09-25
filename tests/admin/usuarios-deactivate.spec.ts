@@ -150,4 +150,66 @@ test.describe("Baja de usuarios (soft-delete)", () => {
     await db.delete(sessions).where(eq(sessions.id, sessionId));
     await db.delete(users).where(eq(users.id, inactive.id));
   });
+
+  test("login de usuario inactivo es rechazado", async ({ page }) => {
+    const ts = Date.now();
+    const username = `inactive_login_${ts}`;
+    const password = "Test1234!";
+    const bcrypt = await import("bcryptjs");
+    const [u] = await db
+      .insert(users)
+      .values({
+        username,
+        password: await bcrypt.hash(password, 10),
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+
+    await page.goto("/login");
+    await page.fill("#login-username", username);
+    await page.fill("#login-password", password);
+    await page.click("button[type=submit]");
+    // El login válido redirige a cleanBase; el inactivo debe quedar en /login
+    // con el toast de cuenta desactivada.
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.getByText("Tu cuenta fue desactivada")).toBeVisible();
+
+    const cookies = await page.context().cookies();
+    expect(cookies.find((c) => c.name === "session_id")).toBeUndefined();
+
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
+  test("login de usuario inactivo no crea sesión", async ({ page }) => {
+    const ts = Date.now();
+    const username = `inactive_noSess_${ts}`;
+    const password = "Test1234!";
+    const bcrypt = await import("bcryptjs");
+    const [u] = await db
+      .insert(users)
+      .values({
+        username,
+        password: await bcrypt.hash(password, 10),
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+
+    const response = await page.request.post("/login", {
+      form: { username, password },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBeGreaterThanOrEqual(300);
+    expect(response.status()).toBeLessThan(400);
+
+    const rows = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.userId, u.id));
+    expect(rows).toHaveLength(0);
+
+    await db.delete(sessions).where(eq(sessions.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
 });
