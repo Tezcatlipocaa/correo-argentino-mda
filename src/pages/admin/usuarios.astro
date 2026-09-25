@@ -548,9 +548,9 @@ if (Astro.request.method === "POST") {
           audit = `Reactivó al usuario "${target.username}"`;
         });
 
-        if (!errorMsg && audit) {
+        if (!errorMsg) {
           successMsg = "Usuario reactivado con éxito.";
-          await logAdminFromAstro(Astro.locals, audit);
+          if (audit) await logAdminFromAstro(Astro.locals, audit);
         }
       } catch (e) {
         console.error("[usuarios] Error al reactivar usuario:", e);
