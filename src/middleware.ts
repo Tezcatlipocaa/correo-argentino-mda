@@ -10,7 +10,10 @@ import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
-import { isFingerprintValid, computeFingerprint } from "./lib/sessionFingerprint";
+import {
+  isFingerprintValid,
+  computeFingerprint,
+} from "./lib/sessionFingerprint";
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -177,6 +180,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
             role: users.role,
             helpdeskId: users.helpdeskId,
             helpdeskName: users.helpdeskName,
+            active: users.active,
             mesaActive: mesas.active,
             mesaName: mesas.name,
           })
@@ -184,7 +188,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
           .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
           .where(eq(users.id, session.userId));
 
-        if (dbUser) {
+        if (dbUser && !dbUser.active) {
+          // Cuenta desactivada por un admin: se invalida la sesión y se expulsa.
+          deleteSessionCookie(cookies);
+          await db.delete(sessions).where(eq(sessions.id, sessionId));
+          if (relativePath !== "/login") {
+            return redirect(
+              resolveUrl(
+                `/login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
+              ),
+            );
+          }
+        } else if (dbUser) {
           // Fail-closed: mesa desactivada, borrada o desconocida = usuario
           // tratado como "sin mesa" (solo paginas comunes visibles) hasta que
           // un admin le reasigne una mesa activa. resolveSessionMesa aplica
@@ -291,7 +306,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return redirect(resolveUrl("/login"));
   }
 
-  const sectionVisible = isSectionVisibleSync(currentUser.helpdeskName, role, checkPath);
+  const sectionVisible = isSectionVisibleSync(
+    currentUser.helpdeskName,
+    role,
+    checkPath,
+  );
   if (!sectionVisible) {
     if (relativePath.startsWith("/api/")) {
       return jsonError("Acceso no autorizado", 401);
