@@ -21,7 +21,7 @@ administración — excepto sobre sí mismo.
 | Protección último admin | **Impedir desactivar al último admin activo**. |
 | Confirmación | **Modal de confirmación** con nombre + rol + username del afectado. |
 | Quién reactiva | **Solo admin**. |
-| Efecto en dominio | **Solo auth + visibilidad**; no toca `agents` (participaciones/guardias quedan intactas). |
+| Efecto en dominio | **Solo auth + visibilidad**: la única escritura de dominio es `users.{active,disabledAt,disabledBy}` (+ borrado de la fila `sessions` al expulsar). No toca `agents`, ni cronograma, ni guardias, ni asignaciones históricas, ni asistencia, ni calidad (ver §8 Invariante de datos). |
 | UX de baja | **Botón en la tabla** + filtro **Inactivos** con botón Reactivar. |
 | Expulsión de sesión | **Validar `active` en middleware**, expulsar en el próximo request. |
 | Auditoría | **`logAdminFromAstro()`** + registrar `disabledAt` / `disabledBy`. |
@@ -151,7 +151,32 @@ impedir auto-edición (`u.id === currentUserId`, ~líneas 407-420).
   afectado, acción, timestamp), con la misma forma que los audits existentes.
 - `disabledAt` y `disabledBy` persistidos en la fila `users`.
 
-### 8. Tests (E2E — Playwright, único mecanismo)
+### 8. Invariante de datos (baja y reactivación)
+
+Única mutación de dominio permitida por una baja o reactivación:
+`users.active`, `users.disabledAt`, `users.disabledBy`. Como efecto de auth se
+borra la fila de `sessions` del usuario desactivado al expulsarlo (middleware).
+**Ninguna otra tabla ni fila se modifica**:
+
+- `agents`: participaciones (`enCronograma`, `enAsistencia`, `asignableCubic`,
+  `incluidoCalidad`, `asignableAgs`), horarios, ubicación, notas — intactas.
+- `schedules` (cronograma) — intacto.
+- `agent_saturday_groups`, `saturday_rotation_config` — intactas.
+- `weekend_overtime_config`, `weekend_overtime_shifts` (guardias) — intactas.
+- `cubic_assignments` (asignaciones) — intactas.
+- `operator_attendance` (asistencia) — intacta.
+- `quality_audits` (calidad) — intactas.
+- `deleted_records` (papelera) — no se crea snapshot de baja.
+
+Excepciones explícitas: `audit_logs` (se registra el evento de baja/reactivación)
+y `sessions` (borrado de la sesión del usuario desactivado).
+
+El historial es la razón de ser del soft-delete: si el usuario fue operador, sus
+horarios, guardias y asignaciones pasadas siguen existiendo y consultándose.
+La baja solo cambia su capacidad de autenticarse y su visibilidad en listas
+activas de asignación (los inactivos no se ofrecen para asignaciones nuevas).
+
+### 9. Tests (E2E — Playwright, único mecanismo)
 
 - **Happy path**: admin da de baja → el user desaparece de la tabla activa →
   aparece en Inactivos → su login falla → admin reactiva → reaparece en activos
@@ -165,7 +190,8 @@ Artefacto: HTML report + traces de Playwright.
 
 ## Fuera de alcance
 
-- Tocar `agents` (participaciones, guardias, asignaciones históricas).
+- Tocar `agents`, cronograma, guardias, asistencia, calidad, asignaciones
+  históricas ni papelera (ver §8 Invariante de datos).
 - Hard-delete / borrado real de filas.
 - Invalidación inmediata de sesiones abiertas en otros dispositivos (sin store
   de sesiones).

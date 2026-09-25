@@ -22,6 +22,50 @@
 - Los flags de participación (`enCronograma`, `asignableCubic`, `incluidoCalidad`, `asignableAgs`) viven en `agents`.
 - Tests: `npx playwright test <archivo>` (workers=1, serial). Helpers en `tests/helpers/auth.ts`.
 
+### Invariante de datos (NO romper)
+
+Una baja o reactivación **solo** escribe `users.active`, `users.disabledAt` y
+`users.disabledBy` (+ borra la fila `sessions` del desactivado al expulsarlo, y
+registra `audit_logs`). Ninguna otra tabla se toca:
+
+- `agents` — participaciones (`enCronograma`, `enAsistencia`, `asignableCubic`,
+  `incluidoCalidad`, `asignableAgs`), horarios, ubicación, notas: intactas.
+  No se pone `enCronograma=false` ni ningún flag al desactivar.
+- `schedules` (cronograma) — intacto; no se borran ni editan horarios.
+- `agent_saturday_groups`, `saturday_rotation_config` — intactas.
+- `weekend_overtime_config`, `weekend_overtime_shifts` (guardias) — intactas.
+- `cubic_assignments`, `operator_attendance`, `quality_audits` — intactas.
+- `deleted_records` — no se crea snapshot.
+
+El historial (guardias, asignaciones, cronograma, asistencia, calidad) sigue
+existiendo y consultándose. La baja solo cambia auth y visibilidad en listas
+activas de asignación. Si un step de este plan contradice este invariante, el
+plan está mal: no ejecutarlo y avisar.
+
+### Compatibilidad con master (verificado 2026-09-25)
+
+La rama `feat/user-deactivation` está **7 commits atrás de `master`**
+(merge-base `11040c2`). **Rebasar sobre `master` antes de ejecutar.** Cambios de
+master que afectan este plan:
+
+- `agents.enAsistencia` (nueva columna, default `false`, flag de participación;
+  invariante `enAsistencia ⊆ enCronograma`). **Task 7 Step 1 debe conservar
+  `enAsistencia: agents.enAsistencia` en la query `allUsers`** — el snippet del
+  plan ya lo incluye. `db:push` del Task 1 convive con la columna nueva.
+- Anclas de línea actualizadas a master (`5c5d245`):
+  - `src/pages/admin/usuarios.astro`: insertar `deactivate-user`/`reactivate-user`
+    antes de `} else if (action === "reset-password") {` — ahora **línea 409**
+    (el plan dice 395; usar el patrón, no el número).
+  - `src/components/admin/users/AdminUsersContent.astro` (1157 líneas en master):
+    query `allUsers` **34-53**; `allUsers.map` **233**; `ActionPasswordButton`
+    **438**; `<Modal id="modal-reset-${u.id}">` **630**. El plan cita 30-52 /
+    225 / 392-429; los offsets cambiaron por el flag `enAsistencia`.
+- Sin cambios en master (compatibles tal cual): `src/middleware.ts`,
+  `src/pages/login/index.astro`, `CalidadContent.astro` (`.where` en línea 68),
+  `AdminCubicsContent.astro`, `AsignacionContent.astro`, `guardia-pasiva.ts`.
+- `PATCH /api/usuarios/[dni]`, inventario público y `UserCard.astro` no
+  intersectan con este feature.
+
 ---
 
 ## File Structure
@@ -135,7 +179,7 @@ git commit -m "feat(lib): helpers de visibilidad de usuarios/agentes activos"
 ## Task 3: Acción `deactivate-user` (server)
 
 **Files:**
-- Modify: `src/pages/admin/usuarios.astro` (bloque POST; insertar antes del `else if (action === "reset-password")` de la línea 395)
+- Modify: `src/pages/admin/usuarios.astro` (bloque POST; insertar antes del `else if (action === "reset-password")`, línea 409 en master — usar el patrón, no el número)
 - Test: `tests/admin/usuarios-deactivate.spec.ts` (parcial, se completa en Task 8)
 
 - [ ] **Step 1: Escribir el test que falla (server: no self-baja)**
@@ -642,7 +686,7 @@ git commit -m "feat(auth): rechazar login de usuarios inactivos"
 
 - [ ] **Step 1: Agregar `active` a la query principal y separar activos/inactivos**
 
-Modificar la query `allUsers` (líneas 30-52) para traer `active`, `disabledAt`, `disabledBy`:
+Modificar la query `allUsers` (líneas 34-53 en master) para traer `active`, `disabledAt`, `disabledBy`:
 
 ```typescript
 const allUsers = await db
@@ -658,6 +702,8 @@ const allUsers = await db
     mesaName: mesas.name,
     agentName: agents.name,
     enCronograma: agents.enCronograma,
+    // Master ya trae este flag: NO quitarlo (regresión del modal de edición).
+    enAsistencia: agents.enAsistencia,
     asignableCubic: agents.asignableCubic,
     incluidoCalidad: agents.incluidoCalidad,
     asignableAgs: agents.asignableAgs,
@@ -673,11 +719,11 @@ const activeUsers = allUsers.filter((u) => u.active);
 const inactiveUsers = allUsers.filter((u) => !u.active);
 ```
 
-Cambiar la referencia de render de `allUsers.map(...)` (línea 225) por `activeUsers.map(...)` y el badge/contador `allUsers.length` (líneas 157-161) y el empty state (línea 205) por `activeUsers`.
+Cambiar la referencia de render de `allUsers.map(...)` (línea 233 en master) por `activeUsers.map(...)` y el badge/contador `allUsers.length` y el empty state por `activeUsers`.
 
 - [ ] **Step 2: Agregar el botón Desactivar a la fila activa**
 
-En el bloque de acciones (líneas 392-429), después de `<ActionPasswordButton ... />`, agregar:
+En el bloque de acciones (~líneas 425-455 en master), después de `<ActionPasswordButton ... />`, agregar:
 
 ```astro
                     <ActionButton
@@ -1007,7 +1053,7 @@ git commit -m "test(admin): negativos de rol para baja de usuarios"
 - Proteger último admin → Task 3.
 - Modal de confirmación → Task 7.
 - Solo admin reactiva → Tasks 3/4 + 9.
-- Solo auth+visibilidad, no tocar agents → todo el plan respeta `agents` intacto.
+- Invariante de datos → cubierto en "Invariante de datos (NO romper)": solo `users.active/disabledAt/disabledBy` + `sessions` del expulsado + `audit_logs`; `agents`, cronograma, guardias, asignaciones, asistencia, calidad y papelera intactos.
 - Botón en tabla → Task 7.
 - Expulsión vía middleware → Task 5.
 - Login rechazado → Task 6.
