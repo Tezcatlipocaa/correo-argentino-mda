@@ -38,6 +38,9 @@ const allUsers = await db
     role: users.role,
     helpdeskName: users.helpdeskName,
     helpdeskId: users.helpdeskId,
+    active: users.active,
+    disabledAt: users.disabledAt,
+    disabledBy: users.disabledBy,
     // Nombre canonico via join: users.helpdeskName puede quedar stale cuando
     // mesaSync renombra una mesa. Se usa para el gating de participaciones;
     // el badge/banner siguen mostrando el denormalizado (informativo).
@@ -55,6 +58,9 @@ const allUsers = await db
     sql`lower(coalesce(${agents.username}, '')) = ${users.username}`,
   )
   .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId));
+
+const activeUsers = allUsers.filter((u) => u.active);
+const inactiveUsers = allUsers.filter((u) => !u.active);
 
 const usersConMesaInactiva = await db
   .select({ username: users.username, mesaName: mesas.name })
@@ -163,9 +169,9 @@ const isSupervisorRole = (role: string): boolean =>
             Usuarios registrados
           </h2>
           {
-            allUsers.length > 0 && (
+            activeUsers.length > 0 && (
               <span class="badge badge-neutral badge-sm font-mono">
-                {allUsers.length}
+                {activeUsers.length}
               </span>
             )
           }
@@ -210,7 +216,7 @@ const isSupervisorRole = (role: string): boolean =>
           </div>
 
           {
-            allUsers.length === 0 ? (
+            activeUsers.length === 0 ? (
               <div class="text-base-content/50 flex flex-col items-center gap-3 py-16">
                 <div class="bg-base-200 rounded-full p-4">
                   <Icon
@@ -230,7 +236,7 @@ const isSupervisorRole = (role: string): boolean =>
                 </div>
               </div>
             ) : (
-              allUsers.map((u) => (
+              activeUsers.map((u) => (
                 <article
                   data-table-row
                   data-sort-username={u.username}
@@ -447,6 +453,17 @@ const isSupervisorRole = (role: string): boolean =>
                       }
                       onclick={`document.getElementById('modal-reset-${u.id}').showModal()`}
                       ariaLabel={`Blanquear contraseña de ${u.username}`}
+                    />
+
+                    <ActionButton
+                      id={`deactivate-user-${u.id}`}
+                      icon="boxicons:user-minus"
+                      label="Desactivar"
+                      size="sm"
+                      color="btn-error"
+                      title="Desactivar este usuario"
+                      ariaLabel={`Desactivar usuario ${u.username}`}
+                      onclick={`document.getElementById('modal-deactivate-${u.id}').showModal()`}
                     />
                   </div>
 
@@ -674,6 +691,40 @@ const isSupervisorRole = (role: string): boolean =>
                       </form>
                     </Fragment>
                   </Modal>
+
+                  <Modal id={`modal-deactivate-${u.id}`}>
+                    <Fragment slot="content">
+                      <h3 class="text-base-content mb-1 text-base font-semibold">
+                        Desactivar usuario
+                      </h3>
+                      <p class="text-base-content/70 mb-4 text-sm">
+                        ¿Confirmás la baja de{" "}
+                        <span class="font-mono font-semibold">
+                          {u.username}
+                        </span>{" "}
+                        ({u.agentName || "sin nombre"}, rol {u.role})? No podrá
+                        iniciar sesión. Podés reactivarlo luego desde la pestaña
+                        Inactivos.
+                      </p>
+                      <form
+                        method="POST"
+                        class="flex justify-end gap-2"
+                        data-async-form
+                      >
+                        <input
+                          type="hidden"
+                          name="action"
+                          value="deactivate-user"
+                        />
+                        <input type="hidden" name="userId" value={u.id} />
+                        <ActionCancelButton />
+                        <ActionConfirmButton
+                          label="Desactivar"
+                          color="btn-error"
+                        />
+                      </form>
+                    </Fragment>
+                  </Modal>
                 </article>
               ))
             )
@@ -681,6 +732,51 @@ const isSupervisorRole = (role: string): boolean =>
         </DataTable>
       </div>
     </section>
+
+    {
+      inactiveUsers.length > 0 && (
+        <section aria-labelledby="tabla-inactivos" class="mt-10">
+          <div class="flex items-center gap-4">
+            <h2
+              id="tabla-inactivos"
+              class="text-base-content text-lg font-semibold"
+            >
+              Usuarios inactivos
+            </h2>
+            <span class="badge badge-neutral badge-sm font-mono">
+              {inactiveUsers.length}
+            </span>
+          </div>
+          <div class="mt-4 flex flex-col">
+            {inactiveUsers.map((u) => (
+              <div
+                class="border-base-300 flex items-center justify-between gap-4 border-b px-5 py-4 opacity-60 last:border-b-0"
+                data-inactive-user-row
+              >
+                <div class="flex min-w-0 items-center gap-4">
+                  <span class="text-base-content truncate font-mono text-sm font-medium">
+                    {u.username}
+                  </span>
+                  <span class="text-base-content/70 truncate text-sm">
+                    {u.agentName || "—"}
+                  </span>
+                  <span class="text-base-content/50 text-xs">
+                    {u.disabledAt
+                      ? `Desactivado el ${u.disabledAt.toLocaleDateString("es-AR")}`
+                      : "Desactivado"}
+                  </span>
+                </div>
+                <form method="POST" data-async-form>
+                  <input type="hidden" name="action" value="reactivate-user" />
+                  <input type="hidden" name="userId" value={u.id} />
+                  <ActionConfirmButton label="Reactivar" color="btn-success" />
+                </form>
+              </div>
+            ))}
+          </div>
+        </section>
+      )
+    }
   </div>
 </PageContainer>
 
