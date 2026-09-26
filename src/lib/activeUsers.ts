@@ -3,8 +3,10 @@ import { users } from "@db/schema";
 
 /**
  * Condición SQL para filtrar agentes operativos: excluye agentes cuyo usuario
- * de portal está inactivo. Los agentes sin usuario vinculado (userId NULL) o
- * sin match de username NO se excluyen (perfil puro de operador).
+ * de portal está inactivo. El match es por `agents.userId` (LEFT JOIN `users`
+ * ON `users.id = agents.userId`). Un agente con `userId` NULL (sin usuario
+ * vinculado) produce `users.active IS NULL` en el LEFT JOIN y se trata como
+ * activo (se preserva); no se matchea por username.
  *
  * Pensado para queries sobre `agents` con LEFT JOIN a `users`:
  *   db.select(...).from(agents).leftJoin(users, sql`...`)

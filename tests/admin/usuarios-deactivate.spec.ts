@@ -68,6 +68,62 @@ test.describe("Baja de usuarios (soft-delete)", () => {
     expect(row.active).toBe(true);
   });
 
+  test("un admin puede desactivar a otro admin", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const [secondAdmin] = await db
+      .insert(users)
+      .values({
+        username: `admin_deact_target_${ts}`,
+        password: "x",
+        role: "admin",
+        active: true,
+      })
+      .returning({ id: users.id });
+
+    try {
+      const response = await page.request.post("/admin/usuarios", {
+        headers: { Accept: "application/json" },
+        form: {
+          action: "deactivate-user",
+          userId: String(secondAdmin.id),
+        },
+      });
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+
+      const [row] = await db
+        .select({
+          active: users.active,
+          disabledAt: users.disabledAt,
+          disabledBy: users.disabledBy,
+        })
+        .from(users)
+        .where(eq(users.id, secondAdmin.id));
+      expect(row.active).toBe(false);
+      expect(row.disabledAt).not.toBeNull();
+      expect(row.disabledBy).toBe(adminId);
+
+      const [actor] = await db
+        .select({ active: users.active })
+        .from(users)
+        .where(eq(users.id, adminId));
+      expect(actor.active).toBe(true);
+    } finally {
+      await db.delete(sessions).where(eq(sessions.userId, secondAdmin.id));
+      await db.delete(users).where(eq(users.id, secondAdmin.id));
+    }
+  });
+
   test("reactiva un usuario desactivado", async ({ page }) => {
     const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
     await page.context().addCookies([

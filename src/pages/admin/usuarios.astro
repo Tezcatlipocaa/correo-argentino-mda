@@ -475,13 +475,14 @@ if (Astro.request.method === "POST") {
 
           // Proteger al último admin activo: sin admins nadie puede reactivar
           // ni crear usuarios.
+          // Defensa en profundidad: en el flujo HTTP normal el actor siempre es admin activo y la auto-baja se bloquea antes; no es la protección primaria.
           if (normalizeRole(target.role) === "admin") {
             const otherAdmins = tx
               .select({ id: users.id })
               .from(users)
               .where(
                 and(
-                  eq(users.role, "admin"),
+                  sql`lower(trim(${users.role})) = 'admin'`,
                   eq(users.active, true),
                   sql`${users.id} <> ${userId}`,
                 ),
