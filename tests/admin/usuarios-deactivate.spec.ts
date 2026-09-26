@@ -5,6 +5,7 @@ import { db } from "../../src/db/index";
 import { users, sessions } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 import { createHmac } from "crypto";
+import bcrypt from "bcryptjs";
 
 const SECRET_KEY =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
@@ -155,7 +156,6 @@ test.describe("Baja de usuarios (soft-delete)", () => {
     const ts = Date.now();
     const username = `inactive_login_${ts}`;
     const password = "Test1234!";
-    const bcrypt = await import("bcryptjs");
     const [u] = await db
       .insert(users)
       .values({
@@ -166,18 +166,24 @@ test.describe("Baja de usuarios (soft-delete)", () => {
       })
       .returning({ id: users.id });
 
-    await page.goto("/login");
-    await page.fill("#login-username", username);
-    await page.fill("#login-password", password);
-    await page.click("button[type=submit]");
-    // El login válido redirige a cleanBase; el inactivo debe quedar en /login
-    // con el toast de cuenta desactivada.
-    await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByText("Tu cuenta fue desactivada")).toBeVisible();
+    // Sin seguir el redirect: la aserción debe ser del contrato del login,
+    // no del middleware que expulsa la sesión al seguir el redirect.
+    const response = await page.context().request.post("/login", {
+      form: { username, password },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(302);
+    const location = response.headers()["location"] || "";
+    expect(location).toContain("toast_type=warning");
+    expect(location).toContain(encodeURIComponent("Tu cuenta fue desactivada"));
 
-    const cookies = await page.context().cookies();
-    expect(cookies.find((c) => c.name === "session_id")).toBeUndefined();
+    const rows = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.userId, u.id));
+    expect(rows).toHaveLength(0);
 
+    await db.delete(sessions).where(eq(sessions.userId, u.id));
     await db.delete(users).where(eq(users.id, u.id));
   });
 
@@ -185,7 +191,6 @@ test.describe("Baja de usuarios (soft-delete)", () => {
     const ts = Date.now();
     const username = `inactive_noSess_${ts}`;
     const password = "Test1234!";
-    const bcrypt = await import("bcryptjs");
     const [u] = await db
       .insert(users)
       .values({
@@ -200,14 +205,43 @@ test.describe("Baja de usuarios (soft-delete)", () => {
       form: { username, password },
       maxRedirects: 0,
     });
-    expect(response.status()).toBeGreaterThanOrEqual(300);
-    expect(response.status()).toBeLessThan(400);
+    expect(response.status()).toBe(302);
 
     const rows = await db
       .select({ id: sessions.id })
       .from(sessions)
       .where(eq(sessions.userId, u.id));
     expect(rows).toHaveLength(0);
+
+    await db.delete(sessions).where(eq(sessions.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
+  test("usuario inactivo con contraseña incorrecta recibe mensaje genérico", async ({
+    page,
+  }) => {
+    const ts = Date.now();
+    const username = `inactive_wrongpass_${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username,
+        password: await bcrypt.hash("CorrectPassword1!", 10),
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+
+    const response = await page.request.post("/login", {
+      form: { username, password: "WrongPassword1!" },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(302);
+    const location = response.headers()["location"] || "";
+    expect(location).toContain(encodeURIComponent("Credenciales inválidas"));
+    expect(location).not.toContain(
+      encodeURIComponent("Tu cuenta fue desactivada"),
+    );
 
     await db.delete(sessions).where(eq(sessions.userId, u.id));
     await db.delete(users).where(eq(users.id, u.id));
