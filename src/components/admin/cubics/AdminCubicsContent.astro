@@ -1,9 +1,8 @@
 ---
 import { getCleanBase } from "@lib/baseUrl";
 import { db } from "@db/index";
-import { cubics, agents, users, operatorAttendance } from "@db/schema";
+import { cubics, agents, operatorAttendance } from "@db/schema";
 import { asc, and, eq } from "drizzle-orm";
-import { activeAgentCondition } from "@lib/activeUsers";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
@@ -44,9 +43,7 @@ const allAgents = await db
       eq(operatorAttendance.agentId, agents.id),
       eq(operatorAttendance.date, todayStr),
     ),
-  )
-  .leftJoin(users, eq(users.id, agents.userId))
-  .where(activeAgentCondition());
+  );
 
 const agentShiftMap = new Map<number, "Diurno" | "Nocturno">();
 for (const agent of allAgents) {

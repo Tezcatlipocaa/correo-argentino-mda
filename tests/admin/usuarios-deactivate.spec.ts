@@ -335,11 +335,34 @@ test.describe("Baja de usuarios (soft-delete)", () => {
       })
       .returning({ id: agents.id });
 
+    const activeUname = `cal_active_${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: activeUname,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: `active-${ts}`,
+        username: activeUname,
+        userId: activeU.id,
+        incluidoCalidad: true,
+      })
+      .returning({ id: agents.id });
+
     try {
       await page.goto("/supervision/calidad-operadores");
+      await expect(page.locator(`text=active-${ts}`)).toHaveCount(1);
       await expect(page.locator(`text=inactive-${ts}`)).toHaveCount(0);
     } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
       await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
       await db.delete(users).where(eq(users.id, u.id));
     }
   });
