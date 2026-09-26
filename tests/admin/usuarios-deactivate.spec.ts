@@ -266,18 +266,44 @@ test.describe("Baja de usuarios (soft-delete)", () => {
       .values({ username, password: "x", role: "agent" })
       .returning({ id: users.id });
 
-    await page.goto("/admin/usuarios");
-    await page.click(`#deactivate-user-${target.id}`);
-    await page
-      .locator(`#modal-deactivate-${target.id} button[type=submit]`)
-      .click();
-    await page.waitForLoadState("networkidle");
+    try {
+      await page.goto("/admin/usuarios");
+      await expect(
+        page.locator(
+          `#usuarios-table [data-table-row][data-sort-username="${username}"]`,
+        ),
+      ).toHaveCount(1);
 
-    await expect(page.locator(`text=${username}`).first()).toBeVisible();
-    await expect(
-      page.locator("[data-inactive-user-row]").first(),
-    ).toBeVisible();
+      await page.click(`#deactivate-user-${target.id}`);
+      await page
+        .locator(`#modal-deactivate-${target.id} button[type=submit]`)
+        .click();
 
-    await db.delete(users).where(eq(users.id, target.id));
+      // El POST async responde con redirectUrl; el cliente navega ~500ms
+      // después con los params de toast. Esperamos esa navegación de forma
+      // determinística para no asertar contra DOM stale.
+      await page.waitForURL(
+        (url) =>
+          url.pathname === "/admin/usuarios" &&
+          url.searchParams.get("toast_type") === "success",
+      );
+
+      await expect(
+        page.locator(
+          `#usuarios-table [data-table-row][data-sort-username="${username}"]`,
+        ),
+      ).toHaveCount(0);
+      await expect(
+        page.locator("[data-inactive-user-row]").filter({ hasText: username }),
+      ).toBeVisible();
+
+      const [row] = await db
+        .select({ active: users.active })
+        .from(users)
+        .where(eq(users.id, target.id));
+      expect(row.active).toBe(false);
+    } finally {
+      await db.delete(users).where(eq(users.id, target.id));
+    }
   });
 });

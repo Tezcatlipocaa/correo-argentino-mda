@@ -166,7 +166,7 @@ const isSupervisorRole = (role: string): boolean =>
             id="tabla-usuarios"
             class="text-base-content text-lg font-semibold"
           >
-            Usuarios registrados
+            Usuarios activos
           </h2>
           {
             activeUsers.length > 0 && (
@@ -228,10 +228,14 @@ const isSupervisorRole = (role: string): boolean =>
                 </div>
                 <div class="space-y-1 text-center">
                   <p class="text-sm font-semibold">
-                    No hay usuarios registrados
+                    {inactiveUsers.length > 0
+                      ? "No hay usuarios activos"
+                      : "No hay usuarios registrados"}
                   </p>
                   <p class="text-xs">
-                    Creá el primer usuario desde el formulario.
+                    {inactiveUsers.length > 0
+                      ? "Los únicos usuarios están inactivos. Reactivalos desde la lista de abajo o creá uno nuevo."
+                      : "Creá el primer usuario desde el formulario."}
                   </p>
                 </div>
               </div>
@@ -458,10 +462,17 @@ const isSupervisorRole = (role: string): boolean =>
                     <ActionButton
                       id={`deactivate-user-${u.id}`}
                       icon="boxicons:user-minus"
-                      label="Desactivar"
-                      size="sm"
+                      size="default"
                       color="btn-error"
-                      title="Desactivar este usuario"
+                      class={
+                        u.id === currentUserId ? "btn-disabled" : undefined
+                      }
+                      disabled={u.id === currentUserId}
+                      title={
+                        u.id === currentUserId
+                          ? "No podés desactivar tu propia cuenta"
+                          : "Desactivar este usuario"
+                      }
                       ariaLabel={`Desactivar usuario ${u.username}`}
                       onclick={`document.getElementById('modal-deactivate-${u.id}').showModal()`}
                     />
