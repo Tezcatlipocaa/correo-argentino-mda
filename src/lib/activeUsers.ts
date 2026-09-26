@@ -9,7 +9,7 @@ import { users } from "@db/schema";
  * activo (se preserva); no se matchea por username.
  *
  * Pensado para queries sobre `agents` con LEFT JOIN a `users`:
- *   db.select(...).from(agents).leftJoin(users, sql`...`)
+ *   db.select(...).from(agents).leftJoin(users, eq(users.id, agents.userId))
  */
 export const activeAgentCondition = (): SQL =>
   sql`(${users.active} IS NULL OR ${users.active} = 1)`;
@@ -18,10 +18,3 @@ export const activeAgentCondition = (): SQL =>
  * Condición SQL para queries sobre `users`: solo usuarios activos.
  */
 export const activeUserCondition = (): SQL => sql`${users.active} = 1`;
-
-/**
- * Excluye agentes vinculados a un usuario inactivo usando `agents.userId`.
- * Frase lista para pegar en un WHERE de queries sobre agents con join a users.
- */
-export const excludeInactiveAgents = (): SQL =>
-  sql`(${users.active} IS NULL OR ${users.active} = 1)`;

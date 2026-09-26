@@ -2,7 +2,13 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 import { db } from "../../src/db/index";
-import { users, sessions, agents } from "../../src/db/schema";
+import {
+  users,
+  sessions,
+  agents,
+  cubics,
+  cubicAssignments,
+} from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 import { createHmac } from "crypto";
 import bcrypt from "bcryptjs";
@@ -739,6 +745,131 @@ test.describe("Baja de usuarios (soft-delete)", () => {
       await db.delete(agents).where(eq(agents.id, a.id));
       await db.delete(users).where(eq(users.id, activeU.id));
       await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("el editor de cubics conserva a un agente asignado inactivo", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `cubic-assigned-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `cubic_assigned_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `cubic_assigned_inactive_${ts}`,
+        userId: u.id,
+        asignableCubic: true,
+      })
+      .returning({ id: agents.id });
+    const [cubic] = await db
+      .insert(cubics)
+      .values({ name: `cubic-assigned-${ts}` })
+      .returning({ id: cubics.id });
+    await db.insert(cubicAssignments).values({
+      cubicId: cubic.id,
+      agentId: a.id,
+      shift: "morning",
+    });
+
+    try {
+      await page.goto(`/inventario-terminales/cubics/edit/${cubic.id}`);
+      const select = page.locator(`#assign_agent_id-${a.id}`);
+      await expect(select).toHaveValue(String(a.id));
+      await expect(select.locator(`option[value="${a.id}"]`)).toHaveText(
+        inactiveName,
+      );
+    } finally {
+      await db
+        .delete(cubicAssignments)
+        .where(eq(cubicAssignments.cubicId, cubic.id));
+      await db.delete(cubics).where(eq(cubics.id, cubic.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("el editor de un cubic sin asignaciones renderiza normalmente", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const [cubic] = await db
+      .insert(cubics)
+      .values({ name: `cubic-empty-${ts}` })
+      .returning({ id: cubics.id });
+
+    try {
+      const response = await page.goto(
+        `/inventario-terminales/cubics/edit/${cubic.id}`,
+      );
+      expect(response?.status()).toBe(200);
+      await expect(page.locator("#no-assignments-msg")).toHaveText(
+        "Sin operadores asignados.",
+      );
+    } finally {
+      await db.delete(cubics).where(eq(cubics.id, cubic.id));
+    }
+  });
+
+  test("un agente sin usuario vinculado sigue visible en el selector de cubics", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const orphanName = `cubic-orphan-${ts}`;
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: orphanName,
+        asignableCubic: true,
+        userId: null,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get(
+        "/inventario-terminales/cubics/create",
+      );
+      expect(response.status()).toBe(200);
+      const html = await response.text();
+      expect(html).toContain(orphanName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, a.id));
     }
   });
 });
