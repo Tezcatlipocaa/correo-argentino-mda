@@ -88,9 +88,9 @@ const helpdeskOptions = await db
   )
   .orderBy(mesas.name);
 
-const headerGridClass = "grid-cols-[1fr_180px_104px_170px_180px_88px] gap-4";
+const headerGridClass = "grid-cols-[1fr_180px_104px_170px_180px_176px] gap-4";
 const rowGridClass =
-  "grid grid-cols-[1fr_180px_104px_170px_180px_88px] items-center gap-4";
+  "grid grid-cols-[1fr_180px_104px_170px_180px_176px] items-center gap-4";
 
 // Normaliza variantes legacy ("Supervisor ", "Team Leader") en la UI; el
 // enforcement real vive server-side (normalizeRole en usuarios.astro).
@@ -186,7 +186,7 @@ const isSupervisorRole = (role: string): boolean =>
         <DataTable
           id="usuarios-table"
           ariaLabel="Listado de usuarios registrados"
-          minWidthClass="min-w-250"
+          minWidthClass="min-w-275"
           headerGridClass={headerGridClass}
           rowGridClass={rowGridClass}
           emptyStateTitle="Sin usuarios que coincidan"
@@ -461,7 +461,7 @@ const isSupervisorRole = (role: string): boolean =>
 
                     <ActionButton
                       id={`deactivate-user-${u.id}`}
-                      icon="boxicons:user-minus"
+                      icon="boxicons:user-minus-filled"
                       size="default"
                       color="btn-error"
                       class={
@@ -728,7 +728,7 @@ const isSupervisorRole = (role: string): boolean =>
                           value="deactivate-user"
                         />
                         <input type="hidden" name="userId" value={u.id} />
-                        <ActionCancelButton />
+                        <ActionCancelButton onclick="this.closest('dialog').close()" />
                         <ActionConfirmButton
                           label="Desactivar"
                           color="btn-error"
@@ -780,7 +780,11 @@ const isSupervisorRole = (role: string): boolean =>
                 <form method="POST" data-async-form>
                   <input type="hidden" name="action" value="reactivate-user" />
                   <input type="hidden" name="userId" value={u.id} />
-                  <ActionConfirmButton label="Reactivar" color="btn-success" />
+                  <ActionConfirmButton
+                    label="Reactivar"
+                    color="btn-success"
+                    icon="boxicons:user-plus-filled"
+                  />
                 </form>
               </div>
             ))}
