@@ -6,8 +6,10 @@ import {
   saturdayRotationConfig,
   agentSaturdayGroups,
   weekendOvertimeShifts,
+  users,
 } from "@db/schema";
 import { and, eq, gte, lte, inArray, sql, lt, desc } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 
 // Helper to generate dates in range (inclusive, max 31 days)
 export function getDatesInRange(startStr: string, endStr: string): string[] {
@@ -93,7 +95,8 @@ export async function getAttendanceData(startDate: string, endDate: string) {
       saturdayHorario: agents.saturdayHorario,
     })
     .from(agents)
-    .where(eq(agents.enAsistencia, true));
+    .leftJoin(users, eq(users.id, agents.userId))
+    .where(and(eq(agents.enAsistencia, true), activeAgentCondition()));
 
   // 2. Fetch schedules for this date range
   const dbSchedules = await db

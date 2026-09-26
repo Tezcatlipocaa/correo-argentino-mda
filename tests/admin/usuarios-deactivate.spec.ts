@@ -437,6 +437,44 @@ test.describe("Baja de usuarios (soft-delete)", () => {
     }
   });
 
+  test("el botón cancelar del modal de desactivación cierra sin desactivar", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const username = `ui_cancel_${ts}`;
+    const [target] = await db
+      .insert(users)
+      .values({ username, password: "x", role: "agent" })
+      .returning({ id: users.id });
+
+    try {
+      await page.goto("/admin/usuarios");
+      await page.click(`#deactivate-user-${target.id}`);
+      const dialog = page.locator(`#modal-deactivate-${target.id}`);
+      await expect(dialog).toBeVisible();
+
+      await dialog.getByRole("button", { name: "Cancelar" }).click();
+      await expect(dialog).toBeHidden();
+
+      const [row] = await db
+        .select({ active: users.active })
+        .from(users)
+        .where(eq(users.id, target.id));
+      expect(row.active).toBe(true);
+    } finally {
+      await db.delete(users).where(eq(users.id, target.id));
+    }
+  });
+
   test("un agente de usuario inactivo no aparece en el selector de calidad", async ({
     page,
   }) => {
@@ -489,6 +527,213 @@ test.describe("Baja de usuarios (soft-delete)", () => {
       await page.goto("/supervision/calidad-operadores");
       await expect(page.locator(`text=active-${ts}`)).toHaveCount(1);
       await expect(page.locator(`text=inactive-${ts}`)).toHaveCount(0);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("un agente inactivo no aparece en el roster de cronograma", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `cron-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `cron_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `cron_inactive_${ts}`,
+        userId: u.id,
+        enCronograma: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeName = `cron-active-${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: `cron_active_${ts}`,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: activeName,
+        username: `cron_active_${ts}`,
+        userId: activeU.id,
+        enCronograma: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get("/api/cronograma?month=2026-01");
+      expect(response.status()).toBe(200);
+      const body = await response.text();
+      expect(body).not.toContain(inactiveName);
+      expect(body).toContain(activeName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("un agente inactivo no aparece en el roster de asistencia", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `asis-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `asis_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `asis_inactive_${ts}`,
+        userId: u.id,
+        enCronograma: true,
+        enAsistencia: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeName = `asis-active-${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: `asis_active_${ts}`,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: activeName,
+        username: `asis_active_${ts}`,
+        userId: activeU.id,
+        enCronograma: true,
+        enAsistencia: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get(
+        "/api/asistencia?startDate=2026-01-05&endDate=2026-01-05",
+      );
+      expect(response.status()).toBe(200);
+      const body = await response.text();
+      expect(body).not.toContain(inactiveName);
+      expect(body).toContain(activeName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("el selector de cubics no ofrece agentes inactivos", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `cubic-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `cubic_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `cubic_inactive_${ts}`,
+        userId: u.id,
+        asignableCubic: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeName = `cubic-active-${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: `cubic_active_${ts}`,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: activeName,
+        username: `cubic_active_${ts}`,
+        userId: activeU.id,
+        asignableCubic: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get(
+        "/inventario-terminales/cubics/create",
+      );
+      expect(response.status()).toBe(200);
+      const html = await response.text();
+      expect(html).not.toContain(inactiveName);
+      expect(html).toContain(activeName);
     } finally {
       await db.delete(agents).where(eq(agents.id, activeA.id));
       await db.delete(agents).where(eq(agents.id, a.id));

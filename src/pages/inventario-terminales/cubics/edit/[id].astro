@@ -6,8 +6,10 @@ import {
   agents,
   cubicAssignments,
   operatorAttendance,
+  users,
 } from "@db/schema";
-import { eq, asc, and } from "drizzle-orm";
+import { eq, asc, and, or, inArray } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import { Icon } from "astro-icon/components";
@@ -191,6 +193,15 @@ const cubic = result as unknown as CubicRecord;
 
 const pageTitle = `Editar: ${cubic.name}`;
 
+const assignedIds = cubic.assignments.map((a) => a.agent.id);
+const cubicPoolCondition =
+  assignedIds.length > 0
+    ? or(
+        and(eq(agents.asignableCubic, true), activeAgentCondition()),
+        inArray(agents.id, assignedIds),
+      )
+    : and(eq(agents.asignableCubic, true), activeAgentCondition());
+
 const allAgents = await db
   .select({
     id: agents.id,
@@ -207,7 +218,8 @@ const allAgents = await db
       eq(operatorAttendance.date, todayStr),
     ),
   )
-  .where(eq(agents.asignableCubic, true))
+  .leftJoin(users, eq(users.id, agents.userId))
+  .where(cubicPoolCondition)
   .orderBy(asc(agents.name));
 
 const agentShiftMap = new Map<number, "Diurno" | "Nocturno">();

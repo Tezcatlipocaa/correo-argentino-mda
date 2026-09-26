@@ -8,8 +8,10 @@ import {
   weekendOvertimeShifts,
   agentSaturdayGroups,
   workLocations,
+  users,
 } from "@db/schema";
 import { eq, and, desc, lt, like, sql } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { jsonResponse } from "@lib/apiResponse";
 import { requireWriteAccess } from "@lib/rbac-middleware";
@@ -130,7 +132,8 @@ export const GET: APIRoute = async ({ url }) => {
         enCronograma: agents.enCronograma,
       })
       .from(agents)
-      .where(eq(agents.enCronograma, true));
+      .leftJoin(users, eq(users.id, agents.userId))
+      .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
 
     // 6. Cargar horas extras de fin de semana para este mes (Scope Overtime Configuration by Month)
     const dbOvertimeConfigs = await db
@@ -189,9 +192,7 @@ export const GET: APIRoute = async ({ url }) => {
     // 8. Combinar schedules sobre la base
     const merged = baseline.map((operator: any) => {
       // Vinculo exclusivo por id (Plan B2): schedules.agent_name ya no existe.
-      const opOverrides = dbSchedules.filter(
-        (s) => s.agentId === operator.id,
-      );
+      const opOverrides = dbSchedules.filter((s) => s.agentId === operator.id);
 
       const newAsistencia = { ...operator.asistencia };
       const newComentarios: Record<string, string> = {};
@@ -375,7 +376,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           esquema_break_inicio,
           esquema_break_fin,
         } = ws;
-        const agentIdNum = agentId != null && agentId !== "" ? Number(agentId) : undefined;
+        const agentIdNum =
+          agentId != null && agentId !== "" ? Number(agentId) : undefined;
         if (agentIdNum !== undefined && !Number.isInteger(agentIdNum)) {
           return jsonResponse({ error: "agentId inválido." }, 400);
         }
@@ -438,7 +440,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // exige callbacks sincronos y el return no saldria del handler).
     for (const edit of edits) {
       const rawEditAgentId = edit?.agentId;
-      const coerced = rawEditAgentId != null && rawEditAgentId !== "" ? Number(rawEditAgentId) : undefined;
+      const coerced =
+        rawEditAgentId != null && rawEditAgentId !== ""
+          ? Number(rawEditAgentId)
+          : undefined;
       if (coerced !== undefined && !Number.isInteger(coerced)) {
         return jsonResponse({ error: "agentId inválido." }, 400);
       }
@@ -459,7 +464,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           breakFin,
         } = edit;
         // agentId ya viene normalizado (pre-tx); la guarda usa nullish exacto.
-        const agentIdNum = agentId != null && agentId !== "" ? Number(agentId) : undefined;
+        const agentIdNum =
+          agentId != null && agentId !== "" ? Number(agentId) : undefined;
         if (!date) {
           skipped++;
           continue;
@@ -593,7 +599,8 @@ export const PUT: APIRoute = async ({ request, locals }) => {
           esquema_break_fin,
           locationId,
         } = ws;
-        const agentIdNum = agentId != null && agentId !== "" ? Number(agentId) : undefined;
+        const agentIdNum =
+          agentId != null && agentId !== "" ? Number(agentId) : undefined;
         if (agentIdNum !== undefined && !Number.isInteger(agentIdNum)) {
           return jsonResponse({ error: "agentId inválido." }, 400);
         }
@@ -612,7 +619,11 @@ export const PUT: APIRoute = async ({ request, locals }) => {
         if (esquema_break_fin !== undefined) {
           updateData.esquemaBreakFin = esquema_break_fin;
         }
-        if (locationId !== undefined && locationId !== null && locationId !== "") {
+        if (
+          locationId !== undefined &&
+          locationId !== null &&
+          locationId !== ""
+        ) {
           const loc = allLocations.find((l) => l.id === String(locationId));
           updateData.location = loc ? loc.name : "Monte Grande";
         }
@@ -659,7 +670,10 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     // exige callbacks sincronos y el return no saldria del handler).
     for (const edit of edits) {
       const rawEditAgentId = edit?.agentId;
-      const coerced = rawEditAgentId != null && rawEditAgentId !== "" ? Number(rawEditAgentId) : undefined;
+      const coerced =
+        rawEditAgentId != null && rawEditAgentId !== ""
+          ? Number(rawEditAgentId)
+          : undefined;
       if (coerced !== undefined && !Number.isInteger(coerced)) {
         return jsonResponse({ error: "agentId inválido." }, 400);
       }
@@ -680,7 +694,8 @@ export const PUT: APIRoute = async ({ request, locals }) => {
           breakFin,
         } = edit;
         // agentId ya viene normalizado (pre-tx); la guarda usa nullish exacto.
-        const agentIdNum = agentId != null && agentId !== "" ? Number(agentId) : undefined;
+        const agentIdNum =
+          agentId != null && agentId !== "" ? Number(agentId) : undefined;
         if (!date) {
           skipped++;
           continue;
