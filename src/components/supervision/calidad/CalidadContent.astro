@@ -10,12 +10,14 @@ import Modal from "@components/ui/Modal.astro";
 import { db } from "@db/index";
 import {
   agents,
+  users,
   qualityAudits,
   auditParameters,
   auditScores,
   monthlySummaries,
 } from "@db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { formatMonthLabel } from "@lib/monthUtils";
 import { getCleanBase } from "@lib/baseUrl";
@@ -65,7 +67,8 @@ if (!selectorMonthsList.includes(selectedMonth)) {
 const allAgents = await db
   .select({ id: agents.id, name: agents.name, username: agents.username })
   .from(agents)
-  .where(eq(agents.incluidoCalidad, true))
+  .leftJoin(users, eq(users.id, agents.userId))
+  .where(and(eq(agents.incluidoCalidad, true), activeAgentCondition()))
   .orderBy(agents.name);
 
 // Fetch all parameters (small table, ~20 rows)
