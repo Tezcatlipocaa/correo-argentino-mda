@@ -106,6 +106,80 @@ test.describe("Baja de usuarios (soft-delete)", () => {
     await db.delete(users).where(eq(users.id, target.id));
   });
 
+  test("un no-admin no puede desactivar usuarios", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    const ts = Date.now();
+    const sessionId = `sess_agent_${ts}`;
+    const [agentUser] = await db
+      .insert(users)
+      .values({ username: `plain_${ts}`, password: "x", role: "agent" })
+      .returning({ id: users.id });
+    try {
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: agentUser.id,
+        expiresAt: Date.now() + 86400000,
+      });
+      await page.context().addCookies([
+        {
+          name: "session_id",
+          value: sign(sessionId),
+          domain: new URL(baseURL).hostname,
+          path: "/",
+        },
+      ]);
+      const response = await page.request.post("/admin/usuarios", {
+        headers: { Accept: "application/json" },
+        form: { action: "deactivate-user", userId: String(adminId) },
+        maxRedirects: 0,
+      });
+      // RBAC deniega a un no-admin antes de llegar a la acción: redirect a
+      // inicio con toast de acceso no autorizado (no 401/403 en esta app).
+      expect(response.status()).toBe(302);
+      const location = response.headers()["location"] || "";
+      expect(location).toContain(encodeURIComponent("Acceso no autorizado"));
+    } finally {
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      await db.delete(users).where(eq(users.id, agentUser.id));
+    }
+  });
+
+  test("un no-admin no puede reactivar usuarios", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    const ts = Date.now();
+    const sessionId = `sess_agent_react_${ts}`;
+    const [agentUser] = await db
+      .insert(users)
+      .values({ username: `plain_react_${ts}`, password: "x", role: "agent" })
+      .returning({ id: users.id });
+    try {
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: agentUser.id,
+        expiresAt: Date.now() + 86400000,
+      });
+      await page.context().addCookies([
+        {
+          name: "session_id",
+          value: sign(sessionId),
+          domain: new URL(baseURL).hostname,
+          path: "/",
+        },
+      ]);
+      const response = await page.request.post("/admin/usuarios", {
+        headers: { Accept: "application/json" },
+        form: { action: "reactivate-user", userId: String(adminId) },
+        maxRedirects: 0,
+      });
+      expect(response.status()).toBe(302);
+      const location = response.headers()["location"] || "";
+      expect(location).toContain(encodeURIComponent("Acceso no autorizado"));
+    } finally {
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      await db.delete(users).where(eq(users.id, agentUser.id));
+    }
+  });
+
   test("un usuario inactivo es expulsado en su próximo request", async ({
     page,
   }) => {
