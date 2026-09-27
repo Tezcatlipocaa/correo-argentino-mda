@@ -71,3 +71,31 @@ export const officeFormSchema = z.object({
   active: z.boolean().optional().default(true),
   closedReason: z.string().nullable().optional(),
 });
+
+export const kbArticleSchema = z.object({
+  title: z
+    .string({ error: "El título es obligatorio" })
+    .trim()
+    .min(3, "El título debe tener al menos 3 caracteres")
+    .max(120, "El título no puede superar los 120 caracteres"),
+  content: z
+    .string({ error: "El contenido es obligatorio" })
+    .max(50000, "El contenido no puede superar los 50000 caracteres")
+    .refine((value) => value.trim().length > 0, {
+      message: "El contenido es obligatorio",
+    }),
+  category: z.preprocess(
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
+    z
+      .string()
+      .trim()
+      .max(60, "La categoría no puede superar los 60 caracteres")
+      .optional(),
+  ),
+  status: z
+    .enum(["draft", "published", "archived"], {
+      error: "El estado es inválido",
+    })
+    .default("draft"),
+});

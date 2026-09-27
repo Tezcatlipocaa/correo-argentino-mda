@@ -1,0 +1,527 @@
+---
+import "easymde/dist/easymde.min.css";
+import { getCleanBase } from "@lib/baseUrl";
+
+interface Props {
+  name?: string;
+  value?: string;
+  id?: string;
+  placeholder?: string;
+  required?: boolean;
+  minHeight?: string;
+  targetHelpdeskId?: number | null;
+  "data-kb-target-mesa-selector"?: string | null;
+  helpText?: string;
+}
+
+const {
+  name = "content",
+  value = "",
+  id = "kb-editor",
+  placeholder = "Escribí el contenido del artículo...",
+  required = false,
+  minHeight = "420px",
+  targetHelpdeskId = null,
+  "data-kb-target-mesa-selector": targetMesaSelector = "",
+  helpText,
+}: Props = Astro.props;
+const cleanBase = getCleanBase();
+---
+
+<textarea
+  id={id}
+  name={name}
+  data-kb-source
+  class="sr-only"
+  aria-hidden="true"
+  tabindex="-1"
+  required={required}>{value}</textarea
+>
+<div
+  class="kb-editor"
+  data-kb-editor
+  data-clean-base={cleanBase}
+  data-upload-url={`${cleanBase}api/kb/upload`}
+  data-placeholder={placeholder}
+  data-min-height={minHeight}
+  data-target-helpdesk-id={targetHelpdeskId ?? ""}
+  data-kb-target-mesa-selector={targetMesaSelector ?? ""}
+>
+</div>
+<p data-kb-error class="text-error mt-2 hidden text-sm" aria-live="polite"></p>
+{helpText && <p class="text-base-content/70 mt-2 text-sm">{helpText}</p>}
+
+<script>
+  import EasyMDE from "easymde";
+  import DOMPurify from "dompurify";
+  import { marked } from "marked";
+
+  const allowedImageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+  const maxImageSide = 1600;
+
+  async function resizeImage(file: File): Promise<File> {
+    let bitmap: ImageBitmap | null = null;
+    let objectUrl: string | null = null;
+
+    try {
+      let source: ImageBitmap | HTMLImageElement;
+
+      if (typeof createImageBitmap === "function") {
+        try {
+          bitmap = await createImageBitmap(file);
+        } catch {
+          bitmap = null;
+        }
+      }
+
+      if (bitmap) {
+        source = bitmap;
+      } else {
+        objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        image.src = objectUrl;
+        await new Promise<void>((resolveImage, rejectImage) => {
+          image.onload = () => resolveImage();
+          image.onerror = () =>
+            rejectImage(new Error("No se pudo leer la imagen."));
+        });
+        source = image;
+      }
+
+      const scale = Math.min(
+        1,
+        maxImageSide / Math.max(source.width, source.height),
+      );
+      const width = Math.max(1, Math.round(source.width * scale));
+      const height = Math.max(1, Math.round(source.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) return file;
+
+      context.drawImage(source, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>((resolveBlob) => {
+        try {
+          canvas.toBlob(resolveBlob, "image/webp", 0.8);
+        } catch {
+          resolveBlob(null);
+        }
+      });
+
+      if (!blob || blob.type !== "image/webp") return file;
+
+      const filename = file.name.replace(/\.[^/.]+$/, "") || "image";
+      return new File([blob], `${filename}.webp`, {
+        type: "image/webp",
+        lastModified: file.lastModified,
+      });
+    } finally {
+      bitmap?.close();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  async function uploadImage(
+    file: File,
+    onSuccess: (url: string) => void,
+    onError: (message: string) => void,
+    uploadUrl: string,
+    targetHelpdeskId: number,
+    targetMesaSelector: string,
+  ): Promise<void> {
+    if (!allowedImageTypes.has(file.type)) {
+      onError("Solo se permiten imágenes PNG, JPG o WebP.");
+      return;
+    }
+
+    if (!uploadUrl) {
+      onError("No se pudo subir la imagen. Intentá de nuevo.");
+      return;
+    }
+
+    let uploadFile = file;
+    try {
+      uploadFile = await resizeImage(file);
+    } catch {
+      uploadFile = file;
+    }
+
+    const formData = new FormData();
+    formData.append("file", uploadFile);
+
+    const targetElement = targetMesaSelector
+      ? document.querySelector(targetMesaSelector)
+      : null;
+    const selectedTargetValue =
+      targetElement instanceof HTMLInputElement ||
+      targetElement instanceof HTMLSelectElement
+        ? targetElement.value.trim()
+        : "";
+    const selectedTargetHelpdeskId = Number(selectedTargetValue);
+    const resolvedTargetHelpdeskId =
+      Number.isInteger(selectedTargetHelpdeskId) && selectedTargetHelpdeskId > 0
+        ? selectedTargetHelpdeskId
+        : targetHelpdeskId;
+
+    if (
+      Number.isInteger(resolvedTargetHelpdeskId) &&
+      resolvedTargetHelpdeskId > 0
+    ) {
+      formData.append("helpdeskId", String(resolvedTargetHelpdeskId));
+    }
+
+    try {
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = "No se pudo subir la imagen. Intentá de nuevo.";
+        try {
+          const payload = (await response.json()) as {
+            error?: unknown;
+            message?: unknown;
+          };
+          if (typeof payload.error === "string" && payload.error) {
+            message = payload.error;
+          } else if (typeof payload.message === "string" && payload.message) {
+            message = payload.message;
+          }
+        } catch {
+          message = "No se pudo subir la imagen. Intentá de nuevo.";
+        }
+        onError(message);
+        return;
+      }
+
+      const payload = (await response.json()) as { url: string };
+      onSuccess(payload.url);
+    } catch {
+      onError("No se pudo subir la imagen. Intentá de nuevo.");
+    }
+  }
+
+  function initKbEditor(container: HTMLElement): void {
+    if (container.dataset.kbEditorInit) return;
+
+    const textarea = container.previousElementSibling;
+    if (
+      !(textarea instanceof HTMLTextAreaElement) ||
+      !textarea.hasAttribute("data-kb-source")
+    ) {
+      return;
+    }
+
+    const errorElement = container.nextElementSibling;
+    if (
+      !(errorElement instanceof HTMLElement) ||
+      !errorElement.hasAttribute("data-kb-error")
+    ) {
+      return;
+    }
+
+    container.dataset.kbEditorInit = "true";
+    const cleanBase = container.dataset.cleanBase ?? "";
+    const uploadUrl = container.dataset.uploadUrl ?? "";
+    const placeholder = container.dataset.placeholder ?? "";
+    const minHeight = container.dataset.minHeight ?? "420px";
+    const targetHelpdeskId = Number(container.dataset.targetHelpdeskId);
+    const targetMesaSelector = container.dataset.kbTargetMesaSelector ?? "";
+    const mde = new EasyMDE({
+      element: textarea,
+      forceSync: true,
+      autoDownloadFontAwesome: false,
+      spellChecker: false,
+      status: ["lines", "words"],
+      autofocus: false,
+      placeholder,
+      minHeight,
+      toolbar: [
+        "bold",
+        "italic",
+        "heading",
+        "code",
+        "quote",
+        "unordered-list",
+        "ordered-list",
+        "link",
+        "upload-image",
+        "preview",
+        "side-by-side",
+        "fullscreen",
+        "guide",
+      ],
+      previewRender(plainText, preview) {
+        const sanitizedHtml = DOMPurify.sanitize(
+          marked.parse(plainText) as string,
+        );
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = sanitizedHtml;
+        wrapper.querySelectorAll("img").forEach((image) => {
+          const src = image.getAttribute("src");
+          if (src?.startsWith("/api/kb/images/")) {
+            image.setAttribute("src", `${cleanBase}${src.slice(1)}`);
+          }
+        });
+        preview.innerHTML = wrapper.innerHTML;
+        return null;
+      },
+      uploadImage: true,
+      imageAccept: "image/png,image/jpeg,image/webp",
+      imageUploadFunction(file, onSuccess, onError) {
+        return uploadImage(
+          file,
+          onSuccess,
+          onError,
+          uploadUrl,
+          targetHelpdeskId,
+          targetMesaSelector,
+        );
+      },
+    });
+
+    const showValidationError = () => {
+      errorElement.textContent = "El contenido del artículo es obligatorio.";
+      errorElement.classList.remove("hidden");
+    };
+    const clearValidationError = () => {
+      errorElement.textContent = "";
+      errorElement.classList.add("hidden");
+    };
+    const syncSubmit = (event: Event) => {
+      if (!mde) return;
+      const value = mde.value();
+      textarea.value = value;
+      if (textarea.required && !value.trim()) {
+        showValidationError();
+        event.preventDefault();
+        return;
+      }
+      clearValidationError();
+    };
+    const form = textarea.closest("form");
+    if (form) {
+      form.addEventListener("submit", syncSubmit);
+    } else {
+      document.addEventListener("submit", syncSubmit, true);
+    }
+    textarea.addEventListener("invalid", (event) => {
+      if (!mde) return;
+      const value = mde.value();
+      if (textarea.required && !value.trim()) {
+        event.preventDefault();
+        textarea.value = value;
+        showValidationError();
+      }
+    });
+    mde.codemirror.on("change", () => {
+      if (mde.value().trim()) clearValidationError();
+    });
+  }
+
+  function initKbEditors(): void {
+    document
+      .querySelectorAll<HTMLElement>("[data-kb-editor]")
+      .forEach(initKbEditor);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initKbEditors, {
+      once: true,
+    });
+  } else {
+    initKbEditors();
+  }
+  document.addEventListener("astro:page-load", initKbEditors);
+</script>
+
+<style is:global>
+  .EasyMDEContainer {
+    border: var(--border) solid var(--color-base-300);
+    border-radius: var(--radius-box);
+    overflow: hidden;
+  }
+
+  .EasyMDEContainer .CodeMirror {
+    background-color: var(--color-base-100);
+    color: var(--color-base-content);
+    border: 0;
+    border-radius: 0;
+    font-family: var(--font-mono);
+  }
+
+  .editor-toolbar {
+    background-color: var(--color-base-200);
+    border-bottom: var(--border) solid var(--color-base-300);
+    border-radius: var(--radius-box) var(--radius-box) 0 0;
+    gap: calc(var(--size-field) / 2);
+    padding: var(--size-field);
+  }
+
+  .editor-toolbar button {
+    background-color: var(--color-base-100);
+    border: var(--border) solid var(--color-base-100);
+    border-radius: var(--radius-field);
+    color: var(--color-base-content);
+  }
+
+  .editor-toolbar button:hover,
+  .editor-toolbar button:focus-visible,
+  .editor-toolbar button.active {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-content);
+  }
+
+  .editor-toolbar button:focus-visible {
+    outline: var(--border) solid var(--color-primary);
+    outline-offset: var(--size-field);
+  }
+
+  .editor-toolbar button:disabled {
+    opacity: 0.5;
+  }
+
+  .editor-toolbar i.fa {
+    align-items: center;
+    display: inline-flex;
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    font-style: normal;
+    font-weight: 700;
+    justify-content: center;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .editor-toolbar i.fa-bold::before {
+    content: "B";
+  }
+
+  .editor-toolbar i.fa-italic::before {
+    content: "I";
+  }
+
+  .editor-toolbar i.fa-heading::before {
+    content: "H";
+  }
+
+  .editor-toolbar i.fa-code::before {
+    content: "code";
+  }
+
+  .editor-toolbar i.fa-quote-left::before {
+    content: "quote";
+  }
+
+  .editor-toolbar i.fa-list-ul::before {
+    content: "UL";
+  }
+
+  .editor-toolbar i.fa-list-ol::before {
+    content: "OL";
+  }
+
+  .editor-toolbar i.fa-link::before {
+    content: "link";
+  }
+
+  .editor-toolbar i.fa-image::before {
+    content: "img";
+  }
+
+  .editor-toolbar i.fa-eye::before {
+    content: "view";
+  }
+
+  .editor-toolbar i.fa-columns::before {
+    content: "split";
+  }
+
+  .editor-toolbar i.fa-arrows-alt::before {
+    content: "full";
+  }
+
+  .editor-toolbar i.fa-question-circle::before {
+    content: "?";
+  }
+
+  .editor-toolbar .separator {
+    color: var(--color-base-content);
+  }
+
+  .editor-preview,
+  .editor-preview-side {
+    background-color: var(--color-base-100);
+    color: var(--color-base-content);
+    padding: var(--size-field);
+  }
+
+  .editor-preview img {
+    height: auto;
+    max-width: 100%;
+  }
+
+  .editor-preview pre,
+  .editor-preview code {
+    background-color: var(--color-base-200);
+    border: var(--border) solid var(--color-base-300);
+    border-radius: var(--radius-field);
+  }
+
+  .editor-preview pre {
+    overflow-x: auto;
+    padding: var(--size-field);
+  }
+
+  .editor-preview code {
+    padding: calc(var(--size-field) / 2);
+  }
+
+  .editor-preview blockquote {
+    border-left: var(--border) solid var(--color-primary);
+    color: var(--color-base-content);
+    padding-left: var(--size-field);
+  }
+
+  .editor-preview table {
+    border-collapse: collapse;
+  }
+
+  .editor-preview th,
+  .editor-preview td {
+    border: var(--border) solid var(--color-base-300);
+    padding: calc(var(--size-field) / 2);
+  }
+
+  .editor-statusbar {
+    background-color: var(--color-base-200);
+    border-top: var(--border) solid var(--color-base-300);
+    color: var(--color-base-content);
+    font-size: var(--text-small);
+    padding: calc(var(--size-field) / 2) var(--size-field);
+  }
+
+  .CodeMirror-cursor {
+    border-left: var(--border) solid var(--color-base-content);
+  }
+
+  .CodeMirror-selected {
+    background-color: var(--color-base-200);
+  }
+
+  .CodeMirror-focused .CodeMirror-selected {
+    background-color: var(--color-base-300);
+  }
+
+  .CodeMirror-gutters {
+    background-color: var(--color-base-200);
+    border-right: var(--border) solid var(--color-base-300);
+  }
+
+  .CodeMirror-linenumber {
+    color: var(--color-base-content);
+  }
+</style>

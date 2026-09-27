@@ -5,7 +5,7 @@ const SUBDIR_APPS = "apps";
 const SUBDIR_ICONS = "icons";
 const SUBDIR_PDFS = "pdfs";
 
-function getStorageRoot(): string {
+export function getStorageRoot(): string {
   const envDir =
     import.meta.env?.EXTERNAL_STORAGE_DIR || process.env.EXTERNAL_STORAGE_DIR;
   return path.resolve(envDir || "./data/storage");

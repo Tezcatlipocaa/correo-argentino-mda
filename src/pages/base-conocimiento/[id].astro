@@ -1,0 +1,67 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import KbViewContent from "@components/base-conocimiento/KbViewContent.astro";
+import { getArticle, type KbArticle, type KbScope } from "@lib/kb";
+import { getModulePermissions } from "@lib/rbac";
+import { can } from "@lib/roleConfig";
+import { resolveUrl } from "@lib/url";
+
+const rawId = Astro.params.id;
+if (!rawId || !/^\d+$/.test(rawId)) {
+  return Astro.rewrite(resolveUrl("/404"));
+}
+
+const articleId = Number(rawId);
+if (!Number.isSafeInteger(articleId) || articleId <= 0) {
+  return Astro.rewrite(resolveUrl("/404"));
+}
+
+const user = Astro.locals.user;
+const canWrite = getModulePermissions("base-conocimiento", user.role).canWrite;
+const isAdmin = can(user.role, "admin");
+const scope: KbScope = {
+  helpdeskId: user.helpdeskId,
+  includeAll: isAdmin,
+};
+
+let article: KbArticle | null = null;
+let loadError = false;
+
+try {
+  article = getArticle(articleId, scope);
+} catch (error) {
+  console.error("[KbView] Error cargando el artículo:", error);
+  loadError = true;
+}
+
+if (
+  !loadError &&
+  (!article || (article.status !== "published" && !canWrite))
+) {
+  return Astro.rewrite(resolveUrl("/404"));
+}
+---
+
+<BaseLayout title="Artículo">
+  <PageContainer width="2xl">
+    <PageHeader
+      title="Artículo"
+      description="Consulta la documentación de tu mesa de ayuda."
+    />
+    <KbViewContent
+      article={article}
+      canWrite={canWrite}
+      isAdmin={isAdmin}
+      loadError={loadError}
+      server:defer
+    >
+      <div slot="fallback" class="space-y-4">
+        <div class="skeleton h-10 w-3/4"></div>
+        <div class="skeleton h-5 w-1/2"></div>
+        <div class="skeleton h-64 w-full"></div>
+      </div>
+    </KbViewContent>
+  </PageContainer>
+</BaseLayout>

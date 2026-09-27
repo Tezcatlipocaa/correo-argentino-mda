@@ -884,6 +884,52 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
   }),
 }));
 
+export const kbArticles = sqliteTable(
+  "kb_articles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    helpdeskId: integer("helpdesk_id")
+      .notNull()
+      .references(() => mesas.invgateId, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    category: text("category"),
+    status: text("status").notNull().default("draft"),
+    authorUserId: integer("author_user_id")
+      .notNull()
+      .references(() => users.id),
+    publishedByUserId: integer("published_by_user_id").references(() => users.id),
+    publishedAt: integer("published_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$onUpdateFn(
+      () => new Date(),
+    ),
+  },
+  (t) => ({
+    helpdeskStatusIdx: index("kb_articles_helpdesk_status_idx").on(
+      t.helpdeskId,
+      t.status,
+    ),
+  }),
+);
+
+export const kbArticlesRelations = relations(kbArticles, ({ one }) => ({
+  author: one(users, {
+    fields: [kbArticles.authorUserId],
+    references: [users.id],
+  }),
+  publishedBy: one(users, {
+    fields: [kbArticles.publishedByUserId],
+    references: [users.id],
+  }),
+  helpdesk: one(mesas, {
+    fields: [kbArticles.helpdeskId],
+    references: [mesas.invgateId],
+  }),
+}));
+
 export const assignmentLock = sqliteTable("assignment_lock", {
   id: integer("id").primaryKey(),
   userId: integer("user_id").notNull(),

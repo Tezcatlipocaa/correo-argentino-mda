@@ -95,6 +95,14 @@ export const routePermissions: RoutePermission[] = [
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
   {
+    path: "/base-conocimiento/create",
+    roles: ["admin", "supervisor", "team_leader"],
+  },
+  {
+    path: "/base-conocimiento/edit",
+    roles: ["admin", "supervisor", "team_leader"],
+  },
+  {
     path: "/inventario-terminales/cubics/create",
     roles: ["admin", "supervisor"],
   },
@@ -133,6 +141,8 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/export", roles: ALL_ROLES },
   { path: "/api/icons", roles: ALL_ROLES },
   { path: "/api/invgate", roles: ALL_ROLES },
+  { path: "/api/kb/upload", roles: ["admin", "supervisor", "team_leader"] },
+  { path: "/api/kb/images", roles: ALL_ROLES },
   { path: "/api/offices", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
@@ -222,6 +232,9 @@ export function getModulePermissions(
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
   } else if (moduleName === "titulos") {
     // Leen: todos / Escriben: admin, supervisor, team_leader
+    perm.canRead = true;
+    perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
+  } else if (moduleName === "base-conocimiento") {
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
   } else if (moduleName === "usuarios") {

@@ -1,0 +1,315 @@
+---
+import { and, eq } from "drizzle-orm";
+import { db } from "@db/index";
+import { mesas } from "@db/schema";
+import FormShell from "@components/ui/FormShell.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import KbEditor from "@components/base-conocimiento/KbEditor.astro";
+import { can } from "@lib/roleConfig";
+import { getModulePermissions } from "@lib/rbac";
+import { kbArticleSchema } from "@lib/validations";
+import { createArticle, listCategorySuggestions } from "@lib/kb";
+import { logAdminFromAstro } from "@lib/auditLogger";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { resolveUrl } from "@lib/url";
+import type { ToastType } from "@lib/toastClient";
+
+type ArticleStatus = "draft" | "published" | "archived";
+
+type MesaOption = {
+  id: number;
+  name: string;
+};
+
+const statusOptions: Array<{ value: ArticleStatus; label: string }> = [
+  { value: "draft", label: "Borrador" },
+  { value: "published", label: "Publicado" },
+  { value: "archived", label: "Archivado" },
+];
+
+const loadActiveMesas = () =>
+  db
+    .select({ id: mesas.invgateId, name: mesas.name })
+    .from(mesas)
+    .where(eq(mesas.active, true))
+    .orderBy(mesas.name)
+    .all();
+
+const user = Astro.locals.user;
+const canWrite = getModulePermissions("base-conocimiento", user.role).canWrite;
+
+if (!canWrite) {
+  return redirectWithToast(
+    "/base-conocimiento",
+    "No tenés permisos para crear artículos.",
+    "error",
+  );
+}
+
+const sessionHelpdeskId = user.helpdeskId;
+if (
+  typeof sessionHelpdeskId !== "number" ||
+  !Number.isInteger(sessionHelpdeskId) ||
+  sessionHelpdeskId <= 0
+) {
+  return redirectWithToast(
+    "/base-conocimiento",
+    "Tu usuario no tiene una mesa asignada.",
+    "error",
+  );
+}
+
+const isAdmin = can(user.role, "admin");
+let errorMsg = "";
+let toastType: ToastType = "alert-error";
+let activeMesas: MesaOption[] = [];
+let formValues = {
+  title: "",
+  category: "",
+  content: "",
+  status: "draft",
+  helpdeskId: String(sessionHelpdeskId),
+};
+
+if (isAdmin) {
+  try {
+    activeMesas = loadActiveMesas();
+    if (activeMesas.length === 0) {
+      errorMsg = "No hay mesas activas disponibles para crear el artículo.";
+    }
+  } catch (error) {
+    console.error("[KbCreate] Error cargando las mesas:", error);
+    errorMsg = "No se pudieron cargar las mesas disponibles.";
+  }
+}
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    formValues.title = formData.get("title")?.toString() ?? "";
+    formValues.category = formData.get("category")?.toString() ?? "";
+    formValues.content = formData.get("content")?.toString() ?? "";
+    formValues.status = formData.get("status")?.toString().trim() || "draft";
+
+    let helpdeskId: number | null = sessionHelpdeskId;
+
+    if (isAdmin) {
+      const rawHelpdeskId = formData.get("helpdeskId")?.toString().trim() ?? "";
+      formValues.helpdeskId = rawHelpdeskId;
+      const parsedHelpdeskId = Number(rawHelpdeskId);
+
+      if (!rawHelpdeskId) {
+        errorMsg = "Seleccioná una mesa para crear el artículo.";
+        helpdeskId = null;
+      } else if (!Number.isInteger(parsedHelpdeskId) || parsedHelpdeskId <= 0) {
+        errorMsg = "La mesa indicada no existe o está inactiva.";
+        helpdeskId = null;
+      } else {
+        const [activeMesa] = await db
+          .select({ id: mesas.invgateId })
+          .from(mesas)
+          .where(
+            and(eq(mesas.invgateId, parsedHelpdeskId), eq(mesas.active, true)),
+          )
+          .limit(1);
+
+        if (!activeMesa) {
+          errorMsg = "La mesa indicada no existe o está inactiva.";
+          helpdeskId = null;
+        } else {
+          helpdeskId = parsedHelpdeskId;
+        }
+      }
+    }
+
+    const parsed = kbArticleSchema.safeParse({
+      title: formValues.title,
+      category: formValues.category,
+      content: formValues.content,
+      status: formValues.status,
+    });
+
+    if (!parsed.success) {
+      errorMsg = parsed.error.issues.map((issue) => issue.message).join(", ");
+    } else if (helpdeskId === null) {
+      if (!errorMsg) {
+        errorMsg = "La mesa indicada no existe o está inactiva.";
+      }
+    } else {
+      const articleId = createArticle({
+        helpdeskId,
+        title: parsed.data.title,
+        content: parsed.data.content,
+        category: parsed.data.category,
+        status: parsed.data.status,
+        authorUserId: user.id,
+        publishedByUserId: user.id,
+      });
+
+      if (articleId === null) {
+        errorMsg = "No se pudo guardar el artículo. Intentá de nuevo.";
+      } else {
+        await logAdminFromAstro(
+          Astro.locals,
+          `Creó el artículo "${parsed.data.title}"`,
+        );
+        if (
+          parsed.data.status === "published" ||
+          parsed.data.status === "archived"
+        ) {
+          const statusAudit =
+            parsed.data.status === "published"
+              ? `Publicó el artículo "${parsed.data.title}"`
+              : `Archivó el artículo "${parsed.data.title}"`;
+          await logAdminFromAstro(Astro.locals, statusAudit);
+        }
+        return redirectWithToast(
+          "/base-conocimiento",
+          "Artículo creado con éxito.",
+        );
+      }
+    }
+  } catch (error) {
+    console.error("[KbCreate] Error guardando el artículo:", error);
+    errorMsg = "No se pudo guardar el artículo. Intentá de nuevo.";
+  }
+}
+
+const parsedEditorHelpdeskId = Number(formValues.helpdeskId);
+const editorTargetHelpdeskId =
+  Number.isInteger(parsedEditorHelpdeskId) && parsedEditorHelpdeskId > 0
+    ? parsedEditorHelpdeskId
+    : sessionHelpdeskId;
+const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
+---
+
+<FormShell
+  backHref={resolveUrl("/base-conocimiento")}
+  title="Nuevo artículo"
+  subtitle="Completá los datos para crear un artículo en la base de conocimiento."
+  formId="kb-article-form"
+  saveLabel="Crear artículo"
+  containerWidth="2xl"
+>
+  <script is:inline define:vars={{ errorMsg, toastType }}>
+    if (errorMsg) {
+      window.addEventListener("load", () =>
+        window.showToast?.(errorMsg, toastType),
+      );
+    }
+  </script>
+
+  <script>
+    const formElement = document.getElementById("kb-article-form");
+    if (formElement instanceof HTMLFormElement) {
+      formElement.addEventListener("submit", (event) => {
+        if (formElement.dataset.submitting === "true") {
+          event.preventDefault();
+          return;
+        }
+
+        queueMicrotask(() => {
+          if (event.defaultPrevented) return;
+          formElement.dataset.submitting = "true";
+          const submitButton = formElement.querySelector<HTMLButtonElement>(
+            'button[type="submit"]',
+          );
+          if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.classList.add("btn-disabled");
+          }
+        });
+      });
+    }
+  </script>
+
+  <SectionCard title="Datos del artículo" icon="boxicons:article-filled">
+    <div class="space-y-6 p-6 sm:p-8">
+      {
+        isAdmin ? (
+          <SelectField
+            id="kb-helpdesk"
+            name="helpdeskId"
+            label="Mesa"
+            required
+            options={activeMesas.map((mesa) => ({
+              value: String(mesa.id),
+              label: mesa.name,
+            }))}
+            value={formValues.helpdeskId}
+            helpText="La mesa donde se publica el artículo."
+          />
+        ) : (
+          <p class="text-base-content/70 text-sm">
+            Mesa: <span class="font-semibold">{user.helpdeskName}</span>
+          </p>
+        )
+      }
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
+          id="kb-title"
+          name="title"
+          label="Título"
+          required
+          value={formValues.title}
+          placeholder="Ej: Configurar una cuenta de correo"
+          maxlength={120}
+          autofocus
+        />
+        <FormField
+          id="kb-category"
+          name="category"
+          label="Categoría"
+          value={formValues.category}
+          placeholder="Ej: Accesos"
+          maxlength={60}
+          helpText="Opcional"
+          list={categorySuggestions.length > 0
+            ? "kb-category-suggestions"
+            : undefined}
+        />
+      </div>
+
+      {
+        categorySuggestions.length > 0 && (
+          <datalist id="kb-category-suggestions">
+            {categorySuggestions.map((category) => (
+              <option value={category} />
+            ))}
+          </datalist>
+        )
+      }
+
+      <SelectField
+        id="kb-status"
+        name="status"
+        label="Estado"
+        required
+        options={statusOptions}
+        value={formValues.status}
+        helpText="Los lectores solo pueden ver artículos publicados."
+      />
+
+      <div class="space-y-2">
+        <label
+          for="kb-content"
+          class="fieldset-legend font-bold tracking-wider"
+        >
+          Contenido <span class="text-error">*</span>
+        </label>
+        <KbEditor
+          id="kb-content"
+          name="content"
+          required
+          value={formValues.content}
+          targetHelpdeskId={editorTargetHelpdeskId}
+          data-kb-target-mesa-selector={isAdmin ? "#kb-helpdesk" : undefined}
+          helpText="Escribí el contenido en Markdown. Las imágenes se guardan en la mesa seleccionada."
+        />
+      </div>
+    </div>
+  </SectionCard>
+</FormShell>
