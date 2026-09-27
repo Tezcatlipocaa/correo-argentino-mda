@@ -1,7 +1,8 @@
 ---
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@db/index";
 import { mesas } from "@db/schema";
+import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 import FormShell from "@components/ui/FormShell.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
@@ -10,10 +11,12 @@ import KbEditor from "@components/base-conocimiento/KbEditor.astro";
 import { can } from "@lib/roleConfig";
 import { getModulePermissions } from "@lib/rbac";
 import { kbArticleSchema } from "@lib/validations";
-import { createArticle, listCategorySuggestions } from "@lib/kb";
+import { createArticle } from "@lib/kb";
+import { listCategories } from "@lib/kbCategories";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { resolveUrl } from "@lib/url";
+import { getCleanBase } from "@lib/baseUrl";
 import type { ToastType } from "@lib/toastClient";
 
 type ArticleStatus = "draft" | "published" | "archived";
@@ -29,11 +32,16 @@ const statusOptions: Array<{ value: ArticleStatus; label: string }> = [
   { value: "archived", label: "Archivado" },
 ];
 
+const habilitadaCondition = and(
+  eq(mesas.active, true),
+  or(eq(mesas.assignable, true), eq(mesas.name, MDA_TI_HELPDESK)),
+);
+
 const loadActiveMesas = () =>
   db
     .select({ id: mesas.invgateId, name: mesas.name })
     .from(mesas)
-    .where(eq(mesas.active, true))
+    .where(habilitadaCondition)
     .orderBy(mesas.name)
     .all();
 
@@ -111,7 +119,7 @@ if (Astro.request.method === "POST") {
           .select({ id: mesas.invgateId })
           .from(mesas)
           .where(
-            and(eq(mesas.invgateId, parsedHelpdeskId), eq(mesas.active, true)),
+            and(eq(mesas.invgateId, parsedHelpdeskId), habilitadaCondition),
           )
           .limit(1);
 
@@ -132,11 +140,21 @@ if (Astro.request.method === "POST") {
     });
 
     if (!parsed.success) {
-      errorMsg = parsed.error.issues.map((issue) => issue.message).join(", ");
+      const validationMsg = parsed.error.issues
+        .map((issue) => issue.message)
+        .join(", ");
+      errorMsg = errorMsg ? `${errorMsg} ${validationMsg}` : validationMsg;
     } else if (helpdeskId === null) {
       if (!errorMsg) {
         errorMsg = "La mesa indicada no existe o está inactiva.";
       }
+    } else if (
+      parsed.data.category &&
+      !listCategories(helpdeskId).some(
+        (category) => category.name === parsed.data.category,
+      )
+    ) {
+      errorMsg = "La categoría seleccionada no es válida.";
     } else {
       const articleId = createArticle({
         helpdeskId,
@@ -177,12 +195,45 @@ if (Astro.request.method === "POST") {
   }
 }
 
+const mesaParamRaw = Astro.url.searchParams.get("mesa") ?? "";
+const mesaParamId = Number(mesaParamRaw);
+if (
+  isAdmin &&
+  Astro.request.method !== "POST" &&
+  Number.isInteger(mesaParamId) &&
+  mesaParamId > 0
+) {
+  const [mesaParam] = await db
+    .select({ id: mesas.invgateId })
+    .from(mesas)
+    .where(and(eq(mesas.invgateId, mesaParamId), habilitadaCondition))
+    .limit(1);
+
+  if (mesaParam) {
+    formValues.helpdeskId = String(mesaParamId);
+  }
+}
+
 const parsedEditorHelpdeskId = Number(formValues.helpdeskId);
 const editorTargetHelpdeskId =
   Number.isInteger(parsedEditorHelpdeskId) && parsedEditorHelpdeskId > 0
     ? parsedEditorHelpdeskId
     : sessionHelpdeskId;
-const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
+const targetCategories = editorTargetHelpdeskId
+  ? listCategories(editorTargetHelpdeskId)
+  : [];
+const nuevaCategoria = Astro.url.searchParams.get("nueva_categoria") ?? "";
+const categoriaOptions = [
+  { value: "", label: "Sin categoría" },
+  ...targetCategories.map((category) => ({
+    value: category.name,
+    label: category.name,
+  })),
+];
+const categoriaSeleccionada =
+  nuevaCategoria && !targetCategories.some((c) => c.name === nuevaCategoria)
+    ? [...categoriaOptions, { value: nuevaCategoria, label: nuevaCategoria }]
+    : categoriaOptions;
 ---
 
 <FormShell
@@ -191,7 +242,7 @@ const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
   subtitle="Completá los datos para crear un artículo en la base de conocimiento."
   formId="kb-article-form"
   saveLabel="Crear artículo"
-  containerWidth="2xl"
+  containerWidth="xxl"
 >
   <script is:inline define:vars={{ errorMsg, toastType }}>
     if (errorMsg) {
@@ -214,7 +265,7 @@ const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
           if (event.defaultPrevented) return;
           formElement.dataset.submitting = "true";
           const submitButton = formElement.querySelector<HTMLButtonElement>(
-            'button[type="submit"]',
+            'button[type="submit"]:not([form])',
           );
           if (submitButton) {
             submitButton.disabled = true;
@@ -227,28 +278,10 @@ const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
 
   <SectionCard title="Datos del artículo" icon="boxicons:article-filled">
     <div class="space-y-6 p-6 sm:p-8">
-      {
-        isAdmin ? (
-          <SelectField
-            id="kb-helpdesk"
-            name="helpdeskId"
-            label="Mesa"
-            required
-            options={activeMesas.map((mesa) => ({
-              value: String(mesa.id),
-              label: mesa.name,
-            }))}
-            value={formValues.helpdeskId}
-            helpText="La mesa donde se publica el artículo."
-          />
-        ) : (
-          <p class="text-base-content/70 text-sm">
-            Mesa: <span class="font-semibold">{user.helpdeskName}</span>
-          </p>
-        )
-      }
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div
+        data-kb-fields-row
+        class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+      >
         <FormField
           id="kb-title"
           name="title"
@@ -258,40 +291,98 @@ const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
           placeholder="Ej: Configurar una cuenta de correo"
           maxlength={120}
           autofocus
+          class="min-w-0"
         />
-        <FormField
-          id="kb-category"
-          name="category"
-          label="Categoría"
-          value={formValues.category}
-          placeholder="Ej: Accesos"
-          maxlength={60}
-          helpText="Opcional"
-          list={categorySuggestions.length > 0
-            ? "kb-category-suggestions"
-            : undefined}
+
+        <div class="min-w-0">
+          <SelectField
+            id="kb-category"
+            name="category"
+            label="Categoría"
+            options={categoriaSeleccionada}
+            value={nuevaCategoria || formValues.category}
+            helpText="Opcional"
+          />
+          <a
+            href={`${getCleanBase()}base-conocimiento/categorias`}
+            class="link link-secondary link-hover text-xs"
+          >
+            Administrar categorías
+          </a>
+        </div>
+
+        <div class="min-w-0" data-kb-mesa-cell>
+          {
+            isAdmin ? (
+              <SelectField
+                id="kb-helpdesk"
+                name="helpdeskId"
+                label="Mesa"
+                required
+                options={activeMesas.map((mesa) => ({
+                  value: String(mesa.id),
+                  label: mesa.name,
+                }))}
+                value={formValues.helpdeskId}
+                helpText="La mesa donde se publica el artículo."
+                selectClass="truncate"
+              />
+            ) : (
+              <div class="min-w-0">
+                <span class="fieldset-legend font-bold tracking-wider">
+                  Mesa
+                </span>
+                <p class="text-base-content/70 py-2 text-sm break-words">
+                  <span class="font-semibold">{user.helpdeskName}</span>
+                </p>
+              </div>
+            )
+          }
+        </div>
+
+        <SelectField
+          id="kb-status"
+          name="status"
+          label="Estado"
+          required
+          options={statusOptions}
+          value={formValues.status}
+          helpText="Los lectores solo pueden ver artículos publicados."
+          class="min-w-0"
         />
       </div>
 
-      {
-        categorySuggestions.length > 0 && (
-          <datalist id="kb-category-suggestions">
-            {categorySuggestions.map((category) => (
-              <option value={category} />
-            ))}
-          </datalist>
-        )
-      }
-
-      <SelectField
-        id="kb-status"
-        name="status"
-        label="Estado"
-        required
-        options={statusOptions}
-        value={formValues.status}
-        helpText="Los lectores solo pueden ver artículos publicados."
-      />
+      <details class="collapse-arrow border-base-300 collapse border">
+        <summary class="collapse-title font-semibold">Nueva categoría</summary>
+        <div class="collapse-content">
+          <div class="flex flex-wrap items-end gap-3">
+            <label class="fieldset flex-1">
+              <span class="fieldset-legend font-bold tracking-wider"
+                >Nombre de la nueva categoría</span
+              >
+              <input
+                type="text"
+                name="name"
+                form="kb-new-category-form"
+                required
+                minlength="2"
+                maxlength="60"
+                class="input input-bordered w-full"
+              />
+            </label>
+            <button
+              type="submit"
+              form="kb-new-category-form"
+              class="btn btn-secondary"
+            >
+              Crear categoría
+            </button>
+          </div>
+          <p class="text-base-content/60 mt-2 text-xs">
+            Al crearla volvés a este formulario con la categoría seleccionada.
+          </p>
+        </div>
+      </details>
 
       <div class="space-y-2">
         <label
@@ -313,3 +404,71 @@ const categorySuggestions = listCategorySuggestions(editorTargetHelpdeskId);
     </div>
   </SectionCard>
 </FormShell>
+
+<form
+  id="kb-new-category-form"
+  method="POST"
+  action={resolveUrl("/base-conocimiento/categorias")}
+  class="hidden"
+>
+  <input type="hidden" name="action" value="create" />
+  <input
+    id="kb-new-category-return-to"
+    type="hidden"
+    name="returnTo"
+    value={isAdmin
+      ? `${resolveUrl("/base-conocimiento/create")}?mesa=${formValues.helpdeskId}`
+      : resolveUrl("/base-conocimiento/create")}
+  />
+  {
+    isAdmin && (
+      <input
+        id="kb-new-category-helpdesk"
+        type="hidden"
+        name="helpdeskId"
+        value={formValues.helpdeskId}
+      />
+    )
+  }
+</form>
+
+<script>
+  const helpdeskSelect = document.getElementById("kb-helpdesk");
+  const categoryHelpdeskInput = document.getElementById(
+    "kb-new-category-helpdesk",
+  );
+  const categoryReturnToInput = document.getElementById(
+    "kb-new-category-return-to",
+  );
+  if (
+    helpdeskSelect instanceof HTMLSelectElement &&
+    categoryHelpdeskInput instanceof HTMLInputElement
+  ) {
+    const syncCategoryHelpdesk = () => {
+      categoryHelpdeskInput.value = helpdeskSelect.value;
+      if (categoryReturnToInput instanceof HTMLInputElement) {
+        const nextReturnTo = new URL(
+          categoryReturnToInput.value,
+          window.location.origin,
+        );
+        nextReturnTo.searchParams.set("mesa", helpdeskSelect.value);
+        categoryReturnToInput.value =
+          nextReturnTo.pathname + nextReturnTo.search;
+      }
+    };
+    helpdeskSelect.addEventListener("change", syncCategoryHelpdesk);
+    syncCategoryHelpdesk();
+  }
+</script>
+
+<script>
+  if (new URLSearchParams(window.location.search).has("nueva_categoria")) {
+    window.addEventListener("load", () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("nueva_categoria");
+      url.searchParams.delete("toast_msg");
+      url.searchParams.delete("toast_type");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    });
+  }
+</script>

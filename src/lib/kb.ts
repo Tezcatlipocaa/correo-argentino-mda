@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, type SQL } from "drizzle-orm";
 import { db } from "@db/index";
 import { kbArticles, mesas, users } from "@db/schema";
 
@@ -114,31 +114,6 @@ export function listArticles(opts: {
     .limit(limit)
     .offset(offset)
     .all();
-}
-
-export function listCategorySuggestions(helpdeskId: number | null): string[] {
-  if (
-    typeof helpdeskId !== "number" ||
-    !Number.isInteger(helpdeskId) ||
-    helpdeskId <= 0
-  ) {
-    return [];
-  }
-
-  return db
-    .selectDistinct({ category: sql<string>`trim(${kbArticles.category})` })
-    .from(kbArticles)
-    .where(
-      and(
-        eq(kbArticles.helpdeskId, helpdeskId),
-        isNotNull(kbArticles.category),
-        sql`trim(${kbArticles.category}) <> ''`,
-      ),
-    )
-    .orderBy(sql`lower(trim(${kbArticles.category}))`)
-    .all()
-    .map(({ category }) => category)
-    .filter((category) => category.length > 0);
 }
 
 export function getArticle(id: number, scope: KbScope): KbArticle | null {

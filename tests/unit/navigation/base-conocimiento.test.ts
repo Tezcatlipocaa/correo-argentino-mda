@@ -31,11 +31,7 @@ describe("sección Base de conocimiento", () => {
   });
 
   it("aplica permisos de rutas nuevas a todos los roles canonicos", () => {
-    const expectedWriteRoles = new Set([
-      "team_leader",
-      "supervisor",
-      "admin",
-    ]);
+    const expectedWriteRoles = new Set(["team_leader", "supervisor", "admin"]);
     const expectedImageRoles = new Set([
       "admin",
       "supervisor",
@@ -44,6 +40,10 @@ describe("sección Base de conocimiento", () => {
       "agent",
     ]);
     const routeCases = [
+      {
+        path: "/base-conocimiento/categorias",
+        expected: expectedWriteRoles,
+      },
       {
         path: "/base-conocimiento/create",
         expected: expectedWriteRoles,
@@ -82,11 +82,7 @@ describe("sección Base de conocimiento", () => {
   });
 
   it("permite leer a todos y escribir solo a team_leader+", () => {
-    const expectedWriteRoles = new Set([
-      "team_leader",
-      "supervisor",
-      "admin",
-    ]);
+    const expectedWriteRoles = new Set(["team_leader", "supervisor", "admin"]);
 
     for (const role of CANONICAL_ROLES) {
       const permissions = getModulePermissions("base-conocimiento", role);

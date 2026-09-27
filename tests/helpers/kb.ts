@@ -8,6 +8,7 @@ import { db } from "../../src/db/index";
 import {
   auditLogs,
   kbArticles,
+  kbCategories,
   mesas,
   sessions,
   users,
@@ -20,6 +21,26 @@ import {
 
 export type KbTestMesa = typeof mesas.$inferSelect;
 export type KbArticleStatus = "draft" | "published" | "archived";
+
+export async function ensureCategoryFixture(
+  helpdeskId: number,
+  name: string,
+): Promise<number> {
+  const [existing] = await db
+    .select({ id: kbCategories.id })
+    .from(kbCategories)
+    .where(
+      and(eq(kbCategories.helpdeskId, helpdeskId), eq(kbCategories.name, name)),
+    )
+    .limit(1);
+  if (existing) return existing.id;
+
+  const [row] = await db
+    .insert(kbCategories)
+    .values({ helpdeskId, name })
+    .returning({ id: kbCategories.id });
+  return row.id;
+}
 
 const CLEANUP_ATTEMPTS = 2;
 const KB_IMAGE_URL_PATTERN =

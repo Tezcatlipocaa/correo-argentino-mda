@@ -36,16 +36,13 @@ try {
   loadError = true;
 }
 
-if (
-  !loadError &&
-  (!article || (article.status !== "published" && !canWrite))
-) {
+if (!loadError && (!article || (article.status !== "published" && !canWrite))) {
   return Astro.rewrite(resolveUrl("/404"));
 }
 ---
 
 <BaseLayout title="Artículo">
-  <PageContainer width="2xl">
+  <PageContainer width="xl">
     <PageHeader
       title="Artículo"
       description="Consulta la documentación de tu mesa de ayuda."

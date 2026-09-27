@@ -40,6 +40,7 @@ test.describe("Base de conocimiento - creación", () => {
       page.getByRole("heading", { name: "Nuevo artículo" }),
     ).toBeVisible();
     await page.locator("#kb-title").fill(title);
+    await page.locator("#kb-category").selectOption("Accesos");
     await expect(page.locator("#kb-status")).toHaveValue("draft");
     await setEasyMdeContent(page, markdown);
 
@@ -73,6 +74,7 @@ test.describe("Base de conocimiento - creación", () => {
       helpdeskId: mesa.invgateId,
       authorUserId: leader.userId,
       content: markdown,
+      category: "Accesos",
     });
 
     await expect(page).toHaveURL(/\/base-conocimiento(?:\?.*)?$/);

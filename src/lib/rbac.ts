@@ -95,6 +95,10 @@ export const routePermissions: RoutePermission[] = [
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
   {
+    path: "/base-conocimiento/categorias",
+    roles: ["admin", "supervisor", "team_leader"],
+  },
+  {
     path: "/base-conocimiento/create",
     roles: ["admin", "supervisor", "team_leader"],
   },
@@ -248,4 +252,3 @@ export function getModulePermissions(
 
   return perm;
 }
-

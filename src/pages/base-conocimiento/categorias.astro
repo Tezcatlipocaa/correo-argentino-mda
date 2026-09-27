@@ -1,0 +1,257 @@
+---
+import { and, eq, or } from "drizzle-orm";
+import { db } from "@db/index";
+import { mesas } from "@db/schema";
+import { getModulePermissions } from "@lib/rbac";
+import { can } from "@lib/roleConfig";
+import { logAdminFromAstro } from "@lib/auditLogger";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
+import { resolveUrl } from "@lib/url";
+import {
+  createCategory,
+  deleteCategory,
+  listCategories,
+  listCategoryCounts,
+  renameCategory,
+} from "@lib/kbCategories";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+
+const user = Astro.locals.user;
+const perms = getModulePermissions("base-conocimiento", user.role);
+if (!perms.canWrite) {
+  return redirectWithToast(
+    "/base-conocimiento",
+    "Acceso no autorizado",
+    "error",
+  );
+}
+
+const sessionHelpdeskId = user.helpdeskId;
+const isAdmin = can(user.role, "admin");
+
+const categoriasUrl = resolveUrl("/base-conocimiento/categorias");
+const kbReturnPrefix = resolveUrl("/base-conocimiento/");
+const kbReturnOrigin = "http://localhost";
+const isKbReturn = (value: string) => {
+  if (!value.startsWith("/") || value.startsWith("//")) return false;
+  return new URL(value, kbReturnOrigin).pathname.startsWith(kbReturnPrefix);
+};
+const isCategoryFormReturn = (value: string) => {
+  if (!isKbReturn(value)) return false;
+  const pathname = new URL(value, kbReturnOrigin).pathname;
+  return (
+    pathname === resolveUrl("/base-conocimiento/create") ||
+    pathname.startsWith(resolveUrl("/base-conocimiento/edit/"))
+  );
+};
+
+const returnToRaw = Astro.url.searchParams.get("returnTo") ?? "";
+const returnTo = isKbReturn(returnToRaw) ? returnToRaw : categoriasUrl;
+
+let errorMsg = "";
+let successMsg = "";
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get("action") ?? "");
+  const postedReturnTo = String(formData.get("returnTo") ?? "");
+  const effectiveReturnTo = isKbReturn(postedReturnTo)
+    ? postedReturnTo
+    : returnTo;
+  const postedHelpdeskId = Number(formData.get("helpdeskId") ?? 0);
+  const isInlineFromForm =
+    isKbReturn(postedReturnTo) && postedReturnTo !== categoriasUrl;
+  let targetHelpdeskId = sessionHelpdeskId;
+  let createdName = "";
+
+  if (isAdmin && Number.isInteger(postedHelpdeskId) && postedHelpdeskId > 0) {
+    const [mesa] = db
+      .select({ id: mesas.invgateId })
+      .from(mesas)
+      .where(
+        and(
+          eq(mesas.invgateId, postedHelpdeskId),
+          eq(mesas.active, true),
+          or(eq(mesas.assignable, true), eq(mesas.name, MDA_TI_HELPDESK)),
+        ),
+      )
+      .limit(1)
+      .all();
+
+    if (mesa) {
+      targetHelpdeskId = postedHelpdeskId;
+    } else {
+      errorMsg = "La mesa indicada no existe o está deshabilitada.";
+    }
+  }
+
+  if (targetHelpdeskId === null || targetHelpdeskId <= 0) {
+    errorMsg = errorMsg || "Tu usuario no tiene mesa asignada.";
+  } else if (!errorMsg) {
+    const name = String(formData.get("name") ?? "");
+    const id = Number(formData.get("id") ?? 0);
+
+    if (action === "create") {
+      const result = createCategory({
+        helpdeskId: targetHelpdeskId,
+        name,
+        userId: user.id,
+      });
+      if (result.ok) {
+        successMsg = `Categoría "${result.name}" creada.`;
+        createdName = result.name;
+      } else if (result.reason === "duplicate") {
+        errorMsg = "Ya existe una categoría con ese nombre en la mesa.";
+      } else {
+        errorMsg = "El nombre debe tener entre 2 y 60 caracteres.";
+      }
+    } else if (action === "rename") {
+      const result = renameCategory({ id, helpdeskId: targetHelpdeskId, name });
+      if (result.ok) {
+        successMsg = "Categoría actualizada.";
+      } else if (result.reason === "duplicate") {
+        errorMsg = "Ya existe una categoría con ese nombre en la mesa.";
+      } else if (result.reason === "not_found") {
+        errorMsg = "La categoría no existe.";
+      } else {
+        errorMsg = "El nombre debe tener entre 2 y 60 caracteres.";
+      }
+    } else if (action === "delete") {
+      const result = deleteCategory({ id, helpdeskId: targetHelpdeskId });
+      if (result.ok) {
+        successMsg = "Categoría eliminada.";
+      } else if (result.reason === "in_use") {
+        errorMsg =
+          "La categoría está en uso en artículos y no se puede eliminar.";
+      } else {
+        errorMsg = "La categoría no existe.";
+      }
+    }
+  }
+
+  if (successMsg) {
+    await logAdminFromAstro(Astro.locals, successMsg);
+    const hashIndex = effectiveReturnTo.indexOf("#");
+    const basePath =
+      hashIndex >= 0
+        ? effectiveReturnTo.slice(0, hashIndex)
+        : effectiveReturnTo;
+    const hash = hashIndex >= 0 ? effectiveReturnTo.slice(hashIndex) : "";
+    const destino =
+      createdName &&
+      action === "create" &&
+      isCategoryFormReturn(effectiveReturnTo)
+        ? `${basePath}${
+            basePath.includes("?") ? "&" : "?"
+          }nueva_categoria=${encodeURIComponent(createdName)}${hash}`
+        : effectiveReturnTo;
+    return redirectWithToast(destino, successMsg, "success");
+  }
+
+  if (errorMsg && isInlineFromForm) {
+    return redirectWithToast(effectiveReturnTo, errorMsg, "error");
+  }
+}
+
+const categorias = sessionHelpdeskId ? listCategories(sessionHelpdeskId) : [];
+const conteos = sessionHelpdeskId
+  ? listCategoryCounts(sessionHelpdeskId)
+  : new Map<string, number>();
+---
+
+<BaseLayout title="Categorías">
+  <PageContainer>
+    <PageHeader
+      title="Categorías"
+      description="Administrá las categorías disponibles para los artículos de tu mesa."
+    />
+
+    {
+      errorMsg && (
+        <div role="alert" class="alert alert-error mb-4">
+          {errorMsg}
+        </div>
+      )
+    }
+
+    <SectionCard title="Categorías de la mesa" icon="boxicons:grid-filled">
+      <div class="space-y-6 p-6 sm:p-8">
+        <form method="POST" class="flex flex-wrap items-end gap-3">
+          <input type="hidden" name="action" value="create" />
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <FormField
+            id="kb-category-name"
+            name="name"
+            label="Nombre"
+            required
+            minlength={2}
+            maxlength={60}
+            placeholder="Ej: Redes"
+            class="flex-1"
+          />
+          <button type="submit" class="btn btn-primary"
+            >Agregar categoría</button
+          >
+        </form>
+
+        <ul class="divide-base-300 divide-y">
+          {
+            categorias.map((categoria) => (
+              <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p class="font-semibold">{categoria.name}</p>
+                  <p class="text-base-content/60 text-xs">
+                    {conteos.get(categoria.name) ?? 0} artículo(s)
+                  </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <form method="POST" class="flex items-end gap-2">
+                    <input type="hidden" name="action" value="rename" />
+                    <input type="hidden" name="id" value={categoria.id} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
+                    <FormField
+                      id={`kb-category-rename-${categoria.id}`}
+                      name="name"
+                      label="Nuevo nombre"
+                      required
+                      minlength={2}
+                      maxlength={60}
+                      size="sm"
+                    />
+                    <button
+                      type="submit"
+                      class="btn btn-sm"
+                      aria-label={`Editar ${categoria.name}`}
+                    >
+                      Guardar
+                    </button>
+                  </form>
+                  <form
+                    method="POST"
+                    onsubmit="return confirm('¿Eliminar esta categoría?');"
+                  >
+                    <input type="hidden" name="action" value="delete" />
+                    <input type="hidden" name="id" value={categoria.id} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
+                    <button
+                      type="submit"
+                      class="btn btn-error btn-sm"
+                      aria-label={`Eliminar ${categoria.name}`}
+                    >
+                      Eliminar
+                    </button>
+                  </form>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </SectionCard>
+  </PageContainer>
+</BaseLayout>

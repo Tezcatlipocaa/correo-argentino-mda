@@ -45,6 +45,7 @@ test("persiste título y contenido después de recargar", async ({
   await page.goto(`/base-conocimiento/edit/${articleId}`);
   await expect(page.locator("#kb-article-form")).toBeVisible();
   await page.locator("#kb-title").fill(updatedTitle);
+  await page.locator("#kb-category").selectOption("Accesos");
   await setEasyMdeContent(page, updatedContent);
 
   const responsePromise = page.waitForResponse(
@@ -82,6 +83,7 @@ test("persiste título y contenido después de recargar", async ({
   if (!stored) throw new Error("Edited article was not found");
   expect(stored.title).toBe(updatedTitle);
   expect(stored.content).toBe(updatedContent);
+  expect(stored.category).toBe("Accesos");
   expect(stored.status).toBe("published");
 });
 
