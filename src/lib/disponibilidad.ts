@@ -42,7 +42,18 @@ export interface AgentDisponibilidad {
   wiseCxMinutesInStatus?: number;
   wiseCxSince?: string;
   wiseCxInCall?: boolean;
+  estadoExcepcional?: string; // Tipo de excepción activa: "devolucion_supervisor" | "break_extendido" | "problema_tecnico"
+  estadoExcepcionalMotivo?: string; // Comentario del supervisor
+  estadoExcepcionalAt?: number; // Timestamp
+  estadoExcepcionalMinutos?: number | null; // Tiempo extra para break extendido en minutos
+  asignableAgs?: boolean;
 }
+
+export const EXCEPTION_LABELS: Record<string, string> = {
+  devolucion_supervisor: "Devolución Supervisor",
+  break_extendido: "Break Extendido",
+  problema_tecnico: "Problema Técnico",
+};
 
 // Format date as YYYY-MM-DD using local time
 export function getLocalDateString(date: Date = new Date()): string {
@@ -238,8 +249,15 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt,
       lastAutogestionAssignedBy: agents.lastAutogestionAssignedBy,
       lastAutogestionUndo: agents.lastAutogestionUndo,
+      estadoExcepcional: agents.estadoExcepcional,
+      estadoExcepcionalMotivo: agents.estadoExcepcionalMotivo,
+      estadoExcepcionalAt: agents.estadoExcepcionalAt,
+      estadoExcepcionalMinutos: agents.estadoExcepcionalMinutos,
+      enCronograma: agents.enCronograma,
+      asignableAgs: agents.asignableAgs,
     })
-    .from(agents);
+    .from(agents)
+    .where(eq(agents.enCronograma, true));
 
   // Filtrar solo operadores que pertenecen a la Mesa 3950 de InvGate
   const dbAgents = dbAgentsAll.filter((agent) => {
@@ -290,8 +308,10 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       "Presencial Parque Patricios",
       "Home Office",
     ];
-    // Check if there is an override for this agent today
-    const schedule = dbSchedules.find((s) => s.date === todayStr && s.agentName === agent.name);
+    // Check if there is an override for this agent today (vinculo por id o nombre)
+    const schedule = dbSchedules.find(
+      (s) => s.date === todayStr && (s.agentId === agent.id || s.agentName === agent.name)
+    );
 
     let status = "Franco";
     let horario = "";
@@ -415,6 +435,19 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       lastAutogestionAssignedBy: agent.lastAutogestionAssignedBy,
       lastAutogestionUndo: agent.lastAutogestionUndo,
       modalidadHoy: status,
+      estadoExcepcional: agent.estadoExcepcional || undefined,
+      estadoExcepcionalMotivo: agent.estadoExcepcionalMotivo || undefined,
+      estadoExcepcionalAt: agent.estadoExcepcionalAt || undefined,
+      estadoExcepcionalMinutos: agent.estadoExcepcionalMinutos,
+      asignableAgs: !!agent.asignableAgs,
+    };
+
+    const applyOverride = () => {
+      if (agent.estadoExcepcional) {
+        info.disponible = false;
+        info.motivo =
+          EXCEPTION_LABELS[agent.estadoExcepcional] || agent.estadoExcepcional;
+      }
     };
 
     // If status is not a working status, they are unavailable
@@ -1441,4 +1474,51 @@ export async function ensureHasLock(
   }
   await heartbeatLock(locals.user.id);
   return { ok: true };
+}
+
+export async function marcarEstadoExcepcional(
+  agentId: number,
+  tipo: string,
+  motivo?: string,
+  tiempoExtra?: number | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(agents)
+      .set({
+        estadoExcepcional: tipo,
+        estadoExcepcionalMotivo: motivo || null,
+        estadoExcepcionalAt: Date.now(),
+        estadoExcepcionalMinutos: tiempoExtra || null,
+      })
+      .where(eq(agents.id, agentId));
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Error al marcar estado excepcional",
+    };
+  }
+}
+
+export async function limpiarEstadoExcepcional(
+  agentId: number,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(agents)
+      .set({
+        estadoExcepcional: null,
+        estadoExcepcionalMotivo: null,
+        estadoExcepcionalAt: null,
+        estadoExcepcionalMinutos: null,
+      })
+      .where(eq(agents.id, agentId));
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Error al limpiar estado excepcional",
+    };
+  }
 }

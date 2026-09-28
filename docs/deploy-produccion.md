@@ -181,11 +181,15 @@ cd C:\Projects\correo-argentino-mda
 git pull origin master
 call pm2 kill
 call npm install
+call npx tsx scripts/align-db-to-schema.mts
+call npx tsx scripts/backfill-asistencia.mts --apply
 call npm run build
 call pm2 start ecosystem.config.cjs
 ```
 
 `pm2 kill` corre ANTES de `npm install`: con procesos Node/PM2 vivos, Windows no permite reemplazar binarios nativos (`.node`) y deja `node_modules` inconsistente → el build genera un manifest SSR sin `rootDir` → crash loop en runtime. `npm run build` incluye el guard `scripts/verify-build.mjs` que aborta si `rootDir` falta. Ver `docs/lessons.md` (2026-09-07).
+
+Entre `npm install` y el build el auto-deploy alinea la DB host (`align-db-to-schema.mts`, idempotente, con backup) y corre el backfill one-time de `agents.en_asistencia` (`backfill-asistencia.mts --apply`, dry-run revisable a mano). Si cualquiera falla, aborta sin reiniciar PM2.
 
 ### Tarea programada (Windows)
 
@@ -209,6 +213,67 @@ Register-ScheduledTask -TaskName "Auto deploy correo-argentino-mda" -Action $a -
 Si `-RunLevel` tampoco existe en el módulo, omitirlo (queda Limited — suficiente para npm/pm2 del perfil usuario).
 
 Nota: en logon no interactivo, `npm`/`pm2` deben resolverse desde el PATH del usuario (`C:\Program Files\nodejs` y `%APPDATA%\npm`); si el run no interactivo falla por esto, fijar el PATH al inicio del `.bat`.
+
+---
+
+## Migración B2: vínculo de horarios por ID (drop de `agent_name`)
+
+Correr **una única vez** al deployar B2, **antes** de que `align-db-to-schema.mts`/`db:push` dropee `schedules.agent_name`. El auto-deploy no incluye migraciones. Todo el flujo está en **un solo script** (`bootstrap-plan-a-b2.mts`), idempotente, dry-run por defecto, backup WAL-safe.
+
+### Caso pre-Plan-A (prod que nunca recibió Plan A: `schedules` sin `agent_id`, `agents` sin `user_id`)
+
+Checklist copiable (ventana de mantenimiento):
+
+```
+0. git pull                                              # los scripts deben existir en el repo
+1. Pausar la tarea programada de auto-deploy
+2. pm2 stop all                                          # ⚠ OBLIGATORIO: detener PM2 antes de migrar
+3. scripts\backup-db.bat                                 # backup externo (opcional; el script ya hace backup WAL-safe)
+4. npx tsx scripts/bootstrap-plan-a-b2.mts --populate    # dry-run: revisar el reporte
+5. npx tsx scripts/bootstrap-plan-a-b2.mts --apply --populate
+6. npm install && npm run build                          # build nuevo antes de levantar
+7. pm2 start all
+8. npx drizzle-kit push                                  # debe responder "No changes detected"
+```
+
+⚠ **Detener PM2 (paso 2) es obligatorio.** El código viejo escribe `schedules.agent_name`, columna que el align elimina: con la app corriendo, los guardados del cronograma fallarían (`NOT NULL constraint failed`) durante y después de la migración.
+
+El paso 5 hace **todo**: agrega `schedules.agent_id` + `agents.user_id`, backfillea vínculos por nombre/username, crea shells para nombres sin agente, sanea `hidden_helpdesks` huérfanas, corre `align-db-to-schema.mts` (drop de `agent_name`, paridad, FK, integridad) y la **Fase 5** (sincroniza `mesas` desde InvGate, asigna todos los usuarios a MDA TI, setea flags por rol y marca `assignable` para MDA TI/Coord).
+
+> ⚠ El saneo borra filas de `hidden_helpdesks` cuyo `invgate_id` no exista en `mesas` (preferencias de ocultamiento, no críticas). Si `mesas` no existe, se crea vacía y se sanean todas las filas. El dry-run lo reporta.
+
+### Fase 5 (`--populate`) — DB era master
+
+Si la DB es vieja (era master), tras el align `users` queda sin mesa (`helpdesk_id`/`helpdesk_name` NULL → fail-closed) y `agents` con los 4 flags en false (`GET /api/cronograma` filtra `enCronograma = true` → cronograma vacío). La Fase 5 resuelve esto:
+
+- Requiere env `INVGATE_API_KEY`, `INVGATE_BASE_URL`, `INVGATE_API_USERNAME` (los carga desde `.env`).
+- Sincroniza `mesas` desde InvGate (`fetchInvGateMesas`), asigna **todos** los usuarios a `TI_GSM_MDA TI` y setea flags por rol:
+
+  | Rol | cronograma | cubic | calidad | AGS |
+  |---|---|---|---|---|
+  | `supervisor` | ✗ | ✗ | ✗ | ✗ |
+  | `team_leader` | ✓ | ✓ | ✗ | ✗ |
+  | `agent`, `admin`, `referent` | ✓ | ✓ | ✓ | ✓ |
+
+- Idempotente y con backup. En dry-run pre-align muestra el preview (conteos) pero no escribe.
+- Asume que **todos** los usuarios pertenecen a MDA TI (caso actual). Si hubiera usuarios de otra mesa, revisar el reporte antes de aplicar.
+
+### Caso post-Plan-A (prod que ya corrió Plan A: tiene `agent_id`/`user_id`)
+
+Los pasos 2-3 del script son no-op; igual conviene ejecutarlo una vez (detecta el estado) o correr directo `npx tsx scripts/align-db-to-schema.mts`. `--populate` sigue siendo útil si faltan mesas/asignaciones.
+
+> Nunca correr `--apply` sin revisar el dry-run. Si se dropea `agent_name` antes de vincular, los horarios huérfanos (`agent_id IS NULL`) no se pueden vincular y quedan invisibles para los lectores id-only (cronograma, asistencia, disponibilidad).
+
+### Mesa asignable (`mesas.assignable`)
+
+`align-db-to-schema.mts`/`db:push` agrega `mesas.assignable` (default `false`): tras la migración, ninguna mesa es elegible en el select de alta/edición de usuario salvo MDA TI (exenta por código).
+
+**La migración one-shot ya lo cubre**: el paso 5 (`--apply --populate`) marca `assignable = 1` para `ALLOWED_HELPDESK_NAMES` (MDA TI y Coord). El script `seed-assignable-mesas.mts` queda solo como **respaldo/idempotente** si por algún motivo no se corrió el bootstrap:
+
+1. Dry-run: `npx tsx scripts/seed-assignable-mesas.mts`
+2. Aplicar: `npx tsx scripts/seed-assignable-mesas.mts --apply` (backup WAL-safe, idempotente; marca `true` las mesas de `ALLOWED_HELPDESK_NAMES`)
+
+Luego el admin cura el resto de mesas desde `/admin/usuarios/mesas-de-ayuda`.
 
 ---
 

@@ -7,7 +7,7 @@ import {
   agentSaturdayGroups,
   weekendOvertimeShifts,
 } from "@db/schema";
-import { and, gte, lte, inArray, sql, lt, desc } from "drizzle-orm";
+import { and, eq, gte, lte, inArray, sql, lt, desc } from "drizzle-orm";
 
 // Helper to generate dates in range (inclusive, max 31 days)
 export function getDatesInRange(startStr: string, endStr: string): string[] {
@@ -77,7 +77,9 @@ export function calculateCompliance(
 export async function getAttendanceData(startDate: string, endDate: string) {
   const dates = getDatesInRange(startDate, endDate);
 
-  // 1. Fetch all agents
+  // 1. Fetch all agents que participan de asistencia (enAsistencia=true).
+  // Un agente de una mesa sin participaciones (Coord/MDC) o con el flag
+  // apagado no figura en el control de asistencia.
   const dbAgents = await db
     .select({
       id: agents.id,
@@ -90,7 +92,8 @@ export async function getAttendanceData(startDate: string, endDate: string) {
       saturdayGroup: agents.saturdayGroup,
       saturdayHorario: agents.saturdayHorario,
     })
-    .from(agents);
+    .from(agents)
+    .where(eq(agents.enAsistencia, true));
 
   // 2. Fetch schedules for this date range
   const dbSchedules = await db
@@ -249,9 +252,9 @@ export async function getAttendanceData(startDate: string, endDate: string) {
     const isScheduledMonth = !!scheduledMonths[monthStr];
 
     dbAgents.forEach((agent) => {
-      // Find planned override/schedule for this date and agent
+      // Find planned override/schedule for this date and agent (vinculo por id)
       const plan = dbSchedules.find(
-        (s) => s.agentName === agent.name && s.date === dateStr,
+        (s) => s.agentId === agent.id && s.date === dateStr,
       );
 
       let isSaturdayRotationShift = false;
@@ -347,7 +350,13 @@ export async function getAttendanceData(startDate: string, endDate: string) {
       const overtimeShift = dbOvertimeShifts.find(
         (s) => s.agentId === agent.id && s.date === dateStr,
       );
-      const hasOvertime = !!overtimeShift;
+      const actualOvertime = dbAttendance.find(
+        (a) =>
+          a.agentId === agent.id &&
+          a.date === dateStr &&
+          a.shiftType === "overtime",
+      );
+      const hasOvertime = !!overtimeShift || !!actualOvertime;
       const isFranco =
         modalidadPlanificada === "Franco" ||
         modalidadPlanificada === "Vacaciones" ||
@@ -362,8 +371,13 @@ export async function getAttendanceData(startDate: string, endDate: string) {
             a.shiftType === "normal",
         );
 
-        if (actualNormal?.horarioEstipulado) {
-          horarioEstipulado = actualNormal.horarioEstipulado;
+        if (
+          actualNormal?.horarioEstipulado &&
+          actualNormal.horarioEstipulado.trim() !== "" &&
+          actualNormal.horarioEstipulado !== "--:--" &&
+          actualNormal.horarioEstipulado !== "Franco"
+        ) {
+          horarioEstipulado = actualNormal.horarioEstipulado.trim();
         }
 
         let defaultAsistencia = "";
@@ -407,17 +421,17 @@ export async function getAttendanceData(startDate: string, endDate: string) {
       }
 
       // 2. Emit overtime row if HE is present
-      if (hasOvertime && overtimeShift) {
-        const actualOvertime = dbAttendance.find(
-          (a) =>
-            a.agentId === agent.id &&
-            a.date === dateStr &&
-            a.shiftType === "overtime",
-        );
-
-        let heHorario = `${overtimeShift.startTime} - ${overtimeShift.endTime}`;
-        if (actualOvertime?.horarioEstipulado) {
-          heHorario = actualOvertime.horarioEstipulado;
+      if (hasOvertime) {
+        let heHorario = overtimeShift
+          ? `${overtimeShift.startTime} - ${overtimeShift.endTime}`
+          : actualOvertime?.horarioEstipulado || "--:--";
+        if (
+          actualOvertime?.horarioEstipulado &&
+          actualOvertime.horarioEstipulado.trim() !== "" &&
+          actualOvertime.horarioEstipulado !== "--:--" &&
+          actualOvertime.horarioEstipulado !== "Franco"
+        ) {
+          heHorario = actualOvertime.horarioEstipulado.trim();
         }
 
         const asistencia = actualOvertime?.asistencia || "HORAS EXTRAS";

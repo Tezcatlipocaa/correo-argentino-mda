@@ -9,6 +9,20 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
   admin: 5,
 };
 
+export const CANONICAL_ROLES: readonly Role[] = [
+  "admin",
+  "supervisor",
+  "team_leader",
+  "referent",
+  "agent",
+] as const;
+
+const CANONICAL_ROLE_SET = new Set<string>(CANONICAL_ROLES);
+
+export function isValidRole(role: string): role is Role {
+  return typeof role === "string" && CANONICAL_ROLE_SET.has(role);
+}
+
 export function normalizeRole(role: string): Role {
   const clean = role.toLowerCase().replace(/[-_]/g, " ").trim();
   if (clean === "admin") return "admin";
@@ -28,10 +42,24 @@ export interface RoutePermission {
   roles: Role[];
 }
 
+// Every role, ordered by hierarchy. Used for whitelist entries whose access
+// was "everyone" under the old default-allow behavior.
+const ALL_ROLES: Role[] = [
+  "agent",
+  "referent",
+  "team_leader",
+  "supervisor",
+  "admin",
+];
+
 export const routePermissions: RoutePermission[] = [
   { path: "/admin/usuarios-sin-ubicacion", roles: ["admin"] },
   { path: "/admin/usuarios", roles: ["admin"] },
+  { path: "/admin/usuarios/mesas-de-ayuda", roles: ["admin"] },
   { path: "/admin/auditoria", roles: ["admin"] },
+  { path: "/admin/feedback", roles: ["admin"] },
+  { path: "/admin/permisos", roles: ["admin"] },
+  { path: "/admin/papelera", roles: ["admin"] },
   {
     path: "/admin/invgate/ubicaciones",
     roles: ["admin", "supervisor", "team_leader"],
@@ -39,6 +67,10 @@ export const routePermissions: RoutePermission[] = [
   { path: "/admin", roles: ["admin", "supervisor", "team_leader"] },
   {
     path: "/supervision/asistencia",
+    roles: ["admin", "supervisor", "team_leader"],
+  },
+  {
+    path: "/supervision/asistencia/operador",
     roles: ["admin", "supervisor", "team_leader"],
   },
   {
@@ -70,9 +102,49 @@ export const routePermissions: RoutePermission[] = [
     path: "/inventario-terminales/cubics/edit",
     roles: ["admin", "supervisor"],
   },
+
+  // Default-deny whitelist: every route group that exists under src/pages
+  // today is listed explicitly below with the access it had under the old
+  // default-allow behavior. Any NEW path is denied by default and must be
+  // added here. Do NOT add a bare "/" entry — the longest-prefix `startsWith`
+  // matching would make it a catch-all that defeats default-deny.
+  { path: "/404", roles: ALL_ROLES },
+  { path: "/login", roles: ALL_ROLES },
+  { path: "/logout", roles: ALL_ROLES },
+  // Astro Actions (/_actions/*): los checks de rol viven dentro de cada
+  // action (context.locals.user); el middleware solo exige sesion valida.
+  { path: "/_actions", roles: ALL_ROLES },
+  { path: "/profile", roles: ALL_ROLES },
+  { path: "/buscador-usuarios", roles: ALL_ROLES },
+  { path: "/contactos", roles: ALL_ROLES },
+  { path: "/generador-firmas", roles: ALL_ROLES },
+  { path: "/inventario-terminales", roles: ALL_ROLES },
+  { path: "/mesas-de-ayuda", roles: ALL_ROLES },
+  { path: "/oficinas", roles: ALL_ROLES },
+  { path: "/recursos", roles: ALL_ROLES },
+  { path: "/titulos", roles: ALL_ROLES },
+  { path: "/base-conocimiento", roles: ALL_ROLES },
+  { path: "/api/admin", roles: ALL_ROLES },
+  { path: "/api/aplicativos", roles: ALL_ROLES },
+  { path: "/api/asistencia", roles: ALL_ROLES },
+  { path: "/api/cronograma", roles: ALL_ROLES },
+  { path: "/api/disponibilidad", roles: ALL_ROLES },
+  { path: "/api/download", roles: ALL_ROLES },
+  { path: "/api/export", roles: ALL_ROLES },
+  { path: "/api/icons", roles: ALL_ROLES },
+  { path: "/api/invgate", roles: ALL_ROLES },
+  { path: "/api/offices", roles: ALL_ROLES },
+  { path: "/api/profile", roles: ALL_ROLES },
+  { path: "/api/soportes", roles: ALL_ROLES },
+  { path: "/api/support-guides", roles: ALL_ROLES },
+  { path: "/api/terminals", roles: ALL_ROLES },
+  { path: "/api/titulos", roles: ALL_ROLES },
+  { path: "/api/usuarios", roles: ALL_ROLES },
 ];
 
 export function hasPermission(path: string, userRole: string): boolean {
+  // Politica: el rol admin siempre tiene acceso a todo (no revocable).
+  if (normalizeRole(userRole) === "admin") return true;
   const role = normalizeRole(userRole);
   const normalizedPath = path.toLowerCase();
 
@@ -80,11 +152,18 @@ export function hasPermission(path: string, userRole: string): boolean {
     .filter((route) => normalizedPath.startsWith(route.path.toLowerCase()))
     .sort((a, b) => b.path.length - a.path.length)[0];
 
+  const userRank = ROLE_HIERARCHY[role];
+
+  // The home page is public. It cannot be expressed as a prefix entry because
+  // "/" matches every path under startsWith semantics.
+  if (normalizedPath === "/") return true;
+
+  // Default deny: unknown paths must be explicitly whitelisted in
+  // routePermissions.
   if (!matchedRoute) {
-    return true;
+    return false;
   }
 
-  const userRank = ROLE_HIERARCHY[role] || 0;
   return matchedRoute.roles.some((allowedRole) => {
     const allowedRank = ROLE_HIERARCHY[allowedRole];
     return userRank >= allowedRank;
@@ -146,10 +225,14 @@ export function getModulePermissions(
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
   } else if (moduleName === "usuarios") {
-    // Solo lectura por defecto, escritura solo para admin
-    perm.canRead = true;
+    // Solo admin lee/escribe (los endpoints de lectura de AD exponen datos sensibles)
+    perm.canRead = rank >= ROLE_HIERARCHY.admin;
+    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
+  } else if (moduleName === "permisos") {
+    perm.canRead = rank >= ROLE_HIERARCHY.admin;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   }
 
   return perm;
 }
+

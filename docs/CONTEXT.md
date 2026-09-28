@@ -81,10 +81,32 @@ Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
 ### Mecanismos de control
 
 - **Middleware:** `src/middleware.ts` — verifica sesion activa via cookie HMAC, adjunta `locals.user` y `locals.role`
-- **Rutas protegidas:** Config en `src/lib/rbac.ts` — `routePermissions` y `hasPermission(href, role)`
-- **Permisos por modulo:** `src/lib/rolesMatrix.ts` — `isAllowed(feature, role)`: 16 features con read/write/viewAll/viewComments/viewTotals
-- **API routes:** `requireWriteAccess(locals)` / `requireReadAccess(locals)` desde `src/lib/rbac-middleware.ts`
+- **Rutas protegidas (rol):** `src/lib/rbac.ts` — `routePermissions` (whitelist default-deny, incluye `/_actions`) y `hasPermission(href, role)`
+- **Visibilidad por mesa (fuente unica):** `isSectionVisibleSync(helpdeskName, role, href)` en `src/lib/helpdeskAccess.ts` — sincronica, sin capa DB de permisos (el sistema DB routeAccess/moduleAccess fue eliminado). Usada por middleware, sidebar y dashboard. Admin short-circuit a allow.
+- **Politica admin:** `/admin/usuarios`, `/admin/usuarios/mesas-de-ayuda`, `/admin/feedback`, `/admin/auditoria` admin-only por whitelist hardcoded. `/admin/permisos` ya no tiene pagina: es un redirect 302 a `/admin/usuarios/mesas-de-ayuda` (sigue en la whitelist admin-only para que el middleware permita resolver el redirect).
+- **Mesa obligatoria:** al crear usuario se exige mesa activa; nombre canonico desde `mesas.name`. Mesa inactiva/borrada/desconocida → fail-closed (`resolveSessionMesa`): usuario queda "sin mesa" (solo paginas comunes) hasta reasignacion.
+- **Banner de `/admin/usuarios`:** solo se muestra para usuarios con **mesa inactiva** (`mesas.active = false`), fail-closed, con cap de 20 + contador de restantes. Los usuarios sin mesa (`helpdeskId` NULL) o con mesa huerfana NO se listan (siguen fail-closed y visibles en la tabla con su badge).
+- **Participaciones:** gating por mesa **canonica**: el selector de participaciones (y el alta/update-user) resuelve la mesa via `LEFT JOIN users→mesas` (`mesas.name`) con fallback al denormalizado `users.helpdeskName` solo si el join no resuelve (usuario huerfano); luego `mesaHasParticipaciones`. Solo mesas en `PARTICIPATION_HELPDESK_NAMES` (hoy MDA TI). El supervisor no figura: `enCronograma` forzado a `false` server-side (`normalizeRole`).
+- **Edición de usuario (modal único):** `/admin/usuarios` usa un solo modal "Editar usuario" que postea `action=update-user` y edita en una única transacción síncrona: rol, mesa de ayuda (canónica desde `mesas.name`), `users.username`, `agents.name` y los 5 flags de participación (`enCronograma`, `enAsistencia`, `asignableCubic`, `incluidoCalidad`, `asignableAgs`). El switch de **asistencia** solo se muestra en mesas participativas (hoy MDA TI); fuera de ellas no figura y el server lo fuerza a false. Invariante: `enAsistencia ⊆ enCronograma` (apagar cronograma apaga asistencia; el modal lo sincroniza en vivo). Renombrar el nombre visible ya no toca `schedules` (B2: el vínculo es por id). La fila `agents` se resuelve por `lower(username)` y se crea si falta (self-heal). Colisiones de `users.username`/`agents.name` se detectan dentro de la tx con mensaje específico. Mesa no participativa ⇒ flags a false; supervisor ⇒ `enCronograma=false`. La contraseña se blanquea con el CTA separado (`reset-password`). Snapshot leído dentro de la tx (sin TOCTOU).
+- **Vínculo de horarios 100% por ID:** `schedules.agentId` → `agents.id` → `agents.userId` → `users.id` (FKs nullable, `onDelete: set null`). `schedules.agentName` fue eliminada (Plan B2): el cliente manda `agentId`; el servidor acepta `agentName` solo como clave de resolución contra `agents.name` (nombres únicos) para compatibilidad. Los 4 lectores y todos los writers usan id. El rename de un operador ya no toca `schedules`. La regeneración de meses borra por `agentId`. Los flags de participación son solo visibilidad. `agents` es el **perfil de operador** (puede existir sin usuario de portal, `username` NULL): guarda configuración de horarios, ubicación, notas y capacidades.
+  - **Orden de migración en prod (obligatorio antes de que align/`db:push` dropee `agent_name`):** (1) backup, (2) `npx tsx scripts/link-orphan-schedules.mts` dry-run, (3) `--apply` (vincula huérfanos), (4) `npx tsx scripts/align-db-to-schema.mts`, (5) restart PM2. Si se dropea la columna antes de aplicar la reconciliación, los huérfanos quedan invisibles para los lectores id-only. Nunca correr `--apply` sin dry-run revisado.
+- **`/admin/usuarios/mesas-de-ayuda`:** gestion de mesas — sync InvGate (CSRF + rate-limit, devuelve `affectedUsers` con banner de reasignacion en `/admin/usuarios`), toggle `Asignable` por mesa (endpoint `POST /api/admin/permisos/mesas/assignable`, auditado) y resumen read-only de visibilidad. El resumen evalua **ambas capas** (`isSectionVisibleSync` ∧ `hasPermission`) para un rol `agent`, asi que refleja el acceso real (p.ej. `/admin` sale ✗ para agentes MDA TI). El endpoint rechaza 400 si se intenta deshabilitar MDA TI.
+- **`mesas.assignable`:** curacion manual (separada de `active`, que es el ciclo de vida del sync de InvGate). Solo mesas `active=1 AND (assignable=1 OR name='TI_GSM_MDA TI')` aparecen en el select de mesa al alta/editar usuario; el server re-valida lo mismo. **MDA TI esta exenta**: siempre asignable y no deshabilitable. Tras la migracion queda todo en `false`; `scripts/seed-assignable-mesas.mts` (dry-run por defecto, `--apply` con backup WAL-safe, idempotente) marca `true` las mesas historicamente permitidas (`ALLOWED_HELPDESK_NAMES`).
+- **Base de conocimiento:** `/base-conocimiento` ALL_ROLES; el contenido futuro se filtrara por `helpdeskId`. Actualmente **oculta de la UI** (sin sección en el sidebar ni en el resumen de `/admin/usuarios/mesas-de-ayuda`), pero la ruta sigue activa por URL directa. Se volverá a mostrar cuando se agreguen artículos.
+- **Tabla descriptiva por rol:** `src/lib/rolesMatrix.ts` — `isAllowed(feature, role)` alimenta la tabla comparativa de `/admin/usuarios` y el gating de UI. **NO es la fuente de verdad**: la matriz real vive en `rbac.ts` (`getModulePermissions` + `routePermissions`) y `helpdeskAccess.ts` (por mesa). Solo modela la capa de rol. `tests/unit/roles-matrix-consistency.test.ts` cubre el anti-drift.
+- **API routes:** `requireWriteAccess(locals, module)` / `requireReadAccess(locals, module)` desde `src/lib/rbac-middleware.ts`.
+- **Guards puntuales (mas alla del module-level):** `GET /api/usuarios/ad-groups-licenses` es admin-only; `PATCH /api/usuarios/[dni]` solo exige admin cuando el body trae `sucursal` (interno/telefono: cualquier usuario autenticado); el reorder de aplicativos/recursos/contactos (y sus categorias) exige `team_leader+` (`can(role, "team_leader")` dentro de `handleReorder`, porque `/api/admin` esta en la whitelist ALL_ROLES); `/api/profile/*` esta en la whitelist ALL_ROLES y cada endpoint se auto-guarda (401 sin sesion, p.ej. `change-password`).
 - **Template checks:** `can(user.role, "admin")` desde `@lib/roleConfig.ts` o `hasPermission(href, userRole)` desde `@lib/rbac.ts`
+
+---
+
+## Papelera de borrado recuperable
+
+- Toda delete de CRUD admin crea snapshot en `deleted_records` (fila padre; oficinas/cubics además hijos) vía `createDeleteHandler` o `deleteWithSnapshot` (`@lib/deletedRecords.ts`). El snapshot es atómico: si falla, no se borra nada.
+- Restauración admin-only en `/admin/papelera`; registry tipado `RESTORE_REGISTRY` — agregar ahí nuevas entidades restaurables. Únicos en conflicto se renombran con sufijo ` (restaurado)`.
+- Purga: proceso PM2 `purge-deleted-records` (04:00 diaria, retención 90d, `scripts/purge-deleted.ts`). Los registros restaurados quedan como histórico permanente.
+- Entidades nuevas con delete: si usan `createDeleteHandler` el snapshot padre es automático (`genericSnapshot: true` default); para snapshot con hijos usar `deleteWithSnapshot` + `genericSnapshot: false` + entrada en `RESTORE_REGISTRY` si deben ser restaurables.
+- Spec: `docs/superpowers/specs/2026-08-28-papelera-deleted-records-design.md`.
 
 ---
 
@@ -274,7 +296,7 @@ BaseLayout (flex flex-col min-h-screen)
 | Ruta                                    | Descripcion                             |
 | --------------------------------------- | --------------------------------------- |
 | `/supervision`                          | Redirecciona al dashboard               |
-| `/supervision/cronograma`               | Gestion de cronograma y horarios        |
+| `/supervision/cronograma`               | Gestion de cronograma, horarios y ubicaciones |
 | `/supervision/asistencia`               | Control de asistencia y cumplimiento    |
 | `/supervision/asignacion-autogestiones` | Asignacion Round-Robin de autogestiones |
 | `/supervision/calidad-operadores`       | Auditoria y puntuacion de calidad       |
@@ -284,13 +306,14 @@ BaseLayout (flex flex-col min-h-screen)
 | Ruta                         | Descripcion                            |
 | ---------------------------- | -------------------------------------- |
 | `/admin`                     | Dashboard admin con resumen de sistema |
-| `/admin/usuarios`            | CRUD de usuarios del sistema           |
+| `/admin/usuarios`            | CRUD de usuarios + participaciones (enCronograma, enAsistencia, asignableCubic, incluidoCalidad, asignableAgs) |
 | `/admin/contactos`           | CRUD de contactos y categorias         |
 | `/admin/recursos`            | CRUD de enlaces y categorias           |
 | `/admin/auditoria`           | Logs de auditoria                      |
-| `/admin/operadores`          | CRUD de operadores N1/N2               |
 | `/admin/aplicativos`         | CRUD de aplicativos del catalogo       |
 | `/admin/invgate/ubicaciones` | Mapeo de ubicaciones InvGate           |
+| `/admin/usuarios/mesas-de-ayuda` | Mesas: sync InvGate + toggle asignable + resumen read-only de visibilidad |
+| `/admin/permisos`            | Redirect 302 a `/admin/usuarios/mesas-de-ayuda` |
 | `/admin/feedback`            | Formulario de feedback                 |
 
 ### Otras rutas
@@ -300,6 +323,7 @@ BaseLayout (flex flex-col min-h-screen)
 | `/login`   | Inicio de sesion  |
 | `/logout`  | Cierre de sesion  |
 | `/profile` | Perfil de usuario |
+| `/base-conocimiento` | Base de conocimiento por mesa (ALL_ROLES). Oculta de la UI por ahora; ruta activa por URL directa |
 
 ---
 
@@ -345,8 +369,10 @@ BaseLayout (flex flex-col min-h-screen)
 
 | Script                     | Descripcion                                               |
 | -------------------------- | --------------------------------------------------------- |
-| `auto-deploy.bat`          | git pull → pm2 kill → npm install → build (verify) → pm2 start |
+| `auto-deploy.bat`          | git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia → build (verify) → pm2 start |
 | `backup-db.bat`            | Copia `database/mda.db` con timestamp                     |
+| `align-db-to-schema.mts`   | Alinea la DB host con `src/db/schema.ts` (backup + paridad + integridad) |
+| `backfill-asistencia.mts`  | One-time idempotente: inicializa `agents.en_asistencia` (dry-run por defecto; `--apply` con backup) |
 | `verify-build.mjs`         | Guard post-build: valida `rootDir` en `dist/server/entry.mjs` |
 | `ping-worker.ts`           | Worker PM2 de ping a cubics                               |
 | `sync-legacy-inventory.ts` | Worker PM2 de sincronizacion de inventario                |
@@ -361,6 +387,8 @@ BaseLayout (flex flex-col min-h-screen)
 - Config: `drizzle.config.ts` (sqlite dialect, schema `./src/db/schema.ts`, out `./drizzle`)
 - Conexion: `src/db/index.ts` via `better-sqlite3`
 - Despues de cambios de schema, ejecutar `npm run db:push`
+- Deploy en prod: correr `scripts/align-db-to-schema.mts` (hace backup) y luego `scripts/backfill-asistencia.mts --apply` antes del restart de PM2 (el `auto-deploy.bat` ya los encadena); `drizzle-kit push` debe quedar limpio ("No changes detected")
+- Las tablas de permisos DB (routes, modules, route_access, module_access, permission_audit_batches) fueron eliminadas de schema y DB
 - Para explorar datos: `npm run db:studio`
 
 ---

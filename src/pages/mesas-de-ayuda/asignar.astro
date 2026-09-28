@@ -10,8 +10,10 @@ import { isNull } from "drizzle-orm";
 import { invgateGet } from "@lib/invgateClient";
 import type { InvgateHelpdeskAndLevel } from "@/types/invgate";
 import { HIDDEN_HELPDESK_IDS } from "@lib/soportesConfig";
+import { getCsrfTokenForSession } from "@lib/csrf";
 
 const cleanBase = getCleanBase();
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
 
 const unassignedRecords = await db.query.supportGuides.findMany({
   where: isNull(supportGuides.invgate_id),
@@ -54,7 +56,7 @@ const helpdesks = allItems
       description="Vincula registros locales de Service Manager a las helpdesks de InvGate."
     />
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2" data-csrf-token={csrfToken}>
       {
         unassignedRecords.map((guide) => {
           let topicsList: string[] = [];
@@ -116,8 +118,8 @@ const helpdesks = allItems
 </BaseLayout>
 
 <script>
-  import { getCleanBase } from "@lib/baseUrl";
-  const cleanBase = getCleanBase();
+import { getCleanBase } from "@lib/baseUrl";
+const cleanBase = getCleanBase();
 
   document
     .querySelectorAll<HTMLButtonElement>("[data-assign-btn]")
@@ -143,7 +145,13 @@ const helpdesks = allItems
           const res = await fetch(`${cleanBase}api/support-guides/assign`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ recordId, invgate_id: invgateId }),
+            body: JSON.stringify({
+              recordId,
+              invgate_id: invgateId,
+              csrf_token: document
+                .querySelector("[data-csrf-token]")
+                ?.getAttribute("data-csrf-token"),
+            }),
           });
 
           if (!res.ok) {

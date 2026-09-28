@@ -1,10 +1,12 @@
 ---
 import { db } from "@db/index";
-import { users } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { users, agents, mesas } from "@db/schema";
+import { eq, sql } from "drizzle-orm";
 import { passwordSchema, hashPassword } from "@lib/security";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { logAdminFromAstro } from "@lib/auditLogger";
+import { isValidRole, normalizeRole } from "@lib/rbac";
+import { mesaHasParticipaciones, MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 import AdminUsersContent from "@components/admin/users/AdminUsersContent.astro";
 import AdminUsersSkeleton from "@components/admin/users/AdminUsersSkeleton.astro";
 
@@ -18,36 +20,393 @@ if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = formData.get("action")?.toString() ?? "create";
 
-  if (action === "create") {
+  // Politica: nadie edita su propio usuario (rol, mesa, nombre, username,
+  // participaciones). La única auto-modificación permitida es la contraseña,
+  // que se hace desde /profile. El rol admin además no es editable por nadie
+  // en el sistema de permisos (whitelist hardcoded, short-circuit en
+  // isSectionVisibleSync).
+  const SELF_EDIT_BLOCKED_ACTIONS = new Set(["update-user"]);
+  const selfEditBlocked =
+    SELF_EDIT_BLOCKED_ACTIONS.has(action) &&
+    Number(formData.get("userId")) === Astro.locals.user.id;
+
+  if (selfEditBlocked) {
+    errorMsg =
+      "No podés editar tu propio usuario desde acá. Solo podés cambiar tu contraseña desde tu perfil.";
+  } else if (action === "create") {
     const username = formData.get("username")?.toString().trim().toLowerCase();
     const password = formData.get("password")?.toString();
     const role = formData.get("role")?.toString();
+    const name = formData.get("name")?.toString().trim();
+    const rawHelpdesk = formData.get("helpdesk")?.toString() ?? "";
+    const participaciones = {
+      enCronograma: formData.get("enCronograma") === "on",
+      enAsistencia: formData.get("enAsistencia") === "on",
+      asignableCubic: formData.get("asignableCubic") === "on",
+      incluidoCalidad: formData.get("incluidoCalidad") === "on",
+      asignableAgs: formData.get("asignableAgs") === "on",
+    };
 
-    if (username && password && role) {
+    let helpdeskId: number | null = null;
+    let helpdeskName: string | null = null;
+    if (rawHelpdesk) {
+      const sep = rawHelpdesk.indexOf("|");
+      const idStr = sep === -1 ? rawHelpdesk : rawHelpdesk.slice(0, sep);
+      const hdName = sep === -1 ? "" : rawHelpdesk.slice(sep + 1);
+      const parsedId = Number(idStr);
+      helpdeskId = Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null;
+      helpdeskName = hdName || null;
+    }
+
+    // Task B3 usa mesaRow para sanitizar participaciones
+    let mesaRow: typeof mesas.$inferSelect | undefined;
+    if (!username || !password || !role || !name) {
+      errorMsg = "Nombre completo, nombre de red, contraseña y rol son obligatorios.";
+    } else if (!isValidRole(role)) {
+      errorMsg = `Rol inválido: "${role}".`;
+    } else if (helpdeskId == null || !helpdeskName) {
+      errorMsg = "La mesa de ayuda es obligatoria: seleccioná una de la lista.";
+    } else {
+      const [row] = await db.select().from(mesas).where(eq(mesas.invgateId, helpdeskId));
+      mesaRow = row;
+      if (
+        !mesaRow ||
+        !mesaRow.active ||
+        (!mesaRow.assignable && mesaRow.name !== MDA_TI_HELPDESK)
+      ) {
+        errorMsg = "La mesa de ayuda seleccionada no existe o no está habilitada.";
+      } else if (
+        normalizeRole(role) === "admin" &&
+        mesaRow.name !== MDA_TI_HELPDESK
+      ) {
+        // El rol admin es un rol adicional solo de MDA TI: ninguna otra mesa
+        // (Coordinación ni futuras) puede tener administradores.
+        errorMsg =
+          "El rol administrador solo puede asignarse a la mesa MDA TI.";
+      } else {
+        // Nombre canónico desde DB, nunca del cliente.
+        helpdeskName = mesaRow.name;
+      }
+    }
+
+    if (!errorMsg) {
       const pwdValidation = passwordSchema.safeParse(password);
       if (!pwdValidation.success) {
         errorMsg = pwdValidation.error.issues[0].message;
       } else {
+        const finalParticipaciones = mesaHasParticipaciones(mesaRow?.name)
+          ? participaciones
+          : { enCronograma: false, enAsistencia: false, asignableCubic: false, incluidoCalidad: false, asignableAgs: false };
+        // Un supervisor no figura en el cronograma como operador (forzado).
+        if (normalizeRole(role) === "supervisor") {
+          finalParticipaciones.enCronograma = false;
+          finalParticipaciones.enAsistencia = false;
+        }
+        // Invariante: asistencia ⊆ cronograma.
+        if (!finalParticipaciones.enCronograma) {
+          finalParticipaciones.enAsistencia = false;
+        }
+
         try {
           const hashedPassword = await hashPassword(password);
-          await db.insert(users).values({
-            username,
-            password: hashedPassword,
-            role: role as any,
+          // better-sqlite3 commitea sincrónicamente al retornar el callback:
+          // usando async/await el driver lanza "Transaction function cannot
+          // return a promise", hace rollback y las statements se ejecutan en
+          // autocommit. Callback SÍNCRONO + .run()/.get().
+          db.transaction((tx) => {
+            const [newUser] = tx
+              .insert(users)
+              .values({
+                username,
+                password: hashedPassword,
+                role: role as any,
+                helpdeskId,
+                helpdeskName,
+              })
+              .returning({ id: users.id })
+              .all();
+
+            const existingAgent = tx
+              .select({ id: agents.id, userId: agents.userId })
+              .from(agents)
+              .where(
+                sql`lower(coalesce(${agents.username}, '')) = ${username}`,
+              )
+              .get();
+
+            if (existingAgent) {
+              tx.update(agents)
+                .set({
+                  name,
+                  // Vincula por id solo si la fila aún no tiene vínculo (respeta
+                  // un vínculo previo distinto: posible anomalía de datos).
+                  ...(existingAgent.userId == null ? { userId: newUser.id } : {}),
+                  ...finalParticipaciones,
+                })
+                .where(eq(agents.id, existingAgent.id))
+                .run();
+            } else {
+              // El vínculo por id se establece al crear: evita que la cadena
+              // agents.id → users.id se degrade con usuarios nuevos.
+              tx.insert(agents)
+                .values({
+                  name,
+                  username,
+                  userId: newUser.id,
+                  ...finalParticipaciones,
+                })
+                .run();
+            }
           });
           successMsg = `Usuario "${username}" creado con éxito.`;
           await logAdminFromAstro(
             Astro.locals,
-            `Creó al usuario "${username}" con rol ${role}`,
+            `Creó al usuario "${name}" (${username}) con rol ${role}. Participaciones: cronograma=${finalParticipaciones.enCronograma ? "sí" : "no"}, asistencia=${finalParticipaciones.enAsistencia ? "sí" : "no"}, cubic=${finalParticipaciones.asignableCubic ? "sí" : "no"}, calidad=${finalParticipaciones.incluidoCalidad ? "sí" : "no"}, AGS=${finalParticipaciones.asignableAgs ? "sí" : "no"}`,
           );
         } catch (e) {
-          errorMsg = "Error: El nombre de usuario ya existe.";
+          console.error("[usuarios] Error al crear usuario:", e);
+          const msg = e instanceof Error ? e.message : String(e);
+          // La transaccion inserta users (username UNIQUE) y agents (name
+          // UNIQUE): distinguir la columna evita reportar "usuario ya existe"
+          // cuando en realidad choco el nombre completo del agente.
+          if (msg.includes("users.username")) {
+            errorMsg = "Error: El nombre de usuario ya existe.";
+          } else if (msg.includes("agents.name")) {
+            errorMsg =
+              "Error: Ya existe un agente con ese nombre completo.";
+          } else {
+            errorMsg = "Error al crear el usuario.";
+          }
         }
       }
     }
-  }
+  } else if (action === "update-user") {
+    const userId = Number(formData.get("userId"));
+    const newUsername = formData.get("username")?.toString().trim().toLowerCase();
+    const newName = formData.get("name")?.toString().trim();
+    const newRole = formData.get("newRole")?.toString();
+    const rawHelpdesk = formData.get("helpdesk")?.toString() ?? "";
+    const submitted = {
+      enCronograma: formData.get("enCronograma") === "on",
+      enAsistencia: formData.get("enAsistencia") === "on",
+      asignableCubic: formData.get("asignableCubic") === "on",
+      incluidoCalidad: formData.get("incluidoCalidad") === "on",
+      asignableAgs: formData.get("asignableAgs") === "on",
+    };
 
-  if (action === "reset-password") {
+    let helpdeskId: number | null = null;
+    if (rawHelpdesk) {
+      const sep = rawHelpdesk.indexOf("|");
+      const idStr = sep === -1 ? rawHelpdesk : rawHelpdesk.slice(0, sep);
+      const parsedId = Number(idStr);
+      helpdeskId = Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null;
+    }
+
+    if (rawHelpdesk && helpdeskId == null) {
+      errorMsg = "Mesa de ayuda inválida.";
+    } else if (!newUsername || !newName) {
+      errorMsg = "Nombre completo y nombre de red son obligatorios.";
+    } else if (!newRole || !isValidRole(newRole)) {
+      errorMsg = `Rol inválido: "${newRole ?? ""}".`;
+    } else {
+      const FLAG_LABELS = {
+        enCronograma: "cronograma",
+        enAsistencia: "asistencia",
+        asignableCubic: "cubic",
+        incluidoCalidad: "calidad",
+        asignableAgs: "AGS",
+      } as const;
+      let audit: string | null = null;
+
+      try {
+        // Callback SÍNCRONO: better-sqlite3 no admite promesas en
+        // transaction() (lanza TypeError y hace rollback). El snapshot se lee
+        // DENTRO de la tx para evitar TOCTOU con ediciones concurrentes.
+        db.transaction((tx) => {
+          const target = tx
+            .select({
+              username: users.username,
+              role: users.role,
+              helpdeskId: users.helpdeskId,
+              helpdeskName: users.helpdeskName,
+            })
+            .from(users)
+            .where(eq(users.id, userId))
+            .get();
+
+          if (!target) {
+            errorMsg = "Usuario no encontrado.";
+            return;
+          }
+
+          // Mesa canónica (activa) desde DB, nunca del cliente.
+          let mesaName: string | null = null;
+          if (helpdeskId != null) {
+            const mesa = tx
+              .select({ name: mesas.name, active: mesas.active, assignable: mesas.assignable })
+              .from(mesas)
+              .where(eq(mesas.invgateId, helpdeskId))
+              .get();
+            if (
+              !mesa ||
+              !mesa.active ||
+              (!mesa.assignable && mesa.name !== MDA_TI_HELPDESK)
+            ) {
+              errorMsg = "La mesa de ayuda seleccionada no existe o no está habilitada.";
+              return;
+            }
+            if (
+              normalizeRole(newRole) === "admin" &&
+              mesa.name !== MDA_TI_HELPDESK
+            ) {
+              // El rol admin es un rol adicional solo de MDA TI.
+              errorMsg =
+                "El rol administrador solo puede asignarse a la mesa MDA TI.";
+              return;
+            }
+            mesaName = mesa.name;
+          }
+          const oldUsername = target.username;
+
+          // Colisión de username (excluyendo el propio usuario).
+          if (newUsername !== oldUsername) {
+            const clash = tx
+              .select({ id: users.id })
+              .from(users)
+              .where(
+                sql`lower(${users.username}) = ${newUsername} and ${users.id} <> ${userId}`,
+              )
+              .get();
+            if (clash) {
+              errorMsg = "Error: Ese nombre de usuario ya existe.";
+              return;
+            }
+          }
+
+          // Fila de agente vinculada (por username actual).
+          const agentRow = tx
+            .select({
+              id: agents.id,
+              name: agents.name,
+              userId: agents.userId,
+              enCronograma: agents.enCronograma,
+              enAsistencia: agents.enAsistencia,
+              asignableCubic: agents.asignableCubic,
+              incluidoCalidad: agents.incluidoCalidad,
+              asignableAgs: agents.asignableAgs,
+            })
+            .from(agents)
+            .where(
+              sql`lower(coalesce(${agents.username}, '')) = ${oldUsername.toLowerCase()}`,
+            )
+            .get();
+
+          // Colisión de nombre visible (excluyendo la propia fila de agente).
+          // Comparación insensible a mayúsculas, igual que el vínculo por
+          // username, para no crear casi-duplicados ("Perez" vs "PEREZ").
+          if (newName !== (agentRow?.name ?? "")) {
+            const nameClash = tx
+              .select({ id: agents.id })
+              .from(agents)
+              .where(
+                sql`lower(${agents.name}) = ${newName.toLowerCase()} and ${agents.id} <> ${agentRow?.id ?? -1}`,
+              )
+              .get();
+            if (nameClash) {
+              errorMsg = "Error: Ya existe un agente con ese nombre completo.";
+              return;
+            }
+          }
+
+          // Flags efectivos: mesa no participativa o supervisor fuerzan false.
+          const mesaParticipativa = mesaHasParticipaciones(mesaName);
+          const isSupervisor = normalizeRole(newRole) === "supervisor";
+          const cronogramaOn = mesaParticipativa && !isSupervisor && submitted.enCronograma;
+          const finalFlags = {
+            enCronograma: cronogramaOn,
+            // Invariante: asistencia ⊆ cronograma.
+            enAsistencia: cronogramaOn && submitted.enAsistencia,
+            asignableCubic: mesaParticipativa && submitted.asignableCubic,
+            incluidoCalidad: mesaParticipativa && submitted.incluidoCalidad,
+            asignableAgs: mesaParticipativa && submitted.asignableAgs,
+          };
+
+          tx.update(users)
+            .set({
+              role: newRole as any,
+              helpdeskId: helpdeskId ?? null,
+              helpdeskName: mesaName,
+              ...(newUsername !== oldUsername ? { username: newUsername } : {}),
+            })
+            .where(eq(users.id, userId))
+            .run();
+
+          if (agentRow) {
+            tx.update(agents)
+              .set({
+                name: newName,
+                username: newUsername,
+                // Vincula por id solo si la fila aún no tiene vínculo
+                // (respeta un vínculo previo distinto: posible anomalía).
+                ...(agentRow.userId == null ? { userId } : {}),
+                ...finalFlags,
+              })
+              .where(eq(agents.id, agentRow.id))
+              .run();
+          } else {
+            // Self-heal: usuarios sin fila agents se crean en el mismo submit.
+            tx.insert(agents)
+              .values({ name: newName, username: newUsername, userId, ...finalFlags })
+              .run();
+          }
+
+          // Audit: solo deltas reales.
+          const changes: string[] = [];
+          if (newUsername !== oldUsername) {
+            changes.push(`nombre de red "${oldUsername}" → "${newUsername}"`);
+          }
+          if (normalizeRole(target.role) !== normalizeRole(newRole)) {
+            changes.push(`rol "${target.role}" → "${newRole}"`);
+          }
+          const oldMesaLabel = target.helpdeskName ?? "Sin mesa de ayuda";
+          const newMesaLabel = mesaName ?? "Sin mesa de ayuda";
+          if (oldMesaLabel !== newMesaLabel) {
+            changes.push(`mesa "${oldMesaLabel}" → "${newMesaLabel}"`);
+          }
+          if (!agentRow) {
+            changes.push(`creada la fila de agente "${newName}"`);
+          } else if (agentRow.name !== newName) {
+            changes.push(`nombre visible "${agentRow.name}" → "${newName}"`);
+          }
+          const changedFlags = (Object.keys(FLAG_LABELS) as (keyof typeof FLAG_LABELS)[])
+            .filter((flag) => (agentRow ? agentRow[flag] : false) !== finalFlags[flag]);
+          if (changedFlags.length > 0) {
+            changes.push(
+              `participaciones: ${changedFlags
+                .map((flag) => `${FLAG_LABELS[flag]}=${finalFlags[flag] ? "sí" : "no"}`)
+                .join(", ")}`,
+            );
+          }
+          audit = `Actualizó al usuario "${oldUsername}"${changes.length > 0 ? `: ${changes.join("; ")}` : " (sin cambios)"}`;
+        });
+
+        if (!errorMsg && audit) {
+          successMsg = "Usuario actualizado con éxito.";
+          await logAdminFromAstro(Astro.locals, audit);
+        }
+      } catch (e) {
+        console.error("[usuarios] Error al actualizar usuario:", e);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("users.username")) {
+          errorMsg = "Error: Ese nombre de usuario ya existe.";
+        } else if (msg.includes("agents.name")) {
+          errorMsg = "Error: Ya existe un agente con ese nombre completo.";
+        } else {
+          errorMsg = "Error al actualizar el usuario.";
+        }
+      }
+    }
+  } else if (action === "reset-password") {
     const userId = Number(formData.get("userId"));
     const newPassword = formData.get("newPassword")?.toString();
     if (userId && newPassword) {
@@ -77,63 +436,8 @@ if (Astro.request.method === "POST") {
         }
       }
     }
-  }
-
-  if (action === "rename-username") {
-    const userId = Number(formData.get("userId"));
-    const newUsername = formData
-      .get("newUsername")
-      ?.toString()
-      .trim()
-      .toLowerCase();
-    if (userId && newUsername) {
-      try {
-        const [existing] = await db
-          .select({ username: users.username })
-          .from(users)
-          .where(eq(users.id, userId));
-        const oldUsername = existing?.username || "desconocido";
-
-        await db
-          .update(users)
-          .set({ username: newUsername })
-          .where(eq(users.id, userId));
-        successMsg = `Usuario renombrado a "${newUsername}" con éxito.`;
-        await logAdminFromAstro(
-          Astro.locals,
-          `Renombró al usuario de "${oldUsername}" a "${newUsername}"`,
-        );
-      } catch (e) {
-        errorMsg = "Error: Ese nombre de usuario ya existe.";
-      }
-    }
-  }
-
-  if (action === "change-role") {
-    const userId = Number(formData.get("userId"));
-    const newRole = formData.get("newRole")?.toString();
-    if (userId && newRole) {
-      try {
-        const [targetUser] = await db
-          .select({ username: users.username, role: users.role })
-          .from(users)
-          .where(eq(users.id, userId));
-        const targetUsername = targetUser?.username || "desconocido";
-        const oldRole = targetUser?.role || "desconocido";
-
-        await db
-          .update(users)
-          .set({ role: newRole as any })
-          .where(eq(users.id, userId));
-        successMsg = "Rol de usuario actualizado con éxito.";
-        await logAdminFromAstro(
-          Astro.locals,
-          `Cambió el rol de "${targetUsername}" de "${oldRole}" a "${newRole}"`,
-        );
-      } catch (e) {
-        errorMsg = "Error al actualizar el rol de usuario.";
-      }
-    }
+  } else {
+    errorMsg = `Acción desconocida: "${action}".`;
   }
 
   if (isAjax) {
@@ -143,12 +447,19 @@ if (Astro.request.method === "POST") {
         headers: { "Content-Type": "application/json" },
       });
     }
-    // For forms in modals, we probably want them to reload to see the updated table, so redirectUrl: Astro.url.href
+    // Los forms de los modales recargan la pagina tras el submit: si el toast
+    // de exito viaja solo en el JSON, se pierde con el reload. Se propaga por
+    // query params para que ToastContainer lo consuma en la pagina recargada.
+    const redirectUrl = new URL(Astro.url.href);
+    if (successMsg) {
+      redirectUrl.searchParams.set("toast_msg", successMsg);
+      redirectUrl.searchParams.set("toast_type", "success");
+    }
     return new Response(
       JSON.stringify({
         success: true,
         message: successMsg,
-        redirectUrl: Astro.url.href,
+        redirectUrl: redirectUrl.href,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
@@ -157,7 +468,7 @@ if (Astro.request.method === "POST") {
 ---
 
 <BaseLayout>
-  <AdminUsersContent server:defer successMsg={successMsg} errorMsg={errorMsg}>
+  <AdminUsersContent server:defer>
     <AdminUsersSkeleton slot="fallback" />
   </AdminUsersContent>
 </BaseLayout>

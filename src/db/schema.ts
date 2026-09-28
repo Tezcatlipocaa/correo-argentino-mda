@@ -15,6 +15,10 @@ export const users = sqliteTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("agent"),
+  helpdeskId: integer("helpdesk_id").references(() => mesas.invgateId, {
+    onDelete: "set null",
+  }),
+  helpdeskName: text("helpdesk_name"),
 });
 
 export const employees = sqliteTable("employees", {
@@ -50,6 +54,7 @@ export const sessions = sqliteTable("sessions", {
     .notNull()
     .references(() => users.id),
   expiresAt: integer("expiresAt").notNull(),
+  fingerprint: text("fingerprint"),
 });
 
 export const offices = sqliteTable(
@@ -308,6 +313,9 @@ export const agents = sqliteTable("agents", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
   username: text("username"),
+  userId: integer("user_id")
+    .unique()
+    .references(() => users.id, { onDelete: "set null" }),
   avatarInitials: text("avatar_initials"),
   notes: text("notes"),
   location: text("location").notNull().default("Monte Grande"),
@@ -329,8 +337,30 @@ export const agents = sqliteTable("agents", {
   lastAutogestionAssignedAt: integer("last_autogestion_assigned_at"),
   lastAutogestionAssignedBy: text("last_autogestion_assigned_by"),
   lastAutogestionUndo: integer("last_autogestion_undo"),
+  estadoExcepcional: text("estado_excepcional"),
+  estadoExcepcionalMotivo: text("estado_excepcional_motivo"),
+  estadoExcepcionalAt: integer("estado_excepcional_at"),
+  estadoExcepcionalMinutos: integer("estado_excepcional_minutos"),
   saturdayGroup: text("saturday_group"),
   saturdayHorario: text("saturday_horario"),
+  enCronograma: integer("en_cronograma", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  // Control de asistencia. Invariante: enAsistencia ⊆ enCronograma (un
+  // operador no puede tener asistencia sin figurar en cronograma, porque
+  // asistencia controla el cumplimiento de los horarios del cronograma).
+  enAsistencia: integer("en_asistencia", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  asignableCubic: integer("asignable_cubic", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  incluidoCalidad: integer("incluido_calidad", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  asignableAgs: integer("asignable_ags", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export const cubicAssignments = sqliteTable(
@@ -382,7 +412,9 @@ export const schedules = sqliteTable(
   "schedules",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    agentName: text("agent_name").notNull(),
+    agentId: integer("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
     date: text("date").notNull(),
     status: text("status").notNull(),
     comment: text("comment"),
@@ -394,7 +426,7 @@ export const schedules = sqliteTable(
     isOverride: integer("is_override", { mode: "boolean" }).default(false),
   },
   (table) => ({
-    agentNameIdx: index("schedules_agent_name_idx").on(table.agentName),
+    agentIdIdx: index("schedules_agent_id_idx").on(table.agentId),
     dateIdx: index("schedules_date_idx").on(table.date),
   }),
 );
@@ -442,69 +474,6 @@ export const workLocations = sqliteTable("work_locations", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
 });
-
-// 11. OPERADORES (Asignación de autogestiones)
-export const operators = sqliteTable("operators", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  status: text("status").notNull().default("disponible"),
-  locationId: text("location_id").references(() => workLocations.id),
-  currentMode: text("current_mode").notNull().default("presencial"),
-  lastAutogestionAssignedAt: integer("last_autogestion_assigned_at"),
-});
-
-export const operatorShifts = sqliteTable("operator_shifts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  operatorId: text("operator_id")
-    .notNull()
-    .references(() => operators.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // 'home' | 'presencial'
-  shiftStart: text("shift_start").notNull(),
-  shiftEnd: text("shift_end").notNull(),
-  breakTime: text("break_time").notNull(),
-});
-
-export const operatorSchedules = sqliteTable("operator_schedules", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  operatorId: text("operator_id")
-    .notNull()
-    .references(() => operators.id, { onDelete: "cascade" }),
-  dayOfWeek: text("day_of_week").notNull(),
-  modality: text("modality").notNull(),
-  shiftStart: text("shift_start"),
-  shiftEnd: text("shift_end"),
-  breakTime: text("break_time"),
-});
-
-export const workLocationsRelations = relations(workLocations, ({ many }) => ({
-  operators: many(operators),
-}));
-
-export const operatorsRelations = relations(operators, ({ one, many }) => ({
-  shifts: many(operatorShifts),
-  schedules: many(operatorSchedules),
-  location: one(workLocations, {
-    fields: [operators.locationId],
-    references: [workLocations.id],
-  }),
-}));
-
-export const operatorShiftsRelations = relations(operatorShifts, ({ one }) => ({
-  operator: one(operators, {
-    fields: [operatorShifts.operatorId],
-    references: [operators.id],
-  }),
-}));
-
-export const operatorSchedulesRelations = relations(
-  operatorSchedules,
-  ({ one }) => ({
-    operator: one(operators, {
-      fields: [operatorSchedules.operatorId],
-      references: [operators.id],
-    }),
-  }),
-);
 
 // 12. TABLA DE AUDITORIAS DE CALIDAD
 export const qualityAudits = sqliteTable(
@@ -690,7 +659,10 @@ export const supportGuides = sqliteTable("support_guides", {
 
 export const hiddenHelpdesks = sqliteTable("hidden_helpdesks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  invgateId: integer("invgate_id").notNull().unique(),
+  invgateId: integer("invgate_id")
+    .notNull()
+    .unique()
+    .references(() => mesas.invgateId, { onDelete: "cascade" }),
   hiddenBy: text("hidden_by").notNull(),
   hiddenAt: text("hidden_at").notNull(),
 });
@@ -700,6 +672,10 @@ export const auditLogs = sqliteTable("audit_logs", {
   username: text("username").notNull(),
   action: text("action").notNull(),
   timestamp: text("timestamp").notNull(),
+  entityType: text("entity_type"),
+  entityId: integer("entity_id"),
+  beforeState: text("before_state", { mode: "json" }),
+  afterState: text("after_state", { mode: "json" }),
 });
 
 // 15. CONTROL DE ASISTENCIA (Horarios reales y eventualidades)
@@ -944,15 +920,54 @@ export const titles = sqliteTable("titles", {
   ),
 });
 
-export const assignmentHistory = sqliteTable("assignment_history", {
+// 18. ADMIN PERMISOS Y ACCESOS
+export const mesas = sqliteTable("mesas", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  agentId: integer("agent_id").notNull(),
-  agentName: text("agent_name").notNull(),
-  ticketNumber: text("ticket_number"),
-  assignedBy: text("assigned_by").notNull(),
-  assignedAt: integer("assigned_at").notNull(),
-  type: text("type").notNull().default("cyclic"),
-}, (table) => ({
-  assignedAtIdx: index("assignment_history_assigned_at_idx").on(table.assignedAt),
-}));
+  invgateId: integer("invgate_id").notNull().unique(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  // Curacion manual: si la mesa puede elegirse en el select de alta/edicion de
+  // usuario. Separado de `active` (ciclo de vida del sync de InvGate). La mesa
+  // principal MDA TI siempre es asignable (exenta del toggle).
+  assignable: integer("assignable", { mode: "boolean" }).notNull().default(false),
+  lastSyncedAt: text("last_synced_at").notNull(),
+});
+
+// 20. PAPELERA DE BORRADO RECUPERABLE (snapshots pre-delete)
+export const deletedRecords = sqliteTable(
+  "deleted_records",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    entity: text("entity").notNull(), // "oficina" | "cubic" | "agente" | entityName del handler
+    recordId: text("record_id").notNull(), // id original, en texto
+    label: text("label").notNull(), // legible: 'Oficina "Rafaela" (Q123)'
+    payload: text("payload", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull(), // { row: filaPadre, children?: { clave: filas[] } }
+    deletedBy: text("deleted_by").notNull(),
+    deletedAt: text("deleted_at").notNull(),
+    restoredAt: text("restored_at"),
+    purgedAt: text("purged_at"),
+  },
+  (t) => ({
+    entityIdx: index("deleted_records_entity_idx").on(t.entity, t.deletedAt),
+  }),
+);
+
+export const assignmentHistory = sqliteTable(
+  "assignment_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    agentId: integer("agent_id").notNull(),
+    agentName: text("agent_name").notNull(),
+    ticketNumber: text("ticket_number"),
+    assignedBy: text("assigned_by").notNull(),
+    assignedAt: integer("assigned_at").notNull(),
+    type: text("type").notNull().default("cyclic"),
+  },
+  (table) => ({
+    assignedAtIdx: index("assignment_history_assigned_at_idx").on(table.assignedAt),
+  }),
+);
 

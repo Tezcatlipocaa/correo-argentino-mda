@@ -105,3 +105,9 @@ docs/superpowers/
 # generated reports and db backups
 scripts/reports
 scripts/backups
+
+# cross-process permissions cache invalidation marker
+.permissions-invalidation-timestamp
+
+# align-db-to-schema workdir (regenerada en cada corrida)
+.drizzle-canonical/

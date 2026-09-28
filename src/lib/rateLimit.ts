@@ -28,6 +28,62 @@ export const RATE_LIMITS = {
   upload: { limit: 10, windowMs: 60 * 60_000 },
 } as const satisfies Record<string, RateLimitProfile>;
 
+const slidingWindows = new Map<string, { timestamps: number[]; windowMs: number }>();
+let lastSlidingSweep = Date.now();
+
+function sweepSliding(now: number) {
+  if (now - lastSlidingSweep < SWEEP_INTERVAL) return;
+  lastSlidingSweep = now;
+  for (const [k, entry] of slidingWindows) {
+    const cutoff = now - entry.windowMs;
+    while (entry.timestamps.length > 0 && entry.timestamps[0] <= cutoff) {
+      entry.timestamps.shift();
+    }
+    if (entry.timestamps.length === 0) {
+      slidingWindows.delete(k);
+    }
+  }
+}
+
+export function checkSlidingRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number,
+): boolean {
+  const now = Date.now();
+  sweepSliding(now);
+
+  let entry = slidingWindows.get(key);
+  if (!entry) {
+    entry = { timestamps: [], windowMs };
+    slidingWindows.set(key, entry);
+  }
+  entry.windowMs = windowMs;
+  const timestamps = entry.timestamps;
+
+  const cutoff = now - windowMs;
+  while (timestamps.length > 0 && timestamps[0] <= cutoff) {
+    timestamps.shift();
+  }
+
+  if (timestamps.length >= maxRequests) {
+    return false;
+  }
+
+  timestamps.push(now);
+  return true;
+}
+
+export function resetRateLimit(): void {
+  slidingWindows.clear();
+  lastSlidingSweep = Date.now();
+}
+
+/** @internal test-only: number of live sliding window keys */
+export function getSlidingEntryCount(): number {
+  return slidingWindows.size;
+}
+
 export function checkRateLimit(
   key: string,
   profile: RateLimitProfile,

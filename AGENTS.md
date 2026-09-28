@@ -1,5 +1,17 @@
 # Portal MDA — Agent Guide
 
+## Testing policy
+
+- **Never** write unit tests after writing the code.
+- **Prefer E2E tests as the only testing mechanism.** Use them to verify complex functionality. After E2E runs, produce a verifiable, reproducible artifact: Playwright HTML report + traces (`playwright show-report`, trace viewer).
+- When testing a system in isolation, **FIRST** write all the ways it could fail, **THEN** write the code.
+
+### Test quality (when implementing with TDD)
+
+- Tautological tests are harmful.
+- Change-detector tests are harmful.
+- Do not create regression tests for bug fixes without a genuine gap in behavior testing.
+
 ## General workflow
 
 - **Read docs first** before writing code: `docs/DESIGN.md` (visual system), `docs/CONTEXT.md` (conventions, infra), `docs/lessons.md` (known errors)
@@ -15,21 +27,25 @@
 - `npm run db:push` — push Drizzle schema to SQLite
 - `npm run db:studio` — Drizzle Studio GUI
 - **Never run `npm install`/`npm audit fix` while PM2/Node processes are alive.** On Windows, native `.node` modules in use (e.g. `better-sqlite3.node`) can't be replaced (`EBUSY/EPERM`) → `node_modules` stays inconsistent → the next build ships a broken SSR manifest. `pm2 kill` (or stop the processes) before installing.
+- **After `git pull` that changes `package.json`/`package-lock.json` (e.g. Astro upgrades): always run `npm install` before `npm run build`.** Stale/mismatched `node_modules` builds a broken `dist/server/entry.mjs` where the Astro SSR manifest gets `rootDir: undefined`, crashing at startup with `TypeError: Invalid URL` in `deserializeManifest`. `npm install` + rebuild fixes it; repo code is fine.
 - **Stale/mismatched `node_modules`** builds a broken `dist/server/entry.mjs` where the SSR manifest gets `rootDir: undefined`, crashing at startup with `TypeError: Invalid URL` (`input: 'undefined'`) in `deserializeManifest`. `npm run build` now runs `scripts/verify-build.mjs` after `astro build`, failing the build if `rootDir` is missing. Fix when it trips: stop Node, delete `node_modules`, `npm ci`, rebuild. See `docs/lessons.md` (2026-09-07) and `scripts/auto-deploy.bat`.
 
 ## Testing
 
-- `npx playwright test` — all E2E tests in `tests/`
-- Workers: 1 (serial). Requires dev server at `http://localhost:4321`.
+- `npx playwright test` — E2E tests (`tests/**/*.spec.ts`). Workers: 1 (serial). Requires dev server at `http://localhost:4321`.
+- Artifact after runs: HTML report + traces (see Testing policy).
 - No CI — tests run manually.
 
 ## DB & Drizzle
 
 - **SQLite** at `database/mda.db` (gitignored; copy from prod or `drizzle-kit push`)
+- **Schema alignment**: `npx tsx scripts/align-db-to-schema.mts` — idempotente, hace backup, deriva el DDL canónico de `src/db/schema.ts`, reconstruye tablas desalineadas y verifica paridad + integridad. `drizzle-kit push` volvió a funcionar (el bug lo disparaba el CHECK constraint en users, eliminado en 2026-08-30), pero el align script sigue siendo más seguro con datos reales: nunca trunca y reporta en vez de aplicar data-loss statements.
 - **Schema**: `src/db/schema.ts` — all tables, relations, types
 - **Config**: `drizzle.config.ts` (sqlite dialect, schema `./src/db/schema.ts`, out `./drizzle`)
 - **Connection**: `src/db/index.ts` via `better-sqlite3`
 - After schema changes, always run `npm run db:push`
+- **Runbook `scripts/normalize-participaciones.mts`** (one-time, idempotente, corrige participaciones stale de `agents`): (1) **dry-run primero**: `npx tsx scripts/normalize-participaciones.mts`; (2) en prod, antes de aplicar, verificar el vinculo `agents.username ↔ users.username` — el reporte muestra `skippedNoAgent` (usuarios sin agente vinculado que NO se tocan); (3) recien entonces `npx tsx scripts/normalize-participaciones.mts --apply`, que crea un backup **WAL-safe** en `database/` (via `db.backup()`, incluye `-wal`) y escribe en transaccion sincrona. Nunca borra filas.
+- **Backfill `scripts/backfill-asistencia.mts`** (one-time, idempotente, inicializa `agents.en_asistencia`; corre solo dentro de `auto-deploy.bat` tras el align): misma mecánica (dry-run por defecto, `--apply` con backup WAL-safe y tx síncrona); aborta si falta la columna. Política: mesa participativa (hoy solo MDA TI) + rol no supervisor + `en_cronograma` ⇒ `en_asistencia=1`; resto ⇒ 0; agentes legacy **sin usuario vinculado** conservan `en_cronograma` (no hay mesa/rol que evaluar). Invariante: `enAsistencia ⊆ enCronograma`. No correr `--apply` sin revisar el dry-run.
 
 ## Stack & style
 
@@ -92,5 +108,5 @@
 ## PM2 production
 
 - `ecosystem.config.cjs` — 5 processes: Astro SSR (port 4321), mda-ping-cubics, sync-legacy-inventory, sync-users, sync-office-links
-- `scripts/auto-deploy.bat` — git pull → pm2 kill → npm install → build (verify-build) → pm2 start
+- `scripts/auto-deploy.bat` — git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia --apply → build (verify-build) → pm2 start
 - `scripts/backup-db.bat` — copies `database/mda.db` to backup directory

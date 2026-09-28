@@ -178,6 +178,30 @@ Cada entrada sigue este formato:
 **Regla:** Todo Icon dentro de un `<template>` clonado por JS o dentro de filas removibles debe usar `is:inline`. Los mesas-de-ayuda/edit.astro ya usaban esta solucion de facto (SVG crudo pegado a mano).
 **Archivos afectados:** src/components/admin/OfficeForm.astro
 
+### 2026-09-06 - Eliminacion del sistema de permisos DB (routeAccess/moduleAccess)
+
+**Problema:** El sistema de permisos en DB (tablas routes/modules/route_access/module_access/permission_audit_batches) generaba riesgo mayor que su valor: escalada de privilegios via overrides, divergencia sidebar/middleware y mismatch invgateId vs mesas.id.
+**Causa:** Capa de permisos dinamica con cache y resolvers para un portal donde la visibilidad depende solo de la mesa del usuario.
+**Solucion:** Sistema DB eliminado (schema + dev DB). Visibilidad hardcodeada y sincronica en `isSectionVisibleSync(helpdeskName, role, href)` (src/lib/helpdeskAccess.ts), fuente unica usada por middleware, sidebar y dashboard; roles por whitelist default-deny en routePermissions.
+**Regla:** No reintroducir permisos en DB para este portal: la visibilidad se define en codigo; cambios de politica = PR, no fila de tabla.
+**Archivos afectados:** src/lib/helpdeskAccess.ts, src/lib/rbac.ts, src/middleware.ts, src/db/schema.ts
+
+### 2026-09-06 - users.helpdeskName denormalizado puede quedar stale
+
+**Problema:** El nombre de mesa guardado en users.helpdeskName puede divergir del nombre real en mesas tras un sync/rename.
+**Causa:** Campo denormalizado escrito en alta/sync; no se actualiza si la mesa cambia de nombre.
+**Solucion:** La sesion resuelve la mesa via LEFT JOIN users→mesas y toma el nombre de mesas.name (resolveSessionMesa en src/lib/helpdeskAccess.ts), fail-closed si la mesa esta inactiva/borrada/desconocida.
+**Regla:** Nunca confiar en users.helpdeskName para autorizacion; usar siempre el join con mesas (nombre canonico).
+**Archivos afectados:** src/middleware.ts, src/lib/helpdeskAccess.ts
+
+### 2026-09-06 - Set-Content en PowerShell 5.1 corrompe UTF-8
+
+**Problema:** Escribir archivos con Set-Content produce BOM/mojibake en contenido UTF-8 (tildes y emojis destruidos).
+**Causa:** Encoding por defecto de PowerShell 5.1 (no es UTF-8 sin BOM).
+**Solucion:** Usar node (fs.writeFileSync) o [IO.File]::WriteAllText con UTF8Encoding($false).
+**Regla:** En scripts de automatizacion sobre este repo (Windows), nunca usar Set-Content/Out-File para textos con UTF-8.
+**Archivos afectados:** scripts/*
+
 ---
 
 ### 2026-09-07 — Crash loop `TypeError: Invalid URL` (rootDir undefined) por node_modules inconsistente
@@ -187,3 +211,43 @@ Cada entrada sigue este formato:
 **Solucion:** Detener todo Node/PM2 -> renombrar `node_modules` -> `npm ci` limpio -> `npm run build` -> verificar `findstr /C:"rootDir" dist\server\entry.mjs` (debe apuntar a `file:///...`) -> `pm2 start`. El deploy automatico se re-creo con `WorkingDirectory` correcto (`scripts/`) y orden corregido (`pm2 kill` antes de `npm install`).
 **Regla:** Nunca ejecutar `npm install`/`npm audit fix` con procesos PM2/Node vivos (lock de modulos `.node` nativos). Despues de todo build validar `rootDir` en `dist/server/entry.mjs`; el guard `scripts/verify-build.mjs` (enchufado a `npm run build`) aborta el deploy si falta. En tasks programados, "Iniciar en" debe ser un directorio, nunca un archivo.
 **Archivos afectados:** scripts/auto-deploy.bat, scripts/verify-build.mjs, package.json, dist/server/entry.mjs, AGENTS.md, docs/deploy-produccion.md
+
+---
+
+### 2026-09-19 — `db.transaction(async cb)` en better-sqlite3 NUNCA commitea
+
+**Problema:** Una transaccion con callback `async` lanzaba `TypeError` (better-sqlite3 no admite promesas) y el `rollback` implicito dejaba los statements previos en **autocommit** (sin commit agrupado). Sintoma tipico: aparece un error falso y la auditoria de esa operacion queda salteada aunque los datos si se hayan escrito (o se escriban parcialmente).
+**Causa:** better-sqlite3 es 100% sincronico: `db.transaction(fn)` solo maneja callbacks sincronicos. Un `async cb` devuelve una Promise, la transaccion se cierra antes de que la Promise resuelva y no hay commit.
+**Solucion:** Usar callbacks **sincronicos** y statements preparados con `.run()`/`.get()`. Ejemplo: `db.transaction((items) => { for (const it of items) stmt.run(...) })`. Si hace falta async (backup, red), hacerlo FUERA y antes de la transaccion.
+**Regla:** Con better-sqlite3, jamas pasar un callback `async` a `db.transaction()`; toda la logica del callback debe ser sincronica. Ver `scripts/normalize-participaciones.mts` y `src/lib/reorderHandler.ts`.
+**Archivos afectados:** scripts/normalize-participaciones.mts, src/lib/reorderHandler.ts
+
+---
+
+### 2026-09-19 — Guards de rol: no indexar `ROLE_HIERARCHY[user.role]` con strings crudos
+
+**Problema:** Un guard tipo `if (ROLE_HIERARCHY[user.role] < ROLE_HIERARCHY.supervisor)` compilaba pero **dejaba pasar** roles con variantes legacy (`"team leader"`, `"team-leader"`, `"Referente"`, mayusculas). El indice daba `undefined` y `undefined < N === false` → bypass de la restriccion.
+**Causa:** `ROLE_HIERARCHY` es `Record<Role, number>` con claves canonicas; un string crudo no-normalizado no matchea y devuelve `undefined` en runtime (TypeScript no lo detecta porque el type miente).
+**Solucion:** Comparar con `can(user.role, "team_leader")` (`@lib/roleConfig`) o normalizar primero con `normalizeRole` y recien despues indexar. `can()` ya normaliza internamente.
+**Regla:** Nunca indexar tablas de jerarquia/permisos con `user.role` crudo. Usar siempre `can()` o `normalizeRole()`. Aplicado en `handleReorder` (reorder team_leader+) y en el gating de participaciones.
+**Archivos afectados:** src/lib/reorderHandler.ts, src/lib/roleConfig.ts, src/pages/admin/usuarios.astro
+
+---
+
+### 2026-09-19 — `AsyncFormScript` no bindeaba forms inyectados por islas `server:defer`
+
+**Problema:** Formularios dentro de islas `server:defer` (p.ej. alta/edicion en `/admin/usuarios`) hacian **submit nativo**, recargando la pagina, y el handler async no corria. Aparecia "Invalid JSON response from server." en el toast cuando el form apuntaba a un endpoint JSON.
+**Causa:** El script corria en `DOMContentLoaded`, pero las islas `server:defer` se inyectan **despues** de ese evento; `document.querySelectorAll("form[data-async-form]")` no las veia y nunca se les agregaba el listener.
+**Solucion:** Mantener `initAsyncForms()` idempotente (guard `form.dataset.asyncFormInitialized`) y observar el DOM con `MutationObserver` (`childList: true, subtree: true`) para re-bindear forms inyectados tardiamente; re-ejecutar tambien en `astro:page-load`.
+**Regla:** Todo script de binding global debe asumir que componentes `server:defer` llegan despues de `DOMContentLoaded`: usar `MutationObserver` (o `astro:page-load`) con guard de idempotencia. Ver `src/components/admin/ui/AsyncFormScript.astro`.
+**Archivos afectados:** src/components/admin/ui/AsyncFormScript.astro
+
+---
+
+### 2026-09-21 — Accessors de Drizzle usan el nombre TS, nunca el nombre SQL
+
+**Problema:** Un `update-user` válido devolvía `400 "Error al actualizar el usuario."` aunque los datos eran correctos. Tres tests E2E (modales de edición) y un probe directo fallaban con el error genérico del `catch`.
+**Causa:** En dos selects se usó `agents.user_id` (nombre de columna SQL) en vez de `agents.userId` (nombre de la propiedad TS). En Drizzle `agents.user_id` es `undefined`, y el select lanza `Cannot convert undefined or null to object`; el `catch` genérico del handler lo enmascaraba como 400. El aislamiento se logró por bisección con `git stash` (versión commiteada → 200, working tree → 400) y un probe mínimo del accessor.
+**Solucion:** Reemplazar `agents.user_id` por `agents.userId` en ambos selects. Verificado: probe directo 200, `tests/admin/` 74 passed, `vitest` 132 passed, build OK.
+**Regla:** En queries Drizzle usar siempre el nombre de propiedad TS (`agents.userId`), nunca el nombre SQL (`agents.user_id`). Ante un 400 genérico de un handler, sospechar primero de un accessor undefined: probarlo aislado con `typeof` antes de teorizar sobre lógica de negocio.
+**Archivos afectados:** src/pages/admin/usuarios.astro, src/pages/api/cronograma/operators.ts

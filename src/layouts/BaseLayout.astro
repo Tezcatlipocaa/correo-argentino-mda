@@ -12,6 +12,7 @@ import {
   type NavItem,
 } from "@lib/navigation";
 import { normalizeRole, hasPermission } from "@lib/rbac";
+import { isSectionVisibleSync } from "@lib/helpdeskAccess";
 import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
 
 // Components
@@ -92,7 +93,9 @@ const isRouteLocked = (href: string): boolean => {
   ) {
     return true;
   }
-  return !hasPermission(href, normalizedUserRole);
+  if (!hasPermission(href, normalizedUserRole)) return true;
+  if (!isSectionVisibleSync(user.helpdeskName, user.role, href)) return true;
+  return false;
 };
 
 let visibleNavSections = navSections
@@ -139,6 +142,16 @@ const globalFontFaceCss = `
             ? savedTheme
             : "light";
         document.documentElement.setAttribute("data-theme", theme);
+
+        const root = document.documentElement;
+        const mode = localStorage.getItem("enlacesViewMode");
+        if (mode === "compact" || mode === "normal" || mode === "large") {
+          root.setAttribute("data-view-mode", mode);
+        }
+        const cols = localStorage.getItem("enlacesViewColumns");
+        if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
+          root.setAttribute("data-view-columns", cols);
+        }
       })();
     </script>
     <style is:global set:html={globalFontFaceCss}></style>

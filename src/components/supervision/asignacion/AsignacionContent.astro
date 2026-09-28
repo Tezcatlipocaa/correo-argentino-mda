@@ -17,6 +17,7 @@ import {
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
 
 import { normalizeRole } from "@lib/rbac";
+import { matchesCurrentUser } from "@lib/currentUserMatch";
 
 const cleanBase = getCleanBase();
 
@@ -27,6 +28,7 @@ const invgateWebBase = invgateApiBase
 
 const user = Astro.locals.user;
 const role = normalizeRole(user.role);
+const currentUsername = (user?.username || "").toLowerCase();
 
 const tabParam = Astro.url.searchParams.get("tab");
 const initialTab = tabParam === "monitoreo" ? "monitoreo" : tabParam === "automatizacion" ? "automatizacion" : "asignacion";
@@ -101,7 +103,7 @@ if (Astro.request.method === "POST" && !isReadOnly) {
 }
 
 // Fetch availability calculations
-const allOperators = await getDisponibilidadHoy();
+const allOperators = (await getDisponibilidadHoy()).filter((op) => op.asignableAgs);
 allOperators.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
 const disponiblesCount = allOperators.filter((op) => op.disponible).length;
@@ -238,7 +240,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 }
 ---
 
-<PageContainer>
+<PageContainer data-user-username={user?.username}>
 
   <div class="mb-6 border-b border-base-200 pb-5">
     <PageHeader
@@ -761,10 +763,17 @@ function formatWiseMinutes(min: number | undefined | null): string {
       {
         allOperators.map((op) => {
           const isHighlighted = op.agentId === maxAssignedOperatorId;
+          const isCurrentUser = matchesCurrentUser(
+            op.username,
+            op.nombre,
+            currentUsername,
+          );
 
           let rowClasses =
             "group border-b border-base-300 px-4 py-2.5 transition-colors duration-300 hover:bg-base-200/50";
-          if (isHighlighted) {
+          if (isCurrentUser) {
+            rowClasses += " bg-accent/10 border-l-4 border-l-accent";
+          } else if (isHighlighted) {
             rowClasses += " bg-primary/10 border-l-4 border-l-primary";
           }
           if (!op.disponible) {
@@ -946,7 +955,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
     </div>
   </div>
 
-  <!-- Modal Detalle de Ticket Sin Asignar -->
+<!-- Modal Detalle de Ticket Sin Asignar -->
   <dialog id="modal-ticket-detail" class="modal" data-invgate-web-base={invgateWebBase}>
     <div class="modal-box w-11/12 max-w-4xl border border-base-300 bg-base-100 p-0 overflow-hidden shadow-2xl rounded-2xl">
       <!-- Modal Header -->
@@ -1347,6 +1356,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 <script>
   import { showToast } from "@/lib/toastClient";
   import { escapeHtml } from "@lib/sanitize";
+  import { matchesCurrentUser } from "@lib/currentUserMatch";
 
   let countdownInterval: any = null;
   let heartbeatInterval: any = null;
@@ -1658,6 +1668,15 @@ function formatWiseMinutes(min: number | undefined | null): string {
         }
       });
 
+      const currentUsername =
+        (
+          document
+            .querySelector("[data-user-username]")
+            ?.getAttribute("data-user-username") || ""
+        )
+          .toLowerCase()
+          .trim();
+
       // 2. Update summary cards
       const disponiblesCount = data.filter((op) => op.disponible).length;
       const totalCount = data.length || 1;
@@ -1899,13 +1918,29 @@ function formatWiseMinutes(min: number | undefined | null): string {
           "border-l-primary",
           "bg-secondary/10",
           "border-l-secondary",
+          "bg-accent/10",
+          "border-l-accent",
           "border-l-4",
           "opacity-50",
           "grayscale-[30%]",
         );
 
         const isHighlighted = op.agentId === maxAgentId && maxAssignedTime > 0;
-        if (isHighlighted) {
+        const isCurrentUser = matchesCurrentUser(
+          row.getAttribute("data-op-username"),
+          row.getAttribute("data-op-nombre"),
+          currentUsername,
+        );
+
+        if (isCurrentUser) {
+          row.classList.add("bg-accent/10", "border-l-4", "border-l-accent");
+        } else if (op.estadoExcepcional) {
+          row.classList.add(
+            "bg-secondary/10",
+            "border-l-4",
+            "border-l-secondary",
+          );
+        } else if (isHighlighted) {
           row.classList.add("bg-primary/10", "border-l-4", "border-l-primary");
         }
 
