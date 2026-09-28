@@ -459,9 +459,11 @@ function formatWiseMinutes(min: number | undefined | null): string {
                       </div>
                     </div>
                     {t.location_name && (
-                      <div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium truncate">
+                      <div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium min-w-0 max-w-full overflow-hidden" title={t.location_name}>
                         <Icon name="boxicons:location-pin" size={14} class="text-info opacity-75 shrink-0" />
-                        <span class="truncate">Ubicación: <strong class="text-base-content/85 font-semibold">{t.location_name}</strong></span>
+                        <span class="truncate block min-w-0 max-w-[260px] sm:max-w-[340px] md:max-w-[420px]">
+                          Ubicación: <strong class="text-base-content/85 font-semibold">{t.location_name}</strong>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1142,6 +1144,25 @@ function formatWiseMinutes(min: number | undefined | null): string {
         </form>
       </div>
 
+      <!-- Barra de Configuración de Asignación / Revisión -->
+      <div class="px-4 py-2.5 bg-base-200/50 border-b border-base-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div class="flex items-center gap-2 min-w-0">
+          <div id="modal-assign-to-revision-alert" class="hidden flex items-center gap-1.5 text-xs font-bold text-warning bg-warning/15 px-2.5 py-1 rounded-lg border border-warning/30 shrink-0">
+            <Icon name="boxicons:alert-octagon" size={16} class="shrink-0" />
+            <span>Solicitud en revisión / rechazo</span>
+          </div>
+          <span class="text-xs text-base-content/60 font-medium truncate">
+            Asigna sin modificar el turno del operador
+          </span>
+        </div>
+        <label class="label cursor-pointer justify-start sm:justify-end gap-2.5 py-0 select-none shrink-0" title="Si se activa, el operador conserva su posición actual en la cola de asignación">
+          <input type="checkbox" id="modal-assign-to-skip-queue" class="toggle toggle-warning toggle-sm" />
+          <span class="label-text text-xs font-bold text-base-content/85">
+            Conservar posición en la cola
+          </span>
+        </label>
+      </div>
+
       <!-- Search Bar -->
       <div class="p-3.5 border-b border-base-300 bg-base-100">
         <div class="relative">
@@ -1152,7 +1173,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             id="modal-assign-to-search"
             type="text"
             placeholder="Buscar operador por nombre o usuario..."
-            class="input input-bordered input-sm sm:input-md w-full pl-10 text-xs sm:text-sm rounded-xl focus:outline-none focus:border-primary"
+            class="input input-bordered input-sm sm:input-md w-full pl-10 text-xs sm:text-sm rounded-xl focus:outline-none focus:border-secondary"
           />
         </div>
       </div>
@@ -2041,7 +2062,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             badgeClass = "badge-soft badge-warning text-warning shadow-xs";
             badgeText = `En break - vuelve ${op.retornoEstimado || ""}`;
             dotHtml = `<span class="size-1.5 rounded-full bg-warning animate-pulse"></span>`;
-          } else if (op.wiseCxStatus && !isDescon) {
+          } else if (op.wiseCxStatus && !isDesconectado) {
             badgeClass = op.wiseCxBadgeVariant === "error"
               ? "badge-soft badge-error text-error shadow-xs"
               : "badge-soft badge-neutral text-base-content/70";
@@ -2359,6 +2380,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
       const titleEl = document.getElementById("modal-assign-to-ticket-title");
       const creatorEl = document.getElementById("modal-assign-to-ticket-creator");
       const searchInput = document.getElementById("modal-assign-to-search") as HTMLInputElement | null;
+      const skipQueueToggle = document.getElementById("modal-assign-to-skip-queue") as HTMLInputElement | null;
+      const revisionAlert = document.getElementById("modal-assign-to-revision-alert");
 
       if (badgeEl) badgeEl.textContent = ticket ? (ticket.pretty_id || `#${ticket.id}`) : `#${ticketId}`;
       if (titleEl) titleEl.textContent = ticket?.title || `Ticket #${ticketId}`;
@@ -2371,6 +2394,16 @@ function formatWiseMinutes(min: number | undefined | null): string {
         }
       }
       if (searchInput) searchInput.value = "";
+      if (skipQueueToggle) skipQueueToggle.checked = false;
+
+      if (revisionAlert) {
+        const catStr = `${ticket?.category_name || ""} ${ticket?.category_last_name || ""}`.toLowerCase();
+        if (catStr.includes("rechazad") || catStr.includes("revisi")) {
+          revisionAlert.classList.remove("hidden");
+        } else {
+          revisionAlert.classList.add("hidden");
+        }
+      }
 
       renderAssignToModalLists(ticketId);
       modal.showModal();
@@ -2469,6 +2502,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
         const ticketId = Number(modalPosponer?.getAttribute("data-ticket-id"));
         const datetimeInput = document.getElementById("posponer-input-datetime") as HTMLInputElement | null;
         const motivoInput = document.getElementById("posponer-input-motivo") as HTMLInputElement | null;
+        const skipQueueInput = document.getElementById("modal-assign-to-skip-queue") as HTMLInputElement | null;
 
         if (!datetimeInput?.value) {
           showAlert("warning", "Por favor selecciona una fecha y hora de reanudación.");
@@ -2485,6 +2519,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
         const postponeDateFormatted = datetimeInput.value.replace("T", " ") + ":00";
         const reason = motivoInput?.value?.trim() || "";
+        const skipQueueUpdate = skipQueueInput ? skipQueueInput.checked : false;
 
         try {
           const res = await fetch("/api/disponibilidad/asignar-posponer", {
@@ -2495,6 +2530,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
               ticketId,
               postponeDate: postponeDateFormatted,
               reason,
+              skipQueueUpdate,
             }),
           });
           const data = await res.json();
@@ -2514,7 +2550,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
             const dStr = new Date(datetimeInput.value).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
             const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
-            showAlert("success", `Autogestión${tNumStr} asignada a ${data.agentName || `ID ${agentId}`} y pospuesta hasta ${dStr}.`);
+            const noQueueStr = data.skipQueueUpdate ? " (conservando su posición en cola)" : "";
+            showAlert("success", `Autogestión${tNumStr} asignada a ${data.agentName || `ID ${agentId}`} y pospuesta hasta ${dStr}${noQueueStr}.`);
             removeTicketCardOptimistically(ticketId);
             fetchDisponibilidad(false);
             nextPollTimestamp = Date.now() + currentIntervalMs;
@@ -2538,6 +2575,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
         const agentId = Number(assignManualBtn.getAttribute("data-op-assign-btn"));
         const ticketIdAttr = assignManualBtn.getAttribute("data-ticket-id");
         const ticketId = ticketIdAttr ? Number(ticketIdAttr) : undefined;
+        const skipQueueInput = document.getElementById("modal-assign-to-skip-queue") as HTMLInputElement | null;
+        const skipQueueUpdate = skipQueueInput ? skipQueueInput.checked : false;
 
         if (!isNaN(agentId)) {
           assignManualBtn.setAttribute("disabled", "true");
@@ -2545,7 +2584,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             const res = await fetch("/api/disponibilidad/asignar-manual", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ agentId, ticketId }),
+              body: JSON.stringify({ agentId, ticketId, skipQueueUpdate }),
             });
             const data = await res.json();
             if (res.status === 423) {
@@ -2563,7 +2602,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
                 modalAssignOp.close();
               }
               const tNumStr = data.ticketNumber ? ` ${data.ticketNumber}` : "";
-              showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
+              const noQueueStr = data.skipQueueUpdate ? " (conservando su posición en cola)" : "";
+              showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}${noQueueStr}.`);
               removeTicketCardOptimistically(ticketId);
               fetchDisponibilidad(false);
               nextPollTimestamp = Date.now() + currentIntervalMs;
@@ -2918,7 +2958,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
               `;
 
               const locationRow = t.location_name
-                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium truncate"><svg class="size-3.5 text-info opacity-75 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate">Ubicación: <strong class="text-base-content/85 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
+                ? `<div class="flex items-center gap-1.5 text-xs text-base-content/60 font-medium min-w-0 max-w-full overflow-hidden" title="${escapeHtml(t.location_name)}"><svg class="size-3.5 text-info opacity-75 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span class="truncate block min-w-0 max-w-[260px] sm:max-w-[340px] md:max-w-[420px]">Ubicación: <strong class="text-base-content/85 font-semibold">${escapeHtml(t.location_name)}</strong></span></div>`
                 : "";
 
               return `
@@ -3170,6 +3210,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           const TYPE_MAP: Record<string, { label: string; badgeClass: string }> = {
             cyclic: { label: "Cíclica", badgeClass: "badge-soft badge-primary font-semibold" },
             manual: { label: "Manual", badgeClass: "badge-soft badge-info font-semibold" },
+            revision: { label: "Revisión", badgeClass: "badge-soft badge-warning font-semibold" },
             undo: { label: "Deshecha", badgeClass: "badge-soft badge-warning font-semibold" },
             batch_suggested: { label: "Sugerida", badgeClass: "badge-soft badge-success font-semibold" },
             batch_all: { label: "Lote cola", badgeClass: "badge-soft badge-secondary font-semibold" },

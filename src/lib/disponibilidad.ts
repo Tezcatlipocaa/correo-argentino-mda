@@ -763,8 +763,9 @@ export async function asignarManual(
   agentId: number,
   assignedBy: string = "Sistema",
   authorInvgateId?: number,
-  ticketId?: number
-): Promise<{ success: boolean; ticketNumber?: string; error?: string }> {
+  ticketId?: number,
+  skipQueueUpdate: boolean = false
+): Promise<{ success: boolean; ticketNumber?: string; error?: string; skipQueueUpdate?: boolean }> {
   const list = await getDisponibilidadHoy();
   const targetAgent = list.find((a) => a.agentId === agentId);
 
@@ -808,10 +809,6 @@ export async function asignarManual(
   }
   const ticketAssigned = targetTicket.pretty_id || `#${targetTicket.id}`;
 
-  // Clear any existing undo states
-  await db.update(agents).set({ lastAutogestionUndo: null });
-
-  // Get current state to preserve
   const [ag] = await db
     .select({
       lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt,
@@ -820,17 +817,22 @@ export async function asignarManual(
     .from(agents)
     .where(eq(agents.id, agentId));
   const prevValue = ag ? ag.lastAutogestionAssignedAt : null;
-
-  // Update lastAutogestionAssignedAt for the manually assigned agent
   const assignTime = Date.now();
-  await db
-    .update(agents)
-    .set({ 
-      lastAutogestionAssignedAt: assignTime,
-      lastAutogestionAssignedBy: assignedBy,
-      lastAutogestionUndo: prevValue,
-    })
-    .where(eq(agents.id, agentId));
+
+  if (!skipQueueUpdate) {
+    // Clear any existing undo states
+    await db.update(agents).set({ lastAutogestionUndo: null });
+
+    // Update lastAutogestionAssignedAt for the manually assigned agent
+    await db
+      .update(agents)
+      .set({ 
+        lastAutogestionAssignedAt: assignTime,
+        lastAutogestionAssignedBy: assignedBy,
+        lastAutogestionUndo: prevValue,
+      })
+      .where(eq(agents.id, agentId));
+  }
 
   // Record audit history entry
   try {
@@ -841,7 +843,7 @@ export async function asignarManual(
       ticketNumber: ticketAssigned || null,
       assignedBy,
       assignedAt: assignTime,
-      type: "manual",
+      type: skipQueueUpdate ? "revision" : "manual",
     });
   } catch (historyErr) {
     console.error("Error saving assignment history:", historyErr);
@@ -849,7 +851,7 @@ export async function asignarManual(
 
   invalidateUnassignedTicketsCache();
 
-  return { success: true, ticketNumber: ticketAssigned };
+  return { success: true, ticketNumber: ticketAssigned, skipQueueUpdate };
 }
 
 /**
@@ -861,8 +863,9 @@ export async function asignarYPosponer(
   authorInvgateId?: number,
   ticketId?: number,
   postponeDate?: string,
-  reason: string = "Pospuesto por supervisión"
-): Promise<{ success: boolean; error?: string; ticketNumber?: string; postponeDate?: string }> {
+  reason: string = "Pospuesto por supervisión",
+  skipQueueUpdate: boolean = false
+): Promise<{ success: boolean; error?: string; ticketNumber?: string; postponeDate?: string; skipQueueUpdate?: boolean }> {
   if (!ticketId) {
     return { success: false, error: "Se requiere especificar un ticket para posponer." };
   }
@@ -912,9 +915,6 @@ export async function asignarYPosponer(
 
   const ticketAssigned = `#${ticketId}`;
 
-  // 3. Limpiar undo y actualizar estado del agente
-  await db.update(agents).set({ lastAutogestionUndo: null });
-
   const [ag] = await db
     .select({
       lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt,
@@ -925,14 +925,19 @@ export async function asignarYPosponer(
   const prevValue = ag ? ag.lastAutogestionAssignedAt : null;
   const assignTime = Date.now();
 
-  await db
-    .update(agents)
-    .set({
-      lastAutogestionAssignedAt: assignTime,
-      lastAutogestionAssignedBy: assignedBy,
-      lastAutogestionUndo: prevValue,
-    })
-    .where(eq(agents.id, agentId));
+  if (!skipQueueUpdate) {
+    // 3. Limpiar undo y actualizar estado del agente
+    await db.update(agents).set({ lastAutogestionUndo: null });
+
+    await db
+      .update(agents)
+      .set({
+        lastAutogestionAssignedAt: assignTime,
+        lastAutogestionAssignedBy: assignedBy,
+        lastAutogestionUndo: prevValue,
+      })
+      .where(eq(agents.id, agentId));
+  }
 
   // 4. Registrar en historial de asignaciones
   try {
@@ -943,7 +948,7 @@ export async function asignarYPosponer(
       ticketNumber: ticketAssigned,
       assignedBy,
       assignedAt: assignTime,
-      type: "manual",
+      type: skipQueueUpdate ? "revision" : "manual",
     });
   } catch (historyErr) {
     console.error("Error guardando historial de asignación pospuesta:", historyErr);
@@ -951,7 +956,7 @@ export async function asignarYPosponer(
 
   invalidateUnassignedTicketsCache();
 
-  return { success: true, ticketNumber: ticketAssigned, postponeDate };
+  return { success: true, ticketNumber: ticketAssigned, postponeDate, skipQueueUpdate };
 }
 
 export interface BatchAssignmentItem {

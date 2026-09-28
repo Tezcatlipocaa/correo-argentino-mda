@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!lockCheck.ok) return lockCheck.response;
 
   try {
-    const { agentId, ticketId, postponeDate, reason } = await request.json();
+    const { agentId, ticketId, postponeDate, reason, skipQueueUpdate } = await request.json();
 
     if (!agentId || typeof agentId !== "number") {
       return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
@@ -49,7 +49,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       authorInvgateId,
       ticketId,
       postponeDate,
-      reason || "Pospuesto por supervisión"
+      reason || "Pospuesto por supervisión",
+      Boolean(skipQueueUpdate),
     );
 
     if (result.success) {
@@ -69,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error("Error retrieving agent name:", dbErr);
     }
 
-    return jsonResponse({ ...result, agentName }, result.success ? 200 : 400);
+    return jsonResponse({ ...result, agentName, skipQueueUpdate: Boolean(skipQueueUpdate) }, result.success ? 200 : 400);
   } catch (error: any) {
     console.error("POST /api/disponibilidad/asignar-posponer Error:", error);
     return jsonResponse({ success: false, error: sanitizeError(error) }, 500);

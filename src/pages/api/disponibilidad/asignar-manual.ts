@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!lockCheck.ok) return lockCheck.response;
 
   try {
-    const { agentId, ticketId } = await request.json();
+    const { agentId, ticketId, skipQueueUpdate } = await request.json();
 
     if (!agentId || typeof agentId !== "number") {
       return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
@@ -41,6 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       assignedBy,
       authorInvgateId,
       typeof ticketId === "number" ? ticketId : undefined,
+      Boolean(skipQueueUpdate),
     );
     if (result.success) {
       await resetAssignmentLock();
@@ -59,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error("Error retrieving agent name:", dbErr);
     }
 
-    return jsonResponse({ ...result, agentName }, result.success ? 200 : 400);
+    return jsonResponse({ ...result, agentName, skipQueueUpdate: Boolean(skipQueueUpdate) }, result.success ? 200 : 400);
   } catch (error: any) {
     console.error("POST /api/disponibilidad/asignar-manual Error:", error);
     return jsonResponse({ success: false, error: sanitizeError(error) }, 500);
