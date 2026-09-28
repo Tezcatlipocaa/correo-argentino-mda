@@ -1,0 +1,45 @@
+---
+export interface DetailItem {
+  label: string;
+  value: string;
+  mono?: boolean;
+}
+
+interface Props {
+  items: DetailItem[];
+  columns?: 1 | 2;
+  class?: string;
+}
+
+const { items, columns = 2, class: wrapperClass } = Astro.props;
+
+const visibleItems = items.filter((item) => item.value.trim().length > 0);
+---
+
+{
+  visibleItems.length > 0 && (
+    <dl
+      class:list={[
+        "grid gap-x-6 gap-y-4",
+        columns === 2 ? "sm:grid-cols-2" : "grid-cols-1",
+        wrapperClass,
+      ]}
+    >
+      {visibleItems.map((item) => (
+        <div class="min-w-0">
+          <dt class="text-base-content/50 text-xxs font-bold tracking-wider uppercase">
+            {item.label}
+          </dt>
+          <dd
+            class:list={[
+              "text-base-content mt-1 text-sm font-medium break-words",
+              item.mono && "font-mono text-xs",
+            ]}
+          >
+            {item.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}

@@ -1,0 +1,44 @@
+---
+import { Icon } from "astro-icon/components";
+
+export interface FlagItem {
+  label: string;
+  icon: string;
+  active: boolean;
+}
+
+interface Props {
+  flags: FlagItem[];
+  class?: string;
+}
+
+const { flags, class: wrapperClass } = Astro.props;
+---
+
+{
+  flags.length > 0 && (
+    <ul class:list={["flex flex-wrap gap-2", wrapperClass]}>
+      {flags.map((flag) => (
+        <li
+          class:list={[
+            "badge badge-sm gap-1.5 border font-semibold",
+            flag.active
+              ? "badge-success badge-outline"
+              : "border-base-300 text-base-content/40 bg-transparent",
+          ]}
+        >
+          <Icon
+            name={
+              flag.active
+                ? "boxicons:check-circle-filled"
+                : "boxicons:minus-circle-filled"
+            }
+            size={14}
+            aria-hidden="true"
+          />
+          {flag.label}
+        </li>
+      ))}
+    </ul>
+  )
+}
