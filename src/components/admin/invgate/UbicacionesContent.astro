@@ -348,22 +348,7 @@ const rowGridClass =
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        const toast = document.createElement("div");
-        toast.className = "toast toast-end toast-bottom z-50 p-4";
-        toast.innerHTML = `
-        <div class="alert alert-success shadow-md py-3 px-5 text-sm flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-current" fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>Copiado al portapapeles</span>
-        </div>
-      `;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-          toast.style.opacity = "0";
-          toast.style.transition = "opacity 0.3s ease";
-          setTimeout(() => toast.remove(), 300);
-        }, 2000);
+        window.showToast?.("Copiado al portapapeles", "alert-success");
       })
       .catch((err) => {
         console.error("Fallo al copiar: ", err);
