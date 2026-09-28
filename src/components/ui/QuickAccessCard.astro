@@ -10,7 +10,7 @@ interface Props {
   iconTone?: string;
   locked?: boolean;
   comingSoon?: boolean;
-  layout?: "horizontal" | "vertical";
+  layout?: "horizontal" | "vertical" | "compact";
 }
 
 const {
@@ -38,7 +38,64 @@ const Wrapper = locked || comingSoon ? "div" : "a";
 ---
 
 {
-  layout === "horizontal" ? (
+  layout === "compact" ? (
+    <Wrapper
+      {...(!(locked || comingSoon)
+        ? {
+            href: resolvedHref,
+            "aria-label": `Abrir ${title}${description ? `: ${description}` : ""}`,
+            title: description || title,
+          }
+        : {
+            "aria-label": `${title} (${comingSoon ? "Próximamente" : "Restringido"})`,
+          })}
+      class:list={[
+        "rounded-box border-base-300 bg-base-100 group relative flex items-center gap-3 p-3 shadow-md transition-all duration-300",
+        locked || comingSoon
+          ? "cursor-not-allowed opacity-40 grayscale select-none"
+          : "hover:border-primary focus:ring-primary cursor-pointer hover:-translate-y-1 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none",
+      ]}
+    >
+      <div
+        class:list={[
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300",
+          iconTone,
+        ]}
+        aria-hidden="true"
+      >
+        <Icon
+          name={icon}
+          size={20}
+          class={
+            locked || comingSoon
+              ? ""
+              : "transition-transform duration-300 group-hover:scale-110"
+          }
+        />
+      </div>
+      <span
+        class:list={[
+          "min-w-0 flex-1 text-sm leading-tight font-semibold",
+          locked || comingSoon
+            ? "text-base-content/50"
+            : "text-base-content/85 group-hover:text-base-content",
+        ]}
+      >
+        {title}
+      </span>
+      <div class="flex shrink-0 items-center" aria-hidden="true">
+        {locked || comingSoon ? (
+          <Icon name="boxicons:lock-filled" size={18} class="text-base-content/40" />
+        ) : (
+          <Icon
+            name="boxicons:chevron-right"
+            size={20}
+            class="text-base-content/30 transition-transform duration-300 group-hover:translate-x-1"
+          />
+        )}
+      </div>
+    </Wrapper>
+  ) : layout === "horizontal" ? (
     <Wrapper
       {...(!(locked || comingSoon)
         ? { href: resolvedHref, "aria-label": `Abrir ${title}` }
@@ -49,13 +106,13 @@ const Wrapper = locked || comingSoon ? "div" : "a";
         "rounded-box border-base-300 bg-base-100 relative flex h-full w-full items-center justify-between overflow-hidden border p-5 shadow-md transition-all duration-300",
         locked || comingSoon
           ? "cursor-not-allowed opacity-40 grayscale select-none"
-          : "hover:border-primary group focus:ring-primary cursor-pointer hover:-translate-y-1 focus:ring-2 focus:ring-offset-2 focus:outline-none",
+          : "hover:border-primary group focus:ring-primary cursor-pointer hover:-translate-y-1 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none",
       ]}
     >
       <div class="flex items-center gap-4">
         <div
           class:list={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300",
             iconTone,
           ]}
         >
@@ -77,12 +134,12 @@ const Wrapper = locked || comingSoon ? "div" : "a";
       </div>
       <div class="flex items-center" aria-hidden="true">
         {locked || comingSoon ? (
-          <Icon name="boxicons:lock" size={24} class="text-base-content/40" />
+          <Icon name="boxicons:lock-filled" size={24} class="text-base-content/40" />
         ) : (
           <Icon
             name="boxicons:chevron-right"
             size={24}
-            class="text-base-content/30 transition-all duration-300 group-hover:translate-x-1"
+            class="text-base-content/30 transition-transform duration-300 group-hover:translate-x-1"
           />
         )}
       </div>
@@ -98,14 +155,14 @@ const Wrapper = locked || comingSoon ? "div" : "a";
         "card card-compact bg-base-100 border-base-300 h-full border shadow-md",
         locked || comingSoon
           ? "cursor-not-allowed opacity-40 grayscale select-none"
-          : "hover:border-primary group focus:ring-primary transition-all duration-300 hover:-translate-y-1 focus:ring-2 focus:ring-offset-2 focus:outline-none",
+          : "hover:border-primary group focus:ring-primary transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none",
       ]}
     >
       <div class="card-body flex h-full flex-col gap-3">
         <div
           aria-hidden="true"
           class:list={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300",
             iconTone,
           ]}
         >
@@ -126,7 +183,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
             <span class="badge badge-warning font-bold">Próximamente</span>
           ) : locked ? (
             <Icon
-              name="boxicons:lock"
+              name="boxicons:lock-filled"
               size={24}
               class="text-base-content/40"
               aria-hidden="true"
@@ -137,7 +194,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
               <Icon
                 name="boxicons:chevron-right"
                 size={24}
-                class="transition-all duration-300 group-hover:translate-x-1"
+                class="transition-transform duration-300 group-hover:translate-x-1"
                 aria-hidden="true"
               />
             </span>
