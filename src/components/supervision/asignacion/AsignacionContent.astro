@@ -311,15 +311,25 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
         <!-- Acciones y Lock a la derecha -->
         <div class="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            id="btn-refresh-general"
-            class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
-            title="Actualizar tickets y disponibilidad de operadores ahora"
-          >
-            <Icon name="boxicons:refresh-ccw" size={16} id="btn-refresh-general-icon" class="shrink-0 transition-transform" />
-            <span>Actualizar</span>
-          </button>
+          <div class="flex items-center gap-1.5 bg-base-200/50 rounded-xl p-1 border border-base-300/60">
+            <button
+              type="button"
+              id="btn-refresh-general"
+              class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
+              title="Actualizar tickets y disponibilidad de operadores ahora"
+            >
+              <Icon name="boxicons:refresh-ccw" size={16} id="btn-refresh-general-icon" class="shrink-0 transition-transform" />
+              <span>Actualizar</span>
+            </button>
+            <div
+              id="poll-countdown-badge"
+              class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xxs font-mono font-bold text-base-content/60 bg-base-100/70 border border-base-300/50 select-none"
+              title="Tiempo restante para la próxima sincronización automática"
+            >
+              <span id="poll-countdown-dot" class="inline-block size-1.5 rounded-full bg-success"></span>
+              <span id="poll-countdown-text">--s</span>
+            </div>
+          </div>
 
           {role !== "agent" && (
             <div id="lock-indicator"
@@ -437,7 +447,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                           class={`btn btn-xs shrink-0 gap-1.5 text-xs px-2.5 h-7 min-h-0 font-bold transition-colors ${
                             isReadOnly
                               ? "btn-ghost btn-disabled opacity-40 cursor-not-allowed text-base-content/40"
-                              : "btn-primary shadow-sm"
+                              : "btn-secondary shadow-sm"
                           }`}
                           data-action-assign-to={t.id}
                           title={isReadOnly ? "Toma el control para asignar autogestiones" : `Asignar ticket #${t.pretty_id || t.id} a un operador...`}
@@ -961,7 +971,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Modal Header -->
       <div class="p-4 sm:p-5 bg-base-200/40 border-b border-base-300 flex items-center justify-between gap-3">
         <div class="flex items-center gap-2.5 min-w-0 flex-wrap flex-1">
-          <div class="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+          <div class="p-2 rounded-xl bg-secondary/10 text-secondary shrink-0">
             <Icon name="boxicons:receipt" size={20} />
           </div>
           <span id="ticket-modal-id" class="badge badge-soft badge-neutral font-mono font-bold text-sm px-3 py-1 shrink-0 text-base-content/70">#0</span>
@@ -1115,7 +1125,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Header -->
       <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/40 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+          <div class="p-2.5 rounded-xl bg-secondary/10 text-secondary shrink-0">
             <Icon name="boxicons:user-plus" size={22} />
           </div>
           <div class="min-w-0 flex flex-col gap-0.5">
@@ -2507,6 +2517,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
             showAlert("success", `Autogestión${tNumStr} asignada a ${data.agentName || `ID ${agentId}`} y pospuesta hasta ${dStr}.`);
             removeTicketCardOptimistically(ticketId);
             fetchDisponibilidad(false);
+            nextPollTimestamp = Date.now() + currentIntervalMs;
+            updateCountdownDisplay();
           } else {
             showAlert("error", data.error || "No se pudo posponer la autogestión.");
           }
@@ -2554,6 +2566,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
               showAlert("success", `Autogestión${tNumStr} asignada manualmente a ${data.agentName || `ID ${agentId}`}.`);
               removeTicketCardOptimistically(ticketId);
               fetchDisponibilidad(false);
+              nextPollTimestamp = Date.now() + currentIntervalMs;
+              updateCountdownDisplay();
             } else {
               showAlert("error", data.error || "No se pudo realizar la asignación manual.");
             }
@@ -2857,7 +2871,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
               const clientIsDisabled = clientIsReadOnly ? 'disabled="true"' : "";
               const clientAssignToClass = clientIsReadOnly
                 ? "btn btn-ghost btn-xs btn-disabled opacity-40 cursor-not-allowed text-base-content/40 px-2.5 h-7 min-h-0 font-bold shrink-0 gap-1.5 text-xs"
-                : "btn btn-primary btn-xs font-bold shadow-sm px-2.5 h-7 min-h-0 shrink-0 gap-1.5 text-xs";
+                : "btn btn-secondary btn-xs font-bold shadow-sm px-2.5 h-7 min-h-0 shrink-0 gap-1.5 text-xs";
 
               const assignButtons = `
                 <button
@@ -2988,18 +3002,22 @@ function formatWiseMinutes(min: number | undefined | null): string {
       if (refreshIcon) refreshIcon.classList.add("animate-spin");
       if (refreshBtn) refreshBtn.disabled = true;
 
+      updateCountdownDisplay();
+
       try {
         await Promise.allSettled([
           fetchUnassignedTickets(),
           fetchDisponibilidad(true),
           fetchLockStatus().then(updateLockBanner),
         ]);
+        nextPollTimestamp = Date.now() + currentIntervalMs;
       } catch (err) {
         console.error("Error during general refresh:", err);
       } finally {
         isRefreshingGeneral = false;
         if (refreshIcon) refreshIcon.classList.remove("animate-spin");
         if (refreshBtn) refreshBtn.disabled = false;
+        updateCountdownDisplay();
       }
     };
 
@@ -3052,7 +3070,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
         if (hasLock) {
           btn.disabled = false;
           btn.removeAttribute("disabled");
-          btn.className = "btn btn-primary btn-xs font-bold shadow-sm px-2.5 h-7 min-h-0 shrink-0 gap-1.5 text-xs";
+          btn.className = "btn btn-secondary btn-xs font-bold shadow-sm px-2.5 h-7 min-h-0 shrink-0 gap-1.5 text-xs";
           btn.title = "Asignar este ticket a un operador específico";
         } else {
           btn.disabled = true;
@@ -3276,15 +3294,56 @@ function formatWiseMinutes(min: number | undefined | null): string {
       }
     };
 
-    // Auto-polling adaptativo y detección de inactividad
+    // Auto-polling adaptativo y temporizador visible
     let isUserIdle = false;
     const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos de inactividad
+    let currentIntervalMs = 5 * 60 * 1000;
+    let nextPollTimestamp = Date.now() + currentIntervalMs;
+
+    const updateCountdownDisplay = () => {
+      const countdownEl = document.getElementById("poll-countdown-text");
+      const dotEl = document.getElementById("poll-countdown-dot");
+      if (!countdownEl) return;
+
+      if (document.hidden || isUserIdle) {
+        countdownEl.textContent = "Pausado";
+        if (dotEl) {
+          dotEl.className = "inline-block size-1.5 rounded-full bg-base-content/30";
+        }
+        return;
+      }
+
+      if (isRefreshingGeneral || isFetchingTickets || isFetchingDisponibilidad) {
+        countdownEl.textContent = "Cargando...";
+        if (dotEl) {
+          dotEl.className = "inline-block size-1.5 rounded-full bg-warning animate-pulse";
+        }
+        return;
+      }
+
+      const diffMs = nextPollTimestamp - Date.now();
+      const remainingSec = Math.max(0, Math.ceil(diffMs / 1000));
+
+      if (dotEl) {
+        dotEl.className = "inline-block size-1.5 rounded-full bg-success";
+      }
+
+      if (remainingSec >= 60) {
+        const mins = Math.floor(remainingSec / 60);
+        const secs = remainingSec % 60;
+        countdownEl.textContent = `${mins}m ${secs}s`;
+      } else {
+        countdownEl.textContent = `${remainingSec}s`;
+      }
+    };
 
     const resetIdleTimer = () => {
       isUserIdle = false;
+      updateCountdownDisplay();
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
         isUserIdle = true;
+        updateCountdownDisplay();
       }, IDLE_TIMEOUT_MS);
     };
 
@@ -3301,24 +3360,51 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
       // Limpieza de caché de comentarios en el cliente para el nuevo ciclo
       loadedCommentsByTicket.clear();
+      updateCountdownDisplay();
 
-      await Promise.allSettled([
-        fetchDisponibilidad(false),
-        fetchUnassignedTickets(),
-        fetchLockStatus().then(updateLockBanner),
-      ]);
+      try {
+        await Promise.allSettled([
+          fetchDisponibilidad(false),
+          fetchUnassignedTickets(),
+          fetchLockStatus().then(updateLockBanner),
+        ]);
+      } finally {
+        nextPollTimestamp = Date.now() + currentIntervalMs;
+        updateCountdownDisplay();
+      }
     };
 
     const setupAutoPolling = (hasLock: boolean) => {
-      if (autoPollTimer) clearInterval(autoPollTimer);
-      const intervalMs = hasLock ? 30 * 1000 : 120 * 1000;
-      autoPollTimer = setInterval(executeAutoPoll, intervalMs);
+      currentIntervalMs = hasLock ? 1 * 60 * 1000 : 5 * 60 * 1000;
+      nextPollTimestamp = Date.now() + currentIntervalMs;
+      updateCountdownDisplay();
+
+      if (!autoPollTimer) {
+        autoPollTimer = setInterval(() => {
+          if (document.hidden || isUserIdle) {
+            updateCountdownDisplay();
+            return;
+          }
+
+          if (Date.now() >= nextPollTimestamp) {
+            nextPollTimestamp = Date.now() + currentIntervalMs;
+            updateCountdownDisplay();
+            executeAutoPoll();
+          } else {
+            updateCountdownDisplay();
+          }
+        }, 1000);
+      }
     };
 
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         resetIdleTimer();
+        nextPollTimestamp = Date.now() + currentIntervalMs;
+        updateCountdownDisplay();
         executeAutoPoll();
+      } else {
+        updateCountdownDisplay();
       }
     });
 
