@@ -139,7 +139,12 @@ Same params and response shape as `by.agent`.
 
 **IMPORTANT:** Parameter is `helpdesk_id=`, NOT `id=`. Passing `?id=X` returns error.
 
-**Params:** `helpdesk_id` (INTEGER, **required**), `limit` (INTEGER), `page_key` (STRING)
+**Params:** `helpdesk_id` (INTEGER, **required**)
+
+**Measured 2026-09-28 (PROD) — only `helpdesk_id` is honored.** `limit`, `page_key`, `location_id` and `status_ids[]` are all silently ignored: one call returns the **entire** open set of the node in a single response (141 helpdesks scanned in one pass). Additional hard limits:
+- Covers **only statuses 1-4**. Status 5 (Cerrado) never appears in the results, so a "any duplicate" check that includes closed tickets cannot be built on this endpoint.
+- **Unreliable under concurrency.** Parallel fan-out (6 workers over 141 nodes) returned truncated sets (≤29 ids where serial returned 63) and dropped the matching incidents entirely. Always call it **sequentially**.
+- With a small node set this is the cheapest narrowing axis available: 3 serial calls ≈ 1.7s vs ≈32s for a global `by.status` scan.
 
 **Response:** IDs only, same shape as `by.status`:
 ```json
