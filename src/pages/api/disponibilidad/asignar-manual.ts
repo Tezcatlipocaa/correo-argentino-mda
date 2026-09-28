@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!lockCheck.ok) return lockCheck.response;
 
   try {
-    const { agentId, ticketId, skipQueueUpdate } = await request.json();
+    const { agentId, ticketId, skipQueueUpdate, comment } = await request.json();
 
     if (!agentId || typeof agentId !== "number") {
       return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
@@ -42,6 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       authorInvgateId,
       typeof ticketId === "number" ? ticketId : undefined,
       Boolean(skipQueueUpdate),
+      typeof comment === "string" ? comment : undefined,
     );
     if (result.success) {
       await resetAssignmentLock();

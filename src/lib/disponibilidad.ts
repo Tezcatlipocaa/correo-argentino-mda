@@ -715,6 +715,17 @@ export async function asignarSiguienteAutogestion(
       error: `Error al reasignar ticket #${oldestTicket.id} en InvGate a ${winner.nombre}: ${reassignRes.message}`,
     };
   }
+
+  // Comentario público automático en InvGate
+  try {
+    const commentRes = await addTicketComment(oldestTicket.id, "Se asigna para su verificación.", authorId, 1);
+    if (!commentRes.ok) {
+      console.warn(`[asignarSiguienteAutogestion] No se pudo agregar comentario público al ticket #${oldestTicket.id}: ${commentRes.message}`);
+    }
+  } catch (commentErr) {
+    console.error(`[asignarSiguienteAutogestion] Error agregando comentario público a ticket #${oldestTicket.id}:`, commentErr);
+  }
+
   const ticketAssigned = oldestTicket.pretty_id || `#${oldestTicket.id}`;
 
   // Clear any existing undo states
@@ -764,7 +775,8 @@ export async function asignarManual(
   assignedBy: string = "Sistema",
   authorInvgateId?: number,
   ticketId?: number,
-  skipQueueUpdate: boolean = false
+  skipQueueUpdate: boolean = false,
+  comment?: string
 ): Promise<{ success: boolean; ticketNumber?: string; error?: string; skipQueueUpdate?: boolean }> {
   const list = await getDisponibilidadHoy();
   const targetAgent = list.find((a) => a.agentId === agentId);
@@ -807,6 +819,18 @@ export async function asignarManual(
       error: `Error al reasignar ticket #${targetTicket.id} en InvGate: ${reassignRes.message}`,
     };
   }
+
+  // Comentario público automático en InvGate
+  try {
+    const publicComment = comment?.trim() || "Se asigna para su verificación.";
+    const commentRes = await addTicketComment(targetTicket.id, publicComment, authorId, 1);
+    if (!commentRes.ok) {
+      console.warn(`[asignarManual] No se pudo agregar comentario público al ticket #${targetTicket.id}: ${commentRes.message}`);
+    }
+  } catch (commentErr) {
+    console.error(`[asignarManual] Error agregando comentario público a ticket #${targetTicket.id}:`, commentErr);
+  }
+
   const ticketAssigned = targetTicket.pretty_id || `#${targetTicket.id}`;
 
   const [ag] = await db
@@ -1037,6 +1061,14 @@ export async function asignarSugeridasAutogestion(
     const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
 
     if (reassignRes.ok) {
+      try {
+        const commentRes = await addTicketComment(ticket.id, "Se asigna para su verificación.", authorId, 1);
+        if (!commentRes.ok) {
+          console.warn(`[asignarSugeridasAutogestion] No se pudo agregar comentario público al ticket #${ticket.id}: ${commentRes.message}`);
+        }
+      } catch (cErr) {
+        console.error(`[asignarSugeridasAutogestion] Error agregando comentario público a ticket #${ticket.id}:`, cErr);
+      }
       assignedCount++;
       const assignTime = now + i;
       await db
@@ -1146,6 +1178,14 @@ export async function asignarTodasEnCola(
     const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
 
     if (reassignRes.ok) {
+      try {
+        const commentRes = await addTicketComment(ticket.id, "Se asigna para su verificación.", authorId, 1);
+        if (!commentRes.ok) {
+          console.warn(`[asignarTodasEnCola] No se pudo agregar comentario público al ticket #${ticket.id}: ${commentRes.message}`);
+        }
+      } catch (cErr) {
+        console.error(`[asignarTodasEnCola] Error agregando comentario público a ticket #${ticket.id}:`, cErr);
+      }
       assignedCount++;
       const assignTime = now + i;
       await db

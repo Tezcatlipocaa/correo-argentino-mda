@@ -271,6 +271,13 @@ export async function addTicketComment(
       return { ok: false, message: res.data.error || "Error al agregar comentario en InvGate" };
     }
 
+    // Invalidar caché de comentarios para este ticket
+    for (const key of ticketCommentsCache.keys()) {
+      if (key.startsWith(`${requestId}_`)) {
+        ticketCommentsCache.delete(key);
+      }
+    }
+
     return { ok: true };
   } catch (err: any) {
     return { ok: false, message: err.message || "Error al conectar con InvGate" };

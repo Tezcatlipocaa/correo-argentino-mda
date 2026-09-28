@@ -2579,7 +2579,11 @@ function formatWiseMinutes(min: number | undefined | null): string {
         const skipQueueUpdate = skipQueueInput ? skipQueueInput.checked : false;
 
         if (!isNaN(agentId)) {
+          const originalBtnHtml = assignManualBtn.innerHTML;
           assignManualBtn.setAttribute("disabled", "true");
+          (assignManualBtn as HTMLButtonElement).disabled = true;
+          assignManualBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span><span>Asignando...</span>';
+
           try {
             const res = await fetch("/api/disponibilidad/asignar-manual", {
               method: "POST",
@@ -2616,6 +2620,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
             showAlert("error", `Ocurrió un error al procesar la asignación manual: ${err.message || err}`);
           } finally {
             assignManualBtn.removeAttribute("disabled");
+            (assignManualBtn as HTMLButtonElement).disabled = false;
+            assignManualBtn.innerHTML = originalBtnHtml;
           }
         }
         return;
