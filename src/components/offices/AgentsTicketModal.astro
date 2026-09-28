@@ -106,10 +106,15 @@ const { id = "agents-ticket-modal" } = Astro.props;
       <div id="ticket-modal-error" class="text-error hidden text-sm">
         Error al cargar los agentes. Intentá de nuevo.
       </div>
+
+      <p class="text-base-content/60 text-xs">
+        Si ya sabés que no hay ningún ticket activo para esta oficina, podés
+        crear el ticket sin verificar.
+      </p>
     </div>
   </Fragment>
   <Fragment slot="actions">
-    <div class="mt-6 flex justify-end gap-2">
+    <div class="mt-6 flex flex-wrap justify-end gap-2">
       <ActionCancelButton
         type="button"
         label="Cancelar"
@@ -118,10 +123,35 @@ const { id = "agents-ticket-modal" } = Astro.props;
         onclick="this.closest('dialog')?.close()"
       />
       <button
-        id="confirm-agents-ticket-btn"
-        class="btn btn-primary btn-sm md:btn-md cursor-pointer gap-2 shadow-md"
+        id="skip-verify-agents-ticket-btn"
+        class="btn btn-outline btn-sm md:btn-md flex-1 cursor-pointer gap-2 sm:flex-none"
+        title="Crear el ticket sin consultar si ya existe uno abierto en InvGate"
       >
-        Crear Ticket
+        Crear sin verificar
+      </button>
+      <button
+        id="confirm-agents-ticket-btn"
+        class="btn btn-primary btn-sm md:btn-md flex-1 cursor-pointer gap-2 shadow-md sm:flex-none"
+      >
+        <!-- Label y spinner comparten la MISMA celda de un grid: se cruzan por
+             opacidad en vez de uno al lado del otro. Asi el boton no tiene un
+             hueco reservado cuando esta idle (la celda la dimensiona el label,
+             que es mas ancho que el spinner) y tampoco cambia de metrica durante
+             el loading. El label nunca se borra: el nombre accesible del boton
+             es estable. Ver docs/lessons.md 2026-09-28. -->
+        <span data-btn-content class="grid place-items-center">
+          <span
+            data-btn-label
+            class="col-start-1 row-start-1 transition-opacity duration-150 motion-reduce:transition-none"
+          >
+            Verificar y crear
+          </span>
+          <span
+            data-btn-spinner
+            class="loading loading-spinner loading-sm col-start-1 row-start-1 opacity-0 transition-opacity duration-150 motion-reduce:transition-none"
+            aria-hidden="true"
+          ></span>
+        </span>
       </button>
     </div>
   </Fragment>
@@ -135,55 +165,103 @@ const { id = "agents-ticket-modal" } = Astro.props;
   size="md"
 >
   <Fragment slot="content">
-    <div id="confirm-default-state" class="space-y-1">
-      <p class="text-base-content/80 text-sm">
-        ¿Estás seguro que deseas crear un ticket por agentes caídos en
-        <strong id="confirm-office-label">&mdash;</strong>?
-      </p>
-      <p class="text-base-content/60 mt-2 text-xs">
-        Origen: <span id="confirm-source-label" class="font-semibold"
-          >&mdash;</span
+    <div class="space-y-4">
+      <div id="confirm-default-state">
+        <p class="text-base-content/80 text-sm">
+          ¿Estás seguro que deseas crear el ticket por agentes caídos en esta
+          oficina?
+        </p>
+      </div>
+      <div id="confirm-unverified-state" class="hidden">
+        <div
+          role="alert"
+          class="border-info/40 bg-info/10 rounded-lg border p-4"
         >
-      </p>
-      <p class="text-base-content/60 text-xs">
-        Agente: <span id="confirm-agent-label" class="font-semibold"
-          >&mdash;</span
-        >
-      </p>
-    </div>
-    <div id="confirm-duplicate-state" class="hidden">
-      <div
-        role="alert"
-        class="border-error/40 bg-error/10 rounded-lg border p-4"
-      >
-        <div class="flex items-start gap-3">
-          <span class="text-error mt-0.5">
-            <Icon name="boxicons:alert-circle-filled" size={24} />
-          </span>
-          <div class="flex min-w-0 flex-1 flex-col gap-2">
-            <p class="text-error text-sm font-semibold">
-              Ya existe un ticket abierto por este motivo en la misma ubicación
-            </p>
-            <p class="text-base-content/70 text-xs">
-              Ticket <strong id="confirm-dup-id" class="font-mono"
-                >#&mdash;</strong
-              >:
-              <span id="confirm-dup-title" class="italic">&mdash;</span>
-            </p>
-            <a
-              id="confirm-dup-link"
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="link-neutral mt-2 text-lg"
-            >
-              Ver ticket en InvGate
-            </a>
-            <p class="text-base-content/80 text-xs">
-              ¿Deseas continuar con la creación de todos modos?
-            </p>
+          <div class="flex items-start gap-3">
+            <span class="text-info mt-0.5">
+              <Icon name="boxicons:info-circle-filled" size={24} />
+            </span>
+            <div class="flex min-w-0 flex-1 flex-col gap-2">
+              <p class="text-info text-sm font-semibold">
+                No se verificó si ya existe un ticket abierto
+              </p>
+              <p class="text-base-content/70 text-xs">
+                Elegiste crear el ticket sin consultar InvGate. Si ya hay uno
+                activo para esta oficina, ambos tickets van a quedar abiertos.
+              </p>
+            </div>
           </div>
         </div>
+      </div>
+      <div id="confirm-duplicate-state" class="hidden">
+        <div
+          role="alert"
+          class="border-error/40 bg-error/10 rounded-lg border p-4"
+        >
+          <div class="flex items-start gap-3">
+            <span class="text-error mt-0.5">
+              <Icon name="boxicons:alert-circle-filled" size={24} />
+            </span>
+            <div class="flex min-w-0 flex-1 flex-col gap-2">
+              <p class="text-error text-sm font-semibold">
+                Ya existe un ticket abierto por este motivo en la misma
+                ubicación
+              </p>
+              <p class="text-base-content/70 text-xs">
+                Ticket <strong id="confirm-dup-id" class="font-mono"
+                  >#&mdash;</strong
+                >:
+                <span id="confirm-dup-title" class="italic">&mdash;</span>
+              </p>
+              <a
+                id="confirm-dup-link"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="link-neutral mt-2 text-lg"
+              >
+                Ver ticket en InvGate
+              </a>
+              <p class="text-base-content/80 text-xs">
+                ¿Deseas continuar con la creación de todos modos?
+              </p>
+              <p class="text-base-content/50 text-xs">
+                Solo se consideran tickets abiertos. Los ya cerrados no bloquean
+                la creación.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="border-base-300 bg-base-200/50 text-base-content/70 rounded-lg border p-3 text-xs"
+      >
+        <p>
+          <span class="text-base-content/60 font-bold tracking-wide uppercase"
+            >Oficina</span
+          >:
+          <span
+            id="confirm-office-label"
+            class="text-base-content font-semibold">&mdash;</span
+          >
+        </p>
+        <p class="mt-1">
+          <span class="text-base-content/60 font-bold tracking-wide uppercase"
+            >Origen</span
+          >:
+          <span
+            id="confirm-source-label"
+            class="text-base-content font-semibold">&mdash;</span
+          >
+        </p>
+        <p class="mt-1">
+          <span class="text-base-content/60 font-bold tracking-wide uppercase"
+            >Agente</span
+          >:
+          <span id="confirm-agent-label" class="text-base-content font-semibold"
+            >&mdash;</span
+          >
+        </p>
       </div>
     </div>
   </Fragment>
@@ -200,7 +278,23 @@ const { id = "agents-ticket-modal" } = Astro.props;
         id="confirm-create-ticket-btn"
         class="btn btn-primary btn-sm md:btn-md cursor-pointer gap-2 shadow-md"
       >
-        Crear Ticket
+        <!-- Mismo criterio que el boton de verificar: label y spinner en la
+             misma celda de un grid, cruzados por opacidad. El label esta en su
+             propio span porque cambia entre "Crear Ticket" y "Crear de todos
+             modos", y un innerHTML lo borraria junto con el spinner. -->
+        <span data-btn-content class="grid place-items-center">
+          <span
+            data-btn-label
+            class="col-start-1 row-start-1 transition-opacity duration-150 motion-reduce:transition-none"
+          >
+            Crear Ticket
+          </span>
+          <span
+            data-btn-spinner
+            class="loading loading-spinner loading-sm col-start-1 row-start-1 opacity-0 transition-opacity duration-150 motion-reduce:transition-none"
+            aria-hidden="true"
+          ></span>
+        </span>
       </button>
     </div>
   </Fragment>
@@ -233,6 +327,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
     sourceId: number;
     sourceName: string;
     observaciones?: string;
+    duplicateCheckSkipped?: boolean;
   } | null = null;
   const modal = document.getElementById(
     "agents-ticket-modal",
@@ -249,13 +344,22 @@ const { id = "agents-ticket-modal" } = Astro.props;
   const confirmBtn = document.getElementById(
     "confirm-agents-ticket-btn",
   ) as HTMLButtonElement | null;
+  const skipVerifyBtn = document.getElementById(
+    "skip-verify-agents-ticket-btn",
+  ) as HTMLButtonElement | null;
   const confirmModal = document.getElementById(
     "agents-ticket-confirm-modal",
   ) as HTMLDialogElement | null;
   const confirmCreateTicketBtn = document.getElementById(
     "confirm-create-ticket-btn",
   ) as HTMLButtonElement | null;
+  const confirmCreateTicketLabel =
+    confirmCreateTicketBtn?.querySelector<HTMLElement>("[data-btn-label]") ??
+    null;
   const confirmDefaultState = document.getElementById("confirm-default-state");
+  const confirmUnverifiedState = document.getElementById(
+    "confirm-unverified-state",
+  );
   const confirmDuplicateState = document.getElementById(
     "confirm-duplicate-state",
   );
@@ -353,10 +457,10 @@ const { id = "agents-ticket-modal" } = Astro.props;
         '<option value="" disabled selected>Cargando orígenes...</option>';
     }
     if (observacionesTextarea) observacionesTextarea.value = "";
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = "Crear Ticket";
-    }
+    if (confirmBtn) confirmBtn.disabled = false;
+    if (skipVerifyBtn) skipVerifyBtn.disabled = false;
+    // Nunca por innerHTML: borraria el slot del spinner reservado.
+    setButtonSpinner(confirmBtn, false);
     pendingCreateData = null;
 
     modal.showModal();
@@ -391,9 +495,16 @@ const { id = "agents-ticket-modal" } = Astro.props;
     reason?: string;
   } | null> {
     let reason: string | undefined;
+    let timedOut = false;
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 30000);
     try {
       const res = await fetch(
         `/api/offices/check-agents-ticket?officeCode=${encodeURIComponent(currentOfficeCode)}`,
+        { signal: controller.signal },
       );
       const data = (await res.json().catch(() => ({}))) as {
         exists?: boolean;
@@ -416,28 +527,69 @@ const { id = "agents-ticket-modal" } = Astro.props;
       }
     } catch {
       reason = undefined;
+    } finally {
+      clearTimeout(abortTimer);
     }
     showToast(
       reason ||
-        "No se pudo verificar si ya existe un ticket en InvGate. Intente de nuevo.",
+        (timedOut
+          ? "La verificación de tickets en InvGate tardó demasiado. Intente de nuevo."
+          : "No se pudo verificar si ya existe un ticket en InvGate. Intente de nuevo."),
       "alert-error",
       6000,
     );
     return null;
   }
 
-  function openConfirmModal(duplicate: {
-    exists: boolean;
-    ticketId?: number;
-    ticketTitle?: string;
-    ticketUrl?: string;
-  }) {
+  type ConfirmState =
+    | { state: "clean" }
+    | {
+        state: "duplicate";
+        ticketId: number;
+        ticketTitle?: string;
+        ticketUrl?: string;
+      }
+    | { state: "unverified" };
+
+  // Label y spinner se cruzan por opacidad dentro de la misma celda del grid
+  // (data-btn-content): el loading REEMPLAZA al label en vez de sumsarse al
+  // lado, asi que no queda un hueco reservado cuando el boton esta idle. Ninguno
+  // de los dos entra ni sale del flujo, por eso el boton no cambia de ancho ni
+  // de alto mientras trabaja (CLS). El label nunca se borra, tampoco en el
+  // loading: cambiarlo por "Verificando..." es lo que hacia crecer el boton, y
+  // mutar el nombre accesible del boton a mitad de una accion es peor todavia.
+  function setButtonSpinner(
+    btn: HTMLButtonElement | null,
+    busy: boolean,
+  ): void {
+    if (!btn) return;
+    btn
+      .querySelector("[data-btn-spinner]")
+      ?.classList.toggle("opacity-0", !busy);
+    btn
+      .querySelector("[data-btn-label]")
+      ?.classList.toggle("opacity-0", busy);
+    btn.setAttribute("aria-busy", busy ? "true" : "false");
+  }
+
+  function setCreateButtonsBusy(busy: boolean) {
+    if (confirmBtn) confirmBtn.disabled = busy;
+    if (skipVerifyBtn) skipVerifyBtn.disabled = busy;
+    setButtonSpinner(confirmBtn, busy);
+  }
+
+  function openConfirmModal(confirm: ConfirmState) {
     if (!confirmModal) return;
 
-    const hasDuplicate = duplicate.exists;
+    const hasDuplicate = confirm.state === "duplicate";
 
     if (confirmDefaultState)
-      confirmDefaultState.classList.toggle("hidden", hasDuplicate);
+      confirmDefaultState.classList.toggle("hidden", confirm.state !== "clean");
+    if (confirmUnverifiedState)
+      confirmUnverifiedState.classList.toggle(
+        "hidden",
+        confirm.state !== "unverified",
+      );
     if (confirmDuplicateState)
       confirmDuplicateState.classList.toggle("hidden", !hasDuplicate);
     if (confirmOfficeLabel) {
@@ -451,11 +603,14 @@ const { id = "agents-ticket-modal" } = Astro.props;
     }
 
     if (hasDuplicate) {
-      if (confirmDupId) confirmDupId.textContent = `#${duplicate.ticketId}`;
+      if (confirmDupId)
+        confirmDupId.textContent = `#${(confirm as { ticketId: number }).ticketId}`;
       if (confirmDupTitle)
-        confirmDupTitle.textContent = duplicate.ticketTitle || "";
+        confirmDupTitle.textContent =
+          (confirm as { ticketTitle?: string }).ticketTitle || "";
       if (confirmDupLink) {
-        confirmDupLink.href = duplicate.ticketUrl || "#";
+        confirmDupLink.href =
+          (confirm as { ticketUrl?: string }).ticketUrl || "#";
         confirmDupLink.textContent = "Ver ticket en InvGate";
       }
     }
@@ -463,9 +618,11 @@ const { id = "agents-ticket-modal" } = Astro.props;
     if (confirmCreateTicketBtn) {
       confirmCreateTicketBtn.classList.toggle("btn-warning", hasDuplicate);
       confirmCreateTicketBtn.classList.toggle("btn-primary", !hasDuplicate);
-      confirmCreateTicketBtn.innerHTML = hasDuplicate
-        ? "Crear de todos modos"
-        : "Crear Ticket";
+      if (confirmCreateTicketLabel) {
+        confirmCreateTicketLabel.textContent = hasDuplicate
+          ? "Crear de todos modos"
+          : "Crear Ticket";
+      }
     }
 
     confirmModal.showModal();
@@ -474,10 +631,8 @@ const { id = "agents-ticket-modal" } = Astro.props;
   confirmCreateTicketBtn?.addEventListener("click", () => {
     if (!pendingCreateData) return;
 
-    const originalHTML = confirmCreateTicketBtn.innerHTML;
     confirmCreateTicketBtn.disabled = true;
-    confirmCreateTicketBtn.innerHTML =
-      '<span class="loading loading-spinner loading-xs"></span> Creando...';
+    setButtonSpinner(confirmCreateTicketBtn, true);
 
     fetch("/api/offices/create-agents-ticket", {
       method: "POST",
@@ -520,14 +675,16 @@ const { id = "agents-ticket-modal" } = Astro.props;
       })
       .finally(() => {
         confirmCreateTicketBtn.disabled = false;
-        confirmCreateTicketBtn.innerHTML = originalHTML;
+        setButtonSpinner(confirmCreateTicketBtn, false);
       });
   });
 
-  confirmBtn?.addEventListener("click", async () => {
+  // Valida origen + agente y arma pendingCreateData. Devuelve false (con toast)
+  // si falta algo, para que los dos caminos de creación compartan la validación.
+  function collectPendingCreateData(): boolean {
     if (!sourceSelect || !sourceSelect.value) {
       showToast("Debe seleccionar el origen de la solicitud.", "alert-warning");
-      return;
+      return false;
     }
 
     const sourceOption = sourceSelect.selectedOptions[0];
@@ -536,7 +693,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
 
     if (!sourceId || !sourceName) {
       showToast("Origen de la solicitud inválido.", "alert-warning");
-      return;
+      return false;
     }
 
     if (!agentSelect || !agentSelect.value) {
@@ -544,7 +701,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
         "Debe seleccionar un agente de mesa de ayuda.",
         "alert-warning",
       );
-      return;
+      return false;
     }
 
     const selectedOption = agentSelect.selectedOptions[0];
@@ -553,7 +710,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
 
     if (!customerId || !customerName) {
       showToast("Selección de agente inválida.", "alert-warning");
-      return;
+      return false;
     }
 
     const observaciones = observacionesTextarea?.value?.trim() || undefined;
@@ -568,28 +725,47 @@ const { id = "agents-ticket-modal" } = Astro.props;
       observaciones,
     };
 
+    return true;
+  }
+
+  // Camino 1: consulta InvGate y recién despues pasa al modal de confirmacion.
+  confirmBtn?.addEventListener("click", async () => {
+    if (!collectPendingCreateData()) return;
+
     const clickedOfficeCode = currentOfficeCode;
 
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML =
-        '<span class="loading loading-spinner loading-xs"></span> Verificando...';
-    }
+    setCreateButtonsBusy(true);
 
     const duplicate = await checkDuplicateTicket();
 
     if (currentOfficeCode !== clickedOfficeCode) return;
 
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = "Crear Ticket";
-    }
+    setCreateButtonsBusy(false);
 
     if (duplicate === null) {
       return;
     }
 
-    openConfirmModal(duplicate);
+    openConfirmModal(
+      duplicate.exists
+        ? {
+            state: "duplicate",
+            ticketId: duplicate.ticketId as number,
+            ticketTitle: duplicate.ticketTitle,
+            ticketUrl: duplicate.ticketUrl,
+          }
+        : { state: "clean" },
+    );
+  });
+
+  // Camino 2: el agente ya sabe que no hay ningun ticket activo. Sin fetch a
+  // InvGate, directo al modal de confirmacion con el aviso de "no verificado".
+  skipVerifyBtn?.addEventListener("click", () => {
+    if (!collectPendingCreateData()) return;
+
+    pendingCreateData.duplicateCheckSkipped = true;
+
+    openConfirmModal({ state: "unverified" });
   });
 
   // Clear cache on page load so fresh agents are fetched
