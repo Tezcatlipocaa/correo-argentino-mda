@@ -23,7 +23,7 @@ export type RoleMatrixFeature = {
 export const rolesMatrix: RoleMatrixFeature[] = [
   {
     feature: "Ver Oficinas",
-    icon: "boxicons:building-house",
+    icon: "boxicons:building-house-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -41,7 +41,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Ver Títulos",
-    icon: "boxicons:note",
+    icon: "boxicons:note-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -50,7 +50,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Ver Mesas de Ayuda",
-    icon: "boxicons:headphone",
+    icon: "boxicons:headphone-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -68,7 +68,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Generar Firmas",
-    icon: "boxicons:edit-alt",
+    icon: "boxicons:edit-alt-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -77,7 +77,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Ver Cronogramas",
-    icon: "boxicons:calendar",
+    icon: "boxicons:calendar-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -86,7 +86,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Métricas Propias",
-    icon: "boxicons:user-id-card",
+    icon: "boxicons:user-id-card-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -95,7 +95,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Gestión de Calidad",
-    icon: "boxicons:star",
+    icon: "boxicons:star-filled",
     agent: false,
     referent: true,
     team_leader: true,
@@ -104,7 +104,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Autogestiones",
-    icon: "boxicons:user-check",
+    icon: "boxicons:user-check-filled",
     agent: false,
     referent: true,
     team_leader: true,
@@ -113,7 +113,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Editar Cronogramas",
-    icon: "boxicons:calendar",
+    icon: "boxicons:calendar-filled",
     agent: false,
     referent: false,
     team_leader: true,
@@ -122,7 +122,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Asistencia",
-    icon: "boxicons:clock",
+    icon: "boxicons:clock-filled",
     agent: false,
     referent: false,
     team_leader: true,
@@ -131,7 +131,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Administrar Títulos",
-    icon: "boxicons:note",
+    icon: "boxicons:note-filled",
     agent: false,
     referent: false,
     team_leader: true,
@@ -140,7 +140,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Administrar Contenido",
-    icon: "boxicons:task",
+    icon: "boxicons:task-filled",
     agent: false,
     referent: false,
     team_leader: false,
@@ -149,7 +149,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Administrar Usuarios",
-    icon: "boxicons:group",
+    icon: "boxicons:group-filled",
     agent: false,
     referent: false,
     team_leader: false,
@@ -158,7 +158,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Logs de Auditoría",
-    icon: "boxicons:history",
+    icon: "boxicons:history-filled",
     agent: false,
     referent: false,
     team_leader: false,
