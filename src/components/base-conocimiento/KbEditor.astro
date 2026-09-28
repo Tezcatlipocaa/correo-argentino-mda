@@ -236,6 +236,7 @@ const cleanBase = getCleanBase();
       spellChecker: false,
       status: ["lines", "words"],
       autofocus: false,
+      sideBySideFullscreen: false,
       placeholder,
       minHeight,
       toolbar: [
@@ -350,6 +351,23 @@ const cleanBase = getCleanBase();
     border: 0;
     border-radius: 0;
     font-family: var(--font-mono);
+  }
+
+  .EasyMDEContainer.sided--no-fullscreen .CodeMirror-sided,
+  .EasyMDEContainer.sided--no-fullscreen .editor-preview-active-side {
+    min-width: 0;
+  }
+
+  .EasyMDEContainer .editor-toolbar.fullscreen {
+    z-index: 70;
+  }
+
+  .EasyMDEContainer .CodeMirror-fullscreen {
+    z-index: 69;
+  }
+
+  .EasyMDEContainer .editor-preview-side {
+    z-index: 69;
   }
 
   .editor-toolbar {
