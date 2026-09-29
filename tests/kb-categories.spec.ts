@@ -637,6 +637,41 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     if (propias[0]) createdCategoryIds.push(propias[0].id);
   });
 
+  test("el alta inline redirige al formulario con un solo prefijo de base", async ({
+    context,
+  }) => {
+    const leader = await fixture.createUser("team_leader", mesa);
+    await setSessionCookie(context, leader.signedSessionId);
+
+    const nombre = `Prefijo ${uniqueToken()}`;
+    const response = await context.request.post(
+      "/base-conocimiento/categorias",
+      {
+        form: {
+          action: "create",
+          name: nombre,
+          returnTo: "/base-conocimiento/create",
+        },
+        maxRedirects: 0,
+      },
+    );
+
+    expect(response.status()).toBe(REDIRECT);
+    const location = new URL(
+      response.headers().location,
+      "http://localhost:4321",
+    );
+    expect(location.pathname).toBe("/base-conocimiento/create");
+    expect(location.pathname).not.toContain(
+      "/base-conocimiento/base-conocimiento",
+    );
+    expect(location.searchParams.get("nueva_categoria")).toBe(nombre);
+    expect(location.searchParams.get("toast_type")).toBe("success");
+
+    const creada = await findCategory(nombre);
+    if (creada) createdCategoryIds.push(creada.id);
+  });
+
   test("un returnTo externo cae al ABM y no redirige afuera", async ({
     context,
   }) => {

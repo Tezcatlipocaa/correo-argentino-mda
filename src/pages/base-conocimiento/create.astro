@@ -417,8 +417,8 @@ const categoriaSeleccionada =
     type="hidden"
     name="returnTo"
     value={isAdmin
-      ? `${resolveUrl("/base-conocimiento/create")}?mesa=${formValues.helpdeskId}`
-      : resolveUrl("/base-conocimiento/create")}
+      ? `/base-conocimiento/create?mesa=${formValues.helpdeskId}`
+      : "/base-conocimiento/create"}
   />
   {
     isAdmin && (

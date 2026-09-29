@@ -7,7 +7,14 @@ import { can } from "@lib/roleConfig";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
-import { resolveUrl } from "@lib/url";
+import { getCleanBase } from "@lib/baseUrl";
+import {
+  buildCategoryRedirectTarget,
+  isCategoryFormKbPath,
+  kbPathname,
+  KB_CATEGORIAS_PATH,
+  normalizeKbReturnPath,
+} from "@lib/kbRedirects";
 import {
   createCategory,
   deleteCategory,
@@ -34,24 +41,10 @@ if (!perms.canWrite) {
 const sessionHelpdeskId = user.helpdeskId;
 const isAdmin = can(user.role, "admin");
 
-const categoriasUrl = resolveUrl("/base-conocimiento/categorias");
-const kbReturnPrefix = resolveUrl("/base-conocimiento/");
-const kbReturnOrigin = "http://localhost";
-const isKbReturn = (value: string) => {
-  if (!value.startsWith("/") || value.startsWith("//")) return false;
-  return new URL(value, kbReturnOrigin).pathname.startsWith(kbReturnPrefix);
-};
-const isCategoryFormReturn = (value: string) => {
-  if (!isKbReturn(value)) return false;
-  const pathname = new URL(value, kbReturnOrigin).pathname;
-  return (
-    pathname === resolveUrl("/base-conocimiento/create") ||
-    pathname.startsWith(resolveUrl("/base-conocimiento/edit/"))
-  );
-};
-
+const cleanBase = getCleanBase();
 const returnToRaw = Astro.url.searchParams.get("returnTo") ?? "";
-const returnTo = isKbReturn(returnToRaw) ? returnToRaw : categoriasUrl;
+const returnTo =
+  normalizeKbReturnPath(returnToRaw, cleanBase) ?? KB_CATEGORIAS_PATH;
 
 let errorMsg = "";
 let successMsg = "";
@@ -60,12 +53,15 @@ if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = String(formData.get("action") ?? "");
   const postedReturnTo = String(formData.get("returnTo") ?? "");
-  const effectiveReturnTo = isKbReturn(postedReturnTo)
-    ? postedReturnTo
-    : returnTo;
+  const postedReturnToNormalized = normalizeKbReturnPath(
+    postedReturnTo,
+    cleanBase,
+  );
+  const effectiveReturnTo = postedReturnToNormalized ?? returnTo;
   const postedHelpdeskId = Number(formData.get("helpdeskId") ?? 0);
   const isInlineFromForm =
-    isKbReturn(postedReturnTo) && postedReturnTo !== categoriasUrl;
+    postedReturnToNormalized !== null &&
+    postedReturnToNormalized !== KB_CATEGORIAS_PATH;
   let targetHelpdeskId = sessionHelpdeskId;
   let createdName = "";
 
@@ -136,21 +132,18 @@ if (Astro.request.method === "POST") {
 
   if (successMsg) {
     await logAdminFromAstro(Astro.locals, successMsg);
-    const hashIndex = effectiveReturnTo.indexOf("#");
-    const basePath =
-      hashIndex >= 0
-        ? effectiveReturnTo.slice(0, hashIndex)
-        : effectiveReturnTo;
-    const hash = hashIndex >= 0 ? effectiveReturnTo.slice(hashIndex) : "";
-    const destino =
-      createdName &&
-      action === "create" &&
-      isCategoryFormReturn(effectiveReturnTo)
-        ? `${basePath}${
-            basePath.includes("?") ? "&" : "?"
-          }nueva_categoria=${encodeURIComponent(createdName)}${hash}`
-        : effectiveReturnTo;
-    return redirectWithToast(destino, successMsg, "success");
+    return redirectWithToast(
+      buildCategoryRedirectTarget({
+        returnTo: effectiveReturnTo,
+        base: cleanBase,
+        createdName,
+        fromCategoryForm: isInlineFromForm
+          ? isCategoryFormKbPath(kbPathname(effectiveReturnTo))
+          : false,
+      }),
+      successMsg,
+      "success",
+    );
   }
 
   if (errorMsg && isInlineFromForm) {
