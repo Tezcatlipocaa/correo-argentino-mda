@@ -251,3 +251,143 @@ Cada entrada sigue este formato:
 **Solucion:** Reemplazar `agents.user_id` por `agents.userId` en ambos selects. Verificado: probe directo 200, `tests/admin/` 74 passed, `vitest` 132 passed, build OK.
 **Regla:** En queries Drizzle usar siempre el nombre de propiedad TS (`agents.userId`), nunca el nombre SQL (`agents.user_id`). Ante un 400 genérico de un handler, sospechar primero de un accessor undefined: probarlo aislado con `typeof` antes de teorizar sobre lógica de negocio.
 **Archivos afectados:** src/pages/admin/usuarios.astro, src/pages/api/cronograma/operators.ts
+
+---
+
+### 2026-09-28 — `astro check` revienta con OOM por artefactos de Playwright
+
+**Problema:** `npx astro check` terminaba con `FATAL ERROR: Ineffective mark-compacts near heap limit` (4 GB, y también con 8 GB) y ~18 MB de salida, sin llegar al resumen de errores.
+**Causa:** `tsconfig.json` tiene `"include": ["**/*"]` y TypeScript **no respeta `.gitignore`**: el type-check parseaba `playwright-report/trace/*.js` (bundles minificados de varios MB generados por la corrida E2E). No era el código del feature.
+**Solucion:** `tsconfig.json` → `"exclude": ["dist", "node_modules", "playwright-report", "test-results", "tmp", ".drizzle-canonical"]`. Volvió a reportar los 42 errores preexistentes del baseline.
+**Regla:** Todo artefacto generado dentro del repo (reportes de Playwright, temporales, `.drizzle-canonical`) debe estar en el `exclude` de `tsconfig.json`, no solo en `.gitignore`. Ante un OOM del type-check, mirar primero el volumen de salida y si hay bundles minificados en el alcance.
+**Archivos afectados:** tsconfig.json
+
+---
+
+### 2026-09-28 — `drizzle-kit push` es inviable sin TTY: usar el script de alineación
+
+**Problema:** `npm run db:push` (y `npx drizzle-kit push --force`) fallaban con `Error: Interactive prompts require a TTY terminal`; la tabla nueva nunca se creaba.
+**Causa:** `drizzle-kit push` pide confirmación interactiva aunque se pase `--force`, y este shell no tiene TTY.
+**Solucion:** `npx tsx scripts/align-db-to-schema.mts`, que hace backup consistente, deriva el DDL canónico de `src/db/schema.ts`, crea/reconstruye lo desalineado y verifica paridad + `foreign_key_check` + `integrity_check` + conteos de filas.
+**Regla:** En este entorno el único camino para aplicar schema es `scripts/align-db-to-schema.mts`. Antes de correrlo: backup y leer el diff que reporta (tablas faltantes / desalineadas / extra).
+**Archivos afectados:** scripts/align-db-to-schema.mts, database/mda.db
+
+---
+
+### 2026-09-28 — Doble prefijo de base al combinar `resolveUrl` con `redirectWithToast`
+
+**Problema:** Las mutaciones del ABM de categorías construyen su destino con `resolveUrl(...)` (que ya incluye el base) y lo pasan a `redirectWithToast`, que a su vez antepone `getBaseNoSlash()`. Con `base: "/"` no se nota; con un deploy en subdirectorio, toda redirección quedaría en `base + base + /base-conocimiento/...`.
+**Causa:** Dos capas que aplican el base, y la misma de ellas lo aplica dos veces. Solo afecta a los call-sites que pasan paths **dinámicos** (los 30 literales del repo nunca lo dispararon).
+**Solucion:** Pendiente en `docs/superpowers/plans/2026-09-28-kb-v2-hardening.md` (Task 1): pasar paths sin base a `redirectWithToast` y mantener la validación base-aware (`isKbReturn` / `kbReturnPrefix`) intacta, con helper puro testeado bajo `tests/unit/`.
+**Regla:** Elegir **una sola** capa que aplique el base. `redirectWithToast`/`toastResponse` ya lo hacen: pasarles paths sin base y usar `resolveUrl` solo para la acción del form o para validar. Si un call-site pasa una URL dinámica a un helper de toast, revisarlo con grep.
+**Archivos afectados:** src/pages/base-conocimiento/categorias.astro, src/lib/api/redirectWithToast.ts
+
+---
+
+### 2026-09-28 — EasyMDE: las vistas split y fullscreen desbordaban y quedaban inclicables
+
+**Problema:** En create/edit, la vista side-by-side se salía del contenedor (quedaba cortada) y el botón de fullscreen no respondía: el header y el drawer de la app tapaban la toolbar y la primera columna de texto.
+**Causa:** Tres bugs, ninguno `100vw` ni `box-sizing`: (1) EasyMDE tiene `sideBySideFullscreen: true` por defecto, así que `toggleSideBySide()` llamaba a `toggleFullScreen()` y el preview `.editor-preview-side` (fixed, 50%) se superponía; (2) `.editor-toolbar.fullscreen` (z-index 9) y `.CodeMirror-fullscreen` (8) quedaban por debajo del header (z-30) y del drawer (z-60); (3) los paneles flex del split no tenían `min-width: 0`, así que no bajaban de su min-content.
+**Solucion:** `sideBySideFullscreen: false` (el fullscreen lo dispara JS, con CSS habría que pelear con `!important` y se rompería el botón), `min-width: 0` en los dos paneles, y `z-index: 70/69` para toolbar/CodeMirror/preview-side en modo fullscreen. Cubierto por `tests/kb-editor-layout.spec.ts` (6 asserts geométricos: sin scroll horizontal, panes dentro del viewport y del contenedor, sin solapamiento).
+**Regla:** Al integrar un editor de terceros hay que verificar (a) los defaults no obvios del paquete leyendo su código en `node_modules`, (b) el stacking context contra el chrome propio de la app, y (c) cada modo de vista con asserts geométricos (`boundingBox`), no solo con una mirada visual. Todo item flex con contenido ancho necesita `min-width: 0`.
+**Archivos afectados:** src/components/base-conocimiento/KbEditor.astro, tests/kb-editor-layout.spec.ts
+
+---
+
+### 2026-09-28 — Los props `Date` de un server island llegan como string
+
+**Problema:** La vista de artículo devolvía **HTTP 500** en todas las requests con `RangeError: Invalid time value` en `KbViewContent.astro` (el `Intl.DateTimeFormat.format()` recibía el string ISO en lugar de un `Date`).
+**Causa:** Astro serializa los props de los server islands con `JSON.stringify` (`node_modules/astro/dist/runtime/server/render/server-islands.js`), y un `Date` se convierte en string. En la carga directa de la página funcionaba; solo fallaba la isla diferida.
+**Solucion:** Coercionar en el componente: `const d = article.updatedAt ? new Date(article.updatedAt as string | Date) : null;` y validar `Number.isNaN(d.getTime())` antes de formatear, con fallback "Sin fecha de actualización".
+**Regla:** En cualquier server island, tratar los props como JSON: coaccionar `Date` y validar `NaN` antes de formatear o comparar. Un 500 que solo aparece en la isla y no en la carga directa es casi siempre este caso.
+**Archivos afectados:** src/components/base-conocimiento/KbViewContent.astro
+
+---
+
+### 2026-09-28 — EasyMDE: `"image"` no abre el selector de archivos y el repo no carga FontAwesome
+
+**Problema:** El botón de imagen del editor no sube nada (no abría el file picker) y los íconos de la toolbar salían en blanco.
+**Causa:** EasyMDE 2.21.0 tiene dos botones distintos: `"image"` inserta una URL y `"upload-image"` es el que abre el picker (verificado en `node_modules/easymde/src/js/easymde.js:1499-1500,1629-1632`). Y el repo no carga FontAwesome en ningún lado, así que con `autoDownloadFontAwesome: false` las clases `fa fa-*` no renderizan nada.
+**Solucion:** Toolbar con `"upload-image"` + `imageAccept` explícito, y etiquetas de texto (no emoji) para los `fa-*` en el `<style is:global>` del componente.
+**Regla:** Antes de configurar un paquete de terceros, leer su fuente en `node_modules` para confirmar nombres de opciones y defaults, y verificar qué assets existen en el repo (aquí: cero FontAwesome). No asumir que un toolbar item "obvio" hace lo que el nombre sugiere.
+**Archivos afectados:** src/components/base-conocimiento/KbEditor.astro
+
+---
+
+### 2026-09-28 — E2E contra el puerto equivocado produce fallos falsos que desvían la investigación
+
+**Problema:** El smoke de upload daba 403 en todos los roles (team_leader y admin incluidos), y el análisis llevó a "arreglar" una restricción de RBAC que en realidad no existía.
+**Causa:** El dev server corría en el puerto 4322 (wrapper de `astro dev`) mientras el probe pegaba a 4321; además `fetch` seguía redirecciones, así que un 302 del middleware aparecía como 200 de la landing y viceversa.
+**Solucion:** El probe pasó a leer el puerto real (`npx astro dev status`) y a usar `redirect: "manual"`; el 403 resultó ser un 302 de middleware (denegación correcta del `agent`), y la única asimetría real era el filtro de mesa en `api/kb/upload.ts` (que se revirtió a `mesas.active`).
+**Regla:** Antes de interpretar un status de E2E, confirmar en qué puerto vive el dev server (`npx astro dev status`) y usar `PLAYWRIGHT_BASE_URL`; y usar `redirect: "manual"` en cualquier assert de status para no medir la landing en lugar del handler.
+**Archivos afectados:** playwright.config.ts, tests/kb-mesas-habilitadas.spec.ts
+
+---
+
+### 2026-09-28 — Tests que pasan por la razón equivocada
+
+**Problema:** Varios asserts verdes que no probaban lo que decían: el guard de duplicado comparaba `name = "Accesos"` (case-sensitive) y daba verde con un `accesos` insertado; el test de preselección de categoría creaba el artículo sin categoría, así que la prioridad invertida también daba verde; `page.once("dialog", accept)` pasaba aunque el `confirm()` nunca se disparara; y `compareDocumentPosition` con `FOLLOWING` también da true cuando el editor está contenido dentro de la fila.
+**Causa:** Aserts escritos contra el valor por defecto en vez de contra la diferencia que el fix introduce, y handlers de eventos registrados sin assert.
+**Solucion:** (a) assertar el total de filas de la mesa + `lower(name)=lower('X')`; (b) sembrar el artículo con una categoría previa y assertar que gana la nueva; (c) flag `dialogFired` en el handler + `expect(dialogFired).toBe(true)`; (d) `following === true && containedBy === false` evaluado dentro del browser. Cada fix se validó revirtiendo el código y confirmando que el test se pone rojo.
+**Regla:** Un assert debe **fallar si se revierte el fix**: probar la reversión antes de dar por verde. Los handlers de eventos (dialogs, callbacks) necesitan flag + assert. Preferir condiciones sobre conteos globales y sobre los valores normalizados que el código realmente usa.
+**Archivos afectados:** tests/kb-categories.spec.ts, tests/kb-form-row.spec.ts
+
+---
+
+### 2026-09-28 — FKs nuevas sin `onDelete` y cascade silencioso desde `mesas`
+
+**Problema:** `kb_categories.createdByUserId → users.id` quedó sin acción de borrado: con `PRAGMA foreign_keys = ON`, borrar un usuario que creó categorías falla. Y `kb_articles.helpdesk_id` / `kb_categories.helpdesk_id` cascadean desde `mesas`, que no está en `deletedRecords`: un "eliminar mesa" futuro se llevaría artículos y categorías sin aviso ni snapshot.
+**Causa:** La tabla se agregó siguiendo el patrón de `kb_articles` sin decidir explícitamente la política de borrado del padre, y sin verificar que el soft-delete del repo cubriera las entidades hijas.
+**Solucion:** `onDelete: "cascade"` en `helpdeskId` (necesario: sin él, los caminos de limpieza de tests que borran mesas fallaban), aplicado con el script de alineación; y detección de que el cascade desde `mesas` es una trampa armada → guard en `tests/unit/security/` que falle si algún path de producción hace `delete(mesas)` (pendiente en el plan de hardening, Task 4 y Task 7).
+**Regla:** Al agregar una FK, elegir y documentar la acción (`set null` > `cascade`) y verificar que el borrado del padre esté cubierto por snapshot/papelera. Si el padre se borra en algún flujo futuro, el cascade tiene que ser intencional y visible.
+**Archivos afectados:** src/db/schema.ts
+
+---
+
+### 2026-09-28 — Un campo que deja de ser texto libre exige backfill de los valores previos
+
+**Problema:** Al pasar la categoría de texto libre a `<select>` con catálogo, quedaron artículos con valores sin fila en `kb_categories` (hay al menos uno: categoría "Prueba" en la mesa 2509). El ABM itera el catálogo, así que ese valor quedó **invisible** ahí (no se puede renombrar ni borrar) pero visible en el listado de artículos y como opción extra en el formulario de edición; y al cambiar la categoría se pierde sin rastro en la auditoría.
+**Causa:** El plan cubrió el alta/edición nueva pero no la migración de los datos previos, ni un estado visible para lo no catalogado.
+**Solucion:** Pendiente en el plan de hardening (Task 6): script de backfill idempotente con dry-run (`scripts/backfill-kb-categories.mts`, siguiendo el patrón de `scripts/normalize-participaciones.mts`) + bloque de solo lectura "Sin catalogar" en el ABM + E2E de un artículo legacy que sobrevive a un guardado.
+**Regla:** Cuando un campo deja de ser texto libre, el plan debe incluir el backfill idempotente de los valores existentes y un estado visible para lo que no quedó catalogado. Un `<select>` es sugerencia: la frontera de confianza es el POST, y aun así el dato viejo no puede desaparecer en silencio.
+**Archivos afectados:** src/lib/kb.ts, src/pages/base-conocimiento/categorias.astro
+
+---
+
+### 2026-09-28 — Seed-on-read con `count == 0` crea invariantes implícitas
+
+**Problema:** La siembra de las 5 categorías por defecto solo corre cuando el catálogo de la mesa está vacío (en `listCategories` y en `createCategory`). Consecuencias no obvias: una mesa nunca puede tener exactamente una categoría, y borrar las cinco defaults las hace resucitar en la siguiente lectura del catálogo. Ninguna de las dos reglas estaba testeada ni documentada.
+**Causa:** Se cambió la siembra "en cada lectura" (5 inserts `ON CONFLICT DO NOTHING` por request) por un gate `count == 0`, lo cual es correcto en performance pero convierte el estado vacío en un disparador de reglas de negocio.
+**Solucion:** Se aceptó la semántica y se congeló con tests de caracterización (uno por regla) más una prueba de mutación que demuestra que pueden fallar (pendiente en el plan de hardening, Task 8), y quedó documentada en `docs/CONTEXT.md`.
+**Regla:** Un seed-on-read con condición de vacío es un invariante de negocio, no un detalle de implementación: si tiene semántica (no puede quedar vacío, no puede tener uno solo), va con tests que la congelen o con una bandera explícita de "ya sembrado".
+**Archivos afectado:** src/lib/kbCategories.ts
+
+---
+
+### 2026-09-28 — Forms fuera de `/api/` quedan sin rate limit
+
+**Problema:** El rate limit del middleware solo se aplica a paths bajo `/api/`, así que los tres POST del ABM de categorías (alta, renombre, baja) son ilimitados: un `team_leader` puede spamear escrituras en bucle sin ninguna traba.
+**Causa:** El rate limiter se concibió para endpoints API; las páginas de gestión hacen POST directo a sí mismas.
+**Solucion:** Pendiente en el plan de hardening (Task 2): límite dedicado (`RATE_LIMITS.kbCategoryWrite`) aplicado a esa ruta de escritura, con E2E que corta exactamente en el límite.
+**Regla:** Cada superficie de escritura (incluidas las páginas de gestión con POST) necesita un límite: si no está bajo `/api/`, hay que agregarla explícitamente al middleware.
+**Archivos afectados:** src/middleware.ts, src/pages/base-conocimiento/categorias.astro
+
+---
+
+### 2026-09-28 — Un fix puede dejar código muerto en un export público
+
+**Problema:** Al mover el conteo de artículos "en uso" dentro de la transacción de `deleteCategory` para que fuera atómico, `countArticlesWithCategory` quedó sin ningún caller en todo el repo: código muerto que el plan declaraba como parte de la API pública.
+**Causa:** El fix inlineó el paso que consumía el helper, sin revisar el contrato de exports del módulo.
+**Solucion:** `countArticlesWithCategory(helpdeskId, name, executor = db)` acepta el handle de transacción y lo consume `deleteCategory` dentro de la tx (sin cambios de comportamiento y sin código muerto).
+**Regla:** Después de cada fix, re-leer el contrato público del módulo (exports que el plan define) y hacer grep de callers: un fix que "simplifica" puede dejar sin uso algo que otro consumidor esperaba.
+**Archivos afectados:** src/lib/kbCategories.ts
+
+---
+
+### 2026-09-28 — `scripts/backup-db.bat`: rutas hardcodeadas y éxito falso
+
+**Problema:** El script de backup tenía rutas absolutas `C:\Projects\correo-argentino-mda\...` (funcionan solo en la máquina de prod) y, si la copia fallaba, igual imprimía "Copia de seguridad completada".
+**Causa:** Script escrito para un path fijo y sin verificación del resultado de `copy`.
+**Solucion:** Rutas relativas al script (`%~dp0..\database\mda.db` y destino hermano), `exit /b 1` si falta el origen o si `copy` falla, y el mensaje de éxito solo después de verificar.
+**Regla:** Los scripts de ops deben resolverse desde su propia ubicación y fallar con código de salida distinto de 0: nunca informar éxito sin comprobar el resultado.
+**Archivos afectados:** scripts/backup-db.bat
