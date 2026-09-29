@@ -943,7 +943,9 @@ export const kbCategories = sqliteTable(
       .notNull()
       .references(() => mesas.invgateId, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    createdByUserId: integer("created_by_user_id").references(() => users.id),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
