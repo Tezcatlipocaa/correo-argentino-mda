@@ -141,23 +141,29 @@ if (Astro.request.method === "POST" && !loadError && article) {
             ? "No se puede volver a borrador. Solo se puede publicar o archivar el artículo."
             : "No se encontró el artículo. Intentá de nuevo.";
       } else {
-        const beforeState = {
-          title: article.title,
-          category: article.category ?? null,
-          status: article.status,
-        };
-        await logAdminActionStructured(
-          user.username || "Sistema",
-          `Actualizó el artículo "${parsed.data.title}"`,
-          "kb_article",
-          articleId,
-          beforeState,
-          {
-            title: parsed.data.title,
-            category: parsed.data.category ?? null,
-            status: result.status,
-          },
-        );
+        const articleChanged =
+          parsed.data.title !== article.title ||
+          parsed.data.content !== article.content ||
+          (parsed.data.category ?? null) !== (article.category ?? null);
+
+        if (articleChanged) {
+          await logAdminActionStructured(
+            user.username || "Sistema",
+            `Actualizó el artículo "${parsed.data.title}"`,
+            "kb_article",
+            articleId,
+            {
+              title: article.title,
+              category: article.category ?? null,
+              status: article.status,
+            },
+            {
+              title: parsed.data.title,
+              category: parsed.data.category ?? null,
+              status: result.status,
+            },
+          );
+        }
 
         if (result.statusChanged) {
           await logAdminActionStructured(

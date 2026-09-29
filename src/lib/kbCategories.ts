@@ -186,14 +186,13 @@ export function renameCategory(input: {
           eq(kbArticles.category, current.name),
         ),
       )
-      .returning({ id: kbArticles.id })
-      .all();
+      .run();
 
     return {
       ok: true as const,
       name,
       previousName: current.name,
-      articlesUpdated: cascaded.length,
+      articlesUpdated: cascaded.changes,
     };
   });
 }

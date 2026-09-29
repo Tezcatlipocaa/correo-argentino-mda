@@ -182,21 +182,6 @@ if (Astro.request.method === "POST") {
             status: parsed.data.status,
           },
         );
-        if (
-          parsed.data.status === "published" ||
-          parsed.data.status === "archived"
-        ) {
-          await logAdminActionStructured(
-            user.username || "Sistema",
-            parsed.data.status === "published"
-              ? `Publicó el artículo "${parsed.data.title}"`
-              : `Archivó el artículo "${parsed.data.title}"`,
-            "kb_article",
-            articleId,
-            { status: "draft" },
-            { status: parsed.data.status },
-          );
-        }
         return redirectWithToast(
           "/base-conocimiento",
           "Artículo creado con éxito.",

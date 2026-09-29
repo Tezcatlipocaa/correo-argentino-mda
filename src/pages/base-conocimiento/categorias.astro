@@ -110,7 +110,7 @@ if (Astro.request.method === "POST") {
         successMsg = `Categoría "${result.name}" creada.`;
         createdName = result.name;
         audit = {
-          action: successMsg,
+          action: `Creó la categoría "${result.name}"`,
           entityId: result.id,
           before: null,
           after: { name: result.name, helpdeskId: targetHelpdeskId },
@@ -127,8 +127,12 @@ if (Astro.request.method === "POST") {
         audit = {
           action: `Actualizó la categoría "${result.previousName}" → "${result.name}"`,
           entityId: id,
-          before: { name: result.previousName },
-          after: { name: result.name, articlesUpdated: result.articlesUpdated },
+          before: { name: result.previousName, helpdeskId: targetHelpdeskId },
+          after: {
+            name: result.name,
+            helpdeskId: targetHelpdeskId,
+            articlesUpdated: result.articlesUpdated,
+          },
         };
       } else if (result.reason === "duplicate") {
         errorMsg = "Ya existe una categoría con ese nombre en la mesa.";
@@ -144,7 +148,11 @@ if (Astro.request.method === "POST") {
         audit = {
           action: `Eliminó la categoría "${result.name}"`,
           entityId: id,
-          before: { name: result.name, articlesInUse: 0 },
+          before: {
+            name: result.name,
+            helpdeskId: targetHelpdeskId,
+            articlesInUse: 0,
+          },
           after: null,
         };
       } else if (result.reason === "in_use") {
@@ -153,7 +161,11 @@ if (Astro.request.method === "POST") {
         audit = {
           action: `No eliminó la categoría "${result.name}": en uso en ${result.articlesInUse} artículo(s)`,
           entityId: id,
-          before: { name: result.name, articlesInUse: result.articlesInUse },
+          before: {
+            name: result.name,
+            helpdeskId: targetHelpdeskId,
+            articlesInUse: result.articlesInUse,
+          },
           after: null,
         };
       } else {
