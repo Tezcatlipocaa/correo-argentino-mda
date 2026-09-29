@@ -10,7 +10,10 @@ import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
-import { isFingerprintValid, computeFingerprint } from "./lib/sessionFingerprint";
+import {
+  isFingerprintValid,
+  computeFingerprint,
+} from "./lib/sessionFingerprint";
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -78,6 +81,24 @@ function applyRateLimit(
       return tooManyRequests(
         "Demasiadas solicitudes. Probá más tarde.",
         result.retryAfter,
+      );
+    }
+  }
+
+  if (relativePath === "/base-conocimiento/categorias" && method === "POST") {
+    const identifier =
+      locals.user.id > 0
+        ? `u:${locals.user.id}`
+        : `ip:${clientAddress ?? "unknown"}`;
+    const result = checkRateLimit(
+      `kb-write:${identifier}:${relativePath}`,
+      RATE_LIMITS.kbCategoryWrite,
+    );
+    if (!result.ok) {
+      return redirect(
+        resolveUrl(
+          `/base-conocimiento/categorias?toast_msg=${encodeURIComponent("Demasiadas operaciones. Probá en unos minutos.")}&toast_type=error`,
+        ),
       );
     }
   }
@@ -303,7 +324,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return redirect(resolveUrl("/login"));
   }
 
-  const sectionVisible = isSectionVisibleSync(currentUser.helpdeskName, role, checkPath);
+  const sectionVisible = isSectionVisibleSync(
+    currentUser.helpdeskName,
+    role,
+    checkPath,
+  );
   if (!sectionVisible) {
     if (relativePath.startsWith("/api/")) {
       return jsonError("Acceso no autorizado", 401);
