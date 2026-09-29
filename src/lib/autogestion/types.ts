@@ -11,6 +11,7 @@ export interface AutogestionRuleDoc {
   status: "active" | "inactive";
   intervalMinutes: number;
   triggerEvent: string;
+  priority?: number;
   conditions: AutogestionRuleCondition[];
   effect: string;
   updatedAt: string;
@@ -25,6 +26,8 @@ export interface RuleEvaluationResult {
   isMdaOperator: boolean;
   isOperatorAvailable: boolean;
   canAssign: boolean;
+  skipQueueUpdate?: boolean;
+  customComment?: string;
   reason?: string;
   targetOperator?: {
     agentId: number;

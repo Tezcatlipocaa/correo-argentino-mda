@@ -1,5 +1,6 @@
 import { db } from "@db/index";
-import { assignmentHistory } from "@db/schema";
+import { agents, assignmentHistory } from "@db/schema";
+import { eq } from "drizzle-orm";
 import {
   reassignTicketToAgent,
   addTicketComment,
@@ -12,22 +13,24 @@ import type {
   AutoAssignmentExecutionResult,
 } from "./types";
 import { evaluateRejectedRequestRule } from "./rules/rejectedRequestRule";
+import { evaluateGeneralCyclicRule } from "./rules/generalCyclicRule";
 
-export { evaluateRejectedRequestRule };
+export { evaluateRejectedRequestRule, evaluateGeneralCyclicRule };
 
 /**
  * Catálogo documental de automatizaciones programadas para la asignación de autogestiones.
- * Utilizado para informar a los supervisores en la interfaz de usuario.
+ * Utilizado para informar a los supervisores en la interfaz de usuario con orden de prioridad.
  */
 export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
   {
     id: "solicitud_rechazada",
+    priority: 1,
     name: "Devolución de Solicitudes Rechazadas",
     description:
       "Asigna de manera autónoma al operador creador aquellos tickets que ingresan a la mesa con la categoría 'Solicitud rechazada en revisión', permitiendo que el operador subsane o complete la gestión de forma inmediata.",
     status: "active",
     intervalMinutes: 10,
-    triggerEvent: "Sondeo automático cada 10 minutos y al refrescar la cola de autogestiones",
+    triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 1)",
     conditions: [
       {
         label: "Categoría del Ticket",
@@ -51,13 +54,51 @@ export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
       },
     ],
     effect:
-      "El ticket se reasigna automáticamente en InvGate al operador con una nota de verificación y registro auditable en historial. No retrasa ni altera la posición del operador en la ronda cíclica general (skipQueueUpdate).",
+      "El ticket se reasigna automáticamente en InvGate al operador creador con una nota de verificación y registro auditable en historial. No retrasa ni altera la posición del operador en la ronda cíclica general (skipQueueUpdate).",
+    updatedAt: "2026-09-29",
+  },
+  {
+    id: "asignacion_ciclica_general",
+    priority: 2,
+    name: "Asignación Cíclica de Nuevas Autogestiones",
+    description:
+      "Distribuye de manera autónoma las nuevas autogestiones de categorías generales al operador disponible que encabeza la fila de espera cíclica (mayor tiempo sin recibir AGS o sin asignaciones previas hoy).",
+    status: "active",
+    intervalMinutes: 10,
+    triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 2, posterior a Solicitudes Rechazadas)",
+    conditions: [
+      {
+        label: "Categoría General / Cliente",
+        description: "Tickets de la mesa 3950 que no correspondan a 'Solicitud rechazada en revisión' (o creados por clientes externos).",
+        required: true,
+      },
+      {
+        label: "Turno en Cola Cíclica",
+        description: "Operador disponible y asignable que encabeza la fila de espera cíclica (menor timestamp o sin asignación hoy).",
+        required: true,
+      },
+      {
+        label: "Disponibilidad en Tiempo Real",
+        description: "El operador debe encontrarse en jornada laboral, sin break activo y con estado disponible.",
+        required: true,
+      },
+      {
+        label: "Asignable a Autogestiones",
+        description: "El operador debe tener activo el atributo asignable para la cola de autogestiones.",
+        required: true,
+      },
+    ],
+    effect:
+      "El ticket se reasigna en InvGate al próximo operador en cola, publica la nota pública 'Se asigna para su gestión.' y actualiza su último tiempo de asignación en base de datos rotando su turno hacia el final de la fila de espera.",
     updatedAt: "2026-09-29",
   },
 ];
 
 /**
- * Evalúa una lista de tickets sin asignar contra todas las reglas activas.
+ * Evalúa una lista de tickets sin asignar aplicando precedencia estricta de reglas:
+ * 1. Primero evalúa y asigna todas las solicitudes rechazadas a sus respectivos creadores.
+ * 2. Los tickets restantes se distribuyen en cascada entre los operadores disponibles por turno cíclico
+ *    (un ticket por operador disponible por ciclo hasta agotar tickets o disponibilidad).
  */
 export function evaluateAllAutogestionRules(
   tickets: Array<{
@@ -72,13 +113,35 @@ export function evaluateAllAutogestionRules(
   allOperators: AgentDisponibilidad[]
 ): RuleEvaluationResult[] {
   const actionableResults: RuleEvaluationResult[] = [];
+  const assignedAgentIdsInCycle = new Set<number>();
+  const unhandledTickets: typeof tickets = [];
 
+  // Paso 1: Precedencia estricta - Evaluar regla 1 (Solicitudes rechazadas en revisión)
   for (const ticket of tickets) {
-    // 1. Regla: Solicitudes rechazadas en revisión
-    const rejectedEval = evaluateRejectedRequestRule(ticket, allOperators);
-    if (rejectedEval.canAssign) {
+    const eligibleForP1 = allOperators.filter((op) => !assignedAgentIdsInCycle.has(op.agentId));
+    const rejectedEval = evaluateRejectedRequestRule(ticket, eligibleForP1);
+    if (rejectedEval.canAssign && rejectedEval.targetOperator) {
+      rejectedEval.skipQueueUpdate = true;
       actionableResults.push(rejectedEval);
-      continue; // Un ticket solo se asigna por una regla a la vez
+      assignedAgentIdsInCycle.add(rejectedEval.targetOperator.agentId);
+    } else {
+      unhandledTickets.push(ticket);
+    }
+  }
+
+  // Paso 2: Evaluar regla 2 (Asignación cíclica general en cascada sobre los tickets restantes)
+  for (const ticket of unhandledTickets) {
+    const availableOperatorsForCyclic = allOperators.filter(
+      (op) => !assignedAgentIdsInCycle.has(op.agentId)
+    );
+    if (availableOperatorsForCyclic.length === 0) {
+      break;
+    }
+
+    const cyclicEval = evaluateGeneralCyclicRule(ticket, availableOperatorsForCyclic);
+    if (cyclicEval.canAssign && cyclicEval.targetOperator) {
+      actionableResults.push(cyclicEval);
+      assignedAgentIdsInCycle.add(cyclicEval.targetOperator.agentId);
     }
   }
 
@@ -93,7 +156,7 @@ export async function executeAutoAssignment(
   evaluation: RuleEvaluationResult,
   authorName: string = "Automatización MDA"
 ): Promise<AutoAssignmentExecutionResult> {
-  const { ticketId, ticketNumber, targetOperator, ruleId, ruleName } = evaluation;
+  const { ticketId, ticketNumber, targetOperator, ruleId, ruleName, skipQueueUpdate, customComment } = evaluation;
 
   if (!targetOperator || !targetOperator.invgateId) {
     return {
@@ -123,7 +186,11 @@ export async function executeAutoAssignment(
 
     // 2. Publicar comentario automático aclaratorio
     try {
-      const commentMessage = `Asignado automáticamente por regla de autogestión: ${ruleName}. Para su correspondiente subsanación y verificación.`;
+      const commentMessage =
+        customComment ||
+        (ruleId === "asignacion_ciclica_general"
+          ? "Se asigna para su gestión."
+          : `Asignado automáticamente por regla de autogestión: ${ruleName}. Para su correspondiente subsanación y verificación.`);
       await addTicketComment(ticketId, commentMessage, authorId, 1);
     } catch (commentErr: any) {
       console.warn(
@@ -132,8 +199,27 @@ export async function executeAutoAssignment(
       );
     }
 
-    // 3. Registrar auditoría en historial (tipo 'automatica')
     const now = Date.now();
+
+    // 3. Si la regla requiere rotar la cola (skipQueueUpdate === false), actualizar timestamp en agents
+    if (skipQueueUpdate === false) {
+      try {
+        await db
+          .update(agents)
+          .set({
+            lastAutogestionAssignedAt: now,
+            lastAutogestionAssignedBy: `${authorName} (${ruleName})`,
+          })
+          .where(eq(agents.id, targetOperator.agentId));
+      } catch (dbErr) {
+        console.error(
+          `[AutoAssignment] Error al actualizar tiempo de asignación en agents para ID ${targetOperator.agentId}:`,
+          dbErr
+        );
+      }
+    }
+
+    // 4. Registrar auditoría en historial (tipo 'automatica')
     try {
       await db.insert(assignmentHistory).values({
         agentId: targetOperator.agentId,
@@ -147,7 +233,7 @@ export async function executeAutoAssignment(
       console.error("[AutoAssignment] Error guardando historial de asignación automática:", histErr);
     }
 
-    // 4. Invalidar caché en memoria de tickets sin asignar
+    // 5. Invalidar caché en memoria de tickets sin asignar
     invalidateUnassignedTicketsCache();
 
     return {

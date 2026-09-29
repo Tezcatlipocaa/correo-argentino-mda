@@ -998,11 +998,14 @@ function formatWiseMinutes(min: number | undefined | null): string {
             <div class="p-4 sm:p-5 bg-base-200/25 border-b border-base-300/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-center gap-3">
                 <div class="p-2 rounded-xl bg-secondary/10 text-secondary shrink-0">
-                  <Icon name="boxicons:git-repo-forked" size={22} />
+                  <Icon name={rule.id === "solicitud_rechazada" ? "boxicons:git-repo-forked" : "boxicons:refresh-cw"} size={22} />
                 </div>
                 <div>
                   <div class="flex items-center gap-2 flex-wrap">
                     <h4 class="font-extrabold text-base text-base-content tracking-tight">{rule.name}</h4>
+                    <span class={`badge ${rule.priority === 1 ? "badge-primary" : "badge-secondary"} badge-soft font-bold text-xs uppercase tracking-wider`}>
+                      Prioridad {rule.priority ?? 1}
+                    </span>
                     <span class="badge badge-success badge-soft font-bold text-xs uppercase tracking-wider">
                       {rule.status === "active" ? "Activa" : "Inactiva"}
                     </span>
@@ -1053,8 +1056,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
                 <div class="flex flex-col gap-3">
                   <div class="p-3.5 rounded-xl bg-secondary/5 border border-secondary/20 flex flex-col gap-1.5">
                     <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
-                      <Icon name="boxicons:user-check" size={16} />
-                      Asignación Directa al Creador
+                      <Icon name={rule.id === "solicitud_rechazada" ? "boxicons:user-check" : "boxicons:group"} size={16} />
+                      {rule.id === "solicitud_rechazada" ? "Asignación Directa al Creador" : "Asignación al Próximo en Cola Cíclica"}
                     </span>
                     <p class="text-xs text-base-content/80 leading-relaxed">
                       {rule.effect}
@@ -1067,10 +1070,17 @@ function formatWiseMinutes(min: number | undefined | null): string {
                         <Icon name="boxicons:refresh-cw" size={14} class="text-info" />
                         Cola Cíclica
                       </span>
-                      <span class="font-semibold text-success flex items-center gap-1">
-                        <Icon name="boxicons:shield-quarter" size={14} />
-                        Turno preservado (skipQueue)
-                      </span>
+                      {rule.id === "solicitud_rechazada" ? (
+                        <span class="font-semibold text-success flex items-center gap-1">
+                          <Icon name="boxicons:shield-quarter" size={14} />
+                          Turno preservado (skipQueue)
+                        </span>
+                      ) : (
+                        <span class="font-semibold text-info flex items-center gap-1">
+                          <Icon name="boxicons:refresh-cw" size={14} />
+                          Rotación de turno (now)
+                        </span>
+                      )}
                     </div>
 
                     <div class="p-3 rounded-xl bg-base-200/30 border border-base-300/50 flex flex-col gap-1">

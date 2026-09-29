@@ -26,4 +26,23 @@ describe("Autogestión UI Documentation - Catálogo documental", () => {
     const rejectedRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "solicitud_rechazada")!;
     expect(rejectedRule.effect.toLowerCase()).toContain("skipqueueupdate");
   });
+
+  it("debe documentar la regla cíclica general con Prioridad 2 y rotación de cola", () => {
+    expect(AUTOGESTION_AUTOMATION_RULES.length).toBe(2);
+
+    const cyclicRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "asignacion_ciclica_general");
+    expect(cyclicRule).toBeDefined();
+    expect(cyclicRule?.priority).toBe(2);
+    expect(cyclicRule?.status).toBe("active");
+    expect(cyclicRule?.intervalMinutes).toBe(10);
+    expect(cyclicRule?.triggerEvent).toContain("Prioridad 2");
+
+    const conditionLabels = cyclicRule!.conditions.map((c) => c.label.toLowerCase());
+    expect(conditionLabels.some((l) => l.includes("categoría"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("turno"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("disponibilidad"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("asignable"))).toBe(true);
+
+    expect(cyclicRule?.effect.toLowerCase()).toContain("rotando su turno");
+  });
 });

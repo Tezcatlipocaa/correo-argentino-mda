@@ -14,6 +14,11 @@ vi.mock("@lib/disponibilidad", () => ({
 
 vi.mock("@db/index", () => ({
   db: {
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    }),
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
     }),
@@ -64,6 +69,70 @@ describe("Auto Assign Runner - Ciclo recurrente de asignación", () => {
     expect(result.assignedCount).toBe(1);
     expect(result.assignedTickets[0].ticketId).toBe(7001);
     expect(result.assignedTickets[0].assignedTo).toBe("Operador Uno");
+  });
+
+  it("debe procesar un lote mixto respetando la precedencia de reglas en el mismo ciclo", async () => {
+    (getUnassignedTicketsByHelpdesk as any).mockResolvedValueOnce({
+      ok: true,
+      helpdeskId: 3950,
+      tickets: [
+        {
+          id: 7002,
+          pretty_id: "#7002",
+          category_name: "Nueva solicitud",
+          creator_id: 9999,
+          creator_username: "cliente.externo",
+        },
+        {
+          id: 7003,
+          pretty_id: "#7003",
+          category_name: "Solicitud rechazada en revisión",
+          creator_id: 101,
+          creator_username: "op1",
+        },
+      ],
+    });
+
+    (getDisponibilidadHoy as any).mockResolvedValueOnce([
+      {
+        agentId: 10,
+        invgateId: 101,
+        nombre: "Operador Uno",
+        username: "op1",
+        disponible: true,
+        asignableAgs: true,
+        lastAutogestionAssignedAt: 1000,
+      },
+      {
+        agentId: 20,
+        invgateId: 102,
+        nombre: "Operador Dos",
+        username: "op2",
+        disponible: true,
+        asignableAgs: true,
+        lastAutogestionAssignedAt: null,
+      },
+    ]);
+
+    (reassignTicketToAgent as any).mockResolvedValue({ ok: true });
+    (addTicketComment as any).mockResolvedValue({ ok: true });
+
+    const result = await runAutoAssignCycle();
+
+    expect(result.evaluatedCount).toBe(2);
+    expect(result.assignedCount).toBe(2);
+
+    // Debe contener el ticket rechazado asignado a op1
+    const rejectedAssigned = result.assignedTickets.find((t) => t.ticketId === 7003);
+    expect(rejectedAssigned).toBeDefined();
+    expect(rejectedAssigned?.assignedTo).toBe("Operador Uno");
+    expect(rejectedAssigned?.ruleId).toBe("solicitud_rechazada");
+
+    // Debe contener el ticket general asignado a op2 (turno cíclico prioritario por null)
+    const cyclicAssigned = result.assignedTickets.find((t) => t.ticketId === 7002);
+    expect(cyclicAssigned).toBeDefined();
+    expect(cyclicAssigned?.assignedTo).toBe("Operador Dos");
+    expect(cyclicAssigned?.ruleId).toBe("asignacion_ciclica_general");
   });
 
   it("debe manejar errores de InvGate sin lanzar excepciones no controladas", async () => {
