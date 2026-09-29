@@ -637,13 +637,13 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     if (propias[0]) createdCategoryIds.push(propias[0].id);
   });
 
-  test("el alta inline redirige al formulario con un solo prefijo de base", async ({
+  test("el alta inline con returnTo al formulario redirige con la categoría nueva en la URL", async ({
     context,
   }) => {
     const leader = await fixture.createUser("team_leader", mesa);
     await setSessionCookie(context, leader.signedSessionId);
 
-    const nombre = `Prefijo ${uniqueToken()}`;
+    const nombre = `Inline URL ${uniqueToken()}`;
     const response = await context.request.post(
       "/base-conocimiento/categorias",
       {
@@ -662,13 +662,11 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
       "http://localhost:4321",
     );
     expect(location.pathname).toBe("/base-conocimiento/create");
-    expect(location.pathname).not.toContain(
-      "/base-conocimiento/base-conocimiento",
-    );
     expect(location.searchParams.get("nueva_categoria")).toBe(nombre);
     expect(location.searchParams.get("toast_type")).toBe("success");
 
     const creada = await findCategory(nombre);
+    expect(creada).toBeTruthy();
     if (creada) createdCategoryIds.push(creada.id);
   });
 

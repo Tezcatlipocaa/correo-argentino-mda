@@ -1,9 +1,9 @@
 const PARSE_ORIGIN = "http://kb-redirects.invalid";
 
-export const KB_PATH_PREFIX = "/base-conocimiento/";
+const KB_PATH_PREFIX = "/base-conocimiento/";
 export const KB_CATEGORIAS_PATH = "/base-conocimiento/categorias";
-export const KB_CREATE_PATH = "/base-conocimiento/create";
-export const KB_EDIT_PATH_PREFIX = "/base-conocimiento/edit/";
+const KB_CREATE_PATH = "/base-conocimiento/create";
+const KB_EDIT_PATH_PREFIX = "/base-conocimiento/edit/";
 
 function basePrefix(base: string): string {
   return base === "/" ? "" : base.replace(/\/+$/, "");
