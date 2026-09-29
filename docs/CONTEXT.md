@@ -385,7 +385,7 @@ BaseLayout (flex flex-col min-h-screen)
 - Schema: `src/db/schema.ts` — tablas, relaciones, tipos
 - Config: `drizzle.config.ts` (sqlite dialect, schema `./src/db/schema.ts`, out `./drizzle`)
 - Conexion: `src/db/index.ts` via `better-sqlite3`
-- Despues de cambios de schema, ejecutar `npm run db:push`
+- Despues de cambios de schema/FK, ejecutar `npx tsx scripts/align-db-to-schema.mts` antes del restart de PM2 (nunca `npm run db:push`: `drizzle-kit push` falla sin TTY)
 - Deploy en prod: correr `scripts/align-db-to-schema.mts` (hace backup) antes del restart de PM2; `drizzle-kit push` debe quedar limpio ("No changes detected")
 - Las tablas de permisos DB (routes, modules, route_access, module_access, permission_audit_batches) fueron eliminadas de schema y DB
 - Para explorar datos: `npm run db:studio`

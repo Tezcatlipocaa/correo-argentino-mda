@@ -73,6 +73,7 @@ export class KbTestFixture {
   private readonly testUsers: TestUser[] = [];
   private readonly imagePaths = new Set<string>();
   private readonly fixtureUserIds = new Set<number>();
+  private readonly fixtureUsernames = new Set<string>();
   private readonly imageDirectories = new Map<string, boolean>();
   readonly auditLogWatermark: number;
 
@@ -111,6 +112,7 @@ export class KbTestFixture {
     const user = await createTestUserAndSession(role);
     this.testUsers.push(user);
     this.fixtureUserIds.add(user.userId);
+    this.fixtureUsernames.add(user.username);
 
     try {
       const username = `kb_${role.replace(/[^a-z0-9_]+/gi, "_")}_${randomUUID()}`;
@@ -127,6 +129,7 @@ export class KbTestFixture {
         throw new Error(`Failed to update test user ${user.userId}`);
       }
       user.username = username;
+      this.fixtureUsernames.add(username);
       return user;
     } catch (error) {
       try {
@@ -136,6 +139,7 @@ export class KbTestFixture {
         );
         if (index >= 0) this.testUsers.splice(index, 1);
         this.fixtureUserIds.delete(user.userId);
+        this.fixtureUsernames.delete(user.username);
       } catch (cleanupError) {
         throw new AggregateError(
           [error, cleanupError],
@@ -318,31 +322,13 @@ export class KbTestFixture {
   }
 
   private deleteAuditLogs(errors: unknown[]): void {
-    const userIds = [...this.fixtureUserIds];
-    if (userIds.length === 0) return;
+    const usernames = [...this.fixtureUsernames];
+    if (usernames.length === 0) return;
 
     let lastError: unknown;
     let deleted = false;
     for (let attempt = 0; attempt < CLEANUP_ATTEMPTS; attempt += 1) {
       try {
-        const fixtureUsers = db
-          .select({ username: users.username })
-          .from(users)
-          .where(inArray(users.id, userIds))
-          .all();
-        if (fixtureUsers.length === 0) {
-          deleted = true;
-          break;
-        }
-
-        const usernames = fixtureUsers
-          .map(({ username }) => username)
-          .filter((username) => username.length > 0);
-        if (usernames.length === 0) {
-          deleted = true;
-          break;
-        }
-
         const conditions = and(
           gt(auditLogs.id, this.auditLogWatermark),
           inArray(auditLogs.username, usernames),
