@@ -1,23 +1,37 @@
 import "dotenv/config";
 import { expect, test } from "@playwright/test";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { db } from "../src/db/index";
-import { kbCategories } from "../src/db/schema";
+import { auditLogs, kbCategories } from "../src/db/schema";
 import { cleanupTestUser, setSessionCookie } from "./helpers/auth";
 import { KbTestFixture, uniqueToken, type KbTestMesa } from "./helpers/kb";
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
+let leaderUsername: string | null = null;
 
 test.beforeEach(async () => {
   fixture = new KbTestFixture();
   mesa = await fixture.createMesa();
+  leaderUsername = null;
 });
 
 test.afterEach(async () => {
   db.delete(kbCategories)
     .where(eq(kbCategories.helpdeskId, mesa.invgateId))
     .run();
+  // El cuerpo del test borra al leader antes del cleanup, así que
+  // deleteAuditLogs no resuelve su username y deja esta fila huérfana.
+  if (leaderUsername !== null) {
+    db.delete(auditLogs)
+      .where(
+        and(
+          gt(auditLogs.id, fixture.auditLogWatermark),
+          eq(auditLogs.username, leaderUsername),
+        ),
+      )
+      .run();
+  }
   await fixture.cleanup();
 });
 
@@ -26,6 +40,7 @@ test("borrar el usuario que creó una categoría no falla y deja la categoría s
   page,
 }) => {
   const leader = await fixture.createUser("team_leader", mesa);
+  leaderUsername = leader.username;
   await setSessionCookie(context, leader.signedSessionId);
 
   const nombre = `FK ${uniqueToken()}`;
