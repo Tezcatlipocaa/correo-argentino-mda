@@ -368,9 +368,19 @@ Cada entrada sigue este formato:
 
 **Problema:** El rate limit del middleware solo se aplica a paths bajo `/api/`, así que los tres POST del ABM de categorías (alta, renombre, baja) son ilimitados: un `team_leader` puede spamear escrituras en bucle sin ninguna traba.
 **Causa:** El rate limiter se concibió para endpoints API; las páginas de gestión hacen POST directo a sí mismas.
-**Solucion:** Pendiente en el plan de hardening (Task 2): límite dedicado (`RATE_LIMITS.kbCategoryWrite`) aplicado a esa ruta de escritura, con E2E que corta exactamente en el límite.
+**Solucion:** Límite dedicado (`RATE_LIMITS.kbCategoryWrite`, 20/min) por bucket de usuario (`kb-write:u:<id>`) aplicado a esa ruta de escritura desde la rama dedicada de `applyRateLimit` en el middleware, con E2E que corta exactamente en el límite (request 21) y que prueba que un segundo usuario no hereda el corte. El path sale de `KB_CATEGORIAS_PATH` (`@lib/kbRedirects`), no de un literal.
 **Regla:** Cada superficie de escritura (incluidas las páginas de gestión con POST) necesita un límite: si no está bajo `/api/`, hay que agregarla explícitamente al middleware.
-**Archivos afectados:** src/middleware.ts, src/pages/base-conocimiento/categorias.astro
+**Archivos afectados:** src/middleware.ts, src/lib/rateLimit.ts, src/pages/base-conocimiento/categorias.astro
+
+---
+
+### 2026-09-28 — Un guard por igualdad exacta de ruta se evade con un slash final
+
+**Problema:** El rate limit comparaba `relativePath === "/base-conocimiento/categorias"` y `=== "/login"`, pero Astro routea con `trailingSlash: "ignore"`: `POST /base-conocimiento/categorias/` y `POST /login/` ejecutan el mismo handler sin pasar por ningún guard. Medido antes del fix: 25 POST autenticados al path con slash final, 0 throttled (y 14 al de login, 0 throttled).
+**Causa:** `url.pathname` conserva el slash final y la comparación era por igualdad exacta; nadie normalizó el path antes de comparar, así que el guard protegía solo una de las dos escrituras de la misma URL.
+**Solucion:** Normalizar una sola vez en `getRelativePath` (strip de trailing slash, conservando `/`) y comparar siempre contra el valor normalizado: `/x` y `/x/` caen en el mismo bucket. E2E que llena la venta entera por el alias con slash y exige que la ruta canónica corte en la request siguiente. Comprobado además que la normalización no altera el resto del middleware: `hasPermission` compara por `startsWith` y `isSectionVisibleSync` ya hace `replace(/\/+$/, "")`.
+**Regla:** Normalizar el path de la request (strip de trailing slash) antes de comparar contra rutas, porque Astro routea con `trailingSlash: 'ignore'` y un slash final evita cualquier guard por igualdad exacta.
+**Archivos afectados:** src/middleware.ts, tests/kb-categorias-rate-limit.spec.ts
 
 ---
 

@@ -9,6 +9,7 @@ import { isSectionVisibleSync, resolveSessionMesa } from "./lib/helpdeskAccess";
 import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
+import { KB_CATEGORIAS_PATH } from "@lib/kbRedirects";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import {
   isFingerprintValid,
@@ -16,6 +17,9 @@ import {
 } from "./lib/sessionFingerprint";
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+const KB_WRITE_THROTTLE_MESSAGE =
+  "Demasiadas operaciones. Probá en unos minutos.";
 
 function isWriteMethod(method: string): boolean {
   return !READ_METHODS.has(method);
@@ -85,7 +89,7 @@ function applyRateLimit(
     }
   }
 
-  if (relativePath === "/base-conocimiento/categorias" && method === "POST") {
+  if (relativePath === KB_CATEGORIAS_PATH && method === "POST") {
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
@@ -95,9 +99,18 @@ function applyRateLimit(
       RATE_LIMITS.kbCategoryWrite,
     );
     if (!result.ok) {
+      const message = encodeURIComponent(KB_WRITE_THROTTLE_MESSAGE);
+      // Un POST anonimo cae igual en /login por RBAC: mandarlo ahi y no al
+      // ABM (que no puede ver) evita dejar el corte a la vista de un
+      // visitante que no tiene sesion.
+      if (locals.user.id === 0) {
+        return redirect(
+          resolveUrl(`/login?toast_msg=${message}&toast_type=error`),
+        );
+      }
       return redirect(
         resolveUrl(
-          `/base-conocimiento/categorias?toast_msg=${encodeURIComponent("Demasiadas operaciones. Probá en unos minutos.")}&toast_type=error`,
+          `${KB_CATEGORIAS_PATH}?toast_msg=${message}&toast_type=error`,
         ),
       );
     }
@@ -138,13 +151,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const cleanBase = getCleanBase();
 
   const getRelativePath = (pathname: string) => {
+    let relative: string;
     if (pathname.startsWith(cleanBase)) {
-      return "/" + pathname.slice(cleanBase.length);
+      relative = "/" + pathname.slice(cleanBase.length);
+    } else if (pathname === cleanBase.slice(0, -1)) {
+      relative = "/";
+    } else {
+      relative = pathname;
     }
-    if (pathname === cleanBase.slice(0, -1)) {
-      return "/";
-    }
-    return pathname;
+    // Astro routea con trailingSlash: "ignore": /x y /x/ ejecutan el mismo
+    // handler, pero url.pathname conserva el slash final. Normalizar una sola
+    // vez aca evita que un slash final esquive cualquier guard que compare
+    // por igualdad exacta (rate limit de /login y del ABM de categorias).
+    return relative.length > 1 ? relative.replace(/\/+$/, "") : relative;
   };
 
   const relativePath = getRelativePath(path);
