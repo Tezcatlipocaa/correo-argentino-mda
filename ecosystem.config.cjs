@@ -55,5 +55,14 @@ module.exports = {
       error_file: "./logs/purge-error.log",
       out_file: "./logs/purge-out.log",
     },
+    {
+      name: "mda-auto-assign",
+      script: "node",
+      args: "--import tsx scripts/auto-assign-worker.ts",
+      autorestart: true,
+      watch: false,
+      error_file: "./logs/auto-assign-error.log",
+      out_file: "./logs/auto-assign-out.log",
+    },
   ],
 };
