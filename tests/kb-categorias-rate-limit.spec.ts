@@ -34,7 +34,7 @@ test.afterEach(async () => {
 const postCreate = async (
   context: BrowserContext,
   name: string,
-  csrfToken = "",
+  csrfToken: string,
   options: { path?: string; headers?: Record<string, string> } = {},
 ): Promise<{ status: number; location: URL | null }> => {
   const response = await context.request.post(options.path ?? CATEGORIAS_PATH, {
@@ -186,7 +186,7 @@ test("un POST anónimo se corta por IP y aterriza en /login", async ({
   // lo prueba el unit de checkRateLimit con el perfil kbCategoryWrite -- y
   // exige el contrato: tras 21 peticiones, la ultima esta cortada.
   for (let i = 0; i < LIMIT + 1; i += 1) {
-    const result = await postCreate(context, `Rate ${uniqueToken()}`);
+    const result = await postCreate(context, `Rate ${uniqueToken()}`, "");
     expect(result.status).toBe(REDIRECT);
     if (i < LIMIT) continue;
 

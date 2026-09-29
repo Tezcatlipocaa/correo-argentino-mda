@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { expect, test } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { createHmac } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { kbArticles, kbCategories } from "../src/db/schema";
@@ -14,6 +15,10 @@ import {
 
 const REDIRECT = 302;
 const CSRF_MESSAGE = "Token CSRF inválido o ausente";
+const CSRF_TTL_MS = 60 * 60 * 1000;
+const SECRET_KEY =
+  process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
+const BASE_URL = "http://localhost:4321";
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
@@ -30,43 +35,62 @@ test.afterEach(async () => {
   await fixture.cleanup();
 });
 
-type PostResult = { status: number; location: URL | null };
+type PostResult = { status: number; location: URL | null; body: string };
 
-const postCategorias = async (
-  context: any,
-  form: Record<string, string>,
-  csrfToken?: string,
-): Promise<PostResult> => {
-  const response = await context.request.post("/base-conocimiento/categorias", {
-    form: csrfToken ? { ...form, csrf_token: csrfToken } : form,
-    maxRedirects: 0,
-  });
+const toResult = async (response: {
+  status: () => number;
+  headers: () => Record<string, string>;
+  text: () => Promise<string>;
+}): Promise<PostResult> => {
   const locationHeader = response.headers().location;
   return {
     status: response.status(),
-    location: locationHeader
-      ? new URL(locationHeader, "http://localhost:4321")
-      : null,
+    location: locationHeader ? new URL(locationHeader, BASE_URL) : null,
+    body: await response.text(),
   };
 };
 
+const postCategorias = async (
+  context: BrowserContext,
+  form: Record<string, string>,
+  csrfToken?: string,
+): Promise<PostResult> =>
+  toResult(
+    await context.request.post("/base-conocimiento/categorias", {
+      form: csrfToken ? { ...form, csrf_token: csrfToken } : form,
+      maxRedirects: 0,
+    }),
+  );
+
 const postPagina = async (
-  context: any,
+  context: BrowserContext,
   path: string,
   form: Record<string, string>,
   csrfToken?: string,
-): Promise<PostResult> => {
-  const response = await context.request.post(path, {
-    form: csrfToken ? { ...form, csrf_token: csrfToken } : form,
-    maxRedirects: 0,
-  });
-  const locationHeader = response.headers().location;
-  return {
-    status: response.status(),
-    location: locationHeader
-      ? new URL(locationHeader, "http://localhost:4321")
-      : null,
-  };
+): Promise<PostResult> =>
+  toResult(
+    await context.request.post(path, {
+      form: csrfToken ? { ...form, csrf_token: csrfToken } : form,
+      maxRedirects: 0,
+    }),
+  );
+
+const csrfFirmado = (sessionId: string, issuedAt: number): string => {
+  const signature = createHmac("sha256", SECRET_KEY)
+    .update(`${sessionId}.${issuedAt}`)
+    .digest("hex");
+  return `${sessionId}.${issuedAt}.${signature}`;
+};
+
+const csrfVencido = (token: string): string => {
+  const [sessionId] = token.split(".");
+  return csrfFirmado(sessionId, Date.now() - CSRF_TTL_MS - 60_000);
+};
+
+const csrfDeHtml = (html: string): string => {
+  const match = html.match(/name="csrf_token"[^>]*value="([^"]+)"/);
+  if (!match) throw new Error("El HTML re-renderizado no trae token CSRF");
+  return match[1];
 };
 
 const expectDenegado = (result: PostResult, pathname: string) => {
@@ -76,6 +100,17 @@ const expectDenegado = (result: PostResult, pathname: string) => {
   expect(result.location?.searchParams.get("toast_type")).toBe("error");
 };
 
+const expectReRender = (
+  result: PostResult,
+  valores: { title: string; content: string },
+) => {
+  expect(result.status).toBe(200);
+  expect(result.location).toBeNull();
+  expect(result.body).toContain(valores.title);
+  expect(result.body).toContain(valores.content);
+  return csrfDeHtml(result.body);
+};
+
 const catalogo = () =>
   db
     .select({ id: kbCategories.id, name: kbCategories.name })
@@ -83,7 +118,13 @@ const catalogo = () =>
     .where(eq(kbCategories.helpdeskId, mesa.invgateId))
     .all();
 
-const crearCategoriaPorUi = async (page: any, name: string) => {
+const articulosPorTitulo = (title: string) =>
+  db
+    .select({ id: kbArticles.id })
+    .from(kbArticles)
+    .where(eq(kbArticles.title, title));
+
+const crearCategoriaPorUi = async (page: Page, name: string) => {
   await page.goto("/base-conocimiento/categorias");
   await page.locator("#kb-category-name").fill(name);
   await page.getByRole("button", { name: "Agregar categoría" }).click();
@@ -190,7 +231,7 @@ test("la baja de categoría sin token CSRF se rechaza y conserva la fila", async
   expect(row).toBeDefined();
 });
 
-test("el alta de artículo sin token CSRF se rechaza y no crea la fila", async ({
+test("el alta de artículo sin token CSRF re-renderiza el editor y no crea la fila", async ({
   context,
   page,
 }) => {
@@ -203,22 +244,19 @@ test("el alta de artículo sin token CSRF se rechaza y no crea la fila", async (
   await page.locator("#kb-category").selectOption("Accesos");
   await setEasyMdeContent(page, `Contenido ${uniqueToken()}`);
 
+  const contenido = "Contenido válido enviado sin token CSRF.";
   const result = await postPagina(context, "/base-conocimiento/create", {
     title: titulo,
     category: "Accesos",
-    content: "Contenido válido enviado sin token CSRF.",
+    content: contenido,
     status: "draft",
   });
 
-  expectDenegado(result, "/base-conocimiento");
-  const rows = await db
-    .select({ id: kbArticles.id })
-    .from(kbArticles)
-    .where(eq(kbArticles.title, titulo));
-  expect(rows).toEqual([]);
+  expectReRender(result, { title: titulo, content: contenido });
+  expect(await articulosPorTitulo(titulo)).toEqual([]);
 });
 
-test("la edición sin token CSRF se rechaza y no cambia título, contenido ni estado", async ({
+test("la edición sin token CSRF re-renderiza el editor y no toca el artículo", async ({
   context,
   page,
 }) => {
@@ -234,18 +272,20 @@ test("la edición sin token CSRF se rechaza y no cambia título, contenido ni es
   await setSessionCookie(context, leader.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${articulo.id}`);
 
+  const titulo = `${articulo.title} editado`;
+  const contenido = "Contenido inyectado sin token.";
   const result = await postPagina(
     context,
     `/base-conocimiento/edit/${articulo.id}`,
     {
-      title: `${articulo.title} editado`,
-      content: "Contenido inyectado sin token.",
+      title: titulo,
+      content: contenido,
       category: "Accesos",
       status: "published",
     },
   );
 
-  expectDenegado(result, "/base-conocimiento");
+  expectReRender(result, { title: titulo, content: contenido });
   const [row] = await db
     .select({
       title: kbArticles.title,
@@ -258,6 +298,75 @@ test("la edición sin token CSRF se rechaza y no cambia título, contenido ni es
   expect(row?.title).toBe(articulo.title);
   expect(row?.content).toBe("Contenido original.");
   expect(row?.status).toBe("draft");
+});
+
+test("un token vencido conserva el borrador y permite reintentar con el token nuevo", async ({
+  context,
+  page,
+}) => {
+  const leader = await fixture.createUser("team_leader", mesa);
+  await setSessionCookie(context, leader.signedSessionId);
+
+  const tokenDeLaPagina = await readCsrfToken(
+    page,
+    "/base-conocimiento/create",
+  );
+  expect(tokenDeLaPagina).toMatch(/^\S+\.\d+\.[0-9a-f]{64}$/);
+  const [sessionId] = tokenDeLaPagina.split(".");
+
+  const control = `CSRF control ${uniqueToken()}`;
+  const aceptado = await postPagina(
+    context,
+    "/base-conocimiento/create",
+    {
+      title: control,
+      category: "Accesos",
+      content: "Control de la firma del spec.",
+      status: "draft",
+    },
+    csrfFirmado(sessionId, Date.now()),
+  );
+  expect(aceptado.status).toBe(REDIRECT);
+  expect(aceptado.location?.searchParams.get("toast_type")).toBe("success");
+  expect(await articulosPorTitulo(control)).toHaveLength(1);
+
+  const titulo = `CSRF vencido ${uniqueToken()}`;
+  const contenido = "Draft de más de una hora que no puede perderse.";
+  const vencido = await postPagina(
+    context,
+    "/base-conocimiento/create",
+    {
+      title: titulo,
+      category: "Accesos",
+      content: contenido,
+      status: "draft",
+    },
+    csrfVencido(tokenDeLaPagina),
+  );
+
+  const tokenNuevo = expectReRender(vencido, {
+    title: titulo,
+    content: contenido,
+  });
+  expect(tokenNuevo).toMatch(/^\S+\.\d+\.[0-9a-f]{64}$/);
+  expect(await articulosPorTitulo(titulo)).toEqual([]);
+
+  const reintento = await postPagina(
+    context,
+    "/base-conocimiento/create",
+    {
+      title: titulo,
+      category: "Accesos",
+      content: contenido,
+      status: "draft",
+    },
+    tokenNuevo,
+  );
+  expect(reintento.status).toBe(REDIRECT);
+  expect(reintento.location?.searchParams.get("toast_msg")).toBe(
+    "Artículo creado con éxito.",
+  );
+  expect(await articulosPorTitulo(titulo)).toHaveLength(1);
 });
 
 test("un token emitido para otra sesión se rechaza", async ({

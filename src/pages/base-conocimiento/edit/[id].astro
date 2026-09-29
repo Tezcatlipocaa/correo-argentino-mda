@@ -102,6 +102,11 @@ const formValues = {
 if (Astro.request.method === "POST" && !loadError && article) {
   try {
     const formData = await Astro.request.formData();
+    formValues.title = formData.get("title")?.toString() ?? "";
+    formValues.category = formData.get("category")?.toString() ?? "";
+    formValues.content = formData.get("content")?.toString() ?? "";
+    formValues.status = formData.get("status")?.toString().trim() || "draft";
+
     if (
       !Astro.locals.sessionId ||
       !validateCsrfToken(
@@ -109,100 +114,93 @@ if (Astro.request.method === "POST" && !loadError && article) {
         Astro.locals.sessionId,
       )
     ) {
-      return redirectWithToast(
-        "/base-conocimiento",
-        "Token CSRF inválido o ausente",
-        "error",
-      );
-    }
-    formValues.title = formData.get("title")?.toString() ?? "";
-    formValues.category = formData.get("category")?.toString() ?? "";
-    formValues.content = formData.get("content")?.toString() ?? "";
-    formValues.status = formData.get("status")?.toString().trim() || "draft";
-
-    const parsed = kbArticleSchema.safeParse({
-      title: formValues.title,
-      category: formValues.category,
-      content: formValues.content,
-      status: formValues.status,
-    });
-
-    if (!parsed.success) {
-      errorMsg = parsed.error.issues.map((issue) => issue.message).join(", ");
-    } else if (
-      parsed.data.category &&
-      parsed.data.category !== (article.category ?? "") &&
-      !listCategories(article.helpdeskId).some(
-        (category) => category.name === parsed.data.category,
-      )
-    ) {
-      errorMsg = "La categoría seleccionada no es válida.";
+      errorMsg =
+        "Tu sesión de edición expiró. Revisá el contenido y volvé a guardar.";
     } else {
-      const result = updateArticleAndTransition(
-        articleId,
-        {
-          title: parsed.data.title,
-          content: parsed.data.content,
-          category: parsed.data.category ?? null,
-        },
-        parsed.data.status,
-        user.id,
-        scope,
-      );
+      const parsed = kbArticleSchema.safeParse({
+        title: formValues.title,
+        category: formValues.category,
+        content: formValues.content,
+        status: formValues.status,
+      });
 
-      if (!result.ok) {
-        errorMsg =
-          result.reason === "invalid_transition"
-            ? "No se puede volver a borrador. Solo se puede publicar o archivar el artículo."
-            : "No se encontró el artículo. Intentá de nuevo.";
+      if (!parsed.success) {
+        errorMsg = parsed.error.issues.map((issue) => issue.message).join(", ");
+      } else if (
+        parsed.data.category &&
+        parsed.data.category !== (article.category ?? "") &&
+        !listCategories(article.helpdeskId).some(
+          (category) => category.name === parsed.data.category,
+        )
+      ) {
+        errorMsg = "La categoría seleccionada no es válida.";
       } else {
-        const articleChanged =
-          parsed.data.title !== article.title ||
-          parsed.data.content !== article.content ||
-          (parsed.data.category ?? null) !== (article.category ?? null);
-
-        if (articleChanged) {
-          await logAdminActionStructured(
-            user.username || "Sistema",
-            `Actualizó el artículo "${parsed.data.title}"`,
-            "kb_article",
-            articleId,
-            {
-              title: article.title,
-              category: article.category ?? null,
-              status: article.status,
-            },
-            {
-              title: parsed.data.title,
-              category: parsed.data.category ?? null,
-              status: result.status,
-            },
-          );
-        }
-
-        if (result.statusChanged) {
-          await logAdminActionStructured(
-            user.username || "Sistema",
-            result.status === "published"
-              ? `Publicó el artículo "${parsed.data.title}"`
-              : `Archivó el artículo "${parsed.data.title}"`,
-            "kb_article",
-            articleId,
-            { status: article.status },
-            { status: result.status },
-          );
-          return redirectWithToast(
-            `/base-conocimiento/${articleId}`,
-            result.status === "published"
-              ? "Artículo publicado con éxito."
-              : "Artículo archivado con éxito.",
-          );
-        }
-
-        return redirectWithToast(
-          "/base-conocimiento",
-          "Artículo actualizado con éxito.",
+        const result = updateArticleAndTransition(
+          articleId,
+          {
+            title: parsed.data.title,
+            content: parsed.data.content,
+            category: parsed.data.category ?? null,
+          },
+          parsed.data.status,
+          user.id,
+          scope,
         );
+
+        if (!result.ok) {
+          errorMsg =
+            result.reason === "invalid_transition"
+              ? "No se puede volver a borrador. Solo se puede publicar o archivar el artículo."
+              : "No se encontró el artículo. Intentá de nuevo.";
+        } else {
+          const articleChanged =
+            parsed.data.title !== article.title ||
+            parsed.data.content !== article.content ||
+            (parsed.data.category ?? null) !== (article.category ?? null);
+
+          if (articleChanged) {
+            await logAdminActionStructured(
+              user.username || "Sistema",
+              `Actualizó el artículo "${parsed.data.title}"`,
+              "kb_article",
+              articleId,
+              {
+                title: article.title,
+                category: article.category ?? null,
+                status: article.status,
+              },
+              {
+                title: parsed.data.title,
+                category: parsed.data.category ?? null,
+                status: result.status,
+              },
+            );
+          }
+
+          if (result.statusChanged) {
+            await logAdminActionStructured(
+              user.username || "Sistema",
+              result.status === "published"
+                ? `Publicó el artículo "${parsed.data.title}"`
+                : `Archivó el artículo "${parsed.data.title}"`,
+              "kb_article",
+              articleId,
+              { status: article.status },
+              { status: result.status },
+            );
+            return redirectWithToast(
+              `/base-conocimiento/${articleId}`,
+              result.status === "published"
+                ? "Artículo publicado con éxito."
+                : "Artículo archivado con éxito.",
+            );
+          }
+
+          return redirectWithToast(
+            "/base-conocimiento",
+            "Artículo actualizado con éxito.",
+          );
+        }
       }
     }
   } catch (error) {

@@ -98,6 +98,15 @@ if (isAdmin) {
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
+    formValues.title = formData.get("title")?.toString() ?? "";
+    formValues.category = formData.get("category")?.toString() ?? "";
+    formValues.content = formData.get("content")?.toString() ?? "";
+    formValues.status = formData.get("status")?.toString().trim() || "draft";
+    const rawHelpdeskId = formData.get("helpdeskId")?.toString().trim() ?? "";
+    if (isAdmin) {
+      formValues.helpdeskId = rawHelpdeskId;
+    }
+
     if (
       !Astro.locals.sessionId ||
       !validateCsrfToken(
@@ -105,102 +114,96 @@ if (Astro.request.method === "POST") {
         Astro.locals.sessionId,
       )
     ) {
-      return redirectWithToast(
-        "/base-conocimiento",
-        "Token CSRF inválido o ausente",
-        "error",
-      );
-    }
-    formValues.title = formData.get("title")?.toString() ?? "";
-    formValues.category = formData.get("category")?.toString() ?? "";
-    formValues.content = formData.get("content")?.toString() ?? "";
-    formValues.status = formData.get("status")?.toString().trim() || "draft";
+      errorMsg =
+        "Tu sesión de edición expiró. Revisá el contenido y volvé a guardar.";
+    } else {
+      let helpdeskId: number | null = sessionHelpdeskId;
 
-    let helpdeskId: number | null = sessionHelpdeskId;
+      if (isAdmin) {
+        const parsedHelpdeskId = Number(rawHelpdeskId);
 
-    if (isAdmin) {
-      const rawHelpdeskId = formData.get("helpdeskId")?.toString().trim() ?? "";
-      formValues.helpdeskId = rawHelpdeskId;
-      const parsedHelpdeskId = Number(rawHelpdeskId);
-
-      if (!rawHelpdeskId) {
-        errorMsg = "Seleccioná una mesa para crear el artículo.";
-        helpdeskId = null;
-      } else if (!Number.isInteger(parsedHelpdeskId) || parsedHelpdeskId <= 0) {
-        errorMsg = "La mesa indicada no existe o está inactiva.";
-        helpdeskId = null;
-      } else {
-        const [activeMesa] = await db
-          .select({ id: mesas.invgateId })
-          .from(mesas)
-          .where(
-            and(eq(mesas.invgateId, parsedHelpdeskId), habilitadaCondition),
-          )
-          .limit(1);
-
-        if (!activeMesa) {
+        if (!rawHelpdeskId) {
+          errorMsg = "Seleccioná una mesa para crear el artículo.";
+          helpdeskId = null;
+        } else if (
+          !Number.isInteger(parsedHelpdeskId) ||
+          parsedHelpdeskId <= 0
+        ) {
           errorMsg = "La mesa indicada no existe o está inactiva.";
           helpdeskId = null;
         } else {
-          helpdeskId = parsedHelpdeskId;
+          const [activeMesa] = await db
+            .select({ id: mesas.invgateId })
+            .from(mesas)
+            .where(
+              and(eq(mesas.invgateId, parsedHelpdeskId), habilitadaCondition),
+            )
+            .limit(1);
+
+          if (!activeMesa) {
+            errorMsg = "La mesa indicada no existe o está inactiva.";
+            helpdeskId = null;
+          } else {
+            helpdeskId = parsedHelpdeskId;
+          }
         }
       }
-    }
 
-    const parsed = kbArticleSchema.safeParse({
-      title: formValues.title,
-      category: formValues.category,
-      content: formValues.content,
-      status: formValues.status,
-    });
-
-    if (!parsed.success) {
-      const validationMsg = parsed.error.issues
-        .map((issue) => issue.message)
-        .join(", ");
-      errorMsg = errorMsg ? `${errorMsg} ${validationMsg}` : validationMsg;
-    } else if (helpdeskId === null) {
-      if (!errorMsg) {
-        errorMsg = "La mesa indicada no existe o está inactiva.";
-      }
-    } else if (
-      parsed.data.category &&
-      !listCategories(helpdeskId).some(
-        (category) => category.name === parsed.data.category,
-      )
-    ) {
-      errorMsg = "La categoría seleccionada no es válida.";
-    } else {
-      const articleId = createArticle({
-        helpdeskId,
-        title: parsed.data.title,
-        content: parsed.data.content,
-        category: parsed.data.category,
-        status: parsed.data.status,
-        authorUserId: user.id,
-        publishedByUserId: user.id,
+      const parsed = kbArticleSchema.safeParse({
+        title: formValues.title,
+        category: formValues.category,
+        content: formValues.content,
+        status: formValues.status,
       });
 
-      if (articleId === null) {
-        errorMsg = "No se pudo guardar el artículo. Intentá de nuevo.";
+      if (!parsed.success) {
+        const validationMsg = parsed.error.issues
+          .map((issue) => issue.message)
+          .join(", ");
+        errorMsg = errorMsg ? `${errorMsg} ${validationMsg}` : validationMsg;
+      } else if (helpdeskId === null) {
+        if (!errorMsg) {
+          errorMsg = "La mesa indicada no existe o está inactiva.";
+        }
+      } else if (
+        parsed.data.category &&
+        !listCategories(helpdeskId).some(
+          (category) => category.name === parsed.data.category,
+        )
+      ) {
+        errorMsg = "La categoría seleccionada no es válida.";
       } else {
-        await logAdminActionStructured(
-          user.username || "Sistema",
-          `Creó el artículo "${parsed.data.title}"`,
-          "kb_article",
-          articleId,
-          null,
-          {
-            title: parsed.data.title,
-            helpdeskId,
-            category: parsed.data.category ?? null,
-            status: parsed.data.status,
-          },
-        );
-        return redirectWithToast(
-          "/base-conocimiento",
-          "Artículo creado con éxito.",
-        );
+        const articleId = createArticle({
+          helpdeskId,
+          title: parsed.data.title,
+          content: parsed.data.content,
+          category: parsed.data.category,
+          status: parsed.data.status,
+          authorUserId: user.id,
+          publishedByUserId: user.id,
+        });
+
+        if (articleId === null) {
+          errorMsg = "No se pudo guardar el artículo. Intentá de nuevo.";
+        } else {
+          await logAdminActionStructured(
+            user.username || "Sistema",
+            `Creó el artículo "${parsed.data.title}"`,
+            "kb_article",
+            articleId,
+            null,
+            {
+              title: parsed.data.title,
+              helpdeskId,
+              category: parsed.data.category ?? null,
+              status: parsed.data.status,
+            },
+          );
+          return redirectWithToast(
+            "/base-conocimiento",
+            "Artículo creado con éxito.",
+          );
+        }
       }
     }
   } catch (error) {
