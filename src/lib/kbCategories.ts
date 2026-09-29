@@ -17,11 +17,13 @@ export type KbCategoryCreateResult =
   | { ok: false; reason: "invalid" | "duplicate" };
 
 export type KbCategoryRenameResult =
-  | { ok: true; name: string }
+  | { ok: true; name: string; previousName: string; articlesUpdated: number }
   | { ok: false; reason: "invalid" | "not_found" | "duplicate" };
 
 export type KbCategoryDeleteResult =
-  { ok: true } | { ok: false; reason: "not_found" | "in_use" };
+  | { ok: true; name: string; articlesInUse: 0 }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "in_use"; name: string; articlesInUse: number };
 
 function normalizeCategoryName(raw: string): string {
   return raw.normalize("NFC").replace(/\s+/g, " ").trim();
@@ -147,7 +149,14 @@ export function renameCategory(input: {
       .all();
 
     if (!current) return { ok: false, reason: "not_found" } as const;
-    if (current.name === name) return { ok: true, name } as const;
+    if (current.name === name) {
+      return {
+        ok: true as const,
+        name,
+        previousName: name,
+        articlesUpdated: 0,
+      };
+    }
 
     const [duplicate] = tx
       .select({ id: kbCategories.id })
@@ -168,7 +177,8 @@ export function renameCategory(input: {
       .set({ name })
       .where(eq(kbCategories.id, input.id))
       .run();
-    tx.update(kbArticles)
+    const cascaded = tx
+      .update(kbArticles)
       .set({ category: name })
       .where(
         and(
@@ -176,9 +186,15 @@ export function renameCategory(input: {
           eq(kbArticles.category, current.name),
         ),
       )
-      .run();
+      .returning({ id: kbArticles.id })
+      .all();
 
-    return { ok: true, name } as const;
+    return {
+      ok: true as const,
+      name,
+      previousName: current.name,
+      articlesUpdated: cascaded.length,
+    };
   });
 }
 
@@ -237,13 +253,27 @@ export function deleteCategory(input: {
       .limit(1)
       .all();
 
-    if (!current) return { ok: false, reason: "not_found" } as const;
+    if (!current) return { ok: false as const, reason: "not_found" as const };
 
-    if (countArticlesWithCategory(input.helpdeskId, current.name, tx) > 0) {
-      return { ok: false, reason: "in_use" } as const;
+    const articlesInUse = countArticlesWithCategory(
+      input.helpdeskId,
+      current.name,
+      tx,
+    );
+    if (articlesInUse > 0) {
+      return {
+        ok: false as const,
+        reason: "in_use" as const,
+        name: current.name,
+        articlesInUse,
+      };
     }
 
     tx.delete(kbCategories).where(eq(kbCategories.id, input.id)).run();
-    return { ok: true } as const;
+    return {
+      ok: true as const,
+      name: current.name,
+      articlesInUse: 0 as const,
+    };
   });
 }

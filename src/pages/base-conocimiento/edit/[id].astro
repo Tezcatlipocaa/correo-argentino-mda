@@ -18,7 +18,7 @@ import {
   type KbScope,
 } from "@lib/kb";
 import { listCategories } from "@lib/kbCategories";
-import { logAdminFromAstro } from "@lib/auditLogger";
+import { logAdminActionStructured } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { resolveUrl } from "@lib/url";
 import { getCleanBase } from "@lib/baseUrl";
@@ -141,17 +141,35 @@ if (Astro.request.method === "POST" && !loadError && article) {
             ? "No se puede volver a borrador. Solo se puede publicar o archivar el artículo."
             : "No se encontró el artículo. Intentá de nuevo.";
       } else {
-        await logAdminFromAstro(
-          Astro.locals,
+        const beforeState = {
+          title: article.title,
+          category: article.category ?? null,
+          status: article.status,
+        };
+        await logAdminActionStructured(
+          user.username || "Sistema",
           `Actualizó el artículo "${parsed.data.title}"`,
+          "kb_article",
+          articleId,
+          beforeState,
+          {
+            title: parsed.data.title,
+            category: parsed.data.category ?? null,
+            status: result.status,
+          },
         );
 
         if (result.statusChanged) {
-          const statusAudit =
+          await logAdminActionStructured(
+            user.username || "Sistema",
             result.status === "published"
               ? `Publicó el artículo "${parsed.data.title}"`
-              : `Archivó el artículo "${parsed.data.title}"`;
-          await logAdminFromAstro(Astro.locals, statusAudit);
+              : `Archivó el artículo "${parsed.data.title}"`,
+            "kb_article",
+            articleId,
+            { status: article.status },
+            { status: result.status },
+          );
           return redirectWithToast(
             `/base-conocimiento/${articleId}`,
             result.status === "published"

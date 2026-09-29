@@ -13,7 +13,7 @@ import { getModulePermissions } from "@lib/rbac";
 import { kbArticleSchema } from "@lib/validations";
 import { createArticle } from "@lib/kb";
 import { listCategories } from "@lib/kbCategories";
-import { logAdminFromAstro } from "@lib/auditLogger";
+import { logAdminActionStructured } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { resolveUrl } from "@lib/url";
 import { getCleanBase } from "@lib/baseUrl";
@@ -169,19 +169,33 @@ if (Astro.request.method === "POST") {
       if (articleId === null) {
         errorMsg = "No se pudo guardar el artículo. Intentá de nuevo.";
       } else {
-        await logAdminFromAstro(
-          Astro.locals,
+        await logAdminActionStructured(
+          user.username || "Sistema",
           `Creó el artículo "${parsed.data.title}"`,
+          "kb_article",
+          articleId,
+          null,
+          {
+            title: parsed.data.title,
+            helpdeskId,
+            category: parsed.data.category ?? null,
+            status: parsed.data.status,
+          },
         );
         if (
           parsed.data.status === "published" ||
           parsed.data.status === "archived"
         ) {
-          const statusAudit =
+          await logAdminActionStructured(
+            user.username || "Sistema",
             parsed.data.status === "published"
               ? `Publicó el artículo "${parsed.data.title}"`
-              : `Archivó el artículo "${parsed.data.title}"`;
-          await logAdminFromAstro(Astro.locals, statusAudit);
+              : `Archivó el artículo "${parsed.data.title}"`,
+            "kb_article",
+            articleId,
+            { status: "draft" },
+            { status: parsed.data.status },
+          );
         }
         return redirectWithToast(
           "/base-conocimiento",

@@ -74,7 +74,7 @@ export class KbTestFixture {
   private readonly imagePaths = new Set<string>();
   private readonly fixtureUserIds = new Set<number>();
   private readonly imageDirectories = new Map<string, boolean>();
-  private readonly auditLogWatermark: number;
+  readonly auditLogWatermark: number;
 
   constructor() {
     const [watermark] = db
