@@ -8,6 +8,7 @@ import { setSessionCookie } from "./helpers/auth";
 import {
   ensureCategoryFixture,
   KbTestFixture,
+  readCsrfToken,
   setEasyMdeContent,
   uniqueToken,
   type KbTestMesa,
@@ -413,9 +414,14 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
   test("rechaza el alta inline de un admin con una mesa deshabilitada", async ({
     context,
+    page,
   }) => {
     const admin = await fixture.createUser("admin", mesa);
     await setSessionCookie(context, admin.signedSessionId);
+    const csrfToken = await readCsrfToken(
+      page,
+      "/base-conocimiento/categorias",
+    );
 
     const response = await context.request.post(
       "/base-conocimiento/categorias",
@@ -425,6 +431,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
           name: `Mesa inválida ${uniqueToken()}`,
           returnTo: "/base-conocimiento/create",
           helpdeskId: "999999999",
+          csrf_token: csrfToken,
         },
         maxRedirects: 0,
       },
@@ -593,11 +600,16 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
   test("un team_leader no puede forzar el alta inline en otra mesa", async ({
     context,
+    page,
   }) => {
     const secondMesa = await fixture.createMesa();
     fixtureHelpdeskIds.push(secondMesa.invgateId);
     const leader = await fixture.createUser("team_leader", mesa);
     await setSessionCookie(context, leader.signedSessionId);
+    const csrfToken = await readCsrfToken(
+      page,
+      "/base-conocimiento/categorias",
+    );
 
     const nombre = `Forzada ${uniqueToken()}`;
     const response = await context.request.post(
@@ -608,6 +620,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
           name: nombre,
           helpdeskId: String(secondMesa.invgateId),
           returnTo: "/base-conocimiento/create",
+          csrf_token: csrfToken,
         },
         maxRedirects: 0,
       },
@@ -639,9 +652,14 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
   test("el alta inline con returnTo al formulario redirige con la categoría nueva en la URL", async ({
     context,
+    page,
   }) => {
     const leader = await fixture.createUser("team_leader", mesa);
     await setSessionCookie(context, leader.signedSessionId);
+    const csrfToken = await readCsrfToken(
+      page,
+      "/base-conocimiento/categorias",
+    );
 
     const nombre = `Inline URL ${uniqueToken()}`;
     const response = await context.request.post(
@@ -651,6 +669,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
           action: "create",
           name: nombre,
           returnTo: "/base-conocimiento/create",
+          csrf_token: csrfToken,
         },
         maxRedirects: 0,
       },
@@ -672,9 +691,14 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
   test("un returnTo externo cae al ABM y no redirige afuera", async ({
     context,
+    page,
   }) => {
     const leader = await fixture.createUser("team_leader", mesa);
     await setSessionCookie(context, leader.signedSessionId);
+    const csrfToken = await readCsrfToken(
+      page,
+      "/base-conocimiento/categorias",
+    );
 
     const nombre = `Open redirect ${uniqueToken()}`;
     const response = await context.request.post(
@@ -684,6 +708,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
           action: "create",
           name: nombre,
           returnTo: "https://evil.example/steal",
+          csrf_token: csrfToken,
         },
         maxRedirects: 0,
       },

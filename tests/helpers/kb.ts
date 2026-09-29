@@ -471,3 +471,17 @@ export class KbTestFixture {
     }
   }
 }
+
+export async function readCsrfToken(
+  page: Page,
+  path = "/base-conocimiento/categorias",
+): Promise<string> {
+  const response = await page.goto(path);
+  expect(response?.status()).toBe(200);
+  const token = await page
+    .locator('input[name="csrf_token"]')
+    .first()
+    .inputValue();
+  expect(token).not.toBe("");
+  return token;
+}

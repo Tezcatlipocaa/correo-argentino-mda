@@ -15,6 +15,7 @@ import { createArticle } from "@lib/kb";
 import { listCategories } from "@lib/kbCategories";
 import { logAdminActionStructured } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { getCsrfTokenForSession, validateCsrfToken } from "@lib/csrf";
 import { resolveUrl } from "@lib/url";
 import { getCleanBase } from "@lib/baseUrl";
 import type { ToastType } from "@lib/toastClient";
@@ -70,6 +71,7 @@ if (
 }
 
 const isAdmin = can(user.role, "admin");
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
 let errorMsg = "";
 let toastType: ToastType = "alert-error";
 let activeMesas: MesaOption[] = [];
@@ -96,6 +98,19 @@ if (isAdmin) {
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
+    if (
+      !Astro.locals.sessionId ||
+      !validateCsrfToken(
+        String(formData.get("csrf_token") ?? ""),
+        Astro.locals.sessionId,
+      )
+    ) {
+      return redirectWithToast(
+        "/base-conocimiento",
+        "Token CSRF inválido o ausente",
+        "error",
+      );
+    }
     formValues.title = formData.get("title")?.toString() ?? "";
     formValues.category = formData.get("category")?.toString() ?? "";
     formValues.content = formData.get("content")?.toString() ?? "";
@@ -275,6 +290,8 @@ const categoriaSeleccionada =
     }
   </script>
 
+  <input type="hidden" name="csrf_token" value={csrfToken} />
+
   <SectionCard title="Datos del artículo" icon="boxicons:article-filled">
     <div class="space-y-6 p-6 sm:p-8">
       <div
@@ -419,6 +436,7 @@ const categoriaSeleccionada =
       ? `/base-conocimiento/create?mesa=${formValues.helpdeskId}`
       : "/base-conocimiento/create"}
   />
+  <input type="hidden" name="csrf_token" value={csrfToken} />
   {
     isAdmin && (
       <input

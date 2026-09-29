@@ -6,6 +6,7 @@ import { getModulePermissions } from "@lib/rbac";
 import { can } from "@lib/roleConfig";
 import { logAdminActionStructured } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { getCsrfTokenForSession, validateCsrfToken } from "@lib/csrf";
 import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 import { getCleanBase } from "@lib/baseUrl";
 import {
@@ -41,6 +42,8 @@ if (!perms.canWrite) {
 const sessionHelpdeskId = user.helpdeskId;
 const isAdmin = can(user.role, "admin");
 
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
+
 const cleanBase = getCleanBase();
 const returnToRaw = Astro.url.searchParams.get("returnTo") ?? "";
 const returnTo =
@@ -59,6 +62,19 @@ let audit: KbCategoryAudit | null = null;
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
+  if (
+    !Astro.locals.sessionId ||
+    !validateCsrfToken(
+      String(formData.get("csrf_token") ?? ""),
+      Astro.locals.sessionId,
+    )
+  ) {
+    return redirectWithToast(
+      returnTo,
+      "Token CSRF inválido o ausente",
+      "error",
+    );
+  }
   const action = String(formData.get("action") ?? "");
   const postedReturnTo = String(formData.get("returnTo") ?? "");
   const postedReturnToNormalized = normalizeKbReturnPath(
@@ -231,6 +247,7 @@ const conteos = sessionHelpdeskId
         <form method="POST" class="flex flex-wrap items-end gap-3">
           <input type="hidden" name="action" value="create" />
           <input type="hidden" name="returnTo" value={returnTo} />
+          <input type="hidden" name="csrf_token" value={csrfToken} />
           <FormField
             id="kb-category-name"
             name="name"
@@ -261,6 +278,7 @@ const conteos = sessionHelpdeskId
                     <input type="hidden" name="action" value="rename" />
                     <input type="hidden" name="id" value={categoria.id} />
                     <input type="hidden" name="returnTo" value={returnTo} />
+                    <input type="hidden" name="csrf_token" value={csrfToken} />
                     <FormField
                       id={`kb-category-rename-${categoria.id}`}
                       name="name"
@@ -285,6 +303,7 @@ const conteos = sessionHelpdeskId
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="id" value={categoria.id} />
                     <input type="hidden" name="returnTo" value={returnTo} />
+                    <input type="hidden" name="csrf_token" value={csrfToken} />
                     <button
                       type="submit"
                       class="btn btn-error btn-sm"
