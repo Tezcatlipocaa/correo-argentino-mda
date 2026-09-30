@@ -49,7 +49,7 @@ export function setSessionCookie(
   cookies.set("session_id", signedSessionId, {
     path: "/",
     httpOnly: true,
-    secure: false,
+    secure: import.meta.env.PROD,
     sameSite: "lax",
     expires: expiresAt,
   });
@@ -59,7 +59,7 @@ export function deleteSessionCookie(cookies: AstroCookies) {
   cookies.delete("session_id", {
     path: "/",
     httpOnly: true,
-    secure: false,
+    secure: import.meta.env.PROD,
     sameSite: "lax",
   });
 }
