@@ -9,6 +9,7 @@ interface Props {
   zIndex?: string;
   titleClass?: string;
   class?: string;
+  actionsBorder?: boolean;
 }
 
 const {
@@ -19,6 +20,7 @@ const {
   zIndex,
   titleClass,
   class: className,
+  actionsBorder = false,
 } = Astro.props;
 
 const sizeClasses: Record<string, string> = {
@@ -53,7 +55,15 @@ const sizeClasses: Record<string, string> = {
       )
     }
     <slot name="content" />
-    <slot name="actions" />
+    {
+      actionsBorder ? (
+        <div class="modal-action border-base-300 mt-6 flex justify-end gap-2 border-t pt-4">
+          <slot name="actions" />
+        </div>
+      ) : (
+        <slot name="actions" />
+      )
+    }
   </div>
   <form method="dialog" class="modal-backdrop">
     <button>close</button>
