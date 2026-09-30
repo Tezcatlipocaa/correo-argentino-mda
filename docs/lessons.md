@@ -401,3 +401,63 @@ Cada entrada sigue este formato:
 **Solucion:** Rutas relativas al script (`%~dp0..\database\mda.db` y destino hermano), `exit /b 1` si falta el origen o si `copy` falla, y el mensaje de éxito solo después de verificar.
 **Regla:** Los scripts de ops deben resolverse desde su propia ubicación y fallar con código de salida distinto de 0: nunca informar éxito sin comprobar el resultado.
 **Archivos afectados:** scripts/backup-db.bat
+
+---
+
+### 2026-09-29 — Const reordenada en frontmatter Astro rompe el SSR (TDZ) y el build no lo detecta
+
+**Problema:** Al agregar el fallback de íconos, `src/pages/admin/recursos/enlace/create.astro` quedó con `const hasSavedIcon = iconExists(link.iconPath);` en la línea 18, antes de `let link = {...}` en la línea 23. La ruta `/admin/recursos/enlace/create` devolvía HTTP 500 con título de página "ReferenceError" (h1 = 0).
+**Causa:** Temporal Dead Zone: `link` se referenciaba en el inicializador de una `const` declarada antes de su propio `let`. `npm run build` + `scripts/verify-build.mjs` terminan OK porque el error es de ejecución en SSR, no de compilación.
+**Solucion:** Mover el `const hasSavedIcon = iconExists(link.iconPath);` debajo del bloque POST (después de toda mutación de `link`), reutilizando la variable más abajo. Semántica intacta: `link.iconPath` no se reasigna tras su declaración.
+**Regla:** En frontmatter Astro, cualquier valor derivado debe declararse después de las variables que consume. El build y `verify-build.mjs` no detectan errores de runtime SSR: un TDZ o un `undefined` solo se ve con un smoke test por ruta (200 + h1 presente). Agregar la ruta nueva a un test E2E de rutas.
+**Archivos afectados:** src/pages/admin/recursos/enlace/create.astro, tests/ui/elementos-rotos-regression.spec.ts
+
+---
+
+### 2026-09-29 — Quitar una clase DaisyUI v4 puede romper hooks JS que la usaban como selector
+
+**Problema:** Al purgar las clases muertas de DaisyUI v4 quedó un campo de formulario sin su hook de JS: el contenedor había perdido la clase que el script usaba para identificar la fila, y las validaciones de ese campo dejaron de disparar.
+**Causa:** El JS hacía `input.closest(".form-control")` (u otra clase del markup viejo) como ancla; la clase era "invisible" para el CSS pero funcionalmente era un selector.
+**Solucion:** Reemplazar la dependencia de clase por un atributo de datos explícito (`<div class="sm:col-span-2" data-field>` + `input.closest("[data-field]")`), inmune a futuros cambios de clase.
+**Regla:** Antes de borrar una clase del markup, hacer grep de la clase en `src/**/*.ts`/`*.tsx`/`.astro` como selector (`closest(`, `querySelector`, `classList`). Los hooks de DOM deben anclarse a atributos `data-*`, no a clases de estilo.
+**Archivos afectados:** src/components/supervision/calidad/CalidadContent.astro
+
+---
+
+### 2026-09-29 — Builds concurrentes corrompen `dist/` aunque `verify-build` pase
+
+**Problema:** Durante la ejecución de tareas en paralelo, `dist/` quedó inconsistente: el server crasheaba con `Error [ERR_MODULE_NOT_FOUND]: Cannot find module '...dist\server\chunks\index_DXRJYlsl.mjs' imported from '...dist\server\chunks\server_DeMlMPoP.mjs'`.
+**Causa:** Dos `npm run build` solapados escribieron `dist/` a la vez; el segundo build mezcló chunks del primero. `scripts/verify-build.mjs` validó `rootDir` (OK) pero no la integridad del grafo de chunks.
+**Solucion:** `npx astro preview stop`, borrar/rehacer un único `npm run build` limpio (32 `index_*.mjs` presentes) y volver a levantar.
+**Regla:** Nunca correr dos builds en paralelo sobre el mismo `dist/`. `verify-build.mjs` es un guard parcial (rootDir), no una validación de integridad: si el server arranca con `ERR_MODULE_NOT_FOUND` sobre un chunk, es síntoma de build solapado → rebuild limpio.
+**Archivos afectados:** dist/server/chunks/*
+
+---
+
+### 2026-09-29 — Con adapter `mode:"middleware"` el entry de prod es `./server.mjs`, y `astro preview` no sirve `dist/client`
+
+**Problema:** Al intentar validar el export a PNG contra el build de producción, `node dist/server/entry.mjs` salía con código 0 sin imprimir nada, y `astro preview` devolvía `200 text/html` para todos los `/_astro/*.{css,js,woff2}` (el fallback SSR en vez del archivo estático).
+**Causa:** Dos hechos del setup: (1) `@astrojs/node` está en `mode: "middleware"`, así que `dist/server/entry.mjs` es un módulo export, no un servidor; el entry real es `./server.mjs` de la raíz (lo que corre PM2 en `ecosystem.config.cjs`). (2) El daemon de `astro preview` no resolvió el handler estático de `dist/client` en esta máquina.
+**Solucion:** Para validar prod local: levantar `node server.mjs` con `HOST`/`PORT` (validar que el puerto esté libre). Para assets estáticos, verificar contra `dist/client/_astro` directamente o contra el server real, no contra `astro preview`.
+**Regla:** Con adapter `mode:"middleware"`, no ejecutar `dist/server/entry.mjs` como servidor: el entry es `./server.mjs`. No usar `astro preview` como referencia de que los assets estáticos funcionan; validar contra el server de PM2 o `dist/client`.
+**Archivos afectados:** astro.config.mjs, server.mjs, ecosystem.config.cjs
+
+---
+
+### 2026-09-29 — Un error de import dinámico dev-only (Vite) no siempre es un bug del feature
+
+**Problema:** El visor del cronograma mostraba en consola `Failed to preload html-to-image: TypeError: Failed to fetch dynamically imported module`, y se asumió que el export a imagen estaba roto en producción.
+**Causa:** El dev server de Vite servía un 504 de dependencia optimizada fuera de fecha (dep-optimize). No era un problema del código: el build emitía el warning `[INEFFECTIVE_DYNAMIC_IMPORT]` porque `exporters.ts` se importa también estáticamente por `copyButton.ts`, así que el módulo queda inlinado en el mismo chunk.
+**Solucion:** Verificar contra el bundle real: grep de la firma `html-to-image` en `dist/client/_astro/*.js` → está presente en `CronogramaDashboard.astro_astro_type_script_index_0_lang.BL03K4Fl.js`. Feature OK; sin cambios de código.
+**Regla:** Antes de "arreglar" un error dev-only de import dinámico/preload, confirmar el feature contra el bundle de producción (`dist/client/_astro`). Un warning `INEFFECTIVE_DYNAMIC_IMPORT` explica que el módulo no tiene chunk propio y viaja en el chunk del importador.
+**Archivos afectados:** src/components/cronograma/lib/exporters.ts, src/components/cronograma/lib/dashboard-client.ts
+
+---
+
+### 2026-09-29 — `Start-Process` + `Start-Sleep` en el mismo comando mata el dev server; y `PORT` no propaga
+
+**Problema:** Al arrancar procesos en segundo plano con `Start-Process` seguido de `Start-Sleep` en el mismo comando, el dev server moría; y arrancar `node server.mjs` con `$env:PORT` terminó ocupando el `4321` del dev server (el env var no llegó al hijo), dejando el entorno contaminado.
+**Causa:** El timeout del tool mata el árbol de procesos del comando, incluyendo el hijo lanzado con `Start-Process`. `Start-Process` no hereda de forma fiable las variables de entorno fijadas con `$env:` en la misma sesión de PowerShell.
+**Solucion:** Lanzar el dev server detached en su **propio** comando: `Start-Process -FilePath "cmd.exe" -ArgumentList "/c","npx astro dev --port 4321 > ... 2>&1" -WorkingDirectory <repo> -WindowStyle Hidden`, y verificar en un **segundo** comando. Para propagar env vars, pasar el entorno explícito (`psi.EnvironmentVariables`) o un `cmd /c "set PORT=... && node ..."` (PowerShell 5.1 no soporta `&&`).
+**Regla:** Nunca combinar `Start-Process` con `Start-Sleep` en un mismo comando para un servidor de larga vida: el timeout del tool se lleva el proceso. Verificar el puerto antes de arrancar para no pisar el dev server.
+**Archivos afectados:** —
