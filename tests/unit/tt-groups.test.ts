@@ -4,7 +4,7 @@ import {
   isTTVmHostname,
   groupTTDevices,
   sortTTGroups,
-} from "../src/lib/ttGroups";
+} from "../../src/lib/ttGroups";
 
 describe("computeTTBase", () => {
   it("strips -D suffix from VM hostnames", () => {

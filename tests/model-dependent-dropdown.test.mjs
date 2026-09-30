@@ -1,10 +1,14 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import {
+  newAuthenticatedPage,
+  destroyAdminSession,
+} from "./helpers/session.mjs";
 
 async function runTest() {
   console.log("Iniciando navegador Chromium...");
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const { page, context, session } = await newAuthenticatedPage(browser);
 
   console.log("Navegando a la página de inventario...");
   await page.goto("http://localhost:4321/inventario-terminales");
@@ -107,6 +111,8 @@ async function runTest() {
   console.log(
     "Todas las verificaciones de dropdown dependiente pasaron correctamente.",
   );
+  await context.close();
+  destroyAdminSession(session.sessionId);
   await browser.close();
 }
 

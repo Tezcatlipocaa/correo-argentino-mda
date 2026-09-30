@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   createSnapshotCache,
   buildTerminalSnapshot,
-} from "../src/lib/terminalSnapshot";
+} from "../../src/lib/terminalSnapshot";
 
 describe("createSnapshotCache", () => {
   it("returns the cached value while the signature is unchanged", async () => {
