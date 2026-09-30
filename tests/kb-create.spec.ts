@@ -5,6 +5,7 @@ import { db } from "../src/db/index";
 import { kbArticles } from "../src/db/schema";
 import { setSessionCookie } from "./helpers/auth";
 import {
+  expectKbDenied,
   KbTestFixture,
   setEasyMdeContent,
   uniqueToken,
@@ -24,16 +25,16 @@ test.afterEach(async () => {
 });
 
 test.describe("Base de conocimiento - creación", () => {
-  test("team_leader guarda un borrador y vuelve al listado", async ({
+  test("admin guarda un borrador y vuelve al listado", async ({
     context,
     page,
   }) => {
     const suffix = uniqueToken();
     const title = `Borrador E2E ${suffix}`;
     const markdown = `Procedimiento **${suffix}** con contenido Markdown.`;
-    const leader = await fixture.createUser("team_leader", mesa);
+    const admin = await fixture.createUser("admin", mesa);
 
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/create");
 
     await expect(
@@ -60,7 +61,7 @@ test.describe("Base de conocimiento - creación", () => {
       .where(
         and(
           eq(kbArticles.helpdeskId, mesa.invgateId),
-          eq(kbArticles.authorUserId, leader.userId),
+          eq(kbArticles.authorUserId, admin.userId),
           eq(kbArticles.title, title),
         ),
       )
@@ -72,7 +73,7 @@ test.describe("Base de conocimiento - creación", () => {
     expect(article).toMatchObject({
       status: "draft",
       helpdeskId: mesa.invgateId,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       content: markdown,
       category: "Accesos",
     });
@@ -89,14 +90,20 @@ test.describe("Base de conocimiento - creación", () => {
     const agent = await fixture.createUser("agent", mesa);
     await context.clearCookies();
     await setSessionCookie(context, agent.signedSessionId);
-    await page.goto("/base-conocimiento");
-    await expect(
-      page.getByRole("link", { name: title, exact: true }),
-    ).toHaveCount(0);
-    const agentViewResponse = await page.goto(
+
+    const listDenial = await context.request.get("/base-conocimiento", {
+      maxRedirects: 0,
+    });
+    expectKbDenied(listDenial);
+
+    await page.goto("/base-conocimiento/create");
+    await expect(page.locator("#kb-article-form")).toHaveCount(0);
+
+    const agentViewResponse = await context.request.get(
       `/base-conocimiento/${article.id}`,
+      { maxRedirects: 0 },
     );
-    expect(agentViewResponse?.status()).toBe(404);
+    expectKbDenied(agentViewResponse);
   });
 
   test("rechaza contenido vacío y no crea una fila", async ({
@@ -105,9 +112,9 @@ test.describe("Base de conocimiento - creación", () => {
   }) => {
     const suffix = uniqueToken();
     const title = `Contenido vacío E2E ${suffix}`;
-    const leader = await fixture.createUser("team_leader", mesa);
+    const admin = await fixture.createUser("admin", mesa);
 
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/create");
 
     await page.locator("#kb-title").fill(title);
@@ -125,7 +132,7 @@ test.describe("Base de conocimiento - creación", () => {
       .where(
         and(
           eq(kbArticles.helpdeskId, mesa.invgateId),
-          eq(kbArticles.authorUserId, leader.userId),
+          eq(kbArticles.authorUserId, admin.userId),
           eq(kbArticles.title, title),
         ),
       );

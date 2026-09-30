@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { kbArticles } from "../src/db/schema";
 import { setSessionCookie, type TestUser } from "./helpers/auth";
-import { KbTestFixture, uniqueToken } from "./helpers/kb";
+import { expectKbDenied, KbTestFixture, uniqueToken } from "./helpers/kb";
 
 let fixture: KbTestFixture;
 let ownArticleId: number;
@@ -109,30 +109,23 @@ test("admin de mesa A lista, ve y edita un borrador de mesa B", async ({
   expect(stored?.status).toBe("draft");
 });
 
-test("un agente de mesa B no ve el borrador ajeno ni edita su artículo", async ({
+test("un no-admin es rechazado al intentar ver o editar el artículo ajeno", async ({
   context,
   page,
 }) => {
   await setSessionCookie(context, otherAgent.signedSessionId);
 
-  const foreignViewResponse = await page.goto(
+  const foreignView = await context.request.get(
     `/base-conocimiento/${foreignArticleId}`,
+    { maxRedirects: 0 },
   );
-  expect(foreignViewResponse?.status()).toBe(404);
-  await expect(page.getByText("Página no encontrada")).toBeVisible();
+  expectKbDenied(foreignView);
 
   const editDenial = await context.request.get(
     `/base-conocimiento/edit/${ownArticleId}`,
     { maxRedirects: 0 },
   );
-  expect(editDenial.status()).toBe(302);
-  const location = new URL(
-    editDenial.headers().location,
-    "http://localhost:4322",
-  );
-  expect(location.pathname).toBe("/");
-  expect(location.searchParams.get("toast_msg")).toBe("Acceso no autorizado");
-  expect(location.searchParams.get("toast_type")).toBe("error");
+  expectKbDenied(editDenial);
 
   await page.goto(`/base-conocimiento/edit/${ownArticleId}`);
   await expect(page.locator("#kb-article-form")).toHaveCount(0);

@@ -13,16 +13,16 @@ import {
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
-let leader: TestUser;
+let admin: TestUser;
 let articleId: number;
 
 test.beforeEach(async () => {
   fixture = new KbTestFixture();
   mesa = await fixture.createMesa();
-  leader = await fixture.createUser("team_leader", mesa);
+  admin = await fixture.createUser("admin", mesa);
   const article = await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: `Artículo editable ${uniqueToken()}`,
     content: "Contenido original.",
   });
@@ -41,7 +41,7 @@ test("persiste título y contenido después de recargar", async ({
   const updatedTitle = `Título actualizado ${suffix}`;
   const updatedContent = `Contenido actualizado **${suffix}** con Markdown.`;
 
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${articleId}`);
   await expect(page.locator("#kb-article-form")).toBeVisible();
   await page.locator("#kb-title").fill(updatedTitle);
@@ -99,7 +99,7 @@ test("rechaza pasar un artículo publicado a borrador sin mutarlo", async ({
   expect(before).toBeDefined();
   if (!before) throw new Error("Article fixture was not found");
 
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${articleId}`);
   await page.locator("#kb-title").fill(`Cambio inválido ${uniqueToken()}`);
   await page.locator("#kb-status").selectOption("draft");

@@ -25,8 +25,8 @@ test("borrar el usuario que creó una categoría no falla y deja la categoría s
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const nombre = `FK ${uniqueToken()}`;
   await page.goto("/base-conocimiento/categorias");
@@ -48,9 +48,9 @@ test("borrar el usuario que creó una categoría no falla y deja la categoría s
     )
     .limit(1);
   expect(creada).toBeDefined();
-  expect(creada?.createdByUserId).toBe(leader.userId);
+  expect(creada?.createdByUserId).toBe(admin.userId);
 
-  await cleanupTestUser(leader.userId, leader.sessionId);
+  await cleanupTestUser(admin.userId, admin.sessionId);
 
   const [row] = await db
     .select({

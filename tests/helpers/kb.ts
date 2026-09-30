@@ -22,6 +22,25 @@ import {
 export type KbTestMesa = typeof mesas.$inferSelect;
 export type KbArticleStatus = "draft" | "published" | "archived";
 
+export const KB_DENIED_TOAST_MSG = "Acceso no autorizado";
+
+export function expectKbDenied(response: {
+  status(): number;
+  headers(): Record<string, string>;
+}): void {
+  expect(response.status()).toBe(302);
+  const locationHeader = response.headers().location;
+  if (!locationHeader) {
+    throw new Error(
+      "Expected an unauthorized redirect with a Location header, but none was present.",
+    );
+  }
+  const location = new URL(locationHeader, "http://localhost");
+  expect(location.pathname).toBe("/");
+  expect(location.searchParams.get("toast_msg")).toBe(KB_DENIED_TOAST_MSG);
+  expect(location.searchParams.get("toast_type")).toBe("error");
+}
+
 export async function ensureCategoryFixture(
   helpdeskId: number,
   name: string,

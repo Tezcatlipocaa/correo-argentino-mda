@@ -7,7 +7,7 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
-let leader: TestUser;
+let admin: TestUser;
 let articleId: number;
 let articleTitle: string;
 
@@ -25,11 +25,11 @@ const measure = async (
 test.beforeEach(async () => {
   fixture = new KbTestFixture();
   mesa = await fixture.createMesa();
-  leader = await fixture.createUser("team_leader", mesa);
+  admin = await fixture.createUser("admin", mesa);
   articleTitle = `Layout E2E ${uniqueToken()}`;
   const article = await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: articleTitle,
     content: "Contenido de prueba para el layout.",
     status: "published",
@@ -46,7 +46,7 @@ test.describe("Base de conocimiento - layout v2", () => {
     context,
     page,
   }) => {
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
 
     await page.goto(`/base-conocimiento/${articleId}`);
     await expect(
@@ -65,7 +65,7 @@ test.describe("Base de conocimiento - layout v2", () => {
     context,
     page,
   }) => {
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
 
     await page.goto("/base-conocimiento/create");
     await expect(
@@ -80,7 +80,7 @@ test.describe("Base de conocimiento - layout v2", () => {
     context,
     page,
   }) => {
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
 
     await page.goto(`/base-conocimiento/edit/${articleId}`);
     await expect(page.locator("#kb-article-form")).toBeVisible();

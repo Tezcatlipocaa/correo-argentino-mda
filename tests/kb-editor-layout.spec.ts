@@ -11,7 +11,7 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
-let leader: TestUser;
+let admin: TestUser;
 
 const WIDE_MARKDOWN = [
   "# Encabezado del artículo",
@@ -86,7 +86,7 @@ const expectInsideWidth = (
 };
 
 const openCreate = async (page: Page): Promise<void> => {
-  await setSessionCookie(page.context(), leader.signedSessionId);
+  await setSessionCookie(page.context(), admin.signedSessionId);
   await page.goto("/base-conocimiento/create");
   await expect(form(page)).toBeVisible();
   await setEasyMdeContent(page, WIDE_MARKDOWN);
@@ -95,7 +95,7 @@ const openCreate = async (page: Page): Promise<void> => {
 test.beforeEach(async () => {
   fixture = new KbTestFixture();
   mesa = await fixture.createMesa();
-  leader = await fixture.createUser("team_leader", mesa);
+  admin = await fixture.createUser("admin", mesa);
 });
 
 test.afterEach(async () => {

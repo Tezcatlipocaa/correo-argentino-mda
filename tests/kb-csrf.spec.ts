@@ -147,8 +147,8 @@ test("el alta de categoría sin token CSRF se rechaza y no crea la fila", async 
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento/categorias");
 
   const antes = await catalogo();
@@ -166,14 +166,14 @@ test("el renombre sin token CSRF se rechaza y no cascadea a los artículos", asy
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const nombre = `CSRF renombre ${uniqueToken()}`;
   const id = await crearCategoriaPorUi(page, nombre);
   await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: `CSRF artículo ${uniqueToken()}`,
     category: nombre,
     status: "draft",
@@ -210,8 +210,8 @@ test("la baja de categoría sin token CSRF se rechaza y conserva la fila", async
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const nombre = `CSRF baja ${uniqueToken()}`;
   const id = await crearCategoriaPorUi(page, nombre);
@@ -235,8 +235,8 @@ test("el alta de artículo sin token CSRF re-renderiza el editor y no crea la fi
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento/create");
 
   const titulo = `CSRF alta artículo ${uniqueToken()}`;
@@ -250,6 +250,7 @@ test("el alta de artículo sin token CSRF re-renderiza el editor y no crea la fi
     category: "Accesos",
     content: contenido,
     status: "draft",
+    helpdeskId: String(mesa.invgateId),
   });
 
   expectReRender(result, { title: titulo, content: contenido });
@@ -260,16 +261,16 @@ test("la edición sin token CSRF re-renderiza el editor y no toca el artículo",
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
+  const admin = await fixture.createUser("admin", mesa);
   const articulo = await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: `CSRF edición ${uniqueToken()}`,
     content: "Contenido original.",
     category: "Accesos",
     status: "draft",
   });
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${articulo.id}`);
 
   const titulo = `${articulo.title} editado`;
@@ -338,8 +339,8 @@ test("un token vencido conserva el borrador y permite reintentar con el token nu
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const tokenDeLaPagina = await readCsrfToken(
     page,
@@ -357,6 +358,7 @@ test("un token vencido conserva el borrador y permite reintentar con el token nu
       category: "Accesos",
       content: "Control de la firma del spec.",
       status: "draft",
+      helpdeskId: String(mesa.invgateId),
     },
     csrfFirmado(sessionId, Date.now()),
   );
@@ -374,6 +376,7 @@ test("un token vencido conserva el borrador y permite reintentar con el token nu
       category: "Accesos",
       content: contenido,
       status: "draft",
+      helpdeskId: String(mesa.invgateId),
     },
     csrfVencido(tokenDeLaPagina),
   );
@@ -393,6 +396,7 @@ test("un token vencido conserva el borrador y permite reintentar con el token nu
       category: "Accesos",
       content: contenido,
       status: "draft",
+      helpdeskId: String(mesa.invgateId),
     },
     tokenNuevo,
   );
@@ -407,12 +411,12 @@ test("un token emitido para otra sesión se rechaza", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  const otro = await fixture.createUser("team_leader", mesa);
+  const admin = await fixture.createUser("admin", mesa);
+  const otro = await fixture.createUser("admin", mesa);
 
   await setSessionCookie(context, otro.signedSessionId);
   const tokenAjeno = await readCsrfToken(page, "/base-conocimiento/categorias");
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const antes = await catalogo();
   const result = await postCategorias(
@@ -433,8 +437,8 @@ test("con el token de la página el alta de categoría se aplica", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const token = await readCsrfToken(page, "/base-conocimiento/categorias");
 
   const nombre = `CSRF ok ${uniqueToken()}`;
@@ -470,8 +474,8 @@ test("el alta inline de create manda el token de la página", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento/create");
 
   await expect(

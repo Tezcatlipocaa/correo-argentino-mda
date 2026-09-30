@@ -63,8 +63,8 @@ test("el ABM corta las escrituras del mismo usuario en la venta de un minuto", a
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const csrfToken = await readCsrfToken(page, CATEGORIAS_PATH);
 
   const nombre = `Rate ${uniqueToken()}`;
@@ -100,11 +100,11 @@ test("un segundo usuario no hereda el corte del primero", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  const otro = await fixture.createUser("team_leader", mesa);
+  const admin = await fixture.createUser("admin", mesa);
+  const otro = await fixture.createUser("admin", mesa);
   const nombreLeader = `Rate ${uniqueToken()}`;
 
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   const csrfTokenLeader = await readCsrfToken(page, CATEGORIAS_PATH);
   for (let i = 0; i < LIMIT + 1; i += 1) {
     await postCreate(context, nombreLeader, csrfTokenLeader);
@@ -140,8 +140,8 @@ test("el alias con slash final comparte la venta con la ruta canónica", async (
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const csrfToken = await readCsrfToken(page, CATEGORIAS_PATH);
 
   const nombre = `Rate ${uniqueToken()}`;
@@ -210,8 +210,8 @@ test("un GET al ABM no consume el presupuesto de escritura", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   for (let i = 0; i < LIMIT; i += 1) {
     const response = await context.request.get(CATEGORIAS_PATH);

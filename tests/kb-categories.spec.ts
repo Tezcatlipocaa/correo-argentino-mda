@@ -7,6 +7,7 @@ import { kbArticles, kbCategories } from "../src/db/schema";
 import { setSessionCookie } from "./helpers/auth";
 import {
   ensureCategoryFixture,
+  expectKbDenied,
   KbTestFixture,
   readCsrfToken,
   setEasyMdeContent,
@@ -91,13 +92,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     const denial = await context.request.get("/base-conocimiento/categorias", {
       maxRedirects: 0,
     });
-    expect(denial.status()).toBe(REDIRECT);
-    const location = new URL(
-      denial.headers().location,
-      "http://localhost:4321",
-    );
-    expect(location.pathname).toBe("/");
-    expect(location.searchParams.get("toast_msg")).toBe("Acceso no autorizado");
+    expectKbDenied(denial);
 
     await page.goto("/base-conocimiento/categorias");
     await expect(page.locator("#global-toast-container")).toContainText(
@@ -113,8 +108,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
 
     await page.goto("/base-conocimiento/categorias");
 
@@ -132,8 +127,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/categorias");
 
     await page.locator("#kb-category-name").fill("accesos");
@@ -165,8 +160,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/categorias");
 
     const nombre = `Redes E2E ${uniqueToken()}`;
@@ -183,8 +178,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/categorias");
 
     const nombre = `Cascada E2E ${uniqueToken()}`;
@@ -193,7 +188,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
     const article = await fixture.createArticle({
       mesa,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       title: `Artículo cascada ${uniqueToken()}`,
       category: nombre,
       status: "draft",
@@ -220,8 +215,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
   });
 
   test("bloquea la baja de una categoría en uso", async ({ context, page }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/categorias");
 
     const nombre = `En uso E2E ${uniqueToken()}`;
@@ -230,7 +225,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
     await fixture.createArticle({
       mesa,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       title: `Artículo en uso ${uniqueToken()}`,
       category: nombre,
       status: "draft",
@@ -257,8 +252,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
   });
 
   test("elimina una categoría sin uso", async ({ context, page }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/categorias");
 
     const nombre = `Sin uso E2E ${uniqueToken()}`;
@@ -285,8 +280,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
 
     const nombre = `Inline E2E ${randomUUID().slice(0, 8)}`;
 
@@ -319,13 +314,13 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
 
     const legado = `Legado ${uniqueToken()}`;
     const article = await fixture.createArticle({
       mesa,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       title: `Artículo legado ${uniqueToken()}`,
       category: legado,
     });
@@ -355,8 +350,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
 
     const seededName = `Seed ${uniqueToken()}`;
     const seededId = await ensureCategoryFixture(mesa.invgateId, seededName);
@@ -364,7 +359,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
     const article = await fixture.createArticle({
       mesa,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       title: `Editable inline ${uniqueToken()}`,
       category: seededName,
       status: "draft",
@@ -394,8 +389,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/categorias");
 
     await page.locator("#kb-category-name").fill("   ");
@@ -506,8 +501,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
 
     await page.goto("/base-conocimiento/create");
     const inline = `Inline stale ${uniqueToken()}`;
@@ -535,11 +530,11 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     const article = await fixture.createArticle({
       mesa,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       title: `Editable stale ${uniqueToken()}`,
       status: "draft",
     });
@@ -569,8 +564,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     const title = `Inyección ${uniqueToken()}`;
     const inyectada = `Inyectada ${uniqueToken()}`;
 
@@ -598,7 +593,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     expect(rows).toEqual([]);
   });
 
-  test("un team_leader no puede forzar el alta inline en otra mesa", async ({
+  test("un team_leader no accede al ABM y no puede forzar el alta inline", async ({
     context,
     page,
   }) => {
@@ -606,37 +601,32 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     fixtureHelpdeskIds.push(secondMesa.invgateId);
     const leader = await fixture.createUser("team_leader", mesa);
     await setSessionCookie(context, leader.signedSessionId);
-    const csrfToken = await readCsrfToken(
-      page,
-      "/base-conocimiento/categorias",
-    );
+
+    const denial = await context.request.get("/base-conocimiento/categorias", {
+      maxRedirects: 0,
+    });
+    expectKbDenied(denial);
 
     const nombre = `Forzada ${uniqueToken()}`;
-    const response = await context.request.post(
-      "/base-conocimiento/categorias",
-      {
-        form: {
-          action: "create",
-          name: nombre,
-          helpdeskId: String(secondMesa.invgateId),
-          returnTo: "/base-conocimiento/create",
-          csrf_token: csrfToken,
-        },
-        maxRedirects: 0,
+    const forced = await context.request.post("/base-conocimiento/categorias", {
+      form: {
+        action: "create",
+        name: nombre,
+        helpdeskId: String(secondMesa.invgateId),
+        returnTo: "/base-conocimiento/create",
       },
+      maxRedirects: 0,
+    });
+    expect(forced.status()).toBe(REDIRECT);
+    const forcedLocation = new URL(
+      forced.headers().location,
+      "http://localhost:4321",
+    );
+    expect(forcedLocation.pathname).toBe("/");
+    expect(forcedLocation.searchParams.get("toast_msg")).toBe(
+      "Acceso no autorizado",
     );
 
-    expect(response.status()).toBe(REDIRECT);
-    const propias = await db
-      .select({ id: kbCategories.id })
-      .from(kbCategories)
-      .where(
-        and(
-          eq(kbCategories.helpdeskId, mesa.invgateId),
-          eq(kbCategories.name, nombre),
-        ),
-      );
-    expect(propias).toHaveLength(1);
     const forzadas = await db
       .select({ id: kbCategories.id })
       .from(kbCategories)
@@ -647,15 +637,14 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
         ),
       );
     expect(forzadas).toEqual([]);
-    if (propias[0]) createdCategoryIds.push(propias[0].id);
   });
 
   test("el alta inline con returnTo al formulario redirige con la categoría nueva en la URL", async ({
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     const csrfToken = await readCsrfToken(
       page,
       "/base-conocimiento/categorias",
@@ -693,8 +682,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
     const csrfToken = await readCsrfToken(
       page,
       "/base-conocimiento/categorias",
@@ -729,8 +718,8 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     context,
     page,
   }) => {
-    const leader = await fixture.createUser("team_leader", mesa);
-    await setSessionCookie(context, leader.signedSessionId);
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
 
     await page.goto("/base-conocimiento/categorias");
     await expect(page.locator("[data-kb-uncategorized]")).toHaveCount(0);
@@ -738,7 +727,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     const legado = `Heredado ${uniqueToken()}`;
     await fixture.createArticle({
       mesa,
-      authorUserId: leader.userId,
+      authorUserId: admin.userId,
       title: `Artículo heredado ${uniqueToken()}`,
       category: legado,
       status: "draft",

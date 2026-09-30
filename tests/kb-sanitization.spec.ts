@@ -19,11 +19,11 @@ test("elimina scripts, handlers inline y URLs javascript de la vista", async ({
 }) => {
   const suffix = uniqueToken();
   const mesa = await fixture.createMesa();
-  const agent = await fixture.createUser("agent", mesa);
+  const admin = await fixture.createUser("admin", mesa);
   const title = `Sanitización ${suffix}`;
   const article = await fixture.createArticle({
     mesa,
-    authorUserId: agent.userId,
+    authorUserId: admin.userId,
     title,
     content: [
       `# Encabezado ${suffix}`,
@@ -40,7 +40,7 @@ test("elimina scripts, handlers inline y URLs javascript de la vista", async ({
     await dialog.dismiss();
   });
 
-  await setSessionCookie(context, agent.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   const response = await page.goto(`/base-conocimiento/${article.id}`);
   expect(response?.status()).toBe(200);
 
@@ -73,11 +73,11 @@ test("sanitiza el markdown abierto en la vista previa del editor", async ({
   page,
 }) => {
   const mesa = await fixture.createMesa();
-  const leader = await fixture.createUser("team_leader", mesa);
+  const admin = await fixture.createUser("admin", mesa);
   const suffix = uniqueToken();
   const article = await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: `Vista previa ${suffix}`,
     content: "Contenido inicial.",
   });
@@ -87,7 +87,7 @@ test("sanitiza el markdown abierto en la vista previa del editor", async ({
     await dialog.dismiss();
   });
 
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${article.id}`);
   await expect(page.locator("#kb-article-form")).toBeVisible();
   await setEasyMdeContent(

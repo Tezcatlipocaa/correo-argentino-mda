@@ -98,8 +98,8 @@ test("el alta de artículo y su publicación dejan registros estructurados", asy
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const watermark = fixture.auditLogWatermark;
 
   const title = `Auditoría ${uniqueToken()}`;
@@ -112,7 +112,7 @@ test("el alta de artículo y su publicación dejan registros estructurados", asy
     "Artículo creado con éxito.",
   );
 
-  const createRows = readAuditRows(leader.username, watermark);
+  const createRows = readAuditRows(admin.username, watermark);
   expect(createRows).toHaveLength(1);
   const [created] = createRows;
   expect(created.action).toBe(`Creó el artículo "${title}"`);
@@ -141,7 +141,7 @@ test("el alta de artículo y su publicación dejan registros estructurados", asy
     "Artículo publicado con éxito.",
   );
 
-  const rows = readAuditRows(leader.username, watermarkAfterCreate);
+  const rows = readAuditRows(admin.username, watermarkAfterCreate);
   const update = rows.find((row) =>
     row.action.includes("Actualizó el artículo"),
   );
@@ -161,8 +161,8 @@ test("el alta de un artículo publicado no fabrica una transición de estado", a
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const watermark = fixture.auditLogWatermark;
 
   const title = `Publicado ${uniqueToken()}`;
@@ -176,7 +176,7 @@ test("el alta de un artículo publicado no fabrica una transición de estado", a
     "Artículo creado con éxito.",
   );
 
-  const rows = readAuditRows(leader.username, watermark);
+  const rows = readAuditRows(admin.username, watermark);
   expect(rows).toHaveLength(1);
   const [created] = rows;
   expect(created.action).toBe(`Creó el artículo "${title}"`);
@@ -204,13 +204,13 @@ test("una edición que conserva el estado deja una sola fila con los campos edit
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const initialTitle = `Sin cambio de estado ${uniqueToken()}`;
   const article = await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: initialTitle,
     content: largeArticleBody(),
     category: null,
@@ -226,7 +226,7 @@ test("una edición que conserva el estado deja una sola fila con los campos edit
     "Artículo actualizado con éxito.",
   );
 
-  const rows = readAuditRows(leader.username, watermark);
+  const rows = readAuditRows(admin.username, watermark);
   expect(rows).toHaveLength(1);
   const [update] = rows;
   expect(update.action).toBe(`Actualizó el artículo "${updatedTitle}"`);
@@ -252,15 +252,15 @@ test("una edición que conserva el estado deja una sola fila con los campos edit
     "Artículo actualizado con éxito.",
   );
 
-  expect(readAuditRows(leader.username, watermarkAfterEdit)).toEqual([]);
+  expect(readAuditRows(admin.username, watermarkAfterEdit)).toEqual([]);
 });
 
 test("el alta de categoría registra la entidad creada con su nombre y su mesa", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const watermark = fixture.auditLogWatermark;
 
   const nombre = `Alta audit ${uniqueToken()}`;
@@ -270,7 +270,7 @@ test("el alta de categoría registra la entidad creada con su nombre y su mesa",
   await expect(page.getByText(nombre, { exact: true }).first()).toBeVisible();
 
   const categoriaId = readCategoryId(mesa.invgateId, nombre);
-  const rows = readAuditRows(leader.username, watermark);
+  const rows = readAuditRows(admin.username, watermark);
   expect(rows).toHaveLength(1);
   const [created] = rows;
   expect(created.action).toBe(`Creó la categoría "${nombre}"`);
@@ -288,8 +288,8 @@ test("la baja de categoría registra nombre y mesa antes de eliminar", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   const nombre = `Baja audit ${uniqueToken()}`;
   await page.goto("/base-conocimiento/categorias");
@@ -304,7 +304,7 @@ test("la baja de categoría registra nombre y mesa antes de eliminar", async ({
   await row.getByRole("button", { name: `Eliminar ${nombre}` }).click();
   await expect(page.getByText("Categoría eliminada.")).toBeVisible();
 
-  const rows = readAuditRows(leader.username, watermarkAfterCreate);
+  const rows = readAuditRows(admin.username, watermarkAfterCreate);
   expect(rows).toHaveLength(1);
   const [deleted] = rows;
   expect(deleted.action).toBe(`Eliminó la categoría "${nombre}"`);
@@ -322,8 +322,8 @@ test("el renombrado de categoría registra el nombre anterior y la cascada", asy
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const watermark = fixture.auditLogWatermark;
 
   const nombre = `Cascada audit ${uniqueToken()}`;
@@ -335,7 +335,7 @@ test("el renombrado de categoría registra el nombre anterior y la cascada", asy
 
   await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: `Artículo cascada ${uniqueToken()}`,
     category: nombre,
     status: "draft",
@@ -349,7 +349,7 @@ test("el renombrado de categoría registra el nombre anterior y la cascada", asy
     page.getByText(renombrada, { exact: true }).first(),
   ).toBeVisible();
 
-  const rows = readAuditRows(leader.username, watermark);
+  const rows = readAuditRows(admin.username, watermark);
   const rename = rows.find((row) =>
     row.action.includes("Actualizó la categoría"),
   );
@@ -371,8 +371,8 @@ test("la baja bloqueada de una categoría registra el conteo de artículos en us
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   const watermark = fixture.auditLogWatermark;
 
   const nombre = `En uso audit ${uniqueToken()}`;
@@ -383,7 +383,7 @@ test("la baja bloqueada de una categoría registra el conteo de artículos en us
 
   await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: `Artículo en uso ${uniqueToken()}`,
     category: nombre,
     status: "draft",
@@ -398,7 +398,7 @@ test("la baja bloqueada de una categoría registra el conteo de artículos en us
     ),
   ).toBeVisible();
 
-  const rows = readAuditRows(leader.username, watermark);
+  const rows = readAuditRows(admin.username, watermark);
   const refused = rows.find((row) =>
     row.action.includes("No eliminó la categoría"),
   );

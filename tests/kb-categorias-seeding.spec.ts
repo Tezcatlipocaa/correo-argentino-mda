@@ -42,8 +42,8 @@ test("una mesa nueva muestra los 5 defaults en la primera visita", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
 
   expect(catalogNames()).toEqual([]);
 
@@ -59,8 +59,8 @@ test("una mesa nunca queda con una sola categoría", async ({
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento/categorias");
   await expect(
     page.getByText("Accesos", { exact: true }).first(),
@@ -83,8 +83,8 @@ test("borrar los 5 defaults los hace reaparecer en la siguiente lectura", async 
   context,
   page,
 }) => {
-  const leader = await fixture.createUser("team_leader", mesa);
-  await setSessionCookie(context, leader.signedSessionId);
+  const admin = await fixture.createUser("admin", mesa);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento/categorias");
   await expect(
     page.getByText("Accesos", { exact: true }).first(),

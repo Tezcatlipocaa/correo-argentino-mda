@@ -8,13 +8,6 @@ let adminUser: TestUser;
 let agentUser: TestUser;
 let articleTitle: string;
 
-const navLink = (page: Page) =>
-  page
-    .locator(
-      "nav a[href='/base-conocimiento'], aside a[href='/base-conocimiento']",
-    )
-    .first();
-
 const articleRow = (page: Page, title: string) =>
   page
     .locator("#kb-articles-table [data-table-row]")
@@ -39,26 +32,27 @@ test.afterEach(async () => {
 });
 
 test.describe("Sección Base de conocimiento", () => {
-  test("admin ve el enlace y la lista diferida", async ({ context, page }) => {
+  test("admin ve la lista diferida", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId);
     await page.goto("/base-conocimiento");
 
-    await expect(navLink(page)).toBeVisible();
     const root = page.locator("#base-conocimiento-root");
     await expect(root).toBeVisible();
     await expect(articleRow(page, articleTitle)).toBeVisible();
   });
 
-  test("un agente ve el enlace y la lista diferida", async ({
+  test("un agente NO ve el enlace y es redirigido", async ({
     context,
     page,
   }) => {
     await setSessionCookie(context, agentUser.signedSessionId);
-    await page.goto("/base-conocimiento");
 
-    await expect(navLink(page)).toBeVisible();
-    const root = page.locator("#base-conocimiento-root");
-    await expect(root).toBeVisible();
-    await expect(articleRow(page, articleTitle)).toBeVisible();
+    await page.goto("/base-conocimiento");
+    expect(new URL(page.url()).pathname).toBe("/");
+    await expect(page.locator("#global-toast-container")).toContainText(
+      "Acceso no autorizado",
+    );
+
+    await expect(page.locator("#base-conocimiento-root")).toHaveCount(0);
   });
 });

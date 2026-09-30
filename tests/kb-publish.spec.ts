@@ -4,11 +4,11 @@ import { eq } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { kbArticles } from "../src/db/schema";
 import { setSessionCookie, type TestUser } from "./helpers/auth";
-import { KbTestFixture, type KbTestMesa } from "./helpers/kb";
+import { expectKbDenied, KbTestFixture, type KbTestMesa } from "./helpers/kb";
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
-let leader: TestUser;
+let admin: TestUser;
 let agent: TestUser;
 let articleId: number;
 
@@ -32,11 +32,11 @@ const submitStatus = async (
 test.beforeEach(async () => {
   fixture = new KbTestFixture();
   mesa = await fixture.createMesa();
-  leader = await fixture.createUser("team_leader", mesa);
+  admin = await fixture.createUser("admin", mesa);
   agent = await fixture.createUser("agent", mesa);
   const article = await fixture.createArticle({
     mesa,
-    authorUserId: leader.userId,
+    authorUserId: admin.userId,
     title: "Ciclo de publicación E2E",
     content: "Contenido inicial.",
     status: "draft",
@@ -52,7 +52,7 @@ test("publica un borrador para su mesa y luego lo archiva", async ({
   context,
   page,
 }) => {
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${articleId}`);
   await expect(page.locator("#kb-article-form")).toBeVisible();
   await submitStatus(page, "published");
@@ -73,22 +73,9 @@ test("publica un borrador para su mesa y luego lo archiva", async ({
   expect(published).toBeDefined();
   if (!published) throw new Error("Published article was not found");
   expect(published.status).toBe("published");
-  expect(published.publishedByUserId).toBe(leader.userId);
+  expect(published.publishedByUserId).toBe(admin.userId);
   expect(published.publishedAt).toBeInstanceOf(Date);
 
-  await context.clearCookies();
-  await setSessionCookie(context, agent.signedSessionId);
-  const listResponse = await page.goto("/base-conocimiento");
-  expect(listResponse?.status()).toBe(200);
-  const publishedRow = page
-    .locator("#kb-articles-table [data-table-row]")
-    .filter({
-      has: page.getByRole("link", {
-        name: "Ciclo de publicación E2E",
-        exact: true,
-      }),
-    });
-  await expect(publishedRow).toBeVisible();
   const viewResponse = await page.goto(`/base-conocimiento/${articleId}`);
   expect(viewResponse?.status()).toBe(200);
   await expect(
@@ -96,7 +83,18 @@ test("publica un borrador para su mesa y luego lo archiva", async ({
   ).toBeVisible();
 
   await context.clearCookies();
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, agent.signedSessionId);
+  expectKbDenied(
+    await context.request.get("/base-conocimiento", { maxRedirects: 0 }),
+  );
+  expectKbDenied(
+    await context.request.get(`/base-conocimiento/${articleId}`, {
+      maxRedirects: 0,
+    }),
+  );
+
+  await context.clearCookies();
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto(`/base-conocimiento/edit/${articleId}`);
   await submitStatus(page, "archived");
   await expect(page.locator("#global-toast-container")).toContainText(
@@ -110,7 +108,7 @@ test("publica un borrador para su mesa y luego lo archiva", async ({
   expect(archived?.status).toBe("archived");
 
   await context.clearCookies();
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento");
   const writerArchivedRow = page
     .locator("#kb-articles-table [data-table-row]")
@@ -127,15 +125,12 @@ test("publica un borrador para su mesa y luego lo archiva", async ({
 
   await context.clearCookies();
   await setSessionCookie(context, agent.signedSessionId);
-  await page.goto("/base-conocimiento");
-  await expect(
-    page.getByRole("link", {
-      name: "Ciclo de publicación E2E",
-      exact: true,
-    }),
-  ).toHaveCount(0);
-  const archivedViewResponse = await page.goto(
-    `/base-conocimiento/${articleId}`,
+  expectKbDenied(
+    await context.request.get("/base-conocimiento", { maxRedirects: 0 }),
   );
-  expect(archivedViewResponse?.status()).toBe(404);
+  expectKbDenied(
+    await context.request.get(`/base-conocimiento/${articleId}`, {
+      maxRedirects: 0,
+    }),
+  );
 });

@@ -28,13 +28,13 @@ test.describe("Base de conocimiento - listado", () => {
     const suffix = uniqueToken();
     const title = `Publicado visible ${suffix}`;
     const category = `Categoría ${suffix}`;
-    const agent = await fixture.createUser("agent", mesa);
+    const admin = await fixture.createUser("admin", mesa);
     const otherMesa = await fixture.createMesa();
     const otherLeader = await fixture.createUser("team_leader", otherMesa);
     const foreignTitle = `Publicado ajeno ${suffix}`;
     await fixture.createArticle({
       mesa,
-      authorUserId: agent.userId,
+      authorUserId: admin.userId,
       title,
       category,
     });
@@ -45,64 +45,16 @@ test.describe("Base de conocimiento - listado", () => {
       category: `Categoría ajena ${suffix}`,
     });
 
-    await setSessionCookie(context, agent.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento");
 
     const row = articleRow(page, title);
     await expect(row).toBeVisible();
     await expect(row).toContainText(category);
-    await expect(articleRow(page, foreignTitle)).toHaveCount(0);
+    await expect(articleRow(page, foreignTitle)).toBeVisible();
     await expect(
       page.locator("#kb-articles-table [data-table-header]"),
-    ).not.toContainText("Mesa");
-  });
-
-  test("oculta borradores a un agente sin permisos de escritura", async ({
-    context,
-    page,
-  }) => {
-    const suffix = uniqueToken();
-    const publishedTitle = `Publicado para agente ${suffix}`;
-    const draftTitle = `Borrador privado ${suffix}`;
-    const agent = await fixture.createUser("agent", mesa);
-    await fixture.createArticle({
-      mesa,
-      authorUserId: agent.userId,
-      title: publishedTitle,
-      content: "Contenido publicado.",
-    });
-    await fixture.createArticle({
-      mesa,
-      authorUserId: agent.userId,
-      title: draftTitle,
-      content: "Contenido en borrador.",
-      status: "draft",
-    });
-
-    await setSessionCookie(context, agent.signedSessionId);
-    await page.goto("/base-conocimiento");
-
-    await expect(articleRow(page, publishedTitle)).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: draftTitle, exact: true }),
-    ).toHaveCount(0);
-  });
-
-  test("renderiza empty state cuando la mesa no tiene artículos", async ({
-    context,
-    page,
-  }) => {
-    const agent = await fixture.createUser("agent", mesa);
-    await setSessionCookie(context, agent.signedSessionId);
-
-    await page.goto("/base-conocimiento");
-
-    const root = page.locator("#base-conocimiento-root");
-    await expect(root).toBeVisible();
-    await expect(
-      root.getByText("No hay artículos", { exact: true }),
-    ).toBeVisible();
-    await expect(page.locator("#kb-articles-search")).toHaveCount(0);
+    ).toContainText("Mesa");
   });
 
   test("filtra filas por título y categoría", async ({ context, page }) => {
@@ -110,21 +62,21 @@ test.describe("Base de conocimiento - listado", () => {
     const matchingTitle = `Filtro coincidencia ${suffix}`;
     const matchingCategory = `Accesos ${suffix}`;
     const otherTitle = `Filtro distinto ${suffix}`;
-    const agent = await fixture.createUser("agent", mesa);
+    const admin = await fixture.createUser("admin", mesa);
     await fixture.createArticle({
       mesa,
-      authorUserId: agent.userId,
+      authorUserId: admin.userId,
       title: matchingTitle,
       category: matchingCategory,
     });
     await fixture.createArticle({
       mesa,
-      authorUserId: agent.userId,
+      authorUserId: admin.userId,
       title: otherTitle,
       category: `Impresoras ${suffix}`,
     });
 
-    await setSessionCookie(context, agent.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento");
 
     const matchingRow = articleRow(page, matchingTitle);
@@ -155,4 +107,44 @@ test.describe("Base de conocimiento - listado", () => {
       ),
     ).toBeVisible();
   });
+
+  test("muestra el empty state de búsqueda cuando no hay coincidencias", async ({
+    context,
+    page,
+  }) => {
+    const admin = await fixture.createUser("admin", mesa);
+    await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Artículo buscable ${uniqueToken()}`,
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto("/base-conocimiento");
+
+    await page
+      .locator("#kb-articles-search")
+      .fill(`sin-coincidencias-${uniqueToken()}`);
+
+    await expect(
+      page.getByText("Sin artículos", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "No encontramos artículos para esa búsqueda. Probá con otros términos.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.locator("#kb-articles-table [data-table-row]:visible"),
+    ).toHaveCount(0);
+  });
+
+  // NOTA: el empty state server-side "No hay artículos" (SearchEmptyState en
+  // KbListContent.astro cuando `articles.length === 0`) NO se cubre a propósito.
+  // Bajo la política admin-only, un admin tiene scope global, por lo que una
+  // mesa recién creada sigue viendo artículos de otras mesas y el conjunto
+  // global vacío es inalcanzable con los fixtures E2E. La cobertura del empty
+  // state queda cubierta del lado cliente por el test de búsqueda sin
+  // coincidencias.
 });

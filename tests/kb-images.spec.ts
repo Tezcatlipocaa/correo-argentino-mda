@@ -4,7 +4,12 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { kbArticles } from "../src/db/schema";
 import { setSessionCookie } from "./helpers/auth";
-import { KbTestFixture, setEasyMdeContent, uniqueToken } from "./helpers/kb";
+import {
+  expectKbDenied,
+  KbTestFixture,
+  setEasyMdeContent,
+  uniqueToken,
+} from "./helpers/kb";
 
 const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -70,7 +75,7 @@ test("sirve imágenes válidas y respeta límites y scope", async ({
 }) => {
   const uploadMesa = await fixture.createMesa();
   const otherMesa = await fixture.createMesa();
-  const uploader = await fixture.createUser("team_leader", uploadMesa);
+  const uploader = await fixture.createUser("admin", uploadMesa);
   const sameMesaAgent = await fixture.createUser("agent", uploadMesa);
   const otherMesaAgent = await fixture.createUser("agent", otherMesa);
   const otherMesaAdmin = await fixture.createUser("admin", otherMesa);
@@ -99,21 +104,29 @@ test("sirve imágenes válidas y respeta límites y scope", async ({
 
   await context.clearCookies();
   await setSessionCookie(context, sameMesaAgent.signedSessionId);
-  const sameMesaResponse = await context.request.get(payload.url);
-  expect(sameMesaResponse.status()).toBe(200);
-  expect(sameMesaResponse.headers()["content-type"]).toBe("image/png");
-  const servedBytes = Buffer.from(await sameMesaResponse.body());
-  expect(servedBytes.subarray(0, PNG_MAGIC.length)).toEqual(PNG_MAGIC);
+  const sameMesaResponse = await context.request.get(payload.url, {
+    maxRedirects: 0,
+  });
+  expectKbDenied(sameMesaResponse);
 
   await context.clearCookies();
   await setSessionCookie(context, otherMesaAdmin.signedSessionId);
   const adminCrossMesaResponse = await context.request.get(payload.url);
   expect(adminCrossMesaResponse.status()).toBe(200);
+  expect(adminCrossMesaResponse.headers()["content-type"]).toBe("image/png");
+  expect(
+    Buffer.from(await adminCrossMesaResponse.body()).subarray(
+      0,
+      PNG_MAGIC.length,
+    ),
+  ).toEqual(PNG_MAGIC);
 
   await context.clearCookies();
   await setSessionCookie(context, otherMesaAgent.signedSessionId);
-  const agentCrossMesaResponse = await context.request.get(payload.url);
-  expect(agentCrossMesaResponse.status()).toBe(404);
+  const agentCrossMesaResponse = await context.request.get(payload.url, {
+    maxRedirects: 0,
+  });
+  expectKbDenied(agentCrossMesaResponse);
 
   await context.clearCookies();
   await setSessionCookie(context, uploader.signedSessionId);
@@ -168,11 +181,11 @@ test("sube una imagen desde EasyMDE y la renderiza al guardar", async ({
   page,
 }) => {
   const mesa = await fixture.createMesa();
-  const leader = await fixture.createUser("team_leader", mesa);
+  const admin = await fixture.createUser("admin", mesa);
   const suffix = uniqueToken();
   const title = `Imagen desde editor ${suffix}`;
 
-  await setSessionCookie(context, leader.signedSessionId);
+  await setSessionCookie(context, admin.signedSessionId);
   await page.goto("/base-conocimiento/create");
   await expect(page.locator("#kb-article-form")).toBeVisible();
   await page.locator("#kb-title").fill(title);
@@ -220,7 +233,7 @@ test("sube una imagen desde EasyMDE y la renderiza al guardar", async ({
     .where(
       and(
         eq(kbArticles.helpdeskId, mesa.invgateId),
-        eq(kbArticles.authorUserId, leader.userId),
+        eq(kbArticles.authorUserId, admin.userId),
         eq(kbArticles.title, title),
       ),
     )

@@ -1,7 +1,12 @@
 import "dotenv/config";
 import { expect, test, type Page } from "@playwright/test";
 import { setSessionCookie, type TestUser } from "./helpers/auth";
-import { KbTestFixture, uniqueToken, type KbTestMesa } from "./helpers/kb";
+import {
+  expectKbDenied,
+  KbTestFixture,
+  uniqueToken,
+  type KbTestMesa,
+} from "./helpers/kb";
 
 test.use({ viewport: { width: 1920, height: 1080 } });
 
@@ -41,11 +46,26 @@ test.afterEach(async () => {
 });
 
 test.describe("Base de conocimiento - fila de metadatos", () => {
-  test("creación no-admin: cuatro campos en una fila antes del editor", async ({
+  test("creación de un no-admin es denegada", async ({ context, page }) => {
+    await setSessionCookie(context, leader.signedSessionId);
+
+    const denial = await context.request.get("/base-conocimiento/create", {
+      maxRedirects: 0,
+    });
+    expectKbDenied(denial);
+
+    await page.goto("/base-conocimiento/create");
+    await expect(page.locator("#kb-article-form")).toHaveCount(0);
+    await expect(page.locator("#global-toast-container")).toContainText(
+      "Acceso no autorizado",
+    );
+  });
+
+  test("creación admin: fila de metadatos antes del editor y select de mesas", async ({
     context,
     page,
   }) => {
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto("/base-conocimiento/create");
     await expect(
       page.getByRole("heading", { name: "Nuevo artículo" }),
@@ -58,13 +78,8 @@ test.describe("Base de conocimiento - fila de metadatos", () => {
       "Mesa",
       "Estado",
     ]);
-
-    await expect(row(page).locator("#kb-title")).toBeVisible();
-    await expect(row(page).locator("#kb-category")).toBeVisible();
+    await expect(mesaCell(page).locator("select#kb-helpdesk")).toBeVisible();
     await expect(row(page).locator("#kb-status")).toBeVisible();
-    await expect(mesaCell(page)).toBeVisible();
-    await expect(mesaCell(page)).toContainText(mesa.name);
-    await expect(mesaCell(page).locator("select")).toHaveCount(0);
 
     const rowBox = await row(page).boundingBox();
     const editorBox = await page
@@ -88,26 +103,11 @@ test.describe("Base de conocimiento - fila de metadatos", () => {
     expect(editorPosition.containedBy).toBe(false);
   });
 
-  test("creación admin: la celda Mesa contiene el select de mesas", async ({
-    context,
-    page,
-  }) => {
-    await setSessionCookie(context, admin.signedSessionId);
-    await page.goto("/base-conocimiento/create");
-    await expect(
-      page.getByRole("heading", { name: "Nuevo artículo" }),
-    ).toBeVisible();
-
-    await expect(row(page)).toHaveCount(1);
-    await expect(mesaCell(page).locator("select#kb-helpdesk")).toBeVisible();
-    await expect(row(page).locator("#kb-status")).toBeVisible();
-  });
-
   test("edición: Mesa read-only y sin caja de estado actual", async ({
     context,
     page,
   }) => {
-    await setSessionCookie(context, leader.signedSessionId);
+    await setSessionCookie(context, admin.signedSessionId);
     await page.goto(`/base-conocimiento/edit/${articleId}`);
     await expect(page.locator("#kb-article-form")).toBeVisible();
 
