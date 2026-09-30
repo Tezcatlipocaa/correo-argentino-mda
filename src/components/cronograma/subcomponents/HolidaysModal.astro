@@ -15,10 +15,10 @@ import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
   titleClass="font-black text-lg uppercase tracking-tight"
   size="lg"
   zIndex="z-200"
-  actionsBorder
+  actionsFooter
 >
   <Fragment slot="content">
-    <div class="space-y-6">
+    <div class="space-y-4">
       <fieldset class="fieldset">
         <FormLegend class="font-bold tracking-wider">Lista de Feriados</FormLegend>
         <div
@@ -33,21 +33,23 @@ import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
         <p class="fieldset-legend w-full font-bold tracking-wider">
           Agregar Nuevo Feriado
         </p>
-        <FormField
-          id="new-holiday-date"
-          name="new-holiday-date"
-          label="Fecha"
-          type="date"
-          size="sm"
-          inputClass="font-mono"
-        />
-        <FormField
-          id="new-holiday-name"
-          name="new-holiday-name"
-          label="Nombre del Feriado"
-          placeholder="Ej: Año Nuevo"
-          size="sm"
-        />
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField
+            id="new-holiday-date"
+            name="new-holiday-date"
+            label="Fecha"
+            type="date"
+            size="sm"
+            inputClass="font-mono"
+          />
+          <FormField
+            id="new-holiday-name"
+            name="new-holiday-name"
+            label="Nombre del Feriado"
+            placeholder="Ej: Año Nuevo"
+            size="sm"
+          />
+        </div>
         <div class="flex justify-end">
           <ActionButton
             id="add-holiday-btn"

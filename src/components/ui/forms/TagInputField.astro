@@ -25,33 +25,43 @@ const {
 } = Astro.props;
 ---
 
-<fieldset class:list={["fieldset", className]} data-taginput-root data-name={name}>
+<fieldset
+  class:list={["fieldset", className]}
+  data-taginput-root
+  data-name={name}
+>
   <FormLegend class="font-bold tracking-wider">
     {label}
     {required && <span class="text-error">*</span>}
   </FormLegend>
 
   <div class="flex flex-wrap gap-1.5" data-taginput-chips>
-    {tags.map((t) => (
-      <span class="badge badge-secondary badge-soft uppercase" data-taginput-chip data-value={t}>
-        {t}
-        <button
-          type="button"
-          class="btn btn-ghost btn-xs btn-circle"
-          data-taginput-remove={t}
-          aria-label={`Quitar ${t}`}
+    {
+      tags.map((t) => (
+        <span
+          class="badge badge-secondary badge-soft uppercase"
+          data-taginput-chip
+          data-value={t}
         >
-          <Icon name="boxicons:x" size={12} />
-        </button>
-        <input type="hidden" name={name} value={t} />
-      </span>
-    ))}
+          {t}
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs btn-circle"
+            data-taginput-remove={t}
+            aria-label={`Quitar ${t}`}
+          >
+            <Icon name="boxicons:x" size={12} />
+          </button>
+          <input type="hidden" name={name} value={t} />
+        </span>
+      ))
+    }
   </div>
 
   <input
     type="text"
     id={id}
-    class="input input-bordered input-sm mt-2 w-full"
+    class="input input-sm mt-2 w-full"
     data-taginput-input
     placeholder={placeholder}
     autocomplete="off"
@@ -82,7 +92,8 @@ const {
       >
         <path
           fill="currentColor"
-          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"></path>
+          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"
+        ></path>
       </svg>
     </button>
     <input type="hidden" data-taginput-hidden />
@@ -104,10 +115,12 @@ const {
 
     const tags = new Set<string>();
 
-    chips.querySelectorAll<HTMLElement>("[data-taginput-chip]").forEach((chip) => {
-      const v = chip.dataset.value || "";
-      if (v) tags.add(v);
-    });
+    chips
+      .querySelectorAll<HTMLElement>("[data-taginput-chip]")
+      .forEach((chip) => {
+        const v = chip.dataset.value || "";
+        if (v) tags.add(v);
+      });
 
     function renderChips() {
       chips.replaceChildren();
@@ -117,7 +130,9 @@ const {
           : null;
         if (!chip) return;
         chip.dataset.value = t;
-        const labelEl = chip.querySelector<HTMLElement>("[data-taginput-chip-label]");
+        const labelEl = chip.querySelector<HTMLElement>(
+          "[data-taginput-chip-label]",
+        );
         if (labelEl) labelEl.textContent = t;
         const removeBtn = chip.querySelector<HTMLButtonElement>(
           "[data-taginput-remove]",
@@ -126,7 +141,9 @@ const {
           removeBtn.dataset.taginputRemove = t;
           removeBtn.setAttribute("aria-label", `Quitar ${t}`);
         }
-        const hidden = chip.querySelector<HTMLInputElement>("[data-taginput-hidden]");
+        const hidden = chip.querySelector<HTMLInputElement>(
+          "[data-taginput-hidden]",
+        );
         if (hidden) {
           hidden.name = name;
           hidden.value = t;

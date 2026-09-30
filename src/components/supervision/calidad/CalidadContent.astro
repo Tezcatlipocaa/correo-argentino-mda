@@ -324,7 +324,7 @@ const cleanBase = getCleanBase();
       </button>
       <select
         id="month-selector"
-        class="select select-bordered select-sm bg-base-100 w-full text-center font-bold sm:w-48"
+        class="select select-sm bg-base-100 w-full text-center font-bold sm:w-48"
       >
         {
           selectorMonthsList.map((m) => (
@@ -399,7 +399,7 @@ const cleanBase = getCleanBase();
                 <div class="flex gap-2">
                   <select
                     id="operator-sort"
-                    class="select select-bordered select-sm text-base-content/70 w-full font-medium"
+                    class="select select-sm text-base-content/70 w-full font-medium"
                   >
                     <option value="name">Nombre: A → Z</option>
                     <option value="name-desc">Nombre: Z → A</option>
@@ -1188,7 +1188,7 @@ const cleanBase = getCleanBase();
       <div class="divider my-2"></div>
 
       <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="form-control sm:col-span-2">
+        <div class="sm:col-span-2" data-field>
           <label
             class="label hover:bg-base-200 w-fit cursor-pointer justify-start gap-3 rounded-lg p-1.5"
           >
@@ -1307,7 +1307,7 @@ const cleanBase = getCleanBase();
 >
   <Fragment slot="content">
     <!-- Tabs Header -->
-    <div class="tabs tabs-boxed bg-base-200/50 mb-4 shrink-0 rounded-xl p-1">
+    <div class="tabs bg-base-200/50 mb-4 shrink-0 rounded-xl p-1">
       <button
         type="button"
         class="tab tab-active parameter-tab flex-1 text-xs font-bold uppercase"
@@ -1779,7 +1779,7 @@ const cleanBase = getCleanBase();
             input.classList.add("input-error");
           }
 
-          const errContainer = input.closest(".form-control");
+          const errContainer = input.closest("[data-field]");
           if (errContainer) {
             const errMsg = document.createElement("span");
             errMsg.className =
@@ -2685,7 +2685,7 @@ const cleanBase = getCleanBase();
             type="text" 
             value="${escapeHtml(param.name)}" 
             placeholder="Nombre del criterio..."
-            class="input input-bordered input-sm flex-1 font-semibold bg-base-100 focus:outline-none focus:border-primary param-input-name"
+            class="input input-sm flex-1 font-semibold bg-base-100 focus:outline-none focus:border-primary param-input-name"
             ${isDeleted ? "disabled" : ""}
             data-index="${actualIndex}"
           />
@@ -2696,7 +2696,7 @@ const cleanBase = getCleanBase();
               step="0.1" 
               min="0"
               value="${param.weight}" 
-              class="input input-bordered input-sm w-16 text-center font-bold bg-base-100 focus:outline-none focus:border-primary param-input-weight"
+              class="input input-sm w-16 text-center font-bold bg-base-100 focus:outline-none focus:border-primary param-input-weight"
               ${isDeleted ? "disabled" : ""}
               data-index="${actualIndex}"
             />

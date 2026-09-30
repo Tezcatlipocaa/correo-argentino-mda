@@ -65,7 +65,7 @@ export function showPrompt(
       <div class="modal-box max-w-sm bg-base-100 border border-base-300 shadow-2xl rounded-3xl">
         <h3 class="font-black text-lg mb-3 text-base-content uppercase tracking-tight">Ingresar Valor</h3>
         <p class="text-sm text-base-content/70 mb-4">${message}</p>
-        <input type="text" id="prompt-input-field" class="input input-bordered w-full input-sm rounded-xl text-sm" value="${defaultValue}" />
+        <input type="text" id="prompt-input-field" class="input w-full input-sm rounded-xl text-sm" value="${defaultValue}" />
         <div class="modal-action mt-6 flex justify-end gap-2">
           <button class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase" id="prompt-cancel-btn" type="button">Cancelar</button>
           <button class="btn btn-sm btn-secondary text-xs font-black uppercase" id="prompt-ok-btn" type="button">Aceptar</button>

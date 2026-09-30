@@ -59,7 +59,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
     assert.ok(src.includes(id), `OperatorForm: id ${id} preservado`);
   }
   assert.doesNotMatch(src, /<form method="dialog">/, "OperatorForm: sin form dialog vestigial");
-  assert.match(src, /actionsBorder/, "OperatorForm: footer estándar con borde");
+  assert.match(src, /actionsFooter/, "OperatorForm: footer estándar");
 }
 
 // ── RulesSettingsModal ──
@@ -71,7 +71,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.match(src, /icon="boxicons:x-filled"/, "Rules: cancelar x-filled");
   assert.match(src, /boxicons:save-filled/, "Rules: guardar save-filled");
   assert.ok(src.includes("save-rules-btn"), "Rules: id save-rules-btn preservado");
-  assert.match(src, /actionsBorder/, "Rules: footer estándar con borde");
+  assert.match(src, /actionsFooter/, "Rules: footer estándar");
   assert.doesNotMatch(src, /<form method="dialog">/, "Rules: sin form dialog vestigial");
 }
 
@@ -86,7 +86,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.ok(src.includes("cancel-holidays-btn"), "Feriados: id cancelar preservado");
   assert.ok(src.includes("save-holidays-btn"), "Feriados: id guardar preservado");
   assert.ok(src.includes("add-holiday-btn"), "Feriados: id agregar preservado");
-  assert.match(src, /actionsBorder/, "Feriados: footer estándar con borde");
+  assert.match(src, /actionsFooter/, "Feriados: footer estándar");
   const markup = src.split("<script")[0];
   assert.doesNotMatch(markup, /btn-ghost/, "Feriados: sin botones ghost en el markup");
   assert.doesNotMatch(markup, /btn-primary/, "Feriados: confirmación en btn-secondary");
@@ -101,7 +101,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.match(src, /boxicons:check-filled/, "Nuevo mes: confirmar check-filled");
   assert.ok(src.includes("cancel-new-month"), "Nuevo mes: id cancelar preservado");
   assert.ok(src.includes("confirm-new-month"), "Nuevo mes: id confirmar preservado");
-  assert.match(src, /actionsBorder/, "Nuevo mes: footer estándar con borde");
+  assert.match(src, /actionsFooter/, "Nuevo mes: footer estándar");
   assert.doesNotMatch(src, /classList\.add\("modal-open"\)/, "Nuevo mes: sin modal-open manual");
 }
 
@@ -115,7 +115,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.doesNotMatch(src, /<dialog id="edit-saturday-schedule-modal"/, "Sábado: sin dialog crudo");
   assert.ok(src.includes('id="saturday-schedule-save-btn"'), "Sábado: botón guardar identificado");
   assert.match(src, /form="edit-saturday-schedule-form"/, "Sábado: submit asociado al form");
-  assert.match(src, /actionsBorder/, "Sábado: footer estándar con borde");
+  assert.match(src, /actionsFooter/, "Sábado: footer estándar");
 }
 
 // ── AgentsTicketModal ──
@@ -139,6 +139,13 @@ const read = (path) => readFile(new URL(path, root), "utf8");
     /icon="boxicons:plus-filled"/,
     "Ubicaciones: confirmar con plus-filled",
   );
+}
+
+// ── Modal.astro: footer estándar sin divider ──
+{
+  const src = await read("src/components/ui/Modal.astro");
+  assert.match(src, /actionsFooter/, "Modal: prop actionsFooter");
+  assert.doesNotMatch(src, /border-t/, "Modal: footer sin borde superior");
 }
 
 console.log("forms-standard-modals: all checks passed");

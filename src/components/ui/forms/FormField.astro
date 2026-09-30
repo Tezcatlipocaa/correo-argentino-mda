@@ -42,14 +42,14 @@ const sizeClass = size === "sm" ? "input-sm" : size === "xs" ? "input-xs" : "";
           type="file"
           id={id}
           name={name}
-          class="file-input file-input-bordered w-full"
+          class="file-input file-w-full"
           {...rest}
         />
       </div>
     ) : icon ? (
       <label
         class:list={[
-          "input input-bordered flex w-full items-center gap-2",
+          "input flex w-full items-center gap-2",
           sizeClass,
           inputClass,
         ]}
@@ -62,7 +62,7 @@ const sizeClass = size === "sm" ? "input-sm" : size === "xs" ? "input-xs" : "";
         type={type}
         id={id}
         name={name}
-        class:list={["input input-bordered w-full", sizeClass, inputClass]}
+        class:list={["input w-full", sizeClass, inputClass]}
         {...rest}
       />
     )

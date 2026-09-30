@@ -123,9 +123,7 @@ export default function TitleModal({
             <div>
               <p className="text-base-content pb-2 text-sm">Nombre *</p>
               <input
-                className={`input input-bordered w-full ${
-                  errors.name ? "input-error" : ""
-                }`}
+                className={`input w-full ${errors.name ? "input-error" : ""}`}
                 placeholder="Escribí el nombre del título"
                 value={form.name}
                 onChange={(e) => {
@@ -141,7 +139,7 @@ export default function TitleModal({
             <div>
               <p className="text-base-content pb-2 text-sm">Categoría *</p>
               <select
-                className={`select select-bordered w-full ${errors.category ? "select-error" : ""}`}
+                className={`select w-full ${errors.category ? "select-error" : ""}`}
                 value={form.categoryId}
                 onChange={(e) => {
                   setForm({
@@ -162,7 +160,7 @@ export default function TitleModal({
             <div>
               <p className="text-base-content pb-2 text-sm">Ruta en Invgate</p>
               <input
-                className="input input-bordered w-full"
+                className="input w-full"
                 placeholder="Escribí la ruta de asignación dentro de Invgate"
                 value={form.route}
                 onChange={(e) =>
@@ -178,7 +176,7 @@ export default function TitleModal({
                                 Artículo dentro de la base de conocimientos
                             </p>
                             <input
-                                className="input input-bordered w-full"
+                                className="input w-full"
                                 placeholder="Escribí el número del artículo sin #"
                                 value={form.articleOnKdb}
                                 onChange={(e) =>
@@ -194,7 +192,7 @@ export default function TitleModal({
             <div>
               <p className="text-base-content pb-2 text-sm">Descripción</p>
               <textarea
-                className="textarea textarea-bordered h-36 w-full"
+                className="textarea h-36 w-full"
                 placeholder="Escribí la descripción del ticket"
                 value={form.description}
                 onChange={(e) =>

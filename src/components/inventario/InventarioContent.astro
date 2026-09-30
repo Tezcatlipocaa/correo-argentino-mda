@@ -50,11 +50,9 @@ const terminalRowGridClass = "grid grid-cols-12 items-start gap-4";
 
 const resolvedParams = getResolvedSearchParams(Astro.request, Astro.url);
 const sortBy = (resolvedParams.get("sortBy") || undefined) as
-  | TerminalSortKey
-  | undefined;
+  TerminalSortKey | undefined;
 const sortOrder = (resolvedParams.get("sortOrder") || undefined) as
-  | SortOrder
-  | undefined;
+  SortOrder | undefined;
 const activeTab = resolvedParams.get("inventory_tabs") || "terminales";
 
 const todayStr = new Date().toLocaleDateString("en-CA", {
@@ -101,7 +99,11 @@ const [
     ),
 ]);
 
-const { items: terminalItems, count: totalTerminals, hasMore } = terminalDisplay;
+const {
+  items: terminalItems,
+  count: totalTerminals,
+  hasMore,
+} = terminalDisplay;
 
 const osVariations = rawUniqueOs.map((r) => r.os).filter(Boolean);
 
@@ -214,10 +216,10 @@ const inventoryTabs = [
       >
         <!-- Fila A: filtros de atributos -->
         <div class="grid w-full grid-cols-3 gap-3 md:grid-cols-6">
-          <div class="form-control grow">
+          <div class="grow">
             <select
               id="filter-os"
-              class="select select-bordered text-base-content/80 w-full font-medium"
+              class="select text-base-content/80 w-full font-medium"
               aria-label="Filtrar por sistema operativo"
             >
               <option value="all">Sist. Op. (Todos)</option>
@@ -230,20 +232,20 @@ const inventoryTabs = [
               <option value="debian">Debian</option>
             </select>
           </div>
-          <div class="form-control grow">
+          <div class="grow">
             <select
               id="filter-os-variant"
-              class="select select-bordered text-base-content/80 w-full font-medium"
+              class="select text-base-content/80 w-full font-medium"
               aria-label="Filtrar por variante de sistema operativo"
               disabled
             >
               <option value="all">Variante (Todas)</option>
             </select>
           </div>
-          <div class="form-control grow">
+          <div class="grow">
             <select
               id="filter-arch"
-              class="select select-bordered text-base-content/80 w-full font-medium"
+              class="select text-base-content/80 w-full font-medium"
               aria-label="Filtrar por arquitectura"
             >
               <option value="all">Arquitectura (Todas)</option>
@@ -251,10 +253,10 @@ const inventoryTabs = [
               <option value="32 bits">32 bits</option>
             </select>
           </div>
-          <div class="form-control grow">
+          <div class="grow">
             <select
               id="filter-brand"
-              class="select select-bordered text-base-content/80 w-full font-medium"
+              class="select text-base-content/80 w-full font-medium"
               aria-label="Filtrar por marca"
             >
               <option value="all">Marca (Todas)</option>
@@ -265,10 +267,10 @@ const inventoryTabs = [
               <option value="coradir">Coradir</option>
             </select>
           </div>
-          <div class="form-control grow">
+          <div class="grow">
             <select
               id="filter-model"
-              class="select select-bordered text-base-content/80 w-full font-medium"
+              class="select text-base-content/80 w-full font-medium"
               aria-label="Filtrar por modelo de terminal"
             >
               <option value="all">Modelo (Todos)</option>
@@ -281,10 +283,10 @@ const inventoryTabs = [
               }
             </select>
           </div>
-          <div class="form-control grow">
+          <div class="grow">
             <select
               id="filter-ram"
-              class="select select-bordered text-base-content/80 w-full font-medium"
+              class="select text-base-content/80 w-full font-medium"
               aria-label="Filtrar por memoria RAM"
             >
               <option value="all">RAM (Todas)</option>
@@ -343,9 +345,14 @@ const inventoryTabs = [
               </span>
             </label>
           </div>
-          <div class="bg-base-200/50 flex flex-wrap items-center gap-4 rounded-lg px-3 py-1.5">
+          <div
+            class="bg-base-200/50 flex flex-wrap items-center gap-4 rounded-lg px-3 py-1.5"
+          >
             <label class="label cursor-pointer gap-2 p-0">
-              <span class="label-text text-base-content/80 text-xs font-medium sm:text-sm">Duplicados</span>
+              <span
+                class="label-text text-base-content/80 text-xs font-medium sm:text-sm"
+                >Duplicados</span
+              >
               <input
                 type="checkbox"
                 id="filter-duplicates"
@@ -354,7 +361,10 @@ const inventoryTabs = [
               />
             </label>
             <label class="label cursor-pointer gap-2 p-0">
-              <span class="label-text text-base-content/80 text-xs font-medium sm:text-sm">Sin ubicación</span>
+              <span
+                class="label-text text-base-content/80 text-xs font-medium sm:text-sm"
+                >Sin ubicación</span
+              >
               <input
                 type="checkbox"
                 id="filter-orphans"
@@ -482,10 +492,10 @@ const inventoryTabs = [
           activeTab === "mediterranea" ? "flex" : "hidden",
         ]}
       >
-        <div class="form-control grow">
+        <div class="grow">
           <select
             id="filter-medi-type"
-            class="select select-bordered text-base-content/80 w-full font-medium"
+            class="select text-base-content/80 w-full font-medium"
             aria-label="Filtrar por tipo de Mediterránea"
           >
             <option value="all">Tipos (Todos)</option>
@@ -875,191 +885,193 @@ const inventoryTabs = [
     }
   </div>
 
-  {showCubicsTab && (
-  <div
-    id="view-cubics"
-    class:list={["space-y-6", activeTab !== "cubics" && "hidden"]}
-  >
-    <section class="space-y-3">
-      <DataTable
-        id="table-cubics"
-        ariaLabel="Listado de cubics"
-        minWidthClass="min-w-220 md:min-w-full"
-        headerGridClass={cubicHeaderGridClass}
-        rowGridClass={cubicRowGridClass}
+  {
+    showCubicsTab && (
+      <div
+        id="view-cubics"
+        class:list={["space-y-6", activeTab !== "cubics" && "hidden"]}
       >
-        <div slot="header" class={hostSpan}>
-          <DataTableHeaderCell sortKey="hostname">Hostname</DataTableHeaderCell>
-        </div>
-        <div slot="header" class={ipSpan}>
-          <DataTableHeaderCell sortKey="ip">Dirección IP</DataTableHeaderCell>
-        </div>
-        <div slot="header" class={statusSpan}>
-          <DataTableHeaderCell>Estado</DataTableHeaderCell>
-        </div>
-        <div slot="header" class={assignedSpan}>
-          <DataTableHeaderCell>Asignado a</DataTableHeaderCell>
-        </div>
-        {
-          isAllowedAdmin && (
-            <div slot="header" class={actionsSpan}>
-              <DataTableHeaderCell>Acciones</DataTableHeaderCell>
+        <section class="space-y-3">
+          <DataTable
+            id="table-cubics"
+            ariaLabel="Listado de cubics"
+            minWidthClass="min-w-220 md:min-w-full"
+            headerGridClass={cubicHeaderGridClass}
+            rowGridClass={cubicRowGridClass}
+          >
+            <div slot="header" class={hostSpan}>
+              <DataTableHeaderCell sortKey="hostname">
+                Hostname
+              </DataTableHeaderCell>
             </div>
-          )
-        }
+            <div slot="header" class={ipSpan}>
+              <DataTableHeaderCell sortKey="ip">
+                Dirección IP
+              </DataTableHeaderCell>
+            </div>
+            <div slot="header" class={statusSpan}>
+              <DataTableHeaderCell>Estado</DataTableHeaderCell>
+            </div>
+            <div slot="header" class={assignedSpan}>
+              <DataTableHeaderCell>Asignado a</DataTableHeaderCell>
+            </div>
+            {isAllowedAdmin && (
+              <div slot="header" class={actionsSpan}>
+                <DataTableHeaderCell>Acciones</DataTableHeaderCell>
+              </div>
+            )}
 
-        {
-          cubicMachines.map((machine) => {
-            const assignmentSearchValue =
-              machine.assignments.length > 0
-                ? machine.assignments.map((a) => a.agent.name).join(" ")
-                : "Sin asignar";
-            return (
-              <article
-                data-table-row
-                data-machine-row
-                data-name={machine.name}
-                data-ip={machine.ip}
-                data-agent={assignmentSearchValue}
-                data-status={machine.status}
-                data-sort-hostname={machine.name}
-                data-sort-ip={machine.ip ?? ""}
-                class:list={[
-                  cubicRowGridClass,
-                  "border-base-300 hover:bg-base-300/50 border-b px-4 py-4 transition-colors last:border-b-0",
-                ]}
-              >
-                <div class={hostSpan + " min-w-0"}>
-                  <div class="flex items-center gap-3">
-                    <span class="inline-flex size-8 shrink-0 items-center justify-center self-center rounded-lg border border-sky-500/30 bg-sky-500/15 text-sky-500 dark:text-sky-400">
-                      <Icon name="boxicons:desktop-filled" size={16} />
-                    </span>
-                    <div class="min-w-0 flex-1">
-                      <CopyButton
-                        value={machine.name}
-                        variant="value"
-                        appearance="ghost"
-                        label={machine.name}
-                        ariaLabel={`Copiar ${machine.name}`}
-                        monospace
-                        fullWidth
-                        highlightable
-                        class="-ml-2"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div class={ipSpan + " min-w-0"}>
-                  <CopyButton
-                    value={machine.ip ?? ""}
-                    variant="value"
-                    appearance="ghost"
-                    label={machine.ip ?? "Sin IP"}
-                    ariaLabel={`Copiar ${machine.ip ?? "IP"}`}
-                    monospace
-                    fullWidth
-                    highlightable
-                    class="-ml-2"
-                  />
-                </div>
-                <div class={statusSpan + " min-w-0"}>
-                  <div class="flex flex-col gap-0.5">
-                    <div class="flex items-center gap-2">
-                      <div class="inline-grid *:[grid-area:1/1]">
-                        <div
-                          class:list={[
-                            "status",
-                            machine.status === "online"
-                              ? "status-success"
-                              : "status-error",
-                            "animate-ping",
-                          ]}
-                        />
-                        <div
-                          class:list={[
-                            "status",
-                            machine.status === "online"
-                              ? "status-success"
-                              : "status-error",
-                          ]}
+            {cubicMachines.map((machine) => {
+              const assignmentSearchValue =
+                machine.assignments.length > 0
+                  ? machine.assignments.map((a) => a.agent.name).join(" ")
+                  : "Sin asignar";
+              return (
+                <article
+                  data-table-row
+                  data-machine-row
+                  data-name={machine.name}
+                  data-ip={machine.ip}
+                  data-agent={assignmentSearchValue}
+                  data-status={machine.status}
+                  data-sort-hostname={machine.name}
+                  data-sort-ip={machine.ip ?? ""}
+                  class:list={[
+                    cubicRowGridClass,
+                    "border-base-300 hover:bg-base-300/50 border-b px-4 py-4 transition-colors last:border-b-0",
+                  ]}
+                >
+                  <div class={hostSpan + " min-w-0"}>
+                    <div class="flex items-center gap-3">
+                      <span class="inline-flex size-8 shrink-0 items-center justify-center self-center rounded-lg border border-sky-500/30 bg-sky-500/15 text-sky-500 dark:text-sky-400">
+                        <Icon name="boxicons:desktop-filled" size={16} />
+                      </span>
+                      <div class="min-w-0 flex-1">
+                        <CopyButton
+                          value={machine.name}
+                          variant="value"
+                          appearance="ghost"
+                          label={machine.name}
+                          ariaLabel={`Copiar ${machine.name}`}
+                          monospace
+                          fullWidth
+                          highlightable
+                          class="-ml-2"
                         />
                       </div>
-                      <span class="text-base-content/80 text-sm">
-                        {statusCopy[machine.status as CubicStatus]}
-                      </span>
                     </div>
-                    <p class="text-xxs text-base-content/50">
-                      Último ping: {formatLastPing((machine as any).lastPing)}
-                    </p>
                   </div>
-                </div>
-                <div class={assignedSpan + " min-w-0"}>
-                  <div class="flex items-center gap-2">
-                    {machine.assignments.length > 0 ? (
-                      machine.assignments.map((assignment) => {
-                        const shift =
-                          agentShiftMap.get(assignment.agent.id) || "Diurno";
-                        return (
-                          <OperatorAvatar
-                            name={assignment.agent.name}
-                            avatarInitials={assignment.agent.avatarInitials}
-                            shiftType={shift}
-                            size="md"
+                  <div class={ipSpan + " min-w-0"}>
+                    <CopyButton
+                      value={machine.ip ?? ""}
+                      variant="value"
+                      appearance="ghost"
+                      label={machine.ip ?? "Sin IP"}
+                      ariaLabel={`Copiar ${machine.ip ?? "IP"}`}
+                      monospace
+                      fullWidth
+                      highlightable
+                      class="-ml-2"
+                    />
+                  </div>
+                  <div class={statusSpan + " min-w-0"}>
+                    <div class="flex flex-col gap-0.5">
+                      <div class="flex items-center gap-2">
+                        <div class="inline-grid *:[grid-area:1/1]">
+                          <div
+                            class:list={[
+                              "status",
+                              machine.status === "online"
+                                ? "status-success"
+                                : "status-error",
+                              "animate-ping",
+                            ]}
                           />
-                        );
-                      })
-                    ) : (
-                      <div
-                        class="tooltip tooltip-top tooltip-neutral z-20"
-                        data-tip="Sin asignar"
-                      >
+                          <div
+                            class:list={[
+                              "status",
+                              machine.status === "online"
+                                ? "status-success"
+                                : "status-error",
+                            ]}
+                          />
+                        </div>
+                        <span class="text-base-content/80 text-sm">
+                          {statusCopy[machine.status as CubicStatus]}
+                        </span>
+                      </div>
+                      <p class="text-xxs text-base-content/50">
+                        Último ping: {formatLastPing((machine as any).lastPing)}
+                      </p>
+                    </div>
+                  </div>
+                  <div class={assignedSpan + " min-w-0"}>
+                    <div class="flex items-center gap-2">
+                      {machine.assignments.length > 0 ? (
+                        machine.assignments.map((assignment) => {
+                          const shift =
+                            agentShiftMap.get(assignment.agent.id) || "Diurno";
+                          return (
+                            <OperatorAvatar
+                              name={assignment.agent.name}
+                              avatarInitials={assignment.agent.avatarInitials}
+                              shiftType={shift}
+                              size="md"
+                            />
+                          );
+                        })
+                      ) : (
                         <div
-                          class="avatar avatar-placeholder"
-                          role="img"
-                          tabindex="0"
-                          aria-label="Usuario asignado: Sin asignar"
+                          class="tooltip tooltip-top tooltip-neutral z-20"
+                          data-tip="Sin asignar"
                         >
-                          <div class="bg-base-200 text-base-content/70 w-9 rounded-full">
-                            <span class="text-xs font-semibold select-none">
-                              --
-                            </span>
+                          <div
+                            class="avatar avatar-placeholder"
+                            role="img"
+                            tabindex="0"
+                            aria-label="Usuario asignado: Sin asignar"
+                          >
+                            <div class="bg-base-200 text-base-content/70 w-9 rounded-full">
+                              <span class="text-xs font-semibold select-none">
+                                --
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-                {isAllowedAdmin && (
-                  <div
-                    class={
-                      actionsSpan +
-                      " flex min-w-0 items-center justify-end gap-2"
-                    }
-                  >
-                    <ActionEditButton
-                      href={`${import.meta.env.BASE_URL}inventario-terminales/cubics/edit/${machine.id}`}
-                      ariaLabel={`Editar cubic ${machine.name}`}
-                    />
-                    <form
-                      method="POST"
-                      action={`${import.meta.env.BASE_URL}inventario-terminales/cubics/edit/${machine.id}/eliminar`}
-                      class="inline"
-                      onsubmit={`return confirm('¿Estás seguro de que deseas dar de baja el ordenador "${machine.name}"?');`}
+                  {isAllowedAdmin && (
+                    <div
+                      class={
+                        actionsSpan +
+                        " flex min-w-0 items-center justify-end gap-2"
+                      }
                     >
-                      <ActionDeleteButton
-                        ariaLabel={`Eliminar cubic ${machine.name}`}
+                      <ActionEditButton
+                        href={`${import.meta.env.BASE_URL}inventario-terminales/cubics/edit/${machine.id}`}
+                        ariaLabel={`Editar cubic ${machine.name}`}
                       />
-                    </form>
-                  </div>
-                )}
-              </article>
-            );
-          })
-        }
-      </DataTable>
-    </section>
-  </div>
-  )}
+                      <form
+                        method="POST"
+                        action={`${import.meta.env.BASE_URL}inventario-terminales/cubics/edit/${machine.id}/eliminar`}
+                        class="inline"
+                        onsubmit={`return confirm('¿Estás seguro de que deseas dar de baja el ordenador "${machine.name}"?');`}
+                      >
+                        <ActionDeleteButton
+                          ariaLabel={`Eliminar cubic ${machine.name}`}
+                        />
+                      </form>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </DataTable>
+        </section>
+      </div>
+    )
+  }
 
   <div
     id="view-mediterranea"

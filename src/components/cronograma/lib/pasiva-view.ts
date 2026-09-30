@@ -276,7 +276,7 @@ export function populatePasivaWeekInputs(): void {
     } else {
       const supervisorSelect = document.createElement("select");
       supervisorSelect.className =
-        "select select-bordered select-sm font-bold text-xs h-9 w-full rounded-xl bg-base-100 focus:outline-none focus:border-secondary";
+        "select select-sm font-bold text-xs h-9 w-full rounded-xl bg-base-100 focus:outline-none focus:border-secondary";
 
       state.pasivaState.supervisors.forEach((name) => {
         const opt = document.createElement("option");
@@ -323,7 +323,7 @@ export function populatePasivaWeekInputs(): void {
     } else {
       const referenteSelect = document.createElement("select");
       referenteSelect.className =
-        "select select-bordered select-sm font-bold text-xs h-9 w-full rounded-xl bg-base-100 focus:outline-none focus:border-secondary";
+        "select select-sm font-bold text-xs h-9 w-full rounded-xl bg-base-100 focus:outline-none focus:border-secondary";
 
       const referenteOptions =
         state.pasivaState.referentes.length > 0
@@ -379,7 +379,7 @@ export function populatePasivaWeekInputs(): void {
     } else {
       const operatorSelect = document.createElement("select");
       operatorSelect.className =
-        "select select-bordered select-sm font-bold text-xs h-9 w-full rounded-xl bg-base-100 focus:outline-none focus:border-secondary";
+        "select select-sm font-bold text-xs h-9 w-full rounded-xl bg-base-100 focus:outline-none focus:border-secondary";
 
       operatorSelect.innerHTML = '<option value="">SIN OPERADOR</option>';
       state.cronoData.forEach((op) => {

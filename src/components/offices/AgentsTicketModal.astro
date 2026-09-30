@@ -47,11 +47,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
           Origen de la solicitud
           <span class="text-error">*</span>
         </legend>
-        <select
-          id="ticket-source-select"
-          class="select select-bordered w-full"
-          required
-        >
+        <select id="ticket-source-select" class="select w-full" required>
           <option value="" disabled selected>Cargando orígenes...</option>
         </select>
         <p class="fieldset-label text-base-content/50 text-xs">
@@ -67,11 +63,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
           Agente de mesa de ayuda
           <span class="text-error">*</span>
         </legend>
-        <select
-          id="ticket-agent-select"
-          class="select select-bordered w-full"
-          required
-        >
+        <select id="ticket-agent-select" class="select w-full" required>
           <option value="" disabled selected>Cargando agentes...</option>
         </select>
         <p class="fieldset-label text-base-content/50 text-xs">
@@ -89,7 +81,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
         </legend>
         <textarea
           id="ticket-observaciones"
-          class="textarea textarea-bordered w-full"
+          class="textarea w-full"
           rows="3"
           placeholder="Detalles adicionales sobre la caída de agentes..."
         ></textarea>

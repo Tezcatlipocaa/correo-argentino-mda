@@ -95,7 +95,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
             "aria-label": `${title} (${comingSoon ? "Próximamente" : "Restringido"})`,
           })}
       class:list={[
-        "card card-compact bg-base-100 border-base-300 h-full border shadow-md",
+        "card bg-base-100 border-base-300 h-full border shadow-md",
         locked || comingSoon
           ? "cursor-not-allowed opacity-40 grayscale select-none"
           : "hover:border-primary group focus:ring-primary transition-all duration-300 hover:-translate-y-1 focus:ring-2 focus:ring-offset-2 focus:outline-none",

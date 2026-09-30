@@ -44,10 +44,12 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 <BaseLayout>
   <PageContainer width="xl">
     <!-- Navegación superior y selector de operador -->
-    <div class="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div
+      class="no-print mb-4 flex flex-wrap items-center justify-between gap-3"
+    >
       <a
         href={`${cleanBase}supervision/asistencia/estadisticas`}
-        class="btn btn-ghost btn-sm pl-2 transition-colors duration-200 gap-1 font-bold text-xs"
+        class="btn btn-ghost btn-sm gap-1 pl-2 text-xs font-bold transition-colors duration-200"
       >
         <Icon name="boxicons:chevron-left" size={16} />
         Volver a Estadísticas
@@ -58,13 +60,13 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         <div class="relative">
           <Icon
             name="boxicons:search"
-            class="text-base-content/40 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            class="text-base-content/40 pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
             size={16}
           />
           <input
             type="text"
             id="operator-combobox-input"
-            class="input input-sm input-bordered bg-base-100 border-base-300 w-full pl-9 pr-8 rounded-xl text-xs font-bold outline-none focus:border-secondary transition-all shadow-xs"
+            class="input input-sm bg-base-100 border-base-300 focus:border-secondary w-full rounded-xl pr-8 pl-9 text-xs font-bold shadow-xs transition-all outline-none"
             placeholder="Cambiar operador..."
             value={agent.name}
             autocomplete="off"
@@ -73,7 +75,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           <button
             type="button"
             id="operator-combobox-clear"
-            class="text-base-content/40 hover:text-base-content absolute right-2.5 top-1/2 -translate-y-1/2 hidden cursor-pointer text-xs font-bold"
+            class="text-base-content/40 hover:text-base-content absolute top-1/2 right-2.5 hidden -translate-y-1/2 cursor-pointer text-xs font-bold"
             title="Limpiar búsqueda"
           >
             ✕
@@ -83,7 +85,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         <!-- Floating Dropdown list -->
         <div
           id="operator-combobox-dropdown"
-          class="bg-base-100 border-base-300 shadow-xl absolute left-0 right-0 top-full z-50 mt-1.5 hidden max-h-72 flex-col overflow-y-auto rounded-xl border p-1"
+          class="bg-base-100 border-base-300 absolute top-full right-0 left-0 z-50 mt-1.5 hidden max-h-72 flex-col overflow-y-auto rounded-xl border p-1 shadow-xl"
         >
           <!-- Elements dynamically generated -->
         </div>
@@ -104,39 +106,49 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         <div>
           <h1 class="text-base-content text-xl font-black">{agent.name}</h1>
           <p class="text-base-content/60 text-xs font-medium">
-            Usuario: <span class="font-bold">{agent.username || "S/D"}</span> |
-            Sede: <span class="font-bold">{agent.location}</span>
+            Usuario: <span class="font-bold">{agent.username || "S/D"}</span> | Sede:
+            <span class="font-bold">{agent.location}</span>
           </p>
-          <div id="print-period-label" class="hidden text-xs font-black text-secondary mt-1"></div>
+          <div
+            id="print-period-label"
+            class="text-secondary mt-1 hidden text-xs font-black"
+          >
+          </div>
         </div>
       </div>
 
       <!-- Métricas clave del período seleccionado (siempre sobre el período completo, no filtrado por estado) -->
-      <p class="text-xxs text-base-content/30 font-medium sm:hidden mb-1">Métricas del período completo</p>
+      <p class="text-xxs text-base-content/30 mb-1 font-medium sm:hidden">
+        Métricas del período completo
+      </p>
       <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
         <div
           class="bg-base-200/50 border-base-300/40 min-w-24 rounded-xl border p-2.5 text-center"
         >
           <span
-            class="text-xxs text-base-content/40 block font-black uppercase tracking-wider"
+            class="text-xxs text-base-content/40 block font-black tracking-wider uppercase"
             >Presentismo</span
           >
-          <span class="text-secondary text-lg font-black" id="kpi-attendance">--%</span>
+          <span class="text-secondary text-lg font-black" id="kpi-attendance"
+            >--%</span
+          >
         </div>
         <div
           class="bg-base-200/50 border-base-300/40 min-w-24 rounded-xl border p-2.5 text-center"
         >
           <span
-            class="text-xxs text-base-content/40 block font-black uppercase tracking-wider"
+            class="text-xxs text-base-content/40 block font-black tracking-wider uppercase"
             >Puntualidad</span
           >
-          <span class="text-secondary text-lg font-black" id="kpi-rate">--%</span>
+          <span class="text-secondary text-lg font-black" id="kpi-rate"
+            >--%</span
+          >
         </div>
         <div
           class="bg-base-200/50 border-base-300/40 min-w-24 rounded-xl border p-2.5 text-center"
         >
           <span
-            class="text-xxs text-base-content/40 block font-black uppercase tracking-wider"
+            class="text-xxs text-base-content/40 block font-black tracking-wider uppercase"
             >Tardanzas</span
           >
           <span class="text-warning text-lg font-black" id="kpi-lates">--</span>
@@ -145,10 +157,12 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           class="bg-base-200/50 border-base-300/40 min-w-24 rounded-xl border p-2.5 text-center"
         >
           <span
-            class="text-xxs text-base-content/40 block font-black uppercase tracking-wider"
+            class="text-xxs text-base-content/40 block font-black tracking-wider uppercase"
             >Ausencias</span
           >
-          <span class="text-lg font-black text-violet-500" id="kpi-absences">--</span>
+          <span class="text-lg font-black text-violet-500" id="kpi-absences"
+            >--</span
+          >
         </div>
       </div>
     </div>
@@ -163,7 +177,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           <span class="text-base-content/60 text-xs font-bold">Año:</span>
           <select
             id="filter-year"
-            class="select select-sm select-bordered rounded-xl text-xs font-bold"
+            class="select select-sm rounded-xl text-xs font-bold"
           >
             {years.map((y) => <option value={y}>{y}</option>)}
           </select>
@@ -174,7 +188,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           <span class="text-base-content/60 text-xs font-bold">Mes:</span>
           <select
             id="filter-month"
-            class="select select-sm select-bordered rounded-xl text-xs font-bold"
+            class="select select-sm rounded-xl text-xs font-bold"
           >
             <option value="all">Todo el año (Consolidado)</option>
             <option value="01">Enero</option>
@@ -197,7 +211,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           <span class="text-base-content/60 text-xs font-bold">Estado:</span>
           <select
             id="filter-status"
-            class="select select-sm select-bordered rounded-xl text-xs font-bold"
+            class="select select-sm rounded-xl text-xs font-bold"
           >
             <option value="all">Todos los estados</option>
             <option value="tardanza">Llegadas Tarde</option>
@@ -218,16 +232,30 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         </span>
 
         <!-- Selector de Vista -->
-        <div class="join border border-base-300 rounded-xl overflow-hidden shadow-xs">
-          <button id="view-monthly-btn" class="join-item btn btn-xs btn-active gap-1 font-bold" title="Vista Mensual">
+        <div
+          class="join border-base-300 overflow-hidden rounded-xl border shadow-xs"
+        >
+          <button
+            id="view-monthly-btn"
+            class="join-item btn btn-xs btn-active gap-1 font-bold"
+            title="Vista Mensual"
+          >
             <Icon name="boxicons:calendar" size={14} />
             Mensual
           </button>
-          <button id="view-annual-btn" class="join-item btn btn-xs btn-ghost gap-1 font-bold text-base-content/60" title="Vista Anual">
+          <button
+            id="view-annual-btn"
+            class="join-item btn btn-xs btn-ghost text-base-content/60 gap-1 font-bold"
+            title="Vista Anual"
+          >
             <Icon name="boxicons:bar-chart-big" size={14} />
             Anual
           </button>
-          <button id="view-table-btn" class="join-item btn btn-xs btn-ghost gap-1 font-bold text-base-content/60" title="Vista Tabla">
+          <button
+            id="view-table-btn"
+            class="join-item btn btn-xs btn-ghost text-base-content/60 gap-1 font-bold"
+            title="Vista Tabla"
+          >
             <Icon name="boxicons:table" size={14} />
             Tabla
           </button>
@@ -237,7 +265,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         <button
           type="button"
           id="export-csv-btn"
-          class="btn btn-outline btn-xs border-base-300 hover:bg-base-200 text-base-content/80 gap-1.5 font-bold rounded-xl h-7 px-3 shadow-xs transition-colors"
+          class="btn btn-outline btn-xs border-base-300 hover:bg-base-200 text-base-content/80 h-7 gap-1.5 rounded-xl px-3 font-bold shadow-xs transition-colors"
           title="Exportar asistencia mensual a CSV"
         >
           <Icon name="boxicons:table-list" size={14} />
@@ -248,7 +276,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         <button
           type="button"
           id="export-pdf-btn"
-          class="btn btn-outline btn-xs border-base-300 hover:bg-base-200 text-base-content/80 gap-1.5 font-bold rounded-xl h-7 px-3 shadow-xs transition-colors"
+          class="btn btn-outline btn-xs border-base-300 hover:bg-base-200 text-base-content/80 h-7 gap-1.5 rounded-xl px-3 font-bold shadow-xs transition-colors"
           title="Exportar asistencia mensual a PDF"
         >
           <Icon name="boxicons:file" size={14} />
@@ -258,9 +286,12 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     </div>
 
     <!-- Vista Calendario Heatmap -->
-    <div id="calendar-view-container" class="w-full flex flex-col gap-3">
+    <div id="calendar-view-container" class="flex w-full flex-col gap-3">
       <!-- Cabecera de días Lunes a Domingo -->
-      <div id="calendar-weekday-headers" class="hidden sm:grid grid-cols-7 gap-2 text-center text-xs font-black tracking-wider uppercase text-base-content/70 px-1">
+      <div
+        id="calendar-weekday-headers"
+        class="text-base-content/70 hidden grid-cols-7 gap-2 px-1 text-center text-xs font-black tracking-wider uppercase sm:grid"
+      >
         <div>Lunes</div>
         <div>Martes</div>
         <div>Miércoles</div>
@@ -270,32 +301,56 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         <div>Domingo</div>
       </div>
       <!-- Grilla de Celdas -->
-      <div id="calendar-grid" class="grid grid-cols-2 sm:grid-cols-7 gap-2 w-full">
+      <div
+        id="calendar-grid"
+        class="grid w-full grid-cols-2 gap-2 sm:grid-cols-7"
+      >
         <!-- Celdas generadas dinámicamente -->
       </div>
     </div>
 
     <!-- Vista Anual Consolidada -->
-    <div id="annual-view-container" class="hidden w-full flex flex-col gap-6">
+    <div id="annual-view-container" class="flex hidden w-full flex-col gap-6">
       <!-- Tira Heatmap 52 Semanas (Estilo GitHub) -->
-      <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-sm space-y-3">
+      <div
+        class="bg-base-100 border-base-300 space-y-3 rounded-2xl border p-5 shadow-sm"
+      >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <h4 class="text-xs font-black uppercase tracking-wider text-base-content/70">Actividad Anual Continua (52 Semanas)</h4>
-            <span class="badge badge-xs badge-ghost font-bold text-base-content/50" id="annual-heatmap-year">2026</span>
+            <h4
+              class="text-base-content/70 text-xs font-black tracking-wider uppercase"
+            >
+              Actividad Anual Continua (52 Semanas)
+            </h4>
+            <span
+              class="badge badge-xs badge-ghost text-base-content/50 font-bold"
+              id="annual-heatmap-year">2026</span
+            >
           </div>
           <!-- Leyenda de colores -->
-          <div class="flex flex-wrap items-center gap-3 text-xxs font-bold text-base-content/50">
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-xs bg-emerald-500/80"></span> Puntual</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-xs bg-amber-500"></span> Tardanza</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-xs bg-violet-500"></span> Ausencia</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-xs bg-error"></span> Incumplió</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-xs bg-base-300/60"></span> Franco/Libre</span>
+          <div
+            class="text-xxs text-base-content/50 flex flex-wrap items-center gap-3 font-bold"
+          >
+            <span class="flex items-center gap-1"
+              ><span class="h-2.5 w-2.5 rounded-xs bg-emerald-500/80"></span> Puntual</span
+            >
+            <span class="flex items-center gap-1"
+              ><span class="h-2.5 w-2.5 rounded-xs bg-amber-500"></span> Tardanza</span
+            >
+            <span class="flex items-center gap-1"
+              ><span class="h-2.5 w-2.5 rounded-xs bg-violet-500"></span> Ausencia</span
+            >
+            <span class="flex items-center gap-1"
+              ><span class="bg-error h-2.5 w-2.5 rounded-xs"></span> Incumplió</span
+            >
+            <span class="flex items-center gap-1"
+              ><span class="bg-base-300/60 h-2.5 w-2.5 rounded-xs"></span> Franco/Libre</span
+            >
           </div>
         </div>
         <!-- Grilla scrollable horizontal -->
         <div class="overflow-x-auto pb-2">
-          <div id="annual-heatmap-grid" class="flex gap-1 min-w-[760px] pt-1">
+          <div id="annual-heatmap-grid" class="flex min-w-[760px] gap-1 pt-1">
             <!-- Columnas semanales generadas con padding exacto -->
           </div>
         </div>
@@ -304,10 +359,19 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       <!-- Grilla 4x3 de Tarjetas Mensuales (12 Meses) -->
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h4 class="text-xs font-black uppercase tracking-wider text-base-content/70">Desempeño Mes a Mes</h4>
-          <span class="text-xxs text-base-content/40 font-medium">Click en cualquier mes para abrir su calendario detallado</span>
+          <h4
+            class="text-base-content/70 text-xs font-black tracking-wider uppercase"
+          >
+            Desempeño Mes a Mes
+          </h4>
+          <span class="text-xxs text-base-content/40 font-medium"
+            >Click en cualquier mes para abrir su calendario detallado</span
+          >
         </div>
-        <div id="annual-months-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div
+          id="annual-months-grid"
+          class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
           <!-- 12 Tarjetas de meses inyectadas dinámicamente -->
         </div>
       </div>
@@ -316,7 +380,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     <!-- Tabla Cronológica de Registros -->
     <div
       id="table-view-container"
-      class="hidden bg-base-100 border-base-300 overflow-hidden rounded-2xl border shadow-sm"
+      class="bg-base-100 border-base-300 hidden overflow-hidden rounded-2xl border shadow-sm"
     >
       <div class="overflow-x-auto">
         <table class="table w-full">
@@ -332,7 +396,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           <tbody id="history-tbody" class="text-xs">
             <tr>
               <td colspan="5" class="py-12 text-center font-bold">
-                <span class="loading loading-spinner loading-md text-secondary"></span>
+                <span class="loading loading-spinner loading-md text-secondary"
+                ></span>
               </td>
             </tr>
           </tbody>
@@ -341,46 +406,94 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     </div>
 
     <!-- Drawer Lateral de Detalle de Jornada -->
-    <div id="day-drawer-backdrop" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 hidden transition-opacity duration-200"></div>
-    <div id="day-drawer" class="fixed right-0 top-0 h-full w-full max-w-sm bg-base-100 border-l border-base-300 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div
+      id="day-drawer-backdrop"
+      class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-xs transition-opacity duration-200"
+    >
+    </div>
+    <div
+      id="day-drawer"
+      class="bg-base-100 border-base-300 fixed top-0 right-0 z-50 flex h-full w-full max-w-sm translate-x-full transform flex-col border-l shadow-2xl transition-transform duration-300"
+    >
       <!-- Drawer Header -->
-      <div class="flex items-center justify-between p-4 border-b border-base-200">
+      <div
+        class="border-base-200 flex items-center justify-between border-b p-4"
+      >
         <div>
-          <span class="text-xxs font-black uppercase tracking-wider text-base-content/40" id="drawer-dayname">Lunes</span>
-          <h3 class="text-base font-black text-base-content" id="drawer-date">14 de Agosto, 2026</h3>
+          <span
+            class="text-xxs text-base-content/40 font-black tracking-wider uppercase"
+            id="drawer-dayname">Lunes</span
+          >
+          <h3 class="text-base-content text-base font-black" id="drawer-date">
+            14 de Agosto, 2026
+          </h3>
         </div>
-        <button id="drawer-close-btn" class="btn btn-sm btn-ghost btn-circle">✕</button>
+        <button id="drawer-close-btn" class="btn btn-sm btn-ghost btn-circle"
+          >✕</button
+        >
       </div>
       <!-- Drawer Body -->
-      <div class="p-5 flex-1 overflow-y-auto space-y-4" id="drawer-body">
+      <div class="flex-1 space-y-4 overflow-y-auto p-5" id="drawer-body">
         <!-- Estado y Badge -->
         <div id="drawer-status-badge"></div>
         <!-- Comparativa Horaria -->
-        <div class="bg-base-200/50 rounded-xl p-4 border border-base-300/40 space-y-3">
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-base-content/50 font-bold">Horario Estipulado:</span>
-            <span class="font-black text-base-content" id="drawer-horario">08:00 - 17:00</span>
+        <div
+          class="bg-base-200/50 border-base-300/40 space-y-3 rounded-xl border p-4"
+        >
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-base-content/50 font-bold"
+              >Horario Estipulado:</span
+            >
+            <span class="text-base-content font-black" id="drawer-horario"
+              >08:00 - 17:00</span
+            >
           </div>
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-base-content/50 font-bold">Modalidad Cronograma:</span>
-            <span class="font-black text-base-content" id="drawer-modalidad">-</span>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-base-content/50 font-bold"
+              >Modalidad Cronograma:</span
+            >
+            <span class="text-base-content font-black" id="drawer-modalidad"
+              >-</span
+            >
           </div>
-          <div class="flex justify-between items-center text-xs">
+          <div class="flex items-center justify-between text-xs">
             <span class="text-base-content/50 font-bold">Entrada Real:</span>
             <span class="font-black" id="drawer-entrada">08:19</span>
           </div>
-          <div class="flex justify-between items-center text-xs border-t border-base-300/40 pt-2" id="drawer-delay-container">
-            <span class="text-base-content/50 font-bold">Desvío Puntualidad:</span>
-            <span class="font-black text-warning" id="drawer-delay">+19 min</span>
+          <div
+            class="border-base-300/40 flex items-center justify-between border-t pt-2 text-xs"
+            id="drawer-delay-container"
+          >
+            <span class="text-base-content/50 font-bold"
+              >Desvío Puntualidad:</span
+            >
+            <span class="text-warning font-black" id="drawer-delay"
+              >+19 min</span
+            >
           </div>
         </div>
         <!-- Observación / Detalle -->
-        <div class="bg-base-200/50 rounded-xl p-4 border border-base-300/40 space-y-1.5" id="drawer-comment-container">
-          <span class="text-xxs font-black uppercase tracking-wider text-base-content/40">Observaciones</span>
-          <p class="text-xs font-medium text-base-content/80 leading-relaxed" id="drawer-comment">-</p>
+        <div
+          class="bg-base-200/50 border-base-300/40 space-y-1.5 rounded-xl border p-4"
+          id="drawer-comment-container"
+        >
+          <span
+            class="text-xxs text-base-content/40 font-black tracking-wider uppercase"
+            >Observaciones</span
+          >
+          <p
+            class="text-base-content/80 text-xs leading-relaxed font-medium"
+            id="drawer-comment"
+          >
+            -
+          </p>
         </div>
         <!-- Enlace a Control Diario -->
-        <a id="drawer-goto-daily" href="#" class="btn btn-sm btn-outline btn-secondary w-full gap-2 mt-4 font-bold">
+        <a
+          id="drawer-goto-daily"
+          href="#"
+          class="btn btn-sm btn-outline btn-secondary mt-4 w-full gap-2 font-bold"
+        >
           <Icon name="boxicons:arrow-up-right" size={14} />
           Abrir en Control Diario
         </a>
@@ -389,7 +502,10 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
   </PageContainer>
 </BaseLayout>
 
-<script is:inline define:vars={{ agentId, agentName: agent.name, cleanBase, allAgents }}>
+<script
+  is:inline
+  define:vars={{ agentId, agentName: agent.name, cleanBase, allAgents }}
+>
   // 1. Elementos DOM
   const yearSelect = document.getElementById("filter-year");
   const monthSelect = document.getElementById("filter-month");
@@ -410,7 +526,9 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
   const exportPdfBtn = document.getElementById("export-pdf-btn");
 
   // Contenedores de vista
-  const calendarViewContainer = document.getElementById("calendar-view-container");
+  const calendarViewContainer = document.getElementById(
+    "calendar-view-container",
+  );
   const annualViewContainer = document.getElementById("annual-view-container");
   const tableViewContainer = document.getElementById("table-view-container");
 
@@ -432,7 +550,9 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
   const drawerHorario = document.getElementById("drawer-horario");
   const drawerModalidad = document.getElementById("drawer-modalidad");
   const drawerEntrada = document.getElementById("drawer-entrada");
-  const drawerDelayContainer = document.getElementById("drawer-delay-container");
+  const drawerDelayContainer = document.getElementById(
+    "drawer-delay-container",
+  );
   const drawerDelay = document.getElementById("drawer-delay");
   const drawerComment = document.getElementById("drawer-comment");
   const drawerGotoDaily = document.getElementById("drawer-goto-daily");
@@ -458,11 +578,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     }
     const y = yearSelect ? yearSelect.value : "";
     const m =
-      activeView === "annual"
-        ? "all"
-        : monthSelect
-          ? monthSelect.value
-          : "";
+      activeView === "annual" ? "all" : monthSelect ? monthSelect.value : "";
     const qs = new URLSearchParams();
     if (y) qs.set("year", y);
     if (m) qs.set("month", m);
@@ -750,28 +866,61 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
   }
 
   function formatModality(status) {
-    if (!status) return { text: "-", full: "Sin modalidad asignada", class: "text-base-content/40" };
+    if (!status)
+      return {
+        text: "-",
+        full: "Sin modalidad asignada",
+        class: "text-base-content/40",
+      };
     const s = String(status).trim();
     if (s === "Home Office") {
-      return { text: "Home Office", full: "Home Office", class: "text-base-content/70 font-bold" };
+      return {
+        text: "Home Office",
+        full: "Home Office",
+        class: "text-base-content/70 font-bold",
+      };
     }
     if (s === "Presencial Monte Grande") {
-      return { text: "Presencial MG", full: "Presencial Monte Grande", class: "text-base-content/70 font-bold" };
+      return {
+        text: "Presencial MG",
+        full: "Presencial Monte Grande",
+        class: "text-base-content/70 font-bold",
+      };
     }
     if (s === "Presencial Parque Patricios") {
-      return { text: "Presencial PP", full: "Presencial Parque Patricios", class: "text-base-content/70 font-bold" };
+      return {
+        text: "Presencial PP",
+        full: "Presencial Parque Patricios",
+        class: "text-base-content/70 font-bold",
+      };
     }
     if (s.toLowerCase().startsWith("presencial")) {
-      return { text: "Presencial", full: s, class: "text-base-content/70 font-bold" };
+      return {
+        text: "Presencial",
+        full: s,
+        class: "text-base-content/70 font-bold",
+      };
     }
     if (s === "Vacaciones") {
-      return { text: "Vacaciones", full: "Vacaciones", class: "text-base-content/70 font-bold" };
+      return {
+        text: "Vacaciones",
+        full: "Vacaciones",
+        class: "text-base-content/70 font-bold",
+      };
     }
     if (s === "Licencia") {
-      return { text: "Licencia", full: "Licencia", class: "text-base-content/70 font-bold" };
+      return {
+        text: "Licencia",
+        full: "Licencia",
+        class: "text-base-content/70 font-bold",
+      };
     }
     if (s === "Franco") {
-      return { text: "Franco", full: "Franco", class: "text-base-content/55 font-semibold" };
+      return {
+        text: "Franco",
+        full: "Franco",
+        class: "text-base-content/55 font-semibold",
+      };
     }
     return { text: s, full: s, class: "text-base-content/70 font-semibold" };
   }
@@ -823,7 +972,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
   function updateKpiDisplays(summary) {
     if (!summary) return;
-    if (kpiAttendance) kpiAttendance.textContent = `${summary.attendanceRate ?? "--"}%`;
+    if (kpiAttendance)
+      kpiAttendance.textContent = `${summary.attendanceRate ?? "--"}%`;
     if (kpiRate) kpiRate.textContent = `${summary.punctualityRate ?? "--"}%`;
     if (kpiLates) kpiLates.textContent = String(summary.lates ?? "--");
     if (kpiAbsences) kpiAbsences.textContent = String(summary.absences ?? "--");
@@ -952,9 +1102,10 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     }
 
     if (countBadge) {
-      countBadge.textContent = selectedMonth === "all"
-        ? `${recs.length} registros · Año completo`
-        : `${recs.length} registros`;
+      countBadge.textContent =
+        selectedMonth === "all"
+          ? `${recs.length} registros · Año completo`
+          : `${recs.length} registros`;
     }
 
     renderTable(recs);
@@ -982,7 +1133,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     const jan1 = new Date(yearNum, 0, 1, 12, 0, 0);
     const jan1DayIndex = (jan1.getDay() + 6) % 7; // 0=Lun .. 6=Dom
 
-    const isLeap = (yearNum % 4 === 0 && yearNum % 100 !== 0) || (yearNum % 400 === 0);
+    const isLeap =
+      (yearNum % 4 === 0 && yearNum % 100 !== 0) || yearNum % 400 === 0;
     const totalDaysInYear = isLeap ? 366 : 365;
 
     const cells = [];
@@ -1024,11 +1176,13 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
     // Columna izquierda con iniciales de días (L, M, M, J, V, S, D)
     const dayLabelsCol = document.createElement("div");
-    dayLabelsCol.className = "flex flex-col gap-1 pr-1.5 text-xxs font-black text-base-content/40 select-none shrink-0";
+    dayLabelsCol.className =
+      "flex flex-col gap-1 pr-1.5 text-xxs font-black text-base-content/40 select-none shrink-0";
     const dayLabels = ["L", "M", "M", "J", "V", "S", "D"];
     dayLabels.forEach((label) => {
       const lbl = document.createElement("div");
-      lbl.className = "w-3 h-3 sm:w-3.5 sm:h-3.5 flex items-center justify-center";
+      lbl.className =
+        "w-3 h-3 sm:w-3.5 sm:h-3.5 flex items-center justify-center";
       lbl.textContent = label;
       dayLabelsCol.appendChild(lbl);
     });
@@ -1036,7 +1190,15 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
     // Columnas estrictas de 7 días (Lunes a Domingo)
     const totalWeeks = cells.length / 7;
-    const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const dayNames = [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ];
 
     for (let w = 0; w < totalWeeks; w++) {
       const col = document.createElement("div");
@@ -1047,7 +1209,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         const cell = document.createElement("div");
 
         if (item.isPadding) {
-          cell.className = "w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-xs bg-base-300/10 opacity-15 pointer-events-none";
+          cell.className =
+            "w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-xs bg-base-300/10 opacity-15 pointer-events-none";
         } else {
           const log = item.log;
           const isWeekend = item.dayOfWeek === 5 || item.dayOfWeek === 6;
@@ -1085,9 +1248,18 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           }
 
           const dayName = dayNames[item.dayOfWeek];
-          const sched = log?.horarioEstipulado && log.horarioEstipulado !== "--:--" ? log.horarioEstipulado : (isWeekend ? "Franco" : "--:--");
-          const entrada = log?.entradaReal && log.entradaReal !== "--:--" ? ` | Entrada: ${log.entradaReal}` : "";
-          const schedStatus = log?.modalidad || schedulesCache?.[item.dateStr]?.status;
+          const sched =
+            log?.horarioEstipulado && log.horarioEstipulado !== "--:--"
+              ? log.horarioEstipulado
+              : isWeekend
+                ? "Franco"
+                : "--:--";
+          const entrada =
+            log?.entradaReal && log.entradaReal !== "--:--"
+              ? ` | Entrada: ${log.entradaReal}`
+              : "";
+          const schedStatus =
+            log?.modalidad || schedulesCache?.[item.dateStr]?.status;
           const modText = schedStatus ? ` | Modalidad: ${schedStatus}` : "";
           cell.title = `${item.dateStr} (${dayName}): ${statusLabel} | Horario: ${sched}${entrada}${modText}`;
 
@@ -1135,7 +1307,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
       const stats = calculateSummary(monthRecords);
       const hasRecords = monthRecords.length > 0;
-      const isCurrentMonth = String(year) === currentYearStr && m.num === currentMonthNum;
+      const isCurrentMonth =
+        String(year) === currentYearStr && m.num === currentMonthNum;
 
       let badgeHtml = "";
       if (!hasRecords) {
@@ -1259,7 +1432,12 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       let schedDisplay = "--:--";
       if (log && log.horarioEstipulado && log.horarioEstipulado !== "--:--") {
         schedDisplay = log.horarioEstipulado;
-      } else if (schedItem && schedItem.horario && schedItem.horario.trim() !== "" && schedItem.horario !== "Franco") {
+      } else if (
+        schedItem &&
+        schedItem.horario &&
+        schedItem.horario.trim() !== "" &&
+        schedItem.horario !== "Franco"
+      ) {
         schedDisplay = schedItem.horario.trim();
       } else if (schedItem && schedItem.status === "Franco") {
         schedDisplay = "Franco";
@@ -1272,14 +1450,27 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
       if (log) {
         if (log.ausencia) {
-          cellBgClass = "bg-violet-500/5 hover:bg-violet-500/10 border-violet-500/30";
-          const hasLoginTime = Boolean(log.entradaReal && log.entradaReal !== "--:--" && log.entradaReal.trim() !== "");
+          cellBgClass =
+            "bg-violet-500/5 hover:bg-violet-500/10 border-violet-500/30";
+          const hasLoginTime = Boolean(
+            log.entradaReal &&
+            log.entradaReal !== "--:--" &&
+            log.entradaReal.trim() !== "",
+          );
           let loginSubHtml = "";
 
           if (log.cumplimiento === "Llegada Tarde") {
-            const delay = getDelayMinutes(log.entradaReal, log.horarioEstipulado);
-            const delayBadge = delay && delay > 0 ? `<span class="badge badge-xs font-black border-amber-500/50 text-base-content bg-amber-500/20 shadow-2xs px-1.5 py-0.5">+${delay} min</span>` : "";
-            const timeText = hasLoginTime ? escapeHtml(log.entradaReal) : "Tardanza";
+            const delay = getDelayMinutes(
+              log.entradaReal,
+              log.horarioEstipulado,
+            );
+            const delayBadge =
+              delay && delay > 0
+                ? `<span class="badge badge-xs font-black border-amber-500/50 text-base-content bg-amber-500/20 shadow-2xs px-1.5 py-0.5">+${delay} min</span>`
+                : "";
+            const timeText = hasLoginTime
+              ? escapeHtml(log.entradaReal)
+              : "Tardanza";
             loginSubHtml = `
               <div class="flex items-center gap-1.5 mt-1">
                 <span class="text-sm font-black text-amber-800 dark:text-amber-300 pl-0.5">${timeText}</span>
@@ -1289,7 +1480,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           } else if (log.cumplimiento === "Cumplió") {
             const timeText = hasLoginTime ? escapeHtml(log.entradaReal) : "";
             loginSubHtml = `
-              <div class="flex items-center gap-1.5 mt-1 text-base-content" title="Entrada: ${escapeHtml(log.entradaReal || 'Cumplió')}">
+              <div class="flex items-center gap-1.5 mt-1 text-base-content" title="Entrada: ${escapeHtml(log.entradaReal || "Cumplió")}">
                 ${timeText ? `<span class="text-sm font-black text-base-content/90 pl-0.5">${timeText}</span>` : ""}
                 <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -1321,7 +1512,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
               </div>
             `;
         } else if (log.cumplimiento === "Llegada Tarde") {
-          cellBgClass = "bg-amber-500/5 hover:bg-amber-500/10 border-amber-500/30";
+          cellBgClass =
+            "bg-amber-500/5 hover:bg-amber-500/10 border-amber-500/30";
           const delay = getDelayMinutes(log.entradaReal, log.horarioEstipulado);
           const delayBadge = delay && delay > 0 ? `+${delay} min` : "Tardanza";
           centerHtml = `
@@ -1340,7 +1532,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
             </div>
           `;
         } else if (log.cumplimiento === "Cumplió") {
-          cellBgClass = "bg-base-100 hover:bg-base-200/60 border-base-300 hover:border-emerald-500/40";
+          cellBgClass =
+            "bg-base-100 hover:bg-base-200/60 border-base-300 hover:border-emerald-500/40";
           centerHtml = `
             <div class="flex items-center my-auto py-1 text-emerald-600 dark:text-emerald-400" title="Entrada: ${escapeHtml(log.entradaReal)}">
               <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1356,14 +1549,16 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           `;
         }
       } else if (isWeekend) {
-        cellBgClass = "bg-base-200/25 hover:bg-base-200/50 border-base-300/30 opacity-75";
+        cellBgClass =
+          "bg-base-200/25 hover:bg-base-200/50 border-base-300/30 opacity-75";
         centerHtml = `
           <div class="my-auto py-1">
             <span class="text-xs font-bold text-base-content/55 italic">Franco</span>
           </div>
         `;
       } else {
-        cellBgClass = "bg-base-200/15 hover:bg-base-200/40 border-base-300/30 opacity-80";
+        cellBgClass =
+          "bg-base-200/15 hover:bg-base-200/40 border-base-300/30 opacity-80";
         centerHtml = `
           <div class="my-auto py-1">
             <span class="text-xs font-medium text-base-content/40">Sin registro</span>
@@ -1376,16 +1571,18 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       }
 
       const isEventuality = Boolean(
-        log && (
-          log.cumplimiento === "Llegada Tarde" ||
+        log &&
+        (log.cumplimiento === "Llegada Tarde" ||
           log.cumplimiento === "Incumplió" ||
-          (log.ausencia && log.ausencia.trim() !== "")
-        )
+          (log.ausencia && log.ausencia.trim() !== "")),
       );
 
       const hasComment = Boolean(log && (log.detalle || log.motivoLoguin));
-      const commentTitle = hasComment ? escapeHtml(log.detalle || log.motivoLoguin) : "";
-      const rawModality = log?.modalidad || schedItem?.status || (isWeekend ? "Franco" : null);
+      const commentTitle = hasComment
+        ? escapeHtml(log.detalle || log.motivoLoguin)
+        : "";
+      const rawModality =
+        log?.modalidad || schedItem?.status || (isWeekend ? "Franco" : null);
       const modalityFmt = formatModality(rawModality);
 
       let footerHtml = "";
@@ -1470,11 +1667,12 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         const detail = escapeHtml(row.detalle || row.motivoLoguin || "-");
         const detailTitle = escapeHtml(row.detalle || "");
 
-        const entradaRealHtml = row.cumplimiento === "Llegada Tarde"
-          ? `<span class="font-bold text-amber-800 dark:text-amber-300">${escapeHtml(row.entradaReal)}</span>`
-          : row.cumplimiento === "Cumplió"
-            ? `<span class="font-bold text-base-content inline-flex items-center gap-1">${escapeHtml(row.entradaReal)}<svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>`
-            : `<span class="font-bold">${escapeHtml(row.entradaReal)}</span>`;
+        const entradaRealHtml =
+          row.cumplimiento === "Llegada Tarde"
+            ? `<span class="font-bold text-amber-800 dark:text-amber-300">${escapeHtml(row.entradaReal)}</span>`
+            : row.cumplimiento === "Cumplió"
+              ? `<span class="font-bold text-base-content inline-flex items-center gap-1">${escapeHtml(row.entradaReal)}<svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>`
+              : `<span class="font-bold">${escapeHtml(row.entradaReal)}</span>`;
 
         return `
         <tr class="hover:bg-base-200/40 transition-colors">
@@ -1499,19 +1697,40 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
     const [y, m, d] = dateStr.split("-").map(Number);
     const dateObj = new Date(y, m - 1, d, 12, 0, 0);
-    const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const dayNames = [
+      "Domingo",
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+    ];
     const monthNames = [
-      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
     ];
 
     if (drawerDayname) drawerDayname.textContent = dayNames[dateObj.getDay()];
-    if (drawerDate) drawerDate.textContent = `${d} de ${monthNames[m - 1]}, ${y}`;
+    if (drawerDate)
+      drawerDate.textContent = `${d} de ${monthNames[m - 1]}, ${y}`;
 
     if (drawerStatusBadge) {
       if (log) {
         const badgeClass = getBadgeClass(log.cumplimiento, log.ausencia);
-        const text = escapeHtml(log.ausencia || log.cumplimiento || "Sin Registro");
+        const text = escapeHtml(
+          log.ausencia || log.cumplimiento || "Sin Registro",
+        );
         drawerStatusBadge.innerHTML = `<span class="badge badge-md font-black ${badgeClass}">${text}</span>`;
       } else {
         const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
@@ -1524,7 +1743,12 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     let horario = "--:--";
     if (log && log.horarioEstipulado && log.horarioEstipulado !== "--:--") {
       horario = log.horarioEstipulado;
-    } else if (schedItem && schedItem.horario && schedItem.horario.trim() !== "" && schedItem.horario !== "Franco") {
+    } else if (
+      schedItem &&
+      schedItem.horario &&
+      schedItem.horario.trim() !== "" &&
+      schedItem.horario !== "Franco"
+    ) {
       horario = schedItem.horario.trim();
     } else if (schedItem && schedItem.status === "Franco") {
       horario = "Franco";
@@ -1537,7 +1761,8 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     if (drawerHorario) drawerHorario.textContent = horario;
 
     if (drawerModalidad) {
-      const rawModality = log?.modalidad || schedItem?.status || (isWeekend ? "Franco" : null);
+      const rawModality =
+        log?.modalidad || schedItem?.status || (isWeekend ? "Franco" : null);
       const modFmt = formatModality(rawModality);
       drawerModalidad.textContent = modFmt.full;
       drawerModalidad.className = "font-black text-base-content";
@@ -1545,36 +1770,44 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     if (drawerEntrada) {
       drawerEntrada.textContent = entrada;
       if (log?.cumplimiento === "Llegada Tarde") {
-        drawerEntrada.className = "font-black text-amber-800 dark:text-amber-300";
+        drawerEntrada.className =
+          "font-black text-amber-800 dark:text-amber-300";
       } else if (log?.cumplimiento === "Cumplió") {
-        drawerEntrada.className = "font-black text-emerald-600 dark:text-emerald-400";
+        drawerEntrada.className =
+          "font-black text-emerald-600 dark:text-emerald-400";
       } else {
         drawerEntrada.className = "font-black text-base-content";
       }
     }
 
-    const delay = log ? getDelayMinutes(log.entradaReal, log.horarioEstipulado) : null;
+    const delay = log
+      ? getDelayMinutes(log.entradaReal, log.horarioEstipulado)
+      : null;
     if (drawerDelayContainer && drawerDelay) {
       if (delay !== null) {
         drawerDelayContainer.classList.remove("hidden");
         if (delay > 0) {
           drawerDelay.textContent = `+${delay} min`;
-          drawerDelay.className = "font-black text-amber-800 dark:text-amber-300";
+          drawerDelay.className =
+            "font-black text-amber-800 dark:text-amber-300";
         } else if (delay === 0) {
           drawerDelay.textContent = "0 min (Puntual)";
-          drawerDelay.className = "font-black text-emerald-600 dark:text-emerald-400";
+          drawerDelay.className =
+            "font-black text-emerald-600 dark:text-emerald-400";
         } else {
           drawerDelay.textContent = `${delay} min (Anticipado)`;
-          drawerDelay.className = "font-black text-emerald-600 dark:text-emerald-400";
+          drawerDelay.className =
+            "font-black text-emerald-600 dark:text-emerald-400";
         }
       } else {
         drawerDelayContainer.classList.add("hidden");
       }
     }
 
-    const comment = log ? (log.detalle || log.motivoLoguin || "") : "";
+    const comment = log ? log.detalle || log.motivoLoguin || "" : "";
     if (drawerComment) {
-      drawerComment.textContent = comment.trim() || "Sin observaciones registradas.";
+      drawerComment.textContent =
+        comment.trim() || "Sin observaciones registradas.";
     }
 
     if (drawerGotoDaily) {
@@ -1684,12 +1917,16 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
   // 12. Exportación a CSV (Mensual y Anual)
   function cleanCsvCell(val) {
     if (val === null || val === undefined) return '""';
-    let str = String(val).replace(/\r?\n|\r/g, " ").replace(/"/g, '""');
+    let str = String(val)
+      .replace(/\r?\n|\r/g, " ")
+      .replace(/"/g, '""');
     return `"${str}"`;
   }
 
   function downloadCsv(content, filename) {
-    const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + content], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -1703,15 +1940,36 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
 
   function handleExportCsv() {
     if (!annualRecordsCache || annualRecordsCache.length === 0) {
-      window.showToast?.("No hay datos cargados para exportar.", "alert-warning");
+      window.showToast?.(
+        "No hay datos cargados para exportar.",
+        "alert-warning",
+      );
       return;
     }
 
     const year = yearSelect?.value || new Date().getFullYear().toString();
-    const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const dayNames = [
+      "Domingo",
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+    ];
     const monthNames = [
-      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
     ];
     const safeName = (agentName || "operador").trim().replace(/\s+/g, "_");
 
@@ -1719,20 +1977,26 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     if (activeView === "annual") {
       const csvSections = [];
 
-      csvSections.push([`REPORTE ANUAL DE ASISTENCIA - ${agentName || 'OPERADOR'} - AÑO ${year}`]);
+      csvSections.push([
+        `REPORTE ANUAL DE ASISTENCIA - ${agentName || "OPERADOR"} - AÑO ${year}`,
+      ]);
       csvSections.push([]);
       csvSections.push(["RESUMEN DE DESEMPEÑO MES A MES"]);
-      csvSections.push([
-        "Mes",
-        "Total Días",
-        "Días Trabajados",
-        "Puntuales",
-        "Tardanzas",
-        "Ausencias",
-        "Incumplió",
-        "% Presentismo",
-        "% Puntualidad"
-      ].map(cleanCsvCell).join(","));
+      csvSections.push(
+        [
+          "Mes",
+          "Total Días",
+          "Días Trabajados",
+          "Puntuales",
+          "Tardanzas",
+          "Ausencias",
+          "Incumplió",
+          "% Presentismo",
+          "% Puntualidad",
+        ]
+          .map(cleanCsvCell)
+          .join(","),
+      );
 
       let sumWorkDays = 0;
       let sumWorked = 0;
@@ -1744,7 +2008,9 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       monthNames.forEach((mName, idx) => {
         const mNum = String(idx + 1).padStart(2, "0");
         const monthPrefix = `${year}-${mNum}`;
-        const monthRecs = annualRecordsCache.filter((r) => r.date.startsWith(monthPrefix));
+        const monthRecs = annualRecordsCache.filter((r) =>
+          r.date.startsWith(monthPrefix),
+        );
         const stats = calculateSummary(monthRecs);
 
         sumWorkDays += stats.totalWorkDays;
@@ -1754,8 +2020,10 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         sumAbsences += stats.absences;
         sumFailed += stats.failed;
 
-        const presStr = monthRecs.length > 0 ? `${stats.attendanceRate}%` : "--";
-        const rateStr = monthRecs.length > 0 ? `${stats.punctualityRate}%` : "--";
+        const presStr =
+          monthRecs.length > 0 ? `${stats.attendanceRate}%` : "--";
+        const rateStr =
+          monthRecs.length > 0 ? `${stats.punctualityRate}%` : "--";
         const row = [
           mName,
           stats.totalWorkDays,
@@ -1765,24 +2033,34 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           stats.absences,
           stats.failed,
           presStr,
-          rateStr
+          rateStr,
         ];
         csvSections.push(row.map(cleanCsvCell).join(","));
       });
 
-      const globalAttendance = sumWorkDays > 0 ? `${Math.round((sumWorked / sumWorkDays) * 100)}%` : "--";
-      const globalPunctuality = sumWorked > 0 ? `${Math.round((sumPunctuals / sumWorked) * 100)}%` : "--";
-      csvSections.push([
-        "TOTAL ANUAL",
-        sumWorkDays,
-        sumWorked,
-        sumPunctuals,
-        sumLates,
-        sumAbsences,
-        sumFailed,
-        globalAttendance,
-        globalPunctuality
-      ].map(cleanCsvCell).join(","));
+      const globalAttendance =
+        sumWorkDays > 0
+          ? `${Math.round((sumWorked / sumWorkDays) * 100)}%`
+          : "--";
+      const globalPunctuality =
+        sumWorked > 0
+          ? `${Math.round((sumPunctuals / sumWorked) * 100)}%`
+          : "--";
+      csvSections.push(
+        [
+          "TOTAL ANUAL",
+          sumWorkDays,
+          sumWorked,
+          sumPunctuals,
+          sumLates,
+          sumAbsences,
+          sumFailed,
+          globalAttendance,
+          globalPunctuality,
+        ]
+          .map(cleanCsvCell)
+          .join(","),
+      );
 
       csvSections.push([]);
       csvSections.push(["DETALLE CRONOLÓGICO DE JORNADAS DEL AÑO"]);
@@ -1793,17 +2071,22 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         "Entrada Real",
         "Estado / Cumplimiento",
         "Modalidad",
-        "Observación / Detalle"
+        "Observación / Detalle",
       ];
       csvSections.push(detailHeaders.map(cleanCsvCell).join(","));
 
-      const sortedAnnual = [...annualRecordsCache].sort((a, b) => a.date.localeCompare(b.date));
+      const sortedAnnual = [...annualRecordsCache].sort((a, b) =>
+        a.date.localeCompare(b.date),
+      );
       sortedAnnual.forEach((row) => {
         const [y, m, d] = row.date.split("-").map(Number);
         const dateObj = new Date(y, m - 1, d, 12, 0, 0);
         const dateFmt = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
         const dayName = dayNames[dateObj.getDay()];
-        const horario = row.horarioEstipulado && row.horarioEstipulado !== "--:--" ? row.horarioEstipulado : "Franco";
+        const horario =
+          row.horarioEstipulado && row.horarioEstipulado !== "--:--"
+            ? row.horarioEstipulado
+            : "Franco";
         const entrada = row.entradaReal || "--:--";
         const status = row.ausencia || row.cumplimiento || "Sin Registro";
         const modalidad = row.modalidad || "Franco";
@@ -1816,19 +2099,23 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
           entrada,
           status,
           modalidad,
-          detalle
+          detalle,
         ];
         csvSections.push(rowData.map(cleanCsvCell).join(","));
       });
 
       const filename = `asistencia_${safeName}_${year}_anual.csv`;
       downloadCsv(csvSections.join("\n"), filename);
-      window.showToast?.("Reporte anual CSV descargado con éxito.", "alert-success");
+      window.showToast?.(
+        "Reporte anual CSV descargado con éxito.",
+        "alert-success",
+      );
       return;
     }
 
     // VISTA MENSUAL / TABLA: Tomando la vista de tabla como referencia
-    const selectedMonth = monthSelect?.value || String(new Date().getMonth() + 1).padStart(2, "0");
+    const selectedMonth =
+      monthSelect?.value || String(new Date().getMonth() + 1).padStart(2, "0");
     let recs = annualRecordsCache;
     if (selectedMonth !== "all") {
       const prefix = `${year}-${selectedMonth}`;
@@ -1845,7 +2132,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       "Entrada Real",
       "Estado / Cumplimiento",
       "Modalidad",
-      "Observación / Detalle"
+      "Observación / Detalle",
     ];
     csvRows.push(headers.map(cleanCsvCell).join(","));
 
@@ -1854,7 +2141,10 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       const dateObj = new Date(y, m - 1, d, 12, 0, 0);
       const dateFmt = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
       const dayName = dayNames[dateObj.getDay()];
-      const horario = row.horarioEstipulado && row.horarioEstipulado !== "--:--" ? row.horarioEstipulado : "Franco";
+      const horario =
+        row.horarioEstipulado && row.horarioEstipulado !== "--:--"
+          ? row.horarioEstipulado
+          : "Franco";
       const entrada = row.entradaReal || "--:--";
       const status = row.ausencia || row.cumplimiento || "Sin Registro";
       const modalidad = row.modalidad || "Franco";
@@ -1867,15 +2157,19 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
         entrada,
         status,
         modalidad,
-        detalle
+        detalle,
       ];
       csvRows.push(rowData.map(cleanCsvCell).join(","));
     });
 
-    const monthLabel = selectedMonth !== "all" ? `${year}-${selectedMonth}` : `${year}_completo`;
+    const monthLabel =
+      selectedMonth !== "all" ? `${year}-${selectedMonth}` : `${year}_completo`;
     const filename = `asistencia_${safeName}_${monthLabel}.csv`;
     downloadCsv(csvRows.join("\n"), filename);
-    window.showToast?.("Reporte mensual CSV descargado con éxito.", "alert-success");
+    window.showToast?.(
+      "Reporte mensual CSV descargado con éxito.",
+      "alert-success",
+    );
   }
 
   exportCsvBtn?.addEventListener("click", handleExportCsv);
@@ -1885,20 +2179,34 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
     const year = yearSelect?.value || new Date().getFullYear().toString();
     const monthNum = monthSelect?.value || "";
     const monthNames = [
-      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
     ];
-    const monthName = monthNum && monthNum !== "all" ? monthNames[parseInt(monthNum, 10) - 1] : "";
+    const monthName =
+      monthNum && monthNum !== "all"
+        ? monthNames[parseInt(monthNum, 10) - 1]
+        : "";
 
     const originalTitle = document.title;
     const periodLabelEl = document.getElementById("print-period-label");
 
     if (activeView === "annual") {
-      document.title = `Asistencia_Anual_${(agentName || 'Operador').trim().replace(/\s+/g, '_')}_${year}`;
-      if (periodLabelEl) periodLabelEl.textContent = `Reporte Anual Consolidado ${year}`;
+      document.title = `Asistencia_Anual_${(agentName || "Operador").trim().replace(/\s+/g, "_")}_${year}`;
+      if (periodLabelEl)
+        periodLabelEl.textContent = `Reporte Anual Consolidado ${year}`;
     } else {
       const pText = monthName ? `${monthName} ${year}` : year;
-      document.title = `Asistencia_${(agentName || 'Operador').trim().replace(/\s+/g, '_')}_${pText.replace(/\s+/g, '_')}`;
+      document.title = `Asistencia_${(agentName || "Operador").trim().replace(/\s+/g, "_")}_${pText.replace(/\s+/g, "_")}`;
       if (periodLabelEl) periodLabelEl.textContent = `Período: ${pText}`;
     }
 
