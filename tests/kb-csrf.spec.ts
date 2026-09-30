@@ -285,7 +285,10 @@ test("la edición sin token CSRF re-renderiza el editor y no toca el artículo",
     },
   );
 
-  expectReRender(result, { title: titulo, content: contenido });
+  const tokenNuevo = expectReRender(result, {
+    title: titulo,
+    content: contenido,
+  });
   const [row] = await db
     .select({
       title: kbArticles.title,
@@ -298,6 +301,37 @@ test("la edición sin token CSRF re-renderiza el editor y no toca el artículo",
   expect(row?.title).toBe(articulo.title);
   expect(row?.content).toBe("Contenido original.");
   expect(row?.status).toBe("draft");
+
+  const reintento = await postPagina(
+    context,
+    `/base-conocimiento/edit/${articulo.id}`,
+    {
+      title: titulo,
+      content: contenido,
+      category: "Accesos",
+      status: "published",
+    },
+    tokenNuevo,
+  );
+  expect(reintento.status).toBe(REDIRECT);
+  expect(reintento.location?.pathname).toBe(
+    `/base-conocimiento/${articulo.id}`,
+  );
+  expect(reintento.location?.searchParams.get("toast_msg")).toBe(
+    "Artículo publicado con éxito.",
+  );
+  const [guardado] = await db
+    .select({
+      title: kbArticles.title,
+      content: kbArticles.content,
+      status: kbArticles.status,
+    })
+    .from(kbArticles)
+    .where(eq(kbArticles.id, articulo.id))
+    .limit(1);
+  expect(guardado?.title).toBe(titulo);
+  expect(guardado?.content).toBe(contenido);
+  expect(guardado?.status).toBe("published");
 });
 
 test("un token vencido conserva el borrador y permite reintentar con el token nuevo", async ({

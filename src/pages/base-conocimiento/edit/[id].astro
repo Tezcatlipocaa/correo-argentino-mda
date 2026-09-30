@@ -115,7 +115,7 @@ if (Astro.request.method === "POST" && !loadError && article) {
       )
     ) {
       errorMsg =
-        "Tu sesión de edición expiró. Revisá el contenido y volvé a guardar.";
+        "No pudimos validar tu sesión. Revisá el contenido y volvé a guardar.";
     } else {
       const parsed = kbArticleSchema.safeParse({
         title: formValues.title,

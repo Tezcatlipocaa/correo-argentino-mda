@@ -114,8 +114,9 @@ if (Astro.request.method === "POST") {
         Astro.locals.sessionId,
       )
     ) {
-      errorMsg =
-        "Tu sesión de edición expiró. Revisá el contenido y volvé a guardar.";
+      const csrfMsg =
+        "No pudimos validar tu sesión. Revisá el contenido y volvé a guardar.";
+      errorMsg = errorMsg ? `${errorMsg} ${csrfMsg}` : csrfMsg;
     } else {
       let helpdeskId: number | null = sessionHelpdeskId;
 
