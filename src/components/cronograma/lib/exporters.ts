@@ -263,10 +263,7 @@ export interface ExportImageOptions {
 export async function exportAsClipboardImage(
   element: HTMLElement,
   options: ExportImageOptions = {},
-  onStart?: () => void,
-  onEnd?: () => void,
 ): Promise<void> {
-  if (onStart) onStart();
   const { padding = 0, compact = false, width: fixedWidth } = options;
 
   // Fixed width mode: render at a device-independent width (e.g. 1034 / 1388)
@@ -383,6 +380,5 @@ export async function exportAsClipboardImage(
     ]);
   } finally {
     if (host.parentNode) document.body.removeChild(host);
-    if (onEnd) onEnd();
   }
 }
