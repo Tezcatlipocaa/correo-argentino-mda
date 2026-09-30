@@ -42,9 +42,12 @@ export default defineConfig({
         },
       },
     },
+    ssr: {
+      external: ["@resvg/resvg-js"],
+    },
     build: {
       rolldownOptions: {
-        external: ["ldapjs"],
+        external: ["ldapjs", "@resvg/resvg-js"],
       },
     },
   },
