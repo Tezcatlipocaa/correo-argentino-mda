@@ -8,7 +8,7 @@ export const TitleCardSkeleton = ({ count = 8 }: Props) => {
       {Array.from({ length: count }).map((_, index) => (
         <article
           key={index}
-          className="card bg-base-200/30 card-compact border-base-300 h-32 border"
+          className="card bg-base-200/30 border-base-300 h-32 border"
         >
           <header className="card-header flex items-center gap-x-2 p-3">
             <article className="skeleton rounded-md p-2">

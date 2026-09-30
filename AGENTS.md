@@ -43,7 +43,7 @@
 - **Schema**: `src/db/schema.ts` — all tables, relations, types
 - **Config**: `drizzle.config.ts` (sqlite dialect, schema `./src/db/schema.ts`, out `./drizzle`)
 - **Connection**: `src/db/index.ts` via `better-sqlite3`
-- After schema changes, always run `npm run db:push`
+- **After schema changes, always run `npx tsx scripts/align-db-to-schema.mts` before the PM2 restart — never `npm run db:push`** (`drizzle-kit push` aborts here with `Error: Interactive prompts require a TTY terminal`).
 - **Runbook `scripts/normalize-participaciones.mts`** (one-time, idempotente, corrige participaciones stale de `agents`): (1) **dry-run primero**: `npx tsx scripts/normalize-participaciones.mts`; (2) en prod, antes de aplicar, verificar el vinculo `agents.username ↔ users.username` — el reporte muestra `skippedNoAgent` (usuarios sin agente vinculado que NO se tocan); (3) recien entonces `npx tsx scripts/normalize-participaciones.mts --apply`, que crea un backup **WAL-safe** en `database/` (via `db.backup()`, incluye `-wal`) y escribe en transaccion sincrona. Nunca borra filas.
 - **Backfill `scripts/backfill-asistencia.mts`** (one-time, idempotente, inicializa `agents.en_asistencia`; corre solo dentro de `auto-deploy.bat` tras el align): misma mecánica (dry-run por defecto, `--apply` con backup WAL-safe y tx síncrona); aborta si falta la columna. Política: mesa participativa (hoy solo MDA TI) + rol no supervisor + `en_cronograma` ⇒ `en_asistencia=1`; resto ⇒ 0; agentes legacy **sin usuario vinculado** conservan `en_cronograma` (no hay mesa/rol que evaluar). Invariante: `enAsistencia ⊆ enCronograma`. No correr `--apply` sin revisar el dry-run.
 

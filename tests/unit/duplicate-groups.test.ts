@@ -3,7 +3,7 @@ import {
   normalizeDuplicateKey,
   buildDuplicateClusters,
   selectActiveMember,
-} from "../src/lib/duplicateGroups";
+} from "../../src/lib/duplicateGroups";
 
 const row = (id, { ip = null, mac = null, hostname = null } = {}) => ({
   id,

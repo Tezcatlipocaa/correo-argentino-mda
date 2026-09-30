@@ -13,6 +13,7 @@ import { toastResponse } from "@lib/api/toastResponse";
 import SectionCard from "@components/ui/SectionCard.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
 import FormShell from "@components/ui/FormShell.astro";
+import { iconExists } from "@lib/storage";
 
 const initialCategoryId = Astro.url.searchParams.get("categoryId") || "";
 
@@ -107,6 +108,8 @@ if (Astro.request.method === "POST") {
     }
   }
 }
+
+const hasSavedIcon = iconExists(link.iconPath);
 ---
 
 <FormShell
@@ -232,7 +235,7 @@ if (Astro.request.method === "POST") {
         helpText="(Opcional, .png, .jpg, .svg, .ico)"
       >
         {
-          link.iconPath && (
+          hasSavedIcon && (
             <div
               slot="preview"
               class="rounded-box border-base-300 bg-base-200 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border p-1"
@@ -241,6 +244,8 @@ if (Astro.request.method === "POST") {
                 src={resolveUrl(`api/icons/${link.iconPath}`)}
                 alt="Preview del ícono"
                 class="h-full w-full object-contain"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           )

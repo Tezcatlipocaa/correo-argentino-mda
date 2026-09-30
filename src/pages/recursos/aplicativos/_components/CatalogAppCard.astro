@@ -5,6 +5,7 @@ import CatalogSoftBadge from "./CatalogSoftBadge.astro";
 import { decryptData } from "@lib/encryption";
 import CopyButton from "@components/ui/CopyButton.astro";
 import { resolveUrl } from "@lib/url";
+import { iconExists } from "@lib/storage";
 import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
 
 interface Props {
@@ -55,7 +56,8 @@ const isExternal = isWebUrl(rawPath);
 const itemUrl = isExternal ? rawPath : rawPath ? resolveUrl(rawPath) : "";
 const hasItemUrl = itemUrl.length > 0;
 
-const iconUrl = iconPath ? `${cleanBase}api/icons/${iconPath}` : null;
+const hasIcon = iconExists(iconPath);
+const iconUrl = hasIcon ? `${cleanBase}api/icons/${iconPath}` : null;
 const searchText = [
   title,
   description ?? "",

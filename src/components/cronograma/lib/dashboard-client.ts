@@ -1421,15 +1421,6 @@ function setupEventListeners(): void {
       }
     });
 
-  // New Operator Modal Handlers
-  const newOpModal = document.getElementById("new-operator-modal") as
-    (HTMLDialogElement & { showModal: () => void; close: () => void }) | null;
-  const openNewOpBtn = document.getElementById("open-new-op-modal");
-
-  openNewOpBtn?.addEventListener("click", () => {
-    newOpModal?.showModal();
-  });
-
   // Holidays Modal Trigger
   const holidaysModal = document.getElementById("holidays-modal") as
     (HTMLDialogElement & { showModal: () => void; close: () => void }) | null;
@@ -1980,11 +1971,11 @@ function setupEventListeners(): void {
       }
     });
 
-  const newMonthModal = document.getElementById(
-    "new-month-modal",
-  ) as HTMLElement | null;
+  const newMonthModal = document.getElementById("new-month-modal") as
+    | (HTMLDialogElement & { showModal: () => void })
+    | null;
   document.getElementById("add-month-btn")?.addEventListener("click", () => {
-    newMonthModal?.classList.add("modal-open");
+    newMonthModal?.showModal();
   });
 
   // --- Import Handler ---
@@ -2788,8 +2779,8 @@ function setupEventListeners(): void {
       return;
     }
 
-    const saveBtn = editSatForm.querySelector(
-      'button[type="submit"]',
+    const saveBtn = document.getElementById(
+      "saturday-schedule-save-btn",
     ) as HTMLButtonElement | null;
     const originalText = saveBtn ? saveBtn.innerHTML : "";
     if (saveBtn) {

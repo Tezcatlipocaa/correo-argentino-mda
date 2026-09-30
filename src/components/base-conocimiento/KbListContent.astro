@@ -1,0 +1,352 @@
+---
+import { Icon } from "astro-icon/components";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
+import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
+import ActionEditButton from "@components/ui/ActionEditButton.astro";
+import { getModulePermissions } from "@lib/rbac";
+import { can } from "@lib/roleConfig";
+import { getBaseNoSlash } from "@lib/baseUrl";
+import { resolveUrl } from "@lib/url";
+import { listArticles, type KbArticleListItem } from "@lib/kb";
+
+const user = Astro.locals.user;
+const role = user.role;
+const helpdeskId = user.helpdeskId;
+const canWrite = getModulePermissions("base-conocimiento", role).canWrite;
+const isAdmin = can(role, "admin");
+const baseNoSlash = getBaseNoSlash();
+
+const ARTICLE_LIST_LIMIT = 500;
+let articles: KbArticleListItem[] = [];
+let hasLoadError = false;
+
+if (isAdmin || helpdeskId !== null) {
+  try {
+    articles = listArticles({
+      helpdeskId,
+      includeAll: isAdmin,
+      includeUnpublished: canWrite,
+      limit: ARTICLE_LIST_LIMIT,
+    });
+  } catch (error) {
+    console.error("[kb/list] Error:", error);
+    hasLoadError = true;
+  }
+}
+
+const isListTruncated = articles.length === ARTICLE_LIST_LIMIT;
+
+const headerGridClass = isAdmin
+  ? "grid-cols-[minmax(0,1.5fr)_180px_140px_110px_160px_180px_180px] gap-3"
+  : canWrite
+    ? "grid-cols-[minmax(0,1.5fr)_140px_110px_160px_180px_180px] gap-3"
+    : "grid-cols-[minmax(0,1.5fr)_140px_160px_180px_180px] gap-3";
+const rowGridClass = `grid ${headerGridClass} items-center`;
+const minWidthClass = isAdmin
+  ? "min-w-250"
+  : canWrite
+    ? "min-w-200"
+    : "min-w-160";
+
+const statusMeta: Record<string, { label: string; className: string }> = {
+  published: { label: "Publicado", className: "badge-success" },
+  draft: { label: "Borrador", className: "badge-warning" },
+  archived: { label: "Archivado", className: "badge-neutral" },
+};
+
+const getStatusMeta = (status: string) =>
+  statusMeta[status] ?? { label: status, className: "badge-neutral" };
+
+const getSearchText = (article: KbArticleListItem) =>
+  [
+    article.title,
+    article.category ?? "",
+    article.authorName ?? "",
+    article.mesaName ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+---
+
+<div id="base-conocimiento-root" class="space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-base-content text-lg font-semibold">Artículos</h2>
+      {
+        (isAdmin || helpdeskId !== null) && !hasLoadError && (
+          <span class="badge badge-neutral badge-sm font-mono">
+            {articles.length}
+          </span>
+        )
+      }
+    </div>
+    {
+      canWrite && (
+        <a
+          href={resolveUrl("/base-conocimiento/create", baseNoSlash)}
+          class="btn btn-primary btn-sm md:btn-md gap-2"
+        >
+          <Icon name="boxicons:plus" size={24} />
+          Nuevo artículo
+        </a>
+      )
+    }
+  </div>
+
+  {
+    hasLoadError ? (
+      <div role="alert" class="alert alert-error">
+        <Icon name="boxicons:x-circle-filled" size={24} />
+        <span>
+          No se pudieron cargar los artículos. Intentá de nuevo más tarde.
+        </span>
+      </div>
+    ) : !isAdmin && helpdeskId === null ? (
+      <div role="status" class="alert alert-warning">
+        <Icon name="boxicons:user-minus" size={24} />
+        <span>Tu usuario no tiene mesa asignada.</span>
+      </div>
+    ) : articles.length === 0 ? (
+      <SearchEmptyState
+        title="No hay artículos"
+        description="Todavía no hay artículos para mostrar."
+        icon="boxicons:book-content"
+        class="flex"
+      />
+    ) : (
+      <>
+        <SearchBar
+          id="kb-articles-search"
+          placeholder="Buscar por título, categoría o autor..."
+          ariaLabel="Buscar artículos"
+        />
+
+        {isListTruncated && (
+          <div role="status" class="alert alert-neutral">
+            <Icon name="boxicons:info-circle-filled" size={24} />
+            <span>
+              Solo se muestran los 500 artículos más recientes. La búsqueda
+              incluye únicamente los artículos cargados.
+            </span>
+          </div>
+        )}
+
+        <DataTable
+          id="kb-articles-table"
+          ariaLabel="Listado de artículos"
+          minWidthClass={minWidthClass}
+          headerGridClass={headerGridClass}
+          rowGridClass={rowGridClass}
+          emptyStateTitle="Sin artículos"
+          emptyStateDescription="No encontramos artículos para esa búsqueda. Probá con otros términos."
+          showClearButton
+          clearButtonText="Limpiar búsqueda"
+          clearButtonId="kb-articles-search-clear"
+          defaultSortKey="updated"
+          defaultSortDirection="descending"
+        >
+          <div slot="header">
+            <DataTableHeaderCell sortKey="title">Título</DataTableHeaderCell>
+          </div>
+          {isAdmin && (
+            <div slot="header">
+              <DataTableHeaderCell>Mesa</DataTableHeaderCell>
+            </div>
+          )}
+          <div slot="header">
+            <DataTableHeaderCell sortKey="category">
+              Categoría
+            </DataTableHeaderCell>
+          </div>
+          {canWrite && (
+            <div slot="header">
+              <DataTableHeaderCell sortKey="status">Estado</DataTableHeaderCell>
+            </div>
+          )}
+          <div slot="header">
+            <DataTableHeaderCell sortKey="author">Autor</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell sortKey="updated">
+              Actualizado
+            </DataTableHeaderCell>
+          </div>
+          <div slot="header" class="text-right">
+            <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
+          </div>
+
+          {articles.map((article) => {
+            const status = getStatusMeta(article.status);
+            const updatedTimestamp = article.updatedAt?.getTime() ?? 0;
+            const updatedLabel = article.updatedAt
+              ? article.updatedAt.toLocaleString("es-AR")
+              : "—";
+
+            return (
+              <div
+                data-table-row
+                data-sort-title={article.title.toLowerCase()}
+                data-sort-category={(article.category ?? "").toLowerCase()}
+                data-sort-status={article.status.toLowerCase()}
+                data-sort-author={(article.authorName ?? "").toLowerCase()}
+                data-sort-updated={updatedTimestamp}
+                data-search-text={getSearchText(article)}
+                class:list={[
+                  rowGridClass,
+                  "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+                ]}
+              >
+                <div class="min-w-0">
+                  <a
+                    href={resolveUrl(
+                      `/base-conocimiento/${article.id}`,
+                      baseNoSlash,
+                    )}
+                    class="text-primary block truncate text-sm font-medium hover:underline"
+                    title={article.title}
+                    data-highlight-target
+                  >
+                    {article.title}
+                  </a>
+                </div>
+
+                {isAdmin && (
+                  <div class="min-w-0">
+                    <span
+                      class="text-base-content/70 block truncate text-sm"
+                      title={article.mesaName ?? ""}
+                      data-highlight-target
+                    >
+                      {article.mesaName || "—"}
+                    </span>
+                  </div>
+                )}
+
+                <div class="min-w-0">
+                  <span
+                    class="text-base-content/70 block truncate text-sm"
+                    title={article.category ?? ""}
+                    data-highlight-target
+                  >
+                    {article.category || "—"}
+                  </span>
+                </div>
+
+                {canWrite && (
+                  <div>
+                    <span class:list={["badge badge-sm", status.className]}>
+                      {status.label}
+                    </span>
+                  </div>
+                )}
+
+                <div class="min-w-0">
+                  <span
+                    class="text-base-content/70 block truncate text-sm"
+                    title={article.authorName ?? ""}
+                    data-highlight-target
+                  >
+                    {article.authorName || "—"}
+                  </span>
+                </div>
+
+                <div class="min-w-0">
+                  <span
+                    class="text-base-content/70 block truncate font-mono text-xs"
+                    data-highlight-target
+                  >
+                    {updatedLabel}
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                  {canWrite && (
+                    <ActionEditButton
+                      href={resolveUrl(
+                        `/base-conocimiento/edit/${article.id}`,
+                        baseNoSlash,
+                      )}
+                      size="xs"
+                      ariaLabel={`Editar ${article.title}`}
+                    />
+                  )}
+                  <a
+                    href={resolveUrl(
+                      `/base-conocimiento/${article.id}`,
+                      baseNoSlash,
+                    )}
+                    class="btn btn-xs btn-soft btn-accent gap-2"
+                    aria-label={`Ver ${article.title}`}
+                  >
+                    <Icon name="boxicons:eye-filled" size={24} />
+                    Ver
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </DataTable>
+      </>
+    )
+  }
+</div>
+
+<script>
+  import {
+    matchesSearchQuery,
+    highlightSearchTargets,
+  } from "@lib/clientSearch";
+
+  function initKbSearch() {
+    const searchInput = document.querySelector<HTMLInputElement>(
+      "#kb-articles-search",
+    );
+    if (!searchInput) return false;
+    if (searchInput.dataset.kbSearchBound === "true") return true;
+
+    const rows = document.querySelectorAll<HTMLElement>(
+      "#kb-articles-table [data-table-row]",
+    );
+
+    function applyFilters() {
+      const query = searchInput?.value.trim() ?? "";
+      rows.forEach((row) => {
+        const searchText = row.dataset.searchText || "";
+        const isVisible = matchesSearchQuery(query, [searchText]);
+        row.classList.toggle("hidden", !isVisible);
+        highlightSearchTargets(row, isVisible ? query : "");
+      });
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    document
+      .getElementById("kb-articles-search-clear")
+      ?.addEventListener("click", () => {
+        searchInput.value = "";
+        applyFilters();
+        searchInput.focus();
+      });
+    searchInput.dataset.kbSearchBound = "true";
+    return true;
+  }
+
+  function setupKbSearchObserver() {
+    if (initKbSearch()) return;
+
+    const observer = new MutationObserver((_, obs) => {
+      if (initKbSearch()) {
+        obs.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupKbSearchObserver();
+
+  document.addEventListener("astro:page-load", () => {
+    setupKbSearchObserver();
+  });
+</script>

@@ -90,6 +90,11 @@ export const navSections: NavSection[] = [
         label: "Mesas de Ayuda",
         icon: "boxicons:headphone-mic",
       },
+      {
+        href: "/base-conocimiento",
+        label: "Base de conocimiento",
+        icon: "boxicons:book-library-filled",
+      },
     ],
   },
   {

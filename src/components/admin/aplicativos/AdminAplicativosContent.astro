@@ -15,6 +15,7 @@ import DeleteCategoryModal from "@components/ui/DeleteCategoryModal.astro";
 import { resolveUrl } from "@lib/url";
 import AddCategoryButton from "@components/ui/AddCategoryButton.astro";
 import AddEntityButton from "@components/ui/AddEntityButton.astro";
+import { iconExists } from "@lib/storage";
 
 const cleanBase = getCleanBase();
 
@@ -370,11 +371,13 @@ const truncatePath = (filePath: string | null) => {
                     </div>
 
                     <div class="border-base-300 bg-base-200 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5">
-                      {app.iconPath ? (
+                      {iconExists(app.iconPath) ? (
                         <img
                           src={`${cleanBase}api/icons/${app.iconPath}`}
                           alt={`Ícono de ${app.title}`}
                           class="h-full w-full object-contain"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <Icon

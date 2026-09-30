@@ -10,7 +10,7 @@ import { logAdminFromAstro } from "@lib/auditLogger";
 import { processIconUpload } from "@lib/iconUpload";
 import { encryptData, decryptData } from "@lib/encryption";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
-import { getPdfsDir, ensureDir } from "@lib/storage";
+import { getPdfsDir, ensureDir, iconExists } from "@lib/storage";
 import { processAppFileUpload } from "@lib/appFileUpload";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
@@ -327,7 +327,7 @@ const isExternal = formUploadType
         helpText="(Opcional, .png, .jpg, .svg, .ico)"
       >
         {
-          app.iconPath && (
+          iconExists(app.iconPath) && (
             <div
               slot="preview"
               class="rounded-box border-base-300 bg-base-200 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border p-1"
@@ -336,6 +336,8 @@ const isExternal = formUploadType
                 src={resolveUrl(`api/icons/${app.iconPath}`)}
                 alt="Preview del ícono"
                 class="h-full w-full object-contain"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           )
@@ -609,14 +611,14 @@ const isExternal = formUploadType
       <input
         type="text"
         placeholder="Entorno / Clave (ej: Debian, MySQL)"
-        class="input input-bordered input-sm flex-1 font-semibold"
+        class="input input-sm flex-1 font-semibold"
         value="${label.replace(/"/g, "&quot;")}"
         required
       />
       <input
         type="text"
         placeholder="Valor / Contraseña"
-        class="input input-bordered input-sm flex-1 font-mono"
+        class="input input-sm flex-1 font-mono"
         value="${value.replace(/"/g, "&quot;")}"
         required
       />

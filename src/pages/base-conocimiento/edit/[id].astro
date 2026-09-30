@@ -1,0 +1,448 @@
+---
+import { Icon } from "astro-icon/components";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import FormShell from "@components/ui/FormShell.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import KbEditor from "@components/base-conocimiento/KbEditor.astro";
+import { can } from "@lib/roleConfig";
+import { getModulePermissions } from "@lib/rbac";
+import { kbArticleSchema } from "@lib/validations";
+import {
+  getArticle,
+  updateArticleAndTransition,
+  type KbArticle,
+  type KbScope,
+} from "@lib/kb";
+import { listCategories } from "@lib/kbCategories";
+import { logAdminActionStructured } from "@lib/auditLogger";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { getCsrfTokenForSession, validateCsrfToken } from "@lib/csrf";
+import { resolveUrl } from "@lib/url";
+import { getCleanBase } from "@lib/baseUrl";
+import type { ToastType } from "@lib/toastClient";
+
+type ArticleStatus = "draft" | "published" | "archived";
+
+const statusOptions: Array<{ value: ArticleStatus; label: string }> = [
+  { value: "draft", label: "Borrador" },
+  { value: "published", label: "Publicado" },
+  { value: "archived", label: "Archivado" },
+];
+
+const rawId = Astro.params.id;
+if (!rawId || !/^\d+$/.test(rawId)) {
+  return Astro.rewrite(resolveUrl("/404"));
+}
+
+const articleId = Number(rawId);
+if (!Number.isSafeInteger(articleId) || articleId <= 0) {
+  return Astro.rewrite(resolveUrl("/404"));
+}
+
+const user = Astro.locals.user;
+const canWrite = getModulePermissions("base-conocimiento", user.role).canWrite;
+
+if (!canWrite) {
+  return redirectWithToast(
+    "/base-conocimiento",
+    "No tenés permisos para editar artículos.",
+    "error",
+  );
+}
+
+const sessionHelpdeskId = user.helpdeskId;
+if (
+  typeof sessionHelpdeskId !== "number" ||
+  !Number.isInteger(sessionHelpdeskId) ||
+  sessionHelpdeskId <= 0
+) {
+  return redirectWithToast(
+    "/base-conocimiento",
+    "Tu usuario no tiene una mesa asignada.",
+    "error",
+  );
+}
+
+const isAdmin = can(user.role, "admin");
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
+const scope: KbScope = {
+  helpdeskId: sessionHelpdeskId,
+  includeAll: isAdmin,
+};
+
+let article: KbArticle | null = null;
+let loadError = false;
+let loadErrorMsg = "";
+let errorMsg = "";
+let toastType: ToastType = "alert-error";
+
+try {
+  article = getArticle(articleId, scope);
+} catch (error) {
+  console.error("[KbEdit] Error cargando el artículo:", error);
+  loadError = true;
+  loadErrorMsg = "No se pudo cargar el artículo. Intentá de nuevo.";
+}
+
+if (!loadError && !article) {
+  return Astro.rewrite(resolveUrl("/404"));
+}
+
+const formValues = {
+  title: article?.title ?? "",
+  category: article?.category ?? "",
+  content: article?.content ?? "",
+  status: article?.status ?? "draft",
+};
+
+if (Astro.request.method === "POST" && !loadError && article) {
+  try {
+    const formData = await Astro.request.formData();
+    formValues.title = formData.get("title")?.toString() ?? "";
+    formValues.category = formData.get("category")?.toString() ?? "";
+    formValues.content = formData.get("content")?.toString() ?? "";
+    formValues.status = formData.get("status")?.toString().trim() || "draft";
+
+    if (
+      !Astro.locals.sessionId ||
+      !validateCsrfToken(
+        String(formData.get("csrf_token") ?? ""),
+        Astro.locals.sessionId,
+      )
+    ) {
+      errorMsg =
+        "No pudimos validar tu sesión. Revisá el contenido y volvé a guardar.";
+    } else {
+      const parsed = kbArticleSchema.safeParse({
+        title: formValues.title,
+        category: formValues.category,
+        content: formValues.content,
+        status: formValues.status,
+      });
+
+      if (!parsed.success) {
+        errorMsg = parsed.error.issues.map((issue) => issue.message).join(", ");
+      } else if (
+        parsed.data.category &&
+        parsed.data.category !== (article.category ?? "") &&
+        !listCategories(article.helpdeskId).some(
+          (category) => category.name === parsed.data.category,
+        )
+      ) {
+        errorMsg = "La categoría seleccionada no es válida.";
+      } else {
+        const result = updateArticleAndTransition(
+          articleId,
+          {
+            title: parsed.data.title,
+            content: parsed.data.content,
+            category: parsed.data.category ?? null,
+          },
+          parsed.data.status,
+          user.id,
+          scope,
+        );
+
+        if (!result.ok) {
+          errorMsg =
+            result.reason === "invalid_transition"
+              ? "No se puede volver a borrador. Solo se puede publicar o archivar el artículo."
+              : "No se encontró el artículo. Intentá de nuevo.";
+        } else {
+          const articleChanged =
+            parsed.data.title !== article.title ||
+            parsed.data.content !== article.content ||
+            (parsed.data.category ?? null) !== (article.category ?? null);
+
+          if (articleChanged) {
+            await logAdminActionStructured(
+              user.username || "Sistema",
+              `Actualizó el artículo "${parsed.data.title}"`,
+              "kb_article",
+              articleId,
+              {
+                title: article.title,
+                category: article.category ?? null,
+                status: article.status,
+              },
+              {
+                title: parsed.data.title,
+                category: parsed.data.category ?? null,
+                status: result.status,
+              },
+            );
+          }
+
+          if (result.statusChanged) {
+            await logAdminActionStructured(
+              user.username || "Sistema",
+              result.status === "published"
+                ? `Publicó el artículo "${parsed.data.title}"`
+                : `Archivó el artículo "${parsed.data.title}"`,
+              "kb_article",
+              articleId,
+              { status: article.status },
+              { status: result.status },
+            );
+            return redirectWithToast(
+              `/base-conocimiento/${articleId}`,
+              result.status === "published"
+                ? "Artículo publicado con éxito."
+                : "Artículo archivado con éxito.",
+            );
+          }
+
+          return redirectWithToast(
+            "/base-conocimiento",
+            "Artículo actualizado con éxito.",
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[KbEdit] Error guardando el artículo:", error);
+    errorMsg = "No se pudo actualizar el artículo. Intentá de nuevo.";
+  }
+}
+
+const articleMesaLabel = article?.mesaName || "Mesa desconocida";
+const editorTargetHelpdeskId = article?.helpdeskId ?? null;
+const targetCategories = editorTargetHelpdeskId
+  ? listCategories(editorTargetHelpdeskId)
+  : [];
+const nuevaCategoria = Astro.url.searchParams.get("nueva_categoria") ?? "";
+const categoriaOptions = [
+  { value: "", label: "Sin categoría" },
+  ...targetCategories.map((category) => ({
+    value: category.name,
+    label: category.name,
+  })),
+];
+const extraCategories = [
+  ...new Set(
+    [formValues.category, nuevaCategoria].filter(
+      (name) =>
+        name.length > 0 && !targetCategories.some((c) => c.name === name),
+    ),
+  ),
+];
+const categoriaSeleccionada = [
+  ...categoriaOptions,
+  ...extraCategories.map((name) => ({ value: name, label: name })),
+];
+const backHref = resolveUrl("/base-conocimiento");
+---
+
+{
+  loadError ? (
+    <BaseLayout title="No se pudo cargar el artículo">
+      <PageContainer width="xl">
+        <PageHeader
+          title="No se pudo cargar el artículo"
+          description="Intentá de nuevo más tarde."
+        />
+        <div class="alert alert-error mt-4" role="alert">
+          <Icon name="boxicons:x-circle-filled" size={24} />
+          <span>{loadErrorMsg}</span>
+        </div>
+        <a href={backHref} class="btn btn-secondary mt-4 gap-2">
+          <Icon name="boxicons:arrow-big-left-filled" size={24} />
+          Volver a la base de conocimiento
+        </a>
+      </PageContainer>
+    </BaseLayout>
+  ) : (
+    <FormShell
+      backHref={backHref}
+      title={`Editar: ${article?.title ?? "artículo"}`}
+      subtitle="Modificá los datos del artículo seleccionado."
+      formId="kb-article-form"
+      saveLabel="Guardar cambios"
+      containerWidth="xxl"
+    >
+      <input type="hidden" name="id" value={articleId} />
+      <input type="hidden" name="csrf_token" value={csrfToken} />
+
+      <SectionCard title="Datos del artículo" icon="boxicons:article-filled">
+        <div class="space-y-6 p-6 sm:p-8">
+          <div
+            data-kb-fields-row
+            class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+          >
+            <FormField
+              id="kb-title"
+              name="title"
+              label="Título"
+              required
+              value={formValues.title}
+              placeholder="Ej: Configurar una cuenta de correo"
+              maxlength={120}
+              class="min-w-0"
+            />
+
+            <div class="min-w-0">
+              <SelectField
+                id="kb-category"
+                name="category"
+                label="Categoría"
+                options={categoriaSeleccionada}
+                value={nuevaCategoria || formValues.category}
+                helpText="Opcional"
+              />
+              <a
+                href={`${getCleanBase()}base-conocimiento/categorias`}
+                class="link link-secondary link-hover text-xs"
+              >
+                Administrar categorías
+              </a>
+            </div>
+
+            <div class="min-w-0" data-kb-mesa-cell>
+              <span class="fieldset-legend font-bold tracking-wider">Mesa</span>
+              <p class="py-2">
+                <span class="badge badge-accent break-words">
+                  {articleMesaLabel}
+                </span>
+              </p>
+            </div>
+
+            <SelectField
+              id="kb-status"
+              name="status"
+              label="Estado"
+              required
+              options={statusOptions}
+              value={formValues.status}
+              helpText="Podés publicar o archivar el artículo; no se puede volver a borrador."
+              class="min-w-0"
+            />
+          </div>
+
+          <details class="collapse-arrow border-base-300 collapse border">
+            <summary class="collapse-title font-semibold">
+              Nueva categoría
+            </summary>
+            <div class="collapse-content">
+              <div class="flex flex-wrap items-end gap-3">
+                <label class="fieldset flex-1">
+                  <span class="fieldset-legend font-bold tracking-wider">
+                    Nombre de la nueva categoría
+                  </span>
+                  <input
+                    type="text"
+                    name="name"
+                    form="kb-new-category-form"
+                    required
+                    minlength="2"
+                    maxlength="60"
+                    class="input w-full"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  form="kb-new-category-form"
+                  class="btn btn-secondary"
+                >
+                  Crear categoría
+                </button>
+              </div>
+              <p class="text-base-content/60 mt-2 text-xs">
+                Al crearla volvés a este formulario con la categoría
+                seleccionada.
+              </p>
+            </div>
+          </details>
+
+          <div class="space-y-2">
+            <label
+              for="kb-content"
+              class="fieldset-legend font-bold tracking-wider"
+            >
+              Contenido <span class="text-error">*</span>
+            </label>
+            <KbEditor
+              id="kb-content"
+              name="content"
+              required
+              value={formValues.content}
+              targetHelpdeskId={editorTargetHelpdeskId}
+              helpText="Escribí el contenido en Markdown. Las imágenes se guardan en la mesa del artículo."
+            />
+          </div>
+        </div>
+      </SectionCard>
+    </FormShell>
+  )
+}
+
+<form
+  id="kb-new-category-form"
+  method="POST"
+  action={resolveUrl("/base-conocimiento/categorias")}
+  class="hidden"
+>
+  <input type="hidden" name="action" value="create" />
+  <input
+    type="hidden"
+    name="returnTo"
+    value={`/base-conocimiento/edit/${articleId}`}
+  />
+  <input type="hidden" name="csrf_token" value={csrfToken} />
+  {
+    isAdmin && (
+      <input
+        type="hidden"
+        name="helpdeskId"
+        value={String(editorTargetHelpdeskId ?? "")}
+      />
+    )
+  }
+</form>
+
+<script is:inline define:vars={{ errorMsg, toastType }}>
+  if (errorMsg) {
+    window.addEventListener("load", () =>
+      window.showToast?.(errorMsg, toastType),
+    );
+  }
+</script>
+
+<script>
+  const formElement = document.getElementById("kb-article-form");
+  if (formElement instanceof HTMLFormElement) {
+    formElement.addEventListener("submit", (event) => {
+      if (formElement.dataset.submitting === "true") {
+        event.preventDefault();
+        return;
+      }
+
+      queueMicrotask(() => {
+        if (event.defaultPrevented) return;
+        formElement.dataset.submitting = "true";
+        const submitButton = formElement.querySelector<HTMLButtonElement>(
+          'button[type="submit"]:not([form])',
+        );
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.classList.add("btn-disabled");
+        }
+      });
+    });
+  }
+</script>
+
+<script>
+  if (new URLSearchParams(window.location.search).has("nueva_categoria")) {
+    window.addEventListener("load", () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("nueva_categoria");
+      url.searchParams.delete("toast_msg");
+      url.searchParams.delete("toast_type");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    });
+  }
+</script>

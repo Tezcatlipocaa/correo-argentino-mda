@@ -15,6 +15,7 @@ import DeleteCategoryModal from "@components/ui/DeleteCategoryModal.astro";
 import { resolveUrl } from "@lib/url";
 import AddCategoryButton from "@components/ui/AddCategoryButton.astro";
 import AddEntityButton from "@components/ui/AddEntityButton.astro";
+import { iconExists } from "@lib/storage";
 
 const cleanBase = getCleanBase();
 
@@ -352,11 +353,13 @@ links.forEach((link) => {
                     </div>
 
                     <div class="border-base-300 bg-base-200 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5">
-                      {link.iconPath ? (
+                      {iconExists(link.iconPath) ? (
                         <img
                           src={`${cleanBase}api/icons/${link.iconPath}`}
                           alt={`Ícono de ${link.title}`}
                           class="h-full w-full object-contain"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <Icon

@@ -2,6 +2,7 @@
 import { db } from "@db/index";
 import { users, agents, mesas } from "@db/schema";
 import { sql, eq, and, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
@@ -31,6 +32,8 @@ import SearchBar from "@components/ui/SearchBar.astro";
 
 const currentUserId = Astro.locals.user?.id ?? 0;
 
+const disabledByUser = alias(users, "disabled_by_user");
+
 const allUsers = await db
   .select({
     id: users.id,
@@ -57,7 +60,8 @@ const allUsers = await db
     agents,
     sql`lower(coalesce(${agents.username}, '')) = ${users.username}`,
   )
-  .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId));
+  .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
+  .leftJoin(disabledByUser, eq(users.disabledBy, disabledByUser.id));
 
 const activeUsers = allUsers.filter((u) => u.active);
 const inactiveUsers = allUsers.filter((u) => !u.active);

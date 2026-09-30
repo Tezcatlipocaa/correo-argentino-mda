@@ -891,6 +891,88 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
   }),
 }));
 
+export const kbArticles = sqliteTable(
+  "kb_articles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    helpdeskId: integer("helpdesk_id")
+      .notNull()
+      .references(() => mesas.invgateId, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    category: text("category"),
+    status: text("status").notNull().default("draft"),
+    authorUserId: integer("author_user_id")
+      .notNull()
+      .references(() => users.id),
+    publishedByUserId: integer("published_by_user_id").references(
+      () => users.id,
+    ),
+    publishedAt: integer("published_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$onUpdateFn(
+      () => new Date(),
+    ),
+  },
+  (t) => ({
+    helpdeskStatusIdx: index("kb_articles_helpdesk_status_idx").on(
+      t.helpdeskId,
+      t.status,
+    ),
+  }),
+);
+
+export const kbArticlesRelations = relations(kbArticles, ({ one }) => ({
+  author: one(users, {
+    fields: [kbArticles.authorUserId],
+    references: [users.id],
+  }),
+  publishedBy: one(users, {
+    fields: [kbArticles.publishedByUserId],
+    references: [users.id],
+  }),
+  helpdesk: one(mesas, {
+    fields: [kbArticles.helpdeskId],
+    references: [mesas.invgateId],
+  }),
+}));
+
+export const kbCategories = sqliteTable(
+  "kb_categories",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    helpdeskId: integer("helpdesk_id")
+      .notNull()
+      .references(() => mesas.invgateId, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("kb_categories_helpdesk_name_unique").on(
+      table.helpdeskId,
+      table.name,
+    ),
+  ],
+);
+
+export const kbCategoriesRelations = relations(kbCategories, ({ one }) => ({
+  helpdesk: one(mesas, {
+    fields: [kbCategories.helpdeskId],
+    references: [mesas.invgateId],
+  }),
+  createdBy: one(users, {
+    fields: [kbCategories.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
 export const assignmentLock = sqliteTable("assignment_lock", {
   id: integer("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -937,7 +1019,9 @@ export const mesas = sqliteTable("mesas", {
   // Curacion manual: si la mesa puede elegirse en el select de alta/edicion de
   // usuario. Separado de `active` (ciclo de vida del sync de InvGate). La mesa
   // principal MDA TI siempre es asignable (exenta del toggle).
-  assignable: integer("assignable", { mode: "boolean" }).notNull().default(false),
+  assignable: integer("assignable", { mode: "boolean" })
+    .notNull()
+    .default(false),
   lastSyncedAt: text("last_synced_at").notNull(),
 });
 

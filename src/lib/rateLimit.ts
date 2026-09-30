@@ -26,9 +26,13 @@ export const RATE_LIMITS = {
   apiRead: { limit: 60, windowMs: 60_000 },
   apiWrite: { limit: 20, windowMs: 60_000 },
   upload: { limit: 10, windowMs: 60 * 60_000 },
+  kbCategoryWrite: { limit: 20, windowMs: 60_000 },
 } as const satisfies Record<string, RateLimitProfile>;
 
-const slidingWindows = new Map<string, { timestamps: number[]; windowMs: number }>();
+const slidingWindows = new Map<
+  string,
+  { timestamps: number[]; windowMs: number }
+>();
 let lastSlidingSweep = Date.now();
 
 function sweepSliding(now: number) {

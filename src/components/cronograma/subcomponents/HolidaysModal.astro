@@ -1,6 +1,11 @@
 ---
 // HolidaysModal.astro
 import Modal from "@components/ui/Modal.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import FormLegend from "@components/ui/forms/FormLegend.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 ---
 
 <Modal
@@ -8,75 +13,69 @@ import Modal from "@components/ui/Modal.astro";
   title="Gestionar Feriados"
   icon="boxicons:calendar-star-filled"
   titleClass="font-black text-lg uppercase tracking-tight"
+  size="lg"
   zIndex="z-200"
-  class="max-w-lg"
+  actionsFooter
 >
   <Fragment slot="content">
     <div class="space-y-4">
-      <!-- Holidays List Section -->
-      <div>
-        <label class="label">
-          <span
-            class="label-text text-base-content/60 text-xs font-bold uppercase"
-            >Lista de Feriados</span
-          >
-        </label>
+      <fieldset class="fieldset">
+        <FormLegend class="font-bold tracking-wider">Lista de Feriados</FormLegend>
         <div
           id="holidays-list-container"
-          class="scrollbar-thin border-base-200 bg-base-200/20 max-h-64 space-y-2 overflow-y-auto rounded-xl border p-3 pr-1"
+          class="scrollbar-thin border-base-300 bg-base-200/20 max-h-64 space-y-2 overflow-y-auto rounded-xl border p-3 pr-1"
         >
           <!-- JavaScript will render the list items here -->
         </div>
-      </div>
+      </fieldset>
 
-      <!-- Add New Holiday Section -->
-      <div class="border-base-200 border-t pt-4">
-        <label class="label">
-          <span
-            class="label-text text-base-content/60 text-xs font-bold uppercase"
-            >Agregar Nuevo Feriado</span
-          >
-        </label>
-        <div class="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="date"
+      <div class="border-base-300 space-y-3 border-t pt-4">
+        <p class="fieldset-legend w-full font-bold tracking-wider">
+          Agregar Nuevo Feriado
+        </p>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField
             id="new-holiday-date"
-            class="input input-bordered input-sm bg-base-100 focus:border-secondary w-full shrink-0 font-mono text-xs focus:outline-none sm:w-44"
+            name="new-holiday-date"
+            label="Fecha"
+            type="date"
+            size="sm"
+            inputClass="font-mono"
           />
-          <input
-            type="text"
+          <FormField
             id="new-holiday-name"
-            placeholder="Nombre del feriado (ej: Año Nuevo)"
-            class="input input-bordered input-sm bg-base-100 focus:border-secondary flex-1 text-xs font-bold focus:outline-none"
+            name="new-holiday-name"
+            label="Nombre del Feriado"
+            placeholder="Ej: Año Nuevo"
+            size="sm"
           />
-          <button
-            type="button"
+        </div>
+        <div class="flex justify-end">
+          <ActionButton
             id="add-holiday-btn"
-            class="btn btn-sm btn-secondary w-full text-xs font-black uppercase sm:w-auto"
-          >
-            Agregar
-          </button>
+            icon="boxicons:plus-filled"
+            label="Agregar"
+            size="sm"
+          />
         </div>
       </div>
     </div>
   </Fragment>
   <Fragment slot="actions">
-    <div class="modal-action mt-6 flex justify-end gap-2">
-      <button
-        class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
-        id="cancel-holidays-btn"
-        type="button"
-      >
-        Cancelar
-      </button>
-      <button
-        class="btn btn-sm btn-primary text-xs font-black uppercase"
-        id="save-holidays-btn"
-        type="button"
-      >
-        Guardar Cambios
-      </button>
-    </div>
+    <ActionCancelButton
+      type="button"
+      id="cancel-holidays-btn"
+      label="Cancelar"
+      icon="boxicons:x-filled"
+      variant="error"
+    />
+    <ActionConfirmButton
+      type="button"
+      id="save-holidays-btn"
+      color="btn-secondary"
+      label="Guardar Cambios"
+      icon="boxicons:save-filled"
+    />
   </Fragment>
 </Modal>
 

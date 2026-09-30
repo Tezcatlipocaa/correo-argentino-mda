@@ -77,6 +77,7 @@ skills-lock.json
 test-insert.js
 test-playwright.js
 scratch/
+test_signature_success.png
 
 # Local storage fallback (when EXTERNAL_STORAGE_DIR is not set)
 /data/storage/

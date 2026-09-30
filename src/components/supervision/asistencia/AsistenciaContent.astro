@@ -787,7 +787,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
   ) {
     const val = selectEl.value;
     const baseClass =
-      "select select-bordered h-9 py-1 rounded-xl w-full font-semibold focus:outline-none focus:border-secondary bg-base-100 pr-9 text-small ";
+      "select h-9 py-1 rounded-xl w-full font-semibold focus:outline-none focus:border-secondary bg-base-100 pr-9 text-small ";
     if (field === "asistencia") {
       selectEl.className = baseClass + "max-w-[220px]";
       const classes = attendanceClasses[val];
@@ -1059,7 +1059,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
             </td>
 
             <td class="py-3 px-3">
-              <select class="select select-bordered h-9 py-1 rounded-xl w-full max-w-[220px] bg-base-100 font-semibold focus:outline-none focus:border-secondary pr-9 text-small ${getAsistenciaClass(asisVal)}" data-field="asistencia" ${isAsisSelectDisabled}>
+              <select class="select h-9 py-1 rounded-xl w-full max-w-[220px] bg-base-100 font-semibold focus:outline-none focus:border-secondary pr-9 text-small ${getAsistenciaClass(asisVal)}" data-field="asistencia" ${isAsisSelectDisabled}>
                 ${selectAsisOpts
                   .map(
                     (opt) => `
@@ -1071,7 +1071,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
             </td>
 
             <td class="py-3 px-3">
-              <select class="select select-bordered h-9 py-1 rounded-xl w-full max-w-[170px] bg-base-100 font-semibold focus:outline-none focus:border-secondary pr-9 text-small ${getAusenciaClass(ausencia)}" data-field="ausencia" ${disabledAttr}>
+              <select class="select h-9 py-1 rounded-xl w-full max-w-[170px] bg-base-100 font-semibold focus:outline-none focus:border-secondary pr-9 text-small ${getAusenciaClass(ausencia)}" data-field="ausencia" ${disabledAttr}>
                 ${ausenciaOptions
                   .map(
                     (opt) => `
@@ -1096,7 +1096,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                     ${op.horarioEstipulado || "Franco"}
                   </span>
                   <input type="text" maxlength="13" placeholder="Franco"
-                    class="horario-edit hidden input input-bordered input-sm rounded-xl bg-base-100 text-center text-xs w-[115px] max-w-full font-mono"
+                    class="horario-edit hidden input input-sm rounded-xl bg-base-100 text-center text-xs w-[115px] max-w-full font-mono"
                     value="${op.horarioEstipulado || ""}" data-field="horarioEstipulado" />
                 </div>
               `
@@ -1106,7 +1106,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
             <td class="py-3 px-3 text-center">
               <input 
                 type="text" 
-                class="input input-bordered input-sm rounded-xl bg-base-100 text-center text-xs w-20 max-w-full focus:outline-none focus:border-secondary font-mono" 
+                class="input input-sm rounded-xl bg-base-100 text-center text-xs w-20 max-w-full focus:outline-none focus:border-secondary font-mono" 
                 value="${entradaReal}" 
                 placeholder="HH:MM" 
                 maxlength="5"
@@ -1120,7 +1120,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                 <span class="badge badge-sm py-2 px-3 rounded-lg text-tiny whitespace-nowrap ${complianceClasses[cumplimiento] || "badge-ghost"}" id="badge-cump-${op.rowId}">
                   ${complianceLabels[cumplimiento] || cumplimiento}
                 </span>
-                <select class="select select-bordered h-8 py-0.5 rounded-lg bg-base-100 text-tiny font-bold text-base-content uppercase w-[120px] text-center focus:outline-none focus:border-secondary" data-field="cumplimiento" ${disabledAttr}>
+                <select class="select h-8 py-0.5 rounded-lg bg-base-100 text-tiny font-bold text-base-content uppercase w-[120px] text-center focus:outline-none focus:border-secondary" data-field="cumplimiento" ${disabledAttr}>
                   <option value="" ${!cumplimientoForzado ? "selected" : ""}>⚙️ AUTOMÁTICO</option>
                   <option value="Cumplió" ${cumplimientoForzado && cumplimiento === "Cumplió" ? "selected" : ""}>Cumplió</option>
                   <option value="Incumplió" ${cumplimientoForzado && cumplimiento === "Incumplió" ? "selected" : ""}>Incumplió</option>
@@ -1141,7 +1141,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                     </label>
                     <input 
                       type="text" 
-                      class="input input-bordered input-sm rounded-xl w-full bg-base-100 text-xs focus:outline-none focus:border-secondary" 
+                      class="input input-sm rounded-xl w-full bg-base-100 text-xs focus:outline-none focus:border-secondary" 
                       value="${motivoLoguin}" 
                       placeholder="Ej: Problemas de conexión, VPN caída..." 
                       data-field="motivoLoguin"
@@ -1155,7 +1155,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                       Detalle / Comentario (RRHH o Supervisor)
                     </label>
                     <textarea 
-                      class="textarea textarea-bordered rounded-xl w-full h-11 min-h-[44px] max-h-[160px] bg-base-100 py-1.5 px-3 text-xs focus:outline-none focus:border-secondary" 
+                      class="textarea rounded-xl w-full h-11 min-h-[44px] max-h-[160px] bg-base-100 py-1.5 px-3 text-xs focus:outline-none focus:border-secondary" 
                       placeholder="Escribe notas adicionales, justificaciones de demoras o comentarios para Recursos Humanos..." 
                       data-field="detalle"
                       ${disabledAttr}

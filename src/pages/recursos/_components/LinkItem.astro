@@ -5,6 +5,7 @@ import { Image } from "astro:assets";
 import CopyButton from "@components/ui/CopyButton.astro";
 import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
 import type { ImportantLink } from "./types";
+import { iconExists } from "@lib/storage";
 
 interface Props {
   link: ImportantLink;
@@ -43,7 +44,8 @@ const mainAction: LinkAction = {
 const linkSubtitle = getDisplaySubtitle(link);
 
 const cleanBase = getCleanBase();
-const iconUrl = link.iconPath ? `${cleanBase}api/icons/${link.iconPath}` : null;
+const hasIcon = iconExists(link.iconPath);
+const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
 ---
 
 <li

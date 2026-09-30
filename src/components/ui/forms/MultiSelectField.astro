@@ -49,7 +49,11 @@ const selectedSet = new Set(selected);
       options
         .filter((o) => selectedSet.has(o.value))
         .map((o) => (
-          <span class="badge badge-neutral gap-1" data-multiselect-chip data-value={o.value}>
+          <span
+            class="badge badge-neutral gap-1"
+            data-multiselect-chip
+            data-value={o.value}
+          >
             <span data-multiselect-chip-label>{o.label}</span>
             <button
               type="button"
@@ -69,28 +73,35 @@ const selectedSet = new Set(selected);
     <input
       type="text"
       id={id}
-      class="input input-bordered input-sm w-full"
+      class="input input-sm w-full"
       data-multiselect-search
       placeholder={placeholder}
       autocomplete="off"
     />
     <ul
-      class="menu bg-base-100 border-base-300 absolute top-full z-50 mt-1 hidden w-full overflow-x-hidden overflow-y-auto rounded-box border shadow-lg"
+      class="menu bg-base-100 border-base-300 rounded-box absolute top-full z-50 mt-1 hidden w-full overflow-x-hidden overflow-y-auto border shadow-lg"
       data-multiselect-list
       role="listbox"
     >
-      {options.map((o) => (
-        <li data-multiselect-option data-value={o.value} data-label={o.label} hidden>
-          <button
-            type="button"
-            role="option"
+      {
+        options.map((o) => (
+          <li
+            data-multiselect-option
             data-value={o.value}
-            class="block whitespace-normal text-left break-words"
+            data-label={o.label}
+            hidden
           >
-            {o.label}
-          </button>
-        </li>
-      ))}
+            <button
+              type="button"
+              role="option"
+              data-value={o.value}
+              class="block text-left break-words whitespace-normal"
+            >
+              {o.label}
+            </button>
+          </li>
+        ))
+      }
       <li data-multiselect-empty hidden class="pointer-events-none">
         <span class="text-base-content/50 text-sm italic">Sin resultados</span>
       </li>
@@ -122,7 +133,8 @@ const selectedSet = new Set(selected);
       >
         <path
           fill="currentColor"
-          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"></path>
+          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"
+        ></path>
       </svg>
     </button>
     <input type="hidden" data-multiselect-hidden />
@@ -149,16 +161,20 @@ const selectedSet = new Set(selected);
     const labelMap = new Map<string, string>();
     const optionEls = new Map<string, HTMLElement>();
 
-    list.querySelectorAll<HTMLElement>("[data-multiselect-option]").forEach((li) => {
-      const v = li.dataset.value || "";
-      optionEls.set(v, li);
-      labelMap.set(v, li.dataset.label || v);
-    });
+    list
+      .querySelectorAll<HTMLElement>("[data-multiselect-option]")
+      .forEach((li) => {
+        const v = li.dataset.value || "";
+        optionEls.set(v, li);
+        labelMap.set(v, li.dataset.label || v);
+      });
 
-    chips.querySelectorAll<HTMLElement>("[data-multiselect-chip]").forEach((chip) => {
-      const v = chip.dataset.value || "";
-      if (v) selected.add(v);
-    });
+    chips
+      .querySelectorAll<HTMLElement>("[data-multiselect-chip]")
+      .forEach((chip) => {
+        const v = chip.dataset.value || "";
+        if (v) selected.add(v);
+      });
 
     let query = "";
 
@@ -175,9 +191,7 @@ const selectedSet = new Set(selected);
         if (show) visible++;
         li.hidden = !show;
       });
-      const empty = list.querySelector<HTMLElement>(
-        "[data-multiselect-empty]",
-      );
+      const empty = list.querySelector<HTMLElement>("[data-multiselect-empty]");
       if (empty) empty.hidden = !(active && visible === 0);
     }
 
@@ -198,7 +212,10 @@ const selectedSet = new Set(selected);
         );
         if (removeBtn) {
           removeBtn.dataset.multiselectRemove = v;
-          removeBtn.setAttribute("aria-label", `Quitar ${labelMap.get(v) || v}`);
+          removeBtn.setAttribute(
+            "aria-label",
+            `Quitar ${labelMap.get(v) || v}`,
+          );
         }
         const hidden = chip.querySelector<HTMLInputElement>(
           "[data-multiselect-hidden]",
