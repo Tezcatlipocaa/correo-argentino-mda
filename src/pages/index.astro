@@ -84,6 +84,22 @@ const visibleMainModules =
       )
     : [];
 
+// Reparto balanceado de columnas: máximo 4 por fila. Elegimos la cantidad de
+// columnas que minimiza la última fila incompleta sin pasar de 4.
+// 4→4 (1 fila), 5→3 (3+2), 6→3 (3+3), 7→4 (4+3), 8→4 (4+4).
+const moduleColumnOptions = [
+  "md:grid-cols-1",
+  "md:grid-cols-2",
+  "md:grid-cols-3",
+  "md:grid-cols-4",
+] as const;
+
+const moduleRows = Math.ceil(visibleMainModules.length / 4);
+const moduleColumnCount =
+  visibleMainModules.length > 0 ? Math.ceil(visibleMainModules.length / moduleRows) : 1;
+const moduleGridClass = moduleColumnOptions[moduleColumnCount - 1];
+const moduleCardLayout = moduleColumnCount >= 3 ? "vertical" : "horizontal";
+
 type BoxiconName = `boxicons:${string}`;
 
 interface QuickAccessItem {
@@ -208,7 +224,7 @@ const visibleQuickAccessItems =
       <!-- Módulos Principales -->
       {
         visibleMainModules.length > 0 && (
-          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div class:list={["grid grid-cols-1 gap-6", moduleGridClass]}>
             {visibleMainModules.map((mod) => (
               <QuickAccessCard
                 href={mod.href}
@@ -216,7 +232,7 @@ const visibleQuickAccessItems =
                 description={mod.sublabel}
                 icon={mod.icon}
                 iconTone={mod.tone}
-                layout="horizontal"
+                layout={moduleCardLayout}
               />
             ))}
           </div>
