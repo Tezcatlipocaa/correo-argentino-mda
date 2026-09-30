@@ -286,6 +286,7 @@ export async function exportAsClipboardImage(
   host.style.pointerEvents = "none";
   const clone = element.cloneNode(true) as HTMLElement;
   clone.removeAttribute("id");
+  clone.classList.add("exporting-image");
   clone
     .querySelectorAll("[id]")
     .forEach((el) => el.removeAttribute("id"));

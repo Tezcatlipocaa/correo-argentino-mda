@@ -2193,8 +2193,6 @@ function setupEventListeners(): void {
         padding: 16,
         compact: true,
         width: 1034,
-        onStart: () => saturdayCard.classList.add("exporting-image"),
-        onEnd: () => saturdayCard.classList.remove("exporting-image"),
       },
       {
         success: "Tabla de guardia copiada al portapapeles.",
@@ -2224,8 +2222,6 @@ function setupEventListeners(): void {
         padding: 16,
         compact: true,
         width: 1388,
-        onStart: () => overtimeCard.classList.add("exporting-image"),
-        onEnd: () => overtimeCard.classList.remove("exporting-image"),
       },
       {
         success: "Horas extras copiadas al portapapeles.",
