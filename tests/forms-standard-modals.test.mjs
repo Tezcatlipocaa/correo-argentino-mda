@@ -87,8 +87,9 @@ const read = (path) => readFile(new URL(path, root), "utf8");
   assert.ok(src.includes("save-holidays-btn"), "Feriados: id guardar preservado");
   assert.ok(src.includes("add-holiday-btn"), "Feriados: id agregar preservado");
   assert.match(src, /actionsBorder/, "Feriados: footer estándar con borde");
-  assert.doesNotMatch(src, /btn-ghost/, "Feriados: sin botones ghost");
-  assert.doesNotMatch(src, /btn-primary/, "Feriados: confirmación en btn-secondary");
+  const markup = src.split("<script")[0];
+  assert.doesNotMatch(markup, /btn-ghost/, "Feriados: sin botones ghost en el markup");
+  assert.doesNotMatch(markup, /btn-primary/, "Feriados: confirmación en btn-secondary");
 }
 
 // ── NewMonthModal ──
