@@ -33,7 +33,7 @@ export default function TitleDrawer({
       />
       {/* Drawer */}
       <aside
-        className={`bg-base-100 fixed top-0 right-0 z-50 flex h-screen w-105 flex-col justify-between overflow-y-auto pt-6 shadow-2xl transition-transform duration-300 ${
+        className={`bg-base-100 fixed inset-y-0 right-0 z-50 flex w-full max-w-105 flex-col justify-between overflow-y-auto pt-6 shadow-2xl transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full pointer-events-none"
         }`}
       >
