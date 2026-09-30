@@ -30,17 +30,17 @@ export type BackfillKbCategoriesReport = {
 };
 
 const MISSING_SQL = `
-  SELECT a.helpdesk_id AS helpdeskId, a.category AS name, count(*) AS articles
+  SELECT a.helpdesk_id AS helpdeskId, trim(a.category) AS name, count(*) AS articles
   FROM kb_articles a
   WHERE a.category IS NOT NULL
     AND length(trim(a.category)) > 0
     AND NOT EXISTS (
       SELECT 1 FROM kb_categories k
       WHERE k.helpdesk_id = a.helpdesk_id
-        AND lower(k.name) = lower(a.category)
+        AND lower(k.name) = lower(trim(a.category))
     )
-  GROUP BY a.helpdesk_id, a.category
-  ORDER BY a.helpdesk_id, lower(a.category)
+  GROUP BY a.helpdesk_id, trim(a.category)
+  ORDER BY a.helpdesk_id, lower(trim(a.category))
 `;
 
 const SCAN_MESAS_SQL = `
@@ -57,16 +57,35 @@ export async function runBackfillKbCategories(options: {
   const { dbPath, apply } = options;
   if (!existsSync(dbPath)) throw new Error(`No existe la DB: ${dbPath}`);
 
-  const db = new Database(dbPath);
+  // En dry-run abrimos readonly; si la DB tiene WAL pendiente de recuperar
+  // o los archivos -shm/-wal no permiten escritura, better-sqlite3 lanza.
+  // Fallback a read-write para que el dry-run no falle. En apply nunca se
+  // abre readonly, así que el fallback no debilita la escritura.
+  let db: Database.Database;
+  if (apply) {
+    db = new Database(dbPath);
+  } else {
+    try {
+      db = new Database(dbPath, { readonly: true });
+    } catch {
+      db = new Database(dbPath);
+    }
+  }
   try {
     const tables = (
       db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
         .all() as Array<{ name: string }>
     ).map((row) => row.name);
-    if (!tables.includes("kb_categories") || !tables.includes("kb_articles")) {
+    const missingTables = ["kb_categories", "kb_articles"].filter(
+      (table) => !tables.includes(table),
+    );
+    if (missingTables.length > 0) {
+      const list = missingTables.join('", "');
       throw new Error(
-        'La DB no tiene la tabla "kb_categories": corré align-db-to-schema.mts primero.',
+        missingTables.length > 1
+          ? `La DB no tiene las tablas "${list}": corré align-db-to-schema.mts primero.`
+          : `La DB no tiene la tabla "${list}": corré align-db-to-schema.mts primero.`,
       );
     }
 
@@ -94,12 +113,16 @@ export async function runBackfillKbCategories(options: {
       `INSERT OR IGNORE INTO kb_categories (helpdesk_id, name, created_at)
        VALUES (?, ?, unixepoch())`,
     );
+    const created: MissingCategory[] = [];
     const tx = db.transaction(() => {
-      for (const row of missing) insert.run(row.helpdeskId, row.name);
+      for (const row of missing) {
+        const changes = insert.run(row.helpdeskId, row.name).changes;
+        if (changes > 0) created.push(row);
+      }
     });
     tx();
 
-    report.created = missing;
+    report.created = created;
     report.missing = db.prepare(MISSING_SQL).all() as MissingCategory[];
     return report;
   } finally {
@@ -110,11 +133,35 @@ export async function runBackfillKbCategories(options: {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const dbFlag = args.indexOf("--db");
-  const dbPath =
-    dbFlag !== -1 && args[dbFlag + 1]
-      ? args[dbFlag + 1]
-      : join(process.cwd(), "database", "mda.db");
+  let dbPath = join(process.cwd(), "database", "mda.db");
+  let dbPathSet = false;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--apply") continue;
+    if (arg === "--db") {
+      if (dbPathSet) throw new Error("--db especificado más de una vez");
+      const value = args[i + 1];
+      if (value === undefined || value.startsWith("--")) {
+        throw new Error("--db requiere una ruta como valor");
+      }
+      dbPath = value;
+      dbPathSet = true;
+      i++;
+      continue;
+    }
+    if (arg.startsWith("--db=")) {
+      if (dbPathSet) throw new Error("--db especificado más de una vez");
+      const value = arg.slice("--db=".length);
+      if (value.length === 0 || value.startsWith("--")) {
+        throw new Error("--db requiere una ruta como valor");
+      }
+      dbPath = value;
+      dbPathSet = true;
+      continue;
+    }
+    throw new Error(`Argumento desconocido: ${arg}`);
+  }
 
   const report = await runBackfillKbCategories({ dbPath, apply });
   console.log(`\nbackfill-kb-categories — ${apply ? "APPLY" : "DRY-RUN"}`);

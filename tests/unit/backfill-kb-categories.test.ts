@@ -1,4 +1,3 @@
-// tests/unit/backfill-kb-categories.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { mkdtempSync, rmSync, existsSync, readdirSync } from "fs";
@@ -122,6 +121,19 @@ describe("runBackfillKbCategories", () => {
 
     expect(report.missing).toEqual([]);
     expect(categoryNames()).toEqual(["Prueba"]);
+  });
+
+  it("agrupa por categoría recortada ignorando espacios sobrantes", async () => {
+    article(2509, "A", "Prueba ");
+    article(2509, "B", "Prueba");
+
+    const report = await runBackfillKbCategories({ dbPath, apply: true });
+
+    expect(categoryNames()).toEqual(["Prueba"]);
+    expect(report.created).toEqual([
+      { helpdeskId: 2509, name: "Prueba", articles: 2 },
+    ]);
+    expect(report.missing).toEqual([]);
   });
 
   it("ignora artículos sin categoría y con categoría vacía", async () => {

@@ -286,7 +286,7 @@ export function listUncatalogedCategories(
 
   const rows = db
     .select({
-      name: kbArticles.category,
+      name: sql<string>`trim(${kbArticles.category})`,
       total: sql<number>`count(*)`,
     })
     .from(kbArticles)
@@ -294,16 +294,16 @@ export function listUncatalogedCategories(
       and(
         eq(kbArticles.helpdeskId, helpdeskId),
         isNotNull(kbArticles.category),
-        sql`trim(${kbArticles.category}) <> ''`,
+        sql`length(trim(${kbArticles.category})) > 0`,
         sql`not exists (
           select 1 from ${kbCategories}
           where ${kbCategories.helpdeskId} = ${kbArticles.helpdeskId}
-            and lower(${kbCategories.name}) = lower(${kbArticles.category})
+            and lower(${kbCategories.name}) = lower(trim(${kbArticles.category}))
         )`,
       ),
     )
-    .groupBy(kbArticles.category)
-    .orderBy(sql`lower(${kbArticles.category})`)
+    .groupBy(sql`trim(${kbArticles.category})`)
+    .orderBy(sql`lower(trim(${kbArticles.category}))`)
     .all();
 
   return rows
