@@ -2788,8 +2788,8 @@ function setupEventListeners(): void {
       return;
     }
 
-    const saveBtn = editSatForm.querySelector(
-      'button[type="submit"]',
+    const saveBtn = document.getElementById(
+      "saturday-schedule-save-btn",
     ) as HTMLButtonElement | null;
     const originalText = saveBtn ? saveBtn.innerHTML : "";
     if (saveBtn) {

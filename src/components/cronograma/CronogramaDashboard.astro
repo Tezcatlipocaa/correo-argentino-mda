@@ -2,6 +2,9 @@
 // CronogramaDashboard.astro
 import { Icon } from "astro-icon/components";
 import ActionButton from "@components/ui/ActionButton.astro";
+import Modal from "@components/ui/Modal.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import FilterButtonBar from "@components/ui/FilterButtonBar.astro";
 import SortDropdown from "@components/ui/SortDropdown.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
@@ -1166,16 +1169,16 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   <OperatorFormModal mode="edit" />
   <HolidaysModal />
 
-  <dialog id="edit-saturday-schedule-modal" class="modal">
-    <div
-      class="modal-box border-base-300 bg-base-100 max-w-sm rounded-3xl border p-6 shadow-2xl"
-    >
-      <h3
-        class="text-base-content mb-4 flex items-center gap-2 text-sm font-black tracking-wider uppercase"
-      >
-        <Icon name="boxicons:clock-filled" size={18} class="text-secondary" />
-        Horario Sábado
-      </h3>
+  <Modal
+    id="edit-saturday-schedule-modal"
+    title="Horario Sábado"
+    icon="boxicons:clock-filled"
+    titleClass="font-black text-lg uppercase tracking-tight"
+    size="sm"
+    zIndex="z-200"
+    actionsBorder
+  >
+    <Fragment slot="content">
       <p class="text-base-content/75 mb-4 text-xs">
         Establece el sub-horario del sábado para <strong id="modal-agent-name"
         ></strong>. Debe estar dentro de la franja general de 07:00 a 13:00 hs.
@@ -1184,41 +1187,50 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
         <input type="hidden" id="modal-agent-id" />
         <input type="hidden" id="modal-agent-group" />
         <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label class="label-xxs text-base-content/40">Inicio</label>
-            <input
-              type="time"
-              id="modal-schedule-start"
-              class="input input-sm input-bordered w-full font-mono font-bold"
-              min="07:00"
-              max="13:00"
-              required
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="label-xxs text-base-content/40">Fin</label>
-            <input
-              type="time"
-              id="modal-schedule-end"
-              class="input input-sm input-bordered w-full font-mono font-bold"
-              min="07:00"
-              max="13:00"
-              required
-            />
-          </div>
-        </div>
-        <div class="modal-action flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline border-base-300"
-            onclick="document.getElementById('edit-saturday-schedule-modal').close()"
-            >Cancelar</button
-          >
-          <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+          <FormField
+            id="modal-schedule-start"
+            name="modal-schedule-start"
+            label="Inicio"
+            type="time"
+            min="07:00"
+            max="13:00"
+            required
+            size="sm"
+            inputClass="font-mono font-bold"
+          />
+          <FormField
+            id="modal-schedule-end"
+            name="modal-schedule-end"
+            label="Fin"
+            type="time"
+            min="07:00"
+            max="13:00"
+            required
+            size="sm"
+            inputClass="font-mono font-bold"
+          />
         </div>
       </form>
-    </div>
-  </dialog>
+    </Fragment>
+    <Fragment slot="actions">
+      <ActionCancelButton
+        type="button"
+        label="Cancelar"
+        icon="boxicons:x-filled"
+        variant="error"
+        onclick="document.getElementById('edit-saturday-schedule-modal')?.close()"
+      />
+      <button
+        type="submit"
+        form="edit-saturday-schedule-form"
+        id="saturday-schedule-save-btn"
+        class="btn btn-sm md:btn-md btn-secondary gap-2"
+      >
+        <Icon name="boxicons:save-filled" size={20} is:inline />
+        Guardar
+      </button>
+    </Fragment>
+  </Modal>
 </div>
 
 <style is:global>
