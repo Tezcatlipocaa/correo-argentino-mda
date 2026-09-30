@@ -112,3 +112,10 @@ scripts/backups
 
 # align-db-to-schema workdir (regenerada en cada corrida)
 .drizzle-canonical/
+
+# Certificados (nunca versionar)
+*.cer
+*.crt
+*.key
+*.pem
+*.pfx
