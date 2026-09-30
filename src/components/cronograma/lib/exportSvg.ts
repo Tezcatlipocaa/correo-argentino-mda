@@ -52,6 +52,7 @@ const WEEKDAY_INITIALS = ["D", "L", "M", "M", "J", "V", "S"];
 
 export function escapeXml(value: string): string {
   return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

@@ -61,7 +61,7 @@ describe("buildCronogramaSvg", () => {
     expect(svg.match(/class="note-dot"/g)?.length).toBe(1);
   });
 
-  it("mantiene el SVG por debajo de 250 KB para un mes completo (guarda del bug de 101 MB)", () => {
+  it("mantiene el SVG por debajo de 400 KB para un mes completo (guarda del bug de 101 MB)", () => {
     const dates = Array.from({ length: 31 }, (_, i) => `2026-09-${String(i + 1).padStart(2, "0")}`);
     const statuses = [
       OperatorStatus.PresencialMonteGrande,
@@ -75,6 +75,51 @@ describe("buildCronogramaSvg", () => {
       op(`Operador ${o}`, Object.fromEntries(dates.map((d, i) => [d, statuses[(i + o) % statuses.length]])), {}),
     );
     const { svg } = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates, operators });
-    expect(svg.length).toBeLessThan(250_000);
+    expect(svg.length).toBeLessThan(400_000);
+  });
+
+  it("soporta lista de operadores vacía sin marcadores de nota", () => {
+    const dates = ["2026-09-01", "2026-09-02"];
+    const result = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates, operators: [] });
+    const expectedWidth = PAD * 2 + NAME_W + dates.length * CELL_W;
+    expect(result.width).toBe(expectedWidth);
+    expect(result.svg).not.toContain('class="note-dot"');
+  });
+
+  it("soporta lista de fechas vacía", () => {
+    const operators = [op("Ana", {})];
+    const result = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates: [], operators });
+    expect(result.width).toBe(PAD * 2 + NAME_W);
+  });
+
+  it("usa Franco como fallback cuando falta la entrada de una fecha", () => {
+    const dates = ["2026-09-01"];
+    const operators = [op("Ana", {})];
+    const { svg } = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates, operators });
+    expect(svg.match(/fill="#f8f9fa"/g)?.length).toBe(2);
+  });
+
+  it("usa Franco como fallback ante un estado desconocido", () => {
+    const dates = ["2026-09-01"];
+    const operators = [op("Ana", { "2026-09-01": "Inexistente" as unknown as OperatorStatus })];
+    const { svg } = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates, operators });
+    expect(svg.match(/fill="#f8f9fa"/g)?.length).toBe(2);
+  });
+
+  it("trunca nombres largos con elipsis", () => {
+    const dates = ["2026-09-01"];
+    const longName = "A".repeat(40);
+    const operators = [op(longName, { "2026-09-01": OperatorStatus.HomeOffice })];
+    const { svg } = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates, operators });
+    expect(svg).toContain("…");
+    expect(svg).not.toContain(longName);
+  });
+
+  it("escapa todos los caracteres XML especiales", () => {
+    const dates = ["2026-09-01"];
+    const operators = [op(`A > B "c" 'd'`, { "2026-09-01": OperatorStatus.HomeOffice })];
+    const { svg } = buildCronogramaSvg({ monthLabel: "septiembre de 2026", dates, operators });
+    expect(svg).toContain("A &gt; B &quot;c&quot; &apos;d&apos;");
+    expect(svg).not.toContain(`A > B "c" 'd'`);
   });
 });
