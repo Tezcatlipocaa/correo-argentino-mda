@@ -724,4 +724,32 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     const creada = await findCategory(nombre);
     if (creada) createdCategoryIds.push(creada.id);
   });
+
+  test("el ABM muestra los valores de categoría que no están catalogados", async ({
+    context,
+    page,
+  }) => {
+    const leader = await fixture.createUser("team_leader", mesa);
+    await setSessionCookie(context, leader.signedSessionId);
+
+    await page.goto("/base-conocimiento/categorias");
+    await expect(page.locator("[data-kb-uncategorized]")).toHaveCount(0);
+
+    const legado = `Heredado ${uniqueToken()}`;
+    await fixture.createArticle({
+      mesa,
+      authorUserId: leader.userId,
+      title: `Artículo heredado ${uniqueToken()}`,
+      category: legado,
+      status: "draft",
+    });
+
+    await page.reload();
+
+    const bloque = page.locator("[data-kb-uncategorized]");
+    await expect(bloque).toBeVisible();
+    await expect(bloque).toContainText("Categorías sin catalogar");
+    await expect(bloque).toContainText(legado);
+    await expect(bloque).toContainText("1 artículo(s)");
+  });
 });

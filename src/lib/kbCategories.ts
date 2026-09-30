@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@db/index";
 import { kbArticles, kbCategories } from "@db/schema";
 
@@ -275,4 +275,41 @@ export function deleteCategory(input: {
       articlesInUse: 0 as const,
     };
   });
+}
+
+export type KbUncatalogedCategory = { name: string; total: number };
+
+export function listUncatalogedCategories(
+  helpdeskId: number,
+): KbUncatalogedCategory[] {
+  if (!isValidHelpdeskId(helpdeskId)) return [];
+
+  const rows = db
+    .select({
+      name: kbArticles.category,
+      total: sql<number>`count(*)`,
+    })
+    .from(kbArticles)
+    .where(
+      and(
+        eq(kbArticles.helpdeskId, helpdeskId),
+        isNotNull(kbArticles.category),
+        sql`trim(${kbArticles.category}) <> ''`,
+        sql`not exists (
+          select 1 from ${kbCategories}
+          where ${kbCategories.helpdeskId} = ${kbArticles.helpdeskId}
+            and lower(${kbCategories.name}) = lower(${kbArticles.category})
+        )`,
+      ),
+    )
+    .groupBy(kbArticles.category)
+    .orderBy(sql`lower(${kbArticles.category})`)
+    .all();
+
+  return rows
+    .filter(
+      (row): row is { name: string; total: number } =>
+        typeof row.name === "string" && row.name.trim().length > 0,
+    )
+    .map((row) => ({ name: row.name, total: Number(row.total ?? 0) }));
 }

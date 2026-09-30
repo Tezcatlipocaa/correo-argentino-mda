@@ -21,6 +21,7 @@ import {
   deleteCategory,
   listCategories,
   listCategoryCounts,
+  listUncatalogedCategories,
   renameCategory,
 } from "@lib/kbCategories";
 import BaseLayout from "@layouts/BaseLayout.astro";
@@ -225,6 +226,9 @@ const categorias = sessionHelpdeskId ? listCategories(sessionHelpdeskId) : [];
 const conteos = sessionHelpdeskId
   ? listCategoryCounts(sessionHelpdeskId)
   : new Map<string, number>();
+const sinCatalogar = sessionHelpdeskId
+  ? listUncatalogedCategories(sessionHelpdeskId)
+  : [];
 ---
 
 <BaseLayout title="Categorías">
@@ -317,6 +321,35 @@ const conteos = sessionHelpdeskId
             ))
           }
         </ul>
+
+        {
+          sinCatalogar.length > 0 && (
+            <div
+              role="status"
+              class="alert alert-warning"
+              data-kb-uncategorized
+            >
+              <div>
+                <p class="font-semibold">Categorías sin catalogar</p>
+                <p class="text-sm">
+                  Hay artículos con valores de categoría que no existen en el
+                  catálogo de la mesa. No se pueden renombrar ni eliminar desde
+                  acá. Migrálos con
+                  <code>scripts/backfill-kb-categories.mts</code>.
+                </p>
+                <ul class="mt-2 flex flex-wrap gap-2">
+                  {sinCatalogar.map((item) => (
+                    <li>
+                      <span class="badge badge-warning badge-outline">
+                        {item.name} · {item.total} artículo(s)
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )
+        }
       </div>
     </SectionCard>
   </PageContainer>
