@@ -1980,11 +1980,11 @@ function setupEventListeners(): void {
       }
     });
 
-  const newMonthModal = document.getElementById(
-    "new-month-modal",
-  ) as HTMLElement | null;
+  const newMonthModal = document.getElementById("new-month-modal") as
+    | (HTMLDialogElement & { showModal: () => void })
+    | null;
   document.getElementById("add-month-btn")?.addEventListener("click", () => {
-    newMonthModal?.classList.add("modal-open");
+    newMonthModal?.showModal();
   });
 
   // --- Import Handler ---
