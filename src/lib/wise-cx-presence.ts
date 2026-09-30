@@ -110,6 +110,23 @@ export function classifyWiseCxStatus(
     };
   }
 
+  // =========================================================================
+  // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS]
+  // Permite que operadores en "Devolución Supervisión" cuenten como disponibles
+  // y elegibles para recibir autogestiones (canReceiveAgs: true) durante las pruebas.
+  // INSTRUCCIONES DE REVERSIÓN: Eliminar este bloque if completo.
+  // =========================================================================
+  if (norm.includes("devolucion") || norm.includes("devolución")) {
+    return {
+      statusCategory: "disponible",
+      badgeVariant: "info",
+      canReceiveAgs: true,
+    };
+  }
+  // =========================================================================
+  // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS] FIN
+  // =========================================================================
+
   // Estados bloqueantes (indicador rojo): Administrativo, Almuerzo, Baño, Devolución Supervisión,
   // Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
   let motivo = statusRaw.trim();

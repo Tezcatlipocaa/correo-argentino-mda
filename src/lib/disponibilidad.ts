@@ -641,6 +641,44 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
     info.proximoTurnoDisponible = proximoTurno.proximoTurnoDisponible;
     info.proximoTurnoMotivo = proximoTurno.proximoTurnoMotivo;
 
+    // =========================================================================
+    // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS]
+    // INICIO: Forzar disponibilidad para operadores solicitados y/o estados de devolución
+    // para pruebas de asignación de autogestiones y visualización en la cola.
+    // Permite que Ignacio Revainera, Altamirano Darío y Franco González (o cualquier
+    // operador en Devolución Supervisión) figuren disponibles y próximos en cola.
+    // INSTRUCCIONES DE REVERSIÓN: Eliminar este bloque condicional completo.
+    // =========================================================================
+    const testTargetNames = [
+      "ignacio revainera",
+      "altamirano dario",
+      "dario altamirano",
+      "franco gonzalez",
+    ];
+    const normAgentName = (agent.name || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    const isTargetTestOperator = testTargetNames.some((target) => {
+      const parts = target.split(" ");
+      return parts.every((p) => normAgentName.includes(p));
+    });
+
+    const isDevolucion =
+      (info.wiseCxStatus || "").toLowerCase().includes("devolucion") ||
+      (info.motivo || "").toLowerCase().includes("devolucion");
+
+    if (isTargetTestOperator || isDevolucion) {
+      info.disponible = true;
+      delete info.motivo;
+      delete info.retornoEstimado;
+    }
+    // =========================================================================
+    // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS] FIN
+    // =========================================================================
+
     return info;
   });
 
