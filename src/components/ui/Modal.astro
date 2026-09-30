@@ -9,7 +9,17 @@ interface Props {
   zIndex?: string;
   titleClass?: string;
   class?: string;
+  /**
+   * Envuelve el slot "actions" en la barra `modal-action` estándar (alineada a
+   * la derecha). No cambia el layout del modal-box.
+   */
   actionsFooter?: boolean;
+  /**
+   * Convierte el modal-box en columna flex: el contenido scrollea en una
+   * region propia y el slot "actions" queda como barra fija opaca (hermana del
+   * scroller, nunca se superpone al contenido).
+   */
+  fixedFooter?: boolean;
 }
 
 const {
@@ -21,6 +31,7 @@ const {
   titleClass,
   class: className,
   actionsFooter = false,
+  fixedFooter = false,
 } = Astro.props;
 
 const sizeClasses: Record<string, string> = {
@@ -37,26 +48,56 @@ const sizeClasses: Record<string, string> = {
 
 <dialog {id} class:list={["modal modal-bottom sm:modal-middle", zIndex]}>
   <div
-    class:list={["modal-box w-11/12 sm:w-full", sizeClasses[size], className]}
+    class:list={[
+      "modal-box w-11/12 sm:w-full",
+      fixedFooter ? "flex flex-col overflow-hidden p-0" : "scrollbar-hide",
+      sizeClasses[size],
+      className,
+    ]}
   >
     {
-      title && (
-        <h3
-          class:list={[
-            "text-base-content mb-3 flex items-center gap-2 text-pretty",
-            titleClass || "text-lg font-bold",
-          ]}
-        >
-          {icon && (
-            <Icon name={icon} class="text-secondary shrink-0" size={22} />
+      fixedFooter ? (
+        <div class="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-4">
+          {title && (
+            <h3
+              class:list={[
+                "text-base-content mb-3 flex items-center gap-2 text-pretty",
+                titleClass || "text-lg font-bold",
+              ]}
+            >
+              {icon && (
+                <Icon name={icon} class="text-secondary shrink-0" size={22} />
+              )}
+              {title}
+            </h3>
           )}
-          {title}
-        </h3>
+          <slot name="content" />
+        </div>
+      ) : (
+        <>
+          {title && (
+            <h3
+              class:list={[
+                "text-base-content mb-3 flex items-center gap-2 text-pretty",
+                titleClass || "text-lg font-bold",
+              ]}
+            >
+              {icon && (
+                <Icon name={icon} class="text-secondary shrink-0" size={22} />
+              )}
+              {title}
+            </h3>
+          )}
+          <slot name="content" />
+        </>
       )
     }
-    <slot name="content" />
     {
-      actionsFooter ? (
+      fixedFooter ? (
+        <div class="bg-base-100 border-base-300 shrink-0 border-t px-6 py-4">
+          <slot name="actions" />
+        </div>
+      ) : actionsFooter ? (
         <div class="modal-action mt-4 flex justify-end gap-2">
           <slot name="actions" />
         </div>

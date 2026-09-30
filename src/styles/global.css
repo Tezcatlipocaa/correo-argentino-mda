@@ -243,6 +243,19 @@
   color: var(--linea-reservada-content, var(--color-onyx));
 }
 
+/* Capa de notificaciones: siempre por encima de cualquier elemento.
+   Para los modales nativos (<dialog> en top layer) el contenedor se reubica
+   dentro del dialog abierto (ver ToastContainer.astro); el z-index cubre el
+   resto de la página. */
+#global-toast-container {
+  z-index: 2147483647 !important;
+  pointer-events: none;
+}
+
+#global-toast-container > * {
+  pointer-events: auto;
+}
+
 @utility label-xxs {
   @apply text-tiny font-black tracking-wider uppercase;
 }

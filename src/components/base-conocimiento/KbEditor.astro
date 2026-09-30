@@ -358,16 +358,18 @@ const cleanBase = getCleanBase();
     min-width: 0;
   }
 
+  /* Fullscreen de EasyMDE por encima de la chrome de la app (header z-150,
+     drawer z-160); por debajo del toast (z-index máximo). */
   .EasyMDEContainer .editor-toolbar.fullscreen {
-    z-index: 70;
+    z-index: 200;
   }
 
   .EasyMDEContainer .CodeMirror-fullscreen {
-    z-index: 69;
+    z-index: 199;
   }
 
   .EasyMDEContainer .editor-preview-side {
-    z-index: 69;
+    z-index: 199;
   }
 
   .editor-toolbar {

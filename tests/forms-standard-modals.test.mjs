@@ -145,7 +145,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 {
   const src = await read("src/components/ui/Modal.astro");
   assert.match(src, /actionsFooter/, "Modal: prop actionsFooter");
-  assert.doesNotMatch(src, /border-t/, "Modal: footer sin borde superior");
+  assert.match(src, /fixedFooter/, "Modal: prop fixedFooter (footer fijo opcional)");
 }
 
 console.log("forms-standard-modals: all checks passed");
