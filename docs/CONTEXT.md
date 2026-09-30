@@ -105,6 +105,7 @@ Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
 - Purga: proceso PM2 `purge-deleted-records` (04:00 diaria, retención 90d, `scripts/purge-deleted.ts`). Los registros restaurados quedan como histórico permanente.
 - Entidades nuevas con delete: si usan `createDeleteHandler` el snapshot padre es automático (`genericSnapshot: true` default); para snapshot con hijos usar `deleteWithSnapshot` + `genericSnapshot: false` + entrada en `RESTORE_REGISTRY` si deben ser restaurables.
 - Spec: `docs/superpowers/specs/2026-08-28-papelera-deleted-records-design.md`.
+- **Mesas y base de conocimiento no están en la papelera:** `mesas`, `kb_articles` y `kb_categories` no tienen entrada en `RESTORE_REGISTRY`. `kb_articles.helpdesk_id` y `kb_categories.helpdesk_id` referencian `mesas.invgate_id` con `onDelete: "cascade"`, así que **borrar una mesa destruye en cascada todos sus artículos y categorías, sin snapshot y sin restauración**. La gestión de mesas nunca borra: solo alterna `mesas.active` y `mesas.assignable`. `tests/unit/security/mesa-hard-delete.test.ts` falla si aparece un `delete(mesas)` en `src/` o `scripts/`.
 
 ---
 
