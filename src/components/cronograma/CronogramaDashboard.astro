@@ -41,74 +41,72 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   class="flex min-h-0 w-full flex-1 flex-col"
 >
   <div
+    class="bg-base-100/95 flex shrink-0 flex-col justify-between pb-4 backdrop-blur-sm md:flex-row md:items-center"
+  >
+    <div id="view-switcher" class="flex shrink-0 flex-wrap items-center gap-3">
+      <!-- Vistas de Calendario -->
+      <div
+        class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
+      >
+        <button
+          type="button"
+          id="switch-to-monthly-btn"
+          class="btn btn-xs btn-secondary text-tiny shadow-secondary/15 h-7 rounded-lg px-3.5 font-black tracking-widest uppercase shadow-sm transition-all duration-200"
+        >
+          Mensual
+        </button>
+        <button
+          type="button"
+          id="switch-to-daily-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Diario
+        </button>
+      </div>
+
+      <!-- Vistas de Configuración y Turnos -->
+      <div
+        class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
+      >
+        <button
+          type="button"
+          id="switch-to-groups-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Grupos
+        </button>
+        <button
+          type="button"
+          id="switch-to-overtime-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Extras
+        </button>
+        <button
+          type="button"
+          id="switch-to-pasiva-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Pasivas
+        </button>
+      </div>
+    </div>
+
+    <CronoDatePicker
+      id="date-picker-container"
+      displayId="date-input-display"
+      inputId="date-input"
+      variant="top"
+      minW="min-w-40"
+      class="hidden"
+    />
+  </div>
+
+  <div
     id="cronograma-container"
     class="animate-in fade-in scrollbar-thin flex min-h-0 w-full flex-1 flex-col overflow-y-auto pb-2 duration-500"
   >
     <div class="flex min-h-0 w-full flex-1 flex-col">
-      <div
-        class="bg-base-100/95 sticky top-0 z-40 flex shrink-0 flex-col justify-between pb-4 backdrop-blur-sm md:flex-row md:items-center"
-      >
-        <div
-          id="view-switcher"
-          class="flex shrink-0 flex-wrap items-center gap-3"
-        >
-          <!-- Vistas de Calendario -->
-          <div
-            class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
-          >
-            <button
-              type="button"
-              id="switch-to-monthly-btn"
-              class="btn btn-xs btn-secondary text-tiny shadow-secondary/15 h-7 rounded-lg px-3.5 font-black tracking-widest uppercase shadow-sm transition-all duration-200"
-            >
-              Mensual
-            </button>
-            <button
-              type="button"
-              id="switch-to-daily-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Diario
-            </button>
-          </div>
-
-          <!-- Vistas de Configuración y Turnos -->
-          <div
-            class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
-          >
-            <button
-              type="button"
-              id="switch-to-groups-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Grupos
-            </button>
-            <button
-              type="button"
-              id="switch-to-overtime-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Extras
-            </button>
-            <button
-              type="button"
-              id="switch-to-pasiva-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Pasivas
-            </button>
-          </div>
-        </div>
-
-        <CronoDatePicker
-          id="date-picker-container"
-          displayId="date-input-display"
-          inputId="date-input"
-          variant="top"
-          minW="min-w-40"
-          class="hidden"
-        />
-      </div>
 
       <!-- Daily View Section (Hidden by default) -->
       <div id="daily-view" class="hidden min-h-0 flex-1">
@@ -499,7 +497,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 >
                 <select
                   id="rotation-start-group"
-                  class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                  class="select select-sm text-base-content cursor-pointer font-bold"
                   required
                 >
                   <option value="A">Grupo A</option>
@@ -515,7 +513,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <input
                   type="text"
                   id="rotation-order"
-                  class="input input-sm input-bordered text-base-content font-bold"
+                  class="input input-sm text-base-content font-bold"
                   placeholder="A,B,C,D"
                   required
                 />
@@ -580,9 +578,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
 
             <div class="flex flex-col gap-1">
-              <label class="label-xxs text-base-content/40"
-                >Grupo Activo</label
-              >
+              <label class="label-xxs text-base-content/40">Grupo Activo</label>
               <div
                 class="bg-secondary/10 border-secondary/20 text-secondary flex h-8 items-center rounded-lg border px-3 py-1.5 text-xs font-bold shadow-sm select-none"
                 id="rotation-active-group-display"
@@ -709,7 +705,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <label class="label-xxs text-base-content/40">Referente</label>
                 <select
                   id="overtime-referente-select"
-                  class="select select-sm select-bordered text-base-content w-full cursor-pointer font-bold"
+                  class="select select-sm text-base-content w-full cursor-pointer font-bold"
                 >
                   <option value="">Sin asignar</option>
                 </select>
@@ -799,7 +795,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   <label class="label-xxs text-base-content/40">Operador</label>
                   <select
                     id="overtime-shift-agent"
-                    class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                    class="select select-sm text-base-content cursor-pointer font-bold"
                     required
                   >
                     <option value="">Seleccionar operador...</option>
@@ -809,7 +805,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   <label class="label-xxs text-base-content/40">Día</label>
                   <select
                     id="overtime-shift-day"
-                    class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                    class="select select-sm text-base-content cursor-pointer font-bold"
                     required
                   >
                     <option value="saturday">Sábado</option>
@@ -822,7 +818,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                     <input
                       type="time"
                       id="overtime-shift-start"
-                      class="input input-sm input-bordered font-mono font-bold"
+                      class="input input-sm font-mono font-bold"
                       required
                     />
                   </div>
@@ -831,7 +827,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                     <input
                       type="time"
                       id="overtime-shift-end"
-                      class="input input-sm input-bordered font-mono font-bold"
+                      class="input input-sm font-mono font-bold"
                       required
                     />
                   </div>
@@ -1164,41 +1160,44 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     titleClass="font-black text-lg uppercase tracking-tight"
     size="sm"
     zIndex="z-200"
-    actionsBorder
+    actionsFooter
   >
     <Fragment slot="content">
-      <p class="text-base-content/75 mb-4 text-xs">
-        Establece el sub-horario del sábado para <strong id="modal-agent-name"
-        ></strong>. Debe estar dentro de la franja general de 07:00 a 13:00 hs.
-      </p>
-      <form id="edit-saturday-schedule-form" class="space-y-4">
-        <input type="hidden" id="modal-agent-id" />
-        <input type="hidden" id="modal-agent-group" />
-        <div class="grid grid-cols-2 gap-3">
-          <FormField
-            id="modal-schedule-start"
-            name="modal-schedule-start"
-            label="Inicio"
-            type="time"
-            min="07:00"
-            max="13:00"
-            required
-            size="sm"
-            inputClass="font-mono font-bold"
-          />
-          <FormField
-            id="modal-schedule-end"
-            name="modal-schedule-end"
-            label="Fin"
-            type="time"
-            min="07:00"
-            max="13:00"
-            required
-            size="sm"
-            inputClass="font-mono font-bold"
-          />
-        </div>
-      </form>
+      <div class="space-y-4">
+        <p class="text-base-content/75 text-xs">
+          Establece el sub-horario del sábado para <strong id="modal-agent-name"
+          ></strong>. Debe estar dentro de la franja general de 07:00 a 13:00
+          hs.
+        </p>
+        <form id="edit-saturday-schedule-form" class="space-y-4">
+          <input type="hidden" id="modal-agent-id" />
+          <input type="hidden" id="modal-agent-group" />
+          <div class="grid grid-cols-2 gap-3">
+            <FormField
+              id="modal-schedule-start"
+              name="modal-schedule-start"
+              label="Inicio"
+              type="time"
+              min="07:00"
+              max="13:00"
+              required
+              size="sm"
+              inputClass="font-mono font-bold"
+            />
+            <FormField
+              id="modal-schedule-end"
+              name="modal-schedule-end"
+              label="Fin"
+              type="time"
+              min="07:00"
+              max="13:00"
+              required
+              size="sm"
+              inputClass="font-mono font-bold"
+            />
+          </div>
+        </form>
+      </div>
     </Fragment>
     <Fragment slot="actions">
       <ActionCancelButton
