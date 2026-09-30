@@ -6,6 +6,7 @@ import { resourceCategories, resourceLinks } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { processIconUpload } from "@lib/iconUpload";
+import { iconExists } from "@lib/storage";
 import { encrypt } from "@lib/encryption";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { resolveUrl } from "@lib/url";
@@ -301,7 +302,7 @@ if (Astro.request.method === "POST") {
         helpText="(Opcional, .png, .jpg, .svg, .ico)"
       >
         {
-          link.iconPath && (
+          iconExists(link.iconPath) && (
             <div
               slot="preview"
               class="rounded-box border-base-300 bg-base-200 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border p-1"
@@ -310,6 +311,8 @@ if (Astro.request.method === "POST") {
                 src={resolveUrl(`api/icons/${link.iconPath}`)}
                 alt="Preview del ícono"
                 class="h-full w-full object-contain"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           )

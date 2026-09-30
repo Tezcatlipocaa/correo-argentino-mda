@@ -23,6 +23,24 @@ export function getPdfsDir(): string {
   return path.join(getStorageRoot(), SUBDIR_PDFS);
 }
 
+export function iconExists(iconPath: string | null | undefined): boolean {
+  if (!iconPath || iconPath.trim() === "") {
+    return false;
+  }
+
+  try {
+    const sanitized = path.basename(iconPath);
+
+    if (sanitized !== iconPath || sanitized.includes("..")) {
+      return false;
+    }
+
+    return fs.existsSync(path.join(getIconsDir(), sanitized));
+  } catch {
+    return false;
+  }
+}
+
 export function ensureDir(dir: string): void {
   try {
     fs.mkdirSync(dir, { recursive: true });
