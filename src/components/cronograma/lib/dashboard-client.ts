@@ -1421,15 +1421,6 @@ function setupEventListeners(): void {
       }
     });
 
-  // New Operator Modal Handlers
-  const newOpModal = document.getElementById("new-operator-modal") as
-    (HTMLDialogElement & { showModal: () => void; close: () => void }) | null;
-  const openNewOpBtn = document.getElementById("open-new-op-modal");
-
-  openNewOpBtn?.addEventListener("click", () => {
-    newOpModal?.showModal();
-  });
-
   // Holidays Modal Trigger
   const holidaysModal = document.getElementById("holidays-modal") as
     (HTMLDialogElement & { showModal: () => void; close: () => void }) | null;
