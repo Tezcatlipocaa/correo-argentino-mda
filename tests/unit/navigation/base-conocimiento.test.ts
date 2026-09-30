@@ -1,8 +1,14 @@
 // tests/unit/navigation/base-conocimiento.test.ts
+//
+// Política temporal (2026-09): Base de conocimiento es SOLO para `admin`.
+// Toda la sección `/base-conocimiento/*` y los endpoints `/api/kb/upload` +
+// `/api/kb/images` quedan restringidos. La fuente única es `KB_ACCESS_ROLES`
+// en `src/lib/rbac.ts`; para revertir, editar solo esa constante.
 import { describe, it, expect } from "vitest";
 import { navSections } from "../../../src/lib/navigation";
 import {
   CANONICAL_ROLES,
+  KB_ACCESS_ROLES,
   getModulePermissions,
   hasPermission,
   routePermissions,
@@ -14,6 +20,9 @@ import {
 
 describe("sección Base de conocimiento", () => {
   it("incluye Base de Conocimiento en accesos rápidos", () => {
+    // Estructural únicamente: `navSections` SIEMPRE contiene el ítem; los
+    // no-admin se ocultan por el filtro de permisos en tiempo de render
+    // (BaseLayout/index), no acá. No es un test de política.
     const quickAccess = navSections.find((s) => s.id === "accesos-rapidos");
     expect(quickAccess?.items).toContainEqual(
       expect.objectContaining({
@@ -23,48 +32,26 @@ describe("sección Base de conocimiento", () => {
     );
   });
 
-  it("/base-conocimiento está whitelisteada para todos los roles (default-deny)", () => {
+  it("/base-conocimiento está restringida a admin (KB_ACCESS_ROLES)", () => {
     const route = routePermissions.find((r) => r.path === "/base-conocimiento");
     expect(route).toBeDefined();
-    expect(route!.roles).toContain("agent");
-    expect(route!.roles).toContain("supervisor");
+    expect(route!.roles).toEqual([...KB_ACCESS_ROLES]);
+    // admin nunca puede quedar bloqueado (short-circuit no revocable).
+    expect(KB_ACCESS_ROLES).toContain("admin");
   });
 
-  it("aplica permisos de rutas nuevas a todos los roles canonicos", () => {
-    const expectedWriteRoles = new Set(["team_leader", "supervisor", "admin"]);
-    const expectedImageRoles = new Set([
-      "admin",
-      "supervisor",
-      "team_leader",
-      "referent",
-      "agent",
-    ]);
+  it("aplica permisos admin-only a la sección y a los endpoints de la KB", () => {
     const routeCases = [
-      {
-        path: "/base-conocimiento/categorias",
-        expected: expectedWriteRoles,
-      },
-      {
-        path: "/base-conocimiento/create",
-        expected: expectedWriteRoles,
-      },
-      {
-        path: "/base-conocimiento/edit",
-        expected: expectedWriteRoles,
-      },
-      {
-        path: "/api/kb/upload",
-        expected: expectedWriteRoles,
-      },
-      {
-        path: "/api/kb/images",
-        expected: expectedImageRoles,
-      },
+      "/base-conocimiento/categorias",
+      "/base-conocimiento/create",
+      "/base-conocimiento/edit",
+      "/api/kb/upload",
+      "/api/kb/images",
     ];
 
-    for (const { path, expected } of routeCases) {
+    for (const path of routeCases) {
       for (const role of CANONICAL_ROLES) {
-        expect(hasPermission(path, role)).toBe(expected.has(role));
+        expect(hasPermission(path, role)).toBe(KB_ACCESS_ROLES.includes(role));
       }
     }
 
@@ -74,27 +61,29 @@ describe("sección Base de conocimiento", () => {
           "/api/kb/images/mda-ti/123e4567-e89b-12d3-a456-426614174000.webp",
           role,
         ),
-      ).toBe(true);
+      ).toBe(KB_ACCESS_ROLES.includes(role));
     }
     expect(hasPermission("/base-conocimiento/edit/5", "team_leader")).toBe(
-      true,
+      false,
     );
+    expect(hasPermission("/base-conocimiento/edit/5", "admin")).toBe(true);
   });
 
-  it("permite leer a todos y escribir solo a team_leader+", () => {
-    const expectedWriteRoles = new Set(["team_leader", "supervisor", "admin"]);
-
+  it("solo admin puede leer y escribir Base de conocimiento (temporal)", () => {
     for (const role of CANONICAL_ROLES) {
       const permissions = getModulePermissions("base-conocimiento", role);
-      expect(permissions.canRead).toBe(true);
-      expect(permissions.canWrite).toBe(expectedWriteRoles.has(role));
+      expect(permissions.canRead).toBe(KB_ACCESS_ROLES.includes(role));
+      expect(permissions.canWrite).toBe(KB_ACCESS_ROLES.includes(role));
     }
   });
 
-  it("visible para mesa de Coordinación (no está en la blocklist)", () => {
-    // isSectionVisibleSync es la fuente de verdad de visibilidad por mesa.
+  it("la capa de mesa sigue permitiendo, pero la capa de rol bloquea a agent", () => {
+    // La mesa (isSectionVisibleSync) NO cambia: para Coordinación el `agent`
+    // sigue viendo la sección. El bloqueo efectivo viene de la capa de rol
+    // (hasPermission), que ahora es admin-only.
     expect(
       isSectionVisibleSync(COORD_HELPDESK, "agent", "/base-conocimiento"),
     ).toBe(true);
+    expect(hasPermission("/base-conocimiento", "agent")).toBe(false);
   });
 });

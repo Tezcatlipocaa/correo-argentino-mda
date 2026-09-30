@@ -52,6 +52,12 @@ const ALL_ROLES: Role[] = [
   "admin",
 ];
 
+// Acceso a Base de conocimiento: SOLO admin por el momento (medida temporal,
+// decidida 2026-09). Para reabrir a la mesa, reemplazar por los roles previos
+// (ver/leer: todos; administrar: ["team_leader","supervisor","admin"]).
+// Ver docs/CONTEXT.md (sección Base de conocimiento).
+export const KB_ACCESS_ROLES: readonly Role[] = Object.freeze(["admin"]);
+
 export const routePermissions: RoutePermission[] = [
   { path: "/admin/usuarios-sin-ubicacion", roles: ["admin"] },
   { path: "/admin/usuarios", roles: ["admin"] },
@@ -94,18 +100,9 @@ export const routePermissions: RoutePermission[] = [
   { path: "/mesas-de-ayuda/asignar", roles: ["admin", "supervisor"] },
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
-  {
-    path: "/base-conocimiento/categorias",
-    roles: ["admin", "supervisor", "team_leader"],
-  },
-  {
-    path: "/base-conocimiento/create",
-    roles: ["admin", "supervisor", "team_leader"],
-  },
-  {
-    path: "/base-conocimiento/edit",
-    roles: ["admin", "supervisor", "team_leader"],
-  },
+  { path: "/base-conocimiento/categorias", roles: [...KB_ACCESS_ROLES] },
+  { path: "/base-conocimiento/create", roles: [...KB_ACCESS_ROLES] },
+  { path: "/base-conocimiento/edit", roles: [...KB_ACCESS_ROLES] },
   {
     path: "/inventario-terminales/cubics/create",
     roles: ["admin", "supervisor"],
@@ -135,7 +132,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/oficinas", roles: ALL_ROLES },
   { path: "/recursos", roles: ALL_ROLES },
   { path: "/titulos", roles: ALL_ROLES },
-  { path: "/base-conocimiento", roles: ALL_ROLES },
+  { path: "/base-conocimiento", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/admin", roles: ALL_ROLES },
   { path: "/api/aplicativos", roles: ALL_ROLES },
   { path: "/api/asistencia", roles: ALL_ROLES },
@@ -145,8 +142,8 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/export", roles: ALL_ROLES },
   { path: "/api/icons", roles: ALL_ROLES },
   { path: "/api/invgate", roles: ALL_ROLES },
-  { path: "/api/kb/upload", roles: ["admin", "supervisor", "team_leader"] },
-  { path: "/api/kb/images", roles: ALL_ROLES },
+  { path: "/api/kb/upload", roles: [...KB_ACCESS_ROLES] },
+  { path: "/api/kb/images", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/offices", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
@@ -239,8 +236,15 @@ export function getModulePermissions(
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
   } else if (moduleName === "base-conocimiento") {
-    perm.canRead = true;
-    perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
+    // Temporal (2026-09): read y write comparten KB_ACCESS_ROLES mientras la
+    // sección está restringida. Al revertir a un esquema read≠write, restaurar
+    // la separación previa (read todos; write team_leader+) acá.
+    // admin siempre permitido (no revocable), igual que el short-circuit de
+    // hasPermission: si se sacara de KB_ACCESS_ROLES, no debe quedar locked out.
+    // Ver docs/CONTEXT.md (sección Base de conocimiento).
+    const canAccessKb = role === "admin" || KB_ACCESS_ROLES.includes(role);
+    perm.canRead = canAccessKb;
+    perm.canWrite = canAccessKb;
   } else if (moduleName === "usuarios") {
     // Solo admin lee/escribe (los endpoints de lectura de AD exponen datos sensibles)
     perm.canRead = rank >= ROLE_HIERARCHY.admin;

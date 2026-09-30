@@ -10,6 +10,10 @@
 // autogestiones, asistencia) tambien depende de la mesa del usuario
 // (`isSectionVisibleSync`). Esta tabla modela solo la capa de rol; el gating
 // por mesa no se representa aca (es por mesa, no por rol).
+import { KB_ACCESS_ROLES, type Role } from "./rbac";
+
+const kbRole = (role: Role): boolean => KB_ACCESS_ROLES.includes(role);
+
 export type RoleMatrixFeature = {
   feature: string;
   icon: string;
@@ -51,20 +55,20 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   {
     feature: "Ver Base de Conocimiento",
     icon: "boxicons:book-library-filled",
-    agent: true,
-    referent: true,
-    team_leader: true,
-    supervisor: true,
-    admin: true,
+    agent: kbRole("agent"),
+    referent: kbRole("referent"),
+    team_leader: kbRole("team_leader"),
+    supervisor: kbRole("supervisor"),
+    admin: kbRole("admin"),
   },
   {
     feature: "Administrar Base de Conocimiento",
     icon: "boxicons:book-library-filled",
-    agent: false,
-    referent: false,
-    team_leader: true,
-    supervisor: true,
-    admin: true,
+    agent: kbRole("agent"),
+    referent: kbRole("referent"),
+    team_leader: kbRole("team_leader"),
+    supervisor: kbRole("supervisor"),
+    admin: kbRole("admin"),
   },
   {
     feature: "Ver Mesas de Ayuda",
