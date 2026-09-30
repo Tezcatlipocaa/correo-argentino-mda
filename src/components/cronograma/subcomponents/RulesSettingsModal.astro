@@ -1,6 +1,7 @@
 ---
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import FormLegend from "@components/ui/forms/FormLegend.astro";
 import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 ---
@@ -8,38 +9,31 @@ import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 <Modal
   id="rules-settings-modal"
   title="Parámetros del Cronograma"
+  icon="boxicons:cog-filled"
   titleClass="font-black text-lg uppercase tracking-tight"
   zIndex="z-200"
-  class="w-11/12"
+  actionsBorder
 >
   <Fragment slot="content">
     <div class="space-y-6">
-      <div class="form-control">
-        <label class="label">
-          <span
-            class="label-text text-base-content/60 text-xs font-bold uppercase"
-            >Cobertura Presencial Mínima (%)</span
-          >
-          <span
-            class="label-text-alt text-secondary text-sm font-black"
-            id="min-coverage-val">40%</span
-          >
-        </label>
+      <fieldset class="fieldset">
+        <FormLegend class="w-full font-bold tracking-wider">
+          <span>Cobertura Presencial Mínima (%)</span>
+          <span id="min-coverage-val" class="text-secondary font-black">40%</span>
+        </FormLegend>
         <input
           type="range"
           id="min-coverage-input"
           min="0"
           max="100"
           value="40"
-          class="range range-secondary range-xs"
+          class="range range-secondary range-xs w-full"
         />
-        <label class="label">
-          <span class="label-text-alt text-base-content/50"
-            >Si la presencialidad cae por debajo de este valor, el día se
-            marcará en rojo.</span
-          >
-        </label>
-      </div>
+        <p class="fieldset-label text-base-content/50 text-xs">
+          Si la presencialidad cae por debajo de este valor, el día se marcará
+          en rojo.
+        </p>
+      </fieldset>
 
       <FormField
         id="max-ho-input"
@@ -79,24 +73,20 @@ import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
     </div>
   </Fragment>
   <Fragment slot="actions">
-    <div class="modal-action">
-      <div class="flex justify-end gap-2">
-        <ActionCancelButton
-          type="button"
-          label="Cancelar"
-          icon="boxicons:x-filled"
-          variant="error"
-          onclick="this.closest('dialog')?.close()"
-        />
-        <ActionConfirmButton
-          type="button"
-          id="save-rules-btn"
-          color="btn-secondary"
-          label="Guardar Reglas"
-          icon="boxicons:save-filled"
-        />
-      </div>
-    </div>
+    <ActionCancelButton
+      type="button"
+      label="Cancelar"
+      icon="boxicons:x-filled"
+      variant="error"
+      onclick="this.closest('dialog')?.close()"
+    />
+    <ActionConfirmButton
+      type="button"
+      id="save-rules-btn"
+      color="btn-secondary"
+      label="Guardar Reglas"
+      icon="boxicons:save-filled"
+    />
   </Fragment>
 </Modal>
 
