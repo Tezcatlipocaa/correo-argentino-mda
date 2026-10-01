@@ -55,6 +55,7 @@
 - **React islands** via `@astrojs/react` — interactive only; prefer `.astro` for static content
 - **Icons**: `astro-icon` with `@iconify-json/boxicons`
 - **URL base helper**: `@lib/baseUrl` exposes `getCleanBase()` (with trailing `/`, for `` `${...}api/foo` ``) and `getBaseNoSlash()` (without trailing `/`, for `` `${...}/oficinas` ``). Always use it; never re-declare `const base = import.meta.env.BASE_URL || "/"` inline.
+- **Export PNG de cronograma**: la tabla mensual se renderiza server-side (`GET /api/cronograma/export.png?month=YYYY-MM` → `@resvg/resvg-js`). No reintroducir `html-to-image` para la tabla mensual: su costo es ~17 KB de estilos por nodo y un mes completo supera el límite de data URL de Chrome (ver `docs/lessons.md` 2026-09-30).
 - **Fonts**: `@fontsource-variable/geist` (UI), `@fontsource-variable/geist-mono` (technical data)
 - **Path aliases**: `@/*` → `src/*`, `@components/*`, `@db/*`, `@lib/*`, etc.
 - **Layout contract**: body `flex flex-col min-h-screen`, main `flex-1` (in `BaseLayout.astro`)

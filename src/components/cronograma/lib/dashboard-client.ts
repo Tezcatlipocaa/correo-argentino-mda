@@ -8,6 +8,7 @@ import {
 } from "./api";
 import { getStatusStyles } from "./styles";
 import { escapeHtml } from "@lib/sanitize";
+import { getCleanBase } from "@lib/baseUrl";
 import {
   getGanttPosition,
   getDaysInMonth,
@@ -2122,10 +2123,6 @@ function setupEventListeners(): void {
   }
 
   async function handleExportAsImage() {
-    const tableContainer = document.querySelector("#monthly-table")
-      ?.parentElement as HTMLElement | null;
-    if (!tableContainer) return;
-
     const imgBtn = document.getElementById(
       "export-image-btn",
     ) as HTMLButtonElement | null;
@@ -2134,33 +2131,31 @@ function setupEventListeners(): void {
     const dateInput = document.getElementById(
       "date-input",
     ) as HTMLInputElement | null;
-    let monthName = "reporte";
-    if (dateInput && dateInput.value) {
-      const d = new Date(dateInput.value + "T12:00:00");
-      monthName = new Intl.DateTimeFormat("es-AR", {
-        month: "long",
-        year: "numeric",
-      }).format(d);
+    if (!dateInput || !dateInput.value) {
+      showToast("No hay un mes seleccionado.", "warning");
+      return;
     }
+    const month = dateInput.value.slice(0, 7);
 
     try {
-      const { exportAsImage } = await import("./exporters");
-      await exportAsImage(
-        tableContainer,
-        monthName,
-        () => {
-          if (imgBtn) {
-            imgBtn.disabled = true;
-            imgBtn.innerHTML = `<span class="loading loading-spinner loading-xs mr-1"></span> Procesando...`;
-          }
-        },
-        () => {
-          if (imgBtn) {
-            imgBtn.disabled = false;
-            imgBtn.innerHTML = originalText;
-          }
-        },
-      );
+      if (imgBtn) {
+        imgBtn.disabled = true;
+        imgBtn.innerHTML = `<span class="loading loading-spinner loading-xs mr-1"></span> Procesando...`;
+      }
+
+      const res = await fetch(`${getCleanBase()}api/cronograma/export.png?month=${month}`);
+      if (!res.ok) throw new Error(`export.png respondió ${res.status}`);
+      const blob = await res.blob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cronograma_${month}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
       showToast("Imagen exportada con éxito", "success");
     } catch (err: unknown) {
       console.error(err);
@@ -2168,6 +2163,11 @@ function setupEventListeners(): void {
         "Hubo un error al generar la imagen. Intenta imprimir el reporte.",
         "error",
       );
+    } finally {
+      if (imgBtn) {
+        imgBtn.disabled = false;
+        imgBtn.innerHTML = originalText;
+      }
     }
   }
 
@@ -2193,8 +2193,6 @@ function setupEventListeners(): void {
         padding: 16,
         compact: true,
         width: 1034,
-        onStart: () => saturdayCard.classList.add("exporting-image"),
-        onEnd: () => saturdayCard.classList.remove("exporting-image"),
       },
       {
         success: "Tabla de guardia copiada al portapapeles.",
@@ -2224,8 +2222,6 @@ function setupEventListeners(): void {
         padding: 16,
         compact: true,
         width: 1388,
-        onStart: () => overtimeCard.classList.add("exporting-image"),
-        onEnd: () => overtimeCard.classList.remove("exporting-image"),
       },
       {
         success: "Horas extras copiadas al portapapeles.",

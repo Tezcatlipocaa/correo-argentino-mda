@@ -492,3 +492,23 @@ Cada entrada sigue este formato:
 **Solucion:** Helper `getInternalOrigin()` (`@lib/internalOrigin`): `INTERNAL_ORIGIN` o default `http://127.0.0.1:${PORT||4321}` para self-fetch directo a Express; `SESSION_COOKIE_SECURE` con runtime-first (`process.env` || `import.meta.env`) seteados en `ecosystem.config.cjs`; `site` a `https://mda.correo.local`; runbook de Apache 443 en `docs/deploy-produccion.md` §5.3.
 **Regla:** En modo middleware detrás de un proxy TLS no confiar en `Astro.url.origin`/`protocol` para self-fetch: ir directo al loopback. Los flags de seguridad por env deben priorizar runtime (`process.env`) sobre build-time (`import.meta.env`) para poder cambiarse sin rebuild. Material de certificados nunca al repo.
 **Archivos afectados:** src/lib/internalOrigin.ts, src/lib/session.ts, src/components/admin/invgate/UbicacionesContent.astro, src/pages/api/invgate/locations/rows.astro, astro.config.mjs, ecosystem.config.cjs, docs/deploy-produccion.md, .env.example, .gitignore, AGENTS.md
+
+---
+
+### 2026-09-30 — `html-to-image` volcó ~17 KB de estilos por nodo: SVG de 101 MB imposible de decodificar
+
+**Problema:** Los 3 botones de imagen del cronograma fallaban: el "Exportar Imagen (PNG)" mostraba "Hubo un error al generar la imagen" y no bajaba nada; los botones de copia podían devolver una imagen en blanco. La consola mostraba `Error generating image: [object Event]`.
+**Causa:** `html-to-image` construye un `data:image/svg+xml` con el estilo computado COMPLETO de cada nodo (~17.5 KB por nodo: Chrome expone ~340 propiedades). La tabla mensual (~2.900 nodos) serializaba **101.065.860 chars (~101 MB)**; Chrome no decodifica un data URL de ese tamaño y el `<img>` interno falla con un `Event`. `skipFonts: true` solo ahorraba ~40 KB: el problema es el volumen de estilos, no las fuentes. Medido con una sesión real en dev: los dos botones de copia chicos funcionaban (SVG 2.7-3.0 MB) pero escalan igual con más datos.
+**Solucion:** El export mensual se renderiza server-side: `GET /api/cronograma/export.png?month=YYYY-MM` construye un SVG determinístico con `buildCronogramaSvg` (`src/components/cronograma/lib/exportSvg.ts`, función pura) y lo rasteriza con `@resvg/resvg-js` (fuentes del sistema). El cliente descarga el blob. Los botones de copia siguen con `html-to-image` pero capturando la clase `exporting-image` en el CLON, no en la card visible (el parpadeo era esa mutación del DOM vivo).
+**Regla:** `html-to-image` no sirve para capturar DOM grande: su costo es lineal en nodos (≈17 KB de estilos por nodo) y Chrome corta el data URL mucho antes de que termine. Para capturas grandes o de un mes completo, renderizar server-side desde los datos. Todo builder de SVG/imagen debe tener un test de tamaño máximo (el unit test exige < 400 KB para 40 operadores × 31 días).
+**Archivos afectados:** src/components/cronograma/lib/exportSvg.ts, src/pages/api/cronograma/export.png.ts, src/components/cronograma/lib/exporters.ts, src/components/cronograma/lib/dashboard-client.ts, src/components/cronograma/CronogramaDashboard.astro, tests/unit/cronograma-export-svg.test.ts, tests/cronograma/export-image.spec.ts
+
+---
+
+### 2026-09-30 — Cambiar `astro.config.mjs` con el dev server vivo deja deps optimizadas obsoletas
+
+**Problema:** Tras agregar `vite.ssr.external` en `astro.config.mjs`, el flujo de copiar imagen falló en dev con `504 (Outdated Optimize Dep)` sobre URLs `.../node_modules/.vite/deps/*.js?v=...`, y el import dinámico de `html-to-image` lanzó `TypeError: Failed to fetch dynamically imported module`. Un test E2E falló por este motivo y no por el código.
+**Causa:** Vite pre-bundlea dependencias en `node_modules/.vite`; si la config de Vite cambia mientras el server corre, los `?v=` hashes quedan viejos y no se regeneran solos.
+**Solucion:** Reiniciar el dev server; si persiste, borrar `node_modules/.vite` antes de relanzarlo.
+**Regla:** Después de tocar `astro.config.mjs` (config de Vite) o instalar/quitar dependencias, reiniciar el dev server (o borrar `node_modules/.vite`). Un `504` + import dinámico roto en dev casi siempre es esto, no el código.
+**Archivos afectados:** astro.config.mjs
