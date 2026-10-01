@@ -37,14 +37,20 @@ export function calculateMultiChannelAuditScores(
     }
   }
 
-  const section1Score = Math.max(0, 100 - s1Deductions);
-  const section2Score = hasSection2 ? Math.max(0, 100 - s2Deductions) : 0;
+  let section1Score = 0;
+  let section2Score = 0;
+  let totalScore = 0;
 
-  let totalScore: number;
-  if (hasSection2) {
-    totalScore = Math.round((section1Score + section2Score) / 2);
+  if (channel === "wise_call") {
+    const s1Raw = Math.max(0, 45 - s1Deductions);
+    const s2Raw = Math.max(0, 55 - s2Deductions);
+    section1Score = Math.round((s1Raw / 45) * 100);
+    section2Score = Math.round((s2Raw / 55) * 100);
+    totalScore = s1Raw + s2Raw;
   } else {
-    totalScore = section1Score;
+    section1Score = Math.max(0, 100 - s1Deductions);
+    section2Score = hasSection2 ? Math.max(0, 100 - s2Deductions) : 0;
+    totalScore = hasSection2 ? Math.round((section1Score + section2Score) / 2) : section1Score;
   }
 
   if (isCriticalFailure) {

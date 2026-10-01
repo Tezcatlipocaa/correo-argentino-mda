@@ -93,7 +93,7 @@ export interface AuditParameter {
   id: number;
   code: string;
   name: string;
-  weight: number;
+  weight: number | null;
   category: string;
   active: boolean;
   channel?: ChannelType;

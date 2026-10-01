@@ -10,8 +10,8 @@ import {
   monthlySummaries,
   feedback,
 } from "@db/schema";
-import { eq, inArray } from "drizzle-orm";
-import { calculateAuditScores } from "@lib/qualityCalculator";
+import { and, eq, inArray } from "drizzle-orm";
+import { calculateAuditScores, calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
 import { logAdminFromAstro } from "@lib/auditLogger";
 
 export const server = {
@@ -23,6 +23,8 @@ export const server = {
           name: z.string().min(1, "El nombre es requerido"),
           weight: z.number().min(0, "El peso debe ser mayor o igual a 0"),
           category: z.string().min(1, "La categoría es requerida"),
+          channel: z.enum(["wise_call", "wise_email", "invgate_ticket"]).optional().default("wise_call"),
+          section: z.enum(["items", "ticket", "mda"]).optional().default("items"),
           isDeleted: z.boolean().optional().default(false),
         }),
       ),
@@ -92,7 +94,9 @@ export const server = {
                 const changed =
                   current.name !== param.name ||
                   current.weight !== param.weight ||
-                  current.category !== param.category;
+                  current.category !== param.category ||
+                  (param.channel && current.channel !== param.channel) ||
+                  (param.section && current.section !== param.section);
 
                 if (changed) {
                   if (!paramsWithScoresSet.has(param.id)) {
@@ -102,6 +106,8 @@ export const server = {
                       name: param.name,
                       weight: param.weight,
                       category: param.category,
+                      channel: param.channel || current.channel,
+                      section: param.section || current.section,
                     });
                   } else {
                     // Soft delete current and insert new version
@@ -111,6 +117,8 @@ export const server = {
                       name: param.name,
                       weight: param.weight,
                       category: param.category,
+                      channel: param.channel || current.channel,
+                      section: param.section || current.section,
                       active: true,
                     });
                   }
@@ -124,6 +132,8 @@ export const server = {
               name: param.name,
               weight: param.weight,
               category: param.category,
+              channel: param.channel || "wise_call",
+              section: param.section || "items",
               active: true,
             });
           }
@@ -154,6 +164,8 @@ export const server = {
                 name: up.name,
                 weight: up.weight,
                 category: up.category,
+                channel: up.channel,
+                section: up.section,
               })
               .where(eq(auditParameters.id, up.id))
               .run();
@@ -280,7 +292,24 @@ export const server = {
           .where(eq(auditParameters.active, true));
       }
 
-      // 2. Preparar el listado de scores y recopilar códigos seleccionados
+      // 2. Determinar si aplica Sección 2
+      let hasSection2 = true;
+      if (input.channelType === "wise_email") {
+        hasSection2 = input.appliesMda;
+      } else if (input.channelType === "invgate_ticket") {
+        hasSection2 = input.staysInMda;
+      }
+
+      // Si la Sección 2 no aplica, solo evaluamos y persistimos los parámetros de la Sección 1 ("items")
+      const applicableParams = hasSection2
+        ? allParams
+        : allParams.filter((p) =>
+            p.section
+              ? p.section === "items"
+              : p.category === "Items" || p.category === "Interacción con Usuario",
+          );
+
+      // 3. Preparar el listado de scores y recopilar códigos seleccionados
       const scoresToInsert: {
         parameterId: number;
         score: boolean;
@@ -288,7 +317,7 @@ export const server = {
       }[] = [];
       const checkedCodes = new Set<string>();
 
-      for (const param of allParams) {
+      for (const param of applicableParams) {
         const isChecked =
           (input as any)[param.code] === "on" ||
           (input as any)[param.code] === true ||
@@ -303,14 +332,6 @@ export const server = {
           score: isChecked,
           comment: typeof comment === "string" ? comment.trim() : null,
         });
-      }
-
-      // 3. Determinar si aplica Sección 2
-      let hasSection2 = true;
-      if (input.channelType === "wise_email") {
-        hasSection2 = input.appliesMda;
-      } else if (input.channelType === "invgate_ticket") {
-        hasSection2 = input.staysInMda;
       }
 
       // 4. Calcular scores ponderados usando el nuevo motor multi-canal

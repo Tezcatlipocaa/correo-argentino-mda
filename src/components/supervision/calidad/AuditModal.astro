@@ -106,7 +106,6 @@ const invgateAgParams = allParameters.filter((p) => p.channel === "invgate_ticke
           name="callId"
           label="Nro Caso / ID Llamada"
           placeholder="Ej: 534787"
-          required
           size="sm"
           inputClass="font-mono font-bold"
         />
@@ -118,14 +117,16 @@ const invgateAgParams = allParameters.filter((p) => p.channel === "invgate_ticke
           size="sm"
           inputClass="font-mono font-bold"
         />
-        <FormField
-          id="form-duration"
-          name="duration"
-          label="Duración"
-          placeholder="02:15"
-          size="sm"
-          inputClass="font-mono font-bold"
-        />
+        <div id="meta-duration-container" class="sm:col-span-1">
+          <FormField
+            id="form-duration"
+            name="duration"
+            label="Duración"
+            placeholder="02:15"
+            size="sm"
+            inputClass="font-mono font-bold"
+          />
+        </div>
         <FormField
           id="form-date"
           name="date"
@@ -543,21 +544,39 @@ const invgateAgParams = allParameters.filter((p) => p.channel === "invgate_ticke
         if (targetChecklist) targetChecklist.classList.remove("hidden");
 
         // Toggle channel specific meta fields
+        const metaDuration = document.getElementById("meta-duration-container");
         const metaRing = document.getElementById("meta-ring-container");
         const metaCreation = document.getElementById("meta-creation-container");
         const metaTake = document.getElementById("meta-take-container");
         const metaPas = document.getElementById("meta-pas-container");
 
+        if (metaDuration) metaDuration.classList.toggle("hidden", channel !== "wise_call");
         if (metaRing) metaRing.classList.toggle("hidden", channel !== "wise_call");
         if (metaCreation) metaCreation.classList.toggle("hidden", channel === "wise_call");
         if (metaTake) metaTake.classList.toggle("hidden", channel === "wise_call");
         if (metaPas) metaPas.classList.toggle("hidden", channel !== "invgate_ticket");
+
+        const formDuration = document.getElementById("form-duration") as HTMLInputElement | null;
+        if (channel !== "wise_call" && formDuration && !formDuration.value) {
+          formDuration.value = "00:00";
+        }
+
+        // Reset search feedback on tab switch
+        if (searchInput) searchInput.value = "";
+        if (alertBox) alertBox.classList.add("hidden");
 
         recalculateScores();
       });
     });
 
     if (btnFetch && searchInput) {
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          btnFetch.click();
+        }
+      });
+
       btnFetch.addEventListener("click", async () => {
         const id = searchInput.value.trim();
         if (!id) {
@@ -598,10 +617,18 @@ const invgateAgParams = allParameters.filter((p) => p.channel === "invgate_ticke
           const formTake = document.getElementById("form-take-time") as HTMLInputElement;
           const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement;
 
-          if (formCallId && d.caseNumber) formCallId.value = d.caseNumber;
-          if (formTicketId && (d.rawDetails?.incidentId || d.caseNumber)) {
-            formTicketId.value = d.rawDetails?.incidentId?.toString() || d.caseNumber;
+          if (channel === "invgate_ticket") {
+            if (formTicketId && d.caseNumber) formTicketId.value = d.caseNumber;
+            if (formCallId && !formCallId.value && d.caseNumber) formCallId.value = d.caseNumber;
+          } else if (channel === "wise_call") {
+            if (formCallId && d.caseNumber) formCallId.value = d.caseNumber;
+            if (formTicketId && d.rawDetails?.incidentId) {
+              formTicketId.value = d.rawDetails.incidentId.toString();
+            }
+          } else if (channel === "wise_email") {
+            if (formCallId && d.caseNumber) formCallId.value = d.caseNumber;
           }
+
           if (formDuration && d.duration) formDuration.value = d.duration;
           if (formDate && d.date) formDate.value = d.date;
           if (formRing && d.ringTime) formRing.value = d.ringTime;
@@ -669,16 +696,28 @@ const invgateAgParams = allParameters.filter((p) => p.channel === "invgate_ticke
         }
       });
 
-      const s1Score = Math.max(0, Math.round(100 - s1Deductions));
+      let s1Score = 0;
+      let s2Score = 0;
+      let total = 0;
       let hasSection2 = true;
-      if (channel === "wise_email") {
-        hasSection2 = toggleAppliesMda?.checked ?? false;
-      } else if (channel === "invgate_ticket") {
-        hasSection2 = toggleStaysMda?.checked ?? true;
-      }
 
-      const s2Score = hasSection2 ? Math.max(0, Math.round(100 - s2Deductions)) : 0;
-      let total = hasSection2 ? Math.round((s1Score + s2Score) / 2) : s1Score;
+      if (channel === "wise_call") {
+        const s1Raw = Math.max(0, 45 - s1Deductions);
+        const s2Raw = Math.max(0, 55 - s2Deductions);
+        s1Score = Math.round((s1Raw / 45) * 100);
+        s2Score = Math.round((s2Raw / 55) * 100);
+        total = s1Raw + s2Raw;
+      } else {
+        if (channel === "wise_email") {
+          hasSection2 = toggleAppliesMda?.checked ?? false;
+        } else if (channel === "invgate_ticket") {
+          hasSection2 = toggleStaysMda?.checked ?? true;
+        }
+
+        s1Score = Math.max(0, Math.round(100 - s1Deductions));
+        s2Score = hasSection2 ? Math.max(0, Math.round(100 - s2Deductions)) : 0;
+        total = hasSection2 ? Math.round((s1Score + s2Score) / 2) : s1Score;
+      }
 
       const isCritical = (document.getElementById("form-is-critical-failure") as HTMLInputElement)?.checked;
       if (isCritical) {

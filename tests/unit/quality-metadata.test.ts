@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   parseWiseCallMetadata,
   parseWiseEmailMetadata,
@@ -102,5 +102,23 @@ describe("Quality Metadata Extractors", () => {
 
     const metadataNonPas = parseInvgateAgMetadata(mockIncidentNonPas);
     expect(metadataNonPas.isPas).toBe(false);
+
+    // Test with numeric epoch timestamps
+    const mockIncidentEpoch = {
+      id: 99125,
+      title: "Problema con token",
+      priority: "Alta",
+      created_at: 1727700000,
+      updated_at: 1727700900,
+      assigned_to: { id: 103, name: "Carlos Gomez" },
+      location: { id: 100, name: "Sucursal" },
+      helpdesk: { id: 5, name: "Mesa TI" },
+    };
+    const metadataEpoch = parseInvgateAgMetadata(mockIncidentEpoch);
+    expect(metadataEpoch.caseNumber).toBe("99125");
+    expect(metadataEpoch.operator).toBe("Carlos Gomez");
+    expect(metadataEpoch.priority).toBe("Alta");
+    expect(metadataEpoch.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(metadataEpoch.takeTime).toBeDefined();
   });
 });

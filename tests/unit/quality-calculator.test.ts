@@ -6,7 +6,6 @@ import {
 import {
   WISE_CALL_PARAMETERS,
   WISE_EMAIL_PARAMETERS,
-  INVGATE_AG_PARAMETERS,
 } from "../../src/config/qualityParams";
 
 describe("Multi-Channel Quality Calculator", () => {
@@ -27,9 +26,11 @@ describe("Multi-Channel Quality Calculator", () => {
 
     it("deducts percentages when parameters do not comply", () => {
       // In Wise Call:
-      // call_cordialidad = 3%
-      // call_sondeo = 6%
-      // Both fail in Section 1 -> Section 1 should be 100 - (3 + 6) = 91%
+      // call_cordialidad = 3 points
+      // call_sondeo = 6 points
+      // Both fail in Section 1 (base 45): (45 - 9) / 45 = 80%
+      // Section 2 has 55 points (100%)
+      // Total score: 36 + 55 = 91% (direct deduction from 100)
       const params = WISE_CALL_PARAMETERS;
       const compliantCodes = new Set(
         params
@@ -44,9 +45,28 @@ describe("Multi-Channel Quality Calculator", () => {
         true,
       );
 
-      expect(res.section1Score).toBe(91);
+      expect(res.section1Score).toBe(80);
       expect(res.section2Score).toBe(100);
-      expect(res.totalScore).toBe(Math.round((91 + 100) / 2)); // 96
+      expect(res.totalScore).toBe(91);
+    });
+
+    it("gives 55% when all Section 1 fails and Section 2 passes in wise_call", () => {
+      const params = WISE_CALL_PARAMETERS;
+      // All section 2 compliant, all section 1 failing
+      const compliantCodes = new Set(
+        params.filter((p) => p.section === "ticket").map((p) => p.code),
+      );
+
+      const res = calculateMultiChannelAuditScores(
+        "wise_call",
+        params,
+        compliantCodes,
+        true,
+      );
+
+      expect(res.section1Score).toBe(0);
+      expect(res.section2Score).toBe(100);
+      expect(res.totalScore).toBe(55);
     });
 
     it("evaluates only Section 1 when Section 2 does not apply (e.g. Wise Email with appliesMda = false)", () => {

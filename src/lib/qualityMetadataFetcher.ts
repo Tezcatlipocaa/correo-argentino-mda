@@ -98,9 +98,28 @@ export function parseWiseEmailMetadata(caseData: any, operatorName = ""): Extrac
 
 export function parseInvgateAgMetadata(incident: any): ExtractedQualityMetadata {
   const caseNumber = (incident?.id ?? "").toString();
-  const createdAt = incident?.created_at || "";
-  const dateStr = createdAt.split(" ")[0] || new Date().toISOString().split("T")[0];
-  const takeTime = incident?.updated_at || incident?.first_response_at || createdAt;
+  const rawCreated = incident?.created_at;
+  const dateStr =
+    typeof rawCreated === "number"
+      ? new Date(rawCreated * 1000).toISOString().split("T")[0]
+      : typeof rawCreated === "string"
+        ? rawCreated.split(" ")[0]
+        : new Date().toISOString().split("T")[0];
+
+  const rawTake = incident?.updated_at || incident?.first_response_at || rawCreated;
+  const takeTime =
+    typeof rawTake === "number"
+      ? new Date(rawTake * 1000).toISOString().replace("T", " ").substring(0, 19)
+      : typeof rawTake === "string"
+        ? rawTake
+        : "";
+
+  const creationTime =
+    typeof rawCreated === "number"
+      ? new Date(rawCreated * 1000).toISOString().replace("T", " ").substring(0, 19)
+      : typeof rawCreated === "string"
+        ? rawCreated
+        : "";
 
   const priorityName = incident?.priority?.name ?? (typeof incident?.priority === "string" ? incident.priority : "Media");
   const operatorName = incident?.assigned_to?.name ?? incident?.collaborator ?? "";
@@ -115,7 +134,7 @@ export function parseInvgateAgMetadata(incident: any): ExtractedQualityMetadata 
     operator: operatorName,
     date: dateStr,
     priority: priorityName,
-    creationTime: createdAt,
+    creationTime,
     takeTime,
     isPas,
     rawDetails: {
@@ -167,9 +186,15 @@ export async function fetchQualityCaseMetadata(
         return { ok: false, error: `No se encontró la llamada Wise con número/ID ${cleanId}` };
       }
 
-      // Obtener actividades
-      const actRes = await wiseCxGet<any[]>(`/core/v1/cases/${caseData.id}/activities`);
-      const activities = actRes.ok && Array.isArray(actRes.data) ? actRes.data : [];
+      // Obtener actividades (pueden venir como array directo o bajo data)
+      const actRes = await wiseCxGet<any>(`/core/v1/cases/${caseData.id}/activities`);
+      const activities = actRes.ok
+        ? (Array.isArray(actRes.data)
+            ? actRes.data
+            : Array.isArray(actRes.data?.data)
+              ? actRes.data.data
+              : [])
+        : [];
 
       const metadata = parseWiseCallMetadata(caseData, activities);
 
@@ -203,7 +228,7 @@ export async function fetchQualityCaseMetadata(
     }
 
     if (channel === "invgate_ticket") {
-      const res = await invgateGet<any>(`incidents/${cleanId}`);
+      const res = await invgateGet<any>(`incident?id=${cleanId}`);
       if (!res.ok || !res.data) {
         return { ok: false, error: `No se encontró el incidente InvGate #${cleanId}` };
       }
@@ -218,3 +243,4 @@ export async function fetchQualityCaseMetadata(
     return { ok: false, error: msg };
   }
 }
+

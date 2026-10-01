@@ -1121,10 +1121,39 @@ const cleanBase = getCleanBase();
   class="flex h-[80vh] w-11/12 flex-col sm:h-150"
 >
   <Fragment slot="content">
+    <!-- Channel Selector in Parameters Modal -->
+    <div class="flex items-center justify-between gap-2 mb-3 bg-base-200/40 p-2 rounded-xl border border-base-300">
+      <span class="text-xs font-bold uppercase tracking-wider text-base-content/60 pl-1">Canal:</span>
+      <div class="join">
+        <button
+          type="button"
+          class="btn btn-xs join-item param-channel-btn btn-active btn-primary font-bold uppercase"
+          data-channel="wise_call"
+        >
+          Llamada Wise
+        </button>
+        <button
+          type="button"
+          class="btn btn-xs join-item param-channel-btn font-bold uppercase"
+          data-channel="wise_email"
+        >
+          Mail Wise
+        </button>
+        <button
+          type="button"
+          class="btn btn-xs join-item param-channel-btn font-bold uppercase"
+          data-channel="invgate_ticket"
+        >
+          Autogestión
+        </button>
+      </div>
+    </div>
+
     <!-- Tabs Header -->
     <div class="tabs bg-base-200/50 mb-4 shrink-0 rounded-xl p-1">
       <button
         type="button"
+        id="param-tab-s1-btn"
         class="tab tab-active parameter-tab flex-1 text-xs font-bold uppercase"
         data-tab="s1"
       >
@@ -1132,6 +1161,7 @@ const cleanBase = getCleanBase();
       </button>
       <button
         type="button"
+        id="param-tab-s2-btn"
         class="tab parameter-tab flex-1 text-xs font-bold uppercase"
         data-tab="s2"
       >
@@ -1141,12 +1171,12 @@ const cleanBase = getCleanBase();
 
     <!-- Lists Container -->
     <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-      <!-- Section 1 List (Interacción con Usuario) -->
+      <!-- Section 1 List -->
       <div id="param-list-s1" class="parameter-list-pane space-y-3">
         <!-- populated dynamically -->
       </div>
 
-      <!-- Section 2 List (Gestión del Ticket) -->
+      <!-- Section 2 List -->
       <div id="param-list-s2" class="parameter-list-pane hidden space-y-3">
         <!-- populated dynamically -->
       </div>
@@ -1164,7 +1194,7 @@ const cleanBase = getCleanBase();
           class="btn btn-sm btn-primary add-param-btn gap-1 text-xs font-black uppercase"
         >
           <Icon name="boxicons:plus" size={16} />
-          Agregar a Interacción
+          <span id="btn-add-param-s1-label">Agregar Criterio</span>
         </button>
         <button
           type="button"
@@ -1172,7 +1202,7 @@ const cleanBase = getCleanBase();
           class="btn btn-sm btn-primary add-param-btn hidden gap-1 text-xs font-black uppercase"
         >
           <Icon name="boxicons:plus" size={16} />
-          Agregar a Gestión
+          <span id="btn-add-param-s2-label">Agregar Criterio</span>
         </button>
       </div>
       <div class="flex gap-2">
@@ -1380,15 +1410,29 @@ const cleanBase = getCleanBase();
               <div class="flex items-center gap-2">
                 <span class="font-mono text-lg font-black tracking-tight text-base-content">${escapeHtml(call.callId)}</span>
                 ${call.isCriticalFailure ? '<span class="badge badge-error badge-sm font-bold uppercase tracking-wider text-xxs px-2 py-1.5 shadow-sm">Falla Crítica</span>' : ""}
+                ${call.isPas ? '<span class="badge badge-secondary badge-sm font-bold uppercase tracking-wider text-xxs px-2 py-1.5 shadow-sm">PAS</span>' : ""}
               </div>
-              <div class="text-xs font-medium text-base-content/50 mt-1 uppercase tracking-widest">Ticket: <span class="font-mono text-base-content/70">${escapeHtml(call.ticketId)}</span></div>
+              <div class="text-xs font-medium text-base-content/50 mt-1 uppercase tracking-widest">Ticket: <span class="font-mono text-base-content/70">${escapeHtml(call.ticketId || "--")}</span> ${call.date ? `<span class="opacity-50 ml-1">(${call.date})</span>` : ""}</div>
             </div>
           </div>
           <div class="flex items-center gap-8 mt-4 sm:mt-0">
+            ${
+              call.channelType === "wise_call"
+                ? `
             <div class="text-right">
               <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Duración</div>
-              <div class="text-base font-mono font-bold text-base-content/80">${escapeHtml(call.duration)}</div>
+              <div class="text-base font-mono font-bold text-base-content/80">${escapeHtml(call.duration || "00:00")}</div>
             </div>
+            `
+                : call.takeTime || call.creationTime
+                  ? `
+            <div class="text-right">
+              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Toma / Lectura</div>
+              <div class="text-xs font-mono font-bold text-base-content/80">${escapeHtml(call.takeTime || call.creationTime || "")}</div>
+            </div>
+            `
+                  : ""
+            }
             <div class="text-right">
               <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Score Total</div>
               <div class="badge ${badgeClass} font-black shadow-sm text-sm py-3 px-3">
@@ -1424,7 +1468,7 @@ const cleanBase = getCleanBase();
           <!-- Section 1 -->
           <div class="p-6 pl-8">
             <div class="mb-6 flex items-center justify-between border-b border-base-300/50 pb-3">
-              <h5 class="font-bold text-xs uppercase tracking-widest text-base-content/70">Interacción con Usuario</h5>
+              <h5 class="font-bold text-xs uppercase tracking-widest text-base-content/70">${call.channelType === "wise_call" ? "Interacción con Usuario" : call.channelType === "wise_email" ? "Gestión del Correo" : "Gestión del Caso"}</h5>
               <div class="flex items-baseline gap-1">
                 <span class="text-xl font-black ${s1ScoreColor}">${call.section1.score}</span>
                 <span class="text-xs font-bold text-base-content/30">/${call.section1.maxScore}</span>
@@ -1438,7 +1482,7 @@ const cleanBase = getCleanBase();
           <!-- Section 2 -->
           <div class="p-6">
             <div class="mb-6 flex items-center justify-between border-b border-base-300/50 pb-3">
-              <h5 class="font-bold text-xs uppercase tracking-widest text-base-content/70">Gestión del Ticket</h5>
+              <h5 class="font-bold text-xs uppercase tracking-widest text-base-content/70">${call.channelType === "wise_call" ? "Gestión del Ticket" : call.channelType === "wise_email" ? (call.appliesMda ? "Ticket MDA" : "Ticket MDA (No Aplica)") : (call.staysInMda ? "Ticket MDA" : "Ticket MDA (No Aplica)")}</h5>
               <div class="flex items-baseline gap-1">
                 <span class="text-xl font-black ${s2ScoreColor}">${call.section2.score}</span>
                 <span class="text-xs font-bold text-base-content/30">/${call.section2.maxScore}</span>
@@ -1703,12 +1747,23 @@ const cleanBase = getCleanBase();
         const caseSearchInput = document.getElementById("case-search-id") as HTMLInputElement | null;
         const alertBox = document.getElementById("fetch-feedback-alert");
 
+        const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
+        const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
+
         if (formRing) formRing.value = "";
         if (formCreation) formCreation.value = "";
         if (formTake) formTake.value = "";
         if (formIsPas) formIsPas.checked = false;
         if (caseSearchInput) caseSearchInput.value = "";
         if (alertBox) alertBox.classList.add("hidden");
+        if (toggleAppliesMda) {
+          toggleAppliesMda.checked = false;
+          toggleAppliesMda.dispatchEvent(new Event("change"));
+        }
+        if (toggleStaysMda) {
+          toggleStaysMda.checked = true;
+          toggleStaysMda.dispatchEvent(new Event("change"));
+        }
 
         const today = new Date().toISOString().substring(0, 10);
         if (formDate) formDate.value = today;
@@ -1756,6 +1811,51 @@ const cleanBase = getCleanBase();
       }
 
       const formData = new FormData(auditForm);
+      const activeChannel = (formData.get("channelType") as string) || "wise_call";
+      const callIdVal = (formData.get("callId") as string)?.trim() || "";
+      const ticketIdVal = (formData.get("ticketId") as string)?.trim() || "";
+
+      // Dynamic validation per channel
+      if (activeChannel === "wise_call" && !callIdVal) {
+        (window as any).showToast?.("El Nro de Caso / ID de Llamada es requerido.", "alert-warning");
+        const callInput = document.getElementById("form-call-id");
+        callInput?.focus();
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = originalText;
+        }
+        return;
+      }
+      if (activeChannel === "wise_email" && !callIdVal) {
+        (window as any).showToast?.("El Nro de Caso / Mail Wise es requerido.", "alert-warning");
+        const callInput = document.getElementById("form-call-id");
+        callInput?.focus();
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = originalText;
+        }
+        return;
+      }
+      if (activeChannel === "invgate_ticket") {
+        if (!ticketIdVal && !callIdVal) {
+          (window as any).showToast?.("El Nro de Caso / Ticket AG es requerido.", "alert-warning");
+          const ticketInput = document.getElementById("form-ticket-id");
+          ticketInput?.focus();
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = originalText;
+          }
+          return;
+        }
+        if (!callIdVal) {
+          formData.set("callId", ticketIdVal);
+        }
+      }
+
+      if (!formData.get("duration")) {
+        formData.set("duration", "00:00");
+      }
+
       // Ensure notes is always present (even if textarea is empty)
       if (!formData.has("notes")) {
         formData.set("notes", "");
@@ -2154,8 +2254,14 @@ const cleanBase = getCleanBase();
           }
 
           if (dStatAht) {
-            const calls = operator.calls || [];
-            if (calls.length > 0) {
+            const allAudits = operator.calls || [];
+            const callAudits = allAudits.filter(
+              (c: any) =>
+                (c.channelType || "wise_call") === "wise_call" &&
+                c.duration &&
+                c.duration !== "00:00",
+            );
+            if (callAudits.length > 0) {
               const parseDurationToSeconds = (durStr: string) => {
                 if (!durStr) return 0;
                 const parts = durStr.split(":").map(Number);
@@ -2171,12 +2277,12 @@ const cleanBase = getCleanBase();
                 const s = Math.round(totalSecs % 60);
                 return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
               };
-              const totalSecs = calls.reduce(
+              const totalSecs = callAudits.reduce(
                 (acc: number, c: any) =>
                   acc + parseDurationToSeconds(c.duration),
                 0,
               );
-              const avgSecs = totalSecs / calls.length;
+              const avgSecs = totalSecs / callAudits.length;
               dStatAht.textContent = formatSecondsToDuration(avgSecs);
               dStatAht.className = "text-xl font-black text-base-content";
             } else {
@@ -2204,13 +2310,19 @@ const cleanBase = getCleanBase();
           }
 
           if (dStatManagement) {
-            const calls = operator.calls || [];
-            if (calls.length > 0) {
+            const allAudits = operator.calls || [];
+            const auditsWithS2 = allAudits.filter((c: any) => {
+              if (c.channelType === "wise_email") return c.appliesMda !== false;
+              if (c.channelType === "invgate_ticket") return c.staysInMda !== false;
+              return true;
+            });
+
+            if (auditsWithS2.length > 0) {
               const avgS2 = Math.round(
-                calls.reduce(
+                auditsWithS2.reduce(
                   (acc: number, c: any) => acc + c.section2.score,
                   0,
-                ) / calls.length,
+                ) / auditsWithS2.length,
               );
               dStatManagement.textContent = `${avgS2}%`;
               dStatManagement.className = `text-xl font-black ${avgS2 >= 90 ? "text-success" : avgS2 >= 80 ? "text-warning" : "text-error"}`;
@@ -2331,7 +2443,11 @@ const cleanBase = getCleanBase();
             if (bAg) bAg.textContent = `${invgateAgs.length}/4`;
             if (bQuota) {
               const isFulfilled = wiseCalls.length >= 4 && wiseEmails.length >= 4 && invgateAgs.length >= 4;
-              bQuota.textContent = `${allAudits.length}/12 Completadas`;
+              const effectiveCompleted =
+                Math.min(wiseCalls.length, 4) +
+                Math.min(wiseEmails.length, 4) +
+                Math.min(invgateAgs.length, 4);
+              bQuota.textContent = `${effectiveCompleted}/12 Completadas`;
               bQuota.className = `badge text-xs font-bold ${isFulfilled ? "badge-success text-success-content" : "badge-neutral"}`;
             }
 
@@ -2420,13 +2536,70 @@ const cleanBase = getCleanBase();
     const btnAddParamS2 = document.getElementById("btn-add-param-s2");
 
     let localParams: any[] = [];
+    let activeParamChannel: string = "wise_call";
+
+    const channelLabels: Record<string, { s1: string; s2: string; addS1: string; addS2: string }> = {
+      wise_call: {
+        s1: "Interacción con Usuario",
+        s2: "Gestión del Ticket",
+        addS1: "Agregar a Interacción",
+        addS2: "Agregar a Gestión",
+      },
+      wise_email: {
+        s1: "Gestión de Correo",
+        s2: "Ticket MDA",
+        addS1: "Agregar a Correo",
+        addS2: "Agregar a Ticket MDA",
+      },
+      invgate_ticket: {
+        s1: "Gestión del Caso",
+        s2: "Ticket MDA",
+        addS1: "Agregar a Caso",
+        addS2: "Agregar a Ticket MDA",
+      },
+    };
+
+    function updateParamTabLabels() {
+      const labels = channelLabels[activeParamChannel] || channelLabels.wise_call;
+      const tab1Btn = document.getElementById("param-tab-s1-btn");
+      const tab2Btn = document.getElementById("param-tab-s2-btn");
+      const add1Label = document.getElementById("btn-add-param-s1-label");
+      const add2Label = document.getElementById("btn-add-param-s2-label");
+
+      if (tab1Btn) tab1Btn.textContent = labels.s1;
+      if (tab2Btn) tab2Btn.textContent = labels.s2;
+      if (add1Label) add1Label.textContent = labels.addS1;
+      if (add2Label) add2Label.textContent = labels.addS2;
+    }
+
+    // Channel buttons in parameters modal
+    document.querySelectorAll(".param-channel-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ch = btn.getAttribute("data-channel");
+        if (!ch) return;
+        activeParamChannel = ch;
+
+        document.querySelectorAll(".param-channel-btn").forEach((b) => b.classList.remove("btn-active", "btn-primary"));
+        btn.classList.add("btn-active", "btn-primary");
+
+        updateParamTabLabels();
+        renderParametersList();
+      });
+    });
 
     if (btnConfigureParameters) {
       btnConfigureParameters.addEventListener("click", () => {
         localParams = getAuditParameters().map((p: any) => ({
           ...p,
+          channel: p.channel || "wise_call",
+          section: p.section || (p.category === "Gestión del Ticket" ? "ticket" : "items"),
           isDeleted: false,
         }));
+
+        activeParamChannel = "wise_call";
+        const chBtns = document.querySelectorAll(".param-channel-btn");
+        chBtns.forEach((b) => b.classList.remove("btn-active", "btn-primary"));
+        chBtns[0]?.classList.add("btn-active", "btn-primary");
 
         // Reset tabs to S1
         const tabs = document.querySelectorAll(".parameter-tab");
@@ -2438,6 +2611,7 @@ const cleanBase = getCleanBase();
         document.getElementById("btn-add-param-s1")?.classList.remove("hidden");
         document.getElementById("btn-add-param-s2")?.classList.add("hidden");
 
+        updateParamTabLabels();
         renderParametersList();
         parametersModal.showModal();
       });
@@ -2451,31 +2625,35 @@ const cleanBase = getCleanBase();
 
     if (btnAddParamS1) {
       btnAddParamS1.addEventListener("click", () => {
-        handleAddParam("Interacción con Usuario");
+        handleAddParam("items");
       });
     }
 
     if (btnAddParamS2) {
       btnAddParamS2.addEventListener("click", () => {
-        handleAddParam("Gestión del Ticket");
+        handleAddParam(activeParamChannel === "wise_call" ? "ticket" : "mda");
       });
     }
 
-    const handleAddParam = (category: string) => {
+    const handleAddParam = (section: "items" | "ticket" | "mda") => {
+      const category =
+        section === "items"
+          ? (activeParamChannel === "wise_call" ? "Interacción con Usuario" : "Items")
+          : (activeParamChannel === "wise_call" ? "Gestión del Ticket" : "MDA");
+
       localParams.push({
         id: null,
         name: "",
         weight: 1.0,
         category: category,
+        channel: activeParamChannel,
+        section: section,
         active: true,
         isDeleted: false,
       });
       renderParametersList();
 
-      const paneId =
-        category === "Interacción con Usuario"
-          ? "param-list-s1"
-          : "param-list-s2";
+      const paneId = section === "items" ? "param-list-s1" : "param-list-s2";
       const pane = document.getElementById(paneId);
       if (pane) {
         setTimeout(() => {
@@ -2546,12 +2724,26 @@ const cleanBase = getCleanBase();
       const s2Container = document.getElementById("param-list-s2");
       if (!s1Container || !s2Container) return;
 
+      const isMatchingChannel = (p: any) => {
+        const ch = p.channel || "wise_call";
+        return ch === activeParamChannel;
+      };
+
+      const isS1 = (p: any) => {
+        return p.section === "items" || p.category === "Items" || p.category === "Interacción con Usuario";
+      };
+
+      const isS2 = (p: any) => {
+        return p.section === "ticket" || p.section === "mda" || p.category === "Gestión del Ticket" || p.category === "Ticket" || p.category === "MDA";
+      };
+
       let s1Count = 0;
       const s1Html = localParams
         .map((p, i) => ({ p, i }))
         .filter(
           (item) =>
-            item.p.category === "Interacción con Usuario" &&
+            isMatchingChannel(item.p) &&
+            isS1(item.p) &&
             (item.p.active || !item.p.id || item.p.isDeleted),
         )
         .map((item) => {
@@ -2565,7 +2757,8 @@ const cleanBase = getCleanBase();
         .map((p, i) => ({ p, i }))
         .filter(
           (item) =>
-            item.p.category === "Gestión del Ticket" &&
+            isMatchingChannel(item.p) &&
+            isS2(item.p) &&
             (item.p.active || !item.p.id || item.p.isDeleted),
         )
         .map((item) => {
@@ -2576,10 +2769,10 @@ const cleanBase = getCleanBase();
 
       s1Container.innerHTML =
         s1Html ||
-        '<p class="text-xs text-base-content/40 italic text-center py-4">No hay parámetros activos en esta categoría.</p>';
+        '<p class="text-xs text-base-content/40 italic text-center py-4">No hay parámetros activos en esta categoría para este canal.</p>';
       s2Container.innerHTML =
         s2Html ||
-        '<p class="text-xs text-base-content/40 italic text-center py-4">No hay parámetros activos en esta categoría.</p>';
+        '<p class="text-xs text-base-content/40 italic text-center py-4">No hay parámetros activos en esta categoría para este canal.</p>';
 
       // Attach input change listeners
       s1Container
@@ -2680,7 +2873,9 @@ const cleanBase = getCleanBase();
             id: p.id,
             name: p.name.trim(),
             weight: p.weight,
-            category: p.category,
+            category: p.category || (p.section === "items" ? "Items" : "MDA"),
+            channel: p.channel || "wise_call",
+            section: p.section || (p.category === "Interacción con Usuario" || p.category === "Items" ? "items" : "ticket"),
             isDeleted: p.isDeleted,
           })),
         };
@@ -2731,17 +2926,28 @@ const cleanBase = getCleanBase();
         // Obtener todos los parámetros configurados en el sistema
         const params = getAuditParameters();
 
+        const channelLabelMap: Record<string, string> = {
+          wise_call: "Llamada Wise",
+          wise_email: "Mail Wise",
+          invgate_ticket: "Autogestión",
+        };
+
         // Headers for CSV
         const headers = [
           "Periodo",
+          "Canal",
           "Operador",
           "Usuario",
           "Fecha",
-          "ID Llamada",
-          "ID Ticket",
+          "ID Llamada / Caso",
+          "ID Ticket / AG",
           "Duracion",
-          "Puntaje Secc. 1 (Interaccion)",
-          "Puntaje Secc. 2 (Gestion)",
+          "Tiempo Ringueo",
+          "Creacion",
+          "Toma / Lectura",
+          "Es PAS",
+          "Puntaje Secc. 1",
+          "Puntaje Secc. 2",
           "Puntaje Total",
           "Falla Critica",
         ];
@@ -2759,12 +2965,17 @@ const cleanBase = getCleanBase();
         selectedOp.calls.forEach((call: any) => {
           const row = [
             call.month,
+            channelLabelMap[call.channelType || "wise_call"] || (call.channelType || "wise_call"),
             selectedOp.name,
             selectedOp.username || "",
-            call.date.substring(0, 10),
+            call.date ? call.date.substring(0, 10) : "",
             call.callId,
             call.ticketId,
-            call.duration,
+            call.duration || "",
+            call.ringTime || "",
+            call.creationTime || "",
+            call.takeTime || "",
+            call.isPas ? "Si" : "No",
             call.section1.score,
             call.section2.score,
             call.totalScore,

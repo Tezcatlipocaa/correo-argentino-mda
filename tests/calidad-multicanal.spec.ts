@@ -9,7 +9,7 @@ let testSupervisor: TestUser;
 let createdAgentId: number | null = null;
 
 test.beforeEach(async ({ context }) => {
-  testSupervisor = await createTestUserAndSession("supervisor");
+  testSupervisor = await createTestUserAndSession("admin");
   await setSessionCookie(context, testSupervisor.signedSessionId);
 
   // Create an agent included in quality module
@@ -44,6 +44,9 @@ test.afterEach(async () => {
 
 test("Calidad Multi-Canal E2E Flow", async ({ page }) => {
   await page.goto("/supervision/calidad-operadores");
+
+  // Wait for server island to finish streaming
+  await expect(page.locator("#operators-data")).toBeAttached({ timeout: 15000 });
 
   // Verify page header
   await expect(page.locator("h1")).toContainText(/Calidad|Supervisión/i);
