@@ -146,7 +146,8 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
                         name="boxicons:user-filled"
                         size={14}
                         aria-hidden="true"
-                      />
+                      
+            is:inline />
                     </span>
                     <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                       <code
@@ -184,12 +185,13 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
                         type="password"
                         value={link.credentials.password}
                         readonly
+                        aria-label={`Contraseña de ${link.title}`}
                         class="input input-xs bg-base-300 text-base-content min-w-0 flex-1 border-none pr-1 text-right font-mono font-bold"
                         data-password-input
                       />
                       <button
                         type="button"
-                        class="btn btn-xs btn-ghost btn-square text-base-content/60 shrink-0"
+                        class="btn btn-xs btn-ghost btn-square min-h-8 min-w-8 text-base-content/60 shrink-0"
                         data-toggle-password
                         title="Mostrar/Ocultar contraseña"
                         aria-label="Mostrar u ocultar contraseña"

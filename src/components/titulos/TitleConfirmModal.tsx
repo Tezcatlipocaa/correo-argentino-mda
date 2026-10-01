@@ -21,7 +21,7 @@ export default function ConfirmModal({
 }: Props) {
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
+      className={`fixed inset-0 z-200 flex items-center justify-center transition-all duration-300 ${
         open ? "visible opacity-100" : "invisible opacity-0"
       } `}
     >

@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { eq } from "drizzle-orm";
-import { db } from "../db/index";
-import { offices, auditLogs } from "../db/schema";
-import { buildBuildingKey, pickCanonicalAddress } from "../lib/officeBuildingKey";
+import { db } from "../src/db/index";
+import { offices, auditLogs } from "../src/db/schema";
+import { buildBuildingKey, pickCanonicalAddress } from "../src/lib/officeBuildingKey";
 
 interface OfficeRow {
   id: number;

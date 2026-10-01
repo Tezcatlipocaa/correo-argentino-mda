@@ -103,11 +103,11 @@ export default function TitleModal({
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-black/80 transition-opacity ${open ? "visible opacity-100" : "invisible opacity-0"}`}
+        className={`fixed inset-0 z-[190] bg-black/80 transition-opacity ${open ? "visible opacity-100" : "invisible opacity-0"}`}
         onClick={onClose}
       />
       <div
-        className={`fixed inset-0 z-40 flex items-center justify-center transition-all duration-300 ${open ? "visible opacity-100" : "invisible opacity-0"}`}
+        className={`fixed inset-0 z-200 flex items-center justify-center transition-all duration-300 ${open ? "visible opacity-100" : "invisible opacity-0"}`}
       >
         <form
           className={`bg-base-100 relative w-full max-w-xl rounded-xl p-6 shadow-2xl transition-all duration-300 ${open ? "translate-y-0 scale-100 opacity-100" : "translate-y-6 scale-95 opacity-0"}`}

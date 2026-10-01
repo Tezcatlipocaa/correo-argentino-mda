@@ -151,12 +151,13 @@ const searchText = [
                           type="password"
                           value={meta.value}
                           readonly
+                          aria-label={`Contraseña para ${meta.label}`}
                           class="input input-xs bg-base-300 text-base-content min-w-0 flex-1 border-none pr-1 text-right font-mono font-bold"
                           data-password-input
                         />
                         <button
                           type="button"
-                          class="btn btn-xs btn-ghost btn-square text-base-content/60 shrink-0"
+                          class="btn btn-xs btn-ghost btn-square min-h-8 min-w-8 text-base-content/60 shrink-0"
                           data-toggle-password
                           title="Mostrar/Ocultar contraseña"
                           aria-label="Mostrar u ocultar contraseña"
@@ -245,7 +246,8 @@ const searchText = [
                 name="boxicons:calendar-filled"
                 size={18}
                 aria-hidden="true"
-              />
+              
+            is:inline />
               <span>Pendiente</span>
             </button>
           )

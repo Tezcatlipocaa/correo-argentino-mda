@@ -26,14 +26,14 @@ export default function TitleDrawer({
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 z-40 bg-black/80 transition-opacity duration-200 ${
+        className={`fixed inset-0 z-[190] bg-black/80 transition-opacity duration-200 ${
           open ? "visible opacity-100" : "invisible opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
       />
       {/* Drawer */}
       <aside
-        className={`bg-base-100 fixed inset-y-0 right-0 z-50 flex w-full max-w-105 flex-col justify-between overflow-y-auto pt-6 shadow-2xl transition-transform duration-300 ${
+        className={`bg-base-100 fixed inset-y-0 right-0 z-200 flex w-full max-w-105 flex-col justify-between overflow-y-auto pt-6 shadow-2xl transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full pointer-events-none"
         }`}
       >
