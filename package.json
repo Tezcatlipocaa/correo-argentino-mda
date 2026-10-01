@@ -42,7 +42,7 @@
     "html-to-image": "^1.11.13",
     "ldapjs": "^3.0.7",
     "leaflet": "^1.9.4",
-    "marked": "18.0.14",
+    "marked": "^18.0.14",
     "masonry-layout": "^4.2.2",
     "mysql2": "^3.22.5",
     "ping": "^1.0.0",

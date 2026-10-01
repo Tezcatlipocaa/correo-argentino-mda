@@ -1,0 +1,724 @@
+---
+import { Icon } from "astro-icon/components";
+import Modal from "@components/ui/Modal.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+import type { AuditParameter } from "@/types/quality";
+import { getCleanBase } from "@lib/baseUrl";
+
+interface Props {
+  allParameters: AuditParameter[];
+  selectedMonth: string;
+}
+
+const { allParameters, selectedMonth } = Astro.props;
+const cleanBase = getCleanBase();
+
+// Group parameters by channel and section
+const wiseCallParams = allParameters.filter((p) => p.channel === "wise_call" || !p.channel);
+const wiseEmailParams = allParameters.filter((p) => p.channel === "wise_email");
+const invgateAgParams = allParameters.filter((p) => p.channel === "invgate_ticket");
+---
+
+<Modal
+  id="audit-modal"
+  size="3xl"
+  titleClass="font-black text-lg uppercase tracking-tight"
+  zIndex="z-200"
+  class="w-11/12 max-w-5xl"
+>
+  <Fragment slot="content">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-base-300 pb-3">
+      <h3
+        id="modal-title"
+        class="text-base-content flex items-center gap-2 text-lg font-black uppercase tracking-tight"
+      >
+        <Icon name="boxicons:task" class="text-primary" size={24} />
+        <span>Auditoría de Calidad</span>
+      </h3>
+
+      <!-- Channel Selector Tabs -->
+      <div class="join bg-base-200 p-1" id="channel-selector-join">
+        <button
+          type="button"
+          class="btn btn-xs join-item channel-btn font-bold btn-active"
+          data-channel="wise_call"
+        >
+          <Icon name="boxicons:phone-ring" size={14} />
+          Llamada Wise
+        </button>
+        <button
+          type="button"
+          class="btn btn-xs join-item channel-btn font-bold"
+          data-channel="wise_email"
+        >
+          <Icon name="boxicons:envelope" size={14} />
+          Mail Wise
+        </button>
+        <button
+          type="button"
+          class="btn btn-xs join-item channel-btn font-bold"
+          data-channel="invgate_ticket"
+        >
+          <Icon name="boxicons:handshake" size={14} />
+          Autogestión
+        </button>
+      </div>
+    </div>
+
+    <!-- API Auto-Fetch Search Toolbar -->
+    <div class="bg-base-200/50 border-base-300 mb-4 rounded-2xl border p-3">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div class="relative flex-1">
+          <input
+            type="text"
+            id="case-search-id"
+            placeholder="Ingrese ID o Número del caso para autocompletar vía API..."
+            class="input input-sm w-full bg-base-100 font-mono text-xs font-bold pl-8"
+          />
+          <div class="absolute left-2.5 top-2 text-base-content/40">
+            <Icon name="boxicons:search" size={16} />
+          </div>
+        </div>
+        <button
+          type="button"
+          id="btn-fetch-case-api"
+          class="btn btn-sm btn-primary text-xs font-bold uppercase gap-1 shrink-0"
+        >
+          <Icon name="boxicons:server" size={16} />
+          <span>Buscar en API</span>
+        </button>
+      </div>
+      <!-- Info alert feedback -->
+      <div id="fetch-feedback-alert" class="mt-2 hidden rounded-xl border p-2 text-xs font-medium"></div>
+    </div>
+
+    <form id="audit-form" method="POST" class="space-y-4">
+      <input type="hidden" name="id" id="form-audit-id" />
+      <input type="hidden" name="agentId" id="form-agent-id" />
+      <input type="hidden" name="month" id="form-month" value={selectedMonth} />
+      <input type="hidden" name="channelType" id="form-channel-type" value="wise_call" />
+
+      <!-- Case Metadata Fields -->
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-4 bg-base-200/20 p-3 rounded-2xl border border-base-300/40">
+        <FormField
+          id="form-call-id"
+          name="callId"
+          label="Nro Caso / ID Llamada"
+          placeholder="Ej: 534787"
+          required
+          size="sm"
+          inputClass="font-mono font-bold"
+        />
+        <FormField
+          id="form-ticket-id"
+          name="ticketId"
+          label="Nro Ticket / AG"
+          placeholder="Ej: INC-12345"
+          size="sm"
+          inputClass="font-mono font-bold"
+        />
+        <FormField
+          id="form-duration"
+          name="duration"
+          label="Duración"
+          placeholder="02:15"
+          size="sm"
+          inputClass="font-mono font-bold"
+        />
+        <FormField
+          id="form-date"
+          name="date"
+          label="Fecha"
+          type="date"
+          required
+          size="sm"
+          inputClass="font-bold"
+        />
+
+        <!-- Secondary Metadata (Dynamic per channel) -->
+        <div id="meta-ring-container" class="sm:col-span-1">
+          <FormField
+            id="form-ring-time"
+            name="ringTime"
+            label="Tiempo Ringueo"
+            placeholder="00:30"
+            size="sm"
+            inputClass="font-mono font-bold"
+          />
+        </div>
+        <div id="meta-creation-container" class="sm:col-span-1 hidden">
+          <FormField
+            id="form-creation-time"
+            name="creationTime"
+            label="Creación"
+            placeholder="YYYY-MM-DD HH:MM"
+            size="sm"
+            inputClass="font-mono font-bold text-xs"
+          />
+        </div>
+        <div id="meta-take-container" class="sm:col-span-1 hidden">
+          <FormField
+            id="form-take-time"
+            name="takeTime"
+            label="Toma / Lectura"
+            placeholder="YYYY-MM-DD HH:MM"
+            size="sm"
+            inputClass="font-mono font-bold text-xs"
+          />
+        </div>
+        <div id="meta-pas-container" class="sm:col-span-1 hidden flex items-center pt-5">
+          <label class="label cursor-pointer gap-2 p-0">
+            <input
+              type="checkbox"
+              name="isPas"
+              id="form-is-pas"
+              class="checkbox checkbox-sm checkbox-primary"
+            />
+            <span class="label-text text-xs font-bold uppercase">Es PAS</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Realtime Score Preview -->
+      <div
+        class="bg-base-200/50 border-base-300 flex items-center justify-between rounded-2xl border p-4 shadow-sm"
+      >
+        <div>
+          <span class="text-base-content/80 text-sm font-bold">Score Calculado:</span>
+          <p class="text-base-content/50 text-xs">
+            Cada criterio no cumplido resta su porcentaje de referencia del 100%.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="border-base-300 border-r pr-4 text-center">
+            <div class="text-base-content/40 text-xs font-bold uppercase">Sección 1</div>
+            <div id="preview-s1" class="text-primary text-lg font-black">100%</div>
+          </div>
+          <div id="preview-s2-block" class="border-base-300 border-r pr-4 text-center">
+            <div class="text-base-content/40 text-xs font-bold uppercase">Sección 2</div>
+            <div id="preview-s2" class="text-primary text-lg font-black">100%</div>
+          </div>
+          <div class="text-center">
+            <div class="text-base-content/40 text-xs font-bold uppercase">Total Final</div>
+            <div id="preview-total" class="text-success text-2xl font-black">100%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist: Channel 1 - Llamadas Wise -->
+      <div id="channel-checklist-wise_call" class="channel-checklist space-y-4">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <!-- S1: Items (Gestión Llamada) -->
+          <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
+            <h4 class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold">
+              <span>1. Gestión de la Llamada / Atención</span>
+              <span class="text-base-content/50 text-xs font-normal">Base: 100%</span>
+            </h4>
+            <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {wiseCallParams.filter((p) => p.section === "items" || p.category === "Items" || p.category === "Interacción con Usuario").map((p) => (
+                <div class="p-1.5 rounded-lg hover:bg-base-200/70 border border-transparent hover:border-base-300/50 transition-colors">
+                  <label class="label cursor-pointer justify-start gap-3 p-0">
+                    <input
+                      type="checkbox"
+                      name={p.code}
+                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                      data-weight={p.weight ?? 0}
+                      data-section="items"
+                      checked
+                    />
+                    <span class="label-text text-xs font-medium flex-1">
+                      {p.name}
+                      {p.weight ? <span class="ml-1 text-xs font-bold text-error/80">(-{p.weight}%)</span> : <span class="ml-1 text-xs opacity-50">(n/a)</span>}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name={`${p.code}_comment`}
+                    placeholder="Observación o comentario opcional..."
+                    class="input input-xs w-full bg-base-100/60 mt-1 text-xxs font-normal"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- S2: Ticket -->
+          <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
+            <h4 class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold">
+              <span>2. TICKET (Gestión y Registro)</span>
+              <span class="text-base-content/50 text-xs font-normal">Base: 100%</span>
+            </h4>
+            <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {wiseCallParams.filter((p) => p.section === "ticket" || p.category === "Ticket" || p.category === "Gestión del Ticket").map((p) => (
+                <div class="p-1.5 rounded-lg hover:bg-base-200/70 border border-transparent hover:border-base-300/50 transition-colors">
+                  <label class="label cursor-pointer justify-start gap-3 p-0">
+                    <input
+                      type="checkbox"
+                      name={p.code}
+                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                      data-weight={p.weight ?? 0}
+                      data-section="ticket"
+                      checked
+                    />
+                    <span class="label-text text-xs font-medium flex-1">
+                      {p.name}
+                      {p.weight ? <span class="ml-1 text-xs font-bold text-error/80">(-{p.weight}%)</span> : <span class="ml-1 text-xs opacity-50">(n/a)</span>}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name={`${p.code}_comment`}
+                    placeholder="Observación o comentario opcional..."
+                    class="input input-xs w-full bg-base-100/60 mt-1 text-xxs font-normal"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist: Channel 2 - Mail Wise -->
+      <div id="channel-checklist-wise_email" class="channel-checklist space-y-4 hidden">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <!-- S1: Items (Gestión Correo) -->
+          <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
+            <h4 class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold">
+              <span>1. Gestión General del Correo</span>
+              <span class="text-base-content/50 text-xs font-normal">Base: 100%</span>
+            </h4>
+            <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {wiseEmailParams.filter((p) => p.section === "items").map((p) => (
+                <div class="p-1.5 rounded-lg hover:bg-base-200/70 border border-transparent hover:border-base-300/50 transition-colors">
+                  <label class="label cursor-pointer justify-start gap-3 p-0">
+                    <input
+                      type="checkbox"
+                      name={p.code}
+                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                      data-weight={p.weight ?? 0}
+                      data-section="items"
+                      checked
+                    />
+                    <span class="label-text text-xs font-medium flex-1">
+                      {p.name}
+                      {p.weight ? <span class="ml-1 text-xs font-bold text-error/80">(-{p.weight}%)</span> : <span class="ml-1 text-xs opacity-50">(n/a)</span>}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name={`${p.code}_comment`}
+                    placeholder="Observación o comentario opcional..."
+                    class="input input-xs w-full bg-base-100/60 mt-1 text-xxs font-normal"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- S2: Items MDA (Condicional) -->
+          <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
+            <div class="border-base-300 mb-3 flex items-center justify-between border-b pb-1">
+              <span class="text-base-content/80 text-sm font-bold">2. Items Categoría MDA (Ticket)</span>
+              <label class="label cursor-pointer gap-2 p-0">
+                <span class="label-text text-xs font-bold">¿Aplica MDA?</span>
+                <input
+                  type="checkbox"
+                  name="appliesMda"
+                  id="toggle-applies-mda"
+                  class="toggle toggle-primary toggle-xs"
+                />
+              </label>
+            </div>
+            <div id="wise-email-mda-block" class="max-h-80 space-y-2 overflow-y-auto pr-1 hidden">
+              {wiseEmailParams.filter((p) => p.section === "mda").map((p) => (
+                <div class="p-1.5 rounded-lg hover:bg-base-200/70 border border-transparent hover:border-base-300/50 transition-colors">
+                  <label class="label cursor-pointer justify-start gap-3 p-0">
+                    <input
+                      type="checkbox"
+                      name={p.code}
+                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                      data-weight={p.weight ?? 0}
+                      data-section="mda"
+                      checked
+                    />
+                    <span class="label-text text-xs font-medium flex-1">
+                      {p.name}
+                      {p.weight ? <span class="ml-1 text-xs font-bold text-error/80">(-{p.weight}%)</span> : <span class="ml-1 text-xs opacity-50">(n/a)</span>}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name={`${p.code}_comment`}
+                    placeholder="Observación o comentario opcional..."
+                    class="input input-xs w-full bg-base-100/60 mt-1 text-xxs font-normal"
+                  />
+                </div>
+              ))}
+            </div>
+            <div id="wise-email-mda-placeholder" class="text-base-content/50 py-12 text-center text-xs">
+              No aplica evaluación MDA para este correo (solo puntúa Sección 1).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist: Channel 3 - Autogestiones (AG) -->
+      <div id="channel-checklist-invgate_ticket" class="channel-checklist space-y-4 hidden">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <!-- S1: Items (Gestión Caso) -->
+          <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
+            <h4 class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold">
+              <span>1. Gestión General del Caso</span>
+              <span class="text-base-content/50 text-xs font-normal">Base: 100%</span>
+            </h4>
+            <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {invgateAgParams.filter((p) => p.section === "items").map((p) => (
+                <div class="p-1.5 rounded-lg hover:bg-base-200/70 border border-transparent hover:border-base-300/50 transition-colors">
+                  <label class="label cursor-pointer justify-start gap-3 p-0">
+                    <input
+                      type="checkbox"
+                      name={p.code}
+                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                      data-weight={p.weight ?? 0}
+                      data-section="items"
+                      checked
+                    />
+                    <span class="label-text text-xs font-medium flex-1">
+                      {p.name}
+                      {p.weight ? <span class="ml-1 text-xs font-bold text-error/80">(-{p.weight}%)</span> : <span class="ml-1 text-xs opacity-50">(n/a)</span>}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name={`${p.code}_comment`}
+                    placeholder="Observación o comentario opcional..."
+                    class="input input-xs w-full bg-base-100/60 mt-1 text-xxs font-normal"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- S2: Items MDA (Condicional) -->
+          <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
+            <div class="border-base-300 mb-3 flex items-center justify-between border-b pb-1">
+              <span class="text-base-content/80 text-sm font-bold">2. Items Categoría MDA</span>
+              <label class="label cursor-pointer gap-2 p-0">
+                <span class="label-text text-xs font-bold">¿Queda en MDA?</span>
+                <input
+                  type="checkbox"
+                  name="staysInMda"
+                  id="toggle-stays-mda"
+                  class="toggle toggle-primary toggle-xs"
+                  checked
+                />
+              </label>
+            </div>
+            <div id="invgate-ag-mda-block" class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {invgateAgParams.filter((p) => p.section === "mda").map((p) => (
+                <div class="p-1.5 rounded-lg hover:bg-base-200/70 border border-transparent hover:border-base-300/50 transition-colors">
+                  <label class="label cursor-pointer justify-start gap-3 p-0">
+                    <input
+                      type="checkbox"
+                      name={p.code}
+                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                      data-weight={p.weight ?? 0}
+                      data-section="mda"
+                      checked
+                    />
+                    <span class="label-text text-xs font-medium flex-1">
+                      {p.name}
+                      {p.weight ? <span class="ml-1 text-xs font-bold text-error/80">(-{p.weight}%)</span> : <span class="ml-1 text-xs opacity-50">(n/a)</span>}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name={`${p.code}_comment`}
+                    placeholder="Observación o comentario opcional..."
+                    class="input input-xs w-full bg-base-100/60 mt-1 text-xxs font-normal"
+                  />
+                </div>
+              ))}
+            </div>
+            <div id="invgate-ag-mda-placeholder" class="text-base-content/50 py-12 text-center text-xs hidden">
+              El caso no queda en MDA (solo puntúa Sección 1).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Fields: Critical Failure, Notes -->
+      <div class="divider my-2"></div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class="label hover:bg-base-200 w-fit cursor-pointer justify-start gap-3 rounded-lg p-1.5">
+            <input
+              type="checkbox"
+              name="isCriticalFailure"
+              id="form-is-critical-failure"
+              class="checkbox checkbox-error checkbox-sm"
+            />
+            <span class="label-text text-error text-sm font-bold uppercase">
+              Falla Crítica de Proceso (-50% sobre puntaje total)
+            </span>
+          </label>
+        </div>
+
+        <div class="sm:col-span-2">
+          <FormTextarea
+            id="form-notes"
+            name="notes"
+            label="Notas / Observaciones Generales"
+            placeholder="Observaciones de esta auditoría..."
+            rows={3}
+            textareaClass="textarea-sm font-bold"
+          />
+        </div>
+      </div>
+    </form>
+  </Fragment>
+
+  <Fragment slot="actions">
+    <div class="modal-action mt-6 flex justify-between w-full">
+      <div>
+        <button
+          type="button"
+          id="btn-delete-audit"
+          class="btn btn-sm btn-error btn-outline hidden text-xs font-black uppercase"
+        >
+          Eliminar
+        </button>
+      </div>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          id="btn-close-modal"
+          class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          form="audit-form"
+          id="btn-submit-audit"
+          class="btn btn-sm btn-secondary text-xs font-black uppercase"
+        >
+          Guardar Auditoría
+        </button>
+      </div>
+    </div>
+  </Fragment>
+</Modal>
+
+<script>
+  import { getCleanBase } from "@lib/baseUrl";
+
+  function initAuditModal() {
+    const modal = document.getElementById("audit-modal");
+    if (!modal) return false;
+    if (modal.dataset.auditModalBound === "true") return true;
+    modal.dataset.auditModalBound = "true";
+
+    const cleanBase = getCleanBase();
+    const btnFetch = document.getElementById("btn-fetch-case-api") as HTMLButtonElement | null;
+    const searchInput = document.getElementById("case-search-id") as HTMLInputElement | null;
+    const alertBox = document.getElementById("fetch-feedback-alert");
+    const formChannelType = document.getElementById("form-channel-type") as HTMLInputElement | null;
+    const channelButtons = document.querySelectorAll(".channel-btn");
+
+    channelButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const channel = btn.getAttribute("data-channel");
+        if (!channel) return;
+
+        channelButtons.forEach((b) => b.classList.remove("btn-active", "btn-primary"));
+        btn.classList.add("btn-active", "btn-primary");
+        if (formChannelType) formChannelType.value = channel;
+
+        // Toggle checklists
+        document.querySelectorAll(".channel-checklist").forEach((el) => el.classList.add("hidden"));
+        const targetChecklist = document.getElementById(`channel-checklist-${channel}`);
+        if (targetChecklist) targetChecklist.classList.remove("hidden");
+
+        // Toggle channel specific meta fields
+        const metaRing = document.getElementById("meta-ring-container");
+        const metaCreation = document.getElementById("meta-creation-container");
+        const metaTake = document.getElementById("meta-take-container");
+        const metaPas = document.getElementById("meta-pas-container");
+
+        if (metaRing) metaRing.classList.toggle("hidden", channel !== "wise_call");
+        if (metaCreation) metaCreation.classList.toggle("hidden", channel === "wise_call");
+        if (metaTake) metaTake.classList.toggle("hidden", channel === "wise_call");
+        if (metaPas) metaPas.classList.toggle("hidden", channel !== "invgate_ticket");
+
+        recalculateScores();
+      });
+    });
+
+    if (btnFetch && searchInput) {
+      btnFetch.addEventListener("click", async () => {
+        const id = searchInput.value.trim();
+        if (!id) {
+          if (alertBox) {
+            alertBox.textContent = "Ingrese un número o ID de caso.";
+            alertBox.className = "mt-2 rounded-xl border border-warning/40 bg-warning/10 text-warning-content p-2 text-xs font-medium";
+            alertBox.classList.remove("hidden");
+          }
+          return;
+        }
+
+        const channel = formChannelType?.value || "wise_call";
+        const originalHtml = btnFetch.innerHTML;
+        btnFetch.disabled = true;
+        btnFetch.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Consultando...';
+        if (alertBox) alertBox.classList.add("hidden");
+
+        try {
+          const res = await fetch(`${cleanBase}api/calidad/fetch-metadata?channel=${channel}&id=${encodeURIComponent(id)}`);
+          const json = await res.json();
+
+          if (!res.ok || !json.data) {
+            if (alertBox) {
+              alertBox.textContent = json.error || "No se encontraron datos para este caso.";
+              alertBox.className = "mt-2 rounded-xl border border-error/40 bg-error/10 text-error-content p-2 text-xs font-medium";
+              alertBox.classList.remove("hidden");
+            }
+            return;
+          }
+
+          const d = json.data;
+          const formCallId = document.getElementById("form-call-id") as HTMLInputElement;
+          const formTicketId = document.getElementById("form-ticket-id") as HTMLInputElement;
+          const formDuration = document.getElementById("form-duration") as HTMLInputElement;
+          const formDate = document.getElementById("form-date") as HTMLInputElement;
+          const formRing = document.getElementById("form-ring-time") as HTMLInputElement;
+          const formCreation = document.getElementById("form-creation-time") as HTMLInputElement;
+          const formTake = document.getElementById("form-take-time") as HTMLInputElement;
+          const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement;
+
+          if (formCallId && d.caseNumber) formCallId.value = d.caseNumber;
+          if (formTicketId && (d.rawDetails?.incidentId || d.caseNumber)) {
+            formTicketId.value = d.rawDetails?.incidentId?.toString() || d.caseNumber;
+          }
+          if (formDuration && d.duration) formDuration.value = d.duration;
+          if (formDate && d.date) formDate.value = d.date;
+          if (formRing && d.ringTime) formRing.value = d.ringTime;
+          if (formCreation && d.creationTime) formCreation.value = d.creationTime;
+          if (formTake && d.takeTime) formTake.value = d.takeTime;
+          if (formIsPas && typeof d.isPas === "boolean") formIsPas.checked = d.isPas;
+
+          if (alertBox) {
+            alertBox.innerHTML = `✓ <strong>Metadatos obtenidos:</strong> ${d.operator ? `Operador: <em>${d.operator}</em>` : ""} ${d.duration ? `| Duración: ${d.duration}` : ""} ${d.isPas ? "| [PAS]" : ""}`;
+            alertBox.className = "mt-2 rounded-xl border border-success/40 bg-success/10 text-success-content p-2 text-xs font-medium";
+            alertBox.classList.remove("hidden");
+          }
+        } catch (err) {
+          if (alertBox) {
+            alertBox.textContent = "Error de red al consultar la API.";
+            alertBox.className = "mt-2 rounded-xl border border-error/40 bg-error/10 text-error-content p-2 text-xs font-medium";
+            alertBox.classList.remove("hidden");
+          }
+        } finally {
+          btnFetch.disabled = false;
+          btnFetch.innerHTML = originalHtml;
+        }
+      });
+    }
+
+    const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement;
+    const wiseEmailMdaBlock = document.getElementById("wise-email-mda-block");
+    const wiseEmailMdaPlaceholder = document.getElementById("wise-email-mda-placeholder");
+
+    toggleAppliesMda?.addEventListener("change", () => {
+      const active = toggleAppliesMda.checked;
+      wiseEmailMdaBlock?.classList.toggle("hidden", !active);
+      wiseEmailMdaPlaceholder?.classList.toggle("hidden", active);
+      recalculateScores();
+    });
+
+    const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement;
+    const invgateAgMdaBlock = document.getElementById("invgate-ag-mda-block");
+    const invgateAgMdaPlaceholder = document.getElementById("invgate-ag-mda-placeholder");
+
+    toggleStaysMda?.addEventListener("change", () => {
+      const active = toggleStaysMda.checked;
+      invgateAgMdaBlock?.classList.toggle("hidden", !active);
+      invgateAgMdaPlaceholder?.classList.toggle("hidden", active);
+      recalculateScores();
+    });
+
+    function recalculateScores() {
+      const channel = formChannelType?.value || "wise_call";
+      const checklist = document.getElementById(`channel-checklist-${channel}`);
+      if (!checklist) return;
+
+      let s1Deductions = 0;
+      let s2Deductions = 0;
+
+      checklist.querySelectorAll<HTMLInputElement>(".audit-checkbox").forEach((cb) => {
+        const weight = parseFloat(cb.getAttribute("data-weight") || "0");
+        const section = cb.getAttribute("data-section");
+        if (!cb.checked && weight > 0) {
+          if (section === "items") {
+            s1Deductions += weight;
+          } else {
+            s2Deductions += weight;
+          }
+        }
+      });
+
+      const s1Score = Math.max(0, Math.round(100 - s1Deductions));
+      let hasSection2 = true;
+      if (channel === "wise_email") {
+        hasSection2 = toggleAppliesMda?.checked ?? false;
+      } else if (channel === "invgate_ticket") {
+        hasSection2 = toggleStaysMda?.checked ?? true;
+      }
+
+      const s2Score = hasSection2 ? Math.max(0, Math.round(100 - s2Deductions)) : 0;
+      let total = hasSection2 ? Math.round((s1Score + s2Score) / 2) : s1Score;
+
+      const isCritical = (document.getElementById("form-is-critical-failure") as HTMLInputElement)?.checked;
+      if (isCritical) {
+        total = Math.round(total * 0.5);
+      }
+
+      const pS1 = document.getElementById("preview-s1");
+      const pS2 = document.getElementById("preview-s2");
+      const pS2Block = document.getElementById("preview-s2-block");
+      const pTotal = document.getElementById("preview-total");
+
+      if (pS1) pS1.textContent = `${s1Score}%`;
+      if (pS2) pS2.textContent = `${s2Score}%`;
+      if (pS2Block) pS2Block.style.opacity = hasSection2 ? "1" : "0.3";
+      if (pTotal) {
+        pTotal.textContent = `${total}%`;
+        pTotal.className = `text-2xl font-black ${total >= 90 ? "text-success" : total >= 80 ? "text-warning" : "text-error"}`;
+      }
+    }
+
+    document.querySelectorAll(".audit-checkbox, #form-is-critical-failure").forEach((el) => {
+      el.addEventListener("change", recalculateScores);
+    });
+
+    (window as any).recalculateAuditScores = recalculateScores;
+    return true;
+  }
+
+  function setupAuditModalObserver() {
+    if (initAuditModal()) return;
+
+    const observer = new MutationObserver((_, obs) => {
+      if (initAuditModal()) {
+        obs.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupAuditModalObserver();
+  document.addEventListener("astro:page-load", setupAuditModalObserver);
+</script>

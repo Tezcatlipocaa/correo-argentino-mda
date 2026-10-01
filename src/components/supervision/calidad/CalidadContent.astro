@@ -21,6 +21,9 @@ import { activeAgentCondition } from "@lib/activeUsers";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { formatMonthLabel } from "@lib/monthUtils";
 import { getCleanBase } from "@lib/baseUrl";
+import AuditModal from "./AuditModal.astro";
+import { calculateOperatorChannelStats } from "@lib/qualityCalculator";
+import type { ChannelType } from "@/types/quality";
 
 const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 
@@ -172,6 +175,8 @@ const operatorsQuality = finalAgents.map((agent) => {
         : 0;
     });
 
+  const channelStats = calculateOperatorChannelStats(currentMonthAudits);
+
   const calls = currentMonthAudits.map((audit) => {
     const auditScoresList = scoresByAudit.get(audit.id) || [];
     const section1Details: Record<string, boolean> = {};
@@ -180,9 +185,9 @@ const operatorsQuality = finalAgents.map((agent) => {
     auditScoresList.forEach((scoreObj) => {
       const param = allParameters.find((p) => p.id === scoreObj.parameterId);
       if (param) {
-        if (param.category === "Interacción con Usuario") {
+        if (param.category === "Interacción con Usuario" || param.section === "items") {
           section1Details[param.code] = scoreObj.score;
-        } else if (param.category === "Gestión del Ticket") {
+        } else {
           section2Details[param.code] = scoreObj.score;
         }
       }
@@ -190,6 +195,7 @@ const operatorsQuality = finalAgents.map((agent) => {
 
     return {
       id: audit.id,
+      channelType: (audit.channelType || "wise_call") as ChannelType,
       callId: audit.callId,
       ticketId: audit.ticketId,
       duration: audit.duration,
@@ -197,6 +203,12 @@ const operatorsQuality = finalAgents.map((agent) => {
       month: audit.month,
       notes: audit.notes || "",
       isCriticalFailure: audit.isCriticalFailure || false,
+      ringTime: audit.ringTime,
+      creationTime: audit.creationTime,
+      takeTime: audit.takeTime,
+      isPas: audit.isPas,
+      appliesMda: audit.appliesMda,
+      staysInMda: audit.staysInMda,
       section1: {
         score: audit.section1Score,
         maxScore: 100,
@@ -235,7 +247,15 @@ const operatorsQuality = finalAgents.map((agent) => {
     monthSummary,
     calls,
     history,
-    averageScore,
+    averageScore: channelStats.globalAverage > 0 ? channelStats.globalAverage : averageScore,
+    wiseCallsAvg: channelStats.wiseCallsAvg,
+    wiseCallsCount: channelStats.wiseCallsCount,
+    wiseEmailsAvg: channelStats.wiseEmailsAvg,
+    wiseEmailsCount: channelStats.wiseEmailsCount,
+    invgateAgAvg: channelStats.invgateAgAvg,
+    invgateAgCount: channelStats.invgateAgCount,
+    totalAuditsCount: channelStats.totalAuditsCount,
+    quotaFulfilled: channelStats.quotaFulfilled,
     prevAverageScore,
     prevCallsCount,
     prevCriticalCount,
@@ -963,38 +983,74 @@ const cleanBase = getCleanBase();
                 </div>
               )}
 
-              {/* Section Titulo */}
+              {/* Section Titulo y Tabs de Canales */}
               <div
                 class:list={[
-                  "border-base-300 flex items-center justify-between border-b pb-2",
+                  "border-base-300 flex flex-col gap-4 border-b pb-3",
                   !isAgent && "mt-8",
                 ]}
               >
-                <h4 class="text-base-content/70 flex items-center gap-2 font-bold tracking-wider uppercase">
-                  <Icon name="boxicons:headphone" size={24} />
-                  Desglose de Llamadas
-                </h4>
-                <div class="flex items-center gap-2">
-                  <span
-                    id="calls-count-badge"
-                    class="text-base-content/50 badge badge-ghost text-xs font-medium"
-                  >
-                    -- Aleatorias
-                  </span>
-                  {!isAgent && (
-                    <button
-                      id="btn-new-audit"
-                      class="btn btn-sm btn-primary rounded-lg text-xs font-bold uppercase"
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 class="text-base-content/80 flex items-center gap-2 font-bold tracking-wider uppercase">
+                      <Icon name="boxicons:chart-bar-columns" size={24} />
+                      Evaluaciones de Calidad del Operador
+                    </h4>
+                    <p class="text-base-content/50 text-xs">Cuota mensual requerida: 4 Llamadas Wise + 4 Mails Wise + 4 Autogestiones (12 en total)</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      id="quota-progress-badge"
+                      class="badge badge-neutral text-xs font-bold"
                     >
-                      <Icon name="boxicons:plus" size={16} />
-                      Nueva Auditoría
-                    </button>
-                  )}
+                      0/12 Completadas
+                    </span>
+                    {!isAgent && (
+                      <button
+                        id="btn-new-audit"
+                        class="btn btn-sm btn-primary rounded-lg text-xs font-bold uppercase gap-1"
+                      >
+                        <Icon name="boxicons:plus" size={16} />
+                        Nueva Auditoría
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <!-- Tabs de separación por Canal -->
+                <div class="tabs tabs-boxed bg-base-200/60 p-1 w-fit" id="operator-channel-tabs">
+                  <button
+                    type="button"
+                    class="tab tab-active operator-channel-tab text-xs font-bold gap-1.5"
+                    data-channel="wise_call"
+                  >
+                    <Icon name="boxicons:phone-ring" size={16} />
+                    <span>Llamadas Wise</span>
+                    <span class="badge badge-xs badge-ghost ml-1" id="tab-count-wise_call">0/4</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="tab operator-channel-tab text-xs font-bold gap-1.5"
+                    data-channel="wise_email"
+                  >
+                    <Icon name="boxicons:envelope" size={16} />
+                    <span>Mails Wise</span>
+                    <span class="badge badge-xs badge-ghost ml-1" id="tab-count-wise_email">0/4</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="tab operator-channel-tab text-xs font-bold gap-1.5"
+                    data-channel="invgate_ticket"
+                  >
+                    <Icon name="boxicons:handshake" size={16} />
+                    <span>Autogestiones</span>
+                    <span class="badge badge-xs badge-ghost ml-1" id="tab-count-invgate_ticket">0/4</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Grid de Llamadas */}
-              <div class="grid gap-6" id="detail-calls-container">
+              {/* Grid de Auditorías del Canal Activo */}
+              <div class="grid gap-6 mt-4" id="detail-calls-container">
                 {/* Renderizado dinámico vía JS */}
               </div>
             </div>
@@ -1005,248 +1061,7 @@ const cleanBase = getCleanBase();
   }
 </PageContainer>
 
-<Modal
-  id="audit-modal"
-  size="3xl"
-  titleClass="font-black text-lg uppercase tracking-tight"
-  zIndex="z-200"
-  class="w-11/12"
->
-  <Fragment slot="content">
-    <h3
-      id="modal-title"
-      class="text-base-content mb-4 flex items-center gap-2 text-lg font-black tracking-tight uppercase"
-    >
-      <Icon name="boxicons:task" class="text-primary" size={22} />
-      Nueva Auditoría de Calidad
-    </h3>
-    <form id="audit-form" method="POST" class="space-y-4">
-      <input type="hidden" name="id" id="form-audit-id" />
-      <input type="hidden" name="agentId" id="form-agent-id" />
-      <input type="hidden" name="month" id="form-month" value={selectedMonth} />
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <FormField
-          id="form-call-id"
-          name="callId"
-          label="ID Llamada"
-          placeholder="CALL-XXXXXX"
-          required
-          size="sm"
-          inputClass="font-mono font-bold"
-        />
-        <FormField
-          id="form-ticket-id"
-          name="ticketId"
-          label="ID Ticket"
-          placeholder="INC-XXXXXXX"
-          required
-          size="sm"
-          inputClass="font-mono font-bold"
-        />
-        <FormField
-          id="form-duration"
-          name="duration"
-          label="Duración"
-          placeholder="05:30"
-          required
-          size="sm"
-          inputClass="font-mono font-bold"
-        />
-        <FormField
-          id="form-date"
-          name="date"
-          label="Fecha"
-          type="date"
-          required
-          size="sm"
-          inputClass="font-bold"
-        />
-      </div>
-
-      <div class="divider my-2"></div>
-
-      <!-- Realtime Score Preview -->
-      <div
-        class="bg-base-200/50 border-base-300 flex items-center justify-between rounded-2xl border p-4"
-      >
-        <div>
-          <span class="text-base-content/70 text-sm font-bold"
-            >Score Estimado:</span
-          >
-          <p class="text-base-content/50 text-xs">
-            Se calcula en base a los criterios cumplidos.
-          </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-4">
-          <div class="border-base-300 border-r pr-4 text-center">
-            <div class="text-base-content/40 text-xs font-bold uppercase">
-              Sección 1
-            </div>
-            <div id="preview-s1" class="text-secondary text-lg font-black">
-              0%
-            </div>
-          </div>
-          <div class="border-base-300 border-r pr-4 text-center">
-            <div class="text-base-content/40 text-xs font-bold uppercase">
-              Sección 2
-            </div>
-            <div id="preview-s2" class="text-secondary text-lg font-black">
-              0%
-            </div>
-          </div>
-          <div class="text-center">
-            <div class="text-base-content/40 text-xs font-bold uppercase">
-              Total
-            </div>
-            <div id="preview-total" class="text-error text-2xl font-black">
-              0%
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <!-- Section 1 Checklist -->
-        <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
-          <h4
-            class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold"
-          >
-            <span>1. Interacción con Usuario</span>
-            <span class="text-base-content/50 text-xs font-normal"
-              >Máx: 100</span
-            >
-          </h4>
-          <div class="max-h-64 space-y-2 overflow-x-hidden overflow-y-auto">
-            {
-              allParameters
-                .filter((p) => p.category === "Interacción con Usuario")
-                .map((p) => (
-                  <label
-                    class="label hover:bg-base-200 audit-parameter-row cursor-pointer justify-start gap-3 rounded-lg p-1.5"
-                    data-param-id={p.id}
-                    data-active={p.active ? "true" : "false"}
-                  >
-                    <input
-                      type="checkbox"
-                      name={p.code}
-                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
-                      data-param-id={p.id}
-                    />
-                    <span class="label-text text-sm font-medium">
-                      {p.name}
-                      <span class="ml-1 text-xs font-normal opacity-50">
-                        ({p.weight})
-                      </span>
-                    </span>
-                  </label>
-                ))
-            }
-          </div>
-        </div>
-
-        <!-- Section 2 Checklist -->
-        <div class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4">
-          <h4
-            class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold"
-          >
-            <span>2. Gestión del Ticket</span>
-            <span class="text-base-content/50 text-xs font-normal"
-              >Máx: 100</span
-            >
-          </h4>
-          <div class="max-h-64 space-y-2 overflow-x-hidden overflow-y-auto">
-            {
-              allParameters
-                .filter((p) => p.category === "Gestión del Ticket")
-                .map((p) => (
-                  <label
-                    class="label hover:bg-base-200 audit-parameter-row cursor-pointer justify-start gap-3 rounded-lg p-1.5"
-                    data-param-id={p.id}
-                    data-active={p.active ? "true" : "false"}
-                  >
-                    <input
-                      type="checkbox"
-                      name={p.code}
-                      class="checkbox checkbox-primary checkbox-sm audit-checkbox"
-                      data-param-id={p.id}
-                    />
-                    <span class="label-text text-sm font-medium">
-                      {p.name}
-                      <span class="ml-1 text-xs font-normal opacity-50">
-                        ({p.weight})
-                      </span>
-                    </span>
-                  </label>
-                ))
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- Additional Fields: Notes, Month Summary, Critical Failure -->
-      <div class="divider my-2"></div>
-
-      <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="sm:col-span-2" data-field>
-          <label
-            class="label hover:bg-base-200 w-fit cursor-pointer justify-start gap-3 rounded-lg p-1.5"
-          >
-            <input
-              type="checkbox"
-              name="isCriticalFailure"
-              id="form-is-critical-failure"
-              class="checkbox checkbox-error checkbox-sm"
-            />
-            <span class="label-text text-error text-sm font-bold uppercase"
-              >Falla Crítica de Proceso</span
-            >
-          </label>
-        </div>
-
-        <div class="sm:col-span-2">
-          <FormTextarea
-            id="form-notes"
-            name="notes"
-            label="Notas / Observaciones"
-            placeholder="Observaciones de esta llamada..."
-            rows={3}
-            textareaClass="textarea-sm font-bold"
-          />
-        </div>
-      </div>
-    </form>
-  </Fragment>
-  <Fragment slot="actions">
-    <div class="modal-action mt-6 flex justify-between">
-      <div>
-        <button
-          type="button"
-          id="btn-delete-audit"
-          class="btn btn-sm btn-error btn-outline hidden text-xs font-black uppercase"
-        >
-          Eliminar
-        </button>
-      </div>
-      <div class="flex gap-2">
-        <button
-          type="button"
-          id="btn-close-modal"
-          class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          form="audit-form"
-          class="btn btn-sm btn-secondary text-xs font-black uppercase"
-        >
-          Guardar
-        </button>
-      </div>
-    </div>
-  </Fragment>
-</Modal>
+<AuditModal allParameters={allParameters} selectedMonth={selectedMonth} />
 
 <Modal
   id="month-summary-modal"
@@ -1489,17 +1304,13 @@ const cleanBase = getCleanBase();
           ? "badge-warning"
           : "badge-error";
 
-    // Filtrar parámetros dinámicos
+    // Filtrar parámetros dinámicos para cualquier canal
     const params: AuditParameter[] = getAuditParameters();
-    const s1Params = params.filter(
-      (p) =>
-        p.category === "Interacción con Usuario" &&
-        call.section1.details.hasOwnProperty(p.code),
+    const s1Params = params.filter((p) =>
+      call.section1.details.hasOwnProperty(p.code),
     );
-    const s2Params = params.filter(
-      (p) =>
-        p.category === "Gestión del Ticket" &&
-        call.section2.details.hasOwnProperty(p.code),
+    const s2Params = params.filter((p) =>
+      call.section2.details.hasOwnProperty(p.code),
     );
 
     const s1ListHTML = s1Params
@@ -1650,6 +1461,13 @@ const cleanBase = getCleanBase();
   }
 
   function initQualityMasterDetail() {
+    const operatorListContainer = document.getElementById("operator-list");
+    if (!operatorListContainer) return false;
+    if (operatorListContainer.dataset.masterDetailBound === "true") return true;
+    operatorListContainer.dataset.masterDetailBound = "true";
+
+    let currentActiveChannel = "wise_call";
+
     const generalPanel = document.getElementById("general-info-panel");
     const detailsPanel = document.getElementById("operator-details-panel");
 
@@ -1801,174 +1619,124 @@ const cleanBase = getCleanBase();
       }
     }
 
-    // helper to calculate and update scores in modal using weights
-    const updateModalScorePreview = () => {
-      const checkboxes = auditForm.querySelectorAll(
-        ".audit-checkbox",
-      ) as NodeListOf<HTMLInputElement>;
-      const checkedIdsOrCodes = new Set<number | string>();
-
-      checkboxes.forEach((cb) => {
-        if (cb.checked) {
-          const paramIdStr = cb.getAttribute("data-param-id");
-          if (paramIdStr) {
-            checkedIdsOrCodes.add(parseInt(paramIdStr, 10));
-          }
-        }
-      });
-
-      const params = getAuditParameters();
-      const isCriticalFailure = formIsCriticalFailure
-        ? formIsCriticalFailure.checked
-        : false;
-
-      const { section1Score, section2Score, totalScore } = calculateAuditScores(
-        params,
-        checkedIdsOrCodes,
-        isCriticalFailure,
-      );
-
-      const p1 = document.getElementById("preview-s1");
-      const p2 = document.getElementById("preview-s2");
-      const pt = document.getElementById("preview-total");
-
-      if (p1) p1.textContent = `${section1Score}%`;
-      if (p2) p2.textContent = `${section2Score}%`;
-      if (pt) {
-        pt.textContent = `${totalScore}%`;
-        pt.classList.remove(
-          "text-secondary",
-          "text-success",
-          "text-warning",
-          "text-error",
-        );
-        if (totalScore >= 90) {
-          pt.classList.add("text-success");
-        } else if (totalScore >= 70) {
-          pt.classList.add("text-warning");
-        } else {
-          pt.classList.add("text-error");
-        }
-      }
-    };
-
-    // add checkbox event listeners
-    auditForm.querySelectorAll(".audit-checkbox").forEach((cb) => {
-      cb.addEventListener("change", updateModalScorePreview);
-    });
-    if (formIsCriticalFailure) {
-      formIsCriticalFailure.addEventListener("change", updateModalScorePreview);
-    }
-
-    // open modal for editing
+    // open modal for editing or new audit
     const openAuditModal = (
       agentId: string,
       callData: QualityCall | null = null,
+      defaultChannel: string = "wise_call",
     ) => {
       activeAgentId = agentId;
+      if (!auditForm || !auditModal) return;
       auditForm.reset();
       clearFormErrors(auditForm);
-      formAgentId.value = agentId;
+      if (formAgentId) formAgentId.value = agentId;
 
-      // Filter parameter checkboxes based on mode
-      const rows = auditForm.querySelectorAll(
-        ".audit-parameter-row",
-      ) as NodeListOf<HTMLElement>;
-      if (callData) {
-        rows.forEach((row) => {
-          const input = row.querySelector(
-            "input[type='checkbox']",
-          ) as HTMLInputElement;
-          const code = input ? input.name : "";
-          const hasAnswer =
-            callData.section1.details.hasOwnProperty(code) ||
-            callData.section2.details.hasOwnProperty(code);
-          if (hasAnswer) {
-            row.classList.remove("hidden");
-          } else {
-            row.classList.add("hidden");
-          }
-        });
-      } else {
-        rows.forEach((row) => {
-          const isActive = row.getAttribute("data-active") === "true";
-          if (isActive) {
-            row.classList.remove("hidden");
-          } else {
-            row.classList.add("hidden");
-          }
-        });
+      const targetChannel = callData ? (callData.channelType || "wise_call") : defaultChannel;
+      const targetBtn = document.querySelector(`.channel-btn[data-channel="${targetChannel}"]`) as HTMLButtonElement | null;
+      if (targetBtn) {
+        targetBtn.click();
       }
 
       if (callData) {
         // Edit mode
-        modalTitle!.innerHTML = `<svg class="size-6 text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor; margin-right: 0.5rem;"><path d="m18.988 2.012-3 3L19.988 9.012l3-3zM3.988 17.012v4h4l12.75-12.75-4-4z"></path></svg> Editar Auditoría de Calidad`;
-        formAuditId.value = String(callData.id);
-        formCallId.value = callData.callId;
-        formTicketId.value = callData.ticketId;
-        formDuration.value = callData.duration;
+        if (modalTitle) {
+          modalTitle.innerHTML = `<svg class="size-6 text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor; margin-right: 0.5rem;"><path d="m18.988 2.012-3 3L19.988 9.012l3-3zM3.988 17.012v4h4l12.75-12.75-4-4z"></path></svg> Editar Auditoría de Calidad`;
+        }
+        if (formAuditId) formAuditId.value = String(callData.id);
+        if (formCallId) formCallId.value = callData.callId;
+        if (formTicketId) formTicketId.value = callData.ticketId;
+        if (formDuration) formDuration.value = callData.duration;
+        if (formDate) formDate.value = callData.date.substring(0, 10);
+        if (formNotes) formNotes.value = callData.notes || "";
+        if (formIsCriticalFailure) formIsCriticalFailure.checked = !!callData.isCriticalFailure;
 
-        // Extract YYYY-MM-DD from ISO date
-        formDate.value = callData.date.substring(0, 10);
+        const formRing = document.getElementById("form-ring-time") as HTMLInputElement | null;
+        const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
+        const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
+        const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
+        const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
+        const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
 
-        // Fill additional fields
-        formNotes.value = callData.notes || "";
-        formIsCriticalFailure.checked = !!callData.isCriticalFailure;
+        if (formRing) formRing.value = callData.ringTime || "";
+        if (formCreation) formCreation.value = callData.creationTime || "";
+        if (formTake) formTake.value = callData.takeTime || "";
+        if (formIsPas) formIsPas.checked = !!callData.isPas;
+        if (toggleAppliesMda) {
+          toggleAppliesMda.checked = !!callData.appliesMda;
+          toggleAppliesMda.dispatchEvent(new Event("change"));
+        }
+        if (toggleStaysMda) {
+          toggleStaysMda.checked = callData.staysInMda ?? true;
+          toggleStaysMda.dispatchEvent(new Event("change"));
+        }
 
-        // Check checkboxes
-        const s1Details = callData.section1.details;
-        const s2Details = callData.section2.details;
+        const s1Details = callData.section1?.details || {};
+        const s2Details = callData.section2?.details || {};
 
-        Object.entries(s1Details).forEach(([key, val]) => {
-          const cb = auditForm.querySelector(
-            `[name="${key}"]`,
-          ) as HTMLInputElement;
-          if (cb) cb.checked = !!val;
+        auditForm.querySelectorAll(".audit-checkbox").forEach((cbEl) => {
+          const cb = cbEl as HTMLInputElement;
+          const name = cb.name;
+          if (s1Details.hasOwnProperty(name)) {
+            cb.checked = !!s1Details[name];
+          } else if (s2Details.hasOwnProperty(name)) {
+            cb.checked = !!s2Details[name];
+          }
         });
-        Object.entries(s2Details).forEach(([key, val]) => {
-          const cb = auditForm.querySelector(
-            `[name="${key}"]`,
-          ) as HTMLInputElement;
-          if (cb) cb.checked = !!val;
-        });
 
-        btnDeleteAudit.classList.remove("hidden");
+        if (btnDeleteAudit) btnDeleteAudit.classList.remove("hidden");
       } else {
         // New mode
-        modalTitle!.innerHTML = `<svg class="size-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor; margin-right: 0.5rem;"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"></path></svg> Nueva Auditoría de Calidad`;
-        formAuditId.value = "";
+        if (modalTitle) {
+          modalTitle.innerHTML = `<svg class="size-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor; margin-right: 0.5rem;"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"></path></svg> Nueva Auditoría de Calidad`;
+        }
+        if (formAuditId) formAuditId.value = "";
+        if (formCallId) formCallId.value = "";
+        if (formTicketId) formTicketId.value = "";
+        if (formDuration) formDuration.value = "";
+        if (formNotes) formNotes.value = "";
+        if (formIsCriticalFailure) formIsCriticalFailure.checked = false;
 
-        // Clear fields so placeholders show
-        formCallId.value = "";
-        formTicketId.value = "";
-        formDuration.value = "";
+        const formRing = document.getElementById("form-ring-time") as HTMLInputElement | null;
+        const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
+        const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
+        const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
+        const caseSearchInput = document.getElementById("case-search-id") as HTMLInputElement | null;
+        const alertBox = document.getElementById("fetch-feedback-alert");
 
-        // Clear additional fields
-        formNotes.value = "";
-        formIsCriticalFailure.checked = false;
+        if (formRing) formRing.value = "";
+        if (formCreation) formCreation.value = "";
+        if (formTake) formTake.value = "";
+        if (formIsPas) formIsPas.checked = false;
+        if (caseSearchInput) caseSearchInput.value = "";
+        if (alertBox) alertBox.classList.add("hidden");
 
-        // Default to today
         const today = new Date().toISOString().substring(0, 10);
-        formDate.value = today;
+        if (formDate) formDate.value = today;
 
-        btnDeleteAudit.classList.add("hidden");
+        auditForm.querySelectorAll(".audit-checkbox").forEach((cbEl) => {
+          (cbEl as HTMLInputElement).checked = true;
+        });
+
+        if (btnDeleteAudit) btnDeleteAudit.classList.add("hidden");
       }
 
-      updateModalScorePreview();
+      (window as any).recalculateAuditScores?.();
       auditModal.showModal();
     };
 
     // Close modal triggers
-    btnCloseModal.addEventListener("click", () => {
-      auditModal.close();
-    });
+    if (btnCloseModal) {
+      btnCloseModal.addEventListener("click", () => {
+        auditModal?.close();
+      });
+    }
 
     // Attach "Nueva Auditoría" button listener
     const btnNewAudit = document.getElementById("btn-new-audit");
     if (btnNewAudit) {
       btnNewAudit.addEventListener("click", () => {
         if (activeAgentId) {
-          openAuditModal(activeAgentId);
+          openAuditModal(activeAgentId, null, currentActiveChannel);
         }
       });
     }
@@ -1978,13 +1746,14 @@ const cleanBase = getCleanBase();
       e.preventDefault();
       clearFormErrors(auditForm);
 
-      const btnSubmit = auditForm.querySelector(
-        'button[type="submit"]',
-      ) as HTMLButtonElement;
-      const originalText = btnSubmit.innerHTML;
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML =
-        '<span class="loading loading-spinner loading-xs"></span> Guardando…';
+      const btnSubmit = (document.getElementById("btn-submit-audit") ||
+        auditForm.querySelector('button[type="submit"]')) as HTMLButtonElement | null;
+      const originalText = btnSubmit ? btnSubmit.innerHTML : "";
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML =
+          '<span class="loading loading-spinner loading-xs"></span> Guardando…';
+      }
 
       const formData = new FormData(auditForm);
       // Ensure notes is always present (even if textarea is empty)
@@ -2017,8 +1786,10 @@ const cleanBase = getCleanBase();
           "alert-error",
         );
       } finally {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = originalText;
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = originalText;
+        }
       }
     });
 
@@ -2157,8 +1928,7 @@ const cleanBase = getCleanBase();
     ) as HTMLInputElement;
     let operatorSort = document.getElementById(
       "operator-sort",
-    ) as HTMLSelectElement;
-    const operatorListContainer = document.getElementById("operator-list");
+    ) as HTMLSelectElement | null;
     const noResultsMsg = document.getElementById("no-results-msg");
 
     const updateOperatorsList = () => {
@@ -2466,7 +2236,7 @@ const cleanBase = getCleanBase();
 
           const callsBadge = document.getElementById("calls-count-badge");
           if (callsBadge) {
-            callsBadge.textContent = `${operator.calls.length} Aleatorias`;
+            callsBadge.textContent = `${(operator.calls || []).length} Aleatorias`;
           }
 
           const historyContainer = document.getElementById(
@@ -2543,30 +2313,81 @@ const cleanBase = getCleanBase();
             }
           }
 
-          if (callsContainer) {
-            callsContainer.innerHTML = operator.calls
-              .map((call, index) => renderCallCard(call, index))
-              .join("");
+          currentActiveChannel = "wise_call";
 
-            // Attach event listeners to all edit buttons!
-            callsContainer
-              .querySelectorAll(".edit-audit-btn")
-              .forEach((btn) => {
-                btn.addEventListener("click", (e) => {
-                  e.stopPropagation(); // prevent collapsing/expanding the card
-                  const callIdStr = (
-                    e.currentTarget as HTMLElement
-                  ).getAttribute("data-call-id");
-                  if (callIdStr) {
-                    const callId = parseInt(callIdStr, 10);
-                    const call = operator.calls.find((c) => c.id === callId);
-                    if (call) {
-                      openAuditModal(operator.id, call);
-                    }
-                  }
-                });
-              });
-          }
+          const updateChannelTabsAndList = () => {
+            const allAudits = operator.calls || [];
+            const wiseCalls = allAudits.filter((c: any) => (c.channelType || "wise_call") === "wise_call");
+            const wiseEmails = allAudits.filter((c: any) => c.channelType === "wise_email");
+            const invgateAgs = allAudits.filter((c: any) => c.channelType === "invgate_ticket");
+
+            const bCall = document.getElementById("tab-count-wise_call");
+            const bEmail = document.getElementById("tab-count-wise_email");
+            const bAg = document.getElementById("tab-count-invgate_ticket");
+            const bQuota = document.getElementById("quota-progress-badge");
+
+            if (bCall) bCall.textContent = `${wiseCalls.length}/4`;
+            if (bEmail) bEmail.textContent = `${wiseEmails.length}/4`;
+            if (bAg) bAg.textContent = `${invgateAgs.length}/4`;
+            if (bQuota) {
+              const isFulfilled = wiseCalls.length >= 4 && wiseEmails.length >= 4 && invgateAgs.length >= 4;
+              bQuota.textContent = `${allAudits.length}/12 Completadas`;
+              bQuota.className = `badge text-xs font-bold ${isFulfilled ? "badge-success text-success-content" : "badge-neutral"}`;
+            }
+
+            let filteredAudits: any[] = [];
+            if (currentActiveChannel === "wise_call") filteredAudits = wiseCalls;
+            else if (currentActiveChannel === "wise_email") filteredAudits = wiseEmails;
+            else if (currentActiveChannel === "invgate_ticket") filteredAudits = invgateAgs;
+
+            if (callsContainer) {
+              if (filteredAudits.length === 0) {
+                callsContainer.innerHTML = `
+                  <div class="bg-base-200/40 border border-base-300 rounded-3xl p-8 text-center text-base-content/60">
+                    <p class="text-sm font-semibold">No hay auditorías registradas para este canal ${operator.month ? `en ${operator.month}` : "en este período"}.</p>
+                    <p class="text-xs text-base-content/40 mt-1">Haga clic en 'Nueva Auditoría' para evaluar un caso de este tipo.</p>
+                  </div>
+                `;
+              } else {
+                callsContainer.innerHTML = filteredAudits
+                  .map((call, index) => renderCallCard(call, index))
+                  .join("");
+
+                callsContainer
+                  .querySelectorAll(".edit-audit-btn")
+                  .forEach((btn) => {
+                    btn.addEventListener("click", (e) => {
+                      e.stopPropagation();
+                      const callIdStr = (
+                        e.currentTarget as HTMLElement
+                      ).getAttribute("data-call-id");
+                      if (callIdStr) {
+                        const callId = parseInt(callIdStr, 10);
+                        const call = (operator.calls || []).find((c: any) => c.id === callId);
+                        if (call) {
+                          openAuditModal(operator.id, call, call.channelType || currentActiveChannel);
+                        }
+                      }
+                    });
+                  });
+              }
+            }
+          };
+
+          document.querySelectorAll(".operator-channel-tab").forEach((tabBtn) => {
+            tabBtn.onclick = () => {
+              document.querySelectorAll(".operator-channel-tab").forEach((b) => b.classList.remove("tab-active"));
+              tabBtn.classList.add("tab-active");
+              currentActiveChannel = tabBtn.getAttribute("data-channel") || "wise_call";
+              updateChannelTabsAndList();
+            };
+          });
+
+          document.querySelectorAll(".operator-channel-tab").forEach((b) => {
+            b.classList.toggle("tab-active", b.getAttribute("data-channel") === "wise_call");
+          });
+          currentActiveChannel = "wise_call";
+          updateChannelTabsAndList();
 
           if (generalPanel) generalPanel.classList.add("hidden");
           if (detailsPanel) {
@@ -3037,7 +2858,21 @@ const cleanBase = getCleanBase();
         opBtn.click();
       }
     }
+    return true;
   }
 
-  initQualityMasterDetail();
+  function setupQualityObserver() {
+    if (initQualityMasterDetail()) return;
+
+    const observer = new MutationObserver((_, obs) => {
+      if (initQualityMasterDetail()) {
+        obs.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupQualityObserver();
+  document.addEventListener("astro:page-load", setupQualityObserver);
 </script>

@@ -183,21 +183,49 @@ export const server = {
           .optional()
           .transform((v) => (v ? parseInt(v, 10) : undefined)),
         agentId: z.string().transform((v) => parseInt(v, 10)),
-        callId: z.string().min(1, "El ID de llamada es requerido"),
-        ticketId: z.string().min(1, "El ID de ticket es requerido"),
-        duration: z.string().min(1, "La duración es requerida"),
+        channelType: z
+          .enum(["wise_call", "wise_email", "invgate_ticket"])
+          .default("wise_call"),
+        callId: z.string().default(""), // ID / Case Number
+        ticketId: z.string().default(""), // Ticket ID
+        duration: z.string().default("00:00"),
         date: z.string().min(1, "La fecha es requerida"),
         month: z.string().min(1, "El período es requerido"),
         notes: z
           .preprocess((v) => (v == null ? "" : String(v)), z.string())
           .optional()
           .default(""),
+        ringTime: z.string().optional().nullable(),
+        creationTime: z.string().optional().nullable(),
+        takeTime: z.string().optional().nullable(),
+        isPas: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(false),
+        appliesMda: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(false),
+        staysInMda: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(true),
         isCriticalFailure: z
           .any()
           .transform(
             (v) =>
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
-          ),
+          )
+          .default(false),
       })
       .passthrough(),
     handler: async (input, context) => {
@@ -208,7 +236,7 @@ export const server = {
           message: "No tiene permisos para guardar auditorías.",
         });
       }
-      // 1. Obtener los parámetros correspondientes
+      // 1. Obtener los parámetros correspondientes al canal
       let allParams;
       if (input.id) {
         const existingScores = await db
@@ -225,9 +253,27 @@ export const server = {
           allParams = await db
             .select()
             .from(auditParameters)
-            .where(eq(auditParameters.active, true));
+            .where(
+              and(
+                eq(auditParameters.active, true),
+                eq(auditParameters.channel, input.channelType),
+              ),
+            );
         }
       } else {
+        allParams = await db
+          .select()
+          .from(auditParameters)
+          .where(
+            and(
+              eq(auditParameters.active, true),
+              eq(auditParameters.channel, input.channelType),
+            ),
+          );
+      }
+
+      // Si por alguna razón no hay parámetros específicos del canal, fallback a los activos
+      if (!allParams || allParams.length === 0) {
         allParams = await db
           .select()
           .from(auditParameters)
@@ -235,7 +281,11 @@ export const server = {
       }
 
       // 2. Preparar el listado de scores y recopilar códigos seleccionados
-      const scoresToInsert: { parameterId: number; score: boolean }[] = [];
+      const scoresToInsert: {
+        parameterId: number;
+        score: boolean;
+        comment: string | null;
+      }[] = [];
       const checkedCodes = new Set<string>();
 
       for (const param of allParams) {
@@ -243,25 +293,40 @@ export const server = {
           (input as any)[param.code] === "on" ||
           (input as any)[param.code] === true ||
           (input as any)[param.code] === "true";
+        const comment = (input as any)[`${param.code}_comment`] || null;
+
         if (isChecked) {
           checkedCodes.add(param.code);
         }
         scoresToInsert.push({
           parameterId: param.id,
           score: isChecked,
+          comment: typeof comment === "string" ? comment.trim() : null,
         });
       }
 
-      // 3. Calcular scores ponderados usando la utilidad compartida
-      const { section1Score, section2Score, totalScore } = calculateAuditScores(
-        allParams,
-        checkedCodes,
-        input.isCriticalFailure,
-      );
+      // 3. Determinar si aplica Sección 2
+      let hasSection2 = true;
+      if (input.channelType === "wise_email") {
+        hasSection2 = input.appliesMda;
+      } else if (input.channelType === "invgate_ticket") {
+        hasSection2 = input.staysInMda;
+      }
+
+      // 4. Calcular scores ponderados usando el nuevo motor multi-canal
+      const { section1Score, section2Score, totalScore } =
+        calculateMultiChannelAuditScores(
+          input.channelType,
+          allParams,
+          checkedCodes,
+          hasSection2,
+          input.isCriticalFailure,
+        );
 
       const auditData = {
         agentId: input.agentId,
-        callId: input.callId,
+        channelType: input.channelType,
+        callId: input.callId || (input.channelType === "invgate_ticket" ? input.ticketId : ""),
         ticketId: input.ticketId,
         duration: input.duration,
         date: input.date,
@@ -270,6 +335,12 @@ export const server = {
         section2Score,
         totalScore,
         notes: input.notes,
+        ringTime: input.ringTime || null,
+        creationTime: input.creationTime || null,
+        takeTime: input.takeTime || null,
+        isPas: input.isPas,
+        appliesMda: input.appliesMda,
+        staysInMda: input.staysInMda,
         isCriticalFailure: input.isCriticalFailure,
       };
 
