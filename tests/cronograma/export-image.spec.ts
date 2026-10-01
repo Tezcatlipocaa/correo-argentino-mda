@@ -1,8 +1,64 @@
 import "dotenv/config";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { createTestUserAndSession, cleanupTestUser, setSessionCookie } from "../helpers/auth";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+async function readClipboardPngStats(page: Page) {
+  return page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    const item = items.find((i) => i.types.includes("image/png"));
+    if (!item) return { ok: false as const, types: items.flatMap((i) => i.types) };
+
+    const blob = await item.getType("image/png");
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result));
+      reader.readAsDataURL(blob);
+    });
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return { ok: false as const, types: ["no-2d-context"] };
+
+    ctx.drawImage(bitmap, 0, 0);
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const bg = { r: data[0], g: data[1], b: data[2] };
+    let content = 0;
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const i = (y * canvas.width + x) * 4;
+        const differs =
+          data[i + 3] > 0 &&
+          (Math.abs(data[i] - bg.r) > 12 ||
+            Math.abs(data[i + 1] - bg.g) > 12 ||
+            Math.abs(data[i + 2] - bg.b) > 12);
+        if (differs) {
+          content++;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    return {
+      ok: true as const,
+      width: canvas.width,
+      height: canvas.height,
+      contentPixels: content,
+      ratio: content / (canvas.width * canvas.height),
+      bbox: maxX < 0 ? null : { minX, minY, maxX, maxY },
+      dataUrl,
+    };
+  });
+}
 
 test.describe("cronograma — export PNG server-side", () => {
   let userId: number;
@@ -78,5 +134,50 @@ test.describe("cronograma — export PNG server-side", () => {
     const changes = await page.evaluate(() => (window as unknown as { __cardClassChanges: string[] }).__cardClassChanges);
     expect(changes.some((c) => c.includes("exporting-image"))).toBe(false);
     await expect(page.locator("#copy-rotation-image-btn")).toBeVisible();
+  });
+
+  test("copiar guardia y horas extras produce imágenes con contenido (no en blanco)", async ({ context, page }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://localhost:4321" });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4321" });
+    await page.goto("/supervision/cronograma");
+    await page.waitForSelector("#monthly-table");
+
+    const { writeFileSync, mkdirSync } = await import("node:fs");
+    mkdirSync("test-results", { recursive: true });
+
+    const check = async (label: string, button: string, switchTo: string, card: string) => {
+      await page.click(switchTo);
+      await page.waitForSelector(card);
+      await page.click(button);
+      await expect(page.locator(button)).toHaveClass(/btn-success/, { timeout: 5000 });
+      const stats = await readClipboardPngStats(page);
+      if (stats.ok) {
+        writeFileSync(
+          `test-results/copied-${label}.png`,
+          Buffer.from(stats.dataUrl.split(",")[1] ?? "", "base64"),
+        );
+      }
+      console.log(
+        `clipboard ${label}:`,
+        JSON.stringify(
+          stats.ok
+            ? { width: stats.width, height: stats.height, ratio: stats.ratio, bbox: stats.bbox }
+            : stats,
+        ),
+      );
+      expect(stats.ok).toBe(true);
+      if (!stats.ok) return;
+      expect(stats.width).toBeGreaterThan(0);
+      expect(stats.height).toBeGreaterThan(0);
+      expect(stats.ratio).toBeGreaterThan(0.01);
+      expect(stats.bbox).not.toBeNull();
+      if (!stats.bbox) return;
+      expect(stats.bbox.maxX).toBeLessThanOrEqual(stats.width - 1);
+      expect(stats.bbox.maxY).toBeLessThanOrEqual(stats.height - 1);
+      expect(stats.bbox.minX).toBeLessThan(stats.width * 0.5);
+    };
+
+    await check("guardia", "#copy-rotation-image-btn", "#switch-to-groups-btn", "#saturday-rotation-card");
+    await check("horas-extras", "#copy-overtime-image-btn", "#switch-to-overtime-btn", "#overtime-card");
   });
 });

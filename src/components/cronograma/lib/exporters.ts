@@ -349,6 +349,12 @@ export async function exportAsClipboardImage(
       style: {
         transform: "scale(1)",
         transformOrigin: "top left",
+        // html-to-image copies every computed longhand of the capture root onto
+        // the clone, including the host's offscreen `position: fixed/left`. Reset
+        // it here (options.style wins) or the clone renders outside the canvas.
+        position: "static",
+        left: "0",
+        top: "0",
       },
       quality: 1.0,
       pixelRatio: 3,
