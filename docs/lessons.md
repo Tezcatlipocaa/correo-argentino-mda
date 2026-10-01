@@ -512,3 +512,23 @@ Cada entrada sigue este formato:
 **Solucion:** Reiniciar el dev server; si persiste, borrar `node_modules/.vite` antes de relanzarlo.
 **Regla:** Después de tocar `astro.config.mjs` (config de Vite) o instalar/quitar dependencias, reiniciar el dev server (o borrar `node_modules/.vite`). Un `504` + import dinámico roto en dev casi siempre es esto, no el código.
 **Archivos afectados:** astro.config.mjs
+
+---
+
+### 2026-09-30 — Un spec Playwright sin `dotenv/config` pasa vacíamente (cookie no valida → `/login`)
+
+**Problema:** Un spec E2E nuevo que usa `tests/helpers/auth.ts` reportó 12/12 verde cuando el plan preveía 4 fallos. Ninguna aserción se estaba ejercitando sobre la ruta real: todas redirigían a `/login`.
+**Causa:** faltaba `import "dotenv/config";` al inicio del spec. Sin esa línea, `process.env.SESSION_SECRET` es `undefined` en el proceso de Playwright, `signSessionId()` firma con el fallback `"fallback-secret-do-not-use-in-prod"`, que no coincide con el `SESSION_SECRET` que el dev server lee de `.env`. El middleware rechaza la cookie, redirige a `/login`, y en `/login` las aserciones (pocos elementos, un `h1`) se cumplen por vacuidad.
+**Solucion:** agregar `import "dotenv/config";` y, en el cuerpo del test, `expect(new URL(page.url()).pathname).toBe(route)` después del `goto`, para que el redirect falle de inmediato en vez de producir un falso positivo.
+**Regla:** Todo spec E2E que use `tests/helpers/auth.ts` debe (1) importar `dotenv/config` y (2) verificar el pathname tras navegar. Un test que "pasa" cuando debería fallar probablemente corre sobre `/login` (sesión no autenticada), no sobre la ruta objetivo.
+**Archivos afectados:** tests/helpers/auth.ts, tests/ui/*.spec.ts
+
+---
+
+### 2026-10-01 — Dos escalas de z-index conviviendo: los overlays de `/titulos` quedaron por debajo del header
+
+**Problema:** El panel lateral que abre "Ver más" en `/titulos` se desplegaba tapado por debajo del header. El modal de edición (`z-40`) y el de confirmación de borrado (`z-50`) tenían el mismo defecto, aunque todavía no se había reportado.
+**Causa:** Conviven dos escalas de capas. El layout creció hasta `z-[150]` (navbar sticky), `z-[160]` (sidebar), `z-200` (modales de la app) y `z-[250]` (toasts), pero los overlays de `src/components/titulos/**` quedaron en la escala vieja `z-40`/`z-50`, escrita antes de que el header tuviera z-index alto. Al ser el header `sticky` y `z-[150]`, cualquier panel con `z < 150` pinta físicamente por debajo.
+**Solucion:** Subir los overlays al tier de modal de la app: panel/form `z-200` y backdrop `z-[190]` (encima del sidebar `160`, debajo del panel). Verificación en vivo con `getComputedStyle().zIndex` + `document.elementFromPoint()` sobre la franja del header, más 2 tests E2E nuevos.
+**Regla:** Capas fijas de este repo: contenido `z-0..z-50`, header `z-[150]`, sidebar `z-[160]`, overlays/paneles `z-[190]`/`z-200`, toasts `z-[250]`. Antes de agregar un elemento `fixed`/`sticky`, comparar su z contra `z-[150]`: si es menor, el header lo tapa. Toda regresión de capa se verifica con `elementFromPoint`, no a ojo.
+**Archivos afectados:** src/components/titulos/TitleDrawer.tsx, src/components/titulos/TitleModal.tsx, src/components/titulos/TitleConfirmModal.tsx, src/layouts/_components/navbar.astro, tests/ui/elementos-rotos-regression.spec.ts

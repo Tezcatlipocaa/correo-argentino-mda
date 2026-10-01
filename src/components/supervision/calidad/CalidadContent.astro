@@ -4,6 +4,7 @@ import StatsCard from "@components/ui/StatsCard.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
+import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import Modal from "@components/ui/Modal.astro";
@@ -467,17 +468,11 @@ const cleanBase = getCleanBase();
                   </div>
                 </button>
               ))}
-              <div
-                id="no-results-msg"
-                class="text-base-content/50 hidden py-8 text-center"
-              >
-                <Icon
-                  name="boxicons:search"
-                  class="mx-auto mb-2 opacity-40"
-                  size={48}
-                />
-                <p class="text-sm font-medium">Sin resultados</p>
-              </div>
+              <SearchEmptyState
+                id="calidad-empty-state"
+                title="Sin resultados"
+                description="No hay operadores que coincidan con la búsqueda. Probá con otro nombre o legajo."
+              />
             </div>
           </div>
         </aside>
@@ -2159,7 +2154,7 @@ const cleanBase = getCleanBase();
       "operator-sort",
     ) as HTMLSelectElement;
     const operatorListContainer = document.getElementById("operator-list");
-    const noResultsMsg = document.getElementById("no-results-msg");
+    const noResultsMsg = document.getElementById("calidad-empty-state");
 
     const updateOperatorsList = () => {
       const term = searchInput?.value.toLowerCase() || "";
@@ -2227,8 +2222,10 @@ const cleanBase = getCleanBase();
 
       if (!hasVisibleItems && noResultsMsg) {
         noResultsMsg.classList.remove("hidden");
+        noResultsMsg.classList.add("flex");
       } else if (noResultsMsg) {
         noResultsMsg.classList.add("hidden");
+        noResultsMsg.classList.remove("flex");
       }
     };
 

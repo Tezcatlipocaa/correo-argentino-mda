@@ -227,8 +227,7 @@ const isSupervisorRole = (role: string): boolean =>
                     name="boxicons:group-filled"
                     size={32}
                     class="opacity-30"
-                    aria-hidden="true"
-                  />
+                    aria-hidden="true" is:inline />
                 </div>
                 <div class="space-y-1 text-center">
                   <p class="text-sm font-semibold">
@@ -360,7 +359,8 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="cronograma"
                             data-tip="Figura en cronograma"
                           >
-                            <Icon name="boxicons:calendar-filled" size={14} />
+                            <Icon name="boxicons:calendar-filled" size={14} 
+            is:inline />
                             <span class="sr-only">Cronograma</span>
                           </span>
                         )}
@@ -380,7 +380,8 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="cubics"
                             data-tip="Asignable a cubics"
                           >
-                            <Icon name="boxicons:desktop-filled" size={14} />
+                            <Icon name="boxicons:desktop-filled" size={14} 
+            is:inline />
                             <span class="sr-only">Cubics</span>
                           </span>
                         )}
@@ -393,7 +394,8 @@ const isSupervisorRole = (role: string): boolean =>
                             <Icon
                               name="boxicons:bar-chart-big-filled"
                               size={14}
-                            />
+                            
+            is:inline />
                             <span class="sr-only">Calidad</span>
                           </span>
                         )}
@@ -403,7 +405,8 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="ags"
                             data-tip="Asignable AGS"
                           >
-                            <Icon name="boxicons:git-branch-filled" size={14} />
+                            <Icon name="boxicons:git-branch-filled" size={14} 
+            is:inline />
                             <span class="sr-only">AGS</span>
                           </span>
                         )}
@@ -843,8 +846,7 @@ const isSupervisorRole = (role: string): boolean =>
                   <Icon
                     name={row.icon}
                     size={16}
-                    class="text-base-content/65 shrink-0"
-                  />
+                    class="text-base-content/65 shrink-0" is:inline />
                   <span>{row.feature}</span>
                 </td>
                 <td class="bg-base-200/5 text-center">
@@ -858,8 +860,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-warning/5 text-center">
@@ -873,8 +874,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-accent/5 text-center">
@@ -888,8 +888,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-info/5 text-center">
@@ -903,8 +902,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-error/5 text-center">
@@ -918,8 +916,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
               </tr>

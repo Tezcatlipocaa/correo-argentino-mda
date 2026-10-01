@@ -10,7 +10,7 @@ import { Icon } from "astro-icon/components";
 >
   <section
     id="monthly-detail-modal"
-    class="monthly-detail-modal border-base-300 bg-base-100 relative flex w-full max-w-72 flex-col rounded-3xl border-2 shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)]"
+    class="monthly-detail-modal border-base-300 bg-base-100 relative flex w-full max-w-72 flex-col rounded-3xl border-2 shadow-modal"
     role="dialog"
     aria-modal="true"
     aria-labelledby="monthly-detail-title"
@@ -43,7 +43,7 @@ import { Icon } from "astro-icon/components";
         class="btn btn-ghost btn-xs btn-square hover:bg-error/10 hover:text-error shrink-0 transition-colors"
         aria-label="Cerrar detalle"
       >
-        <Icon name="boxicons:x-filled" size={16} />
+        <Icon name="boxicons:x-filled" size={16} is:inline />
       </button>
     </div>
 

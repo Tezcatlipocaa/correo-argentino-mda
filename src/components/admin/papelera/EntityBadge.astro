@@ -27,6 +27,6 @@ const badgeClass = size === "sm" ? "badge badge-sm" : "badge";
   title={meta.label}
   aria-label={meta.label}
 >
-  <Icon name={meta.icon} size={iconSize} class:list={["shrink-0", meta.tone]} />
+  <Icon name={meta.icon} size={iconSize} class:list={["shrink-0", meta.tone]} is:inline />
   {showLabel && <span class="truncate">{meta.label}</span>}
 </span>

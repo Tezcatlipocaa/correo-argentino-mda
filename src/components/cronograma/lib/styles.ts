@@ -27,7 +27,7 @@ export function getStatusStyles(type: string | undefined): {
         icon: STATUS_ICONS.briefcase,
         color: "var(--color-primary)",
         bgClass:
-          "bg-primary/10 text-amber-700 dark:text-amber-400 border border-primary/25 shadow-sm",
+          "bg-primary/10 text-amber-700 dark:text-amber-400 border border-primary/25",
         indicatorClass: "bg-amber-500",
         textClass: "text-amber-700 dark:text-amber-400",
       };
@@ -38,7 +38,7 @@ export function getStatusStyles(type: string | undefined): {
         icon: STATUS_ICONS.briefcase,
         color: "#a855f7",
         bgClass:
-          "bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/25 shadow-sm",
+          "bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/25",
         indicatorClass: "bg-purple-500",
         textClass: "text-purple-700 dark:text-purple-400",
       };

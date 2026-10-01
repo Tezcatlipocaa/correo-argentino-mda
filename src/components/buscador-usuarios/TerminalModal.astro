@@ -4,6 +4,7 @@ import Modal from "@components/ui/Modal.astro";
 import InfoCard from "@components/ui/InfoCard.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import CopyButton from "@components/ui/CopyButton.astro";
+import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 ---
 
 <Modal
@@ -150,7 +151,8 @@ import CopyButton from "@components/ui/CopyButton.astro";
                 class="btn btn-secondary btn-sm hidden shrink-0 cursor-pointer px-2 font-sans"
                 title="Buscar supervisor en el portal"
               >
-                <Icon name="boxicons:search" size={16} class="shrink-0" />
+                <Icon name="boxicons:search" size={16} class="shrink-0" 
+            is:inline />
                 <span class="text-xs">Buscar</span>
               </button>
             </InfoCard>
@@ -291,7 +293,8 @@ import CopyButton from "@components/ui/CopyButton.astro";
               type="button"
               data-filter="sistemas"
               class="btn btn-sm rounded-full"
-              ><Icon name="boxicons:desktop-filled" size={20} />Sistemas (<span
+              ><Icon name="boxicons:desktop-filled" size={20} 
+            is:inline />Sistemas (<span
                 id="count-sistemas">0</span
               >)</button
             >
@@ -310,6 +313,12 @@ import CopyButton from "@components/ui/CopyButton.astro";
             class="bg-base-200/30 border-base-300 scrollbar-hide grid min-h-0 flex-1 auto-rows-max grid-cols-2 content-start gap-1.5 overflow-y-auto rounded-lg border p-3 transition-all"
           >
           </div>
+
+          <SearchEmptyState
+            id="terminal-groups-empty-state"
+            title="No se encontraron grupos"
+            description="Ningún grupo de dominio coincide con la búsqueda o con el filtro de categoría seleccionado."
+          />
         </div>
       </div>
 
@@ -429,7 +438,8 @@ import CopyButton from "@components/ui/CopyButton.astro";
               class="btn btn-secondary btn-sm hidden shrink-0 cursor-pointer px-2 font-sans"
               title="Buscar jefe en el portal"
             >
-              <Icon name="boxicons:search" size={16} class="shrink-0" />
+              <Icon name="boxicons:search" size={16} class="shrink-0" 
+            is:inline />
               <span class="text-xs">Buscar</span>
             </button>
           </div>
@@ -469,7 +479,7 @@ import CopyButton from "@components/ui/CopyButton.astro";
                 <div
                   class="bg-secondary/10 text-secondary flex size-10 shrink-0 items-center justify-center rounded-md"
                 >
-                  <Icon name="boxicons:group-filled" size={24} />
+                  <Icon name="boxicons:group-filled" size={24} is:inline />
                 </div>
                 <span
                   class="text-base-content/50 text-xs font-bold tracking-wider uppercase select-none"

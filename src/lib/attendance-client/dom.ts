@@ -171,12 +171,12 @@ export const dom = {
         text = "Guardando cambios automáticamente...";
         iconHTML = `<span class="loading loading-spinner loading-xs text-secondary"></span>`;
         barColor =
-          "border-secondary/40 shadow-[0_4px_20px_rgba(var(--color-secondary-rgb,147,51,234),0.1)]";
+          "border-secondary/40 shadow-raised";
         break;
       case "saved":
         text = "Todos los cambios guardados.";
         iconHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="0" d="M5 13l4 4L19 7" /></svg>`;
-        barColor = "border-success/40 shadow-[0_4px_20px_rgba(34,197,94,0.1)]";
+        barColor = "border-success/40 shadow-raised";
         setTimeout(() => {
           if (store.dirtyKeys.size === 0) {
             this.hideSyncStatus();
@@ -199,7 +199,7 @@ export const dom = {
       case "error":
         text = `Error al guardar: ${errorMsg || "Conexión fallida"}`;
         iconHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
-        barColor = "border-error/40 shadow-[0_4px_20px_rgba(239,68,68,0.1)]";
+        barColor = "border-error/40 shadow-raised";
         break;
       case "idle":
         this.hideSyncStatus();
@@ -210,7 +210,7 @@ export const dom = {
     iconContainer.innerHTML = iconHTML;
 
     // Reset border classes and apply new one
-    statusBar.className = `fixed bottom-6 left-1/2 -translate-x-1/2 bg-base-100/95 backdrop-blur-xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border p-3.5 flex items-center justify-between gap-6 z-100 transition-all duration-300 w-[90%] max-w-md ${barColor}`;
+    statusBar.className = `fixed bottom-6 left-1/2 -translate-x-1/2 bg-base-100/95 backdrop-blur-xl rounded-2xl shadow-overlay border p-3.5 flex items-center justify-between gap-6 z-100 transition-all duration-300 w-[90%] max-w-md ${barColor}`;
   },
 
   hideSyncStatus() {

@@ -146,6 +146,15 @@ function updateCategoryCounts(groupsList: string[]): void {
   if (countOtrosEl) countOtrosEl.textContent = String(countOtros);
 }
 
+// El estado vacío de grupos y los mensajes de error compiten por el mismo
+// contenedor: sólo uno de los dos puede estar hablando.
+function setGroupsEmptyState(show: boolean): void {
+  const emptyState = document.getElementById("terminal-groups-empty-state");
+  if (!emptyState) return;
+  emptyState.classList.toggle("hidden", !show);
+  emptyState.classList.toggle("flex", show);
+}
+
 function renderGroups(
   groupsList: string[],
   filterText: string = "",
@@ -175,9 +184,13 @@ function renderGroups(
   });
 
   if (filtered.length === 0) {
-    terminalGroupsList.innerHTML = `<div class="text-base-content/50 text-center py-8 text-xs font-sans col-span-full">No se encontraron grupos${filterText ? " que coincidan" : ""}</div>`;
+    terminalGroupsList.classList.add("hidden");
+    setGroupsEmptyState(true);
     return;
   }
+
+  terminalGroupsList.classList.remove("hidden");
+  setGroupsEmptyState(false);
 
   const fragment = document.createDocumentFragment();
   filtered.forEach((group, index) => {
@@ -192,7 +205,7 @@ function renderGroups(
           .map(
             (lic) => `
           <div class="tooltip z-50 ${licensePlacement}">
-            <div class="tooltip-content text-left p-3 w-72 max-w-xs shadow-xl border border-neutral-content/15 bg-neutral text-neutral-content rounded-box text-xs">
+            <div class="tooltip-content text-left p-3 w-72 max-w-xs shadow-overlay border border-neutral-content/15 bg-neutral text-neutral-content rounded-box text-xs">
               ${formatSingleLicenseTooltipHtml(lic)}
             </div>
             <button type="button" class="btn btn-ghost btn-xs p-0.5 shrink-0 cursor-pointer" aria-label="Información de licencia ${escapeHtml(lic.name)}">
@@ -587,8 +600,10 @@ export async function loadTerminalData(username: string): Promise<void> {
       terminalOutput.textContent = errorMsg;
       copyTerminalBtn?.setAttribute("data-copy-value", errorMsg);
       if (terminalGroupsList) {
+        terminalGroupsList.classList.remove("hidden");
         terminalGroupsList.innerHTML = `<div class="text-error text-center py-4 text-xs font-sans col-span-full">${errorMsg}</div>`;
       }
+      setGroupsEmptyState(false);
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";
@@ -598,8 +613,10 @@ export async function loadTerminalData(username: string): Promise<void> {
     terminalOutput.textContent = errorMsg;
     copyTerminalBtn?.setAttribute("data-copy-value", errorMsg);
     if (terminalGroupsList) {
+      terminalGroupsList.classList.remove("hidden");
       terminalGroupsList.innerHTML = `<div class="text-error text-center py-4 text-xs font-sans col-span-full">Error al conectar con la red.</div>`;
     }
+    setGroupsEmptyState(false);
   } finally {
     terminalLoading.classList.add("hidden");
     terminalLoading.classList.remove("flex");

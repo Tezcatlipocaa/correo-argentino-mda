@@ -79,7 +79,7 @@ const rowGridClass =
     apiError && (
       <div class="alert alert-error my-4 shadow-sm" role="alert">
         <Icon
-          name="boxicons:x-circle-filled-solid"
+          name="boxicons:x-circle-filled"
           size={24}
           aria-hidden="true"
         />
@@ -226,69 +226,61 @@ const rowGridClass =
         </div>
 
         {/* Results Table */}
-        {results.length === 0 ? (
-          <div class="bg-base-100 border-base-200 flex flex-col items-center justify-center rounded-xl border p-12 text-center">
-            <div class="bg-base-200 text-base-content/40 mb-2 rounded-full p-4">
-              <Icon name="boxicons:search" size={32} aria-hidden="true" />
+        <div class="space-y-4">
+          <DataTable
+            id="ubicaciones-table"
+            ariaLabel="Resultados de la comparación de ubicaciones"
+            minWidthClass="min-w-[1000px]"
+            headerGridClass={headerGridClass}
+            rowGridClass={rowGridClass}
+            whenEmpty
+            emptyStateTitle="No se encontraron ubicaciones"
+            emptyStateDescription="No se encontraron ubicaciones para la búsqueda o filtro seleccionado."
+          >
+            <div slot="header">
+              <DataTableHeaderCell>Estado</DataTableHeaderCell>
             </div>
-            <p class="text-base-content/60 text-sm">
-              No se encontraron ubicaciones para la búsqueda o filtro
-              seleccionado.
-            </p>
-          </div>
-        ) : (
-          <div class="space-y-4">
-            <DataTable
-              ariaLabel="Resultados de la comparación de ubicaciones"
-              minWidthClass="min-w-[1000px]"
-              headerGridClass={headerGridClass}
-              rowGridClass={rowGridClass}
-            >
-              <div slot="header">
-                <DataTableHeaderCell>Estado</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>Ubicación InvGate</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>NIS</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>CP</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>CC</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>Oficina MDA</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>Código MDA</DataTableHeaderCell>
-              </div>
-              <div slot="header">
-                <DataTableHeaderCell>Dirección MDA</DataTableHeaderCell>
-              </div>
-              <div id="locations-container" class="contents">
-                {results.map((row: any) => (
-                  <UbicacionRow row={row} rowGridClass={rowGridClass} />
-                ))}
-              </div>
-            </DataTable>
+            <div slot="header">
+              <DataTableHeaderCell>Ubicación InvGate</DataTableHeaderCell>
+            </div>
+            <div slot="header">
+              <DataTableHeaderCell>NIS</DataTableHeaderCell>
+            </div>
+            <div slot="header">
+              <DataTableHeaderCell>CP</DataTableHeaderCell>
+            </div>
+            <div slot="header">
+              <DataTableHeaderCell>CC</DataTableHeaderCell>
+            </div>
+            <div slot="header">
+              <DataTableHeaderCell>Oficina MDA</DataTableHeaderCell>
+            </div>
+            <div slot="header">
+              <DataTableHeaderCell>Código MDA</DataTableHeaderCell>
+            </div>
+            <div slot="header">
+              <DataTableHeaderCell>Dirección MDA</DataTableHeaderCell>
+            </div>
+            <div id="locations-container" class="contents">
+              {results.map((row: any) => (
+                <UbicacionRow row={row} rowGridClass={rowGridClass} />
+              ))}
+            </div>
+          </DataTable>
 
-            {/* Infinite Scroll Sentinel */}
-            <div
-              id="locations-sentinel"
-              class="{pagination.totalPages > 1 ? '' : 'hidden'} flex justify-center py-8 text-center"
-              data-has-more={pagination.totalPages > 1 ? "true" : "false"}
-              data-initial-page={pagination.page}
-            >
-              <span
-                class="loading loading-spinner loading-md text-primary hidden"
-                id="locations-spinner"
-              />
-            </div>
+          {/* Infinite Scroll Sentinel */}
+          <div
+            id="locations-sentinel"
+            class="{pagination.totalPages > 1 ? '' : 'hidden'} flex justify-center py-8 text-center"
+            data-has-more={pagination.totalPages > 1 ? "true" : "false"}
+            data-initial-page={pagination.page}
+          >
+            <span
+              class="loading loading-spinner loading-md text-primary hidden"
+              id="locations-spinner"
+            />
           </div>
-        )}
+        </div>
       </div>
     )
   }

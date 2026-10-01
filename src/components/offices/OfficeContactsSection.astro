@@ -19,7 +19,8 @@ const { contacts, dense = false } = Astro.props;
       size={16}
       class="text-secondary"
       aria-hidden="true"
-    />
+    
+            is:inline />
     Contactos
   </h2>
 
@@ -41,8 +42,7 @@ const { contacts, dense = false } = Astro.props;
                   name="boxicons:clock-filled"
                   size={14}
                   class="text-base-content/50 shrink-0"
-                  aria-hidden="true"
-                />
+                  aria-hidden="true" is:inline />
                 <span>{contact.timeSlot}</span>
               </p>
             )}
@@ -53,7 +53,8 @@ const { contacts, dense = false } = Astro.props;
                   size={14}
                   class="text-base-content/50 shrink-0"
                   aria-hidden="true"
-                />
+                
+            is:inline />
                 <span class="font-mono">{contact.phone}</span>
               </p>
             )}

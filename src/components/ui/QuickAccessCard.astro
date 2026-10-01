@@ -43,39 +43,39 @@ const Wrapper = locked || comingSoon ? "div" : "a";
       {...(!(locked || comingSoon)
         ? {
             href: resolvedHref,
-            "aria-label": `Abrir ${title}${description ? `: ${description}` : ""}`,
+            "aria-label": `Abrir ${title}`,
             title: description || title,
           }
         : {
             "aria-label": `${title} (${comingSoon ? "Próximamente" : "Restringido"})`,
           })}
+      data-layout={layout}
       class:list={[
-        "rounded-box border-base-300 bg-base-100 group relative flex items-center gap-3 p-3 shadow-md transition-all duration-300",
+        "rounded-box bg-base-100 border-base-300 relative flex h-full items-center gap-3 border p-3 shadow-md transition-all duration-300",
         locked || comingSoon
           ? "cursor-not-allowed opacity-40 grayscale select-none"
-          : "hover:border-primary focus:ring-primary cursor-pointer hover:-translate-y-1 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none",
+          : "hover:border-primary group focus:ring-primary cursor-pointer hover:-translate-y-1 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none",
       ]}
     >
       <div
         class:list={[
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300",
           iconTone,
         ]}
         aria-hidden="true"
       >
         <Icon
           name={icon}
-          size={20}
+          size={24}
           class={
             locked || comingSoon
               ? ""
               : "transition-transform duration-300 group-hover:scale-110"
-          }
-        />
+          } is:inline />
       </div>
       <span
         class:list={[
-          "min-w-0 flex-1 text-sm leading-tight font-semibold",
+          "min-w-0 flex-1 text-sm leading-tight font-bold",
           locked || comingSoon
             ? "text-base-content/50"
             : "text-base-content/85 group-hover:text-base-content",
@@ -85,11 +85,11 @@ const Wrapper = locked || comingSoon ? "div" : "a";
       </span>
       <div class="flex shrink-0 items-center" aria-hidden="true">
         {locked || comingSoon ? (
-          <Icon name="boxicons:lock-filled" size={18} class="text-base-content/40" />
+          <Icon name="boxicons:lock-filled" size={24} class="text-base-content/40" />
         ) : (
           <Icon
             name="boxicons:chevron-right"
-            size={20}
+            size={24}
             class="text-base-content/30 transition-transform duration-300 group-hover:translate-x-1"
           />
         )}
@@ -102,6 +102,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
         : {
             "aria-label": `${title} (${comingSoon ? "Próximamente" : "Restringido"})`,
           })}
+      data-layout={layout}
       class:list={[
         "rounded-box border-base-300 bg-base-100 relative flex h-full w-full items-center justify-between overflow-hidden border p-5 shadow-md transition-all duration-300",
         locked || comingSoon
@@ -124,8 +125,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
             }
-            aria-hidden="true"
-          />
+            aria-hidden="true" is:inline />
         </div>
         <div>
           <h3 class="text-base-content text-lg font-bold">{title}</h3>
@@ -151,6 +151,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
         : {
             "aria-label": `${title} (${comingSoon ? "Próximamente" : "Restringido"})`,
           })}
+      data-layout={layout}
       class:list={[
         "card bg-base-100 border-base-300 h-full border shadow-md",
         locked || comingSoon
@@ -173,8 +174,7 @@ const Wrapper = locked || comingSoon ? "div" : "a";
               locked || comingSoon
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
-            }
-          />
+            } is:inline />
         </div>
         <h3 class="text-base-content text-lg font-bold">{title}</h3>
         <p class="text-base-content/70 text-xs">{description}</p>

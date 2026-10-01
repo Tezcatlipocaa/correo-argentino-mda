@@ -435,8 +435,7 @@ const isExternal = formUploadType
                     : "boxicons:file-filled"
                 }
                 size={20}
-                class="text-success shrink-0"
-              />
+                class="text-success shrink-0" is:inline />
               <div class="min-w-0 flex-1">
                 <p class="text-base-content text-sm font-medium">
                   {isExternal ? "Enlace actual" : "Archivo actual cargado"}
@@ -457,8 +456,7 @@ const isExternal = formUploadType
                       ? "boxicons:arrow-to-right"
                       : "boxicons:arrow-in-down-square-half-filled"
                   }
-                  size={14}
-                />
+                  size={14} is:inline />
                 {isExternal ? "Abrir" : "Descargar"}
               </a>
             </div>

@@ -18,7 +18,7 @@ assert.doesNotMatch(
 
 // 2. Check LinkItem.astro uses lazy loading and async decoding for img or Image tags
 console.log("Checking LinkItem.astro image optimization...");
-const linkItem = await read("src/pages/recursos/_components/LinkItem.astro");
+const linkItem = await read("src/components/enlaces/LinkItem.astro");
 assert.match(
   linkItem,
   /<(?:img|Image)[^>]*loading=["']lazy["']/,
@@ -33,7 +33,7 @@ assert.match(
 // 3. Check CatalogAppCard.astro uses lazy loading and async decoding for img tags
 console.log("Checking CatalogAppCard.astro image optimization...");
 const catalogAppCard = await read(
-  "src/pages/recursos/aplicativos/_components/CatalogAppCard.astro",
+  "src/components/catalogo/CatalogAppCard.astro",
 );
 assert.match(
   catalogAppCard,

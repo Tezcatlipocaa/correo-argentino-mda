@@ -199,7 +199,12 @@ const totalMembers = visibleHelpdesks.reduce(
         aria-label="Limpiar todos los filtros"
         title="Limpiar todos los filtros"
       >
-        <Icon name="boxicons:trash-filled" size={16} aria-hidden="true" />
+        <Icon
+          name="boxicons:trash-filled"
+          size={16}
+          aria-hidden="true"
+          is:inline
+        />
         <span class="hidden lg:inline">Limpiar filtros</span>
       </button>
       {
@@ -286,7 +291,8 @@ const totalMembers = visibleHelpdesks.reduce(
               size={32}
               class="opacity-30"
               aria-hidden="true"
-            />
+            
+            is:inline />
           </div>
           <p class="text-sm font-semibold">No hay mesas de ayuda disponibles</p>
           <p class="text-xs">

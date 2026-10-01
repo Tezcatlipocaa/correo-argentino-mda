@@ -172,7 +172,7 @@ contacts.forEach((contact) => {
                     <div
                       class={`flex size-8 shrink-0 items-center justify-center rounded-md border ${toneColors[cat.tone] || toneColors.primary}`}
                     >
-                      <Icon name={cat.icon || "boxicons:folder"} size={18} />
+                      <Icon name={cat.icon || "boxicons:folder"} size={18} is:inline />
                     </div>
                     <span class="label-title truncate text-sm font-semibold">
                       {cat.title}
@@ -297,6 +297,9 @@ contacts.forEach((contact) => {
           ariaLabel="Listado de contactos en la categoría"
           headerGridClass={contactsGridCols}
           rowGridClass={contactsGridCols}
+          emptyStateTitle="No se encontraron contactos"
+          emptyStateDescription="No hay contactos cargados ni coincidencias para tu búsqueda. Probá con otro término o agregá el primero."
+          whenEmpty
         >
           <Fragment slot="header">
             <DataTableHeaderCell />
@@ -307,28 +310,7 @@ contacts.forEach((contact) => {
 
           <div id="contacts-container" class="divide-base-200 divide-y">
             {
-              contacts.length === 0 ? (
-                <div
-                  class="text-base-content/50 flex flex-col items-center gap-3 py-16"
-                  id="empty-state"
-                >
-                  <div class="bg-base-200/40 rounded-full p-4">
-                    <Icon
-                      name="boxicons:data"
-                      size={32}
-                      class="opacity-30"
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div class="space-y-1 text-center">
-                    <p class="text-sm font-semibold">
-                      No hay contactos registrados
-                    </p>
-                    <p class="text-xs">Comenzá agregando un nuevo contacto.</p>
-                  </div>
-                </div>
-              ) : (
-                contacts.map((contact) => (
+              contacts.map((contact) => (
                   <div
                     class:list={[
                       "group hover:bg-base-200/30 contact-row grid items-center px-4 py-3 transition-colors",
@@ -387,8 +369,7 @@ contacts.forEach((contact) => {
                       </form>
                     </div>
                   </div>
-                ))
-              )
+              ))
             }
           </div>
         </DataTable>
@@ -450,8 +431,7 @@ contacts.forEach((contact) => {
   const btnAddContact = document.getElementById(
     "btn-add-contact",
   ) as HTMLAnchorElement | null;
-  const generalEmptyState = document.getElementById("empty-state");
-  const categoryEmptyState = document.getElementById("category-empty-state");
+    const categoryEmptyState = document.getElementById("category-empty-state");
   const reorderSpinner = document.getElementById("reorder-spinner");
 
   // Selection Handler
@@ -586,9 +566,16 @@ contacts.forEach((contact) => {
     });
 
     // Handle Empty States
-    if (generalEmptyState) generalEmptyState.classList.add("hidden");
+    // «Categoría vacía» sólo cuando el filtro activo es una categoría (sin texto
+    // de búsqueda). Con texto libre el SearchEmptyState del DataTable ya se
+    // muestra y quedarían dos estados simultáneos en pantalla.
+    const categoryIsEmpty =
+      query === "" &&
+      visibleCount === 0 &&
+      activeCategoryId !== "all" &&
+      contactRows.length > 0;
 
-    if (visibleCount === 0) {
+    if (categoryIsEmpty) {
       categoryEmptyState?.classList.remove("hidden");
       categoryEmptyState?.classList.add("flex");
     } else {

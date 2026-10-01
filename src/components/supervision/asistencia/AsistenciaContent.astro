@@ -2,6 +2,7 @@
 import { getCleanBase } from "@lib/baseUrl";
 import { Icon } from "astro-icon/components";
 import SearchBar from "@components/ui/SearchBar.astro";
+import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import { getAttendanceData } from "@lib/attendance";
 
 const cleanBase = getCleanBase();
@@ -103,7 +104,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
           >
         </summary>
         <ul
-          class="dropdown-content menu bg-base-100 border-base-300 z-100 mt-1 w-60 gap-1 rounded-xl border p-2 text-xs font-semibold tracking-normal normal-case shadow-lg"
+          class="dropdown-content menu bg-base-100 border-base-300 z-100 mt-1 w-60 gap-1 rounded-xl border p-2 text-xs font-semibold tracking-normal normal-case shadow-overlay"
           id="sort-menu"
         >
           <li>
@@ -252,7 +253,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                   </summary>
                   <div
                     tabindex="0"
-                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex w-64 flex-col gap-1 rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-lg"
+                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex w-64 flex-col gap-1 rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-overlay"
                   >
                     <label
                       class="hover:bg-base-200 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
@@ -339,7 +340,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                   </summary>
                   <div
                     tabindex="0"
-                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex max-h-64 w-60 flex-col gap-1 overflow-y-auto rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-lg"
+                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex max-h-64 w-60 flex-col gap-1 overflow-y-auto rounded-xl border p-2 text-xs font-normal tracking-normal normal-case shadow-overlay"
                   >
                     <label
                       class="hover:bg-base-200 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
@@ -575,7 +576,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
                   </summary>
                   <div
                     tabindex="0"
-                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex w-52 flex-col gap-1 rounded-xl border p-2 text-left text-xs font-normal tracking-normal normal-case shadow-lg"
+                    class="dropdown-content bg-base-100 border-base-300 z-100 mt-1 flex w-52 flex-col gap-1 rounded-xl border p-2 text-left text-xs font-normal tracking-normal normal-case shadow-overlay"
                   >
                     <label
                       class="hover:bg-base-200 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5"
@@ -649,6 +650,12 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
           </tr>
         </tbody>
       </table>
+
+      <SearchEmptyState
+        id="asistencia-empty-state"
+        title="Sin resultados"
+        description="No hay operadores que coincidan con la búsqueda. Probá con otro nombre."
+      />
     </div>
   </div>
 </div>
@@ -656,7 +663,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
 <!-- Floating Sync Status Bar -->
 <div
   id="sync-status-bar"
-  class="bg-base-100/95 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex w-[90%] max-w-md -translate-x-1/2 translate-y-32 items-center justify-between gap-6 rounded-2xl border p-3.5 opacity-0 shadow-[0_12px_40px_rgba(0,0,0,0.15)] backdrop-blur-xl transition-all duration-300"
+  class="bg-base-100/95 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex w-[90%] max-w-md -translate-x-1/2 translate-y-32 items-center justify-between gap-6 rounded-2xl border p-3.5 opacity-0 shadow-overlay backdrop-blur-xl transition-all duration-300"
 >
   <div class="flex items-center gap-3">
     <div
@@ -712,6 +719,20 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
   ) as HTMLInputElement;
   const exportCsvBtn = document.getElementById("export-csv-btn");
   const tableBody = document.getElementById("attendance-table-body");
+  const attendanceTable = document.getElementById("attendance-table");
+  const attendanceEmptyState = document.getElementById(
+    "asistencia-empty-state",
+  );
+
+  // El estado vacío compite con los mensajes que viven dentro de la tabla
+  // (cargando / error): cuando la tabla es la que habla, el estado se oculta.
+  const setAttendanceEmptyState = (show: boolean) => {
+    attendanceTable?.classList.toggle("hidden", show);
+    if (attendanceEmptyState) {
+      attendanceEmptyState.classList.toggle("hidden", !show);
+      attendanceEmptyState.classList.toggle("flex", show);
+    }
+  };
 
   const asistenciaOptions = [
     "HOME OFFICE",
@@ -749,6 +770,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
 
   async function fetchAttendance(date: string) {
     try {
+      setAttendanceEmptyState(false);
       if (tableBody) {
         tableBody.innerHTML = `
           <tr>
@@ -768,6 +790,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
       startSync(date);
     } catch (error) {
       console.error(error);
+      setAttendanceEmptyState(false);
       if (tableBody) {
         tableBody.innerHTML = `
           <tr>
@@ -939,17 +962,12 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
     renderedData = filtered;
 
     if (filtered.length === 0) {
-      if (tableBody) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="6" class="py-12 text-center text-base-content/40">
-              No se encontraron operadores registrados.
-            </td>
-          </tr>
-        `;
-      }
+      if (tableBody) tableBody.innerHTML = "";
+      setAttendanceEmptyState(true);
       return;
     }
+
+    setAttendanceEmptyState(false);
 
     const todayStr = serverToday;
 
