@@ -136,6 +136,7 @@ function setSecurityHeaders(response: Response): Response {
       "img-src 'self' data: blob: https://wms.ign.gob.ar",
       "font-src 'self'",
       "connect-src 'self' data: https://docs.google.com https://cdn.jsdelivr.net https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
+      "media-src 'self' data: blob: https:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

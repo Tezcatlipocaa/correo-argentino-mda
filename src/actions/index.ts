@@ -210,6 +210,7 @@ export const server = {
         ringTime: z.string().optional().nullable(),
         creationTime: z.string().optional().nullable(),
         takeTime: z.string().optional().nullable(),
+        recordingUrl: z.string().optional().nullable(),
         isPas: z
           .any()
           .transform(
@@ -349,6 +350,7 @@ export const server = {
         appliesMda: input.channelType === "wise_call" ? hasSection2 : input.appliesMda,
         staysInMda: input.staysInMda,
         isCriticalFailure: input.isCriticalFailure,
+        recordingUrl: input.recordingUrl || null,
       };
 
       const [agentForAudit] = await db

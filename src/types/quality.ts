@@ -29,6 +29,7 @@ export interface QualityCall {
   isPas?: boolean;
   appliesMda?: boolean;
   staysInMda?: boolean;
+  recordingUrl?: string | null;
   section1: {
     score: number;
     maxScore: number;
@@ -61,6 +62,7 @@ export interface QualityAuditRecord {
   isPas: boolean;
   appliesMda: boolean;
   staysInMda: boolean;
+  recordingUrl?: string | null;
   section1Score: number;
   section2Score: number;
   totalScore: number;

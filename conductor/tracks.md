@@ -22,6 +22,6 @@
 - [x] **Track: Correcciones de Tickets InvGate (Caracteres y Metadatos) y Comentarios de Calidad**
   *Link: [./tracks/calidad_ticket_metadata_comments_20261002/index.md](./tracks/calidad_ticket_metadata_comments_20261002/index.md)*
 ---
-- [~] **Track: Reformulación y Modernización UI/UX del Modal de Auditoría de Calidad**
+- [x] **Track: Reformulación y Modernización UI/UX del Modal de Auditoría de Calidad**
   *Link: [./tracks/calidad_modal_ui_20261002/index.md](./tracks/calidad_modal_ui_20261002/index.md)*
 

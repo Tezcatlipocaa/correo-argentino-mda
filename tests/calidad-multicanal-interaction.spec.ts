@@ -192,35 +192,68 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const modal = page.locator("#audit-modal");
     await expect(modal).toHaveAttribute("open", "");
 
-    // 1. Verificar presencia de buscador dual en llamadas Wise
-    const wiseSearch = page.locator("#wise-search-container");
-    const invgateSearch = page.locator("#invgate-search-container");
-    await expect(wiseSearch).toBeVisible();
-    await expect(invgateSearch).toBeVisible();
+    // 1. Verificar presencia de buscador unificado con pestañas (Wise CX / InvGate)
+    const tabWise = page.locator("#tab-search-wise");
+    const tabInvgate = page.locator("#tab-search-invgate");
+    await expect(tabWise).toBeVisible();
+    await expect(tabInvgate).toBeVisible();
 
-    // 2. Verificar que en Autogestión se oculta buscador Wise
+    // 2. Verificar que en Autogestión se oculta pestaña Wise CX
     const agBtn = page.locator('.channel-btn[data-channel="invgate_ticket"]');
     await agBtn.click();
-    await expect(wiseSearch).toHaveClass(/hidden/);
-    await expect(invgateSearch).toBeVisible();
+    await expect(tabWise).toHaveClass(/hidden/);
+    await expect(tabInvgate).toBeVisible();
     await expect(page.locator("#btn-fetch-invgate-label")).toHaveText("Buscar Autogestión");
 
     // Volver a canal Llamada Wise
     const callBtn = page.locator('.channel-btn[data-channel="wise_call"]');
     await callBtn.click();
-    await expect(wiseSearch).not.toHaveClass(/hidden/);
+    await expect(tabWise).not.toHaveClass(/hidden/);
 
-    // 3. Verificar acordeón del visor de ticket en vivo
+    // 3. Probar que al buscar en Wise CX NO se llena el Detalle del Ticket y el audio es independiente
+    await tabWise.click();
+    await page.route("**/api/calidad/fetch-metadata*source=wise*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          data: {
+            caseNumber: "534787",
+            operator: "Juan Pérez",
+            duration: "03:45",
+            date: "2026-10-02",
+            recordingUrl: "https://example.com/recordings/call-534787.mp3",
+          },
+        }),
+      });
+    });
+
+    await page.locator("#wise-search-id").fill("534787");
+    await page.locator("#btn-fetch-wise-api").click();
+
+    // Detalle del Ticket NO debe haberse cargado desde Wise
+    const tvTitlePre = page.locator("#tv-title");
+    await expect(tvTitlePre).toHaveText("-");
+    await expect(page.locator("#tv-category")).toHaveText("-");
+    await expect(page.locator("#ticket-viewer-badge")).toHaveText("Sin ticket cargado");
+
+    // Pero el reproductor de audio independiente sí debe mostrarse
+    const audioContainer = page.locator("#tv-audio-container");
+    await expect(audioContainer).toBeVisible();
+    await expect(page.locator("#tv-audio-download")).toHaveAttribute("href", /api\/calidad\/download-audio.*call-534787\.mp3/);
+
+    // 4. Verificar acordeón del visor de ticket en vivo (InvGate)
     const tvHeader = page.locator("#ticket-viewer-header");
     const tvContent = page.locator("#ticket-viewer-content");
     await expect(tvContent).toHaveClass(/hidden/);
     await tvHeader.click();
     await expect(tvContent).not.toHaveClass(/hidden/);
 
-    // 4. Verificar que Falla Crítica de Proceso no existe en el modal
+    // 5. Verificar que Falla Crítica de Proceso no existe en el modal
     await expect(page.locator("#form-is-critical-failure")).not.toBeAttached();
 
-    // 5. Mockear respuesta de InvGate con HTML en descripción y título homologado
+    // 6. Mockear respuesta de InvGate con HTML en descripción y título homologado
     let mockTitle = "Aforadora- Consulta";
     await page.route("**/api/calidad/fetch-metadata*source=invgate*", async (route) => {
       await route.fulfill({
@@ -242,7 +275,8 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
       });
     });
 
-    // Realizar búsqueda en InvGate
+    // Cambiar a pestaña InvGate y realizar búsqueda
+    await tabInvgate.click();
     await page.locator("#invgate-search-id").fill("88442");
     await page.locator("#btn-fetch-invgate-api").click();
 

@@ -38,116 +38,198 @@ const invgateAgParams = allParameters.filter(
       id="audit-modal-container"
       data-approved-titles={JSON.stringify(approvedTitles)}
     >
+      <!-- Modal Header: Título y Selector de Canales alineados -->
       <div
-        class="border-base-300 mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3"
+        class="border-base-300 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5"
       >
         <h3
           id="modal-title"
-          class="text-base-content flex items-center gap-2 text-lg font-black tracking-tight uppercase"
+          class="text-base-content flex items-center gap-2.5 text-base sm:text-lg font-black tracking-tight uppercase m-0 leading-none"
         >
-          <Icon name="boxicons:task" class="text-primary" size={24} />
+          <Icon name="boxicons:task" class="text-primary shrink-0" size={22} />
           <span>Auditoría de Calidad</span>
         </h3>
 
-        <!-- Channel Selector Tabs -->
-        <div class="join bg-base-200 p-1" id="channel-selector-join">
+        <!-- Selector de Canales: Segmented Tabs unificadas -->
+        <div class="join bg-base-200/80 p-0.5 rounded-xl border border-base-300/70 shadow-2xs self-start sm:self-auto" id="channel-selector-join">
           <button
             type="button"
-            class="btn btn-xs join-item channel-btn btn-active font-bold"
+            class="btn btn-xs sm:btn-sm join-item channel-btn btn-active bg-base-100 text-primary font-bold shadow-2xs transition-all border-transparent px-3"
             data-channel="wise_call"
           >
-            <Icon name="boxicons:phone-ring" size={14} />
-            Llamada Wise
+            <Icon name="boxicons:phone-ring" size={15} />
+            <span>Llamada Wise</span>
           </button>
           <button
             type="button"
-            class="btn btn-xs join-item channel-btn font-bold"
+            class="btn btn-xs sm:btn-sm join-item channel-btn font-semibold text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
             data-channel="wise_email"
           >
-            <Icon name="boxicons:envelope" size={14} />
-            Mail Wise
+            <Icon name="boxicons:envelope" size={15} />
+            <span>Mail Wise</span>
           </button>
           <button
             type="button"
-            class="btn btn-xs join-item channel-btn font-bold"
+            class="btn btn-xs sm:btn-sm join-item channel-btn font-semibold text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
             data-channel="invgate_ticket"
           >
-            <Icon name="boxicons:handshake" size={14} />
-            Autogestión
+            <Icon name="boxicons:handshake" size={15} />
+            <span>Autogestión</span>
           </button>
         </div>
       </div>
 
-      <!-- Dual API Search Toolbars -->
-      <div class="mb-4 space-y-2">
-        <!-- Wise Search (Channels: wise_call, wise_email) -->
-        <div
-          id="wise-search-container"
-          class="bg-base-200/50 border-base-300 rounded-2xl border p-3"
-        >
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <!-- Buscador Unificado con Selector de Servicio (Tabs) -->
+      <div
+        id="unified-search-card"
+        class="bg-base-200/40 border border-base-300/80 rounded-2xl p-3 mb-4 shadow-2xs space-y-2.5"
+      >
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          <!-- Selector de Servicio (Tabs: Wise CX / InvGate) -->
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xxs text-base-content/50 font-extrabold uppercase tracking-wider hidden sm:inline">Buscar:</span>
+            <div
+              class="join bg-base-100 p-0.5 rounded-xl border border-base-300/70"
+              id="search-service-tabs"
+            >
+              <button
+                type="button"
+                id="tab-search-wise"
+                class="join-item btn btn-xs sm:btn-sm btn-ghost gap-1.5 font-bold transition-all text-primary bg-base-200/90 shadow-2xs"
+                data-search-target="wise"
+              >
+                <Icon name="boxicons:phone" size={15} class="text-primary" />
+                <span>Wise CX</span>
+              </button>
+              <button
+                type="button"
+                id="tab-search-invgate"
+                class="join-item btn btn-xs sm:btn-sm btn-ghost gap-1.5 font-semibold text-base-content/70 transition-all hover:text-base-content"
+                data-search-target="invgate"
+              >
+                <Icon name="boxicons:receipt" size={15} class="text-secondary" />
+                <span>InvGate</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de Búsqueda Wise CX (Activa por defecto en llamadas/mails) -->
+          <div
+            id="wise-search-container"
+            class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 transition-all"
+          >
             <div class="relative flex-1">
               <input
                 type="text"
                 id="wise-search-id"
-                placeholder="Buscar en Wise CX (Número de caso o llamada, ej: 534787)..."
-                class="input input-sm bg-base-100 w-full pl-8 font-mono text-xs font-bold"
+                placeholder="Buscar Caso Wise CX (ej: 534787)..."
+                class="input input-sm bg-base-100 w-full pl-8 font-mono text-xs font-semibold border-base-300/80 focus:border-primary focus:outline-hidden"
               />
               <div class="text-base-content/40 absolute top-2 left-2.5">
-                <Icon name="boxicons:phone" size={16} />
+                <Icon name="boxicons:phone" size={15} />
               </div>
             </div>
             <button
               type="button"
               id="btn-fetch-wise-api"
-              class="btn btn-sm btn-primary shrink-0 gap-1 text-xs font-bold uppercase"
+              class="btn btn-sm btn-primary text-xs font-bold uppercase gap-1.5 shrink-0 px-3 transition-all hover:scale-98 active:scale-95 shadow-2xs"
             >
-              <Icon name="boxicons:server" size={16} />
+              <Icon name="boxicons:server" size={15} />
               <span>Buscar en Wise</span>
             </button>
           </div>
-          <div
-            id="wise-feedback-alert"
-            class="mt-2 hidden rounded-xl border p-2 text-xs font-medium"
-          >
-          </div>
-        </div>
 
-        <!-- InvGate Search (For tickets generated or AG) -->
-        <div
-          id="invgate-search-container"
-          class="bg-base-200/50 border-base-300 rounded-2xl border p-3"
-        >
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <!-- Barra de Búsqueda InvGate (Alternativa o exclusiva en Autogestión) -->
+          <div
+            id="invgate-search-container"
+            class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 hidden transition-all"
+          >
             <div class="relative flex-1">
               <input
                 type="text"
                 id="invgate-search-id"
-                placeholder="Buscar Ticket en InvGate (ID de incidente, ej: 88442)..."
-                class="input input-sm bg-base-100 w-full pl-8 font-mono text-xs font-bold"
+                placeholder="Buscar Ticket en InvGate (ej: 88442)..."
+                class="input input-sm bg-base-100 w-full pl-8 font-mono text-xs font-semibold border-base-300/80 focus:border-secondary focus:outline-hidden"
               />
               <div class="text-base-content/40 absolute top-2 left-2.5">
-                <Icon name="boxicons:receipt" size={16} />
+                <Icon name="boxicons:receipt" size={15} />
               </div>
             </div>
             <button
               type="button"
               id="btn-fetch-invgate-api"
-              class="btn btn-sm btn-secondary shrink-0 gap-1 text-xs font-bold uppercase"
+              class="btn btn-sm btn-secondary text-xs font-bold uppercase gap-1.5 shrink-0 px-3 transition-all hover:scale-98 active:scale-95 shadow-2xs"
             >
-              <Icon name="boxicons:search-alt" size={16} />
+              <Icon name="boxicons:search-alt" size={15} />
               <span id="btn-fetch-invgate-label">Buscar Ticket InvGate</span>
             </button>
           </div>
-          <div
-            id="invgate-feedback-alert"
-            class="mt-2 hidden rounded-xl border p-2 text-xs font-medium"
-          >
+        </div>
+
+        <!-- Feedback Alerts -->
+        <div
+          id="wise-feedback-alert"
+          class="mt-2 hidden rounded-xl border p-2 text-xs font-medium transition-all"
+        ></div>
+        <div
+          id="invgate-feedback-alert"
+          class="mt-2 hidden rounded-xl border p-2 text-xs font-medium transition-all"
+        ></div>
+      </div>
+
+      <!-- Reproductor y Descarga de Grabación Wise CX (Independiente) -->
+      <div
+        id="tv-audio-container"
+        class="bg-base-200/40 border border-primary/25 hidden rounded-2xl p-3.5 mb-4 shadow-2xs transition-all duration-200"
+      >
+        <div
+          class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
+        >
+          <div class="flex items-center gap-2.5">
+            <div class="bg-primary/10 text-primary rounded-xl p-2 shrink-0">
+              <Icon name="boxicons:volume-full" size={22} />
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="text-xs font-black tracking-wider uppercase text-base-content/90"
+                >
+                  Grabación de la Llamada Wise CX
+                </span>
+                <span class="badge badge-xs badge-success font-bold"
+                  >Audio Disponible</span
+                >
+              </div>
+              <p
+                id="tv-audio-label"
+                class="text-base-content/60 font-mono text-xxs font-medium mt-0.5"
+              >
+                Audio disponible
+              </p>
+            </div>
+          </div>
+          <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <audio
+              id="tv-audio-player"
+              controls
+              class="h-9 w-full max-w-full rounded-lg sm:w-64"
+              preload="metadata"></audio>
+            <a
+              id="tv-audio-download"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              class="btn btn-sm btn-outline btn-primary shrink-0 gap-1.5 text-xs font-bold transition-all hover:scale-98 active:scale-95"
+            >
+              <Icon name="boxicons:save" size={16} />
+              <span>Descargar MP3</span>
+            </a>
           </div>
         </div>
       </div>
 
-      <!-- Live Ticket Viewer Panel -->
+      <!-- Live Ticket Viewer Panel (InvGate) -->
       <div
         id="ticket-viewer-panel"
         class="bg-base-200/30 border-base-300 mb-4 rounded-2xl border p-3"
@@ -157,16 +239,16 @@ const invgateAgParams = allParameters.filter(
           id="ticket-viewer-header"
         >
           <div class="flex items-center gap-2">
-            <Icon name="boxicons:file-detail" size={18} class="text-primary" />
+            <Icon name="boxicons:receipt" size={18} class="text-secondary" />
             <span
               class="text-base-content/80 text-xs font-black tracking-wider uppercase"
             >
-              Detalle del Ticket / Caso en Vivo
+              Detalle del Ticket InvGate
             </span>
             <span
               id="ticket-viewer-badge"
               class="badge badge-xs badge-ghost font-bold"
-              >Sin datos cargados</span
+              >Sin ticket cargado</span
             >
           </div>
           <div
@@ -182,86 +264,94 @@ const invgateAgParams = allParameters.filter(
           </div>
         </div>
 
-        <div id="ticket-viewer-content" class="mt-3 hidden space-y-2">
+        <div id="ticket-viewer-content" class="mt-3 hidden space-y-2.5">
           <!-- Título & Validación asistida -->
           <div
-            class="bg-base-100 border-base-300/60 rounded-xl border p-3 shadow-xs"
+            class="bg-base-100/90 border border-base-300/70 rounded-xl p-3 shadow-2xs"
           >
             <div
-              class="flex flex-col justify-between gap-2 sm:flex-row sm:items-center"
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
             >
               <div class="min-w-0 flex-1">
                 <span
-                  class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
+                  class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase block"
                   >Título en InvGate</span
                 >
                 <p
                   id="tv-title"
-                  class="text-base-content mt-0.5 text-xs font-bold break-words"
+                  class="text-base-content text-xs font-semibold leading-relaxed break-words mt-0.5"
                 >
                   -
                 </p>
               </div>
-              <div id="tv-title-match-badge" class="shrink-0">
+              <div id="tv-title-match-badge" class="shrink-0 flex items-center">
                 <!-- Badge de validación automática -->
               </div>
             </div>
           </div>
 
           <!-- Grid de Metadatos: Categoría, Prioridad, Estado, Solicitante -->
-          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div
-              class="bg-base-100 border-base-300/50 rounded-xl border p-2.5 shadow-xs"
+              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
             >
               <span
-                class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
-                >Categoría</span
+                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
               >
+                <Icon name="boxicons:categories" size={13} class="text-primary/70" />
+                Categoría
+              </span>
               <p
                 id="tv-category"
-                class="text-base-content mt-0.5 truncate font-mono text-xs font-bold"
+                class="text-base-content truncate font-mono text-xs font-bold mt-1"
               >
                 -
               </p>
             </div>
             <div
-              class="bg-base-100 border-base-300/50 rounded-xl border p-2.5 shadow-xs"
+              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
             >
               <span
-                class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
-                >Prioridad</span
+                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
               >
+                <Icon name="boxicons:flag" size={13} class="text-warning/70" />
+                Prioridad
+              </span>
               <p
                 id="tv-priority"
-                class="text-base-content mt-0.5 truncate font-mono text-xs font-bold"
+                class="text-base-content truncate font-mono text-xs font-bold mt-1"
               >
                 -
               </p>
             </div>
             <div
-              class="bg-base-100 border-base-300/50 rounded-xl border p-2.5 shadow-xs"
+              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
             >
               <span
-                class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
-                >Estado</span
+                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
               >
+                <Icon name="boxicons:info-circle" size={13} class="text-info/70" />
+                Estado
+              </span>
               <p
                 id="tv-status"
-                class="text-base-content mt-0.5 truncate font-mono text-xs font-bold"
+                class="text-base-content truncate font-mono text-xs font-bold mt-1"
               >
                 -
               </p>
             </div>
             <div
-              class="bg-base-100 border-base-300/50 rounded-xl border p-2.5 shadow-xs"
+              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
             >
               <span
-                class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
-                >Solicitante</span
+                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
               >
+                <Icon name="boxicons:user" size={13} class="text-secondary/70" />
+                Solicitante
+              </span>
               <p
                 id="tv-creator"
-                class="text-base-content mt-0.5 truncate font-mono text-xs font-bold"
+                class="text-base-content truncate font-mono text-xs font-bold mt-1"
               >
                 -
               </p>
@@ -281,52 +371,6 @@ const invgateAgParams = allParameters.filter(
               class="text-base-content/80 mt-1 max-h-36 overflow-y-auto font-sans text-xs leading-relaxed whitespace-pre-wrap"
             >
               -
-            </div>
-          </div>
-
-          <!-- Reproductor y Descarga de Grabación Wise CX -->
-          <div
-            id="tv-audio-container"
-            class="bg-base-100 border-base-300/50 hidden rounded-xl border p-3 shadow-xs"
-          >
-            <div
-              class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
-            >
-              <div class="flex items-center gap-2">
-                <div class="bg-primary/10 text-primary rounded-lg p-1.5">
-                  <Icon name="boxicons:volume-full" size={20} />
-                </div>
-                <div>
-                  <span
-                    class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
-                    >Grabación de la Llamada</span
-                  >
-                  <p
-                    id="tv-audio-label"
-                    class="text-base-content font-mono text-xs font-bold"
-                  >
-                    Audio disponible
-                  </p>
-                </div>
-              </div>
-              <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                <audio
-                  id="tv-audio-player"
-                  controls
-                  class="h-9 w-full max-w-full rounded-lg sm:w-64"
-                  preload="none"></audio>
-                <a
-                  id="tv-audio-download"
-                  href="#"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
-                  class="btn btn-sm btn-outline btn-primary shrink-0 gap-1 text-xs font-bold"
-                >
-                  <Icon name="boxicons:save" size={16} />
-                  <span>Descargar MP3</span>
-                </a>
-              </div>
             </div>
           </div>
         </div>
@@ -349,131 +393,146 @@ const invgateAgParams = allParameters.filter(
         />
         <input type="hidden" name="recordingUrl" id="form-recording-url" />
 
-        <!-- Case Metadata Fields -->
+        <!-- Case Metadata Fields: Grid responsivo de 3 columnas -->
         <div
-          class="bg-base-200/20 border-base-300/40 grid grid-cols-1 gap-3 rounded-2xl border p-3 sm:grid-cols-4"
+          class="bg-base-200/30 border border-base-300/70 p-3.5 rounded-2xl shadow-2xs space-y-3"
         >
-          <FormField
-            id="form-call-id"
-            name="callId"
-            label="Nro Caso / ID Llamada"
-            placeholder="Ej: 534787"
-            size="sm"
-            inputClass="font-mono font-bold"
-          />
-          <FormField
-            id="form-ticket-id"
-            name="ticketId"
-            label="Nro Ticket / AG"
-            placeholder="Ej: INC-12345"
-            size="sm"
-            inputClass="font-mono font-bold"
-          />
-          <div id="meta-duration-container" class="sm:col-span-1">
-            <FormField
-              id="form-duration"
-              name="duration"
-              label="Duración"
-              placeholder="02:15"
-              size="sm"
-              inputClass="font-mono font-bold"
-            />
+          <div class="flex items-center justify-between pb-1 border-b border-base-300/40">
+            <span class="text-xxs font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+              <Icon name="boxicons:file-detail" size={14} class="text-primary" />
+              <span>Datos Básicos de la Auditoría</span>
+            </span>
           </div>
-          <FormField
-            id="form-date"
-            name="date"
-            label="Fecha"
-            type="date"
-            required
-            size="sm"
-            inputClass="font-bold"
-          />
 
-          <!-- Secondary Metadata (Dynamic per channel) -->
-          <div id="meta-ring-container" class="sm:col-span-1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <FormField
-              id="form-ring-time"
-              name="ringTime"
-              label="Tiempo Ringueo"
-              placeholder="00:30"
+              id="form-call-id"
+              name="callId"
+              label="Nro Caso / ID Llamada"
+              placeholder="Ej: 534787"
               size="sm"
-              inputClass="font-mono font-bold"
+              inputClass="font-mono font-semibold"
             />
-          </div>
-          <div id="meta-creation-container" class="hidden sm:col-span-1">
             <FormField
-              id="form-creation-time"
-              name="creationTime"
-              label="Creación"
-              placeholder="YYYY-MM-DD HH:MM"
+              id="form-ticket-id"
+              name="ticketId"
+              label="Nro Ticket / AG"
+              placeholder="Ej: 88442"
               size="sm"
-              inputClass="font-mono font-bold text-xs"
+              inputClass="font-mono font-semibold"
             />
-          </div>
-          <div id="meta-take-container" class="hidden sm:col-span-1">
             <FormField
-              id="form-take-time"
-              name="takeTime"
-              label="Toma / Lectura"
-              placeholder="YYYY-MM-DD HH:MM"
+              id="form-date"
+              name="date"
+              label="Fecha de Atención"
+              type="date"
+              required
               size="sm"
-              inputClass="font-mono font-bold text-xs"
+              inputClass="font-semibold"
             />
-          </div>
-          <div
-            id="meta-pas-container"
-            class="flex hidden items-center pt-5 sm:col-span-1"
-          >
-            <label class="label cursor-pointer gap-2 p-0">
-              <input
-                type="checkbox"
-                name="isPas"
-                id="form-is-pas"
-                class="checkbox checkbox-sm checkbox-primary"
+
+            <!-- Secondary Metadata (Dynamic per channel) -->
+            <div id="meta-duration-container">
+              <FormField
+                id="form-duration"
+                name="duration"
+                label="Duración"
+                placeholder="02:15"
+                size="sm"
+                inputClass="font-mono font-semibold"
               />
-              <span class="label-text text-xs font-bold uppercase">Es PAS</span>
-            </label>
+            </div>
+            <div id="meta-ring-container">
+              <FormField
+                id="form-ring-time"
+                name="ringTime"
+                label="Tiempo Ringueo"
+                placeholder="00:30"
+                size="sm"
+                inputClass="font-mono font-semibold"
+              />
+            </div>
+            <div id="meta-creation-container" class="hidden">
+              <FormField
+                id="form-creation-time"
+                name="creationTime"
+                label="Creación"
+                placeholder="YYYY-MM-DD HH:MM"
+                size="sm"
+                inputClass="font-mono font-semibold text-xs"
+              />
+            </div>
+            <div id="meta-take-container" class="hidden">
+              <FormField
+                id="form-take-time"
+                name="takeTime"
+                label="Toma / Lectura"
+                placeholder="YYYY-MM-DD HH:MM"
+                size="sm"
+                inputClass="font-mono font-semibold text-xs"
+              />
+            </div>
+            <div
+              id="meta-pas-container"
+              class="hidden flex items-center pt-6"
+            >
+              <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                <input
+                  type="checkbox"
+                  name="isPas"
+                  id="form-is-pas"
+                  class="checkbox checkbox-sm checkbox-primary"
+                />
+                <span class="label-text text-xs font-bold uppercase tracking-wider">Es PAS</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <!-- Realtime Score Preview -->
+        <!-- Realtime Score Preview Card -->
         <div
-          class="bg-base-200/50 border-base-300 flex items-center justify-between rounded-2xl border p-4 shadow-sm"
+          class="bg-base-200/40 border border-base-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl p-4 shadow-2xs transition-all"
         >
-          <div>
-            <span class="text-base-content/80 text-sm font-bold"
-              >Score Calculado:</span
-            >
+          <div class="space-y-0.5">
+            <span class="text-base-content/90 text-sm font-extrabold flex items-center gap-1.5 uppercase tracking-wider">
+              <Icon name="boxicons:bar-chart-big-filled" size={16} class="text-primary" />
+              Score Calculado en Tiempo Real
+            </span>
             <p class="text-base-content/50 text-xs">
-              Cada criterio no cumplido resta su porcentaje de referencia del
-              100%.
+              Cada criterio no cumplido resta su porcentaje de ponderación sobre la base 100%.
             </p>
           </div>
-          <div class="flex flex-wrap items-center gap-4">
-            <div class="border-base-300 border-r pr-4 text-center">
-              <div class="text-base-content/40 text-xs font-bold uppercase">
+
+          <div class="flex items-center gap-4 sm:gap-6 self-end sm:self-auto">
+            <!-- Sección 1 (Secundaria) -->
+            <div class="border-base-300/60 border-r pr-4 text-center">
+              <div class="text-base-content/40 text-xxs font-extrabold uppercase tracking-wider">
                 Sección 1
               </div>
-              <div id="preview-s1" class="text-primary text-lg font-black">
+              <div id="preview-s1" class="text-base-content/80 text-base font-bold mt-0.5 font-mono">
                 100%
               </div>
             </div>
+
+            <!-- Sección 2 (Secundaria) -->
             <div
               id="preview-s2-block"
-              class="border-base-300 border-r pr-4 text-center"
+              class="border-base-300/60 border-r pr-4 text-center transition-opacity"
             >
-              <div class="text-base-content/40 text-xs font-bold uppercase">
+              <div class="text-base-content/40 text-xxs font-extrabold uppercase tracking-wider">
                 Sección 2
               </div>
-              <div id="preview-s2" class="text-primary text-lg font-black">
+              <div id="preview-s2" class="text-base-content/80 text-base font-bold mt-0.5 font-mono">
                 100%
               </div>
             </div>
-            <div class="text-center">
-              <div class="text-base-content/40 text-xs font-bold uppercase">
+
+            <!-- TOTAL FINAL (Hero Metric - Destacado y prominente) -->
+            <div class="text-center pl-1">
+              <div class="text-base-content/50 text-xxs font-black uppercase tracking-wider">
                 Total Final
               </div>
-              <div id="preview-total" class="text-success text-2xl font-black">
+              <div id="preview-total" class="text-success text-3xl sm:text-4xl font-black font-mono tracking-tight leading-none mt-0.5">
                 100%
               </div>
             </div>
@@ -485,20 +544,20 @@ const invgateAgParams = allParameters.filter(
           id="channel-checklist-wise_call"
           class="channel-checklist space-y-4"
         >
-          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
             <!-- S1: Items (Gestión Llamada) -->
             <div
-              class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4"
+              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
             >
-              <h4
-                class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold"
+              <div
+                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
               >
                 <span>1. Gestión de la Llamada / Atención</span>
-                <span class="text-base-content/50 text-xs font-normal"
+                <span class="text-base-content/40 text-xxs font-bold"
                   >Base: 100%</span
                 >
-              </h4>
-              <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              </div>
+              <div class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
                 {
                   wiseCallParams
                     .filter(
@@ -508,20 +567,20 @@ const invgateAgParams = allParameters.filter(
                         p.category === "Interacción con Usuario",
                     )
                     .map((p) => (
-                      <div class="hover:bg-base-200/70 hover:border-base-300/50 rounded-lg border border-transparent p-1.5 transition-colors">
-                        <label class="label cursor-pointer justify-start gap-3 p-0">
+                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
+                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
                           <input
                             type="checkbox"
                             name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
                             data-weight={p.weight ?? 0}
                             data-section="items"
                             checked
                           />
-                          <span class="label-text flex-1 text-xs font-medium">
+                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
                             {p.name}
                             {p.weight ? (
-                              <span class="text-error/80 ml-1 text-xs font-bold">
+                              <span class="text-error font-bold ml-1 text-xs">
                                 (-{p.weight}%)
                               </span>
                             ) : (
@@ -539,7 +598,7 @@ const invgateAgParams = allParameters.filter(
                           type="text"
                           name={`${p.code}_comment`}
                           placeholder="Observación o comentario opcional..."
-                          class="input input-sm bg-base-100/80 border-base-300 text-xs mt-1.5 w-full font-normal focus:bg-base-100"
+                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
                         />
                       </div>
                     ))
@@ -549,16 +608,14 @@ const invgateAgParams = allParameters.filter(
 
             <!-- S2: Ticket (Condicional) -->
             <div
-              class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4"
+              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
             >
               <div
-                class="border-base-300 mb-3 flex items-center justify-between border-b pb-1"
+                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
               >
-                <span class="text-base-content/80 text-sm font-bold"
-                  >2. TICKET (Gestión y Registro)</span
-                >
-                <label class="label cursor-pointer gap-2 p-0">
-                  <span class="label-text text-xs font-bold"
+                <span>2. TICKET (Gestión y Registro)</span>
+                <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                  <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70"
                     >¿Se generó ticket?</span
                   >
                   <input
@@ -572,7 +629,7 @@ const invgateAgParams = allParameters.filter(
               </div>
               <div
                 id="wise-call-ticket-block"
-                class="max-h-80 space-y-2 overflow-y-auto pr-1"
+                class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin"
               >
                 {
                   wiseCallParams
@@ -583,20 +640,20 @@ const invgateAgParams = allParameters.filter(
                         p.category === "Gestión del Ticket",
                     )
                     .map((p) => (
-                      <div class="hover:bg-base-200/70 hover:border-base-300/50 rounded-lg border border-transparent p-1.5 transition-colors">
-                        <label class="label cursor-pointer justify-start gap-3 p-0">
+                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
+                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
                           <input
                             type="checkbox"
                             name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
                             data-weight={p.weight ?? 0}
                             data-section="ticket"
                             checked
                           />
-                          <span class="label-text flex-1 text-xs font-medium">
+                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
                             {p.name}
                             {p.weight ? (
-                              <span class="text-error/80 ml-1 text-xs font-bold">
+                              <span class="text-error font-bold ml-1 text-xs">
                                 (-{p.weight}%)
                               </span>
                             ) : (
@@ -614,17 +671,27 @@ const invgateAgParams = allParameters.filter(
                           type="text"
                           name={`${p.code}_comment`}
                           placeholder="Observación o comentario opcional..."
-                          class="input input-sm bg-base-100/80 border-base-300 text-xs mt-1.5 w-full font-normal focus:bg-base-100"
+                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
                         />
                       </div>
                     ))
                 }
               </div>
+              <!-- Estado Vacío Elegante (Sin Ticket) -->
               <div
                 id="wise-call-ticket-placeholder"
-                class="text-base-content/40 hidden py-12 text-center text-xs"
+                class="hidden flex-col items-center justify-center p-8 text-center rounded-xl bg-base-100/50 border border-dashed border-base-300/80 my-2"
               >
-                No se generó ticket para esta llamada (solo puntúa Sección 1)
+                <div class="p-3 bg-base-200/80 text-base-content/40 rounded-2xl mb-2.5 shadow-2xs">
+                  <Icon name="boxicons:file" size={28} />
+                </div>
+                <h5 class="text-xs font-bold text-base-content/80 mb-1">Sin Ticket Asociado</h5>
+                <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+                  No se generó ticket para esta llamada. La evaluación computará únicamente los criterios de la Sección 1.
+                </p>
+                <span class="badge badge-xs badge-neutral mt-3 font-semibold text-xxs px-2 py-1">
+                  Sección 2 Inactiva (0% peso)
+                </span>
               </div>
             </div>
           </div>
@@ -635,38 +702,38 @@ const invgateAgParams = allParameters.filter(
           id="channel-checklist-wise_email"
           class="channel-checklist hidden space-y-4"
         >
-          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
             <!-- S1: Items (Gestión Correo) -->
             <div
-              class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4"
+              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
             >
-              <h4
-                class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold"
+              <div
+                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
               >
                 <span>1. Gestión General del Correo</span>
-                <span class="text-base-content/50 text-xs font-normal"
+                <span class="text-base-content/40 text-xxs font-bold"
                   >Base: 100%</span
                 >
-              </h4>
-              <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              </div>
+              <div class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
                 {
                   wiseEmailParams
                     .filter((p) => p.section === "items")
                     .map((p) => (
-                      <div class="hover:bg-base-200/70 hover:border-base-300/50 rounded-lg border border-transparent p-1.5 transition-colors">
-                        <label class="label cursor-pointer justify-start gap-3 p-0">
+                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
+                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
                           <input
                             type="checkbox"
                             name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
                             data-weight={p.weight ?? 0}
                             data-section="items"
                             checked
                           />
-                          <span class="label-text flex-1 text-xs font-medium">
+                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
                             {p.name}
                             {p.weight ? (
-                              <span class="text-error/80 ml-1 text-xs font-bold">
+                              <span class="text-error font-bold ml-1 text-xs">
                                 (-{p.weight}%)
                               </span>
                             ) : (
@@ -684,7 +751,7 @@ const invgateAgParams = allParameters.filter(
                           type="text"
                           name={`${p.code}_comment`}
                           placeholder="Observación o comentario opcional..."
-                          class="input input-sm bg-base-100/80 border-base-300 text-xs mt-1.5 w-full font-normal focus:bg-base-100"
+                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
                         />
                       </div>
                     ))
@@ -694,16 +761,14 @@ const invgateAgParams = allParameters.filter(
 
             <!-- S2: Items MDA (Condicional) -->
             <div
-              class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4"
+              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
             >
               <div
-                class="border-base-300 mb-3 flex items-center justify-between border-b pb-1"
+                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
               >
-                <span class="text-base-content/80 text-sm font-bold"
-                  >2. Items Categoría MDA (Ticket)</span
-                >
-                <label class="label cursor-pointer gap-2 p-0">
-                  <span class="label-text text-xs font-bold"
+                <span>2. Items Categoría MDA (Ticket)</span>
+                <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                  <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70"
                     >¿Se generó ticket?</span
                   >
                   <input
@@ -716,26 +781,26 @@ const invgateAgParams = allParameters.filter(
               </div>
               <div
                 id="wise-email-mda-block"
-                class="hidden max-h-80 space-y-2 overflow-y-auto pr-1"
+                class="hidden max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin"
               >
                 {
                   wiseEmailParams
                     .filter((p) => p.section === "mda")
                     .map((p) => (
-                      <div class="hover:bg-base-200/70 hover:border-base-300/50 rounded-lg border border-transparent p-1.5 transition-colors">
-                        <label class="label cursor-pointer justify-start gap-3 p-0">
+                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
+                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
                           <input
                             type="checkbox"
                             name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
                             data-weight={p.weight ?? 0}
                             data-section="mda"
                             checked
                           />
-                          <span class="label-text flex-1 text-xs font-medium">
+                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
                             {p.name}
                             {p.weight ? (
-                              <span class="text-error/80 ml-1 text-xs font-bold">
+                              <span class="text-error font-bold ml-1 text-xs">
                                 (-{p.weight}%)
                               </span>
                             ) : (
@@ -753,17 +818,27 @@ const invgateAgParams = allParameters.filter(
                           type="text"
                           name={`${p.code}_comment`}
                           placeholder="Observación o comentario opcional..."
-                          class="input input-sm bg-base-100/80 border-base-300 text-xs mt-1.5 w-full font-normal focus:bg-base-100"
+                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
                         />
                       </div>
                     ))
                 }
               </div>
+              <!-- Estado Vacío Elegante (Sin Ticket) -->
               <div
                 id="wise-email-mda-placeholder"
-                class="text-base-content/50 py-12 text-center text-xs"
+                class="flex flex-col items-center justify-center p-8 text-center rounded-xl bg-base-100/50 border border-dashed border-base-300/80 my-2"
               >
-                No se generó ticket para este correo (solo puntúa Sección 1)
+                <div class="p-3 bg-base-200/80 text-base-content/40 rounded-2xl mb-2.5 shadow-2xs">
+                  <Icon name="boxicons:envelope-open" size={28} />
+                </div>
+                <h5 class="text-xs font-bold text-base-content/80 mb-1">Sin Ticket Asociado</h5>
+                <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+                  Este correo no requirió la apertura de ticket MDA. La evaluación computará únicamente los criterios de la Sección 1.
+                </p>
+                <span class="badge badge-xs badge-neutral mt-3 font-semibold text-xxs px-2 py-1">
+                  Sección 2 Inactiva (0% peso)
+                </span>
               </div>
             </div>
           </div>
@@ -774,38 +849,38 @@ const invgateAgParams = allParameters.filter(
           id="channel-checklist-invgate_ticket"
           class="channel-checklist hidden space-y-4"
         >
-          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
             <!-- S1: Items (Gestión Caso) -->
             <div
-              class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4"
+              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
             >
-              <h4
-                class="text-base-content/80 border-base-300 mb-3 flex justify-between border-b pb-1 text-sm font-bold"
+              <div
+                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
               >
                 <span>1. Gestión General del Caso</span>
-                <span class="text-base-content/50 text-xs font-normal"
+                <span class="text-base-content/40 text-xxs font-bold"
                   >Base: 100%</span
                 >
-              </h4>
-              <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+              </div>
+              <div class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
                 {
                   invgateAgParams
                     .filter((p) => p.section === "items")
                     .map((p) => (
-                      <div class="hover:bg-base-200/70 hover:border-base-300/50 rounded-lg border border-transparent p-1.5 transition-colors">
-                        <label class="label cursor-pointer justify-start gap-3 p-0">
+                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
+                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
                           <input
                             type="checkbox"
                             name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
                             data-weight={p.weight ?? 0}
                             data-section="items"
                             checked
                           />
-                          <span class="label-text flex-1 text-xs font-medium">
+                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
                             {p.name}
                             {p.weight ? (
-                              <span class="text-error/80 ml-1 text-xs font-bold">
+                              <span class="text-error font-bold ml-1 text-xs">
                                 (-{p.weight}%)
                               </span>
                             ) : (
@@ -823,7 +898,7 @@ const invgateAgParams = allParameters.filter(
                           type="text"
                           name={`${p.code}_comment`}
                           placeholder="Observación o comentario opcional..."
-                          class="input input-sm bg-base-100/80 border-base-300 text-xs mt-1.5 w-full font-normal focus:bg-base-100"
+                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
                         />
                       </div>
                     ))
@@ -833,16 +908,14 @@ const invgateAgParams = allParameters.filter(
 
             <!-- S2: Items MDA (Condicional) -->
             <div
-              class="bg-base-200/20 border-base-300/50 rounded-2xl border p-4"
+              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
             >
               <div
-                class="border-base-300 mb-3 flex items-center justify-between border-b pb-1"
+                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
               >
-                <span class="text-base-content/80 text-sm font-bold"
-                  >2. Items Categoría MDA</span
-                >
-                <label class="label cursor-pointer gap-2 p-0">
-                  <span class="label-text text-xs font-bold"
+                <span>2. Items Categoría MDA</span>
+                <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                  <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70"
                     >¿Queda en MDA?</span
                   >
                   <input
@@ -856,26 +929,26 @@ const invgateAgParams = allParameters.filter(
               </div>
               <div
                 id="invgate-ag-mda-block"
-                class="max-h-80 space-y-2 overflow-y-auto pr-1"
+                class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin"
               >
                 {
                   invgateAgParams
                     .filter((p) => p.section === "mda")
                     .map((p) => (
-                      <div class="hover:bg-base-200/70 hover:border-base-300/50 rounded-lg border border-transparent p-1.5 transition-colors">
-                        <label class="label cursor-pointer justify-start gap-3 p-0">
+                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
+                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
                           <input
                             type="checkbox"
                             name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox"
+                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
                             data-weight={p.weight ?? 0}
                             data-section="mda"
                             checked
                           />
-                          <span class="label-text flex-1 text-xs font-medium">
+                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
                             {p.name}
                             {p.weight ? (
-                              <span class="text-error/80 ml-1 text-xs font-bold">
+                              <span class="text-error font-bold ml-1 text-xs">
                                 (-{p.weight}%)
                               </span>
                             ) : (
@@ -893,17 +966,27 @@ const invgateAgParams = allParameters.filter(
                           type="text"
                           name={`${p.code}_comment`}
                           placeholder="Observación o comentario opcional..."
-                          class="input input-sm bg-base-100/80 border-base-300 text-xs mt-1.5 w-full font-normal focus:bg-base-100"
+                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
                         />
                       </div>
                     ))
                 }
               </div>
+              <!-- Estado Vacío Elegante (Derivado fuera de MDA) -->
               <div
                 id="invgate-ag-mda-placeholder"
-                class="text-base-content/50 hidden py-12 text-center text-xs"
+                class="hidden flex-col items-center justify-center p-8 text-center rounded-xl bg-base-100/50 border border-dashed border-base-300/80 my-2"
               >
-                El caso no queda en MDA (solo puntúa Sección 1).
+                <div class="p-3 bg-base-200/80 text-base-content/40 rounded-2xl mb-2.5 shadow-2xs">
+                  <Icon name="boxicons:share" size={28} />
+                </div>
+                <h5 class="text-xs font-bold text-base-content/80 mb-1">Caso Derivado Fuera de MDA</h5>
+                <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+                  El caso no permanece en la mesa MDA. La evaluación computará únicamente los criterios de la Sección 1.
+                </p>
+                <span class="badge badge-xs badge-neutral mt-3 font-semibold text-xxs px-2 py-1">
+                  Sección 2 Inactiva (0% peso)
+                </span>
               </div>
             </div>
           </div>
@@ -927,31 +1010,34 @@ const invgateAgParams = allParameters.filter(
   </Fragment>
 
   <Fragment slot="actions">
-    <div class="modal-action mt-6 flex w-full justify-between">
+    <div class="modal-action mt-4 flex w-full items-center justify-between border-t border-base-300/60 pt-3">
       <div>
         <button
           type="button"
           id="btn-delete-audit"
-          class="btn btn-sm btn-error btn-outline hidden text-xs font-black uppercase"
+          class="btn btn-sm btn-error btn-outline hidden text-xs font-bold uppercase gap-1.5 transition-all hover:scale-98"
         >
-          Eliminar
+          <Icon name="boxicons:trash" size={15} />
+          <span>Eliminar</span>
         </button>
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2.5">
         <button
           type="button"
           id="btn-close-modal"
-          class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
+          class="btn btn-sm btn-ghost text-xs font-bold uppercase gap-1.5 hover:bg-base-200/80 transition-all hover:scale-98"
         >
-          Cancelar
+          <Icon name="boxicons:x" size={16} />
+          <span>Cancelar</span>
         </button>
         <button
           type="submit"
           form="audit-form"
           id="btn-submit-audit"
-          class="btn btn-sm btn-secondary text-xs font-black uppercase"
+          class="btn btn-sm btn-primary text-xs font-bold uppercase gap-1.5 shadow-xs transition-all hover:scale-98 active:scale-95"
         >
-          Guardar Auditoría
+          <Icon name="boxicons:check" size={16} />
+          <span>Guardar Auditoría</span>
         </button>
       </div>
     </div>
@@ -984,7 +1070,10 @@ const invgateAgParams = allParameters.filter(
     ) as HTMLInputElement | null;
     const channelButtons = document.querySelectorAll(".channel-btn");
 
-    // Search Toolbars & Inputs
+    // Search Toolbars, Tabs & Inputs
+    const tabSearchWise = document.getElementById("tab-search-wise");
+    const tabSearchInvgate = document.getElementById("tab-search-invgate");
+
     const wiseSearchContainer = document.getElementById(
       "wise-search-container",
     );
@@ -1011,6 +1100,29 @@ const invgateAgParams = allParameters.filter(
     const invgateFeedbackAlert = document.getElementById(
       "invgate-feedback-alert",
     );
+
+    function setActiveSearchTab(target: "wise" | "invgate") {
+      if (target === "wise") {
+        tabSearchWise?.classList.add("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.remove("font-semibold", "text-base-content/70");
+        tabSearchInvgate?.classList.remove("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.add("font-semibold", "text-base-content/70");
+
+        wiseSearchContainer?.classList.remove("hidden");
+        invgateSearchContainer?.classList.add("hidden");
+      } else {
+        tabSearchInvgate?.classList.add("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.remove("font-semibold", "text-base-content/70");
+        tabSearchWise?.classList.remove("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.add("font-semibold", "text-base-content/70");
+
+        invgateSearchContainer?.classList.remove("hidden");
+        wiseSearchContainer?.classList.add("hidden");
+      }
+    }
+
+    tabSearchWise?.addEventListener("click", () => setActiveSearchTab("wise"));
+    tabSearchInvgate?.addEventListener("click", () => setActiveSearchTab("invgate"));
 
     // Live Ticket Viewer Elements
     const ticketViewerHeader = document.getElementById("ticket-viewer-header");
@@ -1148,20 +1260,6 @@ const invgateAgParams = allParameters.filter(
         ticketViewerBadge.className = "badge badge-xs badge-primary font-bold";
       }
 
-      // Audio recording if present
-      const recUrl = data.recordingUrl || data.rawDetails?.recordingUrl;
-      if (recUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
-        tvAudioPlayer.src = recUrl;
-        tvAudioDownload.href = recUrl;
-        tvAudioContainer.classList.remove("hidden");
-      } else if (tvAudioContainer) {
-        tvAudioContainer.classList.add("hidden");
-        if (tvAudioPlayer) {
-          tvAudioPlayer.pause();
-          tvAudioPlayer.src = "";
-        }
-      }
-
       // Expandir visor para visualización inmediata
       if (ticketViewerContent) {
         ticketViewerContent.classList.remove("hidden");
@@ -1174,7 +1272,7 @@ const invgateAgParams = allParameters.filter(
       evaluateTicketTitle(title);
     }
 
-    // Resetear visor de ticket
+    // Resetear visor de ticket (exclusivo InvGate)
     function resetTicketViewer() {
       if (tvTitle) tvTitle.textContent = "-";
       if (tvCategory) tvCategory.textContent = "-";
@@ -1183,6 +1281,18 @@ const invgateAgParams = allParameters.filter(
       if (tvCreator) tvCreator.textContent = "-";
       if (tvDescription) tvDescription.textContent = "-";
       if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
+      if (ticketViewerBadge) {
+        ticketViewerBadge.textContent = "Sin ticket cargado";
+        ticketViewerBadge.className = "badge badge-xs badge-ghost font-bold";
+      }
+      if (ticketViewerContent) ticketViewerContent.classList.add("hidden");
+      if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Mostrar";
+      if (ticketViewerChevron) ticketViewerChevron.classList.remove("rotate-180");
+      clearAllRuleBadges();
+    }
+
+    // Resetear reproductor de audio independiente (Wise CX)
+    function resetAudioPlayer() {
       if (tvAudioContainer) tvAudioContainer.classList.add("hidden");
       if (tvAudioPlayer) {
         tvAudioPlayer.pause();
@@ -1190,11 +1300,6 @@ const invgateAgParams = allParameters.filter(
       }
       if (tvAudioDownload) tvAudioDownload.href = "#";
       if (formRecordingUrl) formRecordingUrl.value = "";
-      if (ticketViewerBadge) {
-        ticketViewerBadge.textContent = "Sin datos cargados";
-        ticketViewerBadge.className = "badge badge-xs badge-ghost font-bold";
-      }
-      clearAllRuleBadges();
     }
 
     // Cambio de Pestañas / Canales
@@ -1203,10 +1308,12 @@ const invgateAgParams = allParameters.filter(
         const channel = btn.getAttribute("data-channel");
         if (!channel) return;
 
-        channelButtons.forEach((b) =>
-          b.classList.remove("btn-active", "btn-primary"),
-        );
-        btn.classList.add("btn-active", "btn-primary");
+        channelButtons.forEach((b) => {
+          b.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
+          b.classList.add("font-semibold", "text-base-content/70");
+        });
+        btn.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
+        btn.classList.remove("font-semibold", "text-base-content/70");
         if (formChannelType) formChannelType.value = channel;
 
         // Toggle checklists
@@ -1243,14 +1350,15 @@ const invgateAgParams = allParameters.filter(
           formDuration.value = "00:00";
         }
 
-        // Toggle Search Bars
+        // Toggle Search Tabs / Bars
         if (channel === "invgate_ticket") {
-          if (wiseSearchContainer) wiseSearchContainer.classList.add("hidden");
+          if (tabSearchWise) tabSearchWise.classList.add("hidden");
+          setActiveSearchTab("invgate");
           if (btnFetchInvgateLabel)
             btnFetchInvgateLabel.textContent = "Buscar Autogestión";
         } else {
-          if (wiseSearchContainer)
-            wiseSearchContainer.classList.remove("hidden");
+          if (tabSearchWise) tabSearchWise.classList.remove("hidden");
+          setActiveSearchTab("wise");
           if (btnFetchInvgateLabel)
             btnFetchInvgateLabel.textContent = "Buscar Ticket InvGate";
         }
@@ -1276,6 +1384,39 @@ const invgateAgParams = allParameters.filter(
       });
     });
 
+    // Feedback sutil con auto-dismiss
+    let wiseFeedbackTimeout: any = null;
+    let invgateFeedbackTimeout: any = null;
+
+    function showFeedbackMessage(
+      el: HTMLElement | null,
+      content: string,
+      type: "success" | "error" | "warning",
+      isWise: boolean,
+    ) {
+      if (!el) return;
+      if (isWise && wiseFeedbackTimeout) clearTimeout(wiseFeedbackTimeout);
+      if (!isWise && invgateFeedbackTimeout) clearTimeout(invgateFeedbackTimeout);
+
+      el.innerHTML = content;
+      const typeClasses =
+        type === "success"
+          ? "border-success/30 bg-success/10 text-success"
+          : type === "warning"
+            ? "border-warning/30 bg-warning/10 text-warning"
+            : "border-error/30 bg-error/10 text-error";
+
+      el.className = `mt-2 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold shadow-2xs transition-all duration-200 ${typeClasses}`;
+      el.classList.remove("hidden");
+
+      const timeout = setTimeout(() => {
+        el.classList.add("hidden");
+      }, 4500);
+
+      if (isWise) wiseFeedbackTimeout = timeout;
+      else invgateFeedbackTimeout = timeout;
+    }
+
     // 1. Buscador Wise CX
     if (btnFetchWise && wiseSearchInput) {
       wiseSearchInput.addEventListener("keydown", (e) => {
@@ -1288,13 +1429,12 @@ const invgateAgParams = allParameters.filter(
       btnFetchWise.addEventListener("click", async () => {
         const id = wiseSearchInput.value.trim();
         if (!id) {
-          if (wiseFeedbackAlert) {
-            wiseFeedbackAlert.textContent =
-              "Ingrese un número o ID de caso Wise.";
-            wiseFeedbackAlert.className =
-              "mt-2 rounded-xl border border-warning/40 bg-warning/10 text-warning-content p-2 text-xs font-medium";
-            wiseFeedbackAlert.classList.remove("hidden");
-          }
+          showFeedbackMessage(
+            wiseFeedbackAlert,
+            "Ingrese un número o ID de caso Wise.",
+            "warning",
+            true,
+          );
           return;
         }
 
@@ -1312,13 +1452,12 @@ const invgateAgParams = allParameters.filter(
           const json = await res.json();
 
           if (!res.ok || !json.data) {
-            if (wiseFeedbackAlert) {
-              wiseFeedbackAlert.textContent =
-                json.error || "No se encontró el caso en Wise CX.";
-              wiseFeedbackAlert.className =
-                "mt-2 rounded-xl border border-error/40 bg-error/10 text-error-content p-2 text-xs font-medium";
-              wiseFeedbackAlert.classList.remove("hidden");
-            }
+            showFeedbackMessage(
+              wiseFeedbackAlert,
+              json.error || "No se encontró el caso en Wise CX.",
+              "error",
+              true,
+            );
             return;
           }
 
@@ -1359,22 +1498,36 @@ const invgateAgParams = allParameters.filter(
             formTicketId.value = d.rawDetails.incidentId.toString();
           }
 
-          populateTicketViewer(d);
+          // Al buscar caso en Wise CX NO se carga en Detalle del Ticket (exclusivo InvGate).
+          // El reproductor de audio independiente se muestra si hay grabación:
+          if (d.recordingUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
+            const caseId = d.caseNumber || "llamada";
+            const downloadUrl = `${cleanBase}api/calidad/download-audio?url=${encodeURIComponent(d.recordingUrl)}&filename=grabacion-caso-${encodeURIComponent(caseId)}.mp3&download=1`;
+            tvAudioPlayer.src = d.recordingUrl;
+            tvAudioPlayer.load();
+            tvAudioDownload.href = downloadUrl;
+            tvAudioContainer.classList.remove("hidden");
+          } else if (tvAudioContainer) {
+            tvAudioContainer.classList.add("hidden");
+            if (tvAudioPlayer) {
+              tvAudioPlayer.pause();
+              tvAudioPlayer.src = "";
+            }
+          }
 
-          if (wiseFeedbackAlert) {
-            wiseFeedbackAlert.innerHTML = `✓ <strong>Caso Wise obtenido:</strong> ${d.operator ? `Operador: <em>${d.operator}</em>` : ""} ${d.duration ? `| Duración: ${d.duration}` : ""} ${d.recordingUrl ? `| <span class="badge badge-xs badge-info font-bold">Audio Disponible</span>` : ""}`;
-            wiseFeedbackAlert.className =
-              "mt-2 rounded-xl border border-success/40 bg-success/10 text-success-content p-2 text-xs font-medium";
-            wiseFeedbackAlert.classList.remove("hidden");
-          }
+          showFeedbackMessage(
+            wiseFeedbackAlert,
+            `✓ <strong>Caso Wise obtenido:</strong> ${d.operator ? `Operador: <em>${d.operator}</em>` : ""} ${d.duration ? `| Duración: ${d.duration}` : ""} ${d.recordingUrl ? `| <span class="badge badge-xs badge-info font-bold">Audio Disponible</span>` : ""}`,
+            "success",
+            true,
+          );
         } catch (err) {
-          if (wiseFeedbackAlert) {
-            wiseFeedbackAlert.textContent =
-              "Error de red al consultar Wise CX.";
-            wiseFeedbackAlert.className =
-              "mt-2 rounded-xl border border-error/40 bg-error/10 text-error-content p-2 text-xs font-medium";
-            wiseFeedbackAlert.classList.remove("hidden");
-          }
+          showFeedbackMessage(
+            wiseFeedbackAlert,
+            "Error de red al consultar Wise CX.",
+            "error",
+            true,
+          );
         } finally {
           btnFetchWise.disabled = false;
           btnFetchWise.innerHTML = originalHtml;
@@ -1394,13 +1547,12 @@ const invgateAgParams = allParameters.filter(
       btnFetchInvgate.addEventListener("click", async () => {
         const id = invgateSearchInput.value.trim();
         if (!id) {
-          if (invgateFeedbackAlert) {
-            invgateFeedbackAlert.textContent =
-              "Ingrese un número o ID de incidente InvGate.";
-            invgateFeedbackAlert.className =
-              "mt-2 rounded-xl border border-warning/40 bg-warning/10 text-warning-content p-2 text-xs font-medium";
-            invgateFeedbackAlert.classList.remove("hidden");
-          }
+          showFeedbackMessage(
+            invgateFeedbackAlert,
+            "Ingrese un número o ID de incidente InvGate.",
+            "warning",
+            false,
+          );
           return;
         }
 
@@ -1418,13 +1570,12 @@ const invgateAgParams = allParameters.filter(
           const json = await res.json();
 
           if (!res.ok || !json.data) {
-            if (invgateFeedbackAlert) {
-              invgateFeedbackAlert.textContent =
-                json.error || "No se encontró el ticket en InvGate.";
-              invgateFeedbackAlert.className =
-                "mt-2 rounded-xl border border-error/40 bg-error/10 text-error-content p-2 text-xs font-medium";
-              invgateFeedbackAlert.classList.remove("hidden");
-            }
+            showFeedbackMessage(
+              invgateFeedbackAlert,
+              json.error || "No se encontró el ticket en InvGate.",
+              "error",
+              false,
+            );
             return;
           }
 
@@ -1463,20 +1614,19 @@ const invgateAgParams = allParameters.filter(
           // Cargar datos en el Visor de Ticket y auto-evaluar título
           populateTicketViewer(d);
 
-          if (invgateFeedbackAlert) {
-            invgateFeedbackAlert.innerHTML = `✓ <strong>Ticket InvGate cargado:</strong> ${d.title ? `Título: <em>${d.title}</em>` : ""} ${d.isPas ? "| [PAS]" : ""}`;
-            invgateFeedbackAlert.className =
-              "mt-2 rounded-xl border border-success/40 bg-success/10 text-success-content p-2 text-xs font-medium";
-            invgateFeedbackAlert.classList.remove("hidden");
-          }
+          showFeedbackMessage(
+            invgateFeedbackAlert,
+            `✓ <strong>Ticket InvGate cargado:</strong> ${d.title ? `Título: <em>${d.title}</em>` : ""} ${d.isPas ? "| [PAS]" : ""}`,
+            "success",
+            false,
+          );
         } catch (err) {
-          if (invgateFeedbackAlert) {
-            invgateFeedbackAlert.textContent =
-              "Error de red al consultar InvGate.";
-            invgateFeedbackAlert.className =
-              "mt-2 rounded-xl border border-error/40 bg-error/10 text-error-content p-2 text-xs font-medium";
-            invgateFeedbackAlert.classList.remove("hidden");
-          }
+          showFeedbackMessage(
+            invgateFeedbackAlert,
+            "Error de red al consultar InvGate.",
+            "error",
+            false,
+          );
         } finally {
           btnFetchInvgate.disabled = false;
           btnFetchInvgate.innerHTML = originalHtml;
@@ -1592,7 +1742,7 @@ const invgateAgParams = allParameters.filter(
       if (pS2Block) pS2Block.style.opacity = hasSection2 ? "1" : "0.3";
       if (pTotal) {
         pTotal.textContent = `${total}%`;
-        pTotal.className = `text-2xl font-black ${total >= 90 ? "text-success" : total >= 80 ? "text-warning" : "text-error"}`;
+        pTotal.className = `text-3xl sm:text-4xl font-black font-mono tracking-tight leading-none mt-0.5 ${total >= 90 ? "text-success" : total >= 80 ? "text-warning" : "text-error"}`;
       }
     }
 
@@ -1607,7 +1757,11 @@ const invgateAgParams = allParameters.filter(
     });
 
     (window as any).recalculateAuditScores = recalculateScores;
-    (window as any).resetTicketViewer = resetTicketViewer;
+    (window as any).resetTicketViewer = () => {
+      resetTicketViewer();
+      resetAudioPlayer();
+    };
+    (window as any).setActiveSearchTab = setActiveSearchTab;
     return true;
   }
 
@@ -1626,3 +1780,25 @@ const invgateAgParams = allParameters.filter(
   setupAuditModalObserver();
   document.addEventListener("astro:page-load", setupAuditModalObserver);
 </script>
+
+<style is:global>
+  #audit-modal .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(from var(--color-base-content) l c h / 0.15) transparent;
+  }
+  #audit-modal .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  #audit-modal .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #audit-modal .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: oklch(from var(--color-base-content) l c h / 0.15);
+    border-radius: 9999px;
+  }
+  #audit-modal .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: oklch(from var(--color-base-content) l c h / 0.3);
+  }
+</style>
+

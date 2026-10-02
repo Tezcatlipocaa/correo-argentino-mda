@@ -29,6 +29,12 @@ describe("Quality Metadata Extractors", () => {
       {
         id: 4321648175,
         type: "contact_message",
+        recordings: [
+          {
+            recording_id: "RE_test_12345",
+            url: "https://s3-sa-east-1.amazonaws.com/wc-audio-files/test/RE_test_12345.mp3",
+          },
+        ],
         call_data: {
           started_at: "2026-09-06 03:09:59",
           ended_at: "2026-09-06 03:12:14",
@@ -50,7 +56,9 @@ describe("Quality Metadata Extractors", () => {
     expect(metadata.duration).toBe("02:15");
     expect(metadata.operator).toBe("Franco Nahuel Gonzalez");
     expect(metadata.date).toBe("2026-09-06");
-    expect(metadata.ringTime).toBe("00:44"); // 03:09:59 to 03:10:43 is 44s
+    expect(metadata.ringTime).toBe("00:09"); // 00:10:42.510 (available/assigned) to 00:10:51.893 (attended) is ~9s
+    expect(metadata.recordingUrl).toBe("https://s3-sa-east-1.amazonaws.com/wc-audio-files/test/RE_test_12345.mp3");
+    expect(metadata.recordingId).toBe("RE_test_12345");
   });
 
   it("extracts Wise Email metadata from case and activity payloads", () => {
