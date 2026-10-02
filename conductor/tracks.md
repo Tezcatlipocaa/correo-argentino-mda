@@ -19,6 +19,9 @@
 - [x] **Track: Reproductor y Descarga de Grabaciones de Llamadas Wise CX en Auditorías de Calidad**
   *Link: [./tracks/calidad_audio_recordings_20261002/index.md](./tracks/calidad_audio_recordings_20261002/index.md)*
 ---
-- [~] **Track: Correcciones de Tickets InvGate (Caracteres y Metadatos) y Comentarios de Calidad**
+- [x] **Track: Correcciones de Tickets InvGate (Caracteres y Metadatos) y Comentarios de Calidad**
   *Link: [./tracks/calidad_ticket_metadata_comments_20261002/index.md](./tracks/calidad_ticket_metadata_comments_20261002/index.md)*
+---
+- [ ] **Track: Reformulación y Modernización UI/UX del Modal de Auditoría de Calidad**
+  *Link: [./tracks/calidad_modal_ui_20261002/index.md](./tracks/calidad_modal_ui_20261002/index.md)*
 
