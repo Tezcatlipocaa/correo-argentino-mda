@@ -20,15 +20,15 @@
   - [x] Ejecutar tests y confirmar que pasen (Green Phase) [1ecb018]
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [1ecb018]
 
-## Phase 3: Mejoras Visuales, Visibilidad y Persistencia de Comentarios por Parámetro
-- [ ] Task: TDD - Pruebas de integración para persistencia y lectura de comentarios por parámetro
-  - [ ] Validar que los comentarios se persistan y recuperen correctamente junto a cada score
-- [ ] Task: Actualizar UI de inputs de comentario en `AuditModal.astro`
-  - [ ] Reemplazar `input-xs text-xxs` por `input-sm text-xs` con padding cómodo y bordes suaves
-- [ ] Task: Exponer y renderizar comentarios en tarjetas de detalle (`CalidadContent.astro`)
-  - [ ] Incluir comentarios en el mapping de scores de `CalidadContent.astro`
-  - [ ] Mostrar bloque de comentario estilizado debajo de cada parámetro en la tarjeta de auditoría
-- [ ] Task: Sincronizar comentarios en modo edición y reseteo en nueva auditoría
-  - [ ] Precargar los valores de `_comment` al abrir una auditoría existente en el modal
-  - [ ] Limpiar los campos de comentario al crear una nueva auditoría
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 3: Mejoras Visuales, Visibilidad y Persistencia de Comentarios por Parámetro [checkpoint: 53ed820]
+- [x] Task: TDD - Pruebas de integración para persistencia y lectura de comentarios por parámetro [53ed820]
+  - [x] Validar que los comentarios se persistan y recuperen correctamente junto a cada score [53ed820]
+- [x] Task: Actualizar UI de inputs de comentario en `AuditModal.astro` [53ed820]
+  - [x] Reemplazar `input-xs text-xxs` por `input-sm text-xs` con padding cómodo y bordes suaves [53ed820]
+- [x] Task: Exponer y renderizar comentarios en tarjetas de detalle (`CalidadContent.astro`) [53ed820]
+  - [x] Incluir comentarios en el mapping de scores de `CalidadContent.astro` [53ed820]
+  - [x] Mostrar bloque de comentario estilizado debajo de cada parámetro en la tarjeta de auditoría [53ed820]
+- [x] Task: Sincronizar comentarios en modo edición y reseteo en nueva auditoría [53ed820]
+  - [x] Precargar los valores de `_comment` al abrir una auditoría existente en el modal [53ed820]
+  - [x] Limpiar los campos de comentario al crear una nueva auditoría [53ed820]
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [53ed820]
