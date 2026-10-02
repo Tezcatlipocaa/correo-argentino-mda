@@ -20,8 +20,8 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Verificación Final y Calidad (Green Phase)
-- [~] Task: Ejecutar suite de pruebas Playwright y verificar que pasen en verde
-  - [ ] Correr `npx playwright test tests/cronograma/export-image.spec.ts`.
-  - [ ] Confirmar que las imágenes copiadas y descargadas no son transparentes/en blanco y poseen firmas PNG íntegras.
-  - [ ] Confirmar que los elementos `.no-export` no figuran en las capturas y que el DOM visible no sufre mutaciones.
+- [x] Task: Ejecutar suite de pruebas Playwright y verificar que pasen en verde (fb30cd6)
+  - [x] Correr `npx playwright test tests/cronograma/export-image.spec.ts`.
+  - [x] Confirmar que las imágenes copiadas y descargadas no son transparentes/en blanco y poseen firmas PNG íntegras.
+  - [x] Confirmar que los elementos `.no-export` no figuran en las capturas y que el DOM visible no sufre mutaciones.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
