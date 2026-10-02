@@ -18,6 +18,8 @@ export interface ExtractedQualityMetadata {
   category?: string;
   status?: string;
   creator?: string;
+  recordingUrl?: string;
+  recordingId?: string;
   rawDetails?: Record<string, any>;
 }
 
@@ -36,34 +38,93 @@ export function parseWiseCallMetadata(caseData: any, activities: any[] = []): Ex
   let ringTimeSeconds = 0;
   let operatorName = "";
 
-  // Buscar actividad de llamada con call_data
+  let recordingUrl = "";
+  let recordingId = "";
+
+  // Buscar actividad de llamada con call_data o grabaciones
   const callActivity = activities.find(
-    (a) => a.call_data || a.channel === "incoming_call" || a.type === "contact_message",
+    (a) => a.call_data || a.channel === "incoming_call" || a.type === "contact_message" || (Array.isArray(a.recordings) && a.recordings.length > 0),
   );
+
+  if (callActivity) {
+    if (Array.isArray(callActivity.recordings) && callActivity.recordings.length > 0) {
+      const rec = callActivity.recordings[0];
+      recordingUrl = rec.url || "";
+      recordingId = rec.recording_id || "";
+    }
+  }
+
+  // Si no estaba en callActivity principal, buscar en cualquier actividad que contenga recordings
+  if (!recordingUrl) {
+    const actWithRec = activities.find((a) => Array.isArray(a.recordings) && a.recordings.length > 0);
+    if (actWithRec) {
+      recordingUrl = actWithRec.recordings[0]?.url || "";
+      recordingId = actWithRec.recordings[0]?.recording_id || "";
+    }
+  }
 
   if (callActivity?.call_data) {
     const cd = callActivity.call_data;
     durationSeconds = typeof cd.duration === "number" ? cd.duration : 0;
 
-    // Calcular ring time si existen started_at y assigned_at
-    if (cd.started_at && cd.assigned_at) {
-      const start = new Date(cd.started_at.replace(" ", "T")).getTime();
-      const assigned = new Date(cd.assigned_at.replace(" ", "T")).getTime();
-      if (!isNaN(start) && !isNaN(assigned) && assigned >= start) {
-        ringTimeSeconds = Math.round((assigned - start) / 1000);
-      }
-    }
+    // Buscar operador y evento de atencion en logs
+    let attendedTimeStr = "";
+    let assignedLogTimeStr = "";
 
-    // Buscar operador en los logs si está presente
     if (Array.isArray(cd.logs)) {
       for (const log of cd.logs) {
         const msg = log.message || "";
         if (msg.includes("[call_attended]")) {
           operatorName = msg.replace("[call_attended]", "").trim();
-          break;
+          attendedTimeStr = log.time || "";
+        } else if (msg.includes("[assigned_limit]") || msg.includes("[call_transferred_area]")) {
+          if (!assignedLogTimeStr) {
+            assignedLogTimeStr = log.time || "";
+          }
         } else if (msg.includes("[call_available_agents]") && !operatorName) {
           operatorName = msg.replace("[call_available_agents]", "").split(",")[0].trim();
         }
+      }
+    }
+
+    // Calcular ring time: desde que se asigna/empieza a sonar hasta que atiende
+    if (attendedTimeStr) {
+      const parseLogSeconds = (t: string) => {
+        const parts = t.split(":");
+        if (parts.length === 3) {
+          return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+        }
+        return NaN;
+      };
+
+      const attendedSec = parseLogSeconds(attendedTimeStr);
+      let assignSec = assignedLogTimeStr ? parseLogSeconds(assignedLogTimeStr) : NaN;
+
+      if (!isNaN(attendedSec) && !isNaN(assignSec) && attendedSec >= assignSec) {
+        ringTimeSeconds = Math.round(attendedSec - assignSec);
+      } else if (cd.assigned_at) {
+        const assignDate = new Date(cd.assigned_at.replace(" ", "T")).getTime();
+        // Fallback usando cd.assigned_at contra logs o diferencia
+        if (!isNaN(assignDate) && !isNaN(attendedSec) && Array.isArray(cd.logs) && cd.logs[0]?.time) {
+          const startLogSec = parseLogSeconds(cd.logs[0].time);
+          if (!isNaN(startLogSec)) {
+            const startTimestamp = cd.started_at ? new Date(cd.started_at.replace(" ", "T")).getTime() : NaN;
+            if (!isNaN(startTimestamp)) {
+              const elapsedSinceStart = (attendedSec - startLogSec) * 1000;
+              const attendedTimestamp = startTimestamp + elapsedSinceStart;
+              if (attendedTimestamp >= assignDate) {
+                ringTimeSeconds = Math.round((attendedTimestamp - assignDate) / 1000);
+              }
+            }
+          }
+        }
+      }
+    } else if (cd.started_at && cd.assigned_at) {
+      // Fallback si no hay logs de [call_attended]
+      const start = new Date(cd.started_at.replace(" ", "T")).getTime();
+      const assigned = new Date(cd.assigned_at.replace(" ", "T")).getTime();
+      if (!isNaN(start) && !isNaN(assigned) && assigned >= start) {
+        ringTimeSeconds = Math.round((assigned - start) / 1000);
       }
     }
   }
@@ -74,6 +135,8 @@ export function parseWiseCallMetadata(caseData: any, activities: any[] = []): Ex
     date: dateStr,
     duration: formatSecondsToMinutes(durationSeconds),
     ringTime: formatSecondsToMinutes(ringTimeSeconds),
+    recordingUrl: recordingUrl || undefined,
+    recordingId: recordingId || undefined,
     rawDetails: {
       caseId: caseData?.id,
       channel: caseData?.source_channel,
@@ -102,7 +165,28 @@ export function parseWiseEmailMetadata(caseData: any, operatorName = ""): Extrac
   };
 }
 
-export function parseInvgateAgMetadata(incident: any): ExtractedQualityMetadata {
+export const INVGATE_STATUS_NAMES: Record<number, string> = {
+  1: "Nuevo",
+  2: "Abierto",
+  3: "Pendiente",
+  4: "En espera",
+  5: "Solucionado",
+  6: "Cerrado",
+  7: "Rechazado",
+  8: "Cancelado",
+};
+
+export const INVGATE_PRIORITY_NAMES: Record<number, string> = {
+  1: "Baja",
+  2: "Media",
+  3: "Alta",
+  4: "Urgente",
+};
+
+export function parseInvgateAgMetadata(
+  incident: any,
+  extra?: { customerName?: string; categoryName?: string; operatorName?: string },
+): ExtractedQualityMetadata {
   const caseNumber = (incident?.id ?? "").toString();
   const rawCreated = incident?.created_at;
   const dateStr =
@@ -127,13 +211,40 @@ export function parseInvgateAgMetadata(incident: any): ExtractedQualityMetadata 
         ? rawCreated
         : "";
 
-  const priorityName = incident?.priority?.name ?? (typeof incident?.priority === "string" ? incident.priority : "Media");
-  const operatorName = incident?.assigned_to?.name ?? incident?.collaborator ?? "";
+  const priorityName =
+    incident?.priority?.name ??
+    (typeof incident?.priority === "string" ? incident.priority : null) ??
+    (typeof incident?.priority_id === "number" ? INVGATE_PRIORITY_NAMES[incident.priority_id] : null) ??
+    "Media";
+
+  const operatorName =
+    extra?.operatorName ??
+    incident?.assigned_to?.name ??
+    incident?.collaborator ??
+    "";
+
   const title = incident?.title || "";
   const description = cleanHtmlText(incident?.description || "");
-  const categoryName = incident?.category?.name || (typeof incident?.category === "string" ? incident.category : "");
-  const statusName = incident?.status?.name || (typeof incident?.status === "string" ? incident.status : "");
-  const creatorName = incident?.customer?.name || incident?.creator?.name || incident?.user?.name || (typeof incident?.customer === "string" ? incident.customer : "");
+
+  const categoryName =
+    extra?.categoryName ??
+    incident?.category?.name ??
+    (typeof incident?.category === "string" ? incident.category : "") ??
+    "";
+
+  const statusName =
+    incident?.status?.name ??
+    (typeof incident?.status === "string" ? incident.status : null) ??
+    (typeof incident?.status_id === "number" ? INVGATE_STATUS_NAMES[incident.status_id] : null) ??
+    "";
+
+  const creatorName =
+    extra?.customerName ??
+    incident?.customer?.name ??
+    incident?.creator?.name ??
+    incident?.user?.name ??
+    (typeof incident?.customer === "string" ? incident.customer : "") ??
+    "";
 
   // Condición PAS: ubicación, cliente o helpdesk contiene 'pas'
   const locName = (incident?.location?.name || "").toLowerCase();
@@ -178,7 +289,67 @@ export async function fetchInvgateTicketMetadata(
     if (!res.ok || !res.data) {
       return { ok: false, error: `No se encontró el incidente InvGate #${cleanId}` };
     }
-    const metadata = parseInvgateAgMetadata(res.data);
+    const incident = res.data;
+
+    let customerName = "";
+    let operatorName = "";
+    let categoryName = "";
+
+    // 1. Resolver cliente si existe user_id o creator_id
+    const targetUserId = incident.user_id ?? incident.creator_id;
+    if (targetUserId) {
+      try {
+        const uRes = await invgateGet<any>(`user?id=${targetUserId}`);
+        if (uRes.ok && uRes.data) {
+          const u = uRes.data;
+          customerName = `${u.name || ""} ${u.lastname || ""}`.trim() || u.username || "";
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
+    // 2. Resolver operador si existe assigned_id
+    if (incident.assigned_id) {
+      try {
+        const aRes = await invgateGet<any>(`user?id=${incident.assigned_id}`);
+        if (aRes.ok && aRes.data) {
+          const a = aRes.data;
+          operatorName = `${a.name || ""} ${a.lastname || ""}`.trim() || a.username || "";
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
+    // 3. Resolver categoría si existe category_id
+    if (incident.category_id) {
+      try {
+        const catRes = await invgateGet<any>("categories?page_size=500");
+        if (catRes.ok && Array.isArray(catRes.data)) {
+          const cat = catRes.data.find((c: any) => c.id === incident.category_id);
+          if (cat?.name) {
+            categoryName = cat.name;
+          }
+        } else if (catRes.ok && Array.isArray(catRes.data?.data)) {
+          const cat = catRes.data.data.find((c: any) => c.id === incident.category_id);
+          if (cat?.name) {
+            categoryName = cat.name;
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
+    if (!customerName && !incident.customer && !incident.creator && !incident.user) {
+      customerName = "Desconocido";
+    }
+    if (!categoryName && !incident.category) {
+      categoryName = "Sin categoría";
+    }
+
+    const metadata = parseInvgateAgMetadata(incident, { customerName, categoryName, operatorName });
     return { ok: true, data: metadata };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error al consultar ticket de InvGate";
@@ -255,7 +426,9 @@ export async function fetchQualityCaseMetadata(
       }
 
       // Obtener actividades (pueden venir como array directo o bajo data)
-      const actRes = await wiseCxGet<any>(`/core/v1/cases/${caseData.id}/activities`);
+      const actRes = await wiseCxGet<any>(
+        `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,content,contact_from,contacts_to,attachments,recordings,created_at,sending_status`,
+      );
       const activities = actRes.ok
         ? (Array.isArray(actRes.data)
             ? actRes.data
