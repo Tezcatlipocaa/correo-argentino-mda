@@ -56,5 +56,15 @@ module.exports = {
       error_file: "./logs/purge-error.log",
       out_file: "./logs/purge-out.log",
     },
+    {
+      name: "reconcile-automation-parents",
+      script: "node",
+      args: "--import tsx scripts/reconcile-automation-parents.ts",
+      cron_restart: "0 4 * * *",
+      autorestart: false,
+      watch: false,
+      error_file: "./logs/reconcile-automation-parents-error.log",
+      out_file: "./logs/reconcile-automation-parents-out.log",
+    },
   ],
 };

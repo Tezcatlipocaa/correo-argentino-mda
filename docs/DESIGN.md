@@ -494,6 +494,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | `/inventario-terminales` | Consulta y estado del parque de terminales              |
+| `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate) |
 
 ### Supervision
 

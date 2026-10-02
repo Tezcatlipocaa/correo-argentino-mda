@@ -13,6 +13,21 @@ import {
 import { eq, inArray } from "drizzle-orm";
 import { calculateAuditScores } from "@lib/qualityCalculator";
 import { logAdminFromAstro } from "@lib/auditLogger";
+import {
+  invalidateAutomationDetail,
+  resolveAutomationDetail,
+} from "@lib/workflow/resolver";
+import { invalidateDiscoveryCache } from "@lib/workflow/discovery";
+import { isActiveStatus } from "@lib/workflow/automation-status";
+import {
+  DEFAULT_CLOSE_REASON,
+  canManualClose,
+  getCloseThreshold,
+  getClosure,
+  recordClosure,
+  removeClosure,
+} from "@lib/workflow/closures";
+import { saveManualData } from "@lib/workflow/manual-data";
 
 export const server = {
   saveParameters: defineAction({
@@ -546,6 +561,152 @@ export const server = {
         console.error("Error assigning feedback:", error);
         throw new Error(error.message || "Error al modificar la asignación.");
       }
+    },
+  }),
+
+  closeAutomation: defineAction({
+    input: z.object({
+      automationId: z.number().int().positive(),
+      reason: z
+        .string()
+        .trim()
+        .max(500, "El motivo no puede superar los 500 caracteres")
+        .optional()
+        .nullable(),
+    }),
+    handler: async (input, context) => {
+      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      if (denied) {
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "No tiene permisos para cerrar automatizaciones.",
+        });
+      }
+
+      const result = await resolveAutomationDetail(input.automationId);
+      if (!result.ok) {
+        throw new ActionError({ code: "BAD_REQUEST", message: result.message });
+      }
+
+      if (getClosure(input.automationId)) {
+        return { success: true, alreadyClosed: true };
+      }
+
+      if (!canManualClose(result.detail.progress.percent)) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: `El caso debe alcanzar al menos ${getCloseThreshold()}% de progreso para cerrarse.`,
+        });
+      }
+
+      if (!isActiveStatus(result.detail.statusId)) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "El caso ya está finalizado en InvGate.",
+        });
+      }
+
+      const reason = input.reason?.trim() || DEFAULT_CLOSE_REASON;
+      const closure = recordClosure({
+        automationId: input.automationId,
+        kind: "manual",
+        reason,
+        percent: result.detail.progress.percent,
+        closedBy: context.locals.user?.username || "desconocido",
+      });
+      invalidateAutomationDetail(input.automationId);
+      invalidateDiscoveryCache();
+
+      await logAdminFromAstro(
+        context.locals,
+        `Cerró localmente la automatización ${result.detail.prettyId} (${result.detail.progress.percent}%): "${reason}"`,
+      );
+
+      return { success: true, closure };
+    },
+  }),
+
+  reopenAutomation: defineAction({
+    input: z.object({
+      automationId: z.number().int().positive(),
+    }),
+    handler: async (input, context) => {
+      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      if (denied) {
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "No tiene permisos para reabrir automatizaciones.",
+        });
+      }
+
+      const existing = getClosure(input.automationId);
+      if (!existing) {
+        return { success: true, alreadyOpen: true };
+      }
+
+      if (existing.kind === "auto") {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message:
+            "El cierre es automático (flujo al 100%); no se reabre manualmente.",
+        });
+      }
+
+      removeClosure(input.automationId);
+      invalidateAutomationDetail(input.automationId);
+      invalidateDiscoveryCache();
+
+      await logAdminFromAstro(
+        context.locals,
+        `Reabrió localmente la automatización #${input.automationId}`,
+      );
+
+      return { success: true };
+    },
+  }),
+
+  saveAutomationManualData: defineAction({
+    input: z.object({
+      automationId: z.number().int().positive(),
+      jefeName: z.string().trim().max(120).optional().nullable(),
+      jefeDni: z.string().trim().max(20).optional().nullable(),
+      jefeLegajo: z.string().trim().max(20).optional().nullable(),
+      jefeZonal: z.string().trim().max(120).optional().nullable(),
+      contactNumber: z.string().trim().max(60).optional().nullable(),
+      openingHours: z.string().trim().max(60).optional().nullable(),
+      notes: z.string().trim().max(500).optional().nullable(),
+    }),
+    handler: async (input, context) => {
+      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      if (denied) {
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "No tiene permisos para editar los datos de la automatización.",
+        });
+      }
+
+      const clean = (value: string | null | undefined): string | null =>
+        value && value.length > 0 ? value : null;
+
+      saveManualData({
+        automationId: input.automationId,
+        jefeName: clean(input.jefeName),
+        jefeDni: clean(input.jefeDni),
+        jefeLegajo: clean(input.jefeLegajo),
+        jefeZonal: clean(input.jefeZonal),
+        contactNumber: clean(input.contactNumber),
+        openingHours: clean(input.openingHours),
+        notes: clean(input.notes),
+        updatedBy: context.locals.user?.username || "desconocido",
+      });
+      invalidateAutomationDetail(input.automationId);
+
+      await logAdminFromAstro(
+        context.locals,
+        `Actualizó los datos manuales de la automatización #${input.automationId}`,
+      );
+
+      return { success: true };
     },
   }),
 };

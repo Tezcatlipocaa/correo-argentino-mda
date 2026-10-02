@@ -39,6 +39,9 @@ echo 7. Reiniciando el proceso en PM2...
 call pm2 start ecosystem.config.cjs
 if errorlevel 1 goto :error
 
+echo 8. Precalentando cache de automatizaciones (InvGate)...
+call node --import tsx scripts/warm-automations.ts
+
 echo [MDA Auto-Deploy] Actualizacion completada con exito!
 exit /b 0
 

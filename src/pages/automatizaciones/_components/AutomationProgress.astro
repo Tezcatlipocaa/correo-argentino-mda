@@ -1,0 +1,38 @@
+---
+import AutomationProgressBar from "./AutomationProgressBar.astro";
+import { formatWorkflowProgressLabel } from "@lib/workflow/node-status";
+import type { WorkflowProgress } from "@lib/workflow/node-status";
+
+interface Props {
+  /**
+   * `null` = modo skeleton: label vacío y barra en 0 con `data-progress-*`,
+   * llenados por JS al hidratar (cards del listado).
+   */
+  progress: WorkflowProgress | null;
+  headingLevel?: "h3" | "h4";
+  barClass?: string;
+}
+
+const { progress, headingLevel = "h4", barClass = "" } = Astro.props;
+const Heading = headingLevel;
+const skeleton = progress === null;
+---
+
+<div class="flex items-baseline justify-between">
+  <Heading
+    class="text-base-content/60 text-xs font-semibold tracking-wide uppercase"
+  >
+    Progreso
+  </Heading>
+  <span
+    class="text-base-content text-sm font-medium"
+    data-progress-label={skeleton ? "" : undefined}
+  >
+    {skeleton ? undefined : formatWorkflowProgressLabel(progress)}
+  </span>
+</div>
+<AutomationProgressBar
+  percent={progress?.percent ?? 0}
+  class={barClass}
+  data-progress-bar={skeleton ? "" : undefined}
+/>
