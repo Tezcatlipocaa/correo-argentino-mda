@@ -1,7 +1,11 @@
-import { getIncidents, getSolutionComments } from "@lib/invgate/automation/incidents";
+import {
+  getIncidents,
+  getSolutionComments,
+} from "@lib/invgate/automation/incidents";
 import { getIncidentLinks } from "@lib/invgate/automation/links";
 import { getIncidentTasks } from "@lib/invgate/automation/tasks";
 import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
+import { mapWithConcurrency } from "@lib/async";
 import { getBranchLocation } from "./branch-location";
 import type {
   InvgateAutomationIncident,
@@ -12,37 +16,45 @@ import { htmlToPlainText } from "@lib/format/html-to-text";
 import {
   cleanInvGateTitle,
   parseAutomationBranchTitle,
+  parseEstimatedEndFromTitle,
   parseStepLabel,
+  stripAutomationEmbeddedRefs,
   buildAutomationDisplayName,
 } from "./branch-title";
 import { branchNameFromDescription } from "./branch-display";
 import { resolveAutomationCategoryId } from "./category-resolver";
 import { parseInitialForm } from "./initial-form";
-import type { ParsedInitialForm } from "./initial-form";
+import type { ParsedInitialForm, JefeFormDetails } from "./initial-form";
 import {
   parseInstalacionesDescription,
   toParsedInitialForm,
 } from "./instalaciones-form";
+import { chooseInitialForm } from "./initial-source";
 import {
   computeWorkflowProgress,
   mapRequestStatusToLifecycle,
   mapTaskStatusToLifecycle,
 } from "./node-status";
-import type { WorkflowNodeLifecycle } from "./node-status";
-import {
-  buildStageGroups,
-  loadWorkflowTemplate,
-} from "./stages";
+import type { WorkflowNodeLifecycle, WorkflowProgress } from "./node-status";
+import { buildStageGroups, loadWorkflowTemplate } from "./stages";
 import type { StageGrouping, WorkflowKind } from "./stages";
-import { isFinalizedStatus } from "./automation-status";
+import { isFinalizedStatus, buildStatusNameLookup } from "./automation-status";
+import { parseScheduledDate, parseOpeningHours } from "./schedule";
+import { getManualData, type AutomationManualData } from "./manual-data";
 import { sortChronologically } from "./sort";
 import { getUsersByIds } from "@lib/invgate/automation/users";
+import { getIncidentStatuses } from "@lib/invgate/automation/statuses";
 import {
   getWorkflowRequest,
   parseWorkflowInitialFields,
 } from "@lib/invgate/automation/workflow-request";
 import type { WorkflowInitialFields } from "@lib/invgate/automation/workflow-request";
 import { resolveSectorNames } from "@lib/invgate/automation/helpdesk-names";
+import {
+  buildAutomationBoard,
+  parseWorkflowVariables,
+} from "./workflow-variables";
+import type { AutomationBoard } from "./workflow-variables";
 import {
   AUTO_CLOSE_REASON,
   getClosure,
@@ -52,6 +64,16 @@ import {
 } from "./closures";
 import type { AutomationClosure } from "./closures";
 import { invalidateDiscoveryCache } from "./discovery";
+import { upsertAutomationParentStatus } from "./parent-history";
+import {
+  readPersistedCache,
+  writePersistedCache,
+  deletePersistedCache,
+} from "@lib/invgate/cache";
+import {
+  detailPersistTtlMs,
+  progressTtlMs,
+} from "@lib/invgate/automation/cache-config";
 
 export interface WorkflowNodeActivity {
   createdAt: number;
@@ -83,6 +105,10 @@ export interface AutomationNode {
   description: string;
   lifecycle: WorkflowNodeLifecycle;
   rawStatusId: number;
+  /** Nombre del estado de InvGate (p. ej. "En espera"); null si no se resolvió. */
+  rawStatusName: string | null;
+  /** Fecha programada parseada de la descripción (p. ej. "6 oct 2026"). */
+  scheduledFor: string | null;
   /** Epoch de creación; null cuando el bulk no devolvió detalles del request. */
   createdAt: number | null;
   invgateUrl: string;
@@ -123,16 +149,25 @@ export interface AutomationDetail {
   stages: StageGrouping | null;
   /** `workflow` = flujo AUTSUC nuevo; `legacy` = casos manuales previos. */
   workflowKind: WorkflowKind;
+  /** Nombre de la sucursal del título (fallback de presentación). */
+  branchName: string | null;
   progress: { completed: number; applicableTotal: number; percent: number };
   /** Región/localidad: jerarquía del formulario o DB de oficinas por código. */
   location: { region: string | null; locality: string | null } | null;
+  /** Fecha estimada de implementación (formulario o título del padre). */
+  estimatedEnd: string | null;
+  /** Franja horaria de la sucursal (manual o parseada de la prosa). */
+  openingHours: string | null;
+  /** Override manual local de los datos del jefe/contacto; null si no hay. */
+  manualData: AutomationManualData | null;
+  /** Tablero Status Proyecto (semáforos + hijos + datos técnicos); null si N/A. */
+  board: AutomationBoard | null;
   /** Cierre local en el portal (manual o auto); null si sigue en curso. */
   closure: AutomationClosure | null;
 }
 
 export type AutomationDetailResult =
-  | { ok: true; detail: AutomationDetail }
-  | { ok: false; message: string };
+  { ok: true; detail: AutomationDetail } | { ok: false; message: string };
 
 /**
  * Cache de detalles por id (TTL corto): el detalle consulta links/tasks/bulk
@@ -151,6 +186,49 @@ export type AutomationDetailResult =
 const DETAIL_CACHE_TTL_MS = 2 * 60_000;
 const DETAIL_STALE_MAX_MS = 30 * 60_000;
 const DETAIL_CACHE_MAX_ENTRIES = 50;
+
+/**
+ * Clave del snapshot persistido del detalle (sobrevive restarts del proceso).
+ * v2: cambió la elección de la fuente del formulario y el registrador; los
+ * snapshots v1 quedan ignorados para no servir datos con la lógica vieja.
+ */
+const DETAIL_PERSIST_KEY_PREFIX = "automation.detail.v2.";
+
+/** Key del cache persistido del detalle (exportada para tests/invalidación). */
+export function getDetailCacheKey(automationId: number): string {
+  return `${DETAIL_PERSIST_KEY_PREFIX}${automationId}`;
+}
+
+/** Key del cache persistido del progreso liviano. */
+function getProgressCacheKey(automationId: number): string {
+  return `automation.progress.${automationId}`;
+}
+
+/**
+ * Quita los `Date` del template de etapas antes de persistir (el JSON los
+ * volvería strings; la UI no los usa y achica el payload).
+ */
+function detailForPersist(detail: AutomationDetail): AutomationDetail {
+  if (!detail.stages) {
+    return detail;
+  }
+  return {
+    ...detail,
+    stages: {
+      ...detail.stages,
+      groups: detail.stages.groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => {
+          const { createdAt: _c, updatedAt: _u, ...template } = item.template;
+          return { ...item, template: template as typeof item.template };
+        }),
+      })),
+    },
+  };
+}
+
+/** Límite de llamadas concurrentes a /incident.tasks (una por hijo). */
+const CHILD_TASKS_CONCURRENCY = 8;
 
 interface CachedDetailEntry {
   result: AutomationDetailResult;
@@ -178,6 +256,19 @@ function runDetailPipeline(
           expiresAt: Date.now() + DETAIL_CACHE_TTL_MS,
           cachedAt: Date.now(),
         });
+        // Snapshot persistido: una sola pipeline por id cada TTL, compartida
+        // entre usuarios y restarts del proceso.
+        writePersistedCache(
+          getDetailCacheKey(automationId),
+          detailForPersist(result.detail),
+          detailPersistTtlMs(),
+        );
+        // El detalle deja el progreso disponible para el listado.
+        writePersistedCache(
+          getProgressCacheKey(automationId),
+          result.detail.progress,
+          detailPersistTtlMs(),
+        );
 
         if (detailCache.size > DETAIL_CACHE_MAX_ENTRIES) {
           const oldest = detailCache.keys().next().value;
@@ -216,6 +307,24 @@ export async function resolveAutomationDetail(
     return cached.result;
   }
 
+  // Sin memoria fresca: servir el snapshot persistido (sobrevivió a restart o
+  // pertenece a otra instancia) y regenerar SIEMPRE en background. El snapshot
+  // persistido puede tener hasta su TTL de antigüedad (default 15 min), así que
+  // sin este refresh la vista quedaba pegada a un estado viejo hasta que
+  // venciera el persistido.
+  const persisted = readPersistedCache<AutomationDetail>(
+    getDetailCacheKey(automationId),
+  );
+  if (persisted && persisted.id === automationId) {
+    detailCache.set(automationId, {
+      result: { ok: true, detail: persisted },
+      expiresAt: now + DETAIL_CACHE_TTL_MS,
+      cachedAt: now,
+    });
+    void runDetailPipeline(automationId);
+    return { ok: true, detail: persisted };
+  }
+
   return runDetailPipeline(automationId);
 }
 
@@ -227,6 +336,99 @@ export async function resolveAutomationDetail(
 export function invalidateAutomationDetail(automationId: number): void {
   detailCache.delete(automationId);
   inflightDetail.delete(automationId);
+  deletePersistedCache(getDetailCacheKey(automationId));
+  deletePersistedCache(getProgressCacheKey(automationId));
+}
+
+export type AutomationProgressResult =
+  { ok: true; progress: WorkflowProgress } | { ok: false; message: string };
+
+/**
+ * Progreso liviano para la hidratación de las cards del listado: reusa el
+ * detalle persistido si existe; si no, hace el mínimo (`incident.link` + un
+ * bulk sin comentarios) y calcula el progreso sobre los lifecycles, sin pedir
+ * tasks/solutions/wf.request/users.
+ */
+export async function resolveAutomationProgress(
+  automationId: number,
+): Promise<AutomationProgressResult> {
+  const cachedProgress = readPersistedCache<WorkflowProgress>(
+    getProgressCacheKey(automationId),
+  );
+  if (cachedProgress && typeof cachedProgress.percent === "number") {
+    return { ok: true, progress: cachedProgress };
+  }
+
+  const persisted = readPersistedCache<AutomationDetail>(
+    getDetailCacheKey(automationId),
+  );
+  if (persisted && persisted.id === automationId && persisted.progress) {
+    writePersistedCache(
+      getProgressCacheKey(automationId),
+      persisted.progress,
+      progressTtlMs(),
+    );
+    return { ok: true, progress: persisted.progress };
+  }
+
+  const links = await fetchLinksAndIds(automationId);
+  if (!links.ok) {
+    return { ok: false, message: links.message };
+  }
+
+  const detailsResult = await getIncidents([automationId, ...links.linkIds]);
+  if (!detailsResult.ok) {
+    return {
+      ok: false,
+      message: `No se pudieron obtener los detalles: ${detailsResult.message}`,
+    };
+  }
+
+  const parentIncident = detailsResult.data[String(automationId)];
+  if (!parentIncident) {
+    return {
+      ok: false,
+      message: `El ticket ${automationId} no existe en InvGate.`,
+    };
+  }
+
+  if (parentIncident.category_id !== (await resolveAutomationCategoryId())) {
+    return {
+      ok: false,
+      message: `El ticket ${automationId} no pertenece a la categoría de automatizaciones.`,
+    };
+  }
+
+  // Write-back del estado mutable del padre: la card se abre con datos frescos
+  // de InvGate y el listado (que lee la DB) refleja el cambio sin recargar todo
+  // el scan de discovery.
+  upsertAutomationParentStatus(automationId, {
+    statusId: parentIncident.status_id,
+    updatedAt: parentIncident.last_update ?? parentIncident.created_at,
+    closedAt:
+      typeof parentIncident.closed_at === "number"
+        ? parentIncident.closed_at
+        : null,
+  });
+
+  const lifecycles = links.links.map((link) => {
+    const incident = detailsResult.data[String(link.id)];
+    return mapRequestStatusToLifecycle(incident ? incident.status_id : -1);
+  });
+  const progress = computeWorkflowProgress(lifecycles);
+  writePersistedCache(
+    getProgressCacheKey(automationId),
+    progress,
+    progressTtlMs(),
+  );
+
+  // Al 100% se dispara la pipeline de detalle en background para evaluar el
+  // auto-cierre oportunista, sin encarecer esta respuesta liviana.
+  if (progress.percent === 100) {
+    void runDetailPipeline(automationId).catch(() => {});
+  }
+
+  return { ok: true, progress };
 }
 
 function toActivity(
@@ -255,13 +457,16 @@ function toActivity(
 function buildRequestNodes(
   links: readonly InvgateIncidentLink[],
   incidentsById: Record<string, InvgateAutomationIncident>,
+  statusNames: Readonly<Record<number, string>>,
 ): AutomationNode[] {
   const nodes = links.map((link) => {
     const incident = incidentsById[String(link.id)];
     const cleanTitle = cleanInvGateTitle(link.title);
     // El bulk puede omitir campos del request (title undefined observado en
     // producción): los títulos de link y bulk se combinan con degradación.
-    const incidentTitle = incident ? cleanInvGateTitle(incident.title ?? "") : "";
+    const incidentTitle = incident
+      ? cleanInvGateTitle(incident.title ?? "")
+      : "";
 
     if (!incident) {
       // El enlace existe pero el bulk no devolvió detalles del request.
@@ -274,6 +479,8 @@ function buildRequestNodes(
         description: "",
         lifecycle: mapRequestStatusToLifecycle(-1),
         rawStatusId: -1,
+        rawStatusName: null,
+        scheduledFor: null,
         createdAt: null,
         invgateUrl: deriveInvGateUiUrl(link.id),
         activity: [],
@@ -283,15 +490,19 @@ function buildRequestNodes(
       };
     }
 
+    const description = htmlToPlainText(incident.description ?? "");
+
     return {
       kind: "request" as const,
       refId: incident.id,
       prettyId: incident.pretty_id,
       stepLabel: parseStepLabel(incidentTitle || cleanTitle),
       title: incidentTitle,
-      description: htmlToPlainText(incident.description ?? ""),
+      description,
       lifecycle: mapRequestStatusToLifecycle(incident.status_id),
       rawStatusId: incident.status_id,
+      rawStatusName: statusNames[incident.status_id] ?? null,
+      scheduledFor: parseScheduledDate(description),
       createdAt: incident.created_at,
       invgateUrl: deriveInvGateUiUrl(incident.id),
       activity: toActivity(incident.comments),
@@ -323,10 +534,11 @@ function toAutomationTasks(
 
 /**
  * Busca entre los hijos vinculados el primero con data de INSTALACIONES
- * (título "Instalaciones para AUTSUC #...") y description parseable. Los
- * hijos con data siempre vienen del bulk del detalle (padre + hijos,
- * comments=1). De los duplicados gana el más nuevo (contiene el mismo
- * encabezado de Sucursal/Jefe).
+ * (título "Instalaciones para AUTSUC #..." en el formato viejo, o gestión
+ * "Instalaciones"/"TECO Instalaciones" en el formato nuevo) y description
+ * parseable. Los hijos con data siempre vienen del bulk del detalle
+ * (padre + hijos, comments=1). De los duplicados gana el más nuevo que
+ * mencione "Sucursal" en su description (formulario en prosa).
  */
 function findInstalacionesChild(
   links: readonly InvgateIncidentLink[],
@@ -340,14 +552,20 @@ function findInstalacionesChild(
         incident !== null &&
         Boolean(incident.description),
     )
-    .filter((incident) =>
-      /^instalaciones para autsuc/i.test(
-        cleanInvGateTitle(incident.title ?? "").trim(),
-      ),
-    )
+    .filter((incident) => {
+      const title = cleanInvGateTitle(incident.title ?? "").trim();
+      if (/^instalaciones para autsuc/i.test(title)) {
+        return true;
+      }
+      return /\binstalaciones\b/i.test(stripAutomationEmbeddedRefs(title));
+    })
     .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
 
-  return candidates[0] ?? null;
+  const withSucursal = candidates.filter((incident) =>
+    /\bsucursal\b/i.test(htmlToPlainText(incident.description ?? "")),
+  );
+
+  return withSucursal[0] ?? candidates[0] ?? null;
 }
 
 /**
@@ -369,6 +587,28 @@ export function detectWorkflowKind(
 }
 
 /**
+ * Mergea los datos del jefe: el override (workflow o manual) gana sobre el
+ * formulario parseado, campo por campo.
+ */
+function mergeJefeFields(
+  base: JefeFormDetails | null,
+  override: { name: string | null; dni: string | null; legajo: string | null },
+): JefeFormDetails | null {
+  const jefe: JefeFormDetails = {
+    name: override.name ?? base?.name ?? null,
+    dni: override.dni ?? base?.dni ?? null,
+    legajo: override.legajo ?? base?.legajo ?? null,
+    extras: base?.extras ?? [],
+  };
+  const hasJefe =
+    jefe.name !== null ||
+    jefe.dni !== null ||
+    jefe.legajo !== null ||
+    jefe.extras.length > 0;
+  return hasJefe ? jefe : null;
+}
+
+/**
  * Mergea los initial fields del workflow (best-effort `/wf.request`) sobre el
  * formulario parseado. Los valores del workflow ganan cuando están presentes;
  * si no había formulario, se crea uno base.
@@ -387,18 +627,6 @@ export function mergeWorkflowInitialFields(
     otherFields: [],
   };
 
-  const mergedJefe = {
-    name: fields.jefeName ?? base.jefe?.name ?? null,
-    dni: fields.jefeDni ?? base.jefe?.dni ?? null,
-    legajo: fields.jefeLegajo ?? base.jefe?.legajo ?? null,
-    extras: base.jefe?.extras ?? [],
-  };
-  const hasJefe =
-    mergedJefe.name !== null ||
-    mergedJefe.dni !== null ||
-    mergedJefe.legajo !== null ||
-    mergedJefe.extras.length > 0;
-
   const otherFields = [...base.otherFields];
   if (fields.nis && !otherFields.some((f) => /^nis$/i.test(f.label.trim()))) {
     otherFields.push({ label: "NIS", value: fields.nis });
@@ -406,9 +634,42 @@ export function mergeWorkflowInitialFields(
 
   return {
     ...base,
-    jefe: hasJefe ? mergedJefe : null,
+    jefe: mergeJefeFields(base.jefe, {
+      name: fields.jefeName,
+      dni: fields.jefeDni,
+      legajo: fields.jefeLegajo,
+    }),
     jefeZonal: fields.jefeZonal ?? base.jefeZonal ?? null,
     otherFields,
+  };
+}
+
+/**
+ * Aplica el override manual (portal) sobre el formulario parseado: los datos
+ * cargados a mano ganan sobre los de InvGate. Corrige jefe/zonal.
+ */
+function applyManualOverrides(
+  form: ParsedInitialForm | null,
+  manual: AutomationManualData,
+): ParsedInitialForm {
+  const base: ParsedInitialForm = form ?? {
+    intro: [],
+    sucursal: null,
+    ipRange: null,
+    estimatedEnd: null,
+    jefe: null,
+    jefeZonal: null,
+    otherFields: [],
+  };
+
+  return {
+    ...base,
+    jefe: mergeJefeFields(base.jefe, {
+      name: manual.jefeName,
+      dni: manual.jefeDni,
+      legajo: manual.jefeLegajo,
+    }),
+    jefeZonal: manual.jefeZonal ?? base.jefeZonal ?? null,
   };
 }
 
@@ -422,22 +683,54 @@ export function mergeWorkflowInitialFields(
  * (arriba el primero); el desempate usa el ID ascendente observado.
  */
 /**
+ * Links del padre + ids de los hijos (paso común a detalle y progreso).
+ */
+async function fetchLinksAndIds(
+  automationId: number,
+): Promise<
+  | { ok: true; links: readonly InvgateIncidentLink[]; linkIds: number[] }
+  | { ok: false; message: string }
+> {
+  const linksResult = await getIncidentLinks(automationId);
+  if (!linksResult.ok) {
+    return { ok: false, message: linksResult.message };
+  }
+  return {
+    ok: true,
+    links: linksResult.data,
+    linkIds: linksResult.data.map((link) => link.id),
+  };
+}
+
+/**
  * Detalle de una automatización. El pipeline en sí vive en
  * resolveAutomationDetailUncached.
  */
 async function resolveAutomationDetailUncached(
   automationId: number,
 ): Promise<AutomationDetailResult> {
-  const linksResult = await getIncidentLinks(automationId);
+  /**
+   * Cold-path: el workflow request y la categoría solo dependen del id, así
+   * que se lanzan en paralelo con los links y se awaitean en su punto de uso.
+   * La categoría puede rechazar: se le adjunta un catch vacío para no dejar
+   * una unhandled rejection si salimos antes de awaitearla (el await real
+   * sigue propagando el error).
+   */
+  const workflowRequestPromise = getWorkflowRequest(automationId);
+  const categoryIdPromise = resolveAutomationCategoryId();
+  categoryIdPromise.catch(() => {});
 
-  if (!linksResult.ok) {
-    return { ok: false, message: linksResult.message };
+  const links = await fetchLinksAndIds(automationId);
+  if (!links.ok) {
+    return { ok: false, message: links.message };
   }
+  const { links: linkData, linkIds } = links;
 
-  const linkIds = linksResult.data.map((link) => link.id);
   const [detailsResult, childTasksResults] = await Promise.all([
     getIncidents([automationId, ...linkIds], { includeComments: true }),
-    Promise.all(linkIds.map((id) => getIncidentTasks(id))),
+    mapWithConcurrency(linkIds, CHILD_TASKS_CONCURRENCY, (id) =>
+      getIncidentTasks(id),
+    ),
   ]);
 
   if (!detailsResult.ok) {
@@ -456,14 +749,18 @@ async function resolveAutomationDetailUncached(
     };
   }
 
-  if (parentIncident.category_id !== (await resolveAutomationCategoryId())) {
+  if (parentIncident.category_id !== (await categoryIdPromise)) {
     return {
       ok: false,
       message: `El ticket ${automationId} no pertenece a la categoría de automatizaciones (category_id=${parentIncident.category_id})`,
     };
   }
 
-  const nodes = buildRequestNodes(linksResult.data, detailsResult.data);
+  const statusesResult = await getIncidentStatuses();
+  const statusNames = buildStatusNameLookup(
+    statusesResult.ok ? statusesResult.data : null,
+  );
+  const nodes = buildRequestNodes(linkData, detailsResult.data, statusNames);
 
   // Tareas internas por request vinculado → se muestran dentro de su card.
   const tasksByRef = new Map<number, InvgateIncidentTask[]>();
@@ -507,11 +804,14 @@ async function resolveAutomationDetailUncached(
   const cleanedTitle = cleanInvGateTitle(parentIncident.title);
 
   /**
-   * Fuentes del formulario inicial (2026-09, ambas validadas):
+   * Fuentes del formulario inicial:
    * 1. Description del padre (formato histórico de producción).
    * 2. Primer comentario del padre (formato QA / formularios por comentario).
-   * El comentario de reasignación de mesa históricamente pisaba la description
-   * cuando se prefería el comentario: ahora la description gana.
+   * 3. Description del hijo "Instalaciones para AUTSUC" (workflow AUTSUC nuevo,
+   *    ticket 79867): el padre puede llegar sin description ni comentarios.
+   *
+   * La elección (ver `initial-source.ts`) no se queda con un comentario "débil"
+   * (solo `otherFields`, p.ej. B0177) que bloquearía la sucursal del hijo.
    */
   const parentFormComment = toActivity(parentIncident.comments)[0] ?? null;
 
@@ -523,56 +823,72 @@ async function resolveAutomationDetailUncached(
         }
       : null;
 
+  const instalacionesChild = findInstalacionesChild(
+    linkData,
+    detailsResult.data,
+  );
+  const instalacionesSource = instalacionesChild
+    ? {
+        createdAt:
+          instalacionesChild.created_at ?? parentIncident.created_at,
+        text: htmlToPlainText(instalacionesChild.description ?? ""),
+      }
+    : null;
+  const instalacionesInfo = instalacionesSource
+    ? parseInstalacionesDescription(instalacionesSource.text)
+    : null;
+
+  const chosenForm = chooseInitialForm({
+    description: descriptionSource
+      ? {
+          parsed: parseInitialForm(descriptionSource.text),
+          source: descriptionSource,
+        }
+      : null,
+    comment: parentFormComment
+      ? {
+          parsed: parseInitialForm(parentFormComment.text),
+          source: parentFormComment,
+        }
+      : null,
+    instalaciones:
+      instalacionesSource && instalacionesInfo
+        ? {
+            parsed: toParsedInitialForm(instalacionesInfo),
+            source: instalacionesSource,
+          }
+        : null,
+  });
+
   let formSource: {
     createdAt: number;
     text: string;
     authorId?: number | null;
-  } | null = descriptionSource;
-  let parsedForm = formSource ? parseInitialForm(formSource.text) : null;
-
-  if (parsedForm === null && parentFormComment) {
-    formSource = parentFormComment;
-    parsedForm = parseInitialForm(formSource.text);
-  }
-
-  /**
-   * Tercera fuente (workflow AUTSUC 2026-09, ticket 79867): el padre llega sin
-   * description ni comentarios; la solicitud vive en la description de los
-   * hijos "Instalaciones para AUTSUC #...". Ante un texto no reconocido el
-   * parser devuelve null y la UI degrada al texto crudo o al título.
-   */
-  if (parsedForm === null) {
-    const instalacionesChild = findInstalacionesChild(
-      linksResult.data,
-      detailsResult.data,
-    );
-    if (instalacionesChild) {
-      const instalacionesInfo = parseInstalacionesDescription(
-        htmlToPlainText(instalacionesChild.description ?? ""),
-      );
-      if (instalacionesInfo) {
-        const fallbackAuthorshipDate =
-          instalacionesChild.created_at ?? parentIncident.created_at;
-        formSource = {
-          createdAt: fallbackAuthorshipDate,
-          text: htmlToPlainText(instalacionesChild.description ?? ""),
-        };
-        parsedForm = toParsedInitialForm(instalacionesInfo);
-      }
-    }
-  }
+  } | null = chosenForm?.source ?? null;
+  let parsedForm = chosenForm?.parsed ?? null;
 
   // Best-effort: initial fields del workflow (/wf.request). En instancias que
   // todavía no exponen el endpoint devuelve null y todo queda igual.
-  const workflowFields = parseWorkflowInitialFields(
-    await getWorkflowRequest(parentIncident.id),
-  );
+  const workflowRequest = await workflowRequestPromise;
+  const workflowFields = parseWorkflowInitialFields(workflowRequest);
   if (workflowFields) {
     parsedForm = mergeWorkflowInitialFields(parsedForm, workflowFields);
     if (!formSource) {
       formSource = { createdAt: parentIncident.created_at, text: "" };
     }
   }
+  const board = buildAutomationBoard(parseWorkflowVariables(workflowRequest));
+
+  // Override manual del portal (datos del jefe/contacto cargados a mano).
+  const manualData = getManualData(automationId);
+  if (manualData) {
+    parsedForm = applyManualOverrides(parsedForm, manualData);
+    if (!formSource) {
+      formSource = { createdAt: parentIncident.created_at, text: "" };
+    }
+  }
+  const openingHours =
+    manualData?.openingHours ?? parseOpeningHours(formSource?.text ?? null);
 
   // Resolución única de nombres de autores de comentarios (actividad,
   // solución y formulario si vino de un comentario).
@@ -596,8 +912,16 @@ async function resolveAutomationDetailUncached(
   if (formAuthorId) {
     authorIds.add(formAuthorId);
   }
+  // Registrador cuando el form no vino de un comentario: el creador del padre.
+  if (typeof parentIncident.creator_id === "number" && parentIncident.creator_id > 0) {
+    authorIds.add(parentIncident.creator_id);
+  }
 
   const authorNames = await getUsersByIds([...authorIds]);
+  const formAuthorName =
+    (formAuthorId ? (authorNames.get(formAuthorId) ?? null) : null) ??
+    authorNames.get(parentIncident.creator_id) ??
+    null;
   for (const node of nodes) {
     for (const entry of node.activity) {
       if (entry.authorId) {
@@ -659,12 +983,23 @@ async function resolveAutomationDetailUncached(
     invalidateDiscoveryCache();
   }
 
-  const branchCode = parseAutomationBranchTitle(cleanedTitle).branchCode ?? null;
+  const branchInfo = parseAutomationBranchTitle(cleanedTitle);
+  const branchCode = branchInfo.branchCode ?? null;
+  const branchName =
+    branchInfo.branchName ??
+    branchNameFromDescription(parentIncident.description) ??
+    null;
   const branchLocation = await getBranchLocation(branchCode);
   const region = parsedForm?.sucursal?.region ?? branchLocation?.region ?? null;
   const locality =
     parsedForm?.sucursal?.locality ?? branchLocation?.locality ?? null;
   const location = region || locality ? { region, locality } : null;
+  // La fecha del título del padre es la estimada de implementación; el
+  // formulario/prosa queda como fallback (casos viejos sin fecha en el título).
+  const estimatedEnd =
+    parseEstimatedEndFromTitle(cleanedTitle) ??
+    parsedForm?.estimatedEnd ??
+    null;
 
   return {
     ok: true,
@@ -685,16 +1020,19 @@ async function resolveAutomationDetailUncached(
             createdAt: formSource.createdAt,
             text: formSource.text,
             parsed: parsedForm,
-            authorName: formAuthorId
-              ? (authorNames.get(formAuthorId) ?? null)
-              : null,
+            authorName: formAuthorName,
           }
         : null,
       nodes,
       stages,
       workflowKind,
+      branchName,
       progress,
       location,
+      estimatedEnd,
+      openingHours,
+      manualData,
+      board,
       closure,
     },
   };

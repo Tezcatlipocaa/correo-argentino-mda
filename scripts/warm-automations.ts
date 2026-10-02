@@ -2,7 +2,11 @@ import "dotenv/config";
 import { discoverAutomations } from "@lib/workflow/discovery";
 import { getIncidentStatuses } from "@lib/invgate/automation/statuses";
 import { resolveAutomationCategoryId } from "@lib/workflow/category-resolver";
-import { reconcileTrackedParentsFromStatuses } from "@lib/workflow/tracked-parents";
+import {
+  reconcileTrackedParentsFromStatuses,
+  reconcileTrackedParentsFromView,
+} from "@lib/workflow/tracked-parents";
+import { getAutomationViewId } from "@lib/invgate/automation/by-view";
 
 /**
  * Pre-warm del módulo de automatizaciones: ejecuta el scan frío (categoría,
@@ -20,7 +24,10 @@ async function main(): Promise<void> {
   ]);
 
   const categoryId = await resolveAutomationCategoryId();
-  const reconciled = await reconcileTrackedParentsFromStatuses(categoryId);
+  const viewId = getAutomationViewId();
+  const reconciled = viewId
+    ? await reconcileTrackedParentsFromView(viewId, categoryId)
+    : await reconcileTrackedParentsFromStatuses(categoryId);
 
   const discoveryDetail = discovery.ok
     ? `current=${discovery.current?.prettyId ?? "-"} active=${discovery.otherActive.length}`

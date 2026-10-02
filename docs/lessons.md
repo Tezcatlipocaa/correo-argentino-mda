@@ -302,3 +302,51 @@ Cada entrada sigue este formato:
 **Regla:** No asumir que un ticket de un workflow permanece en la cola donde nació: los flujos lo reasignan de mesa. Trackear por identidad (id) persistida y reconciliar periódicamente por categoría (no por cola). Un "barrido por estado + filtro de categoría" sirve para backfill puntual porque `by.status` devuelve todos los IDs activos en una call. Nunca descartar del seguimiento a un ticket activo solo porque salió de la cola.
 
 **Archivos afectados:** src/lib/workflow/tracked-parents.ts, src/lib/workflow/discovery.ts, src/db/schema.ts, scripts/reconcile-automation-parents.ts, scripts/warm-automations.ts, ecosystem.config.cjs, tests/workflow-tracked-parents.test.mjs
+
+---
+
+### 2026-09-26 — Morph de /automatizaciones: el `view-transition-name` inline no está en el código
+
+**Problema:** La entrada del 2026-09-06 documenta como solución final del morph listado↔detalle el uso de `view-transition-name` inline en items del listado y header del detalle. Al analizar el módulo, `grep view-transition-name src` da 0 resultados y el historial git (un único commit del módulo) nunca lo contuvo: la navegación actual usa el fade por defecto del ClientRouter.
+**Causa:** El anclaje del morph nunca llegó al código commiteado (posible pérdida al consolidar/refactorizar); el ClientRouter sigue activo solo en `/automatizaciones` (`BaseLayout.astro`).
+**Solución:** No se re-implementa por ahora: queda documentado como mejora pendiente, no como bug. Si se retoma, recordar que la card destacada está duplicada en "Todas las automatizaciones" y que los nombres de transición deben ser únicos por página.
+**Regla:** Cuando una entrada de lessons describe una solución de UI, verificar con `grep`/selectores que el código la contenga antes de asumirla vigente: las refactorizaciones pueden haberla removido.
+**Archivos afectados:** src/layouts/BaseLayout.astro, src/pages/automatizaciones/_components/*.astro, docs/lessons.md
+
+---
+
+### 2026-09-26 — `npm run test:unit` (vitest) no resuelve los alias de tsconfig
+
+**Problema:** `npm run test:unit` falla en la colección de casi todos los `tests/*.test.mjs`: vitest no interpreta los `paths` de `tsconfig.json`, así que los imports `@db/*`, `@lib/*` de los módulos de `src/` rompen (`Cannot find package '@db/index'`). Además, la mayoría de esos `.test.mjs` son scripts standalone con su propio `check()` + `process.exit(1)` (pensados para `node --import tsx tests/foo.test.mjs`), no suites vitest: vitest los marca como "sin tests".
+**Causa:** El script `test:unit: vitest run` asume tests en formato vitest con alias configurados, pero el repo usa scripts `tsx` y no hay `vitest.config`.
+**Solución:** Para los tests del módulo automatizaciones correr `npx tsx tests/workflow-*.test.mjs` (todos pasan). El nuevo `tests/workflow-timeline-plan.test.mjs` sigue esa misma convención. Queda pendiente (fuera de alcance) reparar `test:unit` o reemplazarlo por un runner de los scripts.
+**Regla:** Antes de agregar tests, mirar cómo corren los existentes: en este repo los unit tests de workflow son scripts `tsx`, no vitest.
+**Archivos afectados:** package.json, tests/workflow-*.test.mjs
+
+---
+
+### 2026-10-02 - Listado pegado al snapshot persistido y sin paginacion
+
+**Problema:** Un caso cerrado en InvGate no reflejaba "Finalizado" en el portal ni con F5; recien aparecia al abrir el detalle (a veces ~15-20 min despues). Ademas, "Todas las automatizaciones" traia toda la tabla `automation_parents` y filtraba/ordenaba client-side: no escala al crecer el historial.
+
+**Causa:** (1) `resolveAutomationDetail` servia el snapshot persistido y lo marcaba fresco en memoria **sin disparar el refresh en background**, asi que el detalle quedaba pegado hasta que vencia el TTL del persistido (15 min). (2) El listado leia la DB, que solo actualiza el scan de discovery (cache 5 min / SWR hasta 30 min) y no habia revalidacion manual; el fetch de progreso no hacia write-back del estado del padre. (3) `listAutomationParents()` devolvia todas las filas.
+
+**Solucion:** (1) El path persistido dispara siempre `runDetailPipeline` (SWR) y el TTL default del detalle bajo a 5 min. (2) `resolveAutomationProgress` hace write-back de `status_id/updated_at/closed_at` a `automation_parents` (`upsertAutomationParentStatus`). (3) `discoverAutomationsWithMeta` expone `stale`; la vista muestra "Actualizando..." y recarga tras pegarle a `GET /api/automatizaciones/revalidate`, y hay boton "Actualizar" (`?refresh=1`) que fuerza `revalidateAutomations()`. (4) Paginacion server-side (`listAutomationParentsPage` + `listRecentAutomationParents`) con busqueda/filtro en SQL y `Pagination.astro` reutilizado; se elimino `automationListFilterClient.ts`.
+
+**Regla:** En el modulo automatizaciones, la DB de historial es la fuente del listado: cualquier snapshot que se sirva debe poder revalidarse (boton/auto) y toda resolucion que toque un padre debe escribir de vuelta su estado mutable. La busqueda/filtro de un listado paginado va en SQL, nunca client-side sobre la pagina visible.
+
+**Archivos afectados:** src/lib/workflow/resolver.ts, src/lib/workflow/discovery.ts, src/lib/workflow/parent-history.ts, src/lib/invgate/automation/cache-config.ts, src/pages/automatizaciones/_components/AutomatizacionesContent.astro, src/pages/api/automatizaciones/revalidate.ts, src/components/ui/Pagination.astro, src/components/ui/SearchBar.astro, tests/workflow-parent-history.test.mjs
+
+---
+
+### 2026-10-02 - Sucursal y registrador del detalle: un comentario debil bloqueaba el hijo Instalaciones
+
+**Problema:** En B0177 (#81683, Francisco Alvarez) la card "Sucursal" del detalle mostraba "---" mientras que en Tribunales de Banfield (#86762) si aparecia. Inversamente, el "registrado por" aparecia en B0177 pero no en #86762 ni en B0061 (#86717).
+
+**Causa:** (1) `parseInitialForm` devuelve un formulario "debil" (solo `otherFields`) ante cualquier linea "label: valor", y el primer comentario de #81683 era un aviso de Multitoma ("Se vincula tarea ... : #85967"). Ese resultado no-null bloqueaba el fallback `if (parsedForm === null)` al hijo "Instalaciones para AUTSUC", que es donde vive la sucursal real. (2) `initialForm.authorName` solo se resolvia cuando el form venia del primer comentario (`formSource === parentFormComment`); los forms tomados de la description del hijo quedaban sin autor.
+
+**Solucion:** `chooseInitialForm` (`src/lib/workflow/initial-source.ts`) elige la fuente con la sucursal como senal autoritativa: description sustantiva > comentario sustantivo > hijo Instalaciones si aun no hay sucursal. El registrador cae al `creator_id` del ticket padre cuando el form no vino de un comentario. Se agrego `branchName` al detalle como fallback de presentacion en la card Sucursal. La key persistida del detalle pasa a `automation.detail.v2.` para ignorar snapshots viejos.
+
+**Regla:** No asumir que "hay campos parseados" equivale a "hay formulario": validar sustancia (sucursal/jefe/rango IP/fecha) antes de descartar fuentes alternativas. Y todo dato que se muestra en el detalle debe poder resolverse para cualquier origen del form, no solo para el comentario.
+
+**Archivos afectados:** src/lib/workflow/initial-source.ts, src/lib/workflow/resolver.ts, src/pages/automatizaciones/_components/InitialFormDetails.astro, src/pages/automatizaciones/_components/AutomatizacionDetalleContent.astro, tests/workflow-initial-source.test.mjs

@@ -299,6 +299,13 @@ BaseLayout (flex flex-col min-h-screen)
 | `/logout`  | Cierre de sesion  |
 | `/profile` | Perfil de usuario |
 
+### Documentacion del modulo `/automatizaciones`
+
+- `docs/automatizaciones/instructivo-operativo.md` — instructivo de operación (RACI, Tablero Status Proyecto, fichas por sector, checklist de cierre).
+- `docs/automatizaciones/guia-flujo.md` — guía funcional del flujo (etapas, subprocesos, puntos de control Go/No Go).
+- `docs/automatizaciones/nota-tecnica-api.md` — mapeo técnico con InvGate (categoría/workflow, endpoints, initial fields, variables del tablero, formatos de título).
+- `docs/automatizaciones/modelo-datos.md` — persistencia del módulo (tablas, caches/TTLs, ciclo de vida y operación de la DB).
+
 ---
 
 ## Estado actual del Header

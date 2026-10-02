@@ -32,6 +32,8 @@ interface SeedTicket {
   /** Frases de la descripción que matchean cuando el label no alcanza. */
   matchDescription?: string[];
   blocking: boolean;
+  /** Naturaleza: ticket (default), formulario, manual o subproceso. */
+  kind?: "ticket" | "form" | "manual" | "subprocess";
 }
 
 interface SeedStage {
@@ -114,6 +116,7 @@ const SEED: SeedStage[] = [
         displayName: "Equipamiento (Prep y Despacho)",
         aliases: EQUIPMENT_ALIASES,
         blocking: true,
+        kind: "ticket",
       },
       {
         matchLabel: "Relevamiento de conexiones",
@@ -121,18 +124,20 @@ const SEED: SeedStage[] = [
         aliases: SWITCH_ALIASES,
         matchDescription: RELEVAMIENTO_DESC,
         blocking: true,
+        kind: "ticket",
       },
-      { matchLabel: "Preparación y envío de HH", blocking: true },
       {
         matchLabel: "Habilitación de terminales de GDI",
         displayName: "Habilitación de terminales de GDI / VDI en rango IPv4",
         aliases: GDI_ALIASES,
         blocking: true,
+        kind: "form",
       },
       {
         matchLabel: "Visita técnica para instalaciones",
         matchDescription: VISITA_DESC,
         blocking: false,
+        kind: "ticket",
       },
     ],
   },
@@ -148,28 +153,34 @@ const SEED: SeedStage[] = [
         displayName: "Configuración de server",
         aliases: SERVER_ALIASES,
         blocking: true,
+        kind: "ticket",
       },
       {
         matchLabel: "Solicitud de Hostnames",
         displayName: "Solicitud de hostnames",
         blocking: true,
+        kind: "form",
       },
       {
         matchLabel: "Dirección IP",
         displayName: "Configuración de red / direccionamiento IP",
         blocking: true,
+        kind: "ticket",
       },
       {
         matchLabel: "Habilitación de servicios M&F",
         aliases: MF_ALIASES,
         blocking: false,
+        kind: "ticket",
       },
       {
         matchLabel: "Validación de NIS en OnBase",
         displayName: "Alta NIS en OnBase",
+        aliases: ["Alta NIS"],
         blocking: true,
+        kind: "subprocess",
       },
-      { matchLabel: "Alta en OfficeTrack", blocking: false },
+      { matchLabel: "Alta en OfficeTrack", blocking: false, kind: "manual" },
     ],
   },
   {
@@ -177,7 +188,7 @@ const SEED: SeedStage[] = [
     scope: "workflow",
     description:
       "Punto de control exclusivo del workflow AUTSUC previo al pase a implementación.",
-    tickets: [{ matchLabel: "Punto de control Go / No Go", blocking: false }],
+    tickets: [{ matchLabel: "Punto de control Go / No Go", blocking: false, kind: "form" }],
   },
   {
     name: "Etapa 4 — Implementación",
@@ -189,34 +200,40 @@ const SEED: SeedStage[] = [
         matchLabel: "Solicitud de asistencia técnica",
         displayName: "Instalaciones por Servicio Técnico",
         blocking: true,
+        kind: "ticket",
       },
       {
         matchLabel: "Alta operador Mosaic",
         displayName: "Alta de usuarios Mosaic",
         aliases: ALTA_OPERADOR_ALIASES,
         blocking: true,
+        kind: "manual",
       },
       {
         matchLabel: "Validación Central PAQ",
         displayName: "Actualización de Central PAQ",
         blocking: true,
+        kind: "ticket",
       },
       {
         matchLabel: "Baja de usuarios en SOP Central",
         displayName: "Gestión de bajas de servicios de Giros",
         aliases: ["Solicitud baja de usuarios SOP Central"],
         blocking: true,
+        kind: "ticket",
       },
       {
         matchLabel: "Modificación de tipo",
         displayName: "Configuraciones de Soporte Técnico",
         blocking: true,
+        kind: "manual",
       },
       {
         matchLabel: "Configuración carpeta de escaneos BUI",
         displayName: "Actualización BUI",
         aliases: BUI_ALIASES,
         blocking: false,
+        kind: "ticket",
       },
     ],
   },
@@ -231,6 +248,7 @@ const SEED: SeedStage[] = [
         displayName: "Revisión de estado general",
         aliases: REVIEW_ALIASES,
         blocking: false,
+        kind: "manual",
       },
     ],
   },
@@ -281,6 +299,7 @@ const SEED: SeedStage[] = [
       {
         matchLabel: "Validación de NIS en OnBase",
         displayName: "Alta NIS en OnBase",
+        aliases: ["Alta NIS"],
         blocking: false,
       },
       { matchLabel: "Alta en OfficeTrack", blocking: false },
@@ -432,6 +451,7 @@ async function seedWorkflowStages() {
           .set({
             matchLabel: ticketSeed.matchLabel,
             blocking: ticketSeed.blocking,
+            kind: ticketSeed.kind ?? "ticket",
             position: ticketPosition,
             // No pisar displayName/aliases editados a mano: solo completarlos.
             ...(existingTicket.displayName?.trim()
@@ -455,6 +475,7 @@ async function seedWorkflowStages() {
           aliases: ticketSeed.aliases ?? [],
           matchDescription: ticketSeed.matchDescription ?? [],
           blocking: ticketSeed.blocking,
+          kind: ticketSeed.kind ?? "ticket",
           position: ticketPosition,
         });
         console.log(

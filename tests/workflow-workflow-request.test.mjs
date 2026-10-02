@@ -1,9 +1,12 @@
 import { parseWorkflowInitialFields } from "../src/lib/invgate/automation/workflow-request";
 
 /**
- * Parser de los initial fields del workflow (/wf.request). El shape se basa en
- * el manual de InvGate (steps → executions → fields); en la instancia v8.21.7
- * el endpoint da 404, así que este test cubre el parseo con un fixture.
+ * Parser de los initial fields del workflow (/wf.request). El shape está
+ * validado en producción (2026-10, GLEW #84909): el workflow "WKF Automatizar
+ * Sucursal PRODUCTIVO" expone Jefe de Sucursal (user picker, nombre en
+ * value_label), otro "Jefe de Sucursal" (tabla HTML DNI/N° Legajo), Jefe Zonal
+ * y NIS. El endpoint requiere permiso del usuario de API; si falla,
+ * getWorkflowRequest degrada a null.
  *
  * Ejecución: node --import tsx tests/workflow-workflow-request.test.mjs
  */

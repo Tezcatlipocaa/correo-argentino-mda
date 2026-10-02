@@ -94,8 +94,10 @@ export function parseSucursalValue(rawValue: string): SucursalFormDetails {
 
   const site = segments[segments.length - 1];
   const hierarchy = segments.slice(0, -1);
-  const locality = hierarchy.length > 0 ? hierarchy[hierarchy.length - 1] : null;
-  const region = hierarchy.length > 1 ? hierarchy.slice(0, -1).join(" \u00bb ") : null;
+  const locality =
+    hierarchy.length > 0 ? hierarchy[hierarchy.length - 1] : null;
+  const region =
+    hierarchy.length > 1 ? hierarchy.slice(0, -1).join(" \u00bb ") : null;
 
   const withoutCc = site.replace(CC_CODE_PATTERN, "").trim();
   const cpaMatch = CPA_PATTERN.exec(withoutCc);
@@ -145,6 +147,7 @@ export function parseInitialForm(text: string): ParsedInitialForm | null {
   let jefeName: string | null = null;
   let jefeDni: string | null = null;
   let jefeLegajo: string | null = null;
+  let jefeZonal: string | null = null;
   let inJefeSection = false;
 
   for (const line of lines) {
@@ -176,8 +179,14 @@ export function parseInitialForm(text: string): ParsedInitialForm | null {
       jefeName = value;
     } else if (label === "dni") {
       jefeDni = value;
-    } else if (label === "legajo") {
+    } else if (
+      label === "legajo" ||
+      label === "n legajo" ||
+      label === "nro legajo"
+    ) {
       jefeLegajo = value;
+    } else if (label === "jefe zonal") {
+      jefeZonal = value;
     } else if (inJefeSection) {
       jefeExtras.push({ label: match[1].trim(), value });
     } else {
@@ -185,7 +194,8 @@ export function parseInitialForm(text: string): ParsedInitialForm | null {
     }
   }
 
-  const sucursal = sucursalRaw !== null ? parseSucursalValue(sucursalRaw) : null;
+  const sucursal =
+    sucursalRaw !== null ? parseSucursalValue(sucursalRaw) : null;
   const jefe =
     jefeName !== null ||
     jefeDni !== null ||
@@ -199,11 +209,20 @@ export function parseInitialForm(text: string): ParsedInitialForm | null {
     ipRange !== null ||
     estimatedEnd !== null ||
     jefe !== null ||
+    jefeZonal !== null ||
     otherFields.length > 0;
 
   if (!hasFields) {
     return null;
   }
 
-  return { intro, sucursal, ipRange, estimatedEnd, jefe, jefeZonal: null, otherFields };
+  return {
+    intro,
+    sucursal,
+    ipRange,
+    estimatedEnd,
+    jefe,
+    jefeZonal,
+    otherFields,
+  };
 }

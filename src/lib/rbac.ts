@@ -23,6 +23,16 @@ export function normalizeRole(role: string): Role {
   return "agent";
 }
 
+/**
+ * Sesión iniciada: el middleware asigna `id: 0` al usuario anónimo, así que
+ * `id !== 0` es el marcador de sesión activa.
+ */
+export function isLoggedIn(
+  user: { id: number } | null | undefined,
+): boolean {
+  return Boolean(user && user.id !== 0);
+}
+
 export interface RoutePermission {
   path: string;
   roles: Role[];

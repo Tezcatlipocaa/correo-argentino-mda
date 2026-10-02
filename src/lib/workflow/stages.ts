@@ -6,6 +6,7 @@ import {
 } from "@db/schema";
 import { asc } from "drizzle-orm";
 import type { AutomationNode } from "./resolver";
+import { stripAutomationEmbeddedRefs } from "./branch-title";
 import { normalizeLabel, stripLeadingOrdinals } from "./labels";
 import { compareChronologically } from "./sort";
 
@@ -22,6 +23,21 @@ import { compareChronologically } from "./sort";
 export type StageStatus = "waiting" | "in_progress" | "completed";
 
 /**
+ * Naturaleza del ítem esperado de una etapa:
+ * - `ticket`: ticket hijo de InvGate (default).
+ * - `form`: se completa por formulario (no genera ticket).
+ * - `manual`: gestión manual (no genera ticket).
+ * - `subprocess`: ticket generado por un subproceso (se matchea igual).
+ * `form`/`manual` nunca cuentan como faltantes bloqueantes.
+ */
+export type StageItemKind = "ticket" | "form" | "manual" | "subprocess";
+
+/** Ítems que pueden existir como ticket hijo (y por ende faltar). */
+export function isTicketLikeKind(kind: StageItemKind): boolean {
+  return kind === "ticket" || kind === "subprocess";
+}
+
+/**
  * Tipo de automatización: `workflow` = flujo AUTSUC nuevo (5 etapas, gates,
  * Go/No Go); `legacy` = casos manuales anteriores a Luis Guillón (3 etapas
  * simplificadas, sin gates ni Go/No Go).
@@ -29,7 +45,8 @@ export type StageStatus = "waiting" | "in_progress" | "completed";
 export type WorkflowKind = "workflow" | "legacy";
 
 type StageTemplateRow = typeof workflowStages.$inferSelect;
-export type StageTicketTemplateRow = typeof WorkflowStageTicketsTable.$inferSelect;
+export type StageTicketTemplateRow =
+  typeof WorkflowStageTicketsTable.$inferSelect;
 
 /** Labels que matchean un template: matchLabel + aliases configurados. */
 export function templateMatchLabels(ticket: {
@@ -61,6 +78,8 @@ export interface WorkflowTemplate {
 
 export interface StageItemGroup {
   template: StageTicketTemplateRow;
+  /** Naturaleza del ítem: ticket / formulario / manual / subproceso. */
+  kind: StageItemKind;
   /** Etiqueta display (displayName ?? matchLabel). */
   label: string;
   blocking: boolean;
@@ -91,8 +110,6 @@ export interface StageGrouping {
   /** Templates bloqueantes sin ticket asociado (0 para automatizaciones finalizadas). */
   missingBlockingCount: number;
 }
-
-
 
 /** Conectores gramaticales sin peso propio para el matching por tokens. */
 const CONNECTOR_TOKENS = new Set([
@@ -156,9 +173,7 @@ function matchScore(label: string, matchLabel: string): number {
   const templateTokens = significantTokens(templateKey);
   const matchedTemplateTokens = templateTokens.filter((templateToken) => {
     if (
-      nodeTokens.some((nodeToken) =>
-        tokenPairMatches(nodeToken, templateToken),
-      )
+      nodeTokens.some((nodeToken) => tokenPairMatches(nodeToken, templateToken))
     ) {
       return true;
     }
@@ -169,9 +184,7 @@ function matchScore(label: string, matchLabel: string): number {
           ? `${nodeToken}${nodeTokens[index + 1]}`
           : null,
       ].filter((pair) => pair !== null);
-      return pairs.some((pair) =>
-        tokenPairMatches(pair, templateToken),
-      );
+      return pairs.some((pair) => tokenPairMatches(pair, templateToken));
     });
   });
   if (
@@ -184,10 +197,7 @@ function matchScore(label: string, matchLabel: string): number {
     nodeTokens,
     templateTokens,
   );
-  if (
-    matchedTemplateTokens.length >= 2 &&
-    nodeCoversTemplate
-  ) {
+  if (matchedTemplateTokens.length >= 2 && nodeCoversTemplate) {
     return 0.9;
   }
   return 0;
@@ -332,7 +342,10 @@ export function buildStageGroups(
 
   // Template id -> estado construido (para resolver gates entre etapas).
   const itemById = new Map<number, StageItemGroup>();
-  const groupsByStageId = new Map<number, StageGroup & { items: StageItemGroup[] }>();
+  const groupsByStageId = new Map<
+    number,
+    StageGroup & { items: StageItemGroup[] }
+  >();
 
   for (const stage of activeStages) {
     groupsByStageId.set(stage.id, {
@@ -361,6 +374,7 @@ export function buildStageGroups(
   for (const ticketTemplate of stageTicketTemplates) {
     itemById.set(ticketTemplate.id, {
       template: ticketTemplate,
+      kind: (ticketTemplate.kind as StageItemKind) ?? "ticket",
       label: ticketTemplate.displayName?.trim()
         ? ticketTemplate.displayName
         : ticketTemplate.matchLabel,
@@ -378,7 +392,13 @@ export function buildStageGroups(
       .split(/\s+-\s+/)
       .map((segment) => segment.trim())
       .filter(Boolean);
-    return [node.stepLabel, ...segments];
+    // El título nuevo trae prefijo de sucursal, id del padre y fecha: se
+    // agregan las variantes sin esas referencias para que matcheen los
+    // templates configurados (que solo llevan la gestión).
+    const raw = [node.stepLabel, ...segments];
+    return [
+      ...new Set([...raw, ...raw.map(stripAutomationEmbeddedRefs)]),
+    ].filter((label) => label.length > 0);
   };
 
   const nodeMatchScore = (node: AutomationNode, matchLabel: string): number => {
@@ -444,8 +464,11 @@ export function buildStageGroups(
 
   for (const itemGroup of itemById.values()) {
     itemGroup.nodes.sort(compareChronologically);
-    itemGroup.completed =
-      itemStageForNodes(itemGroup.nodes) === "completed";
+    itemGroup.completed = itemStageForNodes(itemGroup.nodes) === "completed";
+    // Los ítems de formulario/manual no esperan ticket: nunca son "faltantes".
+    if (!isTicketLikeKind(itemGroup.kind)) {
+      itemGroup.missing = false;
+    }
   }
 
   // Armar grupos finales por etapa (items ya vienen ordenados por position).
@@ -453,7 +476,7 @@ export function buildStageGroups(
     const itemGroup = itemById.get(ticketTemplate.id)!;
     const stageGroup = groupsByStageId.get(ticketTemplate.stageId)!;
     stageGroup.items.push(itemGroup);
-    if (itemGroup.blocking) {
+    if (itemGroup.blocking && isTicketLikeKind(itemGroup.kind)) {
       stageGroup.totalBlocking += 1;
       if (itemGroup.completed) {
         stageGroup.completedBlocking += 1;
@@ -465,7 +488,12 @@ export function buildStageGroups(
   if (workflowKind === "workflow") {
     for (const stageGroup of groupsByStageId.values()) {
       for (const itemGroup of stageGroup.items) {
-        if (itemGroup.blocking && itemGroup.missing && !finalized) {
+        if (
+          isTicketLikeKind(itemGroup.kind) &&
+          itemGroup.blocking &&
+          itemGroup.missing &&
+          !finalized
+        ) {
           missingBlockingCount += 1;
         }
       }
@@ -486,9 +514,7 @@ export function buildStageGroups(
     }
     // Gate desconocido (item de etapa inexistente) -> no bloquea.
     const itemGroup = itemById.get(gateItemId);
-    const satisfied = itemGroup
-      ? itemGroup.completed
-      : true;
+    const satisfied = itemGroup ? itemGroup.completed : true;
     gatesSatisfiedById.set(gateItemId, satisfied);
     return satisfied;
   }

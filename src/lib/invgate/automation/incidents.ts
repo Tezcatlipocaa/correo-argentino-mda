@@ -1,9 +1,12 @@
 import { invgateGet } from "@lib/invgateClient";
+import { mapWithConcurrency } from "@lib/async";
+import {
+  readPersistedCache,
+  writePersistedCache,
+} from "@lib/invgate/cache";
+import { childCacheTtlMs } from "./cache-config";
 import type { InvgateResult } from "@/types/invgate";
-import type {
-  InvgateComment,
-  InvgateIncidentsByIdResponse,
-} from "./types";
+import type { InvgateComment, InvgateIncidentsByIdResponse } from "./types";
 
 const INCIDENTS_ENDPOINT = "incidents";
 /**
@@ -98,6 +101,14 @@ export interface SolutionComment {
   authorId: number | null;
 }
 
+/** Límite de llamadas concurrentes a /incident.comment (una por request). */
+const SOLUTION_CONCURRENCY = 8;
+
+/** Cache persistido por request: la solución no cambia dentro del TTL. */
+function solutionCacheKey(requestId: number): string {
+  return `automation.solution.${requestId}`;
+}
+
 export async function getSolutionComments(
   requestIds: readonly number[],
 ): Promise<Map<number, SolutionComment>> {
@@ -106,32 +117,45 @@ export async function getSolutionComments(
     return solutions;
   }
 
-  const results = await Promise.all(
-    requestIds.map(async (requestId) => {
+  const results = await mapWithConcurrency(
+    requestIds,
+    SOLUTION_CONCURRENCY,
+    async (requestId) => {
+      const cached = readPersistedCache<{ solution: SolutionComment | null }>(
+        solutionCacheKey(requestId),
+      );
+      if (cached) {
+        return [requestId, cached.solution] as const;
+      }
+
+      let solution: SolutionComment | null = null;
       try {
         const result = await invgateGet<InvgateComment[]>(
           `incident.comment?request_id=${requestId}`,
         );
-        if (!result.ok || !Array.isArray(result.data)) {
-          return [requestId, null] as const;
-        }
-        const solution = result.data.find((comment) => comment.is_solution);
-        return [
-          requestId,
-          solution
+        if (result.ok && Array.isArray(result.data)) {
+          const found = result.data.find((comment) => comment.is_solution);
+          solution = found
             ? {
-                message: solution.message,
+                message: found.message,
                 authorId:
-                  typeof solution.author_id === "number"
-                    ? solution.author_id
+                  typeof found.author_id === "number"
+                    ? found.author_id
                     : null,
               }
-            : null,
-        ] as const;
+            : null;
+        }
       } catch {
         return [requestId, null] as const;
       }
-    }),
+
+      writePersistedCache(
+        solutionCacheKey(requestId),
+        { solution },
+        childCacheTtlMs(),
+      );
+      return [requestId, solution] as const;
+    },
   );
 
   for (const [requestId, solution] of results) {

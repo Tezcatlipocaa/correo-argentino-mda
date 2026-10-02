@@ -26,7 +26,13 @@ function node(partial) {
 
 const template = () => ({
   stages: [
-    { id: 1, name: "Etapa 1", description: null, position: 1, gateItemId: null },
+    {
+      id: 1,
+      name: "Etapa 1",
+      description: null,
+      position: 1,
+      gateItemId: null,
+    },
     { id: 2, name: "Etapa 2", description: null, position: 2, gateItemId: 1 },
   ],
   tickets: [
@@ -76,7 +82,8 @@ function check(name, condition) {
 
 check(
   "normalizeLabel normaliza casing/acentos/espacios",
-  normalizeLabel("  Solicitud de Equipamiento  ") === "solicitud de equipamiento" &&
+  normalizeLabel("  Solicitud de Equipamiento  ") ===
+    "solicitud de equipamiento" &&
     normalizeLabel("Habilitación") === "habilitacion",
 );
 check(
@@ -98,8 +105,14 @@ check(
       result.groups[0].status === "completed" &&
       result.groups[1].status === "in_progress",
   );
-  check("nodo sin template queda 'sin etapa'", result.stagelessNodes.length === 1);
-  check("detecta 2 faltantes bloqueantes (etapa 2 sin tickets)", result.missingBlockingCount === 2);
+  check(
+    "nodo sin template queda 'sin etapa'",
+    result.stagelessNodes.length === 1,
+  );
+  check(
+    "detecta 2 faltantes bloqueantes (etapa 2 sin tickets)",
+    result.missingBlockingCount === 2,
+  );
 }
 
 {
@@ -150,7 +163,12 @@ check(
   "tickets informativos no cuentan para completar la etapa",
   (() => {
     const result = buildStageGroups(
-      [node({ stepLabel: "Creación de Punto de Venta", lifecycle: "completed" })],
+      [
+        node({
+          stepLabel: "Creación de Punto de Venta",
+          lifecycle: "completed",
+        }),
+      ],
       template(),
     );
     return result.groups[1].completedBlocking === 0;
@@ -174,20 +192,21 @@ check(
       [
         node({
           stepLabel: "AUTOMATICACIÓN DE SUCURSAL B0168\tLIBERTAD",
-          title: "AUTOMATICACIÓN DE SUCURSAL B0168\tLIBERTAD - SOLICITUD DE EQUIPAMIENTO",
+          title:
+            "AUTOMATICACIÓN DE SUCURSAL B0168\tLIBERTAD - SOLICITUD DE EQUIPAMIENTO",
           lifecycle: "completed",
         }),
         node({
           stepLabel: "AUTOMATICAZIÓN DE SUCURSAL B1618 TRISTAN SUAREZ",
-          title: "AUTOMATICAZIÓN DE SUCURSAL B1618 TRISTAN SUAREZ - SOLICITUD DE EQUIPAMIENTO",
+          title:
+            "AUTOMATICAZIÓN DE SUCURSAL B1618 TRISTAN SUAREZ - SOLICITUD DE EQUIPAMIENTO",
         }),
       ],
       template(),
     );
-    const item = result.groups.find((g) => g.template.name === "Etapa 1")?.items[0];
-    return (
-      item !== undefined && !item.missing && item.nodes.length === 2
-    );
+    const item = result.groups.find((g) => g.template.name === "Etapa 1")
+      ?.items[0];
+    return item !== undefined && !item.missing && item.nodes.length === 2;
   })(),
 );
 
@@ -195,7 +214,13 @@ check(
   // Aliases: dos labels distintos caen en la MISMA card (mismo item).
   const aliasTemplate = {
     stages: [
-      { id: 1, name: "Etapa 1", description: null, position: 1, gateItemId: null },
+      {
+        id: 1,
+        name: "Etapa 1",
+        description: null,
+        position: 1,
+        gateItemId: null,
+      },
     ],
     tickets: [
       {
@@ -229,14 +254,59 @@ check(
   // Scope: workflow filtra solo etapas workflow; legacy solo legacy.
   const scoped = {
     stages: [
-      { id: 1, name: "Workflow 1", description: null, position: 1, scope: "workflow", gateItemId: null },
-      { id: 2, name: "Workflow 2", description: null, position: 2, scope: "workflow", gateItemId: 1 },
-      { id: 3, name: "Legacy 1", description: null, position: 1, scope: "legacy", gateItemId: null },
+      {
+        id: 1,
+        name: "Workflow 1",
+        description: null,
+        position: 1,
+        scope: "workflow",
+        gateItemId: null,
+      },
+      {
+        id: 2,
+        name: "Workflow 2",
+        description: null,
+        position: 2,
+        scope: "workflow",
+        gateItemId: 1,
+      },
+      {
+        id: 3,
+        name: "Legacy 1",
+        description: null,
+        position: 1,
+        scope: "legacy",
+        gateItemId: null,
+      },
     ],
     tickets: [
-      { id: 1, stageId: 1, matchLabel: "Solicitud de equipamiento", aliases: [], displayName: null, blocking: true, position: 1 },
-      { id: 2, stageId: 2, matchLabel: "Go / No Go", aliases: [], displayName: null, blocking: true, position: 1 },
-      { id: 3, stageId: 3, matchLabel: "Configuración de server", aliases: [], displayName: null, blocking: true, position: 1 },
+      {
+        id: 1,
+        stageId: 1,
+        matchLabel: "Solicitud de equipamiento",
+        aliases: [],
+        displayName: null,
+        blocking: true,
+        position: 1,
+      },
+      {
+        id: 2,
+        stageId: 2,
+        matchLabel: "Go / No Go",
+        aliases: [],
+        displayName: null,
+        blocking: true,
+        position: 1,
+      },
+      {
+        id: 3,
+        stageId: 3,
+        matchLabel: "Configuración de server",
+        aliases: [],
+        displayName: null,
+        blocking: true,
+        position: 1,
+      },
     ],
   };
   const workflow = buildStageGroups(
@@ -272,7 +342,14 @@ check(
   // Fallback por descripción: títulos idénticos se distinguen por keywords.
   const descTemplate = {
     stages: [
-      { id: 1, name: "Etapa 1", description: null, position: 1, scope: "workflow", gateItemId: null },
+      {
+        id: 1,
+        name: "Etapa 1",
+        description: null,
+        position: 1,
+        scope: "workflow",
+        gateItemId: null,
+      },
     ],
     tickets: [
       {
@@ -300,9 +377,24 @@ check(
   const title = "Instalaciones para AUTSUC #79867  (B0106) 25 sep 2026";
   const result = buildStageGroups(
     [
-      node({ refId: 1, stepLabel: title, title, description: "acondicionamiento de redes y cableado" }),
-      node({ refId: 2, stepLabel: title, title, description: "se solicita programar instalaciones para el 24 sep" }),
-      node({ refId: 3, stepLabel: title, title, description: "texto sin pistas" }),
+      node({
+        refId: 1,
+        stepLabel: title,
+        title,
+        description: "acondicionamiento de redes y cableado",
+      }),
+      node({
+        refId: 2,
+        stepLabel: title,
+        title,
+        description: "se solicita programar instalaciones para el 24 sep",
+      }),
+      node({
+        refId: 3,
+        stepLabel: title,
+        title,
+        description: "texto sin pistas",
+      }),
     ],
     descTemplate,
     { workflowKind: "workflow" },
@@ -310,7 +402,8 @@ check(
   const labelFor = (refId) => {
     for (const group of result.groups) {
       for (const item of group.items) {
-        if (item.nodes.some((n) => n.refId === refId)) return item.template.matchLabel;
+        if (item.nodes.some((n) => n.refId === refId))
+          return item.template.matchLabel;
       }
     }
     return null;
@@ -321,6 +414,55 @@ check(
       labelFor(2) === "Visita técnica para instalaciones" &&
       labelFor(3) === null &&
       result.stagelessNodes.length === 1,
+  );
+}
+
+// Ítems `form`/`manual`: no cuentan como faltantes bloqueantes.
+{
+  const tpl = {
+    stages: [
+      {
+        id: 1,
+        name: "Etapa",
+        description: null,
+        position: 1,
+        gateItemId: null,
+      },
+    ],
+    tickets: [
+      {
+        id: 1,
+        stageId: 1,
+        matchLabel: "Ticket faltante",
+        displayName: null,
+        blocking: true,
+        kind: "ticket",
+        position: 1,
+      },
+      {
+        id: 2,
+        stageId: 1,
+        matchLabel: "Formulario",
+        displayName: null,
+        blocking: true,
+        kind: "form",
+        position: 2,
+      },
+      {
+        id: 3,
+        stageId: 1,
+        matchLabel: "Manual",
+        displayName: null,
+        blocking: true,
+        kind: "manual",
+        position: 3,
+      },
+    ],
+  };
+  const result = buildStageGroups([], tpl, { workflowKind: "workflow" });
+  check(
+    "solo el ticket cuenta como faltante bloqueante",
+    result.missingBlockingCount === 1,
   );
 }
 

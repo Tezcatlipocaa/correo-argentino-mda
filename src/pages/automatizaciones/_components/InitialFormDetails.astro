@@ -7,13 +7,30 @@ interface Props {
   form: AutomationInitialForm;
   /** Fallback de región/localidad desde la DB de oficinas (por código de sucursal). */
   location?: { region: string | null; locality: string | null } | null;
+  /** Número de contacto cargado a mano (opcional). */
+  contactNumber?: string | null;
+  /** Franja horaria de la sucursal (manual o parseada). */
+  openingHours?: string | null;
+  /** Notas manuales (opcional). */
+  notes?: string | null;
+  /** Nombre de sucursal del título, fallback si el form no lo trae. */
+  branchName?: string | null;
 }
 
-const { form, location = null } = Astro.props;
+const {
+  form,
+  location = null,
+  contactNumber = null,
+  openingHours = null,
+  notes = null,
+  branchName = null,
+} = Astro.props;
 const parsed = form.parsed;
 
 const region = parsed?.sucursal?.region ?? location?.region ?? null;
 const locality = parsed?.sucursal?.locality ?? location?.locality ?? null;
+const sucursalPrimary =
+  parsed?.sucursal?.name ?? parsed?.sucursal?.raw ?? branchName;
 
 const hasSucursalData =
   parsed !== null &&
@@ -21,7 +38,10 @@ const hasSucursalData =
     parsed.ipRange !== null ||
     parsed.estimatedEnd !== null ||
     region !== null ||
-    locality !== null);
+    locality !== null ||
+    contactNumber !== null ||
+    openingHours !== null ||
+    branchName !== null);
 
 const showRawText = parsed === null;
 ---
@@ -45,10 +65,7 @@ const showRawText = parsed === null;
 
       <div class="grid gap-4 md:grid-cols-2">
         {hasSucursalData && (
-          <InfoGroupCard
-            title="Sucursal"
-            primary={parsed.sucursal?.name ?? parsed.sucursal?.raw ?? "—"}
-          >
+          <InfoGroupCard title="Sucursal" primary={sucursalPrimary ?? "—"}>
             {region && <InitialFormFieldRow label="Región" value={region} />}
             {locality && (
               <InitialFormFieldRow label="Localidad" value={locality} />
@@ -69,6 +86,18 @@ const showRawText = parsed === null;
               <InitialFormFieldRow
                 label="Fecha estimada de finalización"
                 value={parsed.estimatedEnd}
+              />
+            )}
+            {openingHours && (
+              <InitialFormFieldRow
+                label="Franja horaria"
+                value={openingHours}
+              />
+            )}
+            {contactNumber && (
+              <InitialFormFieldRow
+                label="Número de contacto"
+                value={contactNumber}
               />
             )}
           </InfoGroupCard>
@@ -102,6 +131,17 @@ const showRawText = parsed === null;
           </InfoGroupCard>
         )}
       </div>
+
+      {notes && (
+        <div class="bg-base-200/40 rounded-lg px-4 py-3">
+          <h3 class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+            Notas
+          </h3>
+          <p class="text-base-content/80 mt-1 text-sm leading-relaxed whitespace-pre-line">
+            {notes}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

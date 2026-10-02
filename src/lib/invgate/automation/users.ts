@@ -1,4 +1,6 @@
 import { invgateGet } from "@lib/invgateClient";
+import { readPersistedCache, writePersistedCache } from "@lib/invgate/cache";
+import { usersCacheTtlMs } from "./cache-config";
 import type { InvgateUser } from "@/types/invgate";
 
 /**
@@ -13,12 +15,45 @@ const USERS_ENDPOINT = "users";
 const CHUNK_SIZE = 100;
 const CACHE_TTL_MS = 30 * 60_000;
 
+/** Snapshot persistido (sobrevive restarts): id → nombre. */
+const USERS_CACHE_KEY = "automation.users";
+
 interface CacheEntry {
   name: string;
   at: number;
 }
 
 const userNameCache = new Map<number, CacheEntry>();
+/** Ids que la API no devolvió (autores desconocidos) → evita re-pedirlos. */
+const missedUsers = new Map<number, number>();
+
+let hydratedFromPersisted = false;
+
+function hydrateUsersFromPersisted(): void {
+  if (hydratedFromPersisted) {
+    return;
+  }
+  hydratedFromPersisted = true;
+  const snapshot = readPersistedCache<Record<string, string>>(USERS_CACHE_KEY);
+  if (!snapshot) {
+    return;
+  }
+  const now = Date.now();
+  for (const [id, name] of Object.entries(snapshot)) {
+    const numericId = Number(id);
+    if (Number.isInteger(numericId) && typeof name === "string") {
+      userNameCache.set(numericId, { name, at: now });
+    }
+  }
+}
+
+function persistUsers(): void {
+  const snapshot: Record<string, string> = {};
+  for (const [id, entry] of userNameCache) {
+    snapshot[String(id)] = entry.name;
+  }
+  writePersistedCache(USERS_CACHE_KEY, snapshot, usersCacheTtlMs());
+}
 
 /** Nombre display: "Nombre Apellido" → username → "Usuario #id". */
 export function makeUserDisplayName(user: InvgateUser): string {
@@ -68,6 +103,8 @@ function extractUsers(raw: unknown): InvgateUser[] {
 export async function getUsersByIds(
   ids: readonly number[],
 ): Promise<Map<number, string>> {
+  hydrateUsersFromPersisted();
+
   const resolved = new Map<number, string>();
   const now = Date.now();
   const missing: number[] = [];
@@ -79,9 +116,13 @@ export async function getUsersByIds(
     const cached = userNameCache.get(id);
     if (cached && now - cached.at < CACHE_TTL_MS) {
       resolved.set(id, cached.name);
-    } else {
-      missing.push(id);
+      continue;
     }
+    const missed = missedUsers.get(id);
+    if (missed && now - missed < CACHE_TTL_MS) {
+      continue;
+    }
+    missing.push(id);
   }
 
   for (let index = 0; index < missing.length; index += CHUNK_SIZE) {
@@ -97,14 +138,25 @@ export async function getUsersByIds(
       continue;
     }
 
+    const returnedIds = new Set<number>();
     for (const user of extractUsers(result.data)) {
       if (!user || typeof user.id !== "number") {
         continue;
       }
       const name = makeUserDisplayName(user);
       userNameCache.set(user.id, { name, at: Date.now() });
+      returnedIds.add(user.id);
       resolved.set(user.id, name);
     }
+    for (const id of chunk) {
+      if (!returnedIds.has(id)) {
+        missedUsers.set(id, Date.now());
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    persistUsers();
   }
 
   return resolved;

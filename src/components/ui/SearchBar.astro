@@ -3,6 +3,10 @@ import { Icon } from "astro-icon/components";
 
 export interface Props {
   id: string;
+  /** Nombre del campo para enviar por formulario GET (opcional). */
+  name?: string;
+  /** Valor inicial del input (búsqueda server-side). */
+  value?: string;
   placeholder?: string;
   ariaLabel?: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -12,6 +16,8 @@ export interface Props {
 
 const {
   id,
+  name,
+  value = "",
   placeholder = "Buscar...",
   ariaLabel,
   size = "md",
@@ -39,6 +45,8 @@ const iconSize = size === "xs" ? 14 : size === "lg" || size === "xl" ? 20 : 16;
   <input
     type="search"
     {id}
+    name={name}
+    value={value}
     {placeholder}
     aria-label={ariaLabel}
     class="grow"

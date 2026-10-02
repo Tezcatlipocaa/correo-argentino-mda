@@ -1,20 +1,21 @@
 ---
-import { Icon } from "astro-icon/components";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import AutomatizacionDetalleContent from "./_components/AutomatizacionDetalleContent.astro";
+import AutomationBackLink from "./_components/AutomationBackLink.astro";
+import AutomationEmptyState from "./_components/AutomationEmptyState.astro";
 import { resolveUrl } from "@lib/url";
 import { resolveAutomationDetail } from "@lib/workflow/resolver";
 import type { AutomationDetail } from "@lib/workflow/resolver";
-import { normalizeRole } from "@lib/rbac";
+import { isLoggedIn, normalizeRole } from "@lib/rbac";
 
 const { id } = Astro.params;
 const automationId = Number.parseInt(id ?? "", 10);
 const isValidId = Number.isInteger(automationId);
 
 const user = Astro.locals.user;
-const canQuery = user.id !== 0;
+const canQuery = isLoggedIn(user);
 const canClose = normalizeRole(user.role) === "admin";
 
 let detail: AutomationDetail | null = null;
@@ -45,18 +46,12 @@ if (isValidId && canQuery) {
       />
     ) : (
       <PageContainer>
-        <a
-          href={resolveUrl("/automatizaciones")}
-          class="text-base-content/60 hover:text-base-content mb-2 inline-flex items-center gap-1.5 text-sm transition-colors"
-        >
-          <Icon name="boxicons:arrow-left-filled" size={14} aria-hidden="true" />
-          Volver a automatizaciones
-        </a>
+        <AutomationBackLink class="mb-2" />
         <PageHeader description="Detalle del workflow de automatización de sucursal en InvGate Service Management." />
-        <p class="border-base-300 text-base-content/60 rounded-lg border border-dashed px-4 py-10 text-center text-sm">
-          No se encontró la automatización solicitada. Volvé al listado para
-          ver las automatizaciones registradas.
-        </p>
+        <AutomationEmptyState
+          class="py-10"
+          message="No se encontró la automatización solicitada. Volvé al listado para ver las automatizaciones registradas."
+        />
         <a
           href={resolveUrl("/automatizaciones")}
           class="btn btn-secondary btn-sm self-center"

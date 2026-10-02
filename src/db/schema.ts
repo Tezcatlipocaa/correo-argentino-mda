@@ -1015,6 +1015,15 @@ export const workflowStageTickets = sqliteTable(
     displayName: text("display_name"),
     /** false = ticket informativo/registro (no bloquea la etapa). */
     blocking: integer("blocking", { mode: "boolean" }).notNull().default(true),
+    /**
+     * Naturaleza del ítem esperado:
+     * - `ticket` (default): ticket hijo de InvGate.
+     * - `form`: se completa por formulario (no genera ticket).
+     * - `manual`: gestión manual de MDC (no genera ticket).
+     * - `subprocess`: ticket generado por un subproceso (se matchea igual).
+     * form/manual no cuentan como faltantes.
+     */
+    kind: text("kind").notNull().default("ticket"),
     position: integer("position").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(
       () => new Date(),
@@ -1075,6 +1084,25 @@ export const automationClosures = sqliteTable("automation_closures", {
   percent: integer("percent").notNull(),
   closedBy: text("closed_by").notNull(),
   closedAt: integer("closed_at").notNull(),
+});
+
+/**
+ * Datos manuales de una automatización (override local sobre el formulario
+ * inicial). Carga de jefe/zonal y campos operativos que no vienen de InvGate
+ * (Número de contacto, Franja horaria, notas). Se edita desde el portal y el
+ * detalle lo mezcla sobre lo parseado. Nunca toca InvGate.
+ */
+export const automationManualData = sqliteTable("automation_manual_data", {
+  automationId: integer("automation_id").primaryKey(),
+  jefeName: text("jefe_name"),
+  jefeDni: text("jefe_dni"),
+  jefeLegajo: text("jefe_legajo"),
+  jefeZonal: text("jefe_zonal"),
+  contactNumber: text("contact_number"),
+  openingHours: text("opening_hours"),
+  notes: text("notes"),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: integer("updated_at").notNull(),
 });
 
 /**

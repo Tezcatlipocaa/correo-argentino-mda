@@ -2,11 +2,16 @@
 interface Props {
   totalPages: number;
   currentPage: number;
+  /** Sobrescribe la construcción del href (p. ej. preservar filtros propios). */
+  hrefFor?: (page: number) => string;
 }
 
-const { totalPages, currentPage } = Astro.props;
+const { totalPages, currentPage, hrefFor } = Astro.props;
 
 const getPageUrl = (page: number) => {
+  if (hrefFor) {
+    return hrefFor(page);
+  }
   const url = new URL(Astro.url);
   url.searchParams.set("page", page.toString());
   return url.search;

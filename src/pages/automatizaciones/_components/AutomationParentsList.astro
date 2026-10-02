@@ -1,6 +1,6 @@
 ---
 import type { AutomationSummary } from "@lib/workflow/discovery";
-import AutomationCard from "./AutomationCard.astro";
+import AutomationCardList from "./AutomationCardList.astro";
 import AutomationEmptyState from "./AutomationEmptyState.astro";
 
 interface Props {
@@ -12,31 +12,10 @@ interface Props {
 const { items, statusNames, emptyMessage } = Astro.props;
 ---
 
-<div data-automation-list>
-  {
-    items.length === 0 ? (
-      <AutomationEmptyState message={emptyMessage} />
-    ) : (
-      <ul class="flex flex-col gap-3">
-        {items.map((item, index) => (
-          <li
-            data-automation-row
-            data-order={index}
-            data-active={item.isActive ? "1" : "0"}
-            data-search-nis={item.branchCode}
-            data-search-pretty={item.prettyId}
-            data-search-name={item.branchName}
-            data-search-title={item.displayName}
-          >
-            <AutomationCard item={item} statusNames={statusNames} />
-          </li>
-        ))}
-      </ul>
-    )
-  }
-  <AutomationEmptyState
-    message="Ninguna automatización coincide con la búsqueda o el filtro."
-    class="mt-3 hidden"
-    data-automation-no-results
-  />
-</div>
+{
+  items.length === 0 ? (
+    <AutomationEmptyState message={emptyMessage} />
+  ) : (
+    <AutomationCardList items={items} statusNames={statusNames} />
+  )
+}

@@ -72,15 +72,70 @@ const cases = [
     expected: "Configuración de server",
   },
   {
-    title: "Solicitud de hostnames normalizados por automatización: Sucursal B0174",
-    stepLabel: "Solicitud de hostnames normalizados por automatización: Sucursal B0174",
+    title:
+      "Solicitud de hostnames normalizados por automatización: Sucursal B0174",
+    stepLabel:
+      "Solicitud de hostnames normalizados por automatización: Sucursal B0174",
     // Segmento único que es referencia de sucursal: cae al stepLabel.
-    expected: "Solicitud de hostnames normalizados por automatización: Sucursal B0174",
+    expected:
+      "Solicitud de hostnames normalizados por automatización: Sucursal B0174",
   },
   {
-    title: "Generación CAI y carga en ambiente INTEGRA - Automatización de sucursal B0022",
+    title:
+      "Generación CAI y carga en ambiente INTEGRA - Automatización de sucursal B0022",
     stepLabel: "Generación CAI y carga en ambiente INTEGRA",
     expected: "Generación CAI y carga en ambiente INTEGRA",
+  },
+  // Formato nuevo (2026-10, workflow con sucursal en el título): prefijo
+  // "AUTSUC <sucursal> (B####)" + gestión + "#<id padre>" + fecha estimada.
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a0TECO Instalaciones #84909\u00a07 oct 2026",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a0TECO Instalaciones #84909\u00a07 oct 2026",
+    expected: "TECO Instalaciones",
+  },
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a01-Equipamiento (Prep y Despacho) #84909\u00a07 oct 2026\u200b\u200b\u200b",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a01-Equipamiento (Prep y Despacho) #84909\u00a07 oct 2026\u200b\u200b\u200b",
+    expected: "Equipamiento (Prep y Despacho)",
+  },
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a01.1-Equipamiento - Server #84909\u00a07 oct 2026\u200b\u200b",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a01.1-Equipamiento - Server #84909\u00a07 oct 2026\u200b\u200b",
+    expected: "Equipamiento - Server",
+  },
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a01.2-Equipamiento - HH\u00a0#84909\u00a07 oct 2026\u200b\u200b",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a01.2-Equipamiento - HH\u00a0#84909\u00a07 oct 2026\u200b\u200b",
+    expected: "Equipamiento - HH",
+  },
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a01.3-Equipamiento - Otro HW\u00a0#(84909)\u00a07 oct 2026\u200b\u200b",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a01.3-Equipamiento - Otro HW\u00a0#(84909)\u00a07 oct 2026\u200b\u200b",
+    expected: "Equipamiento - Otro HW",
+  },
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a0Instalaciones #84909\u00a07 oct 2026\u200b\u200b",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a0Instalaciones #84909\u00a07 oct 2026\u200b\u200b",
+    expected: "Instalaciones",
+  },
+  {
+    title:
+      "AUTSUC GLEW (B0101) \u00a0Habilitacion de Servicios M&F #84909\u200b\u200b\u00a07 oct 2026\u200b\u200b",
+    stepLabel:
+      "AUTSUC GLEW (B0101) \u00a0Habilitacion de Servicios M&F #84909\u200b\u200b\u00a07 oct 2026\u200b\u200b",
+    expected: "Habilitacion de Servicios M&F",
   },
 ];
 
@@ -92,7 +147,9 @@ for (const testCase of cases) {
       `FAIL: "${testCase.title}"\n  esperado: ${JSON.stringify(testCase.expected)}\n  obtenido: ${JSON.stringify(actual)}`,
     );
   } else {
-    console.log(`ok - ${JSON.stringify(testCase.title)} -> ${JSON.stringify(actual)}`);
+    console.log(
+      `ok - ${JSON.stringify(testCase.title)} -> ${JSON.stringify(actual)}`,
+    );
   }
 }
 

@@ -1,4 +1,6 @@
 import { getHelpdesks, getHelpdesksAndLevels } from "./helpdesks";
+import { readPersistedCache, writePersistedCache } from "@lib/invgate/cache";
+import { usersCacheTtlMs } from "./cache-config";
 
 /**
  * Resolución de nombres de sector para las tareas.
@@ -20,6 +22,40 @@ interface SectorMap {
 
 let cached: SectorMap | null = null;
 let inflight: Promise<SectorMap | null> | null = null;
+
+/** Snapshot persistido del mapa de sectores (sobrevive restarts). */
+const SECTOR_CACHE_KEY = "automation.sector_map";
+
+interface PersistedSectorMap {
+  names: [number, string][];
+  levelToHelpdesk: [number, number][];
+  loadedAt: number;
+}
+
+function persistSectorMap(map: SectorMap): void {
+  writePersistedCache(
+    SECTOR_CACHE_KEY,
+    {
+      names: [...map.names.entries()],
+      levelToHelpdesk: [...map.levelToHelpdesk.entries()],
+      loadedAt: map.loadedAt,
+    } satisfies PersistedSectorMap,
+    usersCacheTtlMs(),
+  );
+}
+
+function readPersistedSectorMap(): SectorMap | null {
+  const persisted = readPersistedCache<PersistedSectorMap>(SECTOR_CACHE_KEY);
+  if (!persisted || !Array.isArray(persisted.names)) {
+    return null;
+  }
+  return {
+    names: new Map(persisted.names),
+    levelToHelpdesk: new Map(persisted.levelToHelpdesk),
+    loadedAt:
+      typeof persisted.loadedAt === "number" ? persisted.loadedAt : Date.now(),
+  };
+}
 
 async function buildSectorMap(): Promise<SectorMap | null> {
   const [helpdesksResult, levelsResult] = await Promise.all([
@@ -55,11 +91,21 @@ async function loadSectorMap(): Promise<SectorMap | null> {
   if (inflight) {
     return inflight;
   }
+
+  const persisted = readPersistedSectorMap();
+  if (persisted) {
+    // `readPersistedCache` ya validó el TTL persistido (24 h): se hidrata y se
+    // reinicia la ventana de memoria para no reconstruir antes de tiempo.
+    cached = { ...persisted, loadedAt: Date.now() };
+    return cached;
+  }
+
   inflight = (async () => {
     try {
       const map = await buildSectorMap();
       if (map) {
         cached = map;
+        persistSectorMap(map);
       }
       return map ?? cached;
     } finally {
@@ -77,7 +123,9 @@ export async function resolveSectorNames(
   ids: readonly number[],
 ): Promise<Map<number, string>> {
   const resolved = new Map<number, string>();
-  const unique = [...new Set(ids)].filter((id) => Number.isInteger(id) && id > 0);
+  const unique = [...new Set(ids)].filter(
+    (id) => Number.isInteger(id) && id > 0,
+  );
   if (unique.length === 0) {
     return resolved;
   }

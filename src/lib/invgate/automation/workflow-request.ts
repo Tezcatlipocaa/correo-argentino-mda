@@ -1,16 +1,16 @@
 import { invgateGet } from "@lib/invgateClient";
 import type { InvgateResult } from "@/types/invgate";
-import { htmlToPlainText } from "@lib/format/html-to-text";
+import { asText, fieldText, richFieldText } from "./value-text";
 
 /**
  * Acceso a `GET /wf.request`, el endpoint del manual que expone los pasos y
  * las variables de un workflow, incluidos los VALORES de los initial fields
  * (Jefe de Sucursal, Jefe Zonal, DNI/Legajo, etc.).
  *
- * Estado en la instancia (2026-09, v8.21.7): el endpoint devuelve 404, así que
- * `getWorkflowRequest` degrada a `null` y la vista mantiene el fallback
- * (formulario parseado de la prosa de `Instalaciones`). Cuando InvGate lo
- * habilite, los campos se completan solos.
+ * Estado en la instancia (2026-10): el endpoint responde 200 con el permiso
+ * correspondiente del usuario de API (antes devolvía 403). `getWorkflowRequest`
+ * degrada a `null` ante error, así que la vista conserva el fallback (formulario
+ * parseado de la prosa de `Instalaciones`) si el endpoint falla.
  */
 
 export interface WorkflowRequestField {
@@ -58,6 +58,8 @@ export interface InvgateWorkflowRequest {
   category_id?: number | null;
   steps?: WorkflowRequestStep[];
   variables?: WorkflowRequestVariable[];
+  /** Variables calculadas del proceso (nombre → valor), validadas 2026-10. */
+  current_variables_values?: WorkflowRequestVariable[];
   [key: string]: unknown;
 }
 
@@ -82,16 +84,6 @@ export interface WorkflowInitialFields {
   nis: string | null;
 }
 
-function asText(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number") {
-    return String(value);
-  }
-  return "";
-}
-
 function normalizeLabel(raw: string): string {
   return raw
     .normalize("NFD")
@@ -99,25 +91,6 @@ function normalizeLabel(raw: string): string {
     .replace(/[\s_]+/g, " ")
     .trim()
     .toLocaleLowerCase("es-AR");
-}
-
-/**
- * Valor legible de un field: prioriza `value_label`, pero cae a `value` cuando
- * el label es vacío o numérico (ids crudos de un user picker).
- */
-function fieldText(field: WorkflowRequestField): string {
-  const rawValue = asText(field.value);
-  const label = asText(field.value_label).trim();
-  if (label && !/^\d+$/.test(label)) {
-    return label;
-  }
-  return rawValue;
-}
-
-/** Texto plano del campo (la tabla de DNI/Legajo viene como HTML). */
-function fieldPlainText(field: WorkflowRequestField): string {
-  const text = fieldText(field);
-  return /<[a-z][\s\S]*>/i.test(text) ? htmlToPlainText(text) : text;
 }
 
 /**
@@ -164,7 +137,9 @@ export function parseWorkflowInitialFields(
     if (!label) {
       continue;
     }
-    const plain = fieldPlainText(field).replace(/\u00a0/g, " ").trim();
+    const plain = richFieldText(field.value, field.value_label)
+      .replace(/\u00a0/g, " ")
+      .trim();
     if (!plain) {
       continue;
     }
@@ -178,7 +153,7 @@ export function parseWorkflowInitialFields(
         continue;
       }
       // Campo usuario: preferir un valor no numérico (nombre).
-      const candidate = fieldText(field).trim();
+      const candidate = fieldText(field.value, field.value_label).trim();
       if (candidate && !/^\d+$/.test(candidate)) {
         jefeName = candidate;
       }
@@ -186,7 +161,7 @@ export function parseWorkflowInitialFields(
     }
 
     if (label === "jefe zonal") {
-      const candidate = fieldText(field).trim();
+      const candidate = fieldText(field.value, field.value_label).trim();
       if (candidate && !/^\d+$/.test(candidate)) {
         jefeZonal = candidate;
       }

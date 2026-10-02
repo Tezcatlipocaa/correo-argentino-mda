@@ -6,7 +6,7 @@ import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
 import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
 import AutomationLink from "./AutomationLink.astro";
-import AutomationProgressBar from "./AutomationProgressBar.astro";
+import AutomationProgress from "./AutomationProgress.astro";
 import InitialFormFieldRow from "./InitialFormFieldRow.astro";
 
 interface Props {
@@ -74,16 +74,7 @@ const resolveStatusName = (statusId: number) =>
         <div class="skeleton h-3 w-full rounded"></div>
       </div>
       <div class="hidden flex-col gap-1" data-progress-content>
-        <div class="flex items-baseline justify-between">
-          <h4 class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
-            Progreso
-          </h4>
-          <span
-            class="text-base-content text-sm font-medium"
-            data-progress-label
-          />
-        </div>
-        <AutomationProgressBar percent={0} data-progress-bar />
+        <AutomationProgress progress={null} />
       </div>
       <p class="text-base-content/50 hidden text-xs" data-progress-error>
         Progreso no disponible.
@@ -112,7 +103,8 @@ const resolveStatusName = (statusId: number) =>
     <div class="flex items-center justify-end gap-x-2">
       <OpenExternalUrlButton
         href={deriveInvGateUiUrl(item.id)}
-        class="btn-ghost shadow-none rounded-sm "
+        appearance="ghost"
+        class="rounded-sm shadow-none"
         ariaLabel={`Abrir ticket ${item.prettyId} en InvGate`}
         variant="text"
         label="Abrir en InvGate"

@@ -1,12 +1,12 @@
 import type { APIRoute } from "astro";
 import { jsonResponse, jsonError, sanitizeError } from "@lib/apiResponse";
 import { requireReadAccess } from "@lib/rbac-middleware";
-import { resolveAutomationDetail } from "@lib/workflow/resolver";
+import { resolveAutomationProgress } from "@lib/workflow/resolver";
 
 /**
  * Progreso de una automatización para las cards del listado (fetch lazy al
- * expandir). Reusa el cache de resolveAutomationDetail (TTL 2 min), así el
- * detalle y este endpoint comparten el mismo dato.
+ * expandir). Usa el pipeline liviano (link + bulk): sirve el snapshot
+ * persistido si existe y, si no, evita tasks/solutions/wf.request.
  */
 export const GET: APIRoute = async ({ params, locals }) => {
   const denied = requireReadAccess(locals, "automatizaciones");
@@ -20,13 +20,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
   }
 
   try {
-    const result = await resolveAutomationDetail(automationId);
+    const result = await resolveAutomationProgress(automationId);
 
     if (!result.ok) {
       return jsonError(result.message, 502, "no-store");
     }
 
-    return jsonResponse({ progress: result.detail.progress }, 200, "no-store");
+    return jsonResponse({ progress: result.progress }, 200, "no-store");
   } catch (error) {
     console.error("[API automatizaciones/progress] Error:", error);
     return jsonError(sanitizeError(error), 500);

@@ -3,22 +3,21 @@ import { Icon } from "astro-icon/components";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
-import Modal from "@components/ui/Modal.astro";
-import FormTextarea from "@components/ui/forms/FormTextarea.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
-import AutomationProgressBar from "./AutomationProgressBar.astro";
+import AutomationProgress from "./AutomationProgress.astro";
 import AutomationTimeline from "./AutomationTimeline.astro";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
 import InitialFormDetails from "./InitialFormDetails.astro";
-import { isActiveStatus, isFinalizedStatus } from "@lib/workflow/automation-status";
+import CloseAutomationModal from "./CloseAutomationModal.astro";
+import AutomationStatusBoard from "./AutomationStatusBoard.astro";
+import EditManualDataModal from "./EditManualDataModal.astro";
+import AutomationBackLink from "./AutomationBackLink.astro";
 import {
-  DEFAULT_CLOSE_REASON,
-  canManualClose,
-} from "@lib/workflow/closures";
+  isActiveStatus,
+  isFinalizedStatus,
+} from "@lib/workflow/automation-status";
+import { canManualClose } from "@lib/workflow/closures";
 import type { AutomationClosure } from "@lib/workflow/closures";
 import { formatEpochDateTime } from "@lib/format/datetime";
-import { resolveUrl } from "@lib/url";
 import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
 import type { AutomationDetail } from "@lib/workflow/resolver";
 
@@ -48,18 +47,11 @@ const canShowCloseButton =
   isActiveStatus(detail.statusId) &&
   canManualClose(detail.progress.percent);
 const canReopen = canClose && hasClosure && closure?.kind === "manual";
+const canEditManualData = canClose && detail !== null;
 ---
 
 <PageContainer width="xl">
-  <!-- Volver a automatizaciones -->
-  <a
-    href={resolveUrl("/automatizaciones")}
-    data-astro-prefetch="hover"
-    class="text-base-content/60 hover:text-base-content inline-flex items-center gap-1.5 text-sm transition-colors"
-  >
-    <Icon name="boxicons:arrow-left-filled" size={14} aria-hidden="true" />
-    Volver a automatizaciones
-  </a>
+  <AutomationBackLink />
 
   <div
     class="bg-base-100 border-base-300 sticky -top-4 z-20 flex flex-col gap-3 border-b pb-4 md:-top-6"
@@ -83,6 +75,12 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
                 Solicitud iniciada el
                 {formatEpochDateTime(detail.createdAt)}
               </p>
+              {detail.estimatedEnd && (
+                <>
+                  <span>{" · "}</span>
+                  <p>Implementación estimada {detail.estimatedEnd}</p>
+                </>
+              )}
             </div>
           </div>
 
@@ -109,7 +107,11 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
                   data-reopen-automation
                   data-automation-id={detail.id}
                 >
-                  <Icon name="boxicons:refresh-cw" size={16} aria-hidden="true" />
+                  <Icon
+                    name="boxicons:refresh-cw"
+                    size={16}
+                    aria-hidden="true"
+                  />
                   Reabrir
                 </button>
               )}
@@ -128,27 +130,20 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
       detail && (
         <header class="bg-base-100 flex flex-col gap-2">
           <div>
-            <div class="flex items-baseline justify-between">
-              <h3 class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
-                Progreso
-              </h3>
-              <span class="text-base-content text-sm font-medium">
-                {detail.progress.percent}% · {detail.progress.completed} de{" "}
-                {detail.progress.applicableTotal} pasos
-              </span>
-            </div>
-            <AutomationProgressBar
-              percent={detail.progress.percent}
-              class="mt-0"
+            <AutomationProgress
+              progress={detail.progress}
+              headingLevel="h3"
+              barClass="mt-0"
             />
             {showMissing && missingCount > 0 && (
               <div
                 role="status"
-                class="border-warning/40 bg-warning/10 text-warning-content text-warning mt-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                class="bg-warning/10 text-base-content mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
               >
                 <Icon
                   name="boxicons:alert-circle"
                   size={18}
+                  class="text-warning shrink-0"
                   aria-hidden="true"
                 />
                 <span>
@@ -171,12 +166,12 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
       <div
         role="status"
         data-automation-closure-banner
-        class="border-success/40 bg-success/10 text-success-content text-success mb-2 flex items-start gap-2 rounded-lg border px-3 py-2"
+        class="bg-success/10 text-base-content mb-2 flex items-start gap-2 rounded-lg px-3 py-2"
       >
         <Icon
           name="boxicons:check-circle"
           size={18}
-          class="mt-0.5 shrink-0"
+          class="text-success mt-0.5 shrink-0"
           aria-hidden="true"
         />
         <div class="flex flex-col gap-0.5">
@@ -215,7 +210,7 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
       </div>
     ) : (
       <>
-        {detail.initialForm && (
+        {(detail.initialForm || canEditManualData) && (
           <section class="flex flex-col gap-3 px-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex flex-wrap items-baseline gap-x-2">
@@ -228,22 +223,46 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
                   </span>
                 )}
               </div>
-              {invgateUrl && (
-                <OpenExternalUrlButton
-                  href={invgateUrl}
-                  ariaLabel={`Abrir ticket ${detail.prettyId} en InvGate`}
-                  variant="text"
-                  label="Abrir en InvGate"
-                  size="sm"
-                />
-              )}
+              <div class="flex items-center gap-2">
+                {canEditManualData && (
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm gap-1"
+                    data-open-edit-automation
+                  >
+                    <Icon name="boxicons:edit" size={16} aria-hidden="true" />
+                    Editar datos
+                  </button>
+                )}
+                {invgateUrl && (
+                  <OpenExternalUrlButton
+                    href={invgateUrl}
+                    ariaLabel={`Abrir ticket ${detail.prettyId} en InvGate`}
+                    variant="text"
+                    label="Abrir en InvGate"
+                    size="sm"
+                  />
+                )}
+              </div>
             </div>
-            <InitialFormDetails
-              form={detail.initialForm}
-              location={detail.location}
-            />
+            {detail.initialForm ? (
+              <InitialFormDetails
+                form={detail.initialForm}
+                location={detail.location}
+                contactNumber={detail.manualData?.contactNumber ?? null}
+                openingHours={detail.openingHours}
+                notes={detail.manualData?.notes ?? null}
+                branchName={detail.branchName}
+              />
+            ) : (
+              <p class="text-base-content/50 text-sm italic">
+                Sin formulario inicial en InvGate. Podés cargar los datos manualmente.
+              </p>
+            )}
           </section>
         )}
+
+        {detail.board && <AutomationStatusBoard board={detail.board} />}
 
         <section class="flex flex-col gap-4 px-4">
           <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
@@ -262,128 +281,56 @@ const canReopen = canClose && hasClosure && closure?.kind === "manual";
 
   {
     detail && canShowCloseButton && (
-      <Modal
-        id="close-automation-modal"
-        title="Cerrar caso"
-        icon="boxicons:check-circle"
-      >
-        <Fragment slot="content">
-          <input type="hidden" id="close-automation-id" value={detail.id} />
-          <p class="text-base-content/70 mb-4 text-sm">
-            Vas a marcar <span class="font-mono">{detail.prettyId}</span> como
-            finalizado en el portal. El ticket en InvGate no se modifica.
-          </p>
-          <FormTextarea
-            id="close-automation-reason"
-            name="reason"
-            label="Motivo del cierre"
-            rows={3}
-            value={DEFAULT_CLOSE_REASON}
-            required
-          />
-        </Fragment>
-        <Fragment slot="actions">
-          <div class="modal-action mt-6 flex justify-end gap-2">
-            <ActionCancelButton
-              type="button"
-              variant="error"
-              icon="boxicons:x-filled"
-              label="Cancelar"
-              data-close-close-automation
-            />
-            <ActionConfirmButton
-              type="button"
-              id="btn-confirm-close-automation"
-              color="btn-secondary"
-              icon="boxicons:check-filled"
-              label="Cerrar caso"
-              data-confirm-close-automation
-            />
-          </div>
-        </Fragment>
-      </Modal>
+      <CloseAutomationModal
+        automationId={detail.id}
+        prettyId={detail.prettyId}
+      />
+    )
+  }
+
+  {
+    detail && canEditManualData && (
+      <EditManualDataModal
+        automationId={detail.id}
+        prettyId={detail.prettyId}
+        jefeName={detail.initialForm?.parsed?.jefe?.name ?? null}
+        jefeDni={detail.initialForm?.parsed?.jefe?.dni ?? null}
+        jefeLegajo={detail.initialForm?.parsed?.jefe?.legajo ?? null}
+        jefeZonal={detail.initialForm?.parsed?.jefeZonal ?? null}
+        contactNumber={detail.manualData?.contactNumber ?? null}
+        openingHours={detail.openingHours}
+        notes={detail.manualData?.notes ?? null}
+      />
     )
   }
 </PageContainer>
 
 <script>
   import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
   import { showToast } from "@/lib/toastClient";
-
-  const setBusy = (el: Element | null, busy: boolean): void => {
-    if (el instanceof HTMLButtonElement) {
-      el.disabled = busy;
-      el.classList.toggle("loading", busy);
-    }
-  };
+  import { setBusy } from "@/lib/clientBusy";
 
   document.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    const openBtn = target.closest("[data-open-close-automation]");
-    if (openBtn) {
-      const modal = document.getElementById("close-automation-modal");
-      if (modal instanceof HTMLDialogElement) modal.showModal();
-      return;
-    }
-
-    const closeBtn = target.closest("[data-close-close-automation]");
-    if (closeBtn) {
-      const modal = document.getElementById("close-automation-modal");
-      if (modal instanceof HTMLDialogElement) modal.close();
-      return;
-    }
-
-    const confirmBtn = target.closest("[data-confirm-close-automation]");
-    if (confirmBtn) {
-      const idInput = document.getElementById("close-automation-id");
-      const reasonInput = document.getElementById("close-automation-reason");
-      const automationId =
-        idInput instanceof HTMLInputElement ? Number(idInput.value) : NaN;
-      const reason =
-        reasonInput instanceof HTMLTextAreaElement ? reasonInput.value : "";
-
-      if (!Number.isInteger(automationId)) return;
-
-      setBusy(confirmBtn, true);
-      const { error } = await actions.closeAutomation({ automationId, reason });
-      setBusy(confirmBtn, false);
-
-      if (error) {
-        showToast(
-          error.message || "No se pudo cerrar el caso",
-          "alert-error",
-        );
-        return;
-      }
-
-      showToast("Caso cerrado correctamente", "alert-success");
-      window.location.reload();
-      return;
-    }
-
     const reopenBtn = target.closest("[data-reopen-automation]");
-    if (reopenBtn) {
-      const automationId = Number(
-        reopenBtn.getAttribute("data-automation-id"),
-      );
-      if (!Number.isInteger(automationId)) return;
+    if (!reopenBtn) return;
 
-      setBusy(reopenBtn, true);
-      const { error } = await actions.reopenAutomation({ automationId });
-      setBusy(reopenBtn, false);
+    const automationId = Number(reopenBtn.getAttribute("data-automation-id"));
+    if (!Number.isInteger(automationId)) return;
 
-      if (error) {
-        showToast(
-          error.message || "No se pudo reabrir el caso",
-          "alert-error",
-        );
-        return;
-      }
+    setBusy(reopenBtn, true);
+    const { error } = await actions.reopenAutomation({ automationId });
+    setBusy(reopenBtn, false);
 
-      showToast("Caso reabierto", "alert-success");
-      window.location.reload();
+    if (error) {
+      showToast(error.message || "No se pudo reabrir el caso", "alert-error");
+      return;
     }
+
+    showToast("Caso reabierto", "alert-success");
+    navigate(window.location.href);
   });
 </script>

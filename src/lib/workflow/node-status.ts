@@ -46,17 +46,18 @@ export const NODE_LIFECYCLE_LABELS: Readonly<
  * Revisar contra datos reales cuando exista la primera automatización con
  * pasos terminados en producción/QA.
  */
-const REQUEST_STATUS_LIFECYCLE: Readonly<Record<number, WorkflowNodeLifecycle>> =
-  {
-    1: "pending",
-    2: "in_progress",
-    3: "blocked",
-    4: "blocked",
-    5: "completed",
-    6: "completed",
-    7: "not_applicable",
-    8: "not_applicable",
-  };
+const REQUEST_STATUS_LIFECYCLE: Readonly<
+  Record<number, WorkflowNodeLifecycle>
+> = {
+  1: "pending",
+  2: "in_progress",
+  3: "blocked",
+  4: "blocked",
+  5: "completed",
+  6: "completed",
+  7: "not_applicable",
+  8: "not_applicable",
+};
 
 /**
  * Mapeo de tareas internas (/incident.tasks), según documentación oficial:
@@ -69,11 +70,15 @@ const TASK_STATUS_LIFECYCLE: Readonly<Record<number, WorkflowNodeLifecycle>> = {
   3: "skipped",
 };
 
-export function mapRequestStatusToLifecycle(statusId: number): WorkflowNodeLifecycle {
+export function mapRequestStatusToLifecycle(
+  statusId: number,
+): WorkflowNodeLifecycle {
   return REQUEST_STATUS_LIFECYCLE[statusId] ?? "unknown";
 }
 
-export function mapTaskStatusToLifecycle(statusId: number): WorkflowNodeLifecycle {
+export function mapTaskStatusToLifecycle(
+  statusId: number,
+): WorkflowNodeLifecycle {
   return TASK_STATUS_LIFECYCLE[statusId] ?? "unknown";
 }
 
@@ -105,4 +110,11 @@ export function computeWorkflowProgress(
         ? 0
         : Math.round((completed.length / applicable.length) * 100),
   };
+}
+
+/** Label display del progreso: "X% · Y de Z pasos" (compartido SSR + client). */
+export function formatWorkflowProgressLabel(
+  progress: WorkflowProgress,
+): string {
+  return `${progress.percent}% · ${progress.completed} de ${progress.applicableTotal} pasos`;
 }

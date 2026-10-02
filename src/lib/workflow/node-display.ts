@@ -19,7 +19,7 @@
  * 1.1-Equipamiento - Server").
  */
 
-import { cleanInvGateTitle } from "./branch-title";
+import { cleanInvGateTitle, stripAutomationEmbeddedRefs } from "./branch-title";
 
 /** Separador de segmentos: InvGate mezcla "A - B", "A- B" y "A -B". */
 const SEGMENT_SEPARATOR_RE = /\s*-\s+/;
@@ -55,6 +55,8 @@ const PRESERVED_ACRONYMS = new Set([
   "GDI",
   "TI",
   "SUC",
+  "TECO",
+  "HW",
   "M&F",
 ]);
 
@@ -147,7 +149,8 @@ export function resolveNodeDisplayLabel(
   stepLabel: string,
 ): string {
   const cleanedTitle = cleanInvGateTitle(rawTitle || "");
-  const segments = splitTitleSegments(cleanedTitle);
+  const strippedTitle = stripAutomationEmbeddedRefs(cleanedTitle);
+  const segments = splitTitleSegments(strippedTitle);
 
   const requirementSegments = segments.filter(
     (segment) => !isBranchReferenceSegment(segment),
@@ -155,7 +158,7 @@ export function resolveNodeDisplayLabel(
 
   if (requirementSegments.length === 0) {
     const fallback = stripTrailingPunctuation(
-      cleanInvGateTitle(stepLabel || cleanedTitle),
+      stripAutomationEmbeddedRefs(cleanInvGateTitle(stepLabel || cleanedTitle)),
     );
     return fallback.length > 0 ? fallback : cleanedTitle;
   }

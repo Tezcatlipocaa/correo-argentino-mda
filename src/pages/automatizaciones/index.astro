@@ -8,123 +8,12 @@ import AutomatizacionesContent from "./_components/AutomatizacionesContent.astro
 </BaseLayout>
 
 <script>
-  import { getCleanBase } from "@lib/baseUrl";
-  import { scoreSearchFields, highlightSearchTargets } from "@lib/clientSearch";
-
-  const baseUrl = getCleanBase();
-
-  function showEl(el: Element | null, display: "flex" | "block") {
-    if (!el) return;
-    el.classList.remove("hidden");
-    if (display === "flex") el.classList.add("flex");
-  }
-
-  function hideEl(el: Element | null) {
-    if (!el) return;
-    el.classList.add("hidden");
-    el.classList.remove("flex");
-  }
-
-  const inflight = new Map<string, Promise<void>>();
-
-  const PROGRESS_CACHE_PREFIX = "automatizaciones:progress:";
-  const PROGRESS_CACHE_TTL_MS = 5 * 60_000;
-
-  interface CachedProgress {
-    percent: number;
-    completed: number;
-    applicableTotal: number;
-    savedAt: number;
-  }
-
-  function readProgressCache(id: string): CachedProgress | null {
-    try {
-      const raw = sessionStorage.getItem(PROGRESS_CACHE_PREFIX + id);
-      if (!raw) return null;
-      const entry = JSON.parse(raw) as CachedProgress | null;
-      if (!entry || typeof entry.percent !== "number") return null;
-      if (Date.now() - entry.savedAt > PROGRESS_CACHE_TTL_MS) return null;
-      return entry;
-    } catch {
-      return null;
-    }
-  }
-
-  function writeProgressCache(id: string, progress: CachedProgress) {
-    try {
-      sessionStorage.setItem(
-        PROGRESS_CACHE_PREFIX + id,
-        JSON.stringify({ ...progress, savedAt: Date.now() }),
-      );
-    } catch {
-      return;
-    }
-  }
-
-  function applyProgress(slot: HTMLElement, progress: CachedProgress) {
-    const label = slot.querySelector("[data-progress-label]");
-    const bar = slot.querySelector<HTMLProgressElement>("[data-progress-bar]");
-    if (label) {
-      label.textContent = `${progress.percent}% · ${progress.completed} de ${progress.applicableTotal} pasos`;
-    }
-    if (bar) bar.value = progress.percent;
-    hideEl(slot.querySelector("[data-progress-loading]"));
-    showEl(slot.querySelector("[data-progress-content]"), "flex");
-  }
-
-  async function hydrate(slot: HTMLElement): Promise<void> {
-    const id = slot.dataset.automationId;
-    if (!id) return;
-
-    slot.classList.remove("hidden");
-    slot.classList.add("flex");
-
-    if (slot.dataset.loaded === "true") return;
-
-    const cached = readProgressCache(id);
-    if (cached) {
-      applyProgress(slot, cached);
-      slot.dataset.loaded = "true";
-      return;
-    }
-
-    if (inflight.has(id)) {
-      await inflight.get(id);
-      return;
-    }
-
-    const loading = slot.querySelector("[data-progress-loading]");
-    const error = slot.querySelector("[data-progress-error]");
-
-    slot.dataset.loaded = "loading";
-    showEl(loading, "flex");
-
-    const request = (async () => {
-      try {
-        const res = await fetch(
-          `${baseUrl}api/automatizaciones/${id}/progress`,
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const progress = data?.progress;
-        if (!progress || typeof progress.percent !== "number") {
-          throw new Error("Respuesta inesperada");
-        }
-        applyProgress(slot, progress);
-        writeProgressCache(id, progress);
-        slot.dataset.loaded = "true";
-      } catch {
-        hideEl(loading);
-        showEl(error, "block");
-        slot.dataset.loaded = "error";
-      } finally {
-        inflight.delete(id);
-      }
-    })();
-
-    inflight.set(id, request);
-    await request;
-  }
+  import {
+    hydrateAutomationProgress,
+    hydrateOpenProgressCards,
+    OPEN_CARD_SELECTOR,
+    PROGRESS_SLOT_SELECTOR,
+  } from "@lib/automationProgressClient";
 
   document.addEventListener(
     "toggle",
@@ -143,202 +32,68 @@ import AutomatizacionesContent from "./_components/AutomatizacionesContent.astro
       if (!target.matches("details.group") || !target.open) {
         return;
       }
-      const slot = target.querySelector<HTMLElement>("[data-progress-slot]");
-      if (slot) void hydrate(slot);
+      const slot = target.querySelector<HTMLElement>(PROGRESS_SLOT_SELECTOR);
+      if (slot) void hydrateAutomationProgress(slot);
     },
     true,
   );
 
-  function hydrateOpenCards(root: Document | Element) {
-    for (const card of root.querySelectorAll("details.group[open]")) {
-      const slot = card.querySelector<HTMLElement>("[data-progress-slot]");
-      if (slot) void hydrate(slot);
+  hydrateOpenProgressCards(document);
+
+  // Búsqueda server-side: debounce del submit para no navegar en cada tecla.
+  let searchTimer: number | undefined;
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.id !== "automatizaciones-search") return;
+
+    const form = target.closest<HTMLFormElement>(
+      "[data-automation-search-form]",
+    );
+    if (!form) return;
+
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => form.requestSubmit(), 400);
+  });
+
+  // Si el server sirvió un snapshot vencido, esperar el scan en background y
+  // recargar para reflejar los estados actualizados de InvGate.
+  async function revalidateIfStale(): Promise<void> {
+    const stale = document.querySelector<HTMLElement>("[data-automation-stale]");
+    if (!stale) return;
+    const href = stale.dataset.automationRevalidateHref;
+    if (!href) return;
+    try {
+      const res = await fetch(href, {
+        headers: { "x-requested-with": "fetch" },
+      });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch {
+      /* sin red: se reintenta en la próxima carga */
     }
   }
 
-  hydrateOpenCards(document);
+  window.setTimeout(() => void revalidateIfStale(), 4000);
 
   document.addEventListener("astro:after-swap", () => {
-    hydrateOpenCards(document);
+    hydrateOpenProgressCards(document);
+    window.setTimeout(() => void revalidateIfStale(), 4000);
   });
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (!(node instanceof HTMLElement)) continue;
-        if (node.matches("details.group[open]")) {
-          const slot = node.querySelector<HTMLElement>("[data-progress-slot]");
-          if (slot) void hydrate(slot);
+        if (node.matches(OPEN_CARD_SELECTOR)) {
+          const slot = node.querySelector<HTMLElement>(PROGRESS_SLOT_SELECTOR);
+          if (slot) void hydrateAutomationProgress(slot);
         } else {
-          hydrateOpenCards(node);
+          hydrateOpenProgressCards(node);
         }
       }
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
-
-  const SEARCH_INPUT_ID = "automatizaciones-search";
-
-  /** Cards abiertas automáticamente por la búsqueda (para poder cerrarlas). */
-  const autoOpenedDetails = new Set<HTMLDetailsElement>();
-
-  interface ScoredRow {
-    row: HTMLElement;
-    score: number;
-    order: number;
-    visible: boolean;
-  }
-
-  function getFilterRoot(): HTMLElement | null {
-    return document.querySelector<HTMLElement>("[data-automation-filter-root]");
-  }
-
-  function getStatusKey(root: HTMLElement): string {
-    const activeButton = root.querySelector<HTMLElement>(
-      '[data-status-filter][aria-pressed="true"]',
-    );
-    return activeButton?.dataset.statusFilter ?? "all";
-  }
-
-  /** Score ponderado por campo: NIS/prettyId primero, luego nombre y título. */
-  function scoreRow(row: HTMLElement, query: string): number | null {
-    return scoreSearchFields(query, [
-      { value: row.dataset.searchNis, subsequence: true, weight: 1.6 },
-      { value: row.dataset.searchPretty, subsequence: true, weight: 1.6 },
-      { value: row.dataset.searchName, weight: 1.2 },
-      { value: row.dataset.searchTitle, weight: 1 },
-    ]);
-  }
-
-  function syncAutoExpanded(scored: readonly ScoredRow[], hasQuery: boolean): void {
-    if (!hasQuery) {
-      for (const details of autoOpenedDetails) {
-        if (details.isConnected && details.open) details.open = false;
-      }
-      autoOpenedDetails.clear();
-      return;
-    }
-
-    const best = scored.find((entry) => entry.visible);
-    const bestDetails =
-      best?.row.querySelector<HTMLDetailsElement>("details") ?? null;
-
-    for (const details of [...autoOpenedDetails]) {
-      if (details !== bestDetails) {
-        if (details.isConnected && details.open) details.open = false;
-        autoOpenedDetails.delete(details);
-      }
-    }
-
-    if (bestDetails) {
-      if (!bestDetails.open) bestDetails.open = true;
-      autoOpenedDetails.add(bestDetails);
-    }
-  }
-
-  function applyAutomationFilters(): void {
-    const root = getFilterRoot();
-    if (!root) return;
-
-    const input = root.querySelector<HTMLInputElement>(`#${SEARCH_INPUT_ID}`);
-    const query = input?.value.trim() ?? "";
-    const hasQuery = query.length > 0;
-    const statusKey = getStatusKey(root);
-
-    const rows = Array.from(
-      root.querySelectorAll<HTMLElement>("[data-automation-row]"),
-    );
-
-    const scored: ScoredRow[] = rows.map((row) => {
-      const score = scoreRow(row, query);
-      const isActive = row.dataset.active === "1";
-      const matchesStatus =
-        statusKey === "all" ||
-        (statusKey === "active" && isActive) ||
-        (statusKey === "finalized" && !isActive);
-
-      return {
-        row,
-        score: score ?? -1,
-        order: Number(row.dataset.order ?? "0"),
-        visible: score !== null && matchesStatus,
-      };
-    });
-
-    let visibleCount = 0;
-    for (const entry of scored) {
-      entry.row.classList.toggle("hidden", !entry.visible);
-      if (entry.visible) visibleCount += 1;
-    }
-
-    // Reordena el DOM por relevancia (con query) o por orden original.
-    const list = root.querySelector<HTMLUListElement>("[data-automation-list] ul");
-    if (list) {
-      scored.sort((a, b) =>
-        hasQuery
-          ? b.score - a.score || a.order - b.order
-          : a.order - b.order,
-      );
-      for (const entry of scored) list.appendChild(entry.row);
-    }
-
-    syncAutoExpanded(scored, hasQuery);
-
-    const noResults = root.querySelector<HTMLElement>(
-      "[data-automation-no-results]",
-    );
-    noResults?.classList.toggle(
-      "hidden",
-      visibleCount > 0 || rows.length === 0,
-    );
-
-    const count = root.querySelector<HTMLElement>("[data-automation-count]");
-    if (count) count.textContent = String(visibleCount);
-
-    const overviewActive = hasQuery || statusKey !== "all";
-    root
-      .querySelectorAll<HTMLElement>("[data-automation-overview]")
-      .forEach((section) => section.classList.toggle("hidden", overviewActive));
-
-    const highlightRoot = root.querySelector("[data-automation-list]") ?? root;
-    highlightSearchTargets(highlightRoot, query);
-  }
-
-  document.addEventListener("input", (event) => {
-    const target = event.target;
-    if (
-      target instanceof HTMLInputElement &&
-      target.id === SEARCH_INPUT_ID
-    ) {
-      applyAutomationFilters();
-    }
-  });
-
-  document.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-
-    const filterButton = target.closest<HTMLElement>("[data-status-filter]");
-    if (filterButton) {
-      const root = getFilterRoot();
-      if (!root) return;
-      root
-        .querySelectorAll<HTMLElement>("[data-status-filter]")
-        .forEach((button) =>
-          button.setAttribute(
-            "aria-pressed",
-            button === filterButton ? "true" : "false",
-          ),
-        );
-      applyAutomationFilters();
-      return;
-    }
-
-  });
-
-  applyAutomationFilters();
-
-  document.addEventListener("astro:after-swap", () => {
-    applyAutomationFilters();
-  });
 </script>

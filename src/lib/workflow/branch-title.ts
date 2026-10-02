@@ -29,10 +29,7 @@ export interface AutomationBranchInfo {
  * espacios iniciales, p.ej. ticket 77759).
  */
 export function cleanInvGateTitle(rawTitle: string): string {
-  return rawTitle
-    .replaceAll("\u200b", "")
-    .replaceAll("&raquo;", "»")
-    .trim();
+  return rawTitle.replaceAll("\u200b", "").replaceAll("&raquo;", "»").trim();
 }
 
 /** Conectores gramaticales que van en minúscula dentro del nombre (regla genérica de casing). */
@@ -63,6 +60,69 @@ export function parseStepLabel(cleanedTitle: string): string {
     return cleanedTitle.trim();
   }
   return match[1].trim();
+}
+
+/** Prefijo de padre con sucursal: "AUTSUC GLEW (B0101)" / "AUTSUC Luis Guillón (B0106)". */
+const AUTSUC_BRANCH_PREFIX_RE = /^AUTSUC\s+.+?\(B\d+\)\s*/i;
+/** Referencia embebida al ticket padre: "#84909" o "#(84909)". */
+const EMBEDDED_PARENT_REF_RE = /#\(?\d+\)?/g;
+/** Fecha en prosa embebida: "7 oct 2026", "25 sep 2026". */
+const EMBEDDED_PROSE_DATE_RE =
+  /\b\d{1,2}\s+(?:ene|feb|mar|abr|may|jun|jul|ago|sept?|oct|nov|dic|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\w*\.?\s+\d{4}\b/gi;
+/** Fecha ISO embebida: "2026-10-07". */
+const EMBEDDED_ISO_DATE_RE = /\b\d{4}-\d{2}-\d{2}\b/g;
+
+/**
+ * Quita del título las referencias embebidas al proceso (2026-10): prefijo
+ * "AUTSUC <sucursal> (B####)", id del padre "#<id>" y la fecha estimada. El
+ * workflow nuevo las incluye tanto en el padre como en los hijos.
+ */
+export function stripAutomationEmbeddedRefs(title: string): string {
+  return cleanInvGateTitle(title)
+    .replace(AUTSUC_BRANCH_PREFIX_RE, " ")
+    .replace(EMBEDDED_PARENT_REF_RE, " ")
+    .replace(EMBEDDED_PROSE_DATE_RE, " ")
+    .replace(EMBEDDED_ISO_DATE_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const MONTHS_ES = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
+
+/**
+ * Fecha estimada de implementación embebida en el título del padre
+ * ("AUTSUC GLEW (B0101) 2026-10-07" → "7 oct 2026") o en prosa en un hijo.
+ */
+export function parseEstimatedEndFromTitle(title: string): string | null {
+  const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(title);
+  if (iso) {
+    const monthIndex = Number(iso[2]) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${Number(iso[3])} ${MONTHS_ES[monthIndex]} ${iso[1]}`;
+    }
+  }
+
+  const prose = /\b(\d{1,2})\s+([a-zA-Záéíóúñ]{3,})\.?\s+(\d{4})\b/i.exec(
+    title,
+  );
+  if (prose) {
+    return `${Number(prose[1])} ${prose[2].slice(0, 3).toLowerCase()} ${prose[3]}`;
+  }
+
+  return null;
 }
 
 export function parseAutomationBranchTitle(
@@ -146,7 +206,10 @@ export function buildAutomationDisplayName(
   // ("Automatización de sucursal B0168 - Libertad"); no lo repitamos si el
   // título (normalizado) ya lo menciona.
   const nameNormalized = normalizeForCompare(fallbackBranchName);
-  if (nameNormalized && normalizeForCompare(cleanedTitle).includes(nameNormalized)) {
+  if (
+    nameNormalized &&
+    normalizeForCompare(cleanedTitle).includes(nameNormalized)
+  ) {
     return info.displayName;
   }
   return info.branchCode !== null

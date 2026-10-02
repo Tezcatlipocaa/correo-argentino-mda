@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { automationTrackedParents } from "@/db/schema";
 import { invgateGet } from "@lib/invgateClient";
 import { getIncidents } from "@lib/invgate/automation/incidents";
+import { getIncidentIdsByView } from "@lib/invgate/automation/by-view";
 import { isActiveStatus } from "./automation-status";
 import { nowSeconds } from "./time";
 
@@ -40,8 +41,7 @@ export function upsertTrackedParents(
   try {
     db.transaction((tx) => {
       for (const entry of entries) {
-        tx
-          .insert(automationTrackedParents)
+        tx.insert(automationTrackedParents)
           .values({
             automationId: entry.automationId,
             lastStatusId: entry.statusId,
@@ -84,6 +84,40 @@ export interface ReconcileTrackedResult {
 }
 
 /**
+ * Reconstruye el tracking a partir de un conjunto de IDs candidatos: filtra
+ * los activos de la categoría de automatizaciones y sincroniza
+ * `automation_tracked_parents` (poda los que ya no aplican).
+ */
+async function reconcileFromCandidateIds(
+  candidateIds: readonly number[],
+  categoryId: number,
+): Promise<ReconcileTrackedResult> {
+  const details = await getIncidents(candidateIds);
+  if (!details.ok) {
+    throw new Error(details.message);
+  }
+
+  const parents = Object.values(details.data).filter(
+    (incident) =>
+      incident &&
+      incident.category_id === categoryId &&
+      isActiveStatus(incident.status_id),
+  );
+
+  const keepIds = new Set(parents.map((parent) => parent.id));
+  const existing = listTrackedParents();
+  removeTrackedParents([...existing.keys()].filter((id) => !keepIds.has(id)));
+  upsertTrackedParents(
+    parents.map((parent) => ({
+      automationId: parent.id,
+      statusId: parent.status_id,
+    })),
+  );
+
+  return { activeParents: parents.length, tracked: keepIds.size };
+}
+
+/**
  * Reconstruye el tracking desde el estado actual de InvGate: busca TODOS los
  * incidentes activos (status 1-4) —sin importar la mesa— y conserva los que
  * pertenecen a la categoría de automatizaciones. Recupera padres que se
@@ -107,29 +141,21 @@ export async function reconcileTrackedParentsFromStatuses(
     ? result.data.requestIds
     : [];
 
-  const details = await getIncidents(activeIds);
-  if (!details.ok) {
-    throw new Error(details.message);
+  return reconcileFromCandidateIds(activeIds, categoryId);
+}
+
+/**
+ * Reconstruye el tracking desde una vista guardada filtrada por la categoría
+ * (todos los estados). Es la vía preferida cuando `INVGATE_AUTOMATION_VIEW_ID`
+ * está configurada: cubre padres de cualquier mesa en una sola consulta.
+ */
+export async function reconcileTrackedParentsFromView(
+  viewId: number,
+  categoryId: number,
+): Promise<ReconcileTrackedResult> {
+  const result = await getIncidentIdsByView(viewId);
+  if (!result.ok) {
+    throw new Error(result.message);
   }
-
-  const parents = Object.values(details.data).filter(
-    (incident) =>
-      incident &&
-      incident.category_id === categoryId &&
-      isActiveStatus(incident.status_id),
-  );
-
-  const keepIds = new Set(parents.map((parent) => parent.id));
-  const existing = listTrackedParents();
-  removeTrackedParents(
-    [...existing.keys()].filter((id) => !keepIds.has(id)),
-  );
-  upsertTrackedParents(
-    parents.map((parent) => ({
-      automationId: parent.id,
-      statusId: parent.status_id,
-    })),
-  );
-
-  return { activeParents: parents.length, tracked: keepIds.size };
+  return reconcileFromCandidateIds(result.data, categoryId);
 }

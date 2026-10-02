@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { resolveAutomationCategoryId } from "@lib/workflow/category-resolver";
-import { reconcileTrackedParentsFromStatuses } from "@lib/workflow/tracked-parents";
+import {
+  reconcileTrackedParentsFromStatuses,
+  reconcileTrackedParentsFromView,
+} from "@lib/workflow/tracked-parents";
+import { getAutomationViewId } from "@lib/invgate/automation/by-view";
 
 /**
  * Reconciliación completa del tracking de padres de automatización: busca
@@ -14,10 +18,13 @@ async function main(): Promise<void> {
   const startedAt = Date.now();
 
   const categoryId = await resolveAutomationCategoryId();
-  const result = await reconcileTrackedParentsFromStatuses(categoryId);
+  const viewId = getAutomationViewId();
+  const result = viewId
+    ? await reconcileTrackedParentsFromView(viewId, categoryId)
+    : await reconcileTrackedParentsFromStatuses(categoryId);
 
   console.log(
-    `[reconcile-automation-parents] categoría ${categoryId} · padres activos ${result.activeParents} · trackeados ${result.tracked} en ${Date.now() - startedAt} ms`,
+    `[reconcile-automation-parents] categoría ${categoryId}${viewId ? ` · vista ${viewId}` : ""} · padres activos ${result.activeParents} · trackeados ${result.tracked} en ${Date.now() - startedAt} ms`,
   );
 }
 

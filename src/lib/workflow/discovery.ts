@@ -1,5 +1,12 @@
 import { getIncidentIdsByHelpdesk } from "@lib/invgate/automation/by-helpdesk";
-import { getHelpdesks, getHelpdesksAndLevels } from "@lib/invgate/automation/helpdesks";
+import {
+  getAutomationViewId,
+  getIncidentIdsByView,
+} from "@lib/invgate/automation/by-view";
+import {
+  getHelpdesks,
+  getHelpdesksAndLevels,
+} from "@lib/invgate/automation/helpdesks";
 import { getIncidents } from "@lib/invgate/automation/incidents";
 import type { InvgateAutomationIncident } from "@lib/invgate/automation/types";
 import {
@@ -14,7 +21,11 @@ import {
   resolveAutomationQueueIds,
 } from "./queue-resolver";
 import { isActiveStatus } from "./automation-status";
-import { cleanInvGateTitle, parseAutomationBranchTitle, buildAutomationDisplayName } from "./branch-title";
+import {
+  cleanInvGateTitle,
+  parseAutomationBranchTitle,
+  buildAutomationDisplayName,
+} from "./branch-title";
 import { branchNameFromDescription } from "./branch-display";
 import { listClosures } from "./closures";
 import type { AutomationClosure } from "./closures";
@@ -161,76 +172,91 @@ function isUsableIncident(
 /**
  * Scan real (sin cache) de las automatizaciones padre:
  *
- * 1. /incidents.by.helpdesk → IDs de la cola (abiertos y, si el endpoint los
- *    expone, cerrados).
- * 2. Detalles bulk vía /incidents, uniendo los IDs de la cola con los padres
- *    trackeados (persistidos) para no perder los reasignados a otras mesas.
+ * 1. Fuente de IDs:
+ *    - Vista por categoría (`INVGATE_AUTOMATION_VIEW_ID`): todos los padres de
+ *      la categoría en cualquier mesa, incluidos los finalizados.
+ *    - Sin vista: /incidents.by.helpdesk de las colas resueltas (fast-path).
+ *    En ambos casos se unen los padres trackeados (persistidos).
+ * 2. Detalles bulk vía /incidents.
  * 3. Filtro local por categoría resuelta + clasificación activo/finalizado.
- *
- * Categoría y topología de colas se resuelven en paralelo cuando no hay
- * override por env.
  */
 async function scanAutomations(): Promise<AutomationDiscoveryResult> {
   const startedAt = Date.now();
 
+  const viewId = getAutomationViewId();
   const queueOverride = getQueueOverrideIds();
 
   const [categoryId, topology] = await Promise.all([
     resolveAutomationCategoryId(),
-    queueOverride
+    viewId !== null || queueOverride
       ? Promise.resolve(null)
       : Promise.all([getHelpdesks(), getHelpdesksAndLevels()]),
   ]);
 
-  let queueIds: number[];
-  if (queueOverride) {
-    queueIds = queueOverride;
-  } else {
-    const [helpdesksResult, levelsResult] = topology!;
-    queueIds = await resolveAutomationQueueIds(categoryId, {
-      helpdesks: helpdesksResult.ok ? helpdesksResult.data : undefined,
-      levels: levelsResult.ok ? levelsResult.data : undefined,
-    });
+  let queueIds: number[] = [];
+  let queueIdsMerged: number[] = [];
+
+  if (viewId === null) {
+    if (queueOverride) {
+      queueIds = queueOverride;
+    } else {
+      const [helpdesksResult, levelsResult] = topology!;
+      queueIds = await resolveAutomationQueueIds(categoryId, {
+        helpdesks: helpdesksResult.ok ? helpdesksResult.data : undefined,
+        levels: levelsResult.ok ? levelsResult.data : undefined,
+      });
+    }
+
+    /**
+     * Colas múltiples (2026-09): conviven dos formatos de padres — el workflow
+     * AUTSUC nuevo asigna directo al helpdesk ("TI_GSM_MDC AUTSUC") mientras
+     * los padres históricos viven en su nivel. Se listan todas las colas
+     * resueltas y se unen los IDs (Set = sin duplicados entre colas).
+     */
+    const queueIdLists = await Promise.all(
+      queueIds.map(async (queueId) => {
+        const idsResult = await getIncidentIdsByHelpdesk(queueId);
+        if (idsResult.ok) {
+          return idsResult.data;
+        }
+        return null;
+      }),
+    );
+
+    const okLists = queueIdLists.filter((ids): ids is number[] => ids !== null);
+
+    if (okLists.length === 0) {
+      invalidateQueueCache();
+      return {
+        ok: false,
+        message: `No se pudo listar las colas de automatizaciones (${queueIds.join(", ")}): verificá la configuración o el estado de InvGate.`,
+      };
+    }
+
+    queueIdsMerged = [...new Set(okLists.flat())];
+  }
+
+  /** Fuente autoritativa por categoría (cubre cualquier mesa y cerrados). */
+  let viewIds: number[] = [];
+  if (viewId !== null) {
+    const viewResult = await getIncidentIdsByView(viewId);
+    if (!viewResult.ok) {
+      return {
+        ok: false,
+        message: `No se pudo listar la vista ${viewId} de automatizaciones: ${viewResult.message}`,
+      };
+    }
+    viewIds = viewResult.data;
   }
 
   /**
-   * Colas múltiples (2026-09): conviven dos formatos de padres — el workflow
-   * AUTSUC nuevo asigna directo al helpdesk ("TI_GSM_MDC AUTSUC") mientras
-   * los padres históricos viven en su nivel. Se listan todas las colas
-   * resueltas y se unen los IDs (Set = sin duplicados entre colas).
-   */
-  const queueIdLists = await Promise.all(
-    queueIds.map(async (queueId) => {
-      const idsResult = await getIncidentIdsByHelpdesk(queueId);
-      if (idsResult.ok) {
-        return idsResult.data;
-      }
-      return null;
-    }),
-  );
-
-  const okLists = queueIdLists.filter(
-    (ids): ids is number[] => ids !== null,
-  );
-
-  if (okLists.length === 0) {
-    invalidateQueueCache();
-    return {
-      ok: false,
-      message: `No se pudo listar las colas de automatizaciones (${queueIds.join(", ")}): verificá la configuración o el estado de InvGate.`,
-    };
-  }
-
-  const queueIdsMerged = [...new Set(okLists.flat())];
-
-  /**
-   * Los padres reasignados a otra mesa salen de las colas resueltas, pero
-   * siguen siendo categoría de automatización: se unen los IDs de la cola con
-   * los trackeados (persistidos) para no perderlos.
+   * Los padres reasignados a otra mesa siguen siendo categoría de
+   * automatización: se unen los IDs de la fuente con los trackeados
+   * (persistidos) para no perderlos.
    */
   const tracked = listTrackedParents();
   const candidateIds = [
-    ...new Set([...queueIdsMerged, ...tracked.keys()]),
+    ...new Set([...viewIds, ...queueIdsMerged, ...tracked.keys()]),
   ];
 
   const details = await getIncidents(candidateIds);
@@ -324,9 +350,7 @@ async function scanAutomations(): Promise<AutomationDiscoveryResult> {
     ...finalizedEntries.map(([, summary]) => summary),
     ...locallyClosed,
   ]
-    .sort(
-      (a, b) => (b.closedAt ?? b.createdAt) - (a.closedAt ?? a.createdAt),
-    )
+    .sort((a, b) => (b.closedAt ?? b.createdAt) - (a.closedAt ?? a.createdAt))
     .slice(0, RECENT_CLOSED_LIMIT);
 
   /**
@@ -344,7 +368,7 @@ async function scanAutomations(): Promise<AutomationDiscoveryResult> {
   upsertAutomationParents([...historyById.values()]);
 
   console.log(
-    `[automatizaciones] discovery scan ok (colas ${queueIds.join(",")} · ${queueIdsMerged.length} en cola · ${tracked.size} trackeados · ${activeEntries.length} activos) en ${Date.now() - startedAt} ms`,
+    `[automatizaciones] discovery scan ok (${viewId !== null ? `vista ${viewId} · ${viewIds.length} ids` : `colas ${queueIds.join(",")} · ${queueIdsMerged.length} en cola`} · ${tracked.size} trackeados · ${candidateIds.length} candidatos · ${activeEntries.length} activos) en ${Date.now() - startedAt} ms`,
   );
 
   return { ok: true, current, otherActive, recentFinalized };
@@ -399,20 +423,35 @@ function runDiscoveryPipeline(): Promise<AutomationDiscoveryResult> {
  * tras un restart no pague el scan completo.
  */
 export async function discoverAutomations(): Promise<AutomationDiscoveryResult> {
+  return (await discoverAutomationsWithMeta()).result;
+}
+
+/**
+ * Igual que `discoverAutomations` pero expone si se sirvió un snapshot vencido
+ * (con un refresh en background en curso). La vista lo usa para mostrar el
+ * indicador "Actualizando…" y recargar cuando el scan termine.
+ */
+export interface AutomationDiscoveryMeta {
+  result: AutomationDiscoveryResult;
+  /** Se sirvió un snapshot vencido; hay (o habrá) un scan en background. */
+  stale: boolean;
+}
+
+export async function discoverAutomationsWithMeta(): Promise<AutomationDiscoveryMeta> {
   const now = Date.now();
   const cached = cachedDiscovery;
 
   if (cached && cached.expiresAt > now) {
-    return toResult(cached);
+    return { result: toResult(cached), stale: false };
   }
 
   if (inflightDiscovery) {
-    return inflightDiscovery;
+    return { result: await inflightDiscovery, stale: false };
   }
 
   if (cached && now - cached.cachedAt <= DISCOVERY_STALE_MAX_MS) {
     void runDiscoveryPipeline();
-    return toResult(cached);
+    return { result: toResult(cached), stale: true };
   }
 
   const persisted = readPersistedCache<PersistedDiscovery>(DISCOVERY_CACHE_KEY);
@@ -432,11 +471,20 @@ export async function discoverAutomations(): Promise<AutomationDiscoveryResult> 
 
     if (now - persisted.cachedAt > DISCOVERY_CACHE_TTL_MS) {
       void runDiscoveryPipeline();
+      return { result: toResult(cachedDiscovery), stale: true };
     }
 
-    return toResult(cachedDiscovery);
+    return { result: toResult(cachedDiscovery), stale: false };
   }
 
+  return { result: await runDiscoveryPipeline(), stale: false };
+}
+
+/**
+ * Fuerza una corrida del scan ignorando caches (botón "Actualizar" y polling
+ * de frescura). Comparte el single-flight si ya hay una en curso.
+ */
+export function revalidateAutomations(): Promise<AutomationDiscoveryResult> {
   return runDiscoveryPipeline();
 }
 

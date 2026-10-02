@@ -1,0 +1,96 @@
+---
+import { Icon } from "astro-icon/components";
+import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
+import type {
+  AutomationBoard,
+  BoardTone,
+} from "@lib/workflow/workflow-variables";
+
+interface Props {
+  board: AutomationBoard;
+}
+
+const { board } = Astro.props;
+
+const toneTile: Record<BoardTone, string> = {
+  success: "bg-success/10",
+  warning: "bg-warning/10",
+  neutral: "bg-base-200/40",
+};
+
+const toneValue: Record<BoardTone, string> = {
+  success: "text-base-content",
+  warning: "text-base-content",
+  neutral: "text-base-content/70",
+};
+---
+
+<section class="flex flex-col gap-3 px-4">
+  <h2
+    class="text-base-content/60 text-sm font-semibold tracking-wide uppercase"
+  >
+    Tablero Status Proyecto
+  </h2>
+
+  {
+    board.indicators.length > 0 && (
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {board.indicators.map((indicator) => (
+          <div class:list={["rounded-lg p-3", toneTile[indicator.tone]]}>
+            <p class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+              {indicator.label}
+            </p>
+            <p
+              class:list={[
+                "mt-1 text-sm font-medium",
+                toneValue[indicator.tone],
+              ]}
+            >
+              {indicator.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    board.links.length > 0 && (
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-base-content/50 text-xs font-semibold tracking-wide uppercase">
+          Tickets vinculados
+        </span>
+        {board.links.map((link) => (
+          <a
+            href={deriveInvGateUiUrl(link.refId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="badge badge-ghost gap-1"
+          >
+            <Icon
+              name="boxicons:arrow-up-right-square-filled"
+              size={13}
+              aria-hidden="true"
+            />
+            {link.label} #{link.refId}
+          </a>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    board.tech.length > 0 && (
+      <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+        {board.tech.map((item) => (
+          <div class="flex justify-between gap-4 sm:block">
+            <dt class="text-base-content/60">{item.label}</dt>
+            <dd class="text-base-content font-medium break-words">
+              {item.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
+</section>
