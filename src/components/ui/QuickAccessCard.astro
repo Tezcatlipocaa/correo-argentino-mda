@@ -10,7 +10,7 @@ interface Props {
   iconTone?: string;
   locked?: boolean;
   comingSoon?: boolean;
-  layout?: "horizontal" | "vertical" | "compact";
+  layout?: "horizontal" | "vertical" | "compact" | "mini";
 }
 
 const {
@@ -35,10 +35,24 @@ const resolvedHref =
     : `${cleanBase}${href.startsWith("/") ? href.slice(1) : href}`;
 
 const Wrapper = locked || comingSoon ? "div" : "a";
+
+// Escala por variante: `compact` y `mini` comparten la fila (ícono + título,
+// sin descripción); `mini` baja las dimensiones interiores y el padding.
+const isRow = layout === "compact" || layout === "mini";
+const isMini = layout === "mini";
+const rowPaddingClass = isMini ? "p-3" : "p-6";
+const rowGapClass = isMini ? "gap-3" : "gap-4";
+const iconBoxClass = isMini
+  ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300"
+  : "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300";
+const iconGlyphSize = isMini ? 20 : 32;
+const titleClass = isMini
+  ? "text-base-content text-sm font-bold truncate"
+  : "text-base-content text-lg font-bold truncate";
 ---
 
 {
-  layout === "compact" ? (
+  isRow ? (
     <Wrapper
       {...(!(locked || comingSoon)
         ? {
@@ -51,41 +65,37 @@ const Wrapper = locked || comingSoon ? "div" : "a";
           })}
       data-layout={layout}
       class:list={[
-        "rounded-box bg-base-100 border-base-300 relative flex h-full items-center gap-3 border p-3 shadow-md transition-all duration-300",
+        "rounded-box bg-base-100 border-base-300 relative flex h-full items-center gap-3 border shadow-md transition-all duration-300",
+        rowPaddingClass,
         locked || comingSoon
           ? "cursor-not-allowed opacity-40 grayscale select-none"
           : "hover:border-primary group focus:ring-primary cursor-pointer hover:-translate-y-1 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none",
       ]}
     >
-      <div
-        class:list={[
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300",
-          iconTone,
-        ]}
-        aria-hidden="true"
-      >
-        <Icon
-          name={icon}
-          size={24}
-          class={
-            locked || comingSoon
-              ? ""
-              : "transition-transform duration-300 group-hover:scale-110"
-          } is:inline />
+      <div class={`flex min-w-0 flex-1 items-center ${rowGapClass}`}>
+        <div class:list={[iconBoxClass, iconTone]} aria-hidden="true">
+          <Icon
+            name={icon}
+            size={iconGlyphSize}
+            class={
+              locked || comingSoon
+                ? ""
+                : "transition-transform duration-300 group-hover:scale-110"
+            }
+            is:inline
+          />
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class={titleClass}>{title}</h3>
+        </div>
       </div>
-      <span
-        class:list={[
-          "min-w-0 flex-1 text-sm leading-tight font-bold",
-          locked || comingSoon
-            ? "text-base-content/50"
-            : "text-base-content/85 group-hover:text-base-content",
-        ]}
-      >
-        {title}
-      </span>
       <div class="flex shrink-0 items-center" aria-hidden="true">
         {locked || comingSoon ? (
-          <Icon name="boxicons:lock-filled" size={24} class="text-base-content/40" />
+          <Icon
+            name="boxicons:lock-filled"
+            size={24}
+            class="text-base-content/40"
+          />
         ) : (
           <Icon
             name="boxicons:chevron-right"
@@ -111,30 +121,31 @@ const Wrapper = locked || comingSoon ? "div" : "a";
       ]}
     >
       <div class="flex items-center gap-4">
-        <div
-          class:list={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300",
-            iconTone,
-          ]}
-        >
+        <div class:list={[iconBoxClass, iconTone]}>
           <Icon
             name={icon}
-            size={32}
+            size={iconGlyphSize}
             class={
               locked || comingSoon
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
             }
-            aria-hidden="true" is:inline />
+            aria-hidden="true"
+            is:inline
+          />
         </div>
         <div>
-          <h3 class="text-base-content text-lg font-bold">{title}</h3>
+          <h3 class={titleClass}>{title}</h3>
           <p class="text-base-content/70 text-xs">{description}</p>
         </div>
       </div>
       <div class="flex items-center" aria-hidden="true">
         {locked || comingSoon ? (
-          <Icon name="boxicons:lock-filled" size={24} class="text-base-content/40" />
+          <Icon
+            name="boxicons:lock-filled"
+            size={24}
+            class="text-base-content/40"
+          />
         ) : (
           <Icon
             name="boxicons:chevron-right"
@@ -160,23 +171,19 @@ const Wrapper = locked || comingSoon ? "div" : "a";
       ]}
     >
       <div class="card-body flex h-full flex-col gap-3">
-        <div
-          aria-hidden="true"
-          class:list={[
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300",
-            iconTone,
-          ]}
-        >
+        <div aria-hidden="true" class:list={[iconBoxClass, iconTone]}>
           <Icon
             name={icon}
-            size={32}
+            size={iconGlyphSize}
             class={
               locked || comingSoon
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
-            } is:inline />
+            }
+            is:inline
+          />
         </div>
-        <h3 class="text-base-content text-lg font-bold">{title}</h3>
+        <h3 class={titleClass}>{title}</h3>
         <p class="text-base-content/70 text-xs">{description}</p>
         <div class="card-actions mt-2 justify-end">
           {comingSoon ? (
