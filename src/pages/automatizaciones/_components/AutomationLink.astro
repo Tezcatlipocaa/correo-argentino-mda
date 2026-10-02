@@ -1,0 +1,18 @@
+---
+import { resolveUrl } from "@lib/url";
+
+interface Props {
+  automationId: number;
+  class?: string;
+}
+
+const { automationId, class: className = "" } = Astro.props;
+---
+
+<a
+  href={resolveUrl(`/automatizaciones/${automationId}`)}
+  data-astro-prefetch="hover"
+  class={className}
+>
+  <slot />
+</a>

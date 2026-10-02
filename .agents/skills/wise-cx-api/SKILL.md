@@ -24,7 +24,7 @@ Wise CX API reference for managing case routing, agent presence, calls, and emai
 
 ### Parametros Comunes
 - `fields` — columnas a devolver (comma-separated). Si se omite, solo campos por defecto.
-- `filtering` — filtro avanzado: `[{'field':'col','operator':'EQUAL','value':'x'}]`. Operadores: IN, NOT IN, EQUAL, NOT EQUAL, GREATER, LOWER, GREATER EQUAL, LOWER EQUAL, CONTAINS.
+- `filtering` — filtro avanzado: debe ser un array JSON serializado en la query string (`filtering=${encodeURIComponent(JSON.stringify([{ field: 'cases.number', operator: 'EQUAL', value: 534787 }]))}`). **IMPORTANTE**: En `/core/v1/cases`, los nombres de campo requieren el prefijo de tabla (ej. `cases.number`, `cases.id`, `cases.status`). Si se pasa `number` o sintaxis PHP `filtering[0]...`, la API retorna `400 Filtering not valid.` o ignora el filtro. Operadores: IN, NOT IN, EQUAL, NOT EQUAL, GREATER, LOWER, GREATER EQUAL, LOWER EQUAL, CONTAINS.
 - `sort` + `sort_field` — ordenamiento (default: asc).
 - `page` + `limit` — paginacion offset-based (max/defecto: 100).
 

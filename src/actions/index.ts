@@ -10,9 +10,24 @@ import {
   monthlySummaries,
   feedback,
 } from "@db/schema";
-import { eq, inArray } from "drizzle-orm";
-import { calculateAuditScores } from "@lib/qualityCalculator";
+import { and, eq, inArray } from "drizzle-orm";
+import { calculateAuditScores, calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
 import { logAdminFromAstro } from "@lib/auditLogger";
+import {
+  invalidateAutomationDetail,
+  resolveAutomationDetail,
+} from "@lib/workflow/resolver";
+import { invalidateDiscoveryCache } from "@lib/workflow/discovery";
+import { isActiveStatus } from "@lib/workflow/automation-status";
+import {
+  DEFAULT_CLOSE_REASON,
+  canManualClose,
+  getCloseThreshold,
+  getClosure,
+  recordClosure,
+  removeClosure,
+} from "@lib/workflow/closures";
+import { saveManualData } from "@lib/workflow/manual-data";
 
 export const server = {
   saveParameters: defineAction({
@@ -23,6 +38,8 @@ export const server = {
           name: z.string().min(1, "El nombre es requerido"),
           weight: z.number().min(0, "El peso debe ser mayor o igual a 0"),
           category: z.string().min(1, "La categoría es requerida"),
+          channel: z.enum(["wise_call", "wise_email", "invgate_ticket"]).optional().default("wise_call"),
+          section: z.enum(["items", "ticket", "mda"]).optional().default("items"),
           isDeleted: z.boolean().optional().default(false),
         }),
       ),
@@ -92,7 +109,9 @@ export const server = {
                 const changed =
                   current.name !== param.name ||
                   current.weight !== param.weight ||
-                  current.category !== param.category;
+                  current.category !== param.category ||
+                  (param.channel && current.channel !== param.channel) ||
+                  (param.section && current.section !== param.section);
 
                 if (changed) {
                   if (!paramsWithScoresSet.has(param.id)) {
@@ -102,6 +121,8 @@ export const server = {
                       name: param.name,
                       weight: param.weight,
                       category: param.category,
+                      channel: param.channel || current.channel,
+                      section: param.section || current.section,
                     });
                   } else {
                     // Soft delete current and insert new version
@@ -111,6 +132,8 @@ export const server = {
                       name: param.name,
                       weight: param.weight,
                       category: param.category,
+                      channel: param.channel || current.channel,
+                      section: param.section || current.section,
                       active: true,
                     });
                   }
@@ -124,6 +147,8 @@ export const server = {
               name: param.name,
               weight: param.weight,
               category: param.category,
+              channel: param.channel || "wise_call",
+              section: param.section || "items",
               active: true,
             });
           }
@@ -154,6 +179,8 @@ export const server = {
                 name: up.name,
                 weight: up.weight,
                 category: up.category,
+                channel: up.channel,
+                section: up.section,
               })
               .where(eq(auditParameters.id, up.id))
               .run();
@@ -183,21 +210,57 @@ export const server = {
           .optional()
           .transform((v) => (v ? parseInt(v, 10) : undefined)),
         agentId: z.string().transform((v) => parseInt(v, 10)),
-        callId: z.string().min(1, "El ID de llamada es requerido"),
-        ticketId: z.string().min(1, "El ID de ticket es requerido"),
-        duration: z.string().min(1, "La duración es requerida"),
+        channelType: z
+          .enum(["wise_call", "wise_email", "invgate_ticket"])
+          .default("wise_call"),
+        callId: z.string().default(""), // ID / Case Number
+        ticketId: z.string().default(""), // Ticket ID
+        duration: z.string().default("00:00"),
         date: z.string().min(1, "La fecha es requerida"),
         month: z.string().min(1, "El período es requerido"),
         notes: z
           .preprocess((v) => (v == null ? "" : String(v)), z.string())
           .optional()
           .default(""),
+        ringTime: z.string().optional().nullable(),
+        creationTime: z.string().optional().nullable(),
+        takeTime: z.string().optional().nullable(),
+        recordingUrl: z.string().optional().nullable(),
+        isPas: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(false),
+        callGeneratedTicket: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(true),
+        appliesMda: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(false),
+        staysInMda: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(true),
         isCriticalFailure: z
           .any()
           .transform(
             (v) =>
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
-          ),
+          )
+          .default(false),
       })
       .passthrough(),
     handler: async (input, context) => {
@@ -208,60 +271,85 @@ export const server = {
           message: "No tiene permisos para guardar auditorías.",
         });
       }
-      // 1. Obtener los parámetros correspondientes
-      let allParams;
-      if (input.id) {
-        const existingScores = await db
-          .select()
-          .from(auditScores)
-          .where(eq(auditScores.auditId, input.id));
-        const paramIds = existingScores.map((s) => s.parameterId);
-        if (paramIds.length > 0) {
-          allParams = await db
-            .select()
-            .from(auditParameters)
-            .where(inArray(auditParameters.id, paramIds));
-        } else {
-          allParams = await db
-            .select()
-            .from(auditParameters)
-            .where(eq(auditParameters.active, true));
-        }
-      } else {
+      // 1. Obtener los parámetros activos correspondientes al canal
+      let allParams = await db
+        .select()
+        .from(auditParameters)
+        .where(
+          and(
+            eq(auditParameters.active, true),
+            eq(auditParameters.channel, input.channelType),
+          ),
+        )
+        .orderBy(auditParameters.order);
+
+      // Si por alguna razón no hay parámetros específicos del canal, fallback a los activos
+      if (!allParams || allParams.length === 0) {
         allParams = await db
           .select()
           .from(auditParameters)
-          .where(eq(auditParameters.active, true));
+          .where(eq(auditParameters.active, true))
+          .orderBy(auditParameters.order);
       }
 
-      // 2. Preparar el listado de scores y recopilar códigos seleccionados
-      const scoresToInsert: { parameterId: number; score: boolean }[] = [];
+      // 2. Determinar si aplica Sección 2
+      let hasSection2 = true;
+      if (input.channelType === "wise_call") {
+        hasSection2 = input.callGeneratedTicket;
+      } else if (input.channelType === "wise_email") {
+        hasSection2 = input.appliesMda;
+      } else if (input.channelType === "invgate_ticket") {
+        hasSection2 = input.staysInMda;
+      }
+
+      // Si la Sección 2 no aplica, solo evaluamos y persistimos los parámetros de la Sección 1 ("items")
+      const applicableParams = hasSection2
+        ? allParams
+        : allParams.filter((p) =>
+            p.section
+              ? p.section === "items"
+              : p.category === "Items" || p.category === "Interacción con Usuario",
+          );
+
+      // 3. Preparar el listado de scores y recopilar códigos seleccionados
+      const scoresToInsert: {
+        parameterId: number;
+        score: boolean;
+        comment: string | null;
+      }[] = [];
       const checkedCodes = new Set<string>();
 
-      for (const param of allParams) {
+      for (const param of applicableParams) {
         const isChecked =
           (input as any)[param.code] === "on" ||
           (input as any)[param.code] === true ||
           (input as any)[param.code] === "true";
+        const comment = (input as any)[`${param.code}_comment`] || null;
+
         if (isChecked) {
           checkedCodes.add(param.code);
         }
         scoresToInsert.push({
           parameterId: param.id,
           score: isChecked,
+          comment: typeof comment === "string" ? comment.trim() : null,
         });
       }
 
-      // 3. Calcular scores ponderados usando la utilidad compartida
-      const { section1Score, section2Score, totalScore } = calculateAuditScores(
-        allParams,
-        checkedCodes,
-        input.isCriticalFailure,
-      );
+      // 4. Calcular scores ponderados usando el nuevo motor multi-canal
+      const { section1Score, section2Score, totalScore } =
+        calculateMultiChannelAuditScores(
+          input.channelType,
+          allParams,
+          checkedCodes,
+          hasSection2,
+          input.isCriticalFailure,
+        );
 
       const auditData = {
         agentId: input.agentId,
-        callId: input.callId,
+        channelType: input.channelType,
+        callId: input.callId || (input.channelType === "invgate_ticket" ? input.ticketId : ""),
         ticketId: input.ticketId,
         duration: input.duration,
         date: input.date,
@@ -270,7 +358,14 @@ export const server = {
         section2Score,
         totalScore,
         notes: input.notes,
+        ringTime: input.ringTime || null,
+        creationTime: input.creationTime || null,
+        takeTime: input.takeTime || null,
+        isPas: input.isPas,
+        appliesMda: input.channelType === "wise_call" ? hasSection2 : input.appliesMda,
+        staysInMda: input.staysInMda,
         isCriticalFailure: input.isCriticalFailure,
+        recordingUrl: input.recordingUrl || null,
       };
 
       const [agentForAudit] = await db
@@ -546,6 +641,152 @@ export const server = {
         console.error("Error assigning feedback:", error);
         throw new Error(error.message || "Error al modificar la asignación.");
       }
+    },
+  }),
+
+  closeAutomation: defineAction({
+    input: z.object({
+      automationId: z.number().int().positive(),
+      reason: z
+        .string()
+        .trim()
+        .max(500, "El motivo no puede superar los 500 caracteres")
+        .optional()
+        .nullable(),
+    }),
+    handler: async (input, context) => {
+      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      if (denied) {
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "No tiene permisos para cerrar automatizaciones.",
+        });
+      }
+
+      const result = await resolveAutomationDetail(input.automationId);
+      if (!result.ok) {
+        throw new ActionError({ code: "BAD_REQUEST", message: result.message });
+      }
+
+      if (getClosure(input.automationId)) {
+        return { success: true, alreadyClosed: true };
+      }
+
+      if (!canManualClose(result.detail.progress.percent)) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: `El caso debe alcanzar al menos ${getCloseThreshold()}% de progreso para cerrarse.`,
+        });
+      }
+
+      if (!isActiveStatus(result.detail.statusId)) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "El caso ya está finalizado en InvGate.",
+        });
+      }
+
+      const reason = input.reason?.trim() || DEFAULT_CLOSE_REASON;
+      const closure = recordClosure({
+        automationId: input.automationId,
+        kind: "manual",
+        reason,
+        percent: result.detail.progress.percent,
+        closedBy: context.locals.user?.username || "desconocido",
+      });
+      invalidateAutomationDetail(input.automationId);
+      invalidateDiscoveryCache();
+
+      await logAdminFromAstro(
+        context.locals,
+        `Cerró localmente la automatización ${result.detail.prettyId} (${result.detail.progress.percent}%): "${reason}"`,
+      );
+
+      return { success: true, closure };
+    },
+  }),
+
+  reopenAutomation: defineAction({
+    input: z.object({
+      automationId: z.number().int().positive(),
+    }),
+    handler: async (input, context) => {
+      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      if (denied) {
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "No tiene permisos para reabrir automatizaciones.",
+        });
+      }
+
+      const existing = getClosure(input.automationId);
+      if (!existing) {
+        return { success: true, alreadyOpen: true };
+      }
+
+      if (existing.kind === "auto") {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message:
+            "El cierre es automático (flujo al 100%); no se reabre manualmente.",
+        });
+      }
+
+      removeClosure(input.automationId);
+      invalidateAutomationDetail(input.automationId);
+      invalidateDiscoveryCache();
+
+      await logAdminFromAstro(
+        context.locals,
+        `Reabrió localmente la automatización #${input.automationId}`,
+      );
+
+      return { success: true };
+    },
+  }),
+
+  saveAutomationManualData: defineAction({
+    input: z.object({
+      automationId: z.number().int().positive(),
+      jefeName: z.string().trim().max(120).optional().nullable(),
+      jefeDni: z.string().trim().max(20).optional().nullable(),
+      jefeLegajo: z.string().trim().max(20).optional().nullable(),
+      jefeZonal: z.string().trim().max(120).optional().nullable(),
+      contactNumber: z.string().trim().max(60).optional().nullable(),
+      openingHours: z.string().trim().max(60).optional().nullable(),
+      notes: z.string().trim().max(500).optional().nullable(),
+    }),
+    handler: async (input, context) => {
+      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      if (denied) {
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "No tiene permisos para editar los datos de la automatización.",
+        });
+      }
+
+      const clean = (value: string | null | undefined): string | null =>
+        value && value.length > 0 ? value : null;
+
+      saveManualData({
+        automationId: input.automationId,
+        jefeName: clean(input.jefeName),
+        jefeDni: clean(input.jefeDni),
+        jefeLegajo: clean(input.jefeLegajo),
+        jefeZonal: clean(input.jefeZonal),
+        contactNumber: clean(input.contactNumber),
+        openingHours: clean(input.openingHours),
+        notes: clean(input.notes),
+        updatedBy: context.locals.user?.username || "desconocido",
+      });
+      invalidateAutomationDetail(input.automationId);
+
+      await logAdminFromAstro(
+        context.locals,
+        `Actualizó los datos manuales de la automatización #${input.automationId}`,
+      );
+
+      return { success: true };
     },
   }),
 };

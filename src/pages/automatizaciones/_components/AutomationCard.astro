@@ -1,0 +1,157 @@
+---
+import { Icon } from "astro-icon/components";
+import type { AutomationSummary } from "@lib/workflow/discovery";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
+import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
+import AutomationLink from "./AutomationLink.astro";
+import AutomationProgress from "./AutomationProgress.astro";
+import InitialFormFieldRow from "./InitialFormFieldRow.astro";
+
+interface Props {
+  item: AutomationSummary;
+  statusNames: Readonly<Record<number, string>>;
+  /** Card expandida al cargar (la hidratación de progreso se dispara con `open`). */
+  open?: boolean;
+  /** `false` bloquea el colapso (card destacada). */
+  collapsible?: boolean;
+}
+
+const { item, statusNames, open = false, collapsible = true } = Astro.props;
+
+const resolveStatusName = (statusId: number) =>
+  statusNames[statusId] ?? `Estado ${statusId}`;
+---
+
+<details
+  class="card bg-base-100 border-base-300 group border"
+  open={open}
+  data-collapse-locked={collapsible ? undefined : "true"}
+>
+  <summary
+    class:list={[
+      "flex flex-wrap items-center justify-between gap-x-4 gap-y-1 p-4 select-none [&::-webkit-details-marker]:hidden",
+      collapsible ? "cursor-pointer" : "pointer-events-none cursor-default",
+    ]}
+  >
+    <div class="flex min-w-0 flex-1 items-center gap-3">
+      <code
+        class="bg-base-200 text-base-content/80 group-open:bg-secondary group-hover:bg-secondary shrink-0 rounded px-1.5 py-0.5 font-mono text-xs transition-colors group-open:text-white group-hover:text-white"
+        data-highlight-target
+      >
+        {item.prettyId}
+      </code>
+      <span
+        class="text-base-content min-w-0 truncate text-sm font-medium"
+        data-highlight-target
+      >
+        {item.displayName}
+      </span>
+    </div>
+    <div class="flex shrink-0 items-center gap-3">
+      <AutomationLifecycleLabel statusId={item.statusId} />
+      {
+        collapsible && (
+          <Icon
+            name="boxicons:chevron-down"
+            size={16}
+            class="text-base-content/40 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        )
+      }
+    </div>
+  </summary>
+  <div class="border-base-300 flex flex-col gap-3 border-t p-4">
+    <div
+      class="hidden flex-col gap-1"
+      data-progress-slot
+      data-automation-id={item.id}
+    >
+      <div class="hidden flex-col gap-1" data-progress-loading>
+        <div class="skeleton h-3 w-24 rounded"></div>
+        <div class="skeleton h-3 w-full rounded"></div>
+      </div>
+      <div class="hidden flex-col gap-1" data-progress-content>
+        <AutomationProgress progress={null} />
+      </div>
+      <p class="text-base-content/50 hidden text-xs" data-progress-error>
+        Progreso no disponible.
+      </p>
+    </div>
+
+    <dl class="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+      <InitialFormFieldRow
+        label="Estado InvGate"
+        value={resolveStatusName(item.statusId)}
+      />
+      <InitialFormFieldRow
+        label="Iniciada"
+        value={formatEpochDateTime(item.createdAt)}
+      />
+      {
+        item.closedAt && (
+          <InitialFormFieldRow
+            label="Finalizada"
+            value={formatEpochDateTime(item.closedAt)}
+          />
+        )
+      }
+    </dl>
+
+    <div class="flex items-center justify-end gap-x-2">
+      <OpenExternalUrlButton
+        href={deriveInvGateUiUrl(item.id)}
+        appearance="ghost"
+        class="rounded-sm shadow-none"
+        ariaLabel={`Abrir ticket ${item.prettyId} en InvGate`}
+        variant="text"
+        label="Abrir en InvGate"
+        size="sm"
+      />
+
+      <AutomationLink
+        automationId={item.id}
+        class="btn btn-secondary btn-sm gap-1 shadow-none"
+      >
+        Ver detalle
+        <Icon name="boxicons:chevron-right" size={14} aria-hidden="true" />
+      </AutomationLink>
+    </div>
+  </div>
+</details>
+
+<style>
+  /* Animación nativa de expandir/colapsar: altura 0 -> auto + fade.
+     Degrada a snap instantáneo en navegadores sin ::details-content
+     o interpolate-size (Firefox/Safari). */
+  details.group {
+    /* DaisyUI .card aplica display:flex al <details>, lo que desactiva
+       por completo la transición de ::details-content en Chromium.
+       block produce el mismo layout apilado para summary + contenido. */
+    display: block;
+    interpolate-size: allow-keywords;
+  }
+
+  details.group::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      block-size 300ms ease,
+      content-visibility 300ms allow-discrete,
+      opacity 300ms ease;
+  }
+
+  details.group[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    details.group::details-content {
+      transition: none;
+    }
+  }
+</style>

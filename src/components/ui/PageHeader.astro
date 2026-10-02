@@ -7,6 +7,7 @@ interface Props {
   headingLevel?: "h1" | "h2";
   class?: string;
   titleClass?: string;
+  titleStyle?: string;
   descriptionClass?: string;
 }
 
@@ -16,6 +17,7 @@ const {
   headingLevel = "h1",
   class: className,
   titleClass,
+  titleStyle,
   descriptionClass,
 } = Astro.props;
 
@@ -31,6 +33,7 @@ const HeadingTag = headingLevel;
       "text-base-content text-3xl font-bold tracking-tight",
       titleClass,
     ]}
+    style={titleStyle}
   >
     {inferredTitle}
   </HeadingTag>

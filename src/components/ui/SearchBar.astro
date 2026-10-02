@@ -3,6 +3,10 @@ import { Icon } from "astro-icon/components";
 
 export interface Props {
   id: string;
+  /** Nombre del campo para enviar por formulario GET (opcional). */
+  name?: string;
+  /** Valor inicial del input (búsqueda server-side). */
+  value?: string;
   placeholder?: string;
   ariaLabel?: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -12,6 +16,8 @@ export interface Props {
 
 const {
   id,
+  name,
+  value = "",
   placeholder = "Buscar...",
   ariaLabel,
   size = "md",
@@ -36,16 +42,20 @@ const iconSize = size === "xs" ? 14 : size === "lg" || size === "xl" ? 20 : 16;
   <input
     type="search"
     {id}
+    name={name}
+    value={value}
     {placeholder}
     aria-label={ariaLabel}
     class="grow"
     autocomplete="off"
+    data-search-input={id}
   />
   {
     clearable && (
       <button
         type="button"
         id={`clear-${id}`}
+        data-clear-btn={id}
         class="text-base-content/50 hover:text-base-content hidden shrink-0 cursor-pointer text-sm transition-colors"
         aria-label="Limpiar búsqueda"
       >
@@ -54,3 +64,31 @@ const iconSize = size === "xs" ? 14 : size === "lg" || size === "xl" ? 20 : 16;
     )
   }
 </label>
+
+<script>
+  function toggleClear(btn: HTMLElement, input: HTMLInputElement) {
+    btn.classList.toggle("hidden", input.value.trim() === "");
+  }
+
+  function wireSearchBar(input: HTMLInputElement) {
+    const id = input.dataset.searchInput;
+    if (!id) return;
+    const btn = document.querySelector<HTMLElement>(`[data-clear-btn="${id}"]`);
+    if (!btn) return;
+
+    toggleClear(btn, input);
+    input.addEventListener("input", () => toggleClear(btn, input));
+    btn.addEventListener("click", () => {
+      input.value = "";
+      input.focus();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+
+  function init() {
+    document.querySelectorAll<HTMLInputElement>("[data-search-input]").forEach(wireSearchBar);
+  }
+
+  init();
+  document.addEventListener("astro:page-load", init);
+</script>

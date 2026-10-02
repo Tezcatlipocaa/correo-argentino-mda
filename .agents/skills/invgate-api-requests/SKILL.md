@@ -33,12 +33,12 @@ digraph invgate_query {
     "Need full objects?" -> "Need many by status?" [label="by status"];
     "Need full objects?" -> "GET /incidents.details.by.view\n?view_id=X\n(full objects, keyset page)" [label="by view"];
     "Need full objects?" -> "GET /incidents.last.hour\n(resp: {data[], next_page_key})" [label="last hour"];
-    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only, open only)" [label="then batch GET /incidents\n?ids[]=... for full"];
-    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only, open only)" [label="IDs enough"];
+    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only)" [label="then batch GET /incidents\n?ids[]=... for full"];
+    "Need many by status?" -> "GET /incidents.by.status\n?status_id=X\n(IDs only)" [label="IDs enough"];
 }
 ```
 
-**Note:** `by.agent`, `by.customer`, and `by.status` only return **open** requests. `by.helpdesk` is even narrower: it returns the whole helpdesk node in one call (ignores `limit`/`page_key`/`location_id`/`status_ids[]`) and only statuses 1-4, so status 5 (Cerrado) never shows up there. For closed/completed incidents, use `/incident?id=X` (if you know the ID) or build a saved view in InvGate and use `incidents.details.by.view`.
+**Note:** `by.agent` and `by.customer` only return **open** requests. `by.helpdesk` returns the whole helpdesk node in one call (ignores `limit`/`page_key`/`location_id`/`status_ids[]`) and only statuses 1-4, so status 5 (Cerrado) never shows up there; además, el valor de `helpdesk_id` debe ser el id del **nivel** (`helpdesksandlevels` `type_id=1`), no el del helpdesk — con el id del helpdesk responde 200 con `requestIds: []`. Llamarlo **secuencialmente**: bajo concurrencia devuelve sets truncados. `by.status` es ambiguo entre corridas (una medición 2026-09 lo vio devolver finalizados — s5=998, s6=73025, s8=1368 — y otra del 2026-09-28 sólo abiertos); no asumir cerrados. Para incidentes cerrados/completados usar `/incident?id=X` o una vista guardada + `incidents.by.view` / `incidents.details.by.view`.
 
 **Tip:** After getting IDs from `by.status` or `by.view`, batch-fetch full objects with `/incidents?ids[]=id1&ids[]=id2&...` instead of individual `/incident?id=X` calls.
 

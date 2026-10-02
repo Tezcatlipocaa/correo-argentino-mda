@@ -1,0 +1,176 @@
+---
+import Modal from "@components/ui/Modal.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+
+interface Props {
+  automationId: number;
+  prettyId: string;
+  jefeName?: string | null;
+  jefeDni?: string | null;
+  jefeLegajo?: string | null;
+  jefeZonal?: string | null;
+  contactNumber?: string | null;
+  openingHours?: string | null;
+  notes?: string | null;
+}
+
+const {
+  automationId,
+  prettyId,
+  jefeName = null,
+  jefeDni = null,
+  jefeLegajo = null,
+  jefeZonal = null,
+  contactNumber = null,
+  openingHours = null,
+  notes = null,
+} = Astro.props;
+---
+
+<Modal
+  id="edit-manual-data-modal"
+  title="Editar datos de la automatización"
+  icon="boxicons:edit"
+>
+  <Fragment slot="content">
+    <input type="hidden" id="edit-automation-id" value={automationId} />
+    <p class="text-base-content/70 mb-4 text-sm">
+      Datos locales para <span class="font-mono">{prettyId}</span>. No modifican
+      InvGate; el portal los muestra sobre el formulario.
+    </p>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <FormField
+        id="edit-automation-jefe"
+        name="jefeName"
+        label="Jefe de sucursal"
+        value={jefeName ?? ""}
+        inputClass="input-sm"
+      />
+      <FormField
+        id="edit-automation-zonal"
+        name="jefeZonal"
+        label="Jefe zonal"
+        value={jefeZonal ?? ""}
+        inputClass="input-sm"
+      />
+      <FormField
+        id="edit-automation-dni"
+        name="jefeDni"
+        label="DNI"
+        value={jefeDni ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="edit-automation-legajo"
+        name="jefeLegajo"
+        label="N° Legajo"
+        value={jefeLegajo ?? ""}
+        inputClass="input-sm font-mono"
+      />
+      <FormField
+        id="edit-automation-contact"
+        name="contactNumber"
+        label="Número de contacto"
+        value={contactNumber ?? ""}
+        inputClass="input-sm"
+      />
+      <FormField
+        id="edit-automation-hours"
+        name="openingHours"
+        label="Franja horaria"
+        value={openingHours ?? ""}
+        placeholder="Ej: 10 a 17hs"
+        inputClass="input-sm"
+      />
+    </div>
+    <div class="mt-3">
+      <FormTextarea
+        id="edit-automation-notes"
+        name="notes"
+        label="Notas"
+        rows={3}
+        value={notes ?? ""}
+      />
+    </div>
+  </Fragment>
+  <Fragment slot="actions">
+    <div class="modal-action mt-6 flex justify-end gap-2">
+      <ActionCancelButton
+        type="button"
+        variant="error"
+        icon="boxicons:x-filled"
+        label="Cancelar"
+        data-close-edit-automation
+      />
+      <ActionConfirmButton
+        type="button"
+        id="btn-save-edit-automation"
+        color="btn-secondary"
+        icon="boxicons:save-filled"
+        label="Guardar"
+        data-save-edit-automation
+      />
+    </div>
+  </Fragment>
+</Modal>
+
+<script>
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
+  import { showToast } from "@/lib/toastClient";
+  import { setBusy, readFieldValue } from "@/lib/clientBusy";
+
+  document.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const openBtn = target.closest("[data-open-edit-automation]");
+    if (openBtn) {
+      const modal = document.getElementById("edit-manual-data-modal");
+      if (modal instanceof HTMLDialogElement) modal.showModal();
+      return;
+    }
+
+    const closeBtn = target.closest("[data-close-edit-automation]");
+    if (closeBtn) {
+      const modal = document.getElementById("edit-manual-data-modal");
+      if (modal instanceof HTMLDialogElement) modal.close();
+      return;
+    }
+
+    const saveBtn = target.closest("[data-save-edit-automation]");
+    if (!saveBtn) return;
+
+    const idInput = document.getElementById("edit-automation-id");
+    const automationId =
+      idInput instanceof HTMLInputElement ? Number(idInput.value) : NaN;
+    if (!Number.isInteger(automationId)) return;
+
+    setBusy(saveBtn, true);
+    const { error } = await actions.saveAutomationManualData({
+      automationId,
+      jefeName: readFieldValue("edit-automation-jefe"),
+      jefeZonal: readFieldValue("edit-automation-zonal"),
+      jefeDni: readFieldValue("edit-automation-dni"),
+      jefeLegajo: readFieldValue("edit-automation-legajo"),
+      contactNumber: readFieldValue("edit-automation-contact"),
+      openingHours: readFieldValue("edit-automation-hours"),
+      notes: readFieldValue("edit-automation-notes"),
+    });
+    setBusy(saveBtn, false);
+
+    if (error) {
+      showToast(
+        error.message || "No se pudieron guardar los datos",
+        "alert-error",
+      );
+      return;
+    }
+
+    showToast("Datos actualizados", "alert-success");
+    navigate(window.location.href);
+  });
+</script>

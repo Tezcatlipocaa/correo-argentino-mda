@@ -1,0 +1,35 @@
+---
+import type { AutomationSummary } from "@lib/workflow/discovery";
+import AutomationCard from "./AutomationCard.astro";
+
+interface Props {
+  items: readonly AutomationSummary[];
+  statusNames: Readonly<Record<number, string>>;
+  /** Automatización expandida al cargar (la hidratación de progreso la dispara `open`). */
+  defaultOpenId?: number | null;
+  /** `false` bloquea el colapso de las cards (vista destacada). */
+  collapsible?: boolean;
+}
+
+const {
+  items,
+  statusNames,
+  defaultOpenId = null,
+  collapsible = true,
+} = Astro.props;
+---
+
+<ul class="flex flex-col gap-3">
+  {
+    items.map((item) => (
+      <li>
+        <AutomationCard
+          item={item}
+          statusNames={statusNames}
+          open={item.id === defaultOpenId}
+          collapsible={collapsible}
+        />
+      </li>
+    ))
+  }
+</ul>

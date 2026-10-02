@@ -1,0 +1,336 @@
+---
+import { Icon } from "astro-icon/components";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import AutomationProgress from "./AutomationProgress.astro";
+import AutomationTimeline from "./AutomationTimeline.astro";
+import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
+import InitialFormDetails from "./InitialFormDetails.astro";
+import CloseAutomationModal from "./CloseAutomationModal.astro";
+import AutomationStatusBoard from "./AutomationStatusBoard.astro";
+import EditManualDataModal from "./EditManualDataModal.astro";
+import AutomationBackLink from "./AutomationBackLink.astro";
+import {
+  isActiveStatus,
+  isFinalizedStatus,
+} from "@lib/workflow/automation-status";
+import { canManualClose } from "@lib/workflow/closures";
+import type { AutomationClosure } from "@lib/workflow/closures";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
+import type { AutomationDetail } from "@lib/workflow/resolver";
+
+interface Props {
+  detail: AutomationDetail | null;
+  loadError: string;
+  canQuery: boolean;
+  canClose: boolean;
+}
+
+const { detail, loadError, canQuery, canClose } = Astro.props;
+
+const closure: AutomationClosure | null = detail?.closure ?? null;
+const hasClosure = closure !== null;
+const invgateUrl = detail ? deriveInvGateUiUrl(detail.id) : "";
+const isFinalized =
+  hasClosure || (detail !== null && isFinalizedStatus(detail.statusId));
+const isLegacy = detail?.workflowKind === "legacy";
+const showMissing = !isFinalized && !isLegacy;
+const missingCount = detail?.stages?.missingBlockingCount ?? 0;
+const initialFormAuthor = detail?.initialForm?.authorName ?? null;
+
+const canShowCloseButton =
+  canClose &&
+  detail !== null &&
+  !hasClosure &&
+  isActiveStatus(detail.statusId) &&
+  canManualClose(detail.progress.percent);
+const canReopen = canClose && hasClosure && closure?.kind === "manual";
+const canEditManualData = canClose && detail !== null;
+---
+
+<PageContainer width="xl">
+  <AutomationBackLink />
+
+  <div
+    class="bg-base-100 border-base-300 sticky -top-4 z-20 flex flex-col gap-3 border-b pb-4 md:-top-6"
+  >
+    {
+      detail && (
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <code class="bg-secondary rounded-sm px-1.5 py-0.5 font-mono text-xs text-white">
+              {detail.prettyId}
+            </code>
+
+            <div class="text-base-content/60 flex items-center gap-x-1 text-sm tracking-wide">
+              <AutomationLifecycleLabel
+                statusId={detail.statusId}
+                hasClosure={hasClosure}
+                class="text-sm"
+              />
+              <span>{" · "}</span>
+              <p>
+                Solicitud iniciada el
+                {formatEpochDateTime(detail.createdAt)}
+              </p>
+              {detail.estimatedEnd && (
+                <>
+                  <span>{" · "}</span>
+                  <p>Implementación estimada {detail.estimatedEnd}</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {(canShowCloseButton || canReopen) && (
+            <div class="ml-auto flex items-center gap-2">
+              {canShowCloseButton && (
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm gap-1"
+                  data-open-close-automation
+                >
+                  <Icon
+                    name="boxicons:check-circle"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  Cerrar caso
+                </button>
+              )}
+              {canReopen && (
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm gap-1"
+                  data-reopen-automation
+                  data-automation-id={detail.id}
+                >
+                  <Icon
+                    name="boxicons:refresh-cw"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  Reabrir
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    <PageHeader
+      title={detail?.displayName}
+      description="Monitoreo de la automatización de la sucursal manual"
+    />
+
+    {
+      detail && (
+        <header class="bg-base-100 flex flex-col gap-2">
+          <div>
+            <AutomationProgress
+              progress={detail.progress}
+              headingLevel="h3"
+              barClass="mt-0"
+            />
+            {showMissing && missingCount > 0 && (
+              <div
+                role="status"
+                class="bg-warning/10 text-base-content mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
+              >
+                <Icon
+                  name="boxicons:alert-circle"
+                  size={18}
+                  class="text-warning shrink-0"
+                  aria-hidden="true"
+                />
+                <span>
+                  {missingCount}
+                  {missingCount === 1
+                    ? "gestión faltante"
+                    : "gestiones faltantes"}
+                  según las etapas configuradas del workflow.
+                </span>
+              </div>
+            )}
+          </div>
+        </header>
+      )
+    }
+  </div>
+
+  {
+    detail && closure && (
+      <div
+        role="status"
+        data-automation-closure-banner
+        class="bg-success/10 text-base-content mb-2 flex items-start gap-2 rounded-lg px-3 py-2"
+      >
+        <Icon
+          name="boxicons:check-circle"
+          size={18}
+          class="text-success mt-0.5 shrink-0"
+          aria-hidden="true"
+        />
+        <div class="flex flex-col gap-0.5">
+          <p class="text-sm font-medium">
+            {closure.kind === "auto"
+              ? "Finalizada automáticamente al completar el flujo"
+              : "Finalizada en el portal"}
+          </p>
+          <p class="text-sm opacity-90">{closure.reason}</p>
+          <p class="text-xs opacity-75">
+            {closure.kind === "auto"
+              ? "Cierre automático"
+              : `Cerrada por ${closure.closedBy}`}
+            {" · "}
+            {formatEpochDateTime(closure.closedAt)}
+            {` · ${closure.percent}%`}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    !canQuery ? (
+      <div role="alert" class="alert alert-warning">
+        <span>
+          Sesión no iniciada. Iniciá sesión para consultar la automatización.
+        </span>
+      </div>
+    ) : loadError || !detail ? (
+      <div role="alert" class="alert alert-error">
+        <div>
+          <h3 class="font-medium">No se pudo cargar la automatización</h3>
+          <p class="text-sm opacity-80">{loadError}</p>
+        </div>
+      </div>
+    ) : (
+      <>
+        {(detail.initialForm || canEditManualData) && (
+          <section class="flex flex-col gap-3 px-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-baseline gap-x-2">
+                <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+                  Datos de la solicitud
+                </h2>
+                {initialFormAuthor && (
+                  <span class="text-base-content/50 text-xs">
+                    registrado por {initialFormAuthor}
+                  </span>
+                )}
+              </div>
+              <div class="flex items-center gap-2">
+                {canEditManualData && (
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm gap-1"
+                    data-open-edit-automation
+                  >
+                    <Icon name="boxicons:edit" size={16} aria-hidden="true" />
+                    Editar datos
+                  </button>
+                )}
+                {invgateUrl && (
+                  <OpenExternalUrlButton
+                    href={invgateUrl}
+                    ariaLabel={`Abrir ticket ${detail.prettyId} en InvGate`}
+                    variant="text"
+                    label="Abrir en InvGate"
+                    size="sm"
+                  />
+                )}
+              </div>
+            </div>
+            {detail.initialForm ? (
+              <InitialFormDetails
+                form={detail.initialForm}
+                location={detail.location}
+                contactNumber={detail.manualData?.contactNumber ?? null}
+                openingHours={detail.openingHours}
+                notes={detail.manualData?.notes ?? null}
+                branchName={detail.branchName}
+              />
+            ) : (
+              <p class="text-base-content/50 text-sm italic">
+                Sin formulario inicial en InvGate. Podés cargar los datos manualmente.
+              </p>
+            )}
+          </section>
+        )}
+
+        {detail.board && <AutomationStatusBoard board={detail.board} />}
+
+        <section class="flex flex-col gap-4 px-4">
+          <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+            Línea de tiempo del workflow
+          </h2>
+          <AutomationTimeline
+            nodes={detail.nodes}
+            stages={detail.stages}
+            showMissing={showMissing}
+            showStageless={!isLegacy}
+          />
+        </section>
+      </>
+    )
+  }
+
+  {
+    detail && canShowCloseButton && (
+      <CloseAutomationModal
+        automationId={detail.id}
+        prettyId={detail.prettyId}
+      />
+    )
+  }
+
+  {
+    detail && canEditManualData && (
+      <EditManualDataModal
+        automationId={detail.id}
+        prettyId={detail.prettyId}
+        jefeName={detail.initialForm?.parsed?.jefe?.name ?? null}
+        jefeDni={detail.initialForm?.parsed?.jefe?.dni ?? null}
+        jefeLegajo={detail.initialForm?.parsed?.jefe?.legajo ?? null}
+        jefeZonal={detail.initialForm?.parsed?.jefeZonal ?? null}
+        contactNumber={detail.manualData?.contactNumber ?? null}
+        openingHours={detail.openingHours}
+        notes={detail.manualData?.notes ?? null}
+      />
+    )
+  }
+</PageContainer>
+
+<script>
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
+  import { showToast } from "@/lib/toastClient";
+  import { setBusy } from "@/lib/clientBusy";
+
+  document.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const reopenBtn = target.closest("[data-reopen-automation]");
+    if (!reopenBtn) return;
+
+    const automationId = Number(reopenBtn.getAttribute("data-automation-id"));
+    if (!Number.isInteger(automationId)) return;
+
+    setBusy(reopenBtn, true);
+    const { error } = await actions.reopenAutomation({ automationId });
+    setBusy(reopenBtn, false);
+
+    if (error) {
+      showToast(error.message || "No se pudo reabrir el caso", "alert-error");
+      return;
+    }
+
+    showToast("Caso reabierto", "alert-success");
+    navigate(window.location.href);
+  });
+</script>

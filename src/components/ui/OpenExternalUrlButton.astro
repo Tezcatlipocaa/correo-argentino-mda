@@ -7,7 +7,9 @@ interface Props {
   variant?: "icon" | "text";
   label?: string;
   size?: "xs" | "sm" | "md";
+  /** Forma del botón; `ghost` ignora `tone` (DaisyUI no combina ambos). */
   appearance?: "solid" | "outline" | "ghost";
+  /** Color del botón (solo solid/outline). */
   tone?: "primary" | "secondary" | "accent" | "neutral";
   disabled?: boolean;
   newTab?: boolean;
@@ -21,6 +23,8 @@ const {
   variant = "icon",
   label = "Abrir",
   size = "sm",
+  appearance = "solid",
+  tone = "secondary",
   disabled = false,
   newTab = true,
   class: className = "",
@@ -33,13 +37,27 @@ const sizeClassMap: Record<NonNullable<Props["size"]>, string> = {
   md: "",
 };
 
+const toneClass: Record<NonNullable<Props["tone"]>, string> = {
+  primary: "btn-primary",
+  secondary: "btn-secondary",
+  accent: "btn-accent",
+  neutral: "btn-neutral",
+};
+
+const appearanceClass =
+  appearance === "ghost"
+    ? "btn-ghost"
+    : appearance === "outline"
+      ? `btn-outline ${toneClass[tone]}`
+      : toneClass[tone];
+
 const canOpen = Boolean(href) && !disabled;
 const isIconVariant = variant === "icon";
 const baseClasses = [
   "btn rounded-lg transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
   sizeClassMap[size],
   canOpen
-    ? "btn-secondary"
+    ? appearanceClass
     : "btn-disabled border-base-300 bg-base-200 text-base-content/45",
   isIconVariant ? "btn-square min-h-8 min-w-8" : "gap-1",
   className,

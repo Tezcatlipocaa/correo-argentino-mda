@@ -42,6 +42,15 @@ Returns active helpdesks.
 ### `GET /helpdesksandlevels`
 **Params:** `page`, `page_size`, `ids` (ARRAY)
 
+**Response:** Array plano que mezcla dos entidades (verificado en producción 2026-09):
+- `type_id=2`: helpdesk, con `name`.
+- `type_id=1`: NIVEL (level_order) del helpdesk `parent_id` — sin `name`. Es la
+  cola real donde viven los tickets: `incidents.by.helpdesk` usa este id, no el
+  del helpdesk (con el helpdesk la respuesta viene vacía).
+Ejemplo producción: helpdesk "TI_GSM_Mesa de Coord" (id 2508) → nivel id 6002
+(`{type_id:1, level_order:1, parent_id:2508, members_ids:[...]}`), cuyo
+`incidents.by.helpdesk` devuelve los tickets de proyectos/automatizaciones.
+
 ---
 
 ## Incidents — by ID
@@ -79,7 +88,9 @@ Returns full objects for specific request IDs. **Does NOT support pagination.**
 
 ### `GET /incidents.by.status`
 
-Lists request IDs matching a status. **Open requests only. IDs only, not full objects.** Offset-paginated.
+Lists request IDs matching a status. **IDs only, not full objects.** Offset-paginated.
+
+**Verified (2026-09, producción):** devuelve TAMBIÉN solicitudes cerradas (s5=998, s6=73025, s8=1368). La nota "open only" documentada previamente era incorrecta para este endpoint (sí aplica a `by.agent`/`by.customer`/`by.helpdesk`).
 
 **Params:** `status_id` (INTEGER), `status_ids[]` (ARRAY — PHP array format), `limit` (INTEGER), `offset` (INTEGER)
 
@@ -141,22 +152,17 @@ Same params and response shape as `by.agent`.
 
 **Params:** `helpdesk_id` (INTEGER, **required**)
 
+**IMPORTANT (2026-09, producción):** `helpdesk_id` debe ser el id del NIVEL
+(helpdesksandlevels `type_id=1`, sin name), no del helpdesk — con el id del
+helpdesk responde 200 con `requestIds: []`. El `assigned_group_id` del ticket
+coincide con el id del nivel, que NO figura en `/groups` ni en `/helpdesks`.
+
 **Measured 2026-09-28 (PROD) — only `helpdesk_id` is honored.** `limit`, `page_key`, `location_id` and `status_ids[]` are all silently ignored: one call returns the **entire** open set of the node in a single response (141 helpdesks scanned in one pass). Additional hard limits:
 - Covers **only statuses 1-4**. Status 5 (Cerrado) never appears in the results, so a "any duplicate" check that includes closed tickets cannot be built on this endpoint.
 - **Unreliable under concurrency.** Parallel fan-out (6 workers over 141 nodes) returned truncated sets (≤29 ids where serial returned 63) and dropped the matching incidents entirely. Always call it **sequentially**.
 - With a small node set this is the cheapest narrowing axis available: 3 serial calls ≈ 1.7s vs ≈32s for a global `by.status` scan.
 
-**Response:** IDs only, same shape as `by.status`:
-```json
-{
-  "status": "OK",
-  "info": "...",
-  "requestIds": [309, 360, ...],
-  "limit": null,
-  "offset": 0,
-  "total": 0
-}
-```
+**Response (observado):** `{status, info, requestIds[]}` — **sin `total`**.
 
 ### `GET /incidents.last.hour`
 
@@ -400,6 +406,9 @@ Searches users by email, username, or phone. Keyset-paginated (10 per page).
 ### `GET /groups`
 **Response:** Flat array of `{ id, name, total }`. ✅ Verified.
 **Note:** Fields differ from documentation (`total` not `parent_id`/`status_id`).
+**Note (2026-09, producción):** el `assigned_group_id` de los tickets puede
+referenciar niveles de helpdesk que NO aparecen en `/groups` (ni en
+`/helpdesks`); figuran solo en `/helpdesksandlevels` (type_id=1, sin name).
 
 ### `GET /groups.observers` / `GET /groups.users`
 **Params:** `id` (INTEGER, **required**)
