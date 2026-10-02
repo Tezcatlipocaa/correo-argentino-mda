@@ -14,9 +14,9 @@
 - [x] Task: Redirigir la captura de rotación de sábados a `#saturday-rotation-card` (470bd53)
   - [x] Modificar `handleCopyRotationImage` en `src/components/cronograma/lib/dashboard-client.ts` para que `targetEl` sea `saturdayCard`.
   - [x] Calibrar el ancho fijo (`width`) y padding para un encuadre nítido que incluya título, badge de grupo y grilla.
-- [~] Task: Identificar y redirigir la captura de horas extras a la Columna 2+3
-  - [ ] Agregar `id="overtime-compact-list-card"` al contenedor de la Columna 2+3 ("Turnos Guardados") en `src/components/cronograma/CronogramaDashboard.astro`.
-  - [ ] Modificar `handleCopyOvertimeImage` en `src/components/cronograma/lib/dashboard-client.ts` para capturar dicho elemento con dimensiones óptimas.
+- [x] Task: Identificar y redirigir la captura de horas extras a la Columna 2+3 (faf3828)
+  - [x] Agregar `id="overtime-compact-list-card"` al contenedor de la Columna 2+3 ("Turnos Guardados") en `src/components/cronograma/CronogramaDashboard.astro`.
+  - [x] Modificar `handleCopyOvertimeImage` en `src/components/cronograma/lib/dashboard-client.ts` para capturar dicho elemento con dimensiones óptimas.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Verificación Final y Calidad (Green Phase)
