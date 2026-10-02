@@ -12,6 +12,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
     const url = new URL(request.url);
     const channel = url.searchParams.get("channel") as ChannelType;
     const id = url.searchParams.get("id")?.trim() || "";
+    const sourceParam = url.searchParams.get("source")?.trim();
+    const source = sourceParam === "wise" || sourceParam === "invgate" ? sourceParam : undefined;
 
     if (!channel || !CHANNEL_TYPES.includes(channel)) {
       return jsonError("Canal inválido o no especificado", 400);
@@ -21,7 +23,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
       return jsonError("El identificador del caso es requerido", 400);
     }
 
-    const result = await fetchQualityCaseMetadata(channel, id);
+    const result = await fetchQualityCaseMetadata(channel, id, source);
 
     if (!result.ok) {
       return jsonError(result.error || "No se pudieron obtener los metadatos", 404);

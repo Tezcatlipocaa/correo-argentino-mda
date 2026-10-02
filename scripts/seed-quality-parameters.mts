@@ -57,7 +57,21 @@ async function seed() {
     }
   }
 
-  console.log(`Parámetros procesados: ${allParams.length} (Insertados: ${inserted}, Actualizados: ${updated})`);
+  // Desactivar parámetros que ya no pertenecen a la lista canónica
+  const validCodes = allParams.map((p) => p.code);
+  let deactivated = 0;
+  const oldParams = db.select().from(auditParameters).where(sql`${auditParameters.active} = true`).all();
+  for (const op of oldParams) {
+    if (!validCodes.includes(op.code)) {
+      db.update(auditParameters)
+        .set({ active: false })
+        .where(sql`${auditParameters.id} = ${op.id}`)
+        .run();
+      deactivated++;
+    }
+  }
+
+  console.log(`Parámetros procesados: ${allParams.length} (Insertados: ${inserted}, Actualizados: ${updated}, Desactivados: ${deactivated})`);
 }
 
 seed().catch(console.error);

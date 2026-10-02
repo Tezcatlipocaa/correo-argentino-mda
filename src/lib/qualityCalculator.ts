@@ -43,18 +43,19 @@ export function calculateMultiChannelAuditScores(
 
   if (channel === "wise_call") {
     const s1Raw = Math.max(0, 45 - s1Deductions);
-    const s2Raw = Math.max(0, 55 - s2Deductions);
     section1Score = Math.round((s1Raw / 45) * 100);
-    section2Score = Math.round((s2Raw / 55) * 100);
-    totalScore = s1Raw + s2Raw;
+    if (hasSection2) {
+      const s2Raw = Math.max(0, 55 - s2Deductions);
+      section2Score = Math.round((s2Raw / 55) * 100);
+      totalScore = s1Raw + s2Raw;
+    } else {
+      section2Score = 0;
+      totalScore = section1Score;
+    }
   } else {
     section1Score = Math.max(0, 100 - s1Deductions);
     section2Score = hasSection2 ? Math.max(0, 100 - s2Deductions) : 0;
     totalScore = hasSection2 ? Math.round((section1Score + section2Score) / 2) : section1Score;
-  }
-
-  if (isCriticalFailure) {
-    totalScore = Math.round(totalScore * (QUALITY_CONFIG.criticalFailurePenaltyMultiplier ?? 0.5));
   }
 
   return {

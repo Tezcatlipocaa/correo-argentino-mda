@@ -82,14 +82,6 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     channel: "wise_call",
     order: 10,
   },
-  {
-    code: "call_solicitud",
-    name: "Solicitud",
-    weight: null,
-    section: "items",
-    channel: "wise_call",
-    order: 11,
-  },
 
   // Sección B: TICKET (Gestión y Registro en Sistema)
   {
@@ -98,7 +90,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 6,
     section: "ticket",
     channel: "wise_call",
-    order: 12,
+    order: 11,
   },
   {
     code: "call_ticket_tipo",
@@ -106,7 +98,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 5,
     section: "ticket",
     channel: "wise_call",
-    order: 13,
+    order: 12,
   },
   {
     code: "call_ticket_categorizacion",
@@ -114,7 +106,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 10,
     section: "ticket",
     channel: "wise_call",
-    order: 14,
+    order: 13,
   },
   {
     code: "call_ticket_ortografia",
@@ -122,7 +114,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 8,
     section: "ticket",
     channel: "wise_call",
-    order: 15,
+    order: 14,
   },
   {
     code: "call_ticket_prioridad",
@@ -130,7 +122,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 6,
     section: "ticket",
     channel: "wise_call",
-    order: 16,
+    order: 15,
   },
   {
     code: "call_ticket_titulo",
@@ -138,7 +130,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 7,
     section: "ticket",
     channel: "wise_call",
-    order: 17,
+    order: 16,
   },
   {
     code: "call_ticket_descripcion",
@@ -146,7 +138,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 7,
     section: "ticket",
     channel: "wise_call",
-    order: 18,
+    order: 17,
   },
   {
     code: "call_ticket_exactitud_datos",
@@ -154,15 +146,7 @@ export const WISE_CALL_PARAMETERS: EvaluationParameter[] = [
     weight: 6,
     section: "ticket",
     channel: "wise_call",
-    order: 19,
-  },
-  {
-    code: "call_ticket_reclamo_novedad",
-    name: "Reclamo / Novedad",
-    weight: 55,
-    section: "ticket",
-    channel: "wise_call",
-    order: 20,
+    order: 18,
   },
 ];
 
@@ -329,14 +313,6 @@ export const WISE_EMAIL_PARAMETERS: EvaluationParameter[] = [
     section: "mda",
     channel: "wise_email",
     order: 20,
-  },
-  {
-    code: "email_mda_reclamo_novedad",
-    name: "Reclamo / Novedad",
-    weight: 100,
-    section: "mda",
-    channel: "wise_email",
-    order: 21,
   },
 ];
 

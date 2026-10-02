@@ -1,10 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   parseWiseCallMetadata,
   parseWiseEmailMetadata,
   parseInvgateAgMetadata,
   formatSecondsToMinutes,
+  fetchWiseCaseData,
 } from "../../src/lib/qualityMetadataFetcher";
+import * as wiseClient from "../../src/lib/wise-cx-client";
 
 describe("Quality Metadata Extractors", () => {
   it("formats seconds into mm:ss string properly", () => {
@@ -90,6 +92,28 @@ describe("Quality Metadata Extractors", () => {
     expect(metadataPas.isPas).toBe(true);
     expect(metadataPas.date).toBe("2026-09-28");
 
+    const mockIncidentDetailed = {
+      id: 88442,
+      title: "Error al ingresar a Sistema SGO",
+      description: "El operador reporta pantalla blanca tras ingresar credenciales.",
+      priority: { id: 3, name: "Alta" },
+      status: { id: 2, name: "En curso" },
+      category: { id: 45, name: "Aplicaciones Internas" },
+      customer: { id: 501, name: "Mariano Moreno" },
+      assigned_to: { id: 104, name: "Agustina Rossi" },
+      created_at: "2026-09-30 11:20:00",
+      location: { id: 10, name: "Sede Retiro" },
+      helpdesk: { id: 2, name: "Mesa Operaciones" },
+    };
+
+    const metadataDetailed = parseInvgateAgMetadata(mockIncidentDetailed);
+    expect(metadataDetailed.title).toBe("Error al ingresar a Sistema SGO");
+    expect(metadataDetailed.description).toBe("El operador reporta pantalla blanca tras ingresar credenciales.");
+    expect(metadataDetailed.category).toBe("Aplicaciones Internas");
+    expect(metadataDetailed.status).toBe("En curso");
+    expect(metadataDetailed.creator).toBe("Mariano Moreno");
+    expect(metadataDetailed.operator).toBe("Agustina Rossi");
+
     const mockIncidentNonPas = {
       id: 99124,
       title: "Reinicio de password",
@@ -120,5 +144,35 @@ describe("Quality Metadata Extractors", () => {
     expect(metadataEpoch.priority).toBe("Alta");
     expect(metadataEpoch.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(metadataEpoch.takeTime).toBeDefined();
+  });
+
+  it("queries Wise CX by cases.number filtering when given a 6-digit ticket number", async () => {
+    const spy = vi.spyOn(wiseClient, "wiseCxGet").mockImplementation(async (path: string) => {
+      if (path.includes("filtering=")) {
+        const decoded = decodeURIComponent(path.split("filtering=")[1].split("&")[0]);
+        const filters = JSON.parse(decoded);
+        expect(filters).toEqual([{ field: "cases.number", operator: "EQUAL", value: 534787 }]);
+        return {
+          ok: true,
+          status: 200,
+          data: {
+            data: [
+              {
+                id: 430357543,
+                number: 534787,
+                subject: "Llamada de Mesa de Ayuda",
+              },
+            ],
+          },
+        };
+      }
+      return { ok: false, status: 404, message: "Not found" };
+    });
+
+    const result = await fetchWiseCaseData("534787");
+    expect(result).toBeDefined();
+    expect(result?.id).toBe(430357543);
+    expect(result?.number).toBe(534787);
+    spy.mockRestore();
   });
 });

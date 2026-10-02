@@ -217,6 +217,13 @@ export const server = {
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
           )
           .default(false),
+        callGeneratedTicket: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1",
+          )
+          .default(true),
         appliesMda: z
           .any()
           .transform(
@@ -248,53 +255,32 @@ export const server = {
           message: "No tiene permisos para guardar auditorías.",
         });
       }
-      // 1. Obtener los parámetros correspondientes al canal
-      let allParams;
-      if (input.id) {
-        const existingScores = await db
-          .select()
-          .from(auditScores)
-          .where(eq(auditScores.auditId, input.id));
-        const paramIds = existingScores.map((s) => s.parameterId);
-        if (paramIds.length > 0) {
-          allParams = await db
-            .select()
-            .from(auditParameters)
-            .where(inArray(auditParameters.id, paramIds));
-        } else {
-          allParams = await db
-            .select()
-            .from(auditParameters)
-            .where(
-              and(
-                eq(auditParameters.active, true),
-                eq(auditParameters.channel, input.channelType),
-              ),
-            );
-        }
-      } else {
-        allParams = await db
-          .select()
-          .from(auditParameters)
-          .where(
-            and(
-              eq(auditParameters.active, true),
-              eq(auditParameters.channel, input.channelType),
-            ),
-          );
-      }
+      // 1. Obtener los parámetros activos correspondientes al canal
+      let allParams = await db
+        .select()
+        .from(auditParameters)
+        .where(
+          and(
+            eq(auditParameters.active, true),
+            eq(auditParameters.channel, input.channelType),
+          ),
+        )
+        .orderBy(auditParameters.order);
 
       // Si por alguna razón no hay parámetros específicos del canal, fallback a los activos
       if (!allParams || allParams.length === 0) {
         allParams = await db
           .select()
           .from(auditParameters)
-          .where(eq(auditParameters.active, true));
+          .where(eq(auditParameters.active, true))
+          .orderBy(auditParameters.order);
       }
 
       // 2. Determinar si aplica Sección 2
       let hasSection2 = true;
-      if (input.channelType === "wise_email") {
+      if (input.channelType === "wise_call") {
+        hasSection2 = input.callGeneratedTicket;
+      } else if (input.channelType === "wise_email") {
         hasSection2 = input.appliesMda;
       } else if (input.channelType === "invgate_ticket") {
         hasSection2 = input.staysInMda;
@@ -360,7 +346,7 @@ export const server = {
         creationTime: input.creationTime || null,
         takeTime: input.takeTime || null,
         isPas: input.isPas,
-        appliesMda: input.appliesMda,
+        appliesMda: input.channelType === "wise_call" ? hasSection2 : input.appliesMda,
         staysInMda: input.staysInMda,
         isCriticalFailure: input.isCriticalFailure,
       };

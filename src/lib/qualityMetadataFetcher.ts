@@ -1,6 +1,7 @@
 import type { ChannelType } from "@/types/quality";
 import { wiseCxGet } from "@/lib/wise-cx-client";
 import { invgateGet } from "@/lib/invgateClient";
+import { cleanHtmlText } from "@/lib/titleNormalizer";
 
 export interface ExtractedQualityMetadata {
   caseNumber: string;
@@ -12,6 +13,11 @@ export interface ExtractedQualityMetadata {
   takeTime?: string;
   priority?: string;
   isPas?: boolean;
+  title?: string;
+  description?: string;
+  category?: string;
+  status?: string;
+  creator?: string;
   rawDetails?: Record<string, any>;
 }
 
@@ -123,6 +129,11 @@ export function parseInvgateAgMetadata(incident: any): ExtractedQualityMetadata 
 
   const priorityName = incident?.priority?.name ?? (typeof incident?.priority === "string" ? incident.priority : "Media");
   const operatorName = incident?.assigned_to?.name ?? incident?.collaborator ?? "";
+  const title = incident?.title || "";
+  const description = cleanHtmlText(incident?.description || "");
+  const categoryName = incident?.category?.name || (typeof incident?.category === "string" ? incident.category : "");
+  const statusName = incident?.status?.name || (typeof incident?.status === "string" ? incident.status : "");
+  const creatorName = incident?.customer?.name || incident?.creator?.name || incident?.user?.name || (typeof incident?.customer === "string" ? incident.customer : "");
 
   // Condición PAS: ubicación, cliente o helpdesk contiene 'pas'
   const locName = (incident?.location?.name || "").toLowerCase();
@@ -137,37 +148,90 @@ export function parseInvgateAgMetadata(incident: any): ExtractedQualityMetadata 
     creationTime,
     takeTime,
     isPas,
+    title,
+    description,
+    category: categoryName,
+    status: statusName,
+    creator: creatorName,
     rawDetails: {
       incidentId: incident?.id,
-      title: incident?.title,
-      status: incident?.status?.name || incident?.status,
+      title,
+      description,
+      status: statusName,
+      category: categoryName,
+      creator: creatorName,
+      priority: priorityName,
+      location: incident?.location?.name || incident?.location,
+      helpdesk: incident?.helpdesk?.name || incident?.helpdesk,
     },
   };
+}
+
+export async function fetchInvgateTicketMetadata(
+  ticketId: string | number,
+): Promise<{ ok: boolean; data?: ExtractedQualityMetadata; error?: string }> {
+  const cleanId = ticketId.toString().replace("#", "").trim();
+  if (!cleanId) return { ok: false, error: "Identificador de ticket InvGate requerido" };
+
+  try {
+    const res = await invgateGet<any>(`incident?id=${cleanId}`);
+    if (!res.ok || !res.data) {
+      return { ok: false, error: `No se encontró el incidente InvGate #${cleanId}` };
+    }
+    const metadata = parseInvgateAgMetadata(res.data);
+    return { ok: true, data: metadata };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error al consultar ticket de InvGate";
+    return { ok: false, error: msg };
+  }
 }
 
 export async function fetchWiseCaseData(identifier: string | number) {
   const cleanId = identifier.toString().replace("#", "").trim();
 
-  // 1. Intentar obtener por ID directo si es numérico largo (>6 dígitos)
+  // 1. Si es numérico largo (>= 8 dígitos), puede ser el ID interno de Wise CX
   if (/^\d{8,}$/.test(cleanId)) {
-    const direct = await wiseCxGet<any>(`/core/v1/cases/${cleanId}?fields=id,number,group_id,user_id,contact_id,status,source_channel,tags,subject,created_at,solved_at,closed_at,last_read,first_read`);
+    const direct = await wiseCxGet<any>(
+      `/core/v1/cases/${cleanId}?fields=id,number,group_id,user_id,contact_id,status,source_channel,tags,subject,created_at,solved_at,closed_at,last_read,first_read`,
+    );
     if (direct.ok && direct.data?.id) {
       return direct.data;
     }
   }
 
-  // 2. Buscar por número de caso en Wise CX (con paginación o filtro)
-  // Intentamos por query param directo o paginación estimada
-  const listRes = await wiseCxGet<any>(`/core/v1/cases?filtering[0][field]=number&filtering[0][operator]=EQUAL&filtering[0][value]=${encodeURIComponent(cleanId)}&fields=id,number,group_id,user_id,contact_id,status,source_channel,tags,subject,created_at,solved_at,closed_at,last_read,first_read`);
+  // 2. Buscar por número de ticket (cases.number) con filtering JSON
+  const numVal = isNaN(Number(cleanId)) ? cleanId : Number(cleanId);
+  const filterJson = JSON.stringify([
+    { field: "cases.number", operator: "EQUAL", value: numVal },
+  ]);
+  const listRes = await wiseCxGet<any>(
+    `/core/v1/cases?filtering=${encodeURIComponent(filterJson)}&fields=id,number,group_id,user_id,contact_id,status,source_channel,tags,subject,created_at,solved_at,closed_at,last_read,first_read`,
+  );
 
-  if (listRes.ok && Array.isArray(listRes.data?.data)) {
-    const matched = listRes.data.data.find((c: any) => c.number?.toString() === cleanId || c.id?.toString() === cleanId);
+  if (listRes.ok && Array.isArray(listRes.data?.data) && listRes.data.data.length > 0) {
+    const matched = listRes.data.data.find(
+      (c: any) => c.number?.toString() === cleanId || c.id?.toString() === cleanId,
+    );
     if (matched) return matched;
   }
 
-  // 3. Fallback: intentar consulta por ID estándar
+  // 3. Si no se encontró por cases.number, intentar por cases.id mediante filtering
+  const filterIdJson = JSON.stringify([
+    { field: "cases.id", operator: "EQUAL", value: numVal },
+  ]);
+  const listByIdRes = await wiseCxGet<any>(
+    `/core/v1/cases?filtering=${encodeURIComponent(filterIdJson)}&fields=id,number,group_id,user_id,contact_id,status,source_channel,tags,subject,created_at,solved_at,closed_at,last_read,first_read`,
+  );
+  if (listByIdRes.ok && Array.isArray(listByIdRes.data?.data) && listByIdRes.data.data.length > 0) {
+    const matched = listByIdRes.data.data.find(
+      (c: any) => c.number?.toString() === cleanId || c.id?.toString() === cleanId,
+    );
+    if (matched) return matched;
+  }
+
+  // 4. Fallback: intentar consulta por ID estándar directo
   const fallback = await wiseCxGet<any>(`/core/v1/cases/${cleanId}`);
-  if (fallback.ok && fallback.data) return fallback.data;
+  if (fallback.ok && fallback.data?.id) return fallback.data;
 
   return null;
 }
@@ -175,11 +239,15 @@ export async function fetchWiseCaseData(identifier: string | number) {
 export async function fetchQualityCaseMetadata(
   channel: ChannelType,
   identifier: string | number,
+  source?: "wise" | "invgate",
 ): Promise<{ ok: boolean; data?: ExtractedQualityMetadata; error?: string }> {
   const cleanId = identifier.toString().replace("#", "").trim();
   if (!cleanId) return { ok: false, error: "Identificador de caso requerido" };
 
   try {
+    if (source === "invgate" || channel === "invgate_ticket") {
+      return fetchInvgateTicketMetadata(cleanId);
+    }
     if (channel === "wise_call") {
       const caseData = await fetchWiseCaseData(cleanId);
       if (!caseData?.id) {

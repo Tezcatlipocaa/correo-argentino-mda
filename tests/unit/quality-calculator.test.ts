@@ -69,6 +69,40 @@ describe("Multi-Channel Quality Calculator", () => {
       expect(res.totalScore).toBe(55);
     });
 
+    it("evaluates only Section 1 when no ticket was generated in wise_call (hasSection2 = false)", () => {
+      const params = WISE_CALL_PARAMETERS;
+      // All section 1 compliant
+      const allCompliant = new Set(params.map((p) => p.code));
+
+      const resAllPass = calculateMultiChannelAuditScores(
+        "wise_call",
+        params,
+        allCompliant,
+        false, // hasSection2 = false (no se generó ticket)
+      );
+
+      expect(resAllPass.section1Score).toBe(100);
+      expect(resAllPass.section2Score).toBe(0);
+      expect(resAllPass.totalScore).toBe(100);
+
+      // Con deducción en sección 1 (ej: call_procedimiento -10%)
+      // s1Raw = 45 - 10 = 35. section1Score = Math.round((35 / 45) * 100) = 78
+      const failProcedimiento = new Set(
+        params.filter((p) => p.code !== "call_procedimiento").map((p) => p.code),
+      );
+
+      const resDeduction = calculateMultiChannelAuditScores(
+        "wise_call",
+        params,
+        failProcedimiento,
+        false,
+      );
+
+      expect(resDeduction.section1Score).toBe(78);
+      expect(resDeduction.section2Score).toBe(0);
+      expect(resDeduction.totalScore).toBe(78);
+    });
+
     it("evaluates only Section 1 when Section 2 does not apply (e.g. Wise Email with appliesMda = false)", () => {
       const params = WISE_EMAIL_PARAMETERS;
       // Fail email_interpretacion (10%) in Section 1
@@ -88,6 +122,27 @@ describe("Multi-Channel Quality Calculator", () => {
       expect(res.section1Score).toBe(90);
       expect(res.section2Score).toBe(0);
       expect(res.totalScore).toBe(90); // 100% governed by Section 1
+    });
+
+    it("calculates exact 97% total (93% S1, 100% S2) when single 3pt item fails in canonical wise_call", () => {
+      // 1 item fails: call_cordialidad (weight: 3)
+      // S1: (45 - 3) / 45 * 100 = 93%
+      // S2: (55 - 0) / 55 * 100 = 100%
+      // Total: 42 + 55 = 97%
+      const compliantCodes = new Set(
+        WISE_CALL_PARAMETERS.filter((p) => p.code !== "call_cordialidad").map((p) => p.code),
+      );
+
+      const res = calculateMultiChannelAuditScores(
+        "wise_call",
+        WISE_CALL_PARAMETERS,
+        compliantCodes,
+        true,
+      );
+
+      expect(res.section1Score).toBe(93);
+      expect(res.section2Score).toBe(100);
+      expect(res.totalScore).toBe(97);
     });
 
     it("clamps scores to 0 when deductions exceed 100", () => {
