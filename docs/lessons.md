@@ -542,3 +542,13 @@ Cada entrada sigue este formato:
 **Solucion:** Helper `getInternalFetchHeaders(request)` en `src/lib/internalOrigin.ts` que reenvía `cookie` **+ `user-agent`**; usado por el endpoint de export y por los otros dos self-fetch (`admin/invgate/UbicacionesContent.astro`, `api/invgate/locations/rows.astro`), que tenían el mismo bug latente. Test E2E nuevo que setea `fingerprint = computeFingerprint(navigator.userAgent)` en la sesión de prueba (rojo antes, verde después) y verifica que la sesión sigue viva tras exportar.
 **Regla:** Todo self-fetch server-side por loopback debe usar `getInternalFetchHeaders(Astro.request)` (cookie + user-agent), no solo la cookie: el middleware invalida la sesión si el UA no coincide. Los tests que crean sesiones a mano deben setear el `fingerprint` para no pasar de largo este control. Un 502 de un endpoint con self-fetch + usuario deslogueado ⇒ sospechar del fingerprint.
 **Archivos afectados:** src/lib/internalOrigin.ts, src/pages/api/cronograma/export.png.ts, src/components/admin/invgate/UbicacionesContent.astro, src/pages/api/invgate/locations/rows.astro, tests/cronograma/export-image.spec.ts
+
+---
+
+### 2026-10-02 — Assets hasheados de Astro no sirven en contenido guardado fuera de la app
+
+**Problema:** El HTML de la firma institucional que se copiaba al portapapeles referenciaba el logo como `/_astro/firma.<hash>.png`. Las firmas ya guardadas en Outlook mostraban el logo roto: la URL cambia en cada build (hash de Vite), así que tras el siguiente deploy el archivo `/_astro/firma.<hash>.png` dejaba de existir.
+**Causa:** Astro/Vite hashea los assets importados (`import logo from "@assets/firma.png"`), generando un nombre con hash que cambia por build. Cualquier contenido que el usuario guarda fuera de la app (la firma en Outlook, un HTML exportado) queda apuntando a una URL efímera.
+**Solucion:** Mover el logo a `public/firma.png` (ruta fija, sin hash, servida por `express.static("dist/client")` antes del SSR) y armar la URL absoluta en el cliente con `new URL(getCleanBase() + "firma.png", window.location.origin)`. El HTML copiado usa esa URL absoluta estable.
+**Regla:** Ningún contenido que el usuario guarde fuera de la app debe referenciar `/_astro/...` ni un asset importado: usar `public/` + URL absoluta estable. Ojo: `server.mjs` sirve `public/` con `immutable`/`maxAge: "1y"`, así que cambiar el logo requiere un nombre de archivo nuevo (ej. `firma-v2.png`) o servir ese archivo con `max-age=0, must-revalidate` (si no, los clientes no lo revalidan ni con recarga forzada).
+**Archivos afectados:** public/firma.png, src/components/generador-firmas/SignatureGenerator.astro, src/pages/generador-firmas/index.astro, tests/generador-firmas/copy-signature.spec.ts
