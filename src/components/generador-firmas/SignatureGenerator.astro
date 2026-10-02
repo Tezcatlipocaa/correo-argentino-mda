@@ -1,22 +1,17 @@
 ---
 import { Icon } from "astro-icon/components";
 import FormField from "@components/ui/forms/FormField.astro";
-import logoFirma from "@assets/firma.png";
 import SectionCard from "@components/ui/SectionCard.astro";
+import { getCleanBase } from "@lib/baseUrl";
 
-interface Props {
-  origin?: string;
-}
-
-const { origin = "" } = Astro.props;
+const logoPath = `${getCleanBase()}firma.png`;
 ---
 
 <div class="space-y-8">
   <div
     class="grid grid-cols-1 items-start gap-8 md:grid-cols-2"
     id="signature-generator-container"
-    data-origin={origin}
-    data-logo-default={logoFirma.src}
+    data-logo-default={logoPath}
   >
     <SectionCard class="overflow-hidden shadow-md">
       <div class="mb-2 flex items-center gap-2">
@@ -123,10 +118,9 @@ const { origin = "" } = Astro.props;
           <span>
             Completa todos los campos obligatorios (marcados con <span
               class="text-error">*</span
-            >) para habilitar los botones de copia y descarga. Sigue la <strong
-              >Guía de Configuración</strong
-            > en la parte inferior de la página para incrustar el logo institucional
-            en tu Outlook.
+            >) para habilitar los botones de copia y descarga. Al pegar la firma
+            en Outlook, el logo se descarga automáticamente desde el portal: no
+            hace falta insertarlo a mano.
           </span>
         </div>
       </div>
@@ -211,9 +205,9 @@ const { origin = "" } = Astro.props;
     </div>
 
     <p class="text-base-content/70 mb-4 text-xs">
-      Para que el logo sea visible para todos, tanto dentro como fuera del
-      Correo Argentino, debe incrustarse manualmente en Outlook. Sigue estos
-      simples pasos:
+      Completa tus datos, copiá la firma y pegala en Outlook. El logo se
+      descarga automáticamente desde el portal al guardar la firma. Seguí estos
+      pasos:
     </p>
 
     <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -222,19 +216,13 @@ const { origin = "" } = Astro.props;
         <div class="card-body space-y-2 p-4">
           <div class="flex items-center gap-2">
             <span class="badge badge-secondary font-bold">1</span>
-            <h3 class="text-sm font-bold">Descargar el Logo</h3>
+            <h3 class="text-sm font-bold">Copiar la firma</h3>
           </div>
           <p class="text-base-content/85 text-xs">
-            Descarga el logo oficial en tu computadora:
+            Completa tus datos y presiona <strong>"Copiar firma visual"</strong
+            >. El contenido queda en el portapapeles con el formato listo para
+            pegar en Outlook.
           </p>
-          <a
-            href={logoFirma.src}
-            download="firma-correo-argentino.png"
-            class="btn btn-sm btn-neutral btn-outline mt-2 w-full"
-          >
-            <Icon name="boxicons:arrow-in-down-square-half-filled" size={16} />
-            Descargar Logo (PNG)
-          </a>
         </div>
       </div>
 
@@ -243,13 +231,20 @@ const { origin = "" } = Astro.props;
         <div class="card-body space-y-2 p-4">
           <div class="flex items-center gap-2">
             <span class="badge badge-secondary font-bold">2</span>
-            <h3 class="text-sm font-bold">Copiar y Pegar</h3>
+            <h3 class="text-sm font-bold">Pegar y guardar en Outlook</h3>
           </div>
-          <p class="text-base-content/85 text-xs">
-            Completa tus datos y presiona <strong>"Copiar firma visual"</strong
-            >. Luego, en la configuración de firmas de Outlook, crea una nueva
-            firma y pega el contenido (<code>Ctrl + V</code>).
-          </p>
+          <ul
+            class="text-xs text-base-content/75 list-inside list-disc space-y-1"
+          >
+            <li>
+              <strong>Outlook de escritorio:</strong> Archivo → Opciones → Correo
+              → Firmas → Nuevo → <code>Ctrl + V</code> → Aceptar.
+            </li>
+            <li>
+              <strong>Outlook Web:</strong> Configuración → Correo → Redactar y
+              responder → Firma de correo electrónico → pegar → Guardar.
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -258,22 +253,26 @@ const { origin = "" } = Astro.props;
         <div class="card-body space-y-2 p-4">
           <div class="flex items-center gap-2">
             <span class="badge badge-secondary font-bold">3</span>
-            <h3 class="text-sm font-bold">Incrustar el Logo</h3>
+            <h3 class="text-sm font-bold">Verificar</h3>
           </div>
           <p class="text-base-content/85 text-xs">
-            El logo pegado se verá roto. Para solucionarlo:
+            Enviá un correo de prueba a una casilla externa: el logo debería
+            verse igual que en la vista previa (Outlook descarga el logo del
+            portal al guardar la firma; confirmá que cargue en el destinatario).
           </p>
-          <ol
-            class="text-small text-base-content/75 list-inside list-decimal space-y-1"
+          <p class="text-base-content/75 text-xs">
+            Si no se ve: en Outlook Web permití descargar imágenes, o usá
+            <strong>"Descargar PNG"</strong> y el logo de respaldo de abajo para
+            insertarlo manualmente.
+          </p>
+          <a
+            href={logoPath}
+            download="firma-correo-argentino.png"
+            class="btn btn-sm btn-neutral btn-outline mt-2 w-full"
           >
-            <li>Haz clic sobre el logo roto y <strong>bórralo</strong>.</li>
-            <li>
-              Presiona el icono de <strong>Insertar imagen</strong> en Outlook.
-            </li>
-            <li>
-              Selecciona la imagen descargada en el <strong>Paso 1</strong>.
-            </li>
-          </ol>
+            <Icon name="boxicons:arrow-in-down-square-half-filled" size={16} />
+            Descargar Logo (PNG)
+          </a>
         </div>
       </div>
     </div>
@@ -391,10 +390,7 @@ const { origin = "" } = Astro.props;
   function renderSignature() {
     if (!previewContainer || !codeOutput) return;
 
-    const logoPath = logoDefault;
-    const fullLogoUrl = logoPath.startsWith("http")
-      ? logoPath
-      : `${window.location.origin}${logoPath}`;
+    const fullLogoUrl = new URL(logoDefault, window.location.origin).href;
 
     const contactInfo = [
       formData.phone ? `Tel: ${formData.phone}` : "",
