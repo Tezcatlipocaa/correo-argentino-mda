@@ -2209,17 +2209,17 @@ function setupEventListeners(): void {
     const copyBtn = document.getElementById(
       "copy-overtime-image-btn",
     ) as HTMLButtonElement | null;
-    const overtimeCard = document.getElementById("overtime-card");
-    if (!copyBtn || !overtimeCard) return;
-    const targetEl =
-      document.getElementById("overtime-timeline-wrapper") || overtimeCard;
+    const compactCard =
+      document.getElementById("overtime-compact-list-card") ||
+      document.getElementById("overtime-card");
+    if (!copyBtn || !compactCard) return;
     await copyElementImageToClipboard(
       copyBtn,
-      targetEl,
+      compactCard,
       {
         padding: 16,
-        compact: true,
-        width: 1388,
+        compact: false,
+        width: 720,
       },
       {
         success: "Horas extras copiadas al portapapeles.",
