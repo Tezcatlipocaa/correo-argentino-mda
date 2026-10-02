@@ -72,10 +72,31 @@ export function matchApprovedTitle(
  */
 export function cleanHtmlText(html: string): string {
   if (!html) return "";
-  return html
+  let text = html
     .replace(/<br\s*[\/]?>/gi, "\n")
     .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<[^>]+>/g, "");
+
+  // Decodificar entidades hexadecimales (ej. &#xED;, &#xE9;, &#xF3;)
+  text = text.replace(/&#x([0-9a-fA-F]+);/gi, (_, hex) => {
+    try {
+      return String.fromCodePoint(parseInt(hex, 16));
+    } catch {
+      return "";
+    }
+  });
+
+  // Decodificar entidades decimales (ej. &#237;, &#243;, &#241;)
+  text = text.replace(/&#([0-9]+);/g, (_, dec) => {
+    try {
+      return String.fromCodePoint(parseInt(dec, 10));
+    } catch {
+      return "";
+    }
+  });
+
+  // Entidades nombradas comunes
+  return text
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&lt;/gi, "<")
