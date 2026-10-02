@@ -2,7 +2,7 @@
   "id": "cronograma_copiar_tablas_bugfix_20261002",
   "name": "Corrección de Copiado de Imágenes en Cronograma (Grupos y Horas Extras)",
   "type": "bug",
-  "status": "new",
+  "status": "completed",
   "created_at": "2026-10-02T14:18:00-03:00",
-  "updated_at": "2026-10-02T14:18:00-03:00"
+  "updated_at": "2026-10-02T15:10:00-03:00"
 }
