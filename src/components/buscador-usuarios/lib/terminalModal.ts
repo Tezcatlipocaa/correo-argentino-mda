@@ -193,25 +193,26 @@ function renderGroups(
   setGroupsEmptyState(false);
 
   const fragment = document.createDocumentFragment();
-  filtered.forEach((group, index) => {
+  filtered.forEach((group) => {
     const categoryInfo = getGroupCategory(group);
     const licenses = getLicensesForGroup(group);
     const item = document.createElement("div");
     item.className = `flex items-center justify-between gap-2.5 px-3 h-11 rounded-lg border transition-all font-sans relative group ${categoryInfo.colorClass}`;
 
-    const licensePlacement = "tooltip-top";
+    // El listado de grupos tiene overflow propio, así que un tooltip dibujado
+    // dentro de él se recorta contra los bordes. Se usa un tooltip flotante
+    // compartido (#license-tooltip, position: fixed) y el HTML viaja acá en el
+    // atributo; ver los handlers más abajo.
     const licenseIcons = Array.isArray(licenses)
       ? licenses
           .map(
             (lic) => `
-          <div class="tooltip z-50 ${licensePlacement}">
-            <div class="tooltip-content text-left p-3 w-72 max-w-xs shadow-overlay border border-neutral-content/15 bg-neutral text-neutral-content rounded-box text-xs">
-              ${formatSingleLicenseTooltipHtml(lic)}
-            </div>
-            <button type="button" class="btn btn-ghost btn-xs p-0.5 shrink-0 cursor-pointer" aria-label="Información de licencia ${escapeHtml(lic.name)}">
-              <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
-            </button>
-          </div>`,
+          <button type="button"
+            class="license-info-btn btn btn-ghost btn-xs p-0.5 shrink-0 cursor-pointer"
+            aria-label="Información de licencia ${escapeHtml(lic.name)}"
+            data-license-tooltip="${encodeURIComponent(formatSingleLicenseTooltipHtml(lic))}">
+            <svg class="size-3.5 text-base-content/50 hover:text-info" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c5.51 0 10-4.49 10-10S17.51 2 12 2S2 6.49 2 12s4.49 10 10 10M11 7h2v2h-2zm0 4h2v6h-2z"/></svg>
+          </button>`,
           )
           .join("")
       : "";
@@ -986,6 +987,79 @@ export function initTerminalModal(onSearchUser?: (name: string) => void): void {
       closeTerminalModal();
       onSearchUserCallback?.(name);
     }
+  });
+
+  // Tooltip flotante de licencias. El listado de grupos es un contenedor con
+  // scroll propio, así que cualquier tooltip posicionado dentro se recorta
+  // contra sus bordes (y quedaba "por debajo" de los chips vecinos). Se dibuja
+  // fuera del listado, en position: fixed, y se posiciona junto al botón
+  // acotándolo a la ventana.
+  const licenseTooltip = document.getElementById("license-tooltip");
+  const terminalGroupsListEl = document.getElementById("terminal-groups-list");
+
+  // El tooltip nace dentro del slot de contenido, o sea dentro del .modal-box de
+  // DaisyUI, que define `translate`/`scale` (identidad, pero distintos de `none`)
+  // y `overflow: hidden`: eso lo convertía en containing block del `fixed` y lo
+  // recortaba. Se mueve a hijo directo del <dialog> — el modal se abre con
+  // showModal(), así que el <dialog> vive en el top layer y un elemento fuera de
+  // él (p. ej. en el body) quedaría por debajo — pero fuera del .modal-box, con
+  // el viewport como containing block.
+  const terminalDialog = document.getElementById("terminal-modal");
+  if (
+    licenseTooltip &&
+    terminalDialog &&
+    licenseTooltip.parentElement !== terminalDialog
+  ) {
+    terminalDialog.appendChild(licenseTooltip);
+  }
+
+  const licenseButtonFrom = (target: EventTarget | null): HTMLElement | null =>
+    target instanceof Element
+      ? target.closest<HTMLElement>(".license-info-btn")
+      : null;
+
+  const showLicenseTooltip = (btn: HTMLElement): void => {
+    if (!licenseTooltip) return;
+    const encoded = btn.getAttribute("data-license-tooltip");
+    if (!encoded) return;
+
+    licenseTooltip.innerHTML = decodeURIComponent(encoded);
+    licenseTooltip.classList.remove("hidden");
+
+    const b = btn.getBoundingClientRect();
+    const tw = licenseTooltip.offsetWidth;
+    const th = licenseTooltip.offsetHeight;
+
+    let left = b.right + 8;
+    if (left + tw > window.innerWidth - 8) left = b.left - tw - 8;
+    if (left < 8) left = 8;
+
+    let top = b.top + b.height / 2 - th / 2;
+    if (top + th > window.innerHeight - 8) top = window.innerHeight - th - 8;
+    if (top < 8) top = 8;
+
+    licenseTooltip.style.left = `${left}px`;
+    licenseTooltip.style.top = `${top}px`;
+  };
+
+  const hideLicenseTooltip = (): void => {
+    licenseTooltip?.classList.add("hidden");
+  };
+
+  terminalGroupsListEl?.addEventListener("mouseover", (e) => {
+    const btn = licenseButtonFrom(e.target);
+    if (btn) showLicenseTooltip(btn);
+  });
+  terminalGroupsListEl?.addEventListener("mouseout", (e) => {
+    if (licenseButtonFrom(e.target)) hideLicenseTooltip();
+  });
+  terminalGroupsListEl?.addEventListener("focusin", (e) => {
+    const btn = licenseButtonFrom(e.target);
+    if (btn) showLicenseTooltip(btn);
+  });
+  terminalGroupsListEl?.addEventListener("focusout", hideLicenseTooltip);
+  terminalGroupsListEl?.addEventListener("scroll", hideLicenseTooltip, {
+    passive: true,
   });
 
   closeTerminalFooterBtn?.addEventListener("click", closeTerminalModal);
