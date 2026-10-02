@@ -2184,14 +2184,12 @@ function setupEventListeners(): void {
     ) as HTMLButtonElement | null;
     const saturdayCard = document.getElementById("saturday-rotation-card");
     if (!copyBtn || !saturdayCard) return;
-    const targetEl =
-      document.getElementById("rotation-timeline-wrapper") || saturdayCard;
     await copyElementImageToClipboard(
       copyBtn,
-      targetEl,
+      saturdayCard,
       {
         padding: 16,
-        compact: true,
+        compact: false,
         width: 1034,
       },
       {
