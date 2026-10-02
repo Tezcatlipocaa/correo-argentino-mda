@@ -186,6 +186,7 @@ const operatorsQuality = finalAgents.map((agent) => {
     const auditScoresList = scoresByAudit.get(audit.id) || [];
     const section1Details: Record<string, boolean> = {};
     const section2Details: Record<string, boolean> = {};
+    const parameterComments: Record<string, string> = {};
 
     auditScoresList.forEach((scoreObj) => {
       const param = allParameters.find((p) => p.id === scoreObj.parameterId);
@@ -194,6 +195,9 @@ const operatorsQuality = finalAgents.map((agent) => {
           section1Details[param.code] = scoreObj.score;
         } else {
           section2Details[param.code] = scoreObj.score;
+        }
+        if (scoreObj.comment && scoreObj.comment.trim()) {
+          parameterComments[param.code] = scoreObj.comment.trim();
         }
       }
     });
@@ -216,6 +220,8 @@ const operatorsQuality = finalAgents.map((agent) => {
         ? (audit.appliesMda ?? true)
         : audit.appliesMda,
       staysInMda: audit.staysInMda,
+      recordingUrl: audit.recordingUrl,
+      comments: parameterComments,
       section1: {
         score: audit.section1Score,
         maxScore: 100,
@@ -1373,13 +1379,26 @@ const cleanBase = getCleanBase();
           param.code in call.section1.details
             ? Boolean(call.section1.details[param.code])
             : false;
+        const comment = call.comments?.[param.code];
         return `
-        <li class="flex items-center justify-between group/item">
-          <span class="text-base-content/70 font-medium group-hover/item:text-base-content transition-colors">
-            ${escapeHtml(param.name)}
-            <span class="text-xs opacity-50 font-normal ml-1.5">(${param.weight})</span>
-          </span>
-          <span class="${isChecked ? "text-success" : "text-error"}" title="${isChecked ? "Cumple" : "No Cumple"}">${isChecked ? ICON_CHECK : ICON_X}</span>
+        <li class="flex flex-col group/item border-b border-base-200/40 last:border-b-0 py-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-base-content/70 font-medium group-hover/item:text-base-content transition-colors text-xs">
+              ${escapeHtml(param.name)}
+              <span class="text-xs opacity-50 font-normal ml-1.5">(${param.weight})</span>
+            </span>
+            <span class="${isChecked ? "text-success" : "text-error"}" title="${isChecked ? "Cumple" : "No Cumple"}">${isChecked ? ICON_CHECK : ICON_X}</span>
+          </div>
+          ${
+            comment
+              ? `
+            <div class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80 bg-base-200/50 rounded-lg px-2.5 py-1 border border-base-300/40">
+              <span class="text-primary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+              <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
+            </div>
+          `
+              : ""
+          }
         </li>
       `;
       })
@@ -1397,13 +1416,26 @@ const cleanBase = getCleanBase();
               param.code in call.section2.details
                 ? Boolean(call.section2.details[param.code])
                 : call.section2.score === 100;
+            const comment = call.comments?.[param.code];
             return `
-        <li class="flex items-center justify-between group/item">
-          <span class="text-base-content/70 font-medium group-hover/item:text-base-content transition-colors">
-            ${escapeHtml(param.name)}
-            <span class="text-xs opacity-50 font-normal ml-1.5">(${param.weight})</span>
-          </span>
-          <span class="${isChecked ? "text-success" : "text-error"}" title="${isChecked ? "Cumple" : "No Cumple"}">${isChecked ? ICON_CHECK : ICON_X}</span>
+        <li class="flex flex-col group/item border-b border-base-200/40 last:border-b-0 py-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-base-content/70 font-medium group-hover/item:text-base-content transition-colors text-xs">
+              ${escapeHtml(param.name)}
+              <span class="text-xs opacity-50 font-normal ml-1.5">(${param.weight})</span>
+            </span>
+            <span class="${isChecked ? "text-success" : "text-error"}" title="${isChecked ? "Cumple" : "No Cumple"}">${isChecked ? ICON_CHECK : ICON_X}</span>
+          </div>
+          ${
+            comment
+              ? `
+            <div class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80 bg-base-200/50 rounded-lg px-2.5 py-1 border border-base-300/40">
+              <span class="text-primary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+              <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
+            </div>
+          `
+              : ""
+          }
         </li>
       `;
           })
@@ -1463,11 +1495,27 @@ const cleanBase = getCleanBase();
               </div>
             </div>
             ${
+              call.recordingUrl
+                ? `
+            <a 
+              href="${escapeHtml(call.recordingUrl)}" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="btn btn-circle btn-sm btn-outline btn-primary text-primary hover:text-primary-content ml-2" 
+              title="Escuchar / Descargar Grabación de Llamada"
+              download
+            >
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor;"><path d="m21.707 20.293-2.016-2.015A9.932 9.932 0 0 0 21 12c0-4.962-4.037-9-9-9-2.28 0-4.37.859-5.976 2.282L3.707 2.966 2.293 4.38l18 18 1.414-1.414zM12 5c3.86 0 7 3.14 7 7 0 1.547-.514 2.977-1.378 4.137L6.89 5.405A6.953 6.953 0 0 1 12 5zM3 12c0 4.962 4.037 9 9 9 1.83 0 3.535-.558 4.969-1.503l-1.472-1.472A6.955 6.955 0 0 1 12 19c-3.86 0-7-3.14-7-7 0-1.295.36-2.508.974-3.548L4.47 6.947A8.937 8.937 0 0 0 3 12z"></path><path d="M16 12a4 4 0 0 0-4-4v2a2 2 0 0 1 2 2h2z"></path></svg>
+            </a>
+            `
+                : ""
+            }
+            ${
               isUserAgent
                 ? ""
                 : `
             <button 
-              class="btn btn-circle btn-ghost btn-sm text-base-content/50 hover:text-secondary ml-2 edit-audit-btn" 
+              class="btn btn-circle btn-ghost btn-sm text-base-content/50 hover:text-secondary ml-1 edit-audit-btn" 
               data-call-id="${call.id}"
               title="Editar Auditoría"
             >
@@ -1715,6 +1763,7 @@ const cleanBase = getCleanBase();
         const formRing = document.getElementById("form-ring-time") as HTMLInputElement | null;
         const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
         const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
+        const formRecordingUrl = document.getElementById("form-recording-url") as HTMLInputElement | null;
         const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
         const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
         const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
@@ -1723,7 +1772,20 @@ const cleanBase = getCleanBase();
         if (formRing) formRing.value = callData.ringTime || "";
         if (formCreation) formCreation.value = callData.creationTime || "";
         if (formTake) formTake.value = callData.takeTime || "";
+        if (formRecordingUrl) formRecordingUrl.value = callData.recordingUrl || "";
         if (formIsPas) formIsPas.checked = !!callData.isPas;
+
+        // Populate audio viewer if callData has recordingUrl
+        const tvAudioContainer = document.getElementById("tv-audio-container");
+        const tvAudioPlayer = document.getElementById("tv-audio-player") as HTMLAudioElement | null;
+        const tvAudioDownload = document.getElementById("tv-audio-download") as HTMLAnchorElement | null;
+        if (callData.recordingUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
+          tvAudioPlayer.src = callData.recordingUrl;
+          tvAudioDownload.href = callData.recordingUrl;
+          tvAudioContainer.classList.remove("hidden");
+          const ticketViewerContent = document.getElementById("ticket-viewer-content");
+          if (ticketViewerContent) ticketViewerContent.classList.remove("hidden");
+        }
         if (toggleCallGeneratedTicket) {
           toggleCallGeneratedTicket.checked = (callData.channelType || "wise_call") === "wise_call"
             ? (callData.appliesMda ?? true)
@@ -1741,6 +1803,7 @@ const cleanBase = getCleanBase();
 
         const s1Details = callData.section1?.details || {};
         const s2Details = callData.section2?.details || {};
+        const comments = callData.comments || {};
 
         auditForm.querySelectorAll(".audit-checkbox").forEach((cbEl) => {
           const cb = cbEl as HTMLInputElement;
@@ -1750,6 +1813,12 @@ const cleanBase = getCleanBase();
           } else if (s2Details.hasOwnProperty(name)) {
             cb.checked = !!s2Details[name];
           }
+        });
+
+        // Precargar comentarios por parámetro
+        auditForm.querySelectorAll<HTMLInputElement>("input[name$='_comment']").forEach((inp) => {
+          const code = inp.name.replace(/_comment$/, "");
+          inp.value = comments[code] || "";
         });
 
         if (btnDeleteAudit) btnDeleteAudit.classList.remove("hidden");
@@ -1799,6 +1868,11 @@ const cleanBase = getCleanBase();
 
         auditForm.querySelectorAll(".audit-checkbox").forEach((cbEl) => {
           (cbEl as HTMLInputElement).checked = true;
+        });
+
+        // Limpiar comentarios por parámetro
+        auditForm.querySelectorAll<HTMLInputElement>("input[name$='_comment']").forEach((inp) => {
+          inp.value = "";
         });
 
         if (btnDeleteAudit) btnDeleteAudit.classList.add("hidden");
