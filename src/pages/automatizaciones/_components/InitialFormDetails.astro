@@ -1,0 +1,147 @@
+---
+import type { AutomationInitialForm } from "@lib/workflow/resolver";
+import InitialFormFieldRow from "./InitialFormFieldRow.astro";
+import InfoGroupCard from "./InfoGroupCard.astro";
+
+interface Props {
+  form: AutomationInitialForm;
+  /** Fallback de región/localidad desde la DB de oficinas (por código de sucursal). */
+  location?: { region: string | null; locality: string | null } | null;
+  /** Número de contacto cargado a mano (opcional). */
+  contactNumber?: string | null;
+  /** Franja horaria de la sucursal (manual o parseada). */
+  openingHours?: string | null;
+  /** Notas manuales (opcional). */
+  notes?: string | null;
+  /** Nombre de sucursal del título, fallback si el form no lo trae. */
+  branchName?: string | null;
+}
+
+const {
+  form,
+  location = null,
+  contactNumber = null,
+  openingHours = null,
+  notes = null,
+  branchName = null,
+} = Astro.props;
+const parsed = form.parsed;
+
+const region = parsed?.sucursal?.region ?? location?.region ?? null;
+const locality = parsed?.sucursal?.locality ?? location?.locality ?? null;
+const sucursalPrimary =
+  parsed?.sucursal?.name ?? parsed?.sucursal?.raw ?? branchName;
+
+const hasSucursalData =
+  parsed !== null &&
+  (parsed.sucursal !== null ||
+    parsed.ipRange !== null ||
+    parsed.estimatedEnd !== null ||
+    region !== null ||
+    locality !== null ||
+    contactNumber !== null ||
+    openingHours !== null ||
+    branchName !== null);
+
+const showRawText = parsed === null;
+---
+
+{
+  showRawText ? (
+    <div class="text-base-content/80 border-base-300 mt-3 border-l pl-6">
+      <pre class="overflow-x-auto break-words font-sans text-sm leading-relaxed whitespace-pre-wrap">
+        {form.text}
+      </pre>
+    </div>
+  ) : (
+    <div class="pb-4 flex flex-col gap-4">
+      {parsed.intro.length > 0 && (
+        <div class="flex flex-col gap-1">
+          {parsed.intro.map((line) => (
+            <p class="text-base-content/70 text-sm leading-relaxed">{line}</p>
+          ))}
+        </div>
+      )}
+
+      <div class="grid gap-4 md:grid-cols-2">
+        {hasSucursalData && (
+          <InfoGroupCard title="Sucursal" primary={sucursalPrimary ?? "—"}>
+            {region && <InitialFormFieldRow label="Región" value={region} />}
+            {locality && (
+              <InitialFormFieldRow label="Localidad" value={locality} />
+            )}
+            {parsed.sucursal?.address && (
+              <InitialFormFieldRow
+                label="Dirección"
+                value={parsed.sucursal.address}
+              />
+            )}
+            {parsed.sucursal?.cpa && (
+              <InitialFormFieldRow label="CPA" value={parsed.sucursal.cpa} />
+            )}
+            {parsed.ipRange && (
+              <InitialFormFieldRow label="Rango IP" value={parsed.ipRange} />
+            )}
+            {parsed.estimatedEnd && (
+              <InitialFormFieldRow
+                label="Fecha estimada de finalización"
+                value={parsed.estimatedEnd}
+              />
+            )}
+            {openingHours && (
+              <InitialFormFieldRow
+                label="Franja horaria"
+                value={openingHours}
+              />
+            )}
+            {contactNumber && (
+              <InitialFormFieldRow
+                label="Número de contacto"
+                value={contactNumber}
+              />
+            )}
+          </InfoGroupCard>
+        )}
+
+        {(parsed.jefe || parsed.jefeZonal) && (
+          <InfoGroupCard
+            title="Jefe de la sucursal"
+            primary={parsed.jefe?.name ?? "—"}
+          >
+            {parsed.jefe?.dni && (
+              <InitialFormFieldRow label="DNI" value={parsed.jefe.dni} />
+            )}
+            {parsed.jefe?.legajo && (
+              <InitialFormFieldRow label="Legajo" value={parsed.jefe.legajo} />
+            )}
+            {parsed.jefeZonal && (
+              <InitialFormFieldRow label="Jefe zonal" value={parsed.jefeZonal} />
+            )}
+            {parsed.jefe?.extras.map((field) => (
+              <InitialFormFieldRow label={field.label} value={field.value} />
+            ))}
+          </InfoGroupCard>
+        )}
+
+        {parsed.otherFields.length > 0 && (
+          <InfoGroupCard title="Otros datos" primary="—">
+            {parsed.otherFields.map((field) => (
+              <InitialFormFieldRow label={field.label} value={field.value} />
+            ))}
+          </InfoGroupCard>
+        )}
+      </div>
+
+      {notes && (
+        <div class="bg-base-200/40 rounded-lg px-4 py-3">
+          <h3 class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+            Notas
+          </h3>
+          <p class="text-base-content/80 mt-1 text-sm leading-relaxed whitespace-pre-line">
+            {notes}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}

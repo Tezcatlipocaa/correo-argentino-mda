@@ -1,0 +1,64 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import AutomatizacionDetalleContent from "./_components/AutomatizacionDetalleContent.astro";
+import AutomationBackLink from "./_components/AutomationBackLink.astro";
+import AutomationEmptyState from "./_components/AutomationEmptyState.astro";
+import { resolveUrl } from "@lib/url";
+import { resolveAutomationDetail } from "@lib/workflow/resolver";
+import type { AutomationDetail } from "@lib/workflow/resolver";
+import { isLoggedIn, normalizeRole } from "@lib/rbac";
+
+const { id } = Astro.params;
+const automationId = Number.parseInt(id ?? "", 10);
+const isValidId = Number.isInteger(automationId);
+
+const user = Astro.locals.user;
+const canQuery = isLoggedIn(user);
+const canClose = normalizeRole(user.role) === "admin";
+
+let detail: AutomationDetail | null = null;
+let loadError = "";
+
+if (isValidId && canQuery) {
+  try {
+    const result = await resolveAutomationDetail(automationId);
+    if (result.ok) {
+      detail = result.detail;
+    } else {
+      loadError = result.message;
+    }
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : "Error desconocido";
+  }
+}
+---
+
+<BaseLayout>
+  {
+    isValidId ? (
+      <AutomatizacionDetalleContent
+        detail={detail}
+        loadError={loadError}
+        canQuery={canQuery}
+        canClose={canClose}
+      />
+    ) : (
+      <PageContainer>
+        <AutomationBackLink class="mb-2" />
+        <PageHeader description="Detalle del workflow de automatización de sucursal en InvGate Service Management." />
+        <AutomationEmptyState
+          class="py-10"
+          message="No se encontró la automatización solicitada. Volvé al listado para ver las automatizaciones registradas."
+        />
+        <a
+          href={resolveUrl("/automatizaciones")}
+          class="btn btn-secondary btn-sm self-center"
+        >
+          Volver a automatizaciones
+        </a>
+      </PageContainer>
+    )
+  }
+</BaseLayout>

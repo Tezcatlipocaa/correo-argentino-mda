@@ -1,0 +1,360 @@
+---
+import { Icon } from "astro-icon/components";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
+import Pagination from "@components/ui/Pagination.astro";
+import AutomationCardList from "./AutomationCardList.astro";
+import AutomationRecentList from "./AutomationRecentList.astro";
+import AutomationParentsList from "./AutomationParentsList.astro";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+import {
+  discoverAutomationsWithMeta,
+  revalidateAutomations,
+} from "@lib/workflow/discovery";
+import type {
+  AutomationDiscoveryResult,
+  AutomationSummary,
+} from "@lib/workflow/discovery";
+import {
+  listAutomationParentsPage,
+  listRecentAutomationParents,
+} from "@lib/workflow/parent-history";
+import type { AutomationParentStatusFilter } from "@lib/workflow/parent-history";
+import { getIncidentStatuses } from "@lib/invgate/automation/statuses";
+import { buildStatusNameLookup } from "@lib/workflow/automation-status";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import { getCleanBase } from "@lib/baseUrl";
+import { isLoggedIn } from "@lib/rbac";
+
+const user = Astro.locals.user;
+const canQuery = isLoggedIn(user);
+
+const searchParams = Astro.url.searchParams;
+const requestedPage = Number.parseInt(searchParams.get("page") ?? "1", 10);
+const q = (searchParams.get("q") ?? "").trim();
+const statusRaw = searchParams.get("status") ?? "all";
+const status: AutomationParentStatusFilter = (
+  ["all", "active", "finalized"] as const
+).includes(statusRaw as AutomationParentStatusFilter)
+  ? (statusRaw as AutomationParentStatusFilter)
+  : "all";
+const forceRefresh = searchParams.get("refresh") === "1";
+const hasListFilters = q.length > 0 || status !== "all";
+
+let discovery: AutomationDiscoveryResult | null = null;
+let discoveryStale = false;
+let statusNames: Record<number, string> = {};
+let loadError = "";
+
+if (canQuery) {
+  try {
+    const [result, statuses] = await Promise.all([
+      forceRefresh ? revalidateAutomations() : discoveryRefresh(),
+      getIncidentStatuses(),
+    ]);
+    discovery = result;
+    statusNames = buildStatusNameLookup(statuses.ok ? statuses.data : null);
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : "Error desconocido";
+  }
+}
+
+/** Wrapper para capturar el flag de staleness sin duplicar el await. */
+async function discoveryRefresh(): Promise<AutomationDiscoveryResult> {
+  const meta = await discoverAutomationsWithMeta();
+  discoveryStale = meta.stale;
+  return meta.result;
+}
+
+const pageResult = canQuery
+  ? listAutomationParentsPage({ page: requestedPage, q, status })
+  : { items: [], total: 0, page: 1, pageSize: 20, totalPages: 1 };
+
+let recentParents = canQuery ? listRecentAutomationParents(4) : [];
+let allParents = pageResult.items;
+let totalParents = pageResult.total;
+let page = pageResult.page;
+const pageSize = pageResult.pageSize;
+let totalPages = pageResult.totalPages;
+
+/**
+ * Fallback cuando la DB de historial todavía está vacía (primer render con
+ * snapshot de discovery en cache): sembrar desde el snapshot para no mostrar
+ * la vista vacía.
+ */
+if (
+  canQuery &&
+  discovery !== null &&
+  discovery.ok &&
+  (totalParents === 0 || recentParents.length === 0)
+) {
+  const fallback = new Map<number, AutomationSummary>();
+  const seed = [
+    ...(discovery.current ? [discovery.current] : []),
+    ...discovery.otherActive,
+    ...discovery.recentFinalized,
+  ];
+  for (const item of seed) {
+    fallback.set(item.id, item);
+  }
+  const fallbackParents = [...fallback.values()];
+
+  if (recentParents.length === 0) {
+    recentParents = [...fallbackParents]
+      .sort(
+        (a, b) => b.updatedAt - a.updatedAt || b.createdAt - a.createdAt,
+      )
+      .slice(0, 4);
+  }
+
+  if (totalParents === 0 && !hasListFilters && fallbackParents.length > 0) {
+    const sortedByCreated = [...fallbackParents].sort(
+      (a, b) => b.createdAt - a.createdAt || b.id - a.id,
+    );
+    allParents = sortedByCreated;
+    totalParents = sortedByCreated.length;
+    totalPages = Math.max(1, Math.ceil(totalParents / pageSize));
+  }
+}
+
+const featured = recentParents[0] ?? null;
+const recent = recentParents.slice(1, 4);
+
+const errorMessage =
+  loadError || (discovery !== null && !discovery.ok ? discovery.message : "");
+
+const parentsEmpty = totalParents === 0 && !hasListFilters;
+
+const statusFilters = [
+  { key: "all", label: "Todas" },
+  { key: "active", label: "En curso" },
+  { key: "finalized", label: "Terminadas" },
+] as const;
+
+/** Href del listado preservando filtros; `page` null resetea la paginación. */
+function buildListHref(overrides: {
+  page?: number | null;
+  q?: string | null;
+  status?: AutomationParentStatusFilter | null;
+  refresh?: boolean;
+}): string {
+  const nextQ = overrides.q === undefined ? q : (overrides.q ?? "");
+  const nextStatus =
+    overrides.status === undefined ? status : (overrides.status ?? "all");
+  const nextPage =
+    overrides.page === undefined ? page : overrides.page;
+
+  const params = new URLSearchParams();
+  if (nextQ) params.set("q", nextQ);
+  if (nextStatus !== "all") params.set("status", nextStatus);
+  if (nextPage && nextPage > 1) params.set("page", String(nextPage));
+  if (overrides.refresh) params.set("refresh", "1");
+
+  const search = params.toString();
+  return `${Astro.url.pathname}${search ? `?${search}` : ""}`;
+}
+---
+
+<PageContainer width="xl">
+  <PageHeader
+    title="Automatizaciones"
+    description="Monitoreo de automatizaciones de sucursales manuales ejecutadas en InvGate Service Management."
+  />
+
+  {
+    !canQuery ? (
+      <div role="alert" class="alert alert-warning">
+        <span>
+          Sesión no iniciada. Iniciá sesión para consultar las automatizaciones.
+        </span>
+      </div>
+    ) : (
+      <>
+        {errorMessage && (
+          <div role="alert" class="alert alert-error">
+            <div>
+              <h3 class="font-medium">No se pudo consultar InvGate</h3>
+              <p class="text-sm opacity-80">
+                {errorMessage} Mostramos el último estado conocido.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {discoveryStale && (
+          <div
+            role="status"
+            data-automation-stale
+            data-automation-revalidate-href={`${getCleanBase()}api/automatizaciones/revalidate`}
+            class="text-base-content/60 flex items-center gap-2 text-xs"
+          >
+            <span class="loading loading-spinner loading-xs" />
+            Actualizando estados en segundo plano…
+          </div>
+        )}
+
+        {parentsEmpty ? (
+          !errorMessage && (
+            <AutomationEmptyState
+              class="py-10"
+              message="No hay automatizaciones en curso ni recientes registradas en la categoría de automatización de sucursales."
+            />
+          )
+        ) : (
+          <>
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-3 px-4">
+              <div class="flex items-center gap-3">
+                <span
+                  class="badge badge-ghost badge-lg text-base-content font-semibold"
+                >
+                  {totalParents}
+                </span>
+                <span class="text-base-content/60 text-sm">
+                  {hasListFilters
+                    ? totalParents === 1
+                      ? "automatización encontrada"
+                      : "automatizaciones encontradas"
+                    : "automatizaciones registradas"}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <form
+                  method="get"
+                  class="w-full sm:w-72"
+                  role="search"
+                  data-automation-search-form
+                >
+                  <SearchBar
+                    id="automatizaciones-search"
+                    name="q"
+                    value={q}
+                    placeholder="Buscar por NIS o sucursal..."
+                    ariaLabel="Buscar automatización por NIS o nombre de sucursal"
+                    class="w-full"
+                    clearable
+                  />
+                  {status !== "all" && (
+                    <input type="hidden" name="status" value={status} />
+                  )}
+                </form>
+
+                <div
+                  class="join"
+                  role="group"
+                  aria-label="Filtrar automatizaciones por estado"
+                >
+                  {statusFilters.map((filter) => (
+                    <a
+                      href={buildListHref({
+                        status:
+                          filter.key === "all" ? null : filter.key,
+                        page: null,
+                      })}
+                      aria-current={filter.key === status ? "true" : false}
+                      class:list={[
+                        "join-item border-base-300 bg-base-200 text-base-content/70 border px-3 py-1.5 text-sm font-medium",
+                        "cursor-pointer transition-colors duration-200",
+                        "hover:border-steel-azure-700 hover:bg-steel-azure-700 hover:text-white",
+                        filter.key === status &&
+                          "border-secondary bg-secondary text-white hover:border-steel-azure-700 hover:bg-steel-azure-700",
+                      ]}
+                    >
+                      {filter.label}
+                    </a>
+                  ))}
+                </div>
+
+                <a
+                  href={buildListHref({ refresh: true })}
+                  class="btn btn-ghost btn-sm gap-1"
+                >
+                  <Icon
+                    name="boxicons:refresh-cw"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  Actualizar
+                </a>
+              </div>
+            </div>
+
+            {!hasListFilters && (
+              <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <section class="flex flex-col gap-3 lg:col-span-2">
+                  <div class="flex flex-wrap items-baseline gap-x-2">
+                    {featured?.isActive && (
+                      <span class="relative mr-1 flex size-2 self-center">
+                        <span class="bg-secondary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                        <span class="bg-secondary relative inline-flex size-2 rounded-full" />
+                      </span>
+                    )}
+                    <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+                      Última actualización
+                    </h2>
+                    {featured && (
+                      <span class="text-base-content/50 text-xs">
+                        {formatEpochDateTime(featured.updatedAt)}
+                      </span>
+                    )}
+                  </div>
+                  {featured && (
+                    <AutomationCardList
+                      items={[featured]}
+                      statusNames={statusNames}
+                      defaultOpenId={featured.id}
+                      collapsible={false}
+                    />
+                  )}
+                </section>
+
+                <section class="flex flex-col gap-3">
+                  <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+                    Actualizadas recientemente
+                  </h2>
+                  {/*
+                  En lg la lista toma exactamente el alto de la card destacada:
+                  el wrapper flexible no aporta altura intrínseca (min-h-0) y la
+                  lista se posiciona absoluta dentro, con scroll propio si sobra.
+                */}
+                  <div class="lg:relative lg:min-h-0 lg:flex-1">
+                    <div class="lg:absolute lg:inset-0">
+                      <AutomationRecentList
+                        items={recent}
+                        emptyMessage="Sin automatizaciones recientes."
+                      />
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            <section class="flex flex-col gap-3">
+              <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+                Todas las automatizaciones
+              </h2>
+              <AutomationParentsList
+                items={allParents}
+                statusNames={statusNames}
+                emptyMessage={
+                  hasListFilters
+                    ? "Ninguna automatización coincide con la búsqueda o el filtro."
+                    : "No hay automatizaciones registradas todavía."
+                }
+              />
+              {totalPages > 1 && (
+                <div class="flex justify-center pt-2">
+                  <Pagination
+                    totalPages={totalPages}
+                    currentPage={page}
+                    hrefFor={(target) => buildListHref({ page: target })}
+                  />
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </>
+    )
+  }
+</PageContainer>

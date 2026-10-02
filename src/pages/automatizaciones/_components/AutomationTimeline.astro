@@ -1,0 +1,131 @@
+---
+import type { AutomationNode } from "@lib/workflow/resolver";
+import type { StageGrouping } from "@lib/workflow/stages";
+import { resolveNodeDisplayLabel } from "@lib/workflow/node-display";
+import { planGrouping } from "@lib/workflow/timeline-plan";
+import AutomationNodeCard from "./AutomationNodeCard.astro";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+
+interface Props {
+  nodes: readonly AutomationNode[];
+  /** Agrupación por etapas (null = plantilla sin configurar → timeline plana). */
+  stages: StageGrouping | null;
+  /** Mostrar nodos fantasma de templates sin ticket (false en finalizadas). */
+  showMissing?: boolean;
+  /** Mostrar la sección "Sin etapa" (false en legacy: vista simplificada). */
+  showStageless?: boolean;
+}
+
+const { nodes, stages, showMissing = true, showStageless = true } = Astro.props;
+
+const flatMode = !stages || stages.groups.length === 0;
+
+const planned = flatMode ? null : planGrouping(stages!, showMissing);
+
+const stageStatusBadgeClass = {
+  waiting: "badge-soft badge-warning",
+  in_progress: "badge-soft badge-info",
+  completed: "badge-soft badge-success",
+} as const;
+
+const stageStatusLabel = {
+  waiting: "En espera",
+  in_progress: "En curso",
+  completed: "Completa",
+} as const;
+---
+
+{
+  nodes.length === 0 && flatMode ? (
+    <AutomationEmptyState message="Este proceso no tiene pasos vinculados ni tareas internas." />
+  ) : (
+    <div class="flex flex-col gap-6">
+      {!flatMode &&
+        planned!.sections.map((section) => (
+          <section class="p-4">
+            <header class="mb-4 flex flex-col gap-0.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-base-content text-sm font-semibold">
+                  {section.name}
+                </h3>
+                <span
+                  class:list={[
+                    "badge badge-sm shrink-0",
+                    stageStatusBadgeClass[section.status],
+                  ]}
+                >
+                  {stageStatusLabel[section.status]}
+                </span>
+                {section.totalBlocking > 0 && (
+                  <span class="badge badge-sm badge-ghost text-base-content/70 font-mono">
+                    {section.completedBlocking}/{section.totalBlocking}
+                  </span>
+                )}
+              </div>
+              {section.gateLabel && (
+                <p class="text-warning mt-0.5 text-xs">
+                  Se habilita al completarse: {section.gateLabel}
+                </p>
+              )}
+            </header>
+
+            {section.items.length === 0 ? (
+              <p class="text-base-content/50 text-xs italic">
+                Esta etapa no tiene tickets esperados configurados todavía.
+              </p>
+            ) : (
+              <ol class="flex flex-col">
+                {section.items.flat().map((card) => (
+                  <AutomationNodeCard
+                    node={card.node}
+                    stepNumber={card.stepNumber}
+                    kind={card.kind}
+                    displayLabel={card.displayLabel}
+                    subprocess={card.subprocess}
+                    children={card.children}
+                    isLast={card.isLast}
+                  />
+                ))}
+              </ol>
+            )}
+          </section>
+        ))}
+
+      {!flatMode && showStageless && planned!.stageless.length > 0 && (
+        <section class="p-4">
+          <header class="mb-4">
+            <h3 class="text-base-content/70 text-sm font-semibold">
+              Sin etapa asignada
+            </h3>
+            <p class="text-base-content/50 text-xs">
+              Tickets vinculados que no corresponden a ninguna etapa
+              configurada.
+            </p>
+          </header>
+          <ol class="flex flex-col">
+            {planned!.stageless.map((card) => (
+              <AutomationNodeCard
+                node={card.node}
+                stepNumber={card.stepNumber}
+                isLast={card.isLast}
+              />
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {flatMode && (
+        <ol class="flex flex-col">
+          {nodes.map((node, index) => (
+            <AutomationNodeCard
+              node={node}
+              stepNumber={index + 1}
+              displayLabel={resolveNodeDisplayLabel(node.title, node.stepLabel)}
+              isLast={index === nodes.length - 1}
+            />
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,302 @@
+---
+import { db } from "@db/index";
+import { workflowStages, workflowStageTickets } from "@db/schema";
+import { and, asc, eq, ne } from "drizzle-orm";
+import { Icon } from "astro-icon/components";
+import { logAdminFromAstro } from "@lib/auditLogger";
+import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import EtapaBaseFields from "@components/admin/automatizaciones/EtapaBaseFields.astro";
+import StageTicketForm from "@components/admin/automatizaciones/StageTicketForm.astro";
+import { resolveUrl } from "@lib/url";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { toastResponse } from "@lib/api/toastResponse";
+
+const listPath = resolveUrl("/admin/automatizaciones/etapas");
+const stageId = Number.parseInt(Astro.params.id ?? "", 10);
+
+if (Number.isNaN(stageId) || stageId <= 0) {
+  return Astro.redirect(listPath);
+}
+
+const [stage] = await db
+  .select()
+  .from(workflowStages)
+  .where(eq(workflowStages.id, stageId))
+  .limit(1);
+
+if (!stage) {
+  return Astro.redirect(listPath);
+}
+
+const selfPath = resolveUrl(`/admin/automatizaciones/etapas/edit/${stage.id}`);
+
+const stageTickets = await db
+  .select()
+  .from(workflowStageTickets)
+  .where(eq(workflowStageTickets.stageId, stage.id))
+  .orderBy(asc(workflowStageTickets.position), asc(workflowStageTickets.id));
+
+const otherTickets = await db
+  .select({
+    id: workflowStageTickets.id,
+    matchLabel: workflowStageTickets.matchLabel,
+    displayName: workflowStageTickets.displayName,
+    stageName: workflowStages.name,
+  })
+  .from(workflowStageTickets)
+  .innerJoin(workflowStages, eq(workflowStageTickets.stageId, workflowStages.id))
+  .where(ne(workflowStageTickets.stageId, stage.id))
+  .orderBy(asc(workflowStages.position), asc(workflowStageTickets.position));
+
+function parseAliases(raw: string | null | undefined): string[] {
+  return (raw ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function parseTicketFields(fd: FormData): {
+  matchLabel: string;
+  displayName: string | null;
+  aliases: string[];
+  matchDescription: string[];
+  blocking: boolean;
+  kind: string;
+  position: number;
+} {
+  const matchLabel = fd.get("matchLabel")?.toString().trim() ?? "";
+  const displayName = fd.get("displayName")?.toString().trim() || null;
+  const aliases = parseAliases(fd.get("aliases")?.toString());
+  const matchDescription = parseAliases(fd.get("matchDescription")?.toString());
+  const blocking = fd.get("blocking") != null;
+  const kindRaw = fd.get("kind")?.toString() ?? "ticket";
+  const kind = ["ticket", "form", "manual", "subprocess"].includes(kindRaw)
+    ? kindRaw
+    : "ticket";
+  const position = Number.parseInt(fd.get("position")?.toString() ?? "", 10);
+  if (!matchLabel) {
+    throw new Error("El 'matchLabel' del ticket es obligatorio.");
+  }
+  if (Number.isNaN(position) || position < 0) {
+    throw new Error("El orden del ticket debe ser un entero mayor o igual a 0.");
+  }
+  return { matchLabel, displayName, aliases, matchDescription, blocking, kind, position };
+}
+
+function parseFieldLimit(error: unknown): string {
+  return error instanceof Error ? error.message : "Error interno del servidor.";
+}
+
+if (Astro.request.method === "POST") {
+  const isAjax = Astro.request.headers.get("accept")?.includes("application/json");
+  const fd = await Astro.request.formData();
+  // named "action": el botón clickeado define la sub-acción del POST.
+  const action = fd.getAll("action").at(-1)?.toString() ?? "";
+
+  const showTicketError = (message: string): Response => {
+    if (isAjax) return toastResponse({ success: false, error: message });
+    return redirectWithToast(selfPath, message, "error");
+  };
+  const showTicketSuccess = (message: string): Response => {
+    // Con redirectUrl: AsyncFormScript recarga y trae la lista de tickets al día.
+    if (isAjax)
+      return toastResponse({ success: true, message, redirectUrl: selfPath });
+    return redirectWithToast(selfPath, message);
+  };
+
+  if (action === "add_ticket" || action === "update_ticket" || action === "delete_ticket") {
+    try {
+      if (action === "add_ticket") {
+        const fields = parseTicketFields(fd);
+        await db.insert(workflowStageTickets).values({
+          stageId: stage.id,
+          ...fields,
+        });
+        await logAdminFromAstro(
+          Astro.locals,
+          `Agregó el ticket esperado "${fields.matchLabel}" a la etapa "${stage.name}"`,
+        );
+        return showTicketSuccess(`Ticket "${fields.matchLabel}" agregado a la etapa.`);
+      }
+
+      const ticketId = Number.parseInt(fd.get("ticket_id")?.toString() ?? "", 10);
+      const belongsToStage =
+        !Number.isNaN(ticketId) &&
+        (
+          await db
+            .select({ id: workflowStageTickets.id })
+            .from(workflowStageTickets)
+            .where(
+              and(
+                eq(workflowStageTickets.id, ticketId),
+                eq(workflowStageTickets.stageId, stage.id),
+              ),
+            )
+            .limit(1)
+        ).length > 0;
+
+      if (!belongsToStage) {
+        return showTicketError("Ticket inexistente o de otra etapa.");
+      }
+
+      if (action === "delete_ticket") {
+        await db
+          .delete(workflowStageTickets)
+          .where(eq(workflowStageTickets.id, ticketId));
+        await logAdminFromAstro(
+          Astro.locals,
+          `Eliminó el ticket esperado #${ticketId} de la etapa "${stage.name}"`,
+        );
+        return showTicketSuccess(`Ticket eliminado de la etapa "${stage.name}".`);
+      }
+
+      const fields = parseTicketFields(fd);
+      await db
+        .update(workflowStageTickets)
+        .set(fields)
+        .where(eq(workflowStageTickets.id, ticketId));
+      await logAdminFromAstro(
+        Astro.locals,
+        `Actualizó el ticket "${fields.matchLabel}" de la etapa "${stage.name}"`,
+      );
+      return showTicketSuccess(`Ticket "${fields.matchLabel}" actualizado con éxito.`);
+    } catch (e) {
+      return showTicketError(parseFieldLimit(e));
+    }
+  }
+
+  // Sin sub-acción: actualización de la etapa en sí.
+  try {
+    const name = fd.get("name")?.toString().trim() ?? "";
+    const description = fd.get("description")?.toString().trim() || null;
+    const position = Number.parseInt(fd.get("position")?.toString() ?? "", 10);
+    const gateRaw = fd.get("gateItemId")?.toString() ?? "none";
+    const scope =
+      fd.get("scope")?.toString() === "legacy" ? "legacy" : "workflow";
+
+    if (!name) {
+      throw new Error("El nombre de la etapa es obligatorio.");
+    }
+    if (Number.isNaN(position) || position < 0) {
+      throw new Error("El orden debe ser un entero mayor o igual a 0.");
+    }
+
+    let gateItemId: number | null = null;
+    if (gateRaw !== "none") {
+      const parsed = Number.parseInt(gateRaw, 10);
+      if (!Number.isNaN(parsed)) {
+        const [ticket] = await db
+          .select({ id: workflowStageTickets.id })
+          .from(workflowStageTickets)
+          .where(eq(workflowStageTickets.id, parsed))
+          .limit(1);
+        if (ticket) {
+          gateItemId = parsed;
+        }
+      }
+    }
+
+    await db
+      .update(workflowStages)
+      .set({ name, description, position, scope, gateItemId })
+      .where(eq(workflowStages.id, stage.id));
+    await logAdminFromAstro(
+      Astro.locals,
+      `Actualizó la etapa "${name}" del workflow (orden ${position}, scope ${scope})`,
+    );
+    const toastMessage = `Etapa "${name}" actualizada con éxito.`;
+    if (isAjax) {
+      return toastResponse({
+        success: true,
+        message: toastMessage,
+        redirectUrl: selfPath,
+      });
+    }
+    return redirectWithToast(selfPath, toastMessage);
+  } catch (e) {
+    const errorMsg = parseFieldLimit(e);
+    if (isAjax) return toastResponse({ success: false, error: errorMsg });
+    return redirectWithToast(selfPath, errorMsg, "error");
+  }
+}
+
+const gateOptions = [
+  { value: "none", label: "Sin gate (siempre habilitada)" },
+  ...otherTickets.map((ticket) => ({
+    value: String(ticket.id),
+    label: `${ticket.stageName} — ${ticket.displayName?.trim() || ticket.matchLabel}`,
+  })),
+];
+---
+
+<PageContainer width="xxl">
+  <PageHeader
+    title={`Editar etapa: ${stage.name}`}
+    description={`ID de base de datos: ${stage.id}`}
+  />
+
+  <SectionCard class="shadow-md mb-6">
+    <form
+      id="etapa-form"
+      method="POST"
+      action={selfPath}
+      data-async-form
+    >
+      <EtapaBaseFields
+        name={stage.name}
+        position={stage.position}
+        description={stage.description}
+        scope={stage.scope}
+        gateItemId={stage.gateItemId}
+        gateOptions={gateOptions}
+      />
+      <div class="mt-6 flex justify-end gap-2">
+        <a href={listPath} class="btn btn-error btn-sm px-4 font-medium">
+          <Icon name="boxicons:arrow-big-left-filled" size={16} aria-hidden="true" />
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-secondary btn-sm px-3 font-medium">
+          <Icon name="boxicons:save-filled" size={18} aria-hidden="true" />
+          Guardar etapa
+        </button>
+      </div>
+    </form>
+  </SectionCard>
+
+  <SectionCard
+    title={`Tickets esperados (${stageTickets.length})`}
+    description="Tickets hijos de InvGate esperados en esta etapa. El match se hace contra el título del ticket (texto previo al primer ' - '), ignorando casing, acentos y ordinales iniciales."
+  >
+    <div class="flex flex-col gap-6">
+      {
+        stageTickets.length === 0 ? (
+          <p class="text-base-content/50 text-sm italic">
+            Esta etapa todavía no tiene tickets esperados.
+          </p>
+        ) : (
+          <div class="flex flex-col gap-3">
+            {stageTickets.map((ticket) => (
+              <StageTicketForm
+                mode="edit"
+                selfPath={selfPath}
+                ticket={ticket}
+              />
+            ))}
+          </div>
+        )
+      }
+
+      <div class="border-base-300 border-t pt-4">
+        <StageTicketForm
+          mode="add"
+          selfPath={selfPath}
+          defaultPosition={stageTickets.length}
+        />
+      </div>
+    </div>
+  </SectionCard>
+</PageContainer>
+<AsyncFormScript />

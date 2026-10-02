@@ -295,6 +295,7 @@ BaseLayout (flex flex-col min-h-screen)
 | 8   | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
+| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Cierre local (portal, no InvGate) por admin desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes |
 
 ### Supervision (sub-rutas)
 
@@ -334,6 +335,14 @@ BaseLayout (flex flex-col min-h-screen)
 | `/base-conocimiento/edit/[id]` | Edición de artículos (team_leader+) |
 | `/base-conocimiento/categorias` | ABM de categorías por mesa (admin/supervisor/team_leader) |
 
+### Documentacion del modulo `/automatizaciones`
+
+- `docs/automatizaciones/instructivo-operativo.md` — instructivo de operación (RACI, Tablero Status Proyecto, fichas por sector, checklist de cierre).
+- `docs/automatizaciones/guia-flujo.md` — guía funcional del flujo (etapas, subprocesos, puntos de control Go/No Go).
+- `docs/automatizaciones/nota-tecnica-api.md` — mapeo técnico con InvGate (categoría/workflow, endpoints, initial fields, variables del tablero, formatos de título).
+- `docs/automatizaciones/modelo-datos.md` — persistencia del módulo (tablas, caches/TTLs, ciclo de vida y operación de la DB).
+- `docs/automatizaciones/resumen-implementacion.md` — bitácora de implementación por commit (alcance, arquitectura, deploy).
+
 ---
 
 ## Estado actual del Header
@@ -371,14 +380,16 @@ BaseLayout (flex flex-col min-h-screen)
 | Astro SSR             | 4321   | Servidor principal (node dist/server/entry.mjs)       |
 | mda-ping-cubics       | —      | ICMP ping segmentado a cubics (batch 5→3, 3min gap)   |
 | sync-legacy-inventory | —      | Sincroniza inventario de terminales desde PHP externo |
-| sync-users            | —      | Sincronizacion de empleados via MidPoint (cron 02:00) |
-| sync-office-links     | —      | Sincronizacion de enlaces de oficinas (cron 03:00)    |
+| sync-users            | —      | Sincroniza empleados via MidPoint (02:00)             |
+| sync-office-links     | —      | Sincroniza links de oficinas (03:00)                  |
+| purge-deleted-records | —      | Purga snapshots vencidos de la papelera (90 días, 04:00) |
+| reconcile-automation-parents | — | Reconcilia tracking de padres de /automatizaciones por categoría, todas las mesas (04:00) |
 
 ### Scripts clave (`scripts/`)
 
 | Script                     | Descripcion                                               |
 | -------------------------- | --------------------------------------------------------- |
-| `auto-deploy.bat`          | git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia → build (verify) → pm2 start |
+| `auto-deploy.bat`          | git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia → build (verify) → pm2 start → warm-automations |
 | `backup-db.bat`            | Copia `database/mda.db` con timestamp                     |
 | `align-db-to-schema.mts`   | Alinea la DB host con `src/db/schema.ts` (backup + paridad + integridad) |
 | `backfill-asistencia.mts`  | One-time idempotente: inicializa `agents.en_asistencia` (dry-run por defecto; `--apply` con backup) |
@@ -387,6 +398,8 @@ BaseLayout (flex flex-col min-h-screen)
 | `sync-legacy-inventory.ts` | Worker PM2 de sincronizacion de inventario                |
 | `sync-users.ts`            | Sincronizacion de empleados via MidPoint                  |
 | `toggle-mode.ts`           | Script de alternancia de tema light/dark                  |
+| `warm-automations.ts`      | Pre-warm del cache de /automatizaciones (scan InvGate + snapshot persistido + reconciliacion de padres) |
+| `reconcile-automation-parents.ts` | Recupera padres de /automatizaciones reasignados a otras mesas (barrido por estado + categoría) |
 
 ### Base de datos
 

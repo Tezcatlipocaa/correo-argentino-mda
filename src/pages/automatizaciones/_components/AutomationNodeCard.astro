@@ -1,0 +1,278 @@
+---
+import type { AutomationNode } from "@lib/workflow/resolver";
+import type { PlannedCard, PlannedCardKind } from "@lib/workflow/timeline-plan";
+import { NODE_LIFECYCLE_LABELS } from "@lib/workflow/node-status";
+import { NODE_LIFECYCLE_DOT_CLASSES } from "@lib/workflow/node-styles";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import WorkflowNodeBadge from "./WorkflowNodeBadge.astro";
+import AutomationSubNode from "./AutomationSubNode.astro";
+
+interface Props {
+  node: AutomationNode;
+  /** Número de paso dentro de su sección (1-based). */
+  stepNumber: number;
+  /** Naturaleza de la card: ticket / fantasma / formulario / manual. */
+  kind?: PlannedCardKind;
+  /** Etiqueta amigable (template de etapa o derivada del título). */
+  displayLabel?: string;
+  /** Ítem generado por subproceso (badge). */
+  subprocess?: boolean;
+  /** Sub-nodos anidados (equipamiento 1.1/1.2/1.3). */
+  children?: PlannedCard[];
+  /** Último nodo de la lista (corta el conector vertical). */
+  isLast?: boolean;
+}
+
+const {
+  node,
+  stepNumber,
+  kind = "ticket",
+  displayLabel,
+  subprocess = false,
+  children = [],
+  isLast = false,
+} = Astro.props;
+
+const isTicket = kind === "ticket";
+
+const ghostBadge = {
+  missing: { label: "Faltante", cls: "badge-soft badge-warning" },
+  registration: {
+    label: "Pendiente de registro",
+    cls: "badge-soft badge-neutral",
+  },
+  form: { label: "Vía formulario", cls: "badge-soft badge-info" },
+  manual: { label: "Gestión manual", cls: "badge-soft badge-neutral" },
+} as const;
+
+const badge = isTicket ? null : ghostBadge[kind as keyof typeof ghostBadge];
+
+const stepLabel = displayLabel?.trim() || node.stepLabel;
+const blockedLabel =
+  node.lifecycle === "blocked" && node.rawStatusName
+    ? node.rawStatusName
+    : undefined;
+---
+
+<li class="relative flex gap-4 pb-6 last:pb-0">
+  <div class="flex w-3 shrink-0 flex-col items-center">
+    {
+      isTicket ? (
+        <span
+          aria-hidden="true"
+          title={NODE_LIFECYCLE_LABELS[node.lifecycle]}
+          class:list={[
+            "ring-base-100 z-10 mt-2 size-3 rounded-full ring-4",
+            NODE_LIFECYCLE_DOT_CLASSES[node.lifecycle],
+          ]}
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          class="border-base-300 z-10 mt-2 size-3 rounded-full border-2 border-dashed"
+        />
+      )
+    }
+    {
+      !isLast && (
+        <span aria-hidden="true" class="bg-base-300 -mt-1 w-px flex-1" />
+      )
+    }
+  </div>
+
+  <article
+    class:list={[
+      "min-w-0 flex-1 rounded-xl p-4",
+      isTicket
+        ? node.lifecycle === "completed"
+          ? "bg-success/10"
+          : "bg-base-200/40"
+        : "bg-base-200/20",
+    ]}
+  >
+    <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-baseline gap-x-2">
+          <span class="text-base-content/40 font-mono text-xs">
+            {stepNumber}.
+          </span>
+          <h3 class="text-base-content text-sm font-semibold">{stepLabel}</h3>
+          {
+            node.prettyId && (
+              <code class="bg-base-200 text-base-content/80 rounded px-1.5 py-0.5 font-mono text-xs">
+                {node.prettyId}
+              </code>
+            )
+          }
+          {
+            isTicket && !node.prettyId && (
+              <code class="border-base-300 text-base-content/60 rounded border border-dashed px-1.5 py-0.5 font-mono text-xs">
+                T{node.refId}
+              </code>
+            )
+          }
+          {
+            subprocess && (
+              <span class="badge badge-sm badge-soft badge-secondary shrink-0">
+                Subproceso
+              </span>
+            )
+          }
+          {
+            badge && (
+              <span class:list={["badge badge-sm shrink-0", badge.cls]}>
+                {badge.label}
+              </span>
+            )
+          }
+        </div>
+        {
+          isTicket && node.title !== stepLabel && (
+            <p class="text-base-content/60 mt-0.5 truncate text-xs">
+              {node.title}
+            </p>
+          )
+        }
+      </div>
+
+      <div class="flex shrink-0 flex-col items-end gap-1">
+        {
+          isTicket && (
+            <>
+              <WorkflowNodeBadge
+                lifecycle={node.lifecycle}
+                label={blockedLabel}
+              />
+              {node.scheduledFor && node.lifecycle === "blocked" && (
+                <span class="text-base-content/60 text-xs">
+                  Programada {node.scheduledFor}
+                </span>
+              )}
+              <time
+                class="text-base-content/60 text-xs"
+                datetime={
+                  node.createdAt !== null
+                    ? new Date(node.createdAt * 1000).toISOString()
+                    : undefined
+                }
+              >
+                {node.createdAt !== null
+                  ? formatEpochDateTime(node.createdAt)
+                  : "Sin fecha"}
+              </time>
+            </>
+          )
+        }
+        {
+          !isTicket && (
+            <span class="text-base-content/40 text-xs italic">
+              Sin ticket aún
+            </span>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      children.length > 0 && (
+        <ul class="border-base-300 mt-3 flex flex-col gap-2 border-l pl-3">
+          {children.map((child) => (
+            <AutomationSubNode card={child} />
+          ))}
+        </ul>
+      )
+    }
+
+    {
+      isTicket && node.lifecycle === "completed" && node.solution && (
+        <div class="bg-success/10 mt-3 flex flex-col gap-1 rounded-lg px-3 py-2">
+          <div class="flex flex-wrap items-center gap-x-2">
+            <span class="text-base-content/70 text-xs font-semibold tracking-wide uppercase">
+              Solución
+            </span>
+            {node.solutionAuthorName && (
+              <span class="text-base-content/50 text-xs">
+                · {node.solutionAuthorName}
+              </span>
+            )}
+          </div>
+          <p class="text-base-content/80 text-sm leading-relaxed break-words whitespace-pre-line">
+            {node.solution}
+          </p>
+        </div>
+      )
+    }
+
+    {
+      isTicket && node.tasks.length > 0 && (
+        <div class="mt-3 flex flex-col gap-2">
+          <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+            Tareas ({node.tasks.length})
+          </span>
+          <ul class="flex flex-col gap-1.5">
+            {node.tasks.map((task) => (
+              <li class="bg-base-200/40 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2">
+                <span class="text-base-content/80 text-sm">{task.name}</span>
+                <span class="flex items-center gap-2">
+                  {task.sectorName && (
+                    <span class="text-base-content/50 text-xs">
+                      {task.sectorName}
+                    </span>
+                  )}
+                  <WorkflowNodeBadge lifecycle={task.lifecycle} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    {
+      isTicket && node.activity.length > 0 && (
+        <details class="mt-3">
+          <summary class="text-base-content/60 hover:text-base-content cursor-pointer text-xs font-medium transition-colors select-none">
+            Ver actividad ({node.activity.length})
+          </summary>
+          <ul class="mt-2 space-y-2">
+            {node.activity.map((entry) => (
+              <li class="bg-base-200/40 rounded-lg px-3 py-2">
+                <div class="flex flex-wrap items-center gap-x-2">
+                  <time
+                    class="text-base-content/40 text-xs"
+                    datetime={new Date(entry.createdAt * 1000).toISOString()}
+                  >
+                    {formatEpochDateTime(entry.createdAt)}
+                  </time>
+                  {entry.authorName && (
+                    <span class="text-base-content/50 text-xs">
+                      · {entry.authorName}
+                    </span>
+                  )}
+                </div>
+                <p class="text-base-content/80 mt-1 text-sm leading-relaxed break-words whitespace-pre-line">
+                  {entry.text}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )
+    }
+
+    {
+      isTicket && node.invgateUrl && (
+        <div class="mt-3 flex justify-end">
+          <OpenExternalUrlButton
+            href={node.invgateUrl}
+            ariaLabel={`Abrir ticket ${node.prettyId ?? `T${node.refId}`} en InvGate`}
+            variant="text"
+            label="Abrir en InvGate"
+            size="xs"
+          />
+        </div>
+      )
+    }
+  </article>
+</li>

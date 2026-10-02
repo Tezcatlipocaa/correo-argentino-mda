@@ -1,0 +1,24 @@
+---
+import { resolveLifecycleLabel } from "@lib/workflow/automation-status";
+
+interface Props {
+  statusId: number;
+  hasClosure?: boolean;
+  class?: string;
+}
+
+const {
+  statusId,
+  hasClosure = false,
+  class: className = "",
+} = Astro.props;
+---
+
+<span
+  class:list={[
+    "text-base-content/60 text-xs font-semibold tracking-wide uppercase whitespace-nowrap",
+    className,
+  ]}
+>
+  {resolveLifecycleLabel(statusId, hasClosure)}
+</span>
