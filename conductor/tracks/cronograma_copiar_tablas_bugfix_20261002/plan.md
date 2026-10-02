@@ -1,11 +1,11 @@
 # Implementation Plan: Corrección de Copiado de Imágenes en Cronograma (Grupos y Horas Extras)
 
-## Phase 1: Tests E2E de Detección de Falla (Red Phase)
+## Phase 1: Tests E2E de Detección de Falla (Red Phase) [checkpoint: d78bd26]
 - [x] Task: Crear/extender tests E2E en Playwright para verificar copiado de Saturday Rotation Card y Overtime Compact List (d78bd26)
   - [x] Escribir caso de prueba en `tests/cronograma/export-image.spec.ts` para el botón "Copiar Tabla" en la rotación de sábados verificando que capture la card completa (#saturday-rotation-card) y genere un PNG no vacío.
   - [x] Escribir caso de prueba para el botón "Copiar Tabla" en horas extras verificando que capture el bloque de turnos guardados (Columna 2+3) y genere un PNG no vacío.
   - [x] Ejecutar el test y confirmar la falla/gap de comportamiento en el estado actual.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Corrección del Renderizado Offscreen y Elementos Objetivo
 - [ ] Task: Corregir posicionamiento del contenedor host en `exportAsClipboardImage` (`src/components/cronograma/lib/exporters.ts`)
