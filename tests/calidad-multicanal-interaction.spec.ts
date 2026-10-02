@@ -375,9 +375,9 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await expect(callTicketPlaceholder).not.toHaveClass(/hidden/);
     await expect(callTicketPlaceholder).toContainText("No se generó ticket para esta llamada");
 
-    // Con sección 2 desactivada: S2 = 0%, S1 = 100%, Total = 100% (solo puntúa S1)
+    // Con sección 2 desactivada: S2 = N/A, S1 = 100%, Total = 100% (solo puntúa S1)
     await expect(previewS1).toHaveText("100%");
-    await expect(previewS2).toHaveText("0%");
+    await expect(previewS2).toHaveText("N/A");
     await expect(previewTotal).toHaveText("100%");
     await expect(previewS2Block).toHaveCSS("opacity", "0.3");
 
@@ -386,7 +386,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const procCheckbox = page.locator('input[name="call_procedimiento"]');
     await procCheckbox.uncheck();
     await expect(previewS1).toHaveText("78%");
-    await expect(previewS2).toHaveText("0%");
+    await expect(previewS2).toHaveText("N/A");
     await expect(previewTotal).toHaveText("78%");
 
     // Volver a activar toggle ¿Se generó ticket?
@@ -475,6 +475,65 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
         await page.locator("#btn-close-modal").click();
       }
     }
+  });
+
+  test("Debe presentar el modal en 2 columnas con notas bajo demanda y score N/A para ticket excluido", async ({ page }) => {
+    await page.goto("/supervision/calidad-operadores");
+    const operatorItems = page.locator(".operator-item");
+    await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
+    await operatorItems.first().click();
+
+    const btnNewAudit = page.locator("#btn-new-audit");
+    await btnNewAudit.click();
+
+    const modal = page.locator("#audit-modal");
+    await expect(modal).toHaveAttribute("open", "");
+
+    // 1. Layout de 2 columnas
+    const gridContainer = page.locator("#modal-grid-container");
+    const colContext = page.locator("#modal-grid-context");
+    const colEvaluation = page.locator("#modal-grid-evaluation");
+    await expect(gridContainer).toBeVisible();
+    await expect(colContext).toBeVisible();
+    await expect(colEvaluation).toBeVisible();
+
+    // 2. Revelado progresivo de notas de observación
+    const firstCheckItem = page.locator("#channel-checklist-wise_call .checklist-item").first();
+    await expect(firstCheckItem).toBeVisible();
+
+    const obsWrapper = firstCheckItem.locator(".criteria-obs-wrapper");
+    // Por defecto debe estar oculto
+    await expect(obsWrapper).toHaveClass(/hidden/);
+
+    // Al desmarcar el check, el campo de observación debe revelarse automáticamente
+    const checkbox = firstCheckItem.locator('input[type="checkbox"]');
+    await expect(checkbox).toBeChecked();
+    await checkbox.uncheck();
+    await expect(obsWrapper).not.toHaveClass(/hidden/);
+
+    // Al volver a marcarlo, se oculta o permite abrirse con el botón "+ Observación"
+    await checkbox.check();
+    await expect(obsWrapper).toHaveClass(/hidden/);
+
+    const toggleObsBtn = firstCheckItem.locator('[data-action="toggle-obs"]');
+    await expect(toggleObsBtn).toBeVisible();
+    await toggleObsBtn.click();
+    await expect(obsWrapper).not.toHaveClass(/hidden/);
+
+    // 3. Score N/A cuando el ticket no aplica
+    const ticketToggle = page.locator("#toggle-call-generated-ticket");
+    await expect(ticketToggle).toBeChecked();
+    await ticketToggle.uncheck();
+
+    const previewS2 = page.locator("#preview-s2");
+    await expect(previewS2).toHaveText(/N\/A|Excluido/i);
+
+    const previewTotal = page.locator("#preview-total");
+    await expect(previewTotal).toHaveText("100%");
+
+    // Cerrar modal
+    await page.locator("#btn-close-modal").click();
+    await expect(modal).not.toHaveAttribute("open", "");
   });
 });
 

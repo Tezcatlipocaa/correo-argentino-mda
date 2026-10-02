@@ -28,10 +28,10 @@ const invgateAgParams = allParameters.filter(
 
 <Modal
   id="audit-modal"
-  size="3xl"
-  titleClass="font-black text-lg uppercase tracking-tight"
+  size="5xl"
+  titleClass="font-bold text-base sm:text-lg tracking-tight"
   zIndex="z-200"
-  class="w-11/12 max-w-5xl"
+  class="w-11/12 max-w-6xl"
 >
   <Fragment slot="content">
     <div
@@ -40,18 +40,18 @@ const invgateAgParams = allParameters.filter(
     >
       <!-- Modal Header: Título y Selector de Canales alineados -->
       <div
-        class="border-base-300 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5"
+        class="border-base-200 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3"
       >
         <h3
           id="modal-title"
-          class="text-base-content flex items-center gap-2.5 text-base sm:text-lg font-black tracking-tight uppercase m-0 leading-none"
+          class="text-base-content flex items-center gap-2.5 text-base sm:text-lg font-bold tracking-tight m-0 leading-none"
         >
           <Icon name="boxicons:task" class="text-primary shrink-0" size={22} />
-          <span>Auditoría de Calidad</span>
+          <span>Auditoría de calidad</span>
         </h3>
 
         <!-- Selector de Canales: Segmented Tabs unificadas -->
-        <div class="join bg-base-200/80 p-0.5 rounded-xl border border-base-300/70 shadow-2xs self-start sm:self-auto" id="channel-selector-join">
+        <div class="join bg-base-200/60 p-0.5 rounded-xl border border-base-200 shadow-2xs self-start sm:self-auto" id="channel-selector-join">
           <button
             type="button"
             class="btn btn-xs sm:btn-sm join-item channel-btn btn-active bg-base-100 text-primary font-bold shadow-2xs transition-all border-transparent px-3"
@@ -62,7 +62,7 @@ const invgateAgParams = allParameters.filter(
           </button>
           <button
             type="button"
-            class="btn btn-xs sm:btn-sm join-item channel-btn font-semibold text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
+            class="btn btn-xs sm:btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
             data-channel="wise_email"
           >
             <Icon name="boxicons:envelope" size={15} />
@@ -70,7 +70,7 @@ const invgateAgParams = allParameters.filter(
           </button>
           <button
             type="button"
-            class="btn btn-xs sm:btn-sm join-item channel-btn font-semibold text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
+            class="btn btn-xs sm:btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
             data-channel="invgate_ticket"
           >
             <Icon name="boxicons:handshake" size={15} />
@@ -79,304 +79,7 @@ const invgateAgParams = allParameters.filter(
         </div>
       </div>
 
-      <!-- Buscador Unificado con Selector de Servicio (Tabs) -->
-      <div
-        id="unified-search-card"
-        class="bg-base-200/40 border border-base-300/80 rounded-2xl p-3 mb-4 shadow-2xs space-y-2.5"
-      >
-        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5">
-          <!-- Selector de Servicio (Tabs: Wise CX / InvGate) -->
-          <div class="flex items-center gap-2 shrink-0">
-            <span class="text-xxs text-base-content/50 font-extrabold uppercase tracking-wider hidden sm:inline">Buscar:</span>
-            <div
-              class="join bg-base-100 p-0.5 rounded-xl border border-base-300/70"
-              id="search-service-tabs"
-            >
-              <button
-                type="button"
-                id="tab-search-wise"
-                class="join-item btn btn-xs sm:btn-sm btn-ghost gap-1.5 font-bold transition-all text-primary bg-base-200/90 shadow-2xs"
-                data-search-target="wise"
-              >
-                <Icon name="boxicons:phone" size={15} class="text-primary" />
-                <span>Wise CX</span>
-              </button>
-              <button
-                type="button"
-                id="tab-search-invgate"
-                class="join-item btn btn-xs sm:btn-sm btn-ghost gap-1.5 font-semibold text-base-content/70 transition-all hover:text-base-content"
-                data-search-target="invgate"
-              >
-                <Icon name="boxicons:receipt" size={15} class="text-secondary" />
-                <span>InvGate</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Barra de Búsqueda Wise CX (Activa por defecto en llamadas/mails) -->
-          <div
-            id="wise-search-container"
-            class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 transition-all"
-          >
-            <div class="relative flex-1">
-              <input
-                type="text"
-                id="wise-search-id"
-                placeholder="Buscar Caso Wise CX (ej: 534787)..."
-                class="input input-sm bg-base-100 w-full pl-8 font-mono text-xs font-semibold border-base-300/80 focus:border-primary focus:outline-hidden"
-              />
-              <div class="text-base-content/40 absolute top-2 left-2.5">
-                <Icon name="boxicons:phone" size={15} />
-              </div>
-            </div>
-            <button
-              type="button"
-              id="btn-fetch-wise-api"
-              class="btn btn-sm btn-primary text-xs font-bold uppercase gap-1.5 shrink-0 px-3 transition-all hover:scale-98 active:scale-95 shadow-2xs"
-            >
-              <Icon name="boxicons:server" size={15} />
-              <span>Buscar en Wise</span>
-            </button>
-          </div>
-
-          <!-- Barra de Búsqueda InvGate (Alternativa o exclusiva en Autogestión) -->
-          <div
-            id="invgate-search-container"
-            class="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 hidden transition-all"
-          >
-            <div class="relative flex-1">
-              <input
-                type="text"
-                id="invgate-search-id"
-                placeholder="Buscar Ticket en InvGate (ej: 88442)..."
-                class="input input-sm bg-base-100 w-full pl-8 font-mono text-xs font-semibold border-base-300/80 focus:border-secondary focus:outline-hidden"
-              />
-              <div class="text-base-content/40 absolute top-2 left-2.5">
-                <Icon name="boxicons:receipt" size={15} />
-              </div>
-            </div>
-            <button
-              type="button"
-              id="btn-fetch-invgate-api"
-              class="btn btn-sm btn-secondary text-xs font-bold uppercase gap-1.5 shrink-0 px-3 transition-all hover:scale-98 active:scale-95 shadow-2xs"
-            >
-              <Icon name="boxicons:search-alt" size={15} />
-              <span id="btn-fetch-invgate-label">Buscar Ticket InvGate</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Feedback Alerts -->
-        <div
-          id="wise-feedback-alert"
-          class="mt-2 hidden rounded-xl border p-2 text-xs font-medium transition-all"
-        ></div>
-        <div
-          id="invgate-feedback-alert"
-          class="mt-2 hidden rounded-xl border p-2 text-xs font-medium transition-all"
-        ></div>
-      </div>
-
-      <!-- Reproductor y Descarga de Grabación Wise CX (Independiente) -->
-      <div
-        id="tv-audio-container"
-        class="bg-base-200/40 border border-primary/25 hidden rounded-2xl p-3.5 mb-4 shadow-2xs transition-all duration-200"
-      >
-        <div
-          class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
-        >
-          <div class="flex items-center gap-2.5">
-            <div class="bg-primary/10 text-primary rounded-xl p-2 shrink-0">
-              <Icon name="boxicons:volume-full" size={22} />
-            </div>
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span
-                  class="text-xs font-black tracking-wider uppercase text-base-content/90"
-                >
-                  Grabación de la Llamada Wise CX
-                </span>
-                <span class="badge badge-xs badge-success font-bold"
-                  >Audio Disponible</span
-                >
-              </div>
-              <p
-                id="tv-audio-label"
-                class="text-base-content/60 font-mono text-xxs font-medium mt-0.5"
-              >
-                Audio disponible
-              </p>
-            </div>
-          </div>
-          <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <audio
-              id="tv-audio-player"
-              controls
-              class="h-9 w-full max-w-full rounded-lg sm:w-64"
-              preload="metadata"></audio>
-            <a
-              id="tv-audio-download"
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              class="btn btn-sm btn-outline btn-primary shrink-0 gap-1.5 text-xs font-bold transition-all hover:scale-98 active:scale-95"
-            >
-              <Icon name="boxicons:save" size={16} />
-              <span>Descargar MP3</span>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Live Ticket Viewer Panel (InvGate) -->
-      <div
-        id="ticket-viewer-panel"
-        class="bg-base-200/30 border-base-300 mb-4 rounded-2xl border p-3"
-      >
-        <div
-          class="flex cursor-pointer items-center justify-between select-none"
-          id="ticket-viewer-header"
-        >
-          <div class="flex items-center gap-2">
-            <Icon name="boxicons:receipt" size={18} class="text-secondary" />
-            <span
-              class="text-base-content/80 text-xs font-black tracking-wider uppercase"
-            >
-              Detalle del Ticket InvGate
-            </span>
-            <span
-              id="ticket-viewer-badge"
-              class="badge badge-xs badge-ghost font-bold"
-              >Sin ticket cargado</span
-            >
-          </div>
-          <div
-            class="text-base-content/60 flex items-center gap-1 text-xs font-semibold"
-          >
-            <span id="ticket-viewer-toggle-text">Mostrar</span>
-            <Icon
-              name="boxicons:chevron-down"
-              size={16}
-              id="ticket-viewer-chevron"
-              class="transition-transform duration-200"
-            />
-          </div>
-        </div>
-
-        <div id="ticket-viewer-content" class="mt-3 hidden space-y-2.5">
-          <!-- Título & Validación asistida -->
-          <div
-            class="bg-base-100/90 border border-base-300/70 rounded-xl p-3 shadow-2xs"
-          >
-            <div
-              class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-            >
-              <div class="min-w-0 flex-1">
-                <span
-                  class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase block"
-                  >Título en InvGate</span
-                >
-                <p
-                  id="tv-title"
-                  class="text-base-content text-xs font-semibold leading-relaxed break-words mt-0.5"
-                >
-                  -
-                </p>
-              </div>
-              <div id="tv-title-match-badge" class="shrink-0 flex items-center">
-                <!-- Badge de validación automática -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Grid de Metadatos: Categoría, Prioridad, Estado, Solicitante -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div
-              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
-            >
-              <span
-                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
-              >
-                <Icon name="boxicons:categories" size={13} class="text-primary/70" />
-                Categoría
-              </span>
-              <p
-                id="tv-category"
-                class="text-base-content truncate font-mono text-xs font-bold mt-1"
-              >
-                -
-              </p>
-            </div>
-            <div
-              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
-            >
-              <span
-                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
-              >
-                <Icon name="boxicons:flag" size={13} class="text-warning/70" />
-                Prioridad
-              </span>
-              <p
-                id="tv-priority"
-                class="text-base-content truncate font-mono text-xs font-bold mt-1"
-              >
-                -
-              </p>
-            </div>
-            <div
-              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
-            >
-              <span
-                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
-              >
-                <Icon name="boxicons:info-circle" size={13} class="text-info/70" />
-                Estado
-              </span>
-              <p
-                id="tv-status"
-                class="text-base-content truncate font-mono text-xs font-bold mt-1"
-              >
-                -
-              </p>
-            </div>
-            <div
-              class="bg-base-100/90 border border-base-300/60 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between"
-            >
-              <span
-                class="text-xxs text-base-content/50 font-extrabold tracking-wider uppercase flex items-center gap-1"
-              >
-                <Icon name="boxicons:user" size={13} class="text-secondary/70" />
-                Solicitante
-              </span>
-              <p
-                id="tv-creator"
-                class="text-base-content truncate font-mono text-xs font-bold mt-1"
-              >
-                -
-              </p>
-            </div>
-          </div>
-
-          <!-- Descripción / Evidencia -->
-          <div
-            class="bg-base-100 border-base-300/50 rounded-xl border p-3 shadow-xs"
-          >
-            <span
-              class="text-xxs text-base-content/50 font-bold tracking-wider uppercase"
-              >Descripción / Evidencia del Ticket</span
-            >
-            <div
-              id="tv-description"
-              class="text-base-content/80 mt-1 max-h-36 overflow-y-auto font-sans text-xs leading-relaxed whitespace-pre-wrap"
-            >
-              -
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <form id="audit-form" method="POST" class="space-y-4">
+      <form id="audit-form" method="POST">
         <input type="hidden" name="id" id="form-audit-id" />
         <input type="hidden" name="agentId" id="form-agent-id" />
         <input
@@ -393,651 +96,962 @@ const invgateAgParams = allParameters.filter(
         />
         <input type="hidden" name="recordingUrl" id="form-recording-url" />
 
-        <!-- Case Metadata Fields: Grid responsivo de 3 columnas -->
-        <div
-          class="bg-base-200/30 border border-base-300/70 p-3.5 rounded-2xl shadow-2xs space-y-3"
-        >
-          <div class="flex items-center justify-between pb-1 border-b border-base-300/40">
-            <span class="text-xxs font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
-              <Icon name="boxicons:file-detail" size={14} class="text-primary" />
-              <span>Datos Básicos de la Auditoría</span>
-            </span>
-          </div>
+        <!-- Grid Principal de 2 Columnas: Contexto (Izq) vs Evaluación (Der) -->
+        <div id="modal-grid-container" class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          <!-- COLUMNA IZQUIERDA: CONTEXTO (Búsqueda, Audio, Datos Atención, Ticket Viewer) -->
+          <div id="modal-grid-context" class="lg:col-span-5 space-y-3.5">
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            <FormField
-              id="form-call-id"
-              name="callId"
-              label="Nro Caso / ID Llamada"
-              placeholder="Ej: 534787"
-              size="sm"
-              inputClass="font-mono font-semibold"
-            />
-            <FormField
-              id="form-ticket-id"
-              name="ticketId"
-              label="Nro Ticket / AG"
-              placeholder="Ej: 88442"
-              size="sm"
-              inputClass="font-mono font-semibold"
-            />
-            <FormField
-              id="form-date"
-              name="date"
-              label="Fecha de Atención"
-              type="date"
-              required
-              size="sm"
-              inputClass="font-semibold"
-            />
-
-            <!-- Secondary Metadata (Dynamic per channel) -->
-            <div id="meta-duration-container">
-              <FormField
-                id="form-duration"
-                name="duration"
-                label="Duración"
-                placeholder="02:15"
-                size="sm"
-                inputClass="font-mono font-semibold"
-              />
-            </div>
-            <div id="meta-ring-container">
-              <FormField
-                id="form-ring-time"
-                name="ringTime"
-                label="Tiempo Ringueo"
-                placeholder="00:30"
-                size="sm"
-                inputClass="font-mono font-semibold"
-              />
-            </div>
-            <div id="meta-creation-container" class="hidden">
-              <FormField
-                id="form-creation-time"
-                name="creationTime"
-                label="Creación"
-                placeholder="YYYY-MM-DD HH:MM"
-                size="sm"
-                inputClass="font-mono font-semibold text-xs"
-              />
-            </div>
-            <div id="meta-take-container" class="hidden">
-              <FormField
-                id="form-take-time"
-                name="takeTime"
-                label="Toma / Lectura"
-                placeholder="YYYY-MM-DD HH:MM"
-                size="sm"
-                inputClass="font-mono font-semibold text-xs"
-              />
-            </div>
+            <!-- Buscador Unificado con Selector de Servicio (Tabs) -->
             <div
-              id="meta-pas-container"
-              class="hidden flex items-center pt-6"
+              id="unified-search-card"
+              class="bg-base-100 border border-base-200 rounded-xl p-3 shadow-2xs space-y-2.5"
             >
-              <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                <input
-                  type="checkbox"
-                  name="isPas"
-                  id="form-is-pas"
-                  class="checkbox checkbox-sm checkbox-primary"
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                <!-- Selector de Servicio (Tabs: Wise CX / InvGate) -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider hidden sm:inline">Buscar:</span>
+                  <div
+                    class="join bg-base-200/60 p-0.5 rounded-lg border border-base-200"
+                    id="search-service-tabs"
+                  >
+                    <button
+                      type="button"
+                      id="tab-search-wise"
+                      class="join-item btn btn-xs btn-ghost gap-1 font-bold transition-all text-primary bg-base-100 shadow-2xs"
+                      data-search-target="wise"
+                    >
+                      <Icon name="boxicons:phone" size={14} class="text-primary" />
+                      <span>Wise CX</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="tab-search-invgate"
+                      class="join-item btn btn-xs btn-ghost gap-1 font-medium text-base-content/70 transition-all hover:text-base-content"
+                      data-search-target="invgate"
+                    >
+                      <Icon name="boxicons:receipt" size={14} class="text-secondary" />
+                      <span>InvGate</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Barra de Búsqueda Wise CX -->
+                <div
+                  id="wise-search-container"
+                  class="flex-1 flex items-center gap-1.5 transition-all"
+                >
+                  <div class="relative flex-1">
+                    <input
+                      type="text"
+                      id="wise-search-id"
+                      placeholder="Caso Wise (ej: 534787)..."
+                      class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-primary focus:outline-hidden"
+                    />
+                    <div class="text-base-content/40 absolute top-1.5 left-2">
+                      <Icon name="boxicons:phone" size={13} />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    id="btn-fetch-wise-api"
+                    class="btn btn-xs btn-neutral text-xs font-semibold gap-1 shrink-0 px-2.5 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                  >
+                    <Icon name="boxicons:search" size={13} />
+                    <span>Buscar en Wise</span>
+                  </button>
+                </div>
+
+                <!-- Barra de Búsqueda InvGate -->
+                <div
+                  id="invgate-search-container"
+                  class="flex-1 flex items-center gap-1.5 hidden transition-all"
+                >
+                  <div class="relative flex-1">
+                    <input
+                      type="text"
+                      id="invgate-search-id"
+                      placeholder="Ticket InvGate (ej: 88442)..."
+                      class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-secondary focus:outline-hidden"
+                    />
+                    <div class="text-base-content/40 absolute top-1.5 left-2">
+                      <Icon name="boxicons:receipt" size={13} />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    id="btn-fetch-invgate-api"
+                    class="btn btn-xs btn-neutral text-xs font-semibold gap-1 shrink-0 px-2.5 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                  >
+                    <Icon name="boxicons:search-alt" size={13} />
+                    <span id="btn-fetch-invgate-label">Buscar ticket</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Feedback Alerts -->
+              <div
+                id="wise-feedback-alert"
+                class="hidden rounded-lg border p-2 text-xs font-medium transition-all"
+              ></div>
+              <div
+                id="invgate-feedback-alert"
+                class="hidden rounded-lg border p-2 text-xs font-medium transition-all"
+              ></div>
+            </div>
+
+            <!-- Reproductor y Descarga de Grabación Wise CX -->
+            <div
+              id="tv-audio-container"
+              class="bg-base-100 border border-primary/25 hidden rounded-xl p-3 shadow-2xs transition-all duration-200 space-y-2"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <div class="bg-primary/10 text-primary rounded-lg p-1.5 shrink-0">
+                    <Icon name="boxicons:volume-full" size={18} />
+                  </div>
+                  <span class="text-xs font-bold text-base-content">
+                    Grabación de la llamada
+                  </span>
+                </div>
+                <span class="badge badge-xs badge-success font-semibold">Audio disponible</span>
+              </div>
+              <div class="flex flex-col sm:flex-row items-center gap-2">
+                <audio
+                  id="tv-audio-player"
+                  controls
+                  class="h-8 w-full rounded-md"
+                  preload="metadata"
+                ></audio>
+                <a
+                  id="tv-audio-download"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  class="btn btn-xs btn-neutral shrink-0 gap-1 font-semibold text-xs transition-all hover:scale-98 active:scale-95"
+                  title="Descargar audio"
+                >
+                  <Icon name="boxicons:archive-arrow-down" size={14} />
+                  <span>MP3</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Datos Básicos de la Atención -->
+            <div
+              class="bg-base-100 border border-base-200 p-3 rounded-xl shadow-2xs space-y-2.5"
+            >
+              <div class="flex items-center justify-between pb-1.5 border-b border-base-200">
+                <span class="text-xs font-bold text-base-content flex items-center gap-1.5">
+                  <Icon name="boxicons:file-detail" size={15} class="text-primary" />
+                  <span>Datos de la atención</span>
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5">
+                <FormField
+                  id="form-call-id"
+                  name="callId"
+                  label="Nro Caso / Llamada"
+                  placeholder="Ej: 534787"
+                  size="xs"
+                  inputClass="font-mono font-semibold text-xs"
                 />
-                <span class="label-text text-xs font-bold uppercase tracking-wider">Es PAS</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Realtime Score Preview Card -->
-        <div
-          class="bg-base-200/40 border border-base-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl p-4 shadow-2xs transition-all"
-        >
-          <div class="space-y-0.5">
-            <span class="text-base-content/90 text-sm font-extrabold flex items-center gap-1.5 uppercase tracking-wider">
-              <Icon name="boxicons:bar-chart-big-filled" size={16} class="text-primary" />
-              Score Calculado en Tiempo Real
-            </span>
-            <p class="text-base-content/50 text-xs">
-              Cada criterio no cumplido resta su porcentaje de ponderación sobre la base 100%.
-            </p>
-          </div>
-
-          <div class="flex items-center gap-4 sm:gap-6 self-end sm:self-auto">
-            <!-- Sección 1 (Secundaria) -->
-            <div class="border-base-300/60 border-r pr-4 text-center">
-              <div class="text-base-content/40 text-xxs font-extrabold uppercase tracking-wider">
-                Sección 1
-              </div>
-              <div id="preview-s1" class="text-base-content/80 text-base font-bold mt-0.5 font-mono">
-                100%
-              </div>
-            </div>
-
-            <!-- Sección 2 (Secundaria) -->
-            <div
-              id="preview-s2-block"
-              class="border-base-300/60 border-r pr-4 text-center transition-opacity"
-            >
-              <div class="text-base-content/40 text-xxs font-extrabold uppercase tracking-wider">
-                Sección 2
-              </div>
-              <div id="preview-s2" class="text-base-content/80 text-base font-bold mt-0.5 font-mono">
-                100%
-              </div>
-            </div>
-
-            <!-- TOTAL FINAL (Hero Metric - Destacado y prominente) -->
-            <div class="text-center pl-1">
-              <div class="text-base-content/50 text-xxs font-black uppercase tracking-wider">
-                Total Final
-              </div>
-              <div id="preview-total" class="text-success text-3xl sm:text-4xl font-black font-mono tracking-tight leading-none mt-0.5">
-                100%
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Checklist: Channel 1 - Llamadas Wise -->
-        <div
-          id="channel-checklist-wise_call"
-          class="channel-checklist space-y-4"
-        >
-          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <!-- S1: Items (Gestión Llamada) -->
-            <div
-              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
-            >
-              <div
-                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
-              >
-                <span>1. Gestión de la Llamada / Atención</span>
-                <span class="text-base-content/40 text-xxs font-bold"
-                  >Base: 100%</span
-                >
-              </div>
-              <div class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
-                {
-                  wiseCallParams
-                    .filter(
-                      (p) =>
-                        p.section === "items" ||
-                        p.category === "Items" ||
-                        p.category === "Interacción con Usuario",
-                    )
-                    .map((p) => (
-                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
-                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
-                          <input
-                            type="checkbox"
-                            name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                            data-weight={p.weight ?? 0}
-                            data-section="items"
-                            checked
-                          />
-                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
-                            {p.name}
-                            {p.weight ? (
-                              <span class="text-error font-bold ml-1 text-xs">
-                                (-{p.weight}%)
-                              </span>
-                            ) : (
-                              <span class="ml-1 text-xs opacity-50">(n/a)</span>
-                            )}
-                          </span>
-                          <span
-                            class="badge badge-warning badge-xs rule-auto-badge ml-auto hidden shrink-0 font-bold"
-                            data-rule-badge={p.code}
-                          >
-                            Desactivado por regla
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          name={`${p.code}_comment`}
-                          placeholder="Observación o comentario opcional..."
-                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
-                        />
-                      </div>
-                    ))
-                }
-              </div>
-            </div>
-
-            <!-- S2: Ticket (Condicional) -->
-            <div
-              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
-            >
-              <div
-                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
-              >
-                <span>2. TICKET (Gestión y Registro)</span>
-                <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                  <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70"
-                    >¿Se generó ticket?</span
-                  >
-                  <input
-                    type="checkbox"
-                    name="callGeneratedTicket"
-                    id="toggle-call-generated-ticket"
-                    class="toggle toggle-primary toggle-xs"
-                    checked
+                <FormField
+                  id="form-ticket-id"
+                  name="ticketId"
+                  label="Nro Ticket InvGate"
+                  placeholder="Ej: 88442"
+                  size="xs"
+                  inputClass="font-mono font-semibold text-xs"
+                />
+                <div class="col-span-2">
+                  <FormField
+                    id="form-date"
+                    name="date"
+                    label="Fecha de atención"
+                    type="date"
+                    required
+                    size="xs"
+                    inputClass="font-semibold text-xs"
                   />
-                </label>
-              </div>
-              <div
-                id="wise-call-ticket-block"
-                class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin"
-              >
-                {
-                  wiseCallParams
-                    .filter(
-                      (p) =>
-                        p.section === "ticket" ||
-                        p.category === "Ticket" ||
-                        p.category === "Gestión del Ticket",
-                    )
-                    .map((p) => (
-                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
-                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
-                          <input
-                            type="checkbox"
-                            name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                            data-weight={p.weight ?? 0}
-                            data-section="ticket"
-                            checked
-                          />
-                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
-                            {p.name}
-                            {p.weight ? (
-                              <span class="text-error font-bold ml-1 text-xs">
-                                (-{p.weight}%)
-                              </span>
-                            ) : (
-                              <span class="ml-1 text-xs opacity-50">(n/a)</span>
-                            )}
-                          </span>
-                          <span
-                            class="badge badge-warning badge-xs rule-auto-badge ml-auto hidden shrink-0 font-bold"
-                            data-rule-badge={p.code}
-                          >
-                            Desactivado por regla
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          name={`${p.code}_comment`}
-                          placeholder="Observación o comentario opcional..."
-                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
-                        />
-                      </div>
-                    ))
-                }
-              </div>
-              <!-- Estado Vacío Elegante (Sin Ticket) -->
-              <div
-                id="wise-call-ticket-placeholder"
-                class="hidden flex-col items-center justify-center p-8 text-center rounded-xl bg-base-100/50 border border-dashed border-base-300/80 my-2"
-              >
-                <div class="p-3 bg-base-200/80 text-base-content/40 rounded-2xl mb-2.5 shadow-2xs">
-                  <Icon name="boxicons:file" size={28} />
                 </div>
-                <h5 class="text-xs font-bold text-base-content/80 mb-1">Sin Ticket Asociado</h5>
-                <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
-                  No se generó ticket para esta llamada. La evaluación computará únicamente los criterios de la Sección 1.
-                </p>
-                <span class="badge badge-xs badge-neutral mt-3 font-semibold text-xxs px-2 py-1">
-                  Sección 2 Inactiva (0% peso)
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Checklist: Channel 2 - Mail Wise -->
-        <div
-          id="channel-checklist-wise_email"
-          class="channel-checklist hidden space-y-4"
-        >
-          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <!-- S1: Items (Gestión Correo) -->
-            <div
-              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
-            >
-              <div
-                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
-              >
-                <span>1. Gestión General del Correo</span>
-                <span class="text-base-content/40 text-xxs font-bold"
-                  >Base: 100%</span
-                >
-              </div>
-              <div class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
-                {
-                  wiseEmailParams
-                    .filter((p) => p.section === "items")
-                    .map((p) => (
-                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
-                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
-                          <input
-                            type="checkbox"
-                            name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                            data-weight={p.weight ?? 0}
-                            data-section="items"
-                            checked
-                          />
-                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
-                            {p.name}
-                            {p.weight ? (
-                              <span class="text-error font-bold ml-1 text-xs">
-                                (-{p.weight}%)
-                              </span>
-                            ) : (
-                              <span class="ml-1 text-xs opacity-50">(n/a)</span>
-                            )}
-                          </span>
-                          <span
-                            class="badge badge-warning badge-xs rule-auto-badge ml-auto hidden shrink-0 font-bold"
-                            data-rule-badge={p.code}
-                          >
-                            Desactivado por regla
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          name={`${p.code}_comment`}
-                          placeholder="Observación o comentario opcional..."
-                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
-                        />
-                      </div>
-                    ))
-                }
-              </div>
-            </div>
-
-            <!-- S2: Items MDA (Condicional) -->
-            <div
-              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
-            >
-              <div
-                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
-              >
-                <span>2. Items Categoría MDA (Ticket)</span>
-                <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                  <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70"
-                    >¿Se generó ticket?</span
-                  >
-                  <input
-                    type="checkbox"
-                    name="appliesMda"
-                    id="toggle-applies-mda"
-                    class="toggle toggle-primary toggle-xs"
+                <!-- Secondary Metadata -->
+                <div id="meta-duration-container">
+                  <FormField
+                    id="form-duration"
+                    name="duration"
+                    label="Duración"
+                    placeholder="02:15"
+                    size="xs"
+                    inputClass="font-mono font-semibold text-xs"
                   />
-                </label>
-              </div>
-              <div
-                id="wise-email-mda-block"
-                class="hidden max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin"
-              >
-                {
-                  wiseEmailParams
-                    .filter((p) => p.section === "mda")
-                    .map((p) => (
-                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
-                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
-                          <input
-                            type="checkbox"
-                            name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                            data-weight={p.weight ?? 0}
-                            data-section="mda"
-                            checked
-                          />
-                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
-                            {p.name}
-                            {p.weight ? (
-                              <span class="text-error font-bold ml-1 text-xs">
-                                (-{p.weight}%)
-                              </span>
-                            ) : (
-                              <span class="ml-1 text-xs opacity-50">(n/a)</span>
-                            )}
-                          </span>
-                          <span
-                            class="badge badge-warning badge-xs rule-auto-badge ml-auto hidden shrink-0 font-bold"
-                            data-rule-badge={p.code}
-                          >
-                            Desactivado por regla
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          name={`${p.code}_comment`}
-                          placeholder="Observación o comentario opcional..."
-                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
-                        />
-                      </div>
-                    ))
-                }
-              </div>
-              <!-- Estado Vacío Elegante (Sin Ticket) -->
-              <div
-                id="wise-email-mda-placeholder"
-                class="flex flex-col items-center justify-center p-8 text-center rounded-xl bg-base-100/50 border border-dashed border-base-300/80 my-2"
-              >
-                <div class="p-3 bg-base-200/80 text-base-content/40 rounded-2xl mb-2.5 shadow-2xs">
-                  <Icon name="boxicons:envelope-open" size={28} />
                 </div>
-                <h5 class="text-xs font-bold text-base-content/80 mb-1">Sin Ticket Asociado</h5>
-                <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
-                  Este correo no requirió la apertura de ticket MDA. La evaluación computará únicamente los criterios de la Sección 1.
-                </p>
-                <span class="badge badge-xs badge-neutral mt-3 font-semibold text-xxs px-2 py-1">
-                  Sección 2 Inactiva (0% peso)
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Checklist: Channel 3 - Autogestiones (AG) -->
-        <div
-          id="channel-checklist-invgate_ticket"
-          class="channel-checklist hidden space-y-4"
-        >
-          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <!-- S1: Items (Gestión Caso) -->
-            <div
-              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
-            >
-              <div
-                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
-              >
-                <span>1. Gestión General del Caso</span>
-                <span class="text-base-content/40 text-xxs font-bold"
-                  >Base: 100%</span
-                >
-              </div>
-              <div class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin">
-                {
-                  invgateAgParams
-                    .filter((p) => p.section === "items")
-                    .map((p) => (
-                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
-                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
-                          <input
-                            type="checkbox"
-                            name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                            data-weight={p.weight ?? 0}
-                            data-section="items"
-                            checked
-                          />
-                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
-                            {p.name}
-                            {p.weight ? (
-                              <span class="text-error font-bold ml-1 text-xs">
-                                (-{p.weight}%)
-                              </span>
-                            ) : (
-                              <span class="ml-1 text-xs opacity-50">(n/a)</span>
-                            )}
-                          </span>
-                          <span
-                            class="badge badge-warning badge-xs rule-auto-badge ml-auto hidden shrink-0 font-bold"
-                            data-rule-badge={p.code}
-                          >
-                            Desactivado por regla
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          name={`${p.code}_comment`}
-                          placeholder="Observación o comentario opcional..."
-                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
-                        />
-                      </div>
-                    ))
-                }
-              </div>
-            </div>
-
-            <!-- S2: Items MDA (Condicional) -->
-            <div
-              class="bg-base-200/25 border border-base-300/60 rounded-2xl p-4 shadow-2xs"
-            >
-              <div
-                class="border-base-300/60 mb-3 flex items-center justify-between border-b pb-2 text-xs font-black uppercase tracking-wider text-base-content/85"
-              >
-                <span>2. Items Categoría MDA</span>
-                <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                  <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70"
-                    >¿Queda en MDA?</span
-                  >
-                  <input
-                    type="checkbox"
-                    name="staysInMda"
-                    id="toggle-stays-mda"
-                    class="toggle toggle-primary toggle-xs"
-                    checked
+                <div id="meta-ring-container">
+                  <FormField
+                    id="form-ring-time"
+                    name="ringTime"
+                    label="Tiempo ringueo"
+                    placeholder="00:30"
+                    size="xs"
+                    inputClass="font-mono font-semibold text-xs"
                   />
-                </label>
-              </div>
-              <div
-                id="invgate-ag-mda-block"
-                class="max-h-96 space-y-2.5 overflow-y-auto pr-1.5 scrollbar-thin"
-              >
-                {
-                  invgateAgParams
-                    .filter((p) => p.section === "mda")
-                    .map((p) => (
-                      <div class="p-2.5 rounded-xl border border-base-300/40 bg-base-100/50 hover:bg-base-100 hover:border-base-300 hover:shadow-2xs transition-all duration-150">
-                        <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start">
-                          <input
-                            type="checkbox"
-                            name={p.code}
-                            class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                            data-weight={p.weight ?? 0}
-                            data-section="mda"
-                            checked
-                          />
-                          <span class="label-text flex-1 text-xs font-semibold leading-snug text-base-content/90">
-                            {p.name}
-                            {p.weight ? (
-                              <span class="text-error font-bold ml-1 text-xs">
-                                (-{p.weight}%)
-                              </span>
-                            ) : (
-                              <span class="ml-1 text-xs opacity-50">(n/a)</span>
-                            )}
-                          </span>
-                          <span
-                            class="badge badge-warning badge-xs rule-auto-badge ml-auto hidden shrink-0 font-bold"
-                            data-rule-badge={p.code}
-                          >
-                            Desactivado por regla
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          name={`${p.code}_comment`}
-                          placeholder="Observación o comentario opcional..."
-                          class="input input-xs bg-base-200/40 hover:bg-base-100 focus:bg-base-100 border border-base-300/70 focus:border-primary text-xxs mt-2 w-full font-normal placeholder:text-base-content/40 rounded-lg transition-all"
-                        />
-                      </div>
-                    ))
-                }
-              </div>
-              <!-- Estado Vacío Elegante (Derivado fuera de MDA) -->
-              <div
-                id="invgate-ag-mda-placeholder"
-                class="hidden flex-col items-center justify-center p-8 text-center rounded-xl bg-base-100/50 border border-dashed border-base-300/80 my-2"
-              >
-                <div class="p-3 bg-base-200/80 text-base-content/40 rounded-2xl mb-2.5 shadow-2xs">
-                  <Icon name="boxicons:share" size={28} />
                 </div>
-                <h5 class="text-xs font-bold text-base-content/80 mb-1">Caso Derivado Fuera de MDA</h5>
-                <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
-                  El caso no permanece en la mesa MDA. La evaluación computará únicamente los criterios de la Sección 1.
-                </p>
-                <span class="badge badge-xs badge-neutral mt-3 font-semibold text-xxs px-2 py-1">
-                  Sección 2 Inactiva (0% peso)
-                </span>
+                <div id="meta-creation-container" class="hidden">
+                  <FormField
+                    id="form-creation-time"
+                    name="creationTime"
+                    label="Creación"
+                    placeholder="YYYY-MM-DD HH:MM"
+                    size="xs"
+                    inputClass="font-mono font-semibold text-xs"
+                  />
+                </div>
+                <div id="meta-take-container" class="hidden">
+                  <FormField
+                    id="form-take-time"
+                    name="takeTime"
+                    label="Toma / Lectura"
+                    placeholder="YYYY-MM-DD HH:MM"
+                    size="xs"
+                    inputClass="font-mono font-semibold text-xs"
+                  />
+                </div>
+                <div
+                  id="meta-pas-container"
+                  class="hidden col-span-2 flex items-center pt-1"
+                >
+                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                    <input
+                      type="checkbox"
+                      name="isPas"
+                      id="form-is-pas"
+                      class="checkbox checkbox-xs checkbox-primary"
+                    />
+                    <span class="label-text text-xs font-bold">Es caso PAS</span>
+                  </label>
+                </div>
               </div>
             </div>
+
+            <!-- Live Ticket Viewer Panel (InvGate) -->
+            <div
+              id="ticket-viewer-panel"
+              class="bg-base-100 border border-base-200 rounded-xl p-3 shadow-2xs"
+            >
+              <div
+                class="flex cursor-pointer items-center justify-between select-none"
+                id="ticket-viewer-header"
+              >
+                <div class="flex items-center gap-2">
+                  <Icon name="boxicons:receipt" size={17} class="text-secondary" />
+                  <span class="text-base-content text-xs font-bold">
+                    Detalle del ticket InvGate
+                  </span>
+                  <span
+                    id="ticket-viewer-badge"
+                    class="badge badge-xs badge-ghost font-medium"
+                    >Sin ticket cargado</span
+                  >
+                </div>
+                <div
+                  class="text-base-content/60 flex items-center gap-1 text-xs font-medium"
+                >
+                  <span id="ticket-viewer-toggle-text">Mostrar</span>
+                  <Icon
+                    name="boxicons:chevron-down"
+                    size={16}
+                    id="ticket-viewer-chevron"
+                    class="transition-transform duration-200"
+                  />
+                </div>
+              </div>
+
+              <div id="ticket-viewer-content" class="mt-2.5 hidden space-y-2.5">
+                <!-- Título & Validación asistida -->
+                <div class="bg-base-200/40 border border-base-200 rounded-lg p-2.5">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                      <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider block">
+                        Título en InvGate
+                      </span>
+                      <p
+                        id="tv-title"
+                        class="text-base-content text-xs font-semibold leading-relaxed break-words mt-0.5 font-sans"
+                      >
+                        -
+                      </p>
+                    </div>
+                    <div id="tv-title-match-badge" class="shrink-0 flex items-center"></div>
+                  </div>
+                </div>
+
+                <!-- Grid de Metadatos: Tipografía Sans-Serif Limpia -->
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:categories" size={13} class="text-primary/70" />
+                      Categoría
+                    </span>
+                    <p id="tv-category" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:flag" size={13} class="text-warning/70" />
+                      Prioridad
+                    </span>
+                    <p id="tv-priority" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:info-circle" size={13} class="text-info/70" />
+                      Estado
+                    </span>
+                    <p id="tv-status" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:user" size={13} class="text-secondary/70" />
+                      Solicitante
+                    </span>
+                    <p id="tv-creator" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Descripción / Evidencia -->
+                <div class="bg-base-200/40 border border-base-200 rounded-lg p-2.5">
+                  <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider">
+                    Descripción / Evidencia
+                  </span>
+                  <div
+                    id="tv-description"
+                    class="text-base-content/85 mt-1 max-h-36 overflow-y-auto font-sans text-xs leading-relaxed whitespace-pre-wrap scrollbar-thin"
+                  >
+                    -
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
-        </div>
 
-        <!-- Additional Fields: Notes -->
-        <div class="divider my-2"></div>
+          <!-- COLUMNA DERECHA: EVALUACIÓN (Score en Tiempo Real, Criterios, Notas) -->
+          <div id="modal-grid-evaluation" class="lg:col-span-7 space-y-3.5">
+            
+            <!-- Realtime Score Preview Card -->
+            <div
+              class="bg-base-100 border border-base-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl p-3.5 shadow-2xs"
+            >
+              <div class="space-y-0.5">
+                <span class="text-base-content text-xs font-bold flex items-center gap-1.5">
+                  <Icon name="boxicons:bar-chart-big-filled" size={16} class="text-primary" />
+                  Score en tiempo real
+                </span>
+                <p class="text-base-content/50 text-xxs">
+                  Cada criterio no cumplido resta porcentaje sobre la base 100%.
+                </p>
+              </div>
 
-        <div class="w-full">
-          <FormTextarea
-            id="form-notes"
-            name="notes"
-            label="Notas / Observaciones Generales"
-            placeholder="Observaciones de esta auditoría..."
-            rows={3}
-            textareaClass="textarea-sm font-bold"
-          />
+              <div class="flex items-center gap-4 sm:gap-5 self-end sm:self-auto">
+                <!-- Sección 1 -->
+                <div class="border-base-200 border-r pr-3.5 text-center">
+                  <div class="text-base-content/50 text-xxs font-bold uppercase tracking-wider">
+                    Sección 1
+                  </div>
+                  <div id="preview-s1" class="text-base-content/90 text-sm font-bold mt-0.5 font-mono">
+                    100%
+                  </div>
+                </div>
+
+                <!-- Sección 2 -->
+                <div
+                  id="preview-s2-block"
+                  class="border-base-200 border-r pr-3.5 text-center transition-opacity"
+                >
+                  <div class="text-base-content/50 text-xxs font-bold uppercase tracking-wider">
+                    Sección 2
+                  </div>
+                  <div id="preview-s2" class="text-base-content/90 text-sm font-bold mt-0.5 font-mono">
+                    100%
+                  </div>
+                </div>
+
+                <!-- TOTAL FINAL -->
+                <div class="text-center pl-1">
+                  <div class="text-base-content/60 text-xxs font-black uppercase tracking-wider">
+                    Total final
+                  </div>
+                  <div id="preview-total" class="text-success text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none mt-0.5">
+                    100%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Checklist: Canal 1 - Llamadas Wise -->
+            <div
+              id="channel-checklist-wise_call"
+              class="channel-checklist space-y-3"
+            >
+              <!-- S1: Gestión de la llamada -->
+              <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
+                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                  <span>1. Gestión de la llamada / atención</span>
+                  <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                </div>
+                <div class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                  {
+                    wiseCallParams
+                      .filter(
+                        (p) =>
+                          p.section === "items" ||
+                          p.category === "Items" ||
+                          p.category === "Interacción con Usuario",
+                      )
+                      .map((p) => (
+                        <div class="checklist-item py-2 px-1 transition-colors">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                name={p.code}
+                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                                data-weight={p.weight ?? 0}
+                                data-section="items"
+                                checked
+                              />
+                              <span class="label-text text-xs leading-snug text-base-content font-medium">
+                                {p.name}
+                                {p.weight ? (
+                                  <span class="text-error font-semibold ml-1 text-xs">
+                                    (-{p.weight}%)
+                                  </span>
+                                ) : (
+                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                                )}
+                              </span>
+                            </label>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <span
+                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                                data-rule-badge={p.code}
+                              >
+                                Regla
+                              </span>
+                              <button
+                                type="button"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                data-action="toggle-obs"
+                                title="Agregar nota"
+                              >
+                                <Icon name="boxicons:message" size={13} />
+                                <span class="text-3xs hidden sm:inline">Nota</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                            <input
+                              type="text"
+                              name={`${p.code}_comment`}
+                              placeholder="Motivo de penalización u observación..."
+                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+
+              <!-- S2: Ticket (Condicional) -->
+              <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
+                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                  <span>2. Ticket (Gestión y registro)</span>
+                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                    <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                      ¿Se generó ticket?
+                    </span>
+                    <input
+                      type="checkbox"
+                      name="callGeneratedTicket"
+                      id="toggle-call-generated-ticket"
+                      class="toggle toggle-primary toggle-xs"
+                      checked
+                    />
+                  </label>
+                </div>
+                <div
+                  id="wise-call-ticket-block"
+                  class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                >
+                  {
+                    wiseCallParams
+                      .filter(
+                        (p) =>
+                          p.section === "ticket" ||
+                          p.category === "Ticket" ||
+                          p.category === "Gestión del Ticket",
+                      )
+                      .map((p) => (
+                        <div class="checklist-item py-2 px-1 transition-colors">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                name={p.code}
+                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                                data-weight={p.weight ?? 0}
+                                data-section="ticket"
+                                checked
+                              />
+                              <span class="label-text text-xs leading-snug text-base-content font-medium">
+                                {p.name}
+                                {p.weight ? (
+                                  <span class="text-error font-semibold ml-1 text-xs">
+                                    (-{p.weight}%)
+                                  </span>
+                                ) : (
+                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                                )}
+                              </span>
+                            </label>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <span
+                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                                data-rule-badge={p.code}
+                              >
+                                Regla
+                              </span>
+                              <button
+                                type="button"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                data-action="toggle-obs"
+                                title="Agregar nota"
+                              >
+                                <Icon name="boxicons:message" size={13} />
+                                <span class="text-3xs hidden sm:inline">Nota</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                            <input
+                              type="text"
+                              name={`${p.code}_comment`}
+                              placeholder="Motivo de penalización u observación..."
+                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+                <!-- Estado Vacío Elegante (Sin Ticket) -->
+                <div
+                  id="wise-call-ticket-placeholder"
+                  class="hidden flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
+                >
+                  <div class="p-2.5 bg-base-200 text-base-content/40 rounded-xl mb-2">
+                    <Icon name="boxicons:file" size={24} />
+                  </div>
+                  <h5 class="text-xs font-bold text-base-content mb-0.5">Sin ticket asociado</h5>
+                  <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+                    No se generó ticket para esta llamada. La evaluación computará únicamente la Sección 1.
+                  </p>
+                  <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
+                    Sección 2 excluida
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Checklist: Canal 2 - Mail Wise -->
+            <div
+              id="channel-checklist-wise_email"
+              class="channel-checklist hidden space-y-3"
+            >
+              <!-- S1: Gestión Correo -->
+              <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
+                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                  <span>1. Gestión general del correo</span>
+                  <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                </div>
+                <div class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                  {
+                    wiseEmailParams
+                      .filter((p) => p.section === "items")
+                      .map((p) => (
+                        <div class="checklist-item py-2 px-1 transition-colors">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                name={p.code}
+                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                                data-weight={p.weight ?? 0}
+                                data-section="items"
+                                checked
+                              />
+                              <span class="label-text text-xs leading-snug text-base-content font-medium">
+                                {p.name}
+                                {p.weight ? (
+                                  <span class="text-error font-semibold ml-1 text-xs">
+                                    (-{p.weight}%)
+                                  </span>
+                                ) : (
+                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                                )}
+                              </span>
+                            </label>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <span
+                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                                data-rule-badge={p.code}
+                              >
+                                Regla
+                              </span>
+                              <button
+                                type="button"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                data-action="toggle-obs"
+                                title="Agregar nota"
+                              >
+                                <Icon name="boxicons:message" size={13} />
+                                <span class="text-3xs hidden sm:inline">Nota</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                            <input
+                              type="text"
+                              name={`${p.code}_comment`}
+                              placeholder="Motivo de penalización u observación..."
+                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+
+              <!-- S2: Items MDA (Condicional) -->
+              <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
+                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                  <span>2. Items categoría MDA (Ticket)</span>
+                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                    <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                      ¿Se generó ticket?
+                    </span>
+                    <input
+                      type="checkbox"
+                      name="appliesMda"
+                      id="toggle-applies-mda"
+                      class="toggle toggle-primary toggle-xs"
+                    />
+                  </label>
+                </div>
+                <div
+                  id="wise-email-mda-block"
+                  class="hidden space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                >
+                  {
+                    wiseEmailParams
+                      .filter((p) => p.section === "mda")
+                      .map((p) => (
+                        <div class="checklist-item py-2 px-1 transition-colors">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                name={p.code}
+                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                                data-weight={p.weight ?? 0}
+                                data-section="mda"
+                                checked
+                              />
+                              <span class="label-text text-xs leading-snug text-base-content font-medium">
+                                {p.name}
+                                {p.weight ? (
+                                  <span class="text-error font-semibold ml-1 text-xs">
+                                    (-{p.weight}%)
+                                  </span>
+                                ) : (
+                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                                )}
+                              </span>
+                            </label>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <span
+                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                                data-rule-badge={p.code}
+                              >
+                                Regla
+                              </span>
+                              <button
+                                type="button"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                data-action="toggle-obs"
+                                title="Agregar nota"
+                              >
+                                <Icon name="boxicons:message" size={13} />
+                                <span class="text-3xs hidden sm:inline">Nota</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                            <input
+                              type="text"
+                              name={`${p.code}_comment`}
+                              placeholder="Motivo de penalización u observación..."
+                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+                <!-- Estado Vacío Elegante (Sin Ticket) -->
+                <div
+                  id="wise-email-mda-placeholder"
+                  class="flex flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
+                >
+                  <div class="p-2.5 bg-base-200 text-base-content/40 rounded-xl mb-2">
+                    <Icon name="boxicons:envelope-open" size={24} />
+                  </div>
+                  <h5 class="text-xs font-bold text-base-content mb-0.5">Sin ticket asociado</h5>
+                  <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+                    Este correo no requirió ticket MDA. La evaluación computará únicamente la Sección 1.
+                  </p>
+                  <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
+                    Sección 2 excluida
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Checklist: Canal 3 - Autogestiones -->
+            <div
+              id="channel-checklist-invgate_ticket"
+              class="channel-checklist hidden space-y-3"
+            >
+              <!-- S1: Gestión Caso -->
+              <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
+                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                  <span>1. Gestión general del caso</span>
+                  <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                </div>
+                <div class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                  {
+                    invgateAgParams
+                      .filter((p) => p.section === "items")
+                      .map((p) => (
+                        <div class="checklist-item py-2 px-1 transition-colors">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                name={p.code}
+                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                                data-weight={p.weight ?? 0}
+                                data-section="items"
+                                checked
+                              />
+                              <span class="label-text text-xs leading-snug text-base-content font-medium">
+                                {p.name}
+                                {p.weight ? (
+                                  <span class="text-error font-semibold ml-1 text-xs">
+                                    (-{p.weight}%)
+                                  </span>
+                                ) : (
+                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                                )}
+                              </span>
+                            </label>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <span
+                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                                data-rule-badge={p.code}
+                              >
+                                Regla
+                              </span>
+                              <button
+                                type="button"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                data-action="toggle-obs"
+                                title="Agregar nota"
+                              >
+                                <Icon name="boxicons:message" size={13} />
+                                <span class="text-3xs hidden sm:inline">Nota</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                            <input
+                              type="text"
+                              name={`${p.code}_comment`}
+                              placeholder="Motivo de penalización u observación..."
+                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+
+              <!-- S2: Items MDA -->
+              <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
+                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                  <span>2. Items categoría MDA</span>
+                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                    <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                      ¿Queda en MDA?
+                    </span>
+                    <input
+                      type="checkbox"
+                      name="staysInMda"
+                      id="toggle-stays-mda"
+                      class="toggle toggle-primary toggle-xs"
+                      checked
+                    />
+                  </label>
+                </div>
+                <div
+                  id="invgate-ag-mda-block"
+                  class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                >
+                  {
+                    invgateAgParams
+                      .filter((p) => p.section === "mda")
+                      .map((p) => (
+                        <div class="checklist-item py-2 px-1 transition-colors">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                name={p.code}
+                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                                data-weight={p.weight ?? 0}
+                                data-section="mda"
+                                checked
+                              />
+                              <span class="label-text text-xs leading-snug text-base-content font-medium">
+                                {p.name}
+                                {p.weight ? (
+                                  <span class="text-error font-semibold ml-1 text-xs">
+                                    (-{p.weight}%)
+                                  </span>
+                                ) : (
+                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                                )}
+                              </span>
+                            </label>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <span
+                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                                data-rule-badge={p.code}
+                              >
+                                Regla
+                              </span>
+                              <button
+                                type="button"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                data-action="toggle-obs"
+                                title="Agregar nota"
+                              >
+                                <Icon name="boxicons:message" size={13} />
+                                <span class="text-3xs hidden sm:inline">Nota</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                            <input
+                              type="text"
+                              name={`${p.code}_comment`}
+                              placeholder="Motivo de penalización u observación..."
+                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+                <!-- Estado Vacío Elegante (Derivado fuera de MDA) -->
+                <div
+                  id="invgate-ag-mda-placeholder"
+                  class="hidden flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
+                >
+                  <div class="p-2.5 bg-base-200 text-base-content/40 rounded-xl mb-2">
+                    <Icon name="boxicons:share" size={24} />
+                  </div>
+                  <h5 class="text-xs font-bold text-base-content mb-0.5">Caso derivado fuera de MDA</h5>
+                  <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+                    El caso no permanece en la mesa MDA. La evaluación computará únicamente la Sección 1.
+                  </p>
+                  <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
+                    Sección 2 excluida
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notas / Observaciones Generales -->
+            <div class="bg-base-100 border border-base-200 rounded-xl p-3 shadow-2xs">
+              <FormTextarea
+                id="form-notes"
+                name="notes"
+                label="Notas y observaciones generales"
+                placeholder="Observaciones de esta auditoría..."
+                rows={2}
+                textareaClass="textarea-xs font-medium"
+              />
+            </div>
+
+          </div>
         </div>
       </form>
     </div>
   </Fragment>
 
   <Fragment slot="actions">
-    <div class="modal-action mt-4 flex w-full items-center justify-between border-t border-base-300/60 pt-3">
+    <div class="modal-action mt-3 flex w-full items-center justify-between border-t border-base-200 pt-3">
       <div>
         <button
           type="button"
           id="btn-delete-audit"
-          class="btn btn-sm btn-error btn-outline hidden text-xs font-bold uppercase gap-1.5 transition-all hover:scale-98"
+          class="btn btn-sm btn-error btn-outline hidden text-xs font-semibold gap-1.5 transition-all hover:scale-98"
         >
           <Icon name="boxicons:trash" size={15} />
           <span>Eliminar</span>
         </button>
       </div>
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-2">
         <button
           type="button"
           id="btn-close-modal"
-          class="btn btn-sm btn-ghost text-xs font-bold uppercase gap-1.5 hover:bg-base-200/80 transition-all hover:scale-98"
+          class="btn btn-sm btn-ghost text-xs font-semibold gap-1.5 hover:bg-base-200/80 transition-all hover:scale-98"
         >
-          <Icon name="boxicons:x" size={16} />
+          <Icon name="boxicons:x" size={15} />
           <span>Cancelar</span>
         </button>
         <button
           type="submit"
           form="audit-form"
           id="btn-submit-audit"
-          class="btn btn-sm btn-primary text-xs font-bold uppercase gap-1.5 shadow-xs transition-all hover:scale-98 active:scale-95"
+          class="btn btn-sm btn-primary text-xs font-bold gap-1.5 shadow-xs transition-all hover:scale-98 active:scale-95"
         >
-          <Icon name="boxicons:check" size={16} />
-          <span>Guardar Auditoría</span>
+          <Icon name="boxicons:check" size={15} />
+          <span>Guardar auditoría</span>
         </button>
       </div>
     </div>
@@ -1103,18 +1117,18 @@ const invgateAgParams = allParameters.filter(
 
     function setActiveSearchTab(target: "wise" | "invgate") {
       if (target === "wise") {
-        tabSearchWise?.classList.add("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchWise?.classList.remove("font-semibold", "text-base-content/70");
-        tabSearchInvgate?.classList.remove("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchInvgate?.classList.add("font-semibold", "text-base-content/70");
+        tabSearchWise?.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.remove("font-medium", "text-base-content/70");
+        tabSearchInvgate?.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.add("font-medium", "text-base-content/70");
 
         wiseSearchContainer?.classList.remove("hidden");
         invgateSearchContainer?.classList.add("hidden");
       } else {
-        tabSearchInvgate?.classList.add("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchInvgate?.classList.remove("font-semibold", "text-base-content/70");
-        tabSearchWise?.classList.remove("btn-active", "bg-base-200/90", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchWise?.classList.add("font-semibold", "text-base-content/70");
+        tabSearchInvgate?.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.remove("font-medium", "text-base-content/70");
+        tabSearchWise?.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.add("font-medium", "text-base-content/70");
 
         invgateSearchContainer?.classList.remove("hidden");
         wiseSearchContainer?.classList.add("hidden");
@@ -1213,7 +1227,7 @@ const invgateAgParams = allParameters.filter(
       if (tvTitleMatchBadge) {
         if (match.matched) {
           tvTitleMatchBadge.innerHTML = `
-            <span class="badge badge-sm badge-success font-bold gap-1 text-[11px]" title="Coincide con: ${match.matchedTitle}">
+            <span class="badge badge-xs badge-success font-semibold gap-1 text-[11px]" title="Coincide con: ${match.matchedTitle}">
               <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               Título Homologado
             </span>
@@ -1222,7 +1236,7 @@ const invgateAgParams = allParameters.filter(
           setParamRuleBadge(checkboxName, false);
         } else {
           tvTitleMatchBadge.innerHTML = `
-            <span class="badge badge-sm badge-warning font-bold text-[11px]" title="No coincide con catálogo de títulos">
+            <span class="badge badge-xs badge-warning font-semibold text-[11px]" title="No coincide con catálogo de títulos">
               No Homologado
             </span>
           `;
@@ -1272,7 +1286,7 @@ const invgateAgParams = allParameters.filter(
       evaluateTicketTitle(title);
     }
 
-    // Resetear visor de ticket (exclusivo InvGate)
+    // Resetear visor de ticket
     function resetTicketViewer() {
       if (tvTitle) tvTitle.textContent = "-";
       if (tvCategory) tvCategory.textContent = "-";
@@ -1283,7 +1297,7 @@ const invgateAgParams = allParameters.filter(
       if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
       if (ticketViewerBadge) {
         ticketViewerBadge.textContent = "Sin ticket cargado";
-        ticketViewerBadge.className = "badge badge-xs badge-ghost font-bold";
+        ticketViewerBadge.className = "badge badge-xs badge-ghost font-medium";
       }
       if (ticketViewerContent) ticketViewerContent.classList.add("hidden");
       if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Mostrar";
@@ -1291,7 +1305,7 @@ const invgateAgParams = allParameters.filter(
       clearAllRuleBadges();
     }
 
-    // Resetear reproductor de audio independiente (Wise CX)
+    // Resetear reproductor de audio
     function resetAudioPlayer() {
       if (tvAudioContainer) tvAudioContainer.classList.add("hidden");
       if (tvAudioPlayer) {
@@ -1310,10 +1324,10 @@ const invgateAgParams = allParameters.filter(
 
         channelButtons.forEach((b) => {
           b.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-          b.classList.add("font-semibold", "text-base-content/70");
+          b.classList.add("font-medium", "text-base-content/70");
         });
         btn.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-        btn.classList.remove("font-semibold", "text-base-content/70");
+        btn.classList.remove("font-medium", "text-base-content/70");
         if (formChannelType) formChannelType.value = channel;
 
         // Toggle checklists
@@ -1360,7 +1374,7 @@ const invgateAgParams = allParameters.filter(
           if (tabSearchWise) tabSearchWise.classList.remove("hidden");
           setActiveSearchTab("wise");
           if (btnFetchInvgateLabel)
-            btnFetchInvgateLabel.textContent = "Buscar Ticket InvGate";
+            btnFetchInvgateLabel.textContent = "Buscar ticket";
         }
 
         if (channel === "wise_call") {
@@ -1384,7 +1398,7 @@ const invgateAgParams = allParameters.filter(
       });
     });
 
-    // Feedback sutil con auto-dismiss
+    // Feedback con auto-dismiss
     let wiseFeedbackTimeout: any = null;
     let invgateFeedbackTimeout: any = null;
 
@@ -1406,7 +1420,7 @@ const invgateAgParams = allParameters.filter(
             ? "border-warning/30 bg-warning/10 text-warning"
             : "border-error/30 bg-error/10 text-error";
 
-      el.className = `mt-2 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold shadow-2xs transition-all duration-200 ${typeClasses}`;
+      el.className = `mt-2 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold shadow-2xs transition-all duration-200 ${typeClasses}`;
       el.classList.remove("hidden");
 
       const timeout = setTimeout(() => {
@@ -1442,7 +1456,7 @@ const invgateAgParams = allParameters.filter(
         const originalHtml = btnFetchWise.innerHTML;
         btnFetchWise.disabled = true;
         btnFetchWise.innerHTML =
-          '<span class="loading loading-spinner loading-xs"></span> Consultando Wise...';
+          '<span class="loading loading-spinner loading-xs"></span>';
         if (wiseFeedbackAlert) wiseFeedbackAlert.classList.add("hidden");
 
         try {
@@ -1498,8 +1512,7 @@ const invgateAgParams = allParameters.filter(
             formTicketId.value = d.rawDetails.incidentId.toString();
           }
 
-          // Al buscar caso en Wise CX NO se carga en Detalle del Ticket (exclusivo InvGate).
-          // El reproductor de audio independiente se muestra si hay grabación:
+          // Reproductor de audio independiente
           if (d.recordingUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
             const caseId = d.caseNumber || "llamada";
             const downloadUrl = `${cleanBase}api/calidad/download-audio?url=${encodeURIComponent(d.recordingUrl)}&filename=grabacion-caso-${encodeURIComponent(caseId)}.mp3&download=1`;
@@ -1517,7 +1530,7 @@ const invgateAgParams = allParameters.filter(
 
           showFeedbackMessage(
             wiseFeedbackAlert,
-            `✓ <strong>Caso Wise obtenido:</strong> ${d.operator ? `Operador: <em>${d.operator}</em>` : ""} ${d.duration ? `| Duración: ${d.duration}` : ""} ${d.recordingUrl ? `| <span class="badge badge-xs badge-info font-bold">Audio Disponible</span>` : ""}`,
+            `✓ Caso obtenido: ${d.operator || ""} ${d.duration ? `(${d.duration})` : ""}`,
             "success",
             true,
           );
@@ -1560,7 +1573,7 @@ const invgateAgParams = allParameters.filter(
         const originalHtml = btnFetchInvgate.innerHTML;
         btnFetchInvgate.disabled = true;
         btnFetchInvgate.innerHTML =
-          '<span class="loading loading-spinner loading-xs"></span> Consultando InvGate...';
+          '<span class="loading loading-spinner loading-xs"></span>';
         if (invgateFeedbackAlert) invgateFeedbackAlert.classList.add("hidden");
 
         try {
@@ -1616,7 +1629,7 @@ const invgateAgParams = allParameters.filter(
 
           showFeedbackMessage(
             invgateFeedbackAlert,
-            `✓ <strong>Ticket InvGate cargado:</strong> ${d.title ? `Título: <em>${d.title}</em>` : ""} ${d.isPas ? "| [PAS]" : ""}`,
+            `✓ Ticket #${d.caseNumber} cargado ${d.isPas ? "[PAS]" : ""}`,
             "success",
             false,
           );
@@ -1681,6 +1694,71 @@ const invgateAgParams = allParameters.filter(
       recalculateScores();
     });
 
+    // Revelado Progresivo de Observaciones / Notas
+    function toggleCriterionObservation(btn: HTMLElement) {
+      const item = btn.closest(".checklist-item");
+      if (!item) return;
+      const wrapper = item.querySelector(".criteria-obs-wrapper");
+      if (!wrapper) return;
+      const isHidden = wrapper.classList.contains("hidden");
+      if (isHidden) {
+        wrapper.classList.remove("hidden");
+        const inp = wrapper.querySelector("input");
+        inp?.focus();
+      } else {
+        wrapper.classList.add("hidden");
+      }
+    }
+
+    document.querySelectorAll('[data-action="toggle-obs"]').forEach((el) => {
+      el.addEventListener("click", () => {
+        toggleCriterionObservation(el as HTMLElement);
+      });
+    });
+
+    // Checkbox change handler: muestra u oculta observaciones según necesidad
+    document.querySelectorAll(".audit-checkbox").forEach((el) => {
+      const cb = el as HTMLInputElement;
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          setParamRuleBadge(cb.name, false);
+        }
+
+        const item = cb.closest(".checklist-item");
+        const wrapper = item?.querySelector(".criteria-obs-wrapper");
+        const inp = wrapper?.querySelector<HTMLInputElement>("input");
+
+        if (!cb.checked) {
+          // Desmarcado (penalización): revelar automáticamente para documentar
+          wrapper?.classList.remove("hidden");
+          inp?.focus();
+        } else {
+          // Si vuelve a marcarse y no hay comentario, ocultar
+          if (inp && !inp.value.trim()) {
+            wrapper?.classList.add("hidden");
+          }
+        }
+
+        recalculateScores();
+      });
+    });
+
+    // Función para refrescar visibilidad de notas en modo edición
+    function refreshAuditCommentsVisibility() {
+      document.querySelectorAll(".checklist-item").forEach((item) => {
+        const cb = item.querySelector<HTMLInputElement>(".audit-checkbox");
+        const inp = item.querySelector<HTMLInputElement>("input[name$='_comment']");
+        const wrapper = item.querySelector(".criteria-obs-wrapper");
+        if (!wrapper) return;
+
+        if ((cb && !cb.checked) || (inp && inp.value.trim() !== "")) {
+          wrapper.classList.remove("hidden");
+        } else {
+          wrapper.classList.add("hidden");
+        }
+      });
+    }
+
     function recalculateScores() {
       const channel = formChannelType?.value || "wise_call";
       const checklist = document.getElementById(`channel-checklist-${channel}`);
@@ -1738,25 +1816,24 @@ const invgateAgParams = allParameters.filter(
       const pTotal = document.getElementById("preview-total");
 
       if (pS1) pS1.textContent = `${s1Score}%`;
-      if (pS2) pS2.textContent = `${s2Score}%`;
+      
+      if (pS2) {
+        if (!hasSection2) {
+          pS2.textContent = "N/A";
+        } else {
+          pS2.textContent = `${s2Score}%`;
+        }
+      }
       if (pS2Block) pS2Block.style.opacity = hasSection2 ? "1" : "0.3";
+
       if (pTotal) {
         pTotal.textContent = `${total}%`;
-        pTotal.className = `text-3xl sm:text-4xl font-black font-mono tracking-tight leading-none mt-0.5 ${total >= 90 ? "text-success" : total >= 80 ? "text-warning" : "text-error"}`;
+        pTotal.className = `text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none mt-0.5 ${total >= 90 ? "text-success" : total >= 80 ? "text-warning" : "text-error"}`;
       }
     }
 
-    document.querySelectorAll(".audit-checkbox").forEach((el) => {
-      const cb = el as HTMLInputElement;
-      cb.addEventListener("change", () => {
-        if (cb.checked) {
-          setParamRuleBadge(cb.name, false);
-        }
-        recalculateScores();
-      });
-    });
-
     (window as any).recalculateAuditScores = recalculateScores;
+    (window as any).refreshAuditCommentsVisibility = refreshAuditCommentsVisibility;
     (window as any).resetTicketViewer = () => {
       resetTicketViewer();
       resetAudioPlayer();
@@ -1787,8 +1864,8 @@ const invgateAgParams = allParameters.filter(
     scrollbar-color: oklch(from var(--color-base-content) l c h / 0.15) transparent;
   }
   #audit-modal .scrollbar-thin::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
   }
   #audit-modal .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
@@ -1801,4 +1878,3 @@ const invgateAgParams = allParameters.filter(
     background-color: oklch(from var(--color-base-content) l c h / 0.3);
   }
 </style>
-

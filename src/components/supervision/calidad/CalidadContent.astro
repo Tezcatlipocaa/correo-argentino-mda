@@ -1883,6 +1883,7 @@ const cleanBase = getCleanBase();
         if (btnDeleteAudit) btnDeleteAudit.classList.add("hidden");
       }
 
+      (window as any).refreshAuditCommentsVisibility?.();
       (window as any).recalculateAuditScores?.();
       auditModal.showModal();
     };
