@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { Resvg } from "@resvg/resvg-js";
 import { jsonError, sanitizeError } from "@lib/apiResponse";
-import { getInternalOrigin } from "@lib/internalOrigin";
+import { getInternalFetchHeaders, getInternalOrigin } from "@lib/internalOrigin";
 import { requireReadAccess } from "@lib/rbac-middleware";
 import { buildCronogramaSvg } from "@components/cronograma/lib/exportSvg";
 import type { CronogramaPayload } from "@components/cronograma/lib/api";
@@ -25,9 +25,9 @@ function monthDates(month: string): string[] {
   );
 }
 
-async function fetchUpstream(month: string, cookie: string): Promise<Response> {
+async function fetchUpstream(month: string, request: Request): Promise<Response> {
   const path = `/api/cronograma?month=${month}`;
-  const init = { headers: { cookie } };
+  const init = { headers: getInternalFetchHeaders(request) };
   try {
     return await fetch(new URL(path, getInternalOrigin()), init);
   } catch (error) {
@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ url, locals, request }) => {
   }
 
   try {
-    const upstream = await fetchUpstream(month, request.headers.get("cookie") ?? "");
+    const upstream = await fetchUpstream(month, request);
     if (!upstream.ok) {
       return jsonError("No se pudieron cargar los datos del cronograma.", 502);
     }

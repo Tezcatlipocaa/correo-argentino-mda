@@ -1,5 +1,9 @@
 import "dotenv/config";
 import { expect, test, type Page } from "@playwright/test";
+import { eq } from "drizzle-orm";
+import { db } from "../../src/db/index";
+import { sessions } from "../../src/db/schema";
+import { computeFingerprint } from "../../src/lib/sessionFingerprint";
 import { createTestUserAndSession, cleanupTestUser, setSessionCookie } from "../helpers/auth";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -179,5 +183,25 @@ test.describe("cronograma — export PNG server-side", () => {
 
     await check("guardia", "#copy-rotation-image-btn", "#switch-to-groups-btn", "#saturday-rotation-card");
     await check("horas-extras", "#copy-overtime-image-btn", "#switch-to-overtime-btn", "#overtime-card");
+  });
+
+  test("exportar la imagen no invalida la sesión con fingerprint de User-Agent", async ({ page }) => {
+    const userAgent = await page.evaluate(() => navigator.userAgent);
+    await db
+      .update(sessions)
+      .set({ fingerprint: computeFingerprint(userAgent) })
+      .where(eq(sessions.id, sessionId));
+
+    await page.goto("/supervision/cronograma");
+    await page.waitForSelector("#monthly-table");
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.click("#export-image-btn");
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^cronograma.*\.png$/);
+
+    await page.goto("/supervision/cronograma");
+    await expect(page.locator("#monthly-table")).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe("/supervision/cronograma");
   });
 });

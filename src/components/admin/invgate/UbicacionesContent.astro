@@ -14,7 +14,7 @@ import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 import { db } from "@db/index";
 import { provinces } from "@db/schema";
 import { officeTypeLabelByType } from "@lib/officeHelpers";
-import { getInternalOrigin } from "@lib/internalOrigin";
+import { getInternalFetchHeaders, getInternalOrigin } from "@lib/internalOrigin";
 
 const allProvinces = await db.select().from(provinces).orderBy(provinces.name);
 
@@ -25,7 +25,6 @@ const q = searchParams.get("q") ?? "";
 const sync = searchParams.get("sync") === "true";
 
 // Call API locally
-const cookie = Astro.request.headers.get("cookie") || "";
 const apiUrl = new URL("/api/invgate/locations", getInternalOrigin());
 apiUrl.searchParams.set("page", page.toString());
 apiUrl.searchParams.set("filter", filter);
@@ -39,9 +38,7 @@ let apiError = "";
 
 try {
   const res = await fetch(apiUrl.toString(), {
-    headers: {
-      cookie,
-    },
+    headers: getInternalFetchHeaders(Astro.request),
   });
   if (res.ok) {
     apiData = await res.json();
