@@ -25,6 +25,6 @@
 - [x] **Track: Reformulación y Modernización UI/UX del Modal de Auditoría de Calidad**
   *Link: [./tracks/calidad_modal_ui_20261002/index.md](./tracks/calidad_modal_ui_20261002/index.md)*
 ---
-- [~] **Track: Refinamiento Visual y Ergonómico del Modal de Auditoría de Calidad**
+- [x] **Track: Refinamiento Visual y Ergonómico del Modal de Auditoría de Calidad**
   *Link: [./tracks/calidad_modal_refine_20261002/index.md](./tracks/calidad_modal_refine_20261002/index.md)*
 
