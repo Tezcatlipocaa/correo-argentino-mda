@@ -1,0 +1,875 @@
+// tests/admin/usuarios-deactivate.spec.ts
+import "dotenv/config";
+import { test, expect } from "@playwright/test";
+import { db } from "../../src/db/index";
+import {
+  users,
+  sessions,
+  agents,
+  cubics,
+  cubicAssignments,
+} from "../../src/db/schema";
+import { eq } from "drizzle-orm";
+import { createHmac } from "crypto";
+import bcrypt from "bcryptjs";
+
+const SECRET_KEY =
+  process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
+function sign(sessionId: string): string {
+  const sig = createHmac("sha256", SECRET_KEY)
+    .update(sessionId)
+    .digest("base64url");
+  return `${sessionId}.${sig}`;
+}
+
+test.describe("Baja de usuarios (soft-delete)", () => {
+  let adminCookie: string;
+  let adminSession: string;
+  let adminId: number;
+
+  test.beforeAll(async () => {
+    const ts = Date.now();
+    adminSession = `sess_deact_admin_${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({ username: `admin_deact_${ts}`, password: "x", role: "admin" })
+      .returning({ id: users.id });
+    adminId = u.id;
+    await db.insert(sessions).values({
+      id: adminSession,
+      userId: adminId,
+      expiresAt: Date.now() + 86400000,
+    });
+    adminCookie = sign(adminSession);
+  });
+
+  test.afterAll(async () => {
+    await db.delete(sessions).where(eq(sessions.id, adminSession));
+    await db.delete(users).where(eq(users.id, adminId));
+  });
+
+  test("no puede desactivarse a sí mismo", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const response = await page.request.post("/admin/usuarios", {
+      headers: { Accept: "application/json" },
+      form: { action: "deactivate-user", userId: String(adminId) },
+    });
+    expect(response.status()).toBe(400);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain("No podés desactivar tu propio usuario");
+
+    const [row] = await db
+      .select({ active: users.active })
+      .from(users)
+      .where(eq(users.id, adminId));
+    expect(row.active).toBe(true);
+  });
+
+  test("un admin puede desactivar a otro admin", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const [secondAdmin] = await db
+      .insert(users)
+      .values({
+        username: `admin_deact_target_${ts}`,
+        password: "x",
+        role: "admin",
+        active: true,
+      })
+      .returning({ id: users.id });
+
+    try {
+      const response = await page.request.post("/admin/usuarios", {
+        headers: { Accept: "application/json" },
+        form: {
+          action: "deactivate-user",
+          userId: String(secondAdmin.id),
+        },
+      });
+      expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.success).toBe(true);
+
+      const [row] = await db
+        .select({
+          active: users.active,
+          disabledAt: users.disabledAt,
+          disabledBy: users.disabledBy,
+        })
+        .from(users)
+        .where(eq(users.id, secondAdmin.id));
+      expect(row.active).toBe(false);
+      expect(row.disabledAt).not.toBeNull();
+      expect(row.disabledBy).toBe(adminId);
+
+      const [actor] = await db
+        .select({ active: users.active })
+        .from(users)
+        .where(eq(users.id, adminId));
+      expect(actor.active).toBe(true);
+    } finally {
+      await db.delete(sessions).where(eq(sessions.userId, secondAdmin.id));
+      await db.delete(users).where(eq(users.id, secondAdmin.id));
+    }
+  });
+
+  test("reactiva un usuario desactivado", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const [target] = await db
+      .insert(users)
+      .values({
+        username: `deact_target_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+        disabledAt: new Date(),
+      })
+      .returning({ id: users.id });
+
+    const response = await page.request.post("/admin/usuarios", {
+      headers: { Accept: "application/json" },
+      form: { action: "reactivate-user", userId: String(target.id) },
+    });
+    expect(response.status()).toBe(200);
+
+    const [row] = await db
+      .select({ active: users.active, disabledAt: users.disabledAt })
+      .from(users)
+      .where(eq(users.id, target.id));
+    expect(row.active).toBe(true);
+    expect(row.disabledAt).toBeNull();
+
+    await db.delete(users).where(eq(users.id, target.id));
+  });
+
+  test("un no-admin no puede desactivar usuarios", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    const ts = Date.now();
+    const sessionId = `sess_agent_${ts}`;
+    const [agentUser] = await db
+      .insert(users)
+      .values({ username: `plain_${ts}`, password: "x", role: "agent" })
+      .returning({ id: users.id });
+    try {
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: agentUser.id,
+        expiresAt: Date.now() + 86400000,
+      });
+      await page.context().addCookies([
+        {
+          name: "session_id",
+          value: sign(sessionId),
+          domain: new URL(baseURL).hostname,
+          path: "/",
+        },
+      ]);
+      const response = await page.request.post("/admin/usuarios", {
+        headers: { Accept: "application/json" },
+        form: { action: "deactivate-user", userId: String(adminId) },
+        maxRedirects: 0,
+      });
+      // RBAC deniega a un no-admin antes de llegar a la acción: redirect a
+      // inicio con toast de acceso no autorizado (no 401/403 en esta app).
+      expect(response.status()).toBe(302);
+      const location = response.headers()["location"] || "";
+      expect(location).toContain(encodeURIComponent("Acceso no autorizado"));
+    } finally {
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      await db.delete(users).where(eq(users.id, agentUser.id));
+    }
+  });
+
+  test("un no-admin no puede reactivar usuarios", async ({ page }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    const ts = Date.now();
+    const sessionId = `sess_agent_react_${ts}`;
+    const [agentUser] = await db
+      .insert(users)
+      .values({ username: `plain_react_${ts}`, password: "x", role: "agent" })
+      .returning({ id: users.id });
+    try {
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: agentUser.id,
+        expiresAt: Date.now() + 86400000,
+      });
+      await page.context().addCookies([
+        {
+          name: "session_id",
+          value: sign(sessionId),
+          domain: new URL(baseURL).hostname,
+          path: "/",
+        },
+      ]);
+      const response = await page.request.post("/admin/usuarios", {
+        headers: { Accept: "application/json" },
+        form: { action: "reactivate-user", userId: String(adminId) },
+        maxRedirects: 0,
+      });
+      expect(response.status()).toBe(302);
+      const location = response.headers()["location"] || "";
+      expect(location).toContain(encodeURIComponent("Acceso no autorizado"));
+    } finally {
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      await db.delete(users).where(eq(users.id, agentUser.id));
+    }
+  });
+
+  test("un usuario inactivo es expulsado en su próximo request", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    const ts = Date.now();
+    const sessionId = `sess_inactive_${ts}`;
+    const [inactive] = await db
+      .insert(users)
+      .values({
+        username: `inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId: inactive.id,
+      expiresAt: Date.now() + 86400000,
+    });
+
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: sign(sessionId),
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const response = await page.goto("/");
+    await expect(page).toHaveURL(/\/login/);
+    expect(response?.url()).toContain("toast_type=warning");
+
+    const remaining = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId));
+    expect(remaining).toHaveLength(0);
+
+    const cookiesAfter = await page.context().cookies();
+    expect(cookiesAfter.find((c) => c.name === "session_id")).toBeUndefined();
+
+    await db.delete(sessions).where(eq(sessions.id, sessionId));
+    await db.delete(users).where(eq(users.id, inactive.id));
+  });
+
+  test("login de usuario inactivo es rechazado", async ({ page }) => {
+    const ts = Date.now();
+    const username = `inactive_login_${ts}`;
+    const password = "Test1234!";
+    const [u] = await db
+      .insert(users)
+      .values({
+        username,
+        password: await bcrypt.hash(password, 10),
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+
+    // Sin seguir el redirect: la aserción debe ser del contrato del login,
+    // no del middleware que expulsa la sesión al seguir el redirect.
+    const response = await page.context().request.post("/login", {
+      form: { username, password },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(302);
+    const location = response.headers()["location"] || "";
+    expect(location).toContain("toast_type=warning");
+    expect(location).toContain(encodeURIComponent("Tu cuenta fue desactivada"));
+
+    const rows = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.userId, u.id));
+    expect(rows).toHaveLength(0);
+
+    await db.delete(sessions).where(eq(sessions.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
+  test("login de usuario inactivo no crea sesión", async ({ page }) => {
+    const ts = Date.now();
+    const username = `inactive_noSess_${ts}`;
+    const password = "Test1234!";
+    const [u] = await db
+      .insert(users)
+      .values({
+        username,
+        password: await bcrypt.hash(password, 10),
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+
+    const response = await page.request.post("/login", {
+      form: { username, password },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(302);
+
+    const rows = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.userId, u.id));
+    expect(rows).toHaveLength(0);
+
+    await db.delete(sessions).where(eq(sessions.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
+  test("usuario inactivo con contraseña incorrecta recibe mensaje genérico", async ({
+    page,
+  }) => {
+    const ts = Date.now();
+    const username = `inactive_wrongpass_${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username,
+        password: await bcrypt.hash("CorrectPassword1!", 10),
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+
+    const response = await page.request.post("/login", {
+      form: { username, password: "WrongPassword1!" },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(302);
+    const location = response.headers()["location"] || "";
+    expect(location).toContain(encodeURIComponent("Credenciales inválidas"));
+    expect(location).not.toContain(
+      encodeURIComponent("Tu cuenta fue desactivada"),
+    );
+
+    await db.delete(sessions).where(eq(sessions.userId, u.id));
+    await db.delete(users).where(eq(users.id, u.id));
+  });
+
+  test("flujo UI: desactivar oculta de activos y muestra en inactivos", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const username = `ui_deact_${ts}`;
+    const [target] = await db
+      .insert(users)
+      .values({ username, password: "x", role: "agent" })
+      .returning({ id: users.id });
+
+    try {
+      await page.goto("/admin/usuarios");
+      await expect(
+        page.locator(
+          `#usuarios-table [data-table-row][data-sort-username="${username}"]`,
+        ),
+      ).toHaveCount(1);
+
+      await page.click(`#deactivate-user-${target.id}`);
+      await page
+        .locator(`#modal-deactivate-${target.id} button[type=submit]`)
+        .click();
+
+      // El POST async responde con redirectUrl; el cliente navega ~500ms
+      // después con los params de toast. Esperamos esa navegación de forma
+      // determinística para no asertar contra DOM stale.
+      await page.waitForURL(
+        (url) =>
+          url.pathname === "/admin/usuarios" &&
+          url.searchParams.get("toast_type") === "success",
+      );
+
+      await expect(
+        page.locator(
+          `#usuarios-table [data-table-row][data-sort-username="${username}"]`,
+        ),
+      ).toHaveCount(0);
+      await expect(
+        page.locator("[data-inactive-user-row]").filter({ hasText: username }),
+      ).toBeVisible();
+
+      const [row] = await db
+        .select({ active: users.active })
+        .from(users)
+        .where(eq(users.id, target.id));
+      expect(row.active).toBe(false);
+    } finally {
+      await db.delete(users).where(eq(users.id, target.id));
+    }
+  });
+
+  test("el botón cancelar del modal de desactivación cierra sin desactivar", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const username = `ui_cancel_${ts}`;
+    const [target] = await db
+      .insert(users)
+      .values({ username, password: "x", role: "agent" })
+      .returning({ id: users.id });
+
+    try {
+      await page.goto("/admin/usuarios");
+      await page.click(`#deactivate-user-${target.id}`);
+      const dialog = page.locator(`#modal-deactivate-${target.id}`);
+      await expect(dialog).toBeVisible();
+
+      await dialog.getByRole("button", { name: "Cancelar" }).click();
+      await expect(dialog).toBeHidden();
+
+      const [row] = await db
+        .select({ active: users.active })
+        .from(users)
+        .where(eq(users.id, target.id));
+      expect(row.active).toBe(true);
+    } finally {
+      await db.delete(users).where(eq(users.id, target.id));
+    }
+  });
+
+  test("un agente de usuario inactivo no aparece en el selector de calidad", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const uname = `cal_inactive_${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({ username: uname, password: "x", role: "agent", active: false })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: `inactive-${ts}`,
+        username: uname,
+        userId: u.id,
+        incluidoCalidad: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeUname = `cal_active_${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: activeUname,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: `active-${ts}`,
+        username: activeUname,
+        userId: activeU.id,
+        incluidoCalidad: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      await page.goto("/supervision/calidad-operadores");
+      await expect(page.locator(`text=active-${ts}`)).toHaveCount(1);
+      await expect(page.locator(`text=inactive-${ts}`)).toHaveCount(0);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("un agente inactivo no aparece en el roster de cronograma", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `cron-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `cron_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `cron_inactive_${ts}`,
+        userId: u.id,
+        enCronograma: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeName = `cron-active-${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: `cron_active_${ts}`,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: activeName,
+        username: `cron_active_${ts}`,
+        userId: activeU.id,
+        enCronograma: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get("/api/cronograma?month=2026-01");
+      expect(response.status()).toBe(200);
+      const body = await response.text();
+      expect(body).not.toContain(inactiveName);
+      expect(body).toContain(activeName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("un agente inactivo no aparece en el roster de asistencia", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `asis-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `asis_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `asis_inactive_${ts}`,
+        userId: u.id,
+        enCronograma: true,
+        enAsistencia: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeName = `asis-active-${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: `asis_active_${ts}`,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: activeName,
+        username: `asis_active_${ts}`,
+        userId: activeU.id,
+        enCronograma: true,
+        enAsistencia: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get(
+        "/api/asistencia?startDate=2026-01-05&endDate=2026-01-05",
+      );
+      expect(response.status()).toBe(200);
+      const body = await response.text();
+      expect(body).not.toContain(inactiveName);
+      expect(body).toContain(activeName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("el selector de cubics no ofrece agentes inactivos", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `cubic-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `cubic_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `cubic_inactive_${ts}`,
+        userId: u.id,
+        asignableCubic: true,
+      })
+      .returning({ id: agents.id });
+
+    const activeName = `cubic-active-${ts}`;
+    const [activeU] = await db
+      .insert(users)
+      .values({
+        username: `cubic_active_${ts}`,
+        password: "x",
+        role: "agent",
+        active: true,
+      })
+      .returning({ id: users.id });
+    const [activeA] = await db
+      .insert(agents)
+      .values({
+        name: activeName,
+        username: `cubic_active_${ts}`,
+        userId: activeU.id,
+        asignableCubic: true,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get(
+        "/inventario-terminales/cubics/create",
+      );
+      expect(response.status()).toBe(200);
+      const html = await response.text();
+      expect(html).not.toContain(inactiveName);
+      expect(html).toContain(activeName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, activeA.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, activeU.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("el editor de cubics conserva a un agente asignado inactivo", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const inactiveName = `cubic-assigned-inactive-${ts}`;
+    const [u] = await db
+      .insert(users)
+      .values({
+        username: `cubic_assigned_inactive_${ts}`,
+        password: "x",
+        role: "agent",
+        active: false,
+      })
+      .returning({ id: users.id });
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: inactiveName,
+        username: `cubic_assigned_inactive_${ts}`,
+        userId: u.id,
+        asignableCubic: true,
+      })
+      .returning({ id: agents.id });
+    const [cubic] = await db
+      .insert(cubics)
+      .values({ name: `cubic-assigned-${ts}` })
+      .returning({ id: cubics.id });
+    await db.insert(cubicAssignments).values({
+      cubicId: cubic.id,
+      agentId: a.id,
+      shift: "morning",
+    });
+
+    try {
+      await page.goto(`/inventario-terminales/cubics/edit/${cubic.id}`);
+      const select = page.locator(`#assign_agent_id-${a.id}`);
+      await expect(select).toHaveValue(String(a.id));
+      await expect(select.locator(`option[value="${a.id}"]`)).toHaveText(
+        inactiveName,
+      );
+    } finally {
+      await db
+        .delete(cubicAssignments)
+        .where(eq(cubicAssignments.cubicId, cubic.id));
+      await db.delete(cubics).where(eq(cubics.id, cubic.id));
+      await db.delete(agents).where(eq(agents.id, a.id));
+      await db.delete(users).where(eq(users.id, u.id));
+    }
+  });
+
+  test("el editor de un cubic sin asignaciones renderiza normalmente", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const [cubic] = await db
+      .insert(cubics)
+      .values({ name: `cubic-empty-${ts}` })
+      .returning({ id: cubics.id });
+
+    try {
+      const response = await page.goto(
+        `/inventario-terminales/cubics/edit/${cubic.id}`,
+      );
+      expect(response?.status()).toBe(200);
+      await expect(page.locator("#no-assignments-msg")).toHaveText(
+        "Sin operadores asignados.",
+      );
+    } finally {
+      await db.delete(cubics).where(eq(cubics.id, cubic.id));
+    }
+  });
+
+  test("un agente sin usuario vinculado sigue visible en el selector de cubics", async ({
+    page,
+  }) => {
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await page.context().addCookies([
+      {
+        name: "session_id",
+        value: adminCookie,
+        domain: new URL(baseURL).hostname,
+        path: "/",
+      },
+    ]);
+    const ts = Date.now();
+    const orphanName = `cubic-orphan-${ts}`;
+    const [a] = await db
+      .insert(agents)
+      .values({
+        name: orphanName,
+        asignableCubic: true,
+        userId: null,
+      })
+      .returning({ id: agents.id });
+
+    try {
+      const response = await page.request.get(
+        "/inventario-terminales/cubics/create",
+      );
+      expect(response.status()).toBe(200);
+      const html = await response.text();
+      expect(html).toContain(orphanName);
+    } finally {
+      await db.delete(agents).where(eq(agents.id, a.id));
+    }
+  });
+});

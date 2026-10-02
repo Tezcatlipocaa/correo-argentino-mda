@@ -10,7 +10,7 @@ import react from "@astrojs/react";
 import node from "@astrojs/node";
 
 export default defineConfig({
-  site: "http://mda.correo.local",
+  site: "https://mda.correo.local",
   base: "/",
   compressHTML: true,
 
@@ -24,6 +24,13 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    server: {
+      watch: {
+        // Evita recargas del dev server mientras Playwright escribe reportes
+        // (provoca islands re-render a mitad de test -> flakiness).
+        ignored: ["**/playwright-report/**", "**/test-results/**"],
+      },
+    },
     optimizeDeps: {
       rolldownOptions: {
         transform: {
@@ -35,9 +42,12 @@ export default defineConfig({
         },
       },
     },
+    ssr: {
+      external: ["@resvg/resvg-js"],
+    },
     build: {
       rolldownOptions: {
-        external: ["ldapjs"],
+        external: ["ldapjs", "@resvg/resvg-js"],
       },
     },
   },

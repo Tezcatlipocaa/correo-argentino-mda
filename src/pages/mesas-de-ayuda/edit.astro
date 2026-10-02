@@ -1,5 +1,6 @@
 ---
 import { getCleanBase } from "@lib/baseUrl";
+import { getCsrfTokenForSession } from "@lib/csrf";
 import FormShell from "@components/ui/FormShell.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
@@ -61,7 +62,10 @@ const displayNameOf = (r: { id: number; legacyName: string | null }) =>
 const byDisplayName = (
   a: { id: number; legacyName: string | null },
   b: { id: number; legacyName: string | null },
-) => displayNameOf(a).localeCompare(displayNameOf(b), "es", { sensitivity: "base" });
+) =>
+  displayNameOf(a).localeCompare(displayNameOf(b), "es", {
+    sensitivity: "base",
+  });
 
 const first = linkedRecords[0];
 
@@ -83,6 +87,8 @@ const linkedJson = JSON.stringify(
     legacyName: r.legacyName,
   })),
 );
+
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
 
 const unassignedJson = JSON.stringify(
   unassignedRecords.map((r) => ({
@@ -206,11 +212,12 @@ const pageTitle = `Editar: ${hdName}`;
       data-invgate-id={invgateId}
       data-unassigned={unassignedJson}
       data-linked={linkedJson}
+      data-csrf-token={csrfToken}
     >
       {
         unassignedRecords.length > 0 && (
           <div class="assign-row flex items-center gap-2">
-            <select class="select select-bordered assign-select flex-1">
+            <select class="select assign-select flex-1">
               <option value="">Seleccionar mesa SM...</option>
               {unassignedRecords.map((rec) => (
                 <option value={rec.id}>
@@ -278,7 +285,8 @@ const pageTitle = `Editar: ${hdName}`;
     >
       <path
         fill="currentColor"
-        d="M20 13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2m-5 5h-2v-2h2zm4 0h-2v-2h2zm1-15H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-5 5h-2V6h2zm4 0h-2V6h2z"></path>
+        d="M20 13H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2m-5 5h-2v-2h2zm4 0h-2v-2h2zm1-15H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-5 5h-2V6h2zm4 0h-2V6h2z"
+      ></path>
     </svg>
     <span data-chip-label></span>
     <button
@@ -295,7 +303,8 @@ const pageTitle = `Editar: ${hdName}`;
       >
         <path
           fill="currentColor"
-          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"></path>
+          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"
+        ></path>
       </svg>
     </button>
   </div>
@@ -309,6 +318,7 @@ const pageTitle = `Editar: ${hdName}`;
   if (!chain) throw new Error("assign-chain not found");
 
   const invgateId = Number(chain.dataset.invgateId);
+  const csrfToken = chain.dataset.csrfToken || "";
   let unassigned: {
     id: number;
     helpDeskName: string;
@@ -341,7 +351,7 @@ const pageTitle = `Editar: ${hdName}`;
       row = document.createElement("div");
       row.className = "assign-row flex items-center gap-2";
       row.innerHTML = `
-        <select class="select select-sm select-bordered flex-1 assign-select">
+        <select class="select select-sm flex-1 assign-select">
           <option value="">Seleccionar mesa SM...</option>
         </select>
         <button type="button" class="btn btn-xs btn-primary assign-btn">
@@ -368,7 +378,8 @@ const pageTitle = `Editar: ${hdName}`;
     }
   }
 
-  function handleAssign() {    const select = chain?.querySelector<HTMLSelectElement>(".assign-select");
+  function handleAssign() {
+    const select = chain?.querySelector<HTMLSelectElement>(".assign-select");
     const btn = chain?.querySelector<HTMLButtonElement>(".assign-btn");
     const recordId = Number(select?.value);
     if (!recordId || !btn) return;
@@ -380,7 +391,11 @@ const pageTitle = `Editar: ${hdName}`;
     fetch(`${cleanBase}api/support-guides/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recordId, invgate_id: invgateId }),
+      body: JSON.stringify({
+        recordId,
+        invgate_id: invgateId,
+        csrf_token: csrfToken,
+      }),
     })
       .then((r) =>
         r.ok
@@ -401,8 +416,7 @@ const pageTitle = `Editar: ${hdName}`;
 
           if (list && chipTpl) {
             const chip = chipTpl.content.firstElementChild?.cloneNode(true) as
-              | HTMLElement
-              | undefined;
+              HTMLElement | undefined;
             if (chip) {
               chip.setAttribute("data-linked-id", item.id.toString());
               const label = chip.querySelector("[data-chip-label]");
@@ -453,7 +467,7 @@ const pageTitle = `Editar: ${hdName}`;
     fetch(`${cleanBase}api/support-guides/unassign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recordId }),
+      body: JSON.stringify({ recordId, csrf_token: csrfToken }),
     })
       .then((r) =>
         r.ok

@@ -1,6 +1,7 @@
 import { db } from "@db/index";
-import { agents, schedules, assignmentLock } from "@db/schema";
+import { agents, users, schedules, assignmentLock } from "@db/schema";
 import { eq, and } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
 
@@ -23,6 +24,7 @@ export interface AgentDisponibilidad {
   estadoExcepcionalMotivo?: string; // Comentario del supervisor
   estadoExcepcionalAt?: number; // Timestamp
   estadoExcepcionalMinutos?: number | null; // Tiempo extra para break extendido en minutos
+  asignableAgs?: boolean;
 }
 
 export const EXCEPTION_LABELS: Record<string, string> = {
@@ -74,8 +76,12 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       estadoExcepcionalMotivo: agents.estadoExcepcionalMotivo,
       estadoExcepcionalAt: agents.estadoExcepcionalAt,
       estadoExcepcionalMinutos: agents.estadoExcepcionalMinutos,
+      enCronograma: agents.enCronograma,
+      asignableAgs: agents.asignableAgs,
     })
-    .from(agents);
+    .from(agents)
+    .leftJoin(users, eq(users.id, agents.userId))
+    .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
 
   // 2. Fetch today's persistent schedule overrides
   const dbSchedules = await db
@@ -90,8 +96,8 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       "Presencial Parque Patricios",
       "Home Office",
     ];
-    // Check if there is an override for this agent today
-    const schedule = dbSchedules.find((s) => s.agentName === agent.name);
+    // Check if there is an override for this agent today (vinculo por id)
+    const schedule = dbSchedules.find((s) => s.agentId === agent.id);
 
     let status = "Franco";
     let horario = "";
@@ -170,6 +176,7 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       estadoExcepcionalMotivo: agent.estadoExcepcionalMotivo || undefined,
       estadoExcepcionalAt: agent.estadoExcepcionalAt || undefined,
       estadoExcepcionalMinutos: agent.estadoExcepcionalMinutos,
+      asignableAgs: !!agent.asignableAgs,
     };
 
     const applyOverride = () => {

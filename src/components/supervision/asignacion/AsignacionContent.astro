@@ -19,11 +19,13 @@ import {
 } from "@lib/disponibilidad";
 
 import { normalizeRole } from "@lib/rbac";
+import { matchesCurrentUser } from "@lib/currentUserMatch";
 
 const cleanBase = getCleanBase();
 
 const user = Astro.locals.user;
 const role = normalizeRole(user.role);
+const currentUsername = (user?.username || "").toLowerCase();
 
 const lockStatus = await getLockStatus();
 let hasLock = false;
@@ -89,7 +91,7 @@ if (Astro.request.method === "POST" && !isReadOnly) {
 }
 
 // Fetch availability calculations
-const allOperators = await getDisponibilidadHoy();
+const allOperators = (await getDisponibilidadHoy()).filter((op) => op.asignableAgs);
 allOperators.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
 const disponiblesCount = allOperators.filter((op) => op.disponible).length;
@@ -216,7 +218,7 @@ const getExcepcionalShortLabel = (tipo: string): string => {
 };
 ---
 
-<PageContainer>
+<PageContainer data-user-username={user?.username}>
   <Modal id="modal-marcar-excepcion">
     <Fragment slot="content">
       <h3
@@ -254,7 +256,7 @@ const getExcepcionalShortLabel = (tipo: string): string => {
           <option value="problema_tecnico">Problema Técnico</option>
         </SelectField>
 
-        <div id="container-tiempo-extra" class="form-control hidden">
+        <div id="container-tiempo-extra" class="hidden">
           <SelectField
             id="modal-select-tiempo-extra"
             name="modal-select-tiempo-extra"
@@ -622,7 +624,6 @@ const getExcepcionalShortLabel = (tipo: string): string => {
             <div
               id="lock-indicator"
               data-user-id={user?.id}
-              data-user-username={user?.username}
               data-lock-timeout={10 * 60 * 1000}
               class="text-base-content/70 grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 text-xs font-semibold"
             >
@@ -707,10 +708,17 @@ const getExcepcionalShortLabel = (tipo: string): string => {
       allOperators.map((op) => {
         const isHighlighted = op.agentId === maxAssignedOperatorId;
         const isExceptional = !!op.estadoExcepcional;
+        const isCurrentUser = matchesCurrentUser(
+          op.username,
+          op.nombre,
+          currentUsername,
+        );
 
         let rowClasses =
           "group border-b border-base-300 px-4 py-2.5 transition-colors duration-300 hover:bg-base-200/50";
-        if (isExceptional) {
+        if (isCurrentUser) {
+          rowClasses += " bg-accent/10 border-l-4 border-l-accent";
+        } else if (isExceptional) {
           rowClasses += " bg-secondary/10 border-l-4 border-l-secondary";
         } else if (isHighlighted) {
           rowClasses += " bg-primary/10 border-l-4 border-l-primary";
@@ -724,6 +732,8 @@ const getExcepcionalShortLabel = (tipo: string): string => {
             class={rowClasses}
             data-table-row
             data-op-id={op.agentId}
+            data-op-username={op.username}
+            data-op-nombre={op.nombre}
             data-op-estado={
               op.disponible ? "disponible" : op.motivo || "offline"
             }
@@ -920,6 +930,7 @@ const getExcepcionalShortLabel = (tipo: string): string => {
 <script>
   import { showToast } from "@/lib/toastClient";
   import { escapeHtml } from "@lib/sanitize";
+  import { matchesCurrentUser } from "@lib/currentUserMatch";
 
   let countdownInterval: any = null;
   let timer: any = null;
@@ -1088,6 +1099,15 @@ const getExcepcionalShortLabel = (tipo: string): string => {
           maxAgentId = op.agentId;
         }
       });
+
+      const currentUsername =
+        (
+          document
+            .querySelector("[data-user-username]")
+            ?.getAttribute("data-user-username") || ""
+        )
+          .toLowerCase()
+          .trim();
 
       // 2. Update summary cards
       const disponiblesCount = data.filter((op) => op.disponible).length;
@@ -1350,6 +1370,8 @@ const getExcepcionalShortLabel = (tipo: string): string => {
           "border-l-primary",
           "bg-secondary/10",
           "border-l-secondary",
+          "bg-accent/10",
+          "border-l-accent",
           "border-l-4",
           "opacity-50",
           "grayscale-[30%]",
@@ -1357,8 +1379,15 @@ const getExcepcionalShortLabel = (tipo: string): string => {
 
         const isExceptional = !!op.estadoExcepcional;
         const isHighlighted = op.agentId === maxAgentId && maxAssignedTime > 0;
+        const isCurrentUser = matchesCurrentUser(
+          row.getAttribute("data-op-username"),
+          row.getAttribute("data-op-nombre"),
+          currentUsername,
+        );
 
-        if (isExceptional) {
+        if (isCurrentUser) {
+          row.classList.add("bg-accent/10", "border-l-4", "border-l-accent");
+        } else if (isExceptional) {
           row.classList.add(
             "bg-secondary/10",
             "border-l-4",

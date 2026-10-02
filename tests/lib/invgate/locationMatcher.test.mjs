@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {
   parseInvgateLocationName,
   matchLocations,
-} from "../../../src/lib/invgate/locationMatcher.js";
+} from "../../../src/lib/invgate/locationMatcher.ts";
 
 // Test parseInvgateLocationName
 {
@@ -88,13 +88,16 @@ import {
   const result = matchLocations(invgateLocations, allOfficeCodes);
 
   // Total stats checking
-  assert.equal(result.stats.totalInvgate, 3);
+  // El matcher filtra a hojas con NIS: excluye contenedores (cuyo id aparece
+  // como parent_id) y ubicaciones sin NIS. Solo ids 1 (L6300) y 2 (L0002) son
+  // relevantes.
+  assert.equal(result.stats.totalInvgate, 2);
   assert.equal(result.stats.totalMda, 2);
   assert.equal(result.stats.matched, 1);
-  assert.equal(result.stats.unmatchedInvgate, 2);
+  assert.equal(result.stats.unmatchedInvgate, 1);
 
   // Results list checking
-  assert.equal(result.results.length, 3);
+  assert.equal(result.results.length, 2);
 
   // First item: matched
   assert.equal(result.results[0].invgateLocation.id, 1);
@@ -110,12 +113,10 @@ import {
   assert.equal(result.results[1].officeCode, null);
   assert.equal(result.results[1].mdaOffice, null);
 
-  // Third item: no NIS, unmatched
-  assert.equal(result.results[2].invgateLocation.id, 3);
-  assert.equal(result.results[2].invgateLocation.nis, null);
-  assert.equal(result.results[2].matched, false);
-  assert.equal(result.results[2].officeCode, null);
-  assert.equal(result.results[2].mdaOffice, null);
+  // Las ubicaciones sin NIS (id 3) y los contenedores (id 4, referenciado como
+  // parent_id de otras) quedan fuera por diseño del matcher.
+  assert.ok(!result.results.some((r) => r.invgateLocation.id === 3));
+  assert.ok(!result.results.some((r) => r.invgateLocation.id === 4));
 }
 
 console.log("All locationMatcher tests passed!");

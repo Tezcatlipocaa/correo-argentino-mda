@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import { getCleanBase } from "@lib/baseUrl";
+import { getCsrfTokenForSession } from "@lib/csrf";
 import ActionExternalButton from "@components/ui/ActionExternalButton.astro";
 import OpenModalButton from "@components/ui/OpenModalButton.astro";
 import Modal from "@components/ui/Modal.astro";
@@ -110,6 +111,7 @@ const searchableText = [
   data-member-count={helpdesk.total_members}
   data-topic-count={topicsList.length}
   data-name={hdName}
+  data-csrf-token={getCsrfTokenForSession(Astro.locals.sessionId)}
 >
   <div class="card-body flex h-full flex-col gap-0 p-5">
     <div class="flex-1 space-y-3">
@@ -403,7 +405,7 @@ const searchableText = [
 </Modal>
 
 <script>
-  import { getCleanBase } from "@lib/baseUrl";
+import { getCleanBase } from "@lib/baseUrl";
 
   const cleanBase = getCleanBase();
 
@@ -445,10 +447,14 @@ const searchableText = [
 
   async function toggleHidden(invgateId: number, action: "hide" | "show") {
     try {
+      const csrfToken =
+        document
+          .querySelector("[data-card-for]")
+          ?.getAttribute("data-csrf-token") || "";
       const res = await fetch(`${cleanBase}api/soportes/helpdesks/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invgate_id: invgateId }),
+        body: JSON.stringify({ invgate_id: invgateId, csrf_token: csrfToken }),
       });
       if (res.ok) {
         window.location.reload();

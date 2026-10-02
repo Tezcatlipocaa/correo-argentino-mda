@@ -1,93 +1,226 @@
 ---
 import { db } from "@db/index";
-import { users } from "@db/schema";
+import { users, agents, mesas } from "@db/schema";
+import { sql, eq, and, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { Icon } from "astro-icon/components";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionRoleButton from "@components/ui/ActionRoleButton.astro";
 import ActionPasswordButton from "@components/ui/ActionPasswordButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
+import {
+  PARTICIPATION_HELPDESK_NAMES,
+  MDA_TI_HELPDESK,
+  mesaHasParticipaciones,
+} from "@lib/helpdeskAccess";
+import { getCleanBase } from "@lib/baseUrl";
 import { rolesMatrix } from "@lib/rolesMatrix";
+import { normalizeRole } from "@lib/rbac";
 import FormField from "@components/ui/forms/FormField.astro";
+import FormLegend from "@components/ui/forms/FormLegend.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import PasswordField from "@components/ui/forms/PasswordField.astro";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
-import SectionCard from "@components/ui/SectionCard.astro";
 import Modal from "@components/ui/Modal.astro";
+import UserCreateModal from "@components/admin/users/UserCreateModal.astro";
 import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
 
-interface Props {
-  successMsg?: string;
-  errorMsg?: string;
-}
+const currentUserId = Astro.locals.user?.id ?? 0;
 
-const { successMsg = "", errorMsg = "" } = Astro.props;
+const disabledByUser = alias(users, "disabled_by_user");
 
-const allUsers = await db.select().from(users);
+const allUsers = await db
+  .select({
+    id: users.id,
+    username: users.username,
+    role: users.role,
+    helpdeskName: users.helpdeskName,
+    helpdeskId: users.helpdeskId,
+    active: users.active,
+    disabledAt: users.disabledAt,
+    disabledBy: users.disabledBy,
+    // Nombre canonico via join: users.helpdeskName puede quedar stale cuando
+    // mesaSync renombra una mesa. Se usa para el gating de participaciones;
+    // el badge/banner siguen mostrando el denormalizado (informativo).
+    mesaName: mesas.name,
+    agentName: agents.name,
+    enCronograma: agents.enCronograma,
+    enAsistencia: agents.enAsistencia,
+    asignableCubic: agents.asignableCubic,
+    incluidoCalidad: agents.incluidoCalidad,
+    asignableAgs: agents.asignableAgs,
+  })
+  .from(users)
+  .leftJoin(
+    agents,
+    sql`lower(coalesce(${agents.username}, '')) = ${users.username}`,
+  )
+  .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
+  .leftJoin(disabledByUser, eq(users.disabledBy, disabledByUser.id));
 
-const headerGridClass = "grid-cols-[1fr_140px_320px] gap-4";
-const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
+const activeUsers = allUsers.filter((u) => u.active);
+const inactiveUsers = allUsers.filter((u) => !u.active);
+
+const usersConMesaInactiva = await db
+  .select({ username: users.username, mesaName: mesas.name })
+  .from(users)
+  .innerJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
+  .where(eq(mesas.active, false));
+
+// Mismo cap para el banner de mesa inactiva (evita overflow del listado).
+const MESA_INACTIVA_PREVIEW = 20;
+const usersConMesaInactivaMostrados = usersConMesaInactiva.slice(
+  0,
+  MESA_INACTIVA_PREVIEW,
+);
+const usersConMesaInactivaRestantes =
+  usersConMesaInactiva.length - usersConMesaInactivaMostrados.length;
+
+const helpdeskOptions = await db
+  .select({ id: mesas.invgateId, name: mesas.name })
+  .from(mesas)
+  .where(
+    and(
+      eq(mesas.active, true),
+      or(eq(mesas.assignable, true), eq(mesas.name, MDA_TI_HELPDESK)),
+    ),
+  )
+  .orderBy(mesas.name);
+
+const headerGridClass = "grid-cols-[1fr_180px_104px_170px_180px_176px] gap-4";
+const rowGridClass =
+  "grid grid-cols-[1fr_180px_104px_170px_180px_176px] items-center gap-4";
+
+// Normaliza variantes legacy ("Supervisor ", "Team Leader") en la UI; el
+// enforcement real vive server-side (normalizeRole en usuarios.astro).
+const isSupervisorRole = (role: string): boolean =>
+  normalizeRole(role) === "supervisor";
 ---
 
-<PageContainer width="xl">
+<PageContainer
+  width="xl"
+  data-participation-mesas={JSON.stringify(PARTICIPATION_HELPDESK_NAMES)}
+>
   <PageHeader
     title="Gestión de usuarios"
     description="Alta de operadores, asignación de roles y revisión de accesos activos en el portal."
   />
 
-  <div class="mb-6 flex justify-start">
-    <button
-      type="button"
-      class="btn btn-soft btn-lg btn-accent gap-2"
-      onclick="document.getElementById('modal-permissions-matrix').showModal()"
-    >
-      <Icon name="boxicons:universal-access-filled" size={24} />
-      Ver tabla comparativa de permisos por rol
-    </button>
+  {
+    usersConMesaInactiva.length > 0 && (
+      <div role="alert" class="alert alert-warning">
+        <Icon name="boxicons:x-circle" size={24} />
+        <span class="min-w-0 wrap-break-word">
+          <strong>{usersConMesaInactiva.length}</strong> usuario(s) tienen una
+          mesa de ayuda desactivada y requieren reasignación:
+          {usersConMesaInactivaMostrados
+            .map((u) => `${u.username} (${u.mesaName})`)
+            .join(", ")}
+          {usersConMesaInactivaRestantes > 0
+            ? ` y ${usersConMesaInactivaRestantes} más`
+            : ""}
+          .
+        </span>
+      </div>
+    )
+  }
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        class="btn btn-soft btn-sm md:btn-md btn-accent gap-2"
+        onclick="document.getElementById('modal-permissions-matrix').showModal()"
+      >
+        <Icon name="boxicons:universal-access-filled" size={18} />
+        Ver tabla comparativa de permisos por rol
+      </button>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <a
+        href={`${getCleanBase()}admin/usuarios/mesas-de-ayuda`}
+        class="btn btn-soft btn-sm md:btn-md gap-2"
+      >
+        <Icon name="boxicons:headphone-mic" size={18} />
+        Mesas asignables
+      </a>
+      <ActionButton
+        id="btn-nuevo-usuario"
+        icon="boxicons:user-plus-filled"
+        label="Nuevo usuario"
+        size="default"
+        color="btn-secondary"
+        title="Dar de alta un nuevo usuario"
+        ariaLabel="Dar de alta un nuevo usuario"
+      />
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
+  <div>
     <!-- ─── Table: Usuarios registrados ─── -->
-    <section class="lg:order-1" aria-labelledby="tabla-usuarios">
-      <div class="flex flex-col gap-3">
+    <section aria-labelledby="tabla-usuarios">
+      <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between gap-4">
           <h2
             id="tabla-usuarios"
             class="text-base-content text-lg font-semibold"
           >
-            Usuarios registrados
+            Usuarios activos
           </h2>
           {
-            allUsers.length > 0 && (
+            activeUsers.length > 0 && (
               <span class="badge badge-neutral badge-sm font-mono">
-                {allUsers.length}
+                {activeUsers.length}
               </span>
             )
           }
         </div>
 
+        <SearchBar
+          id="admin-users-search"
+          placeholder="Buscar por usuario o nombre..."
+          ariaLabel="Buscar usuarios por nombre de red o nombre completo"
+        />
+
         <DataTable
+          id="usuarios-table"
           ariaLabel="Listado de usuarios registrados"
-          minWidthClass="min-w-200"
+          minWidthClass="min-w-275"
           headerGridClass={headerGridClass}
           rowGridClass={rowGridClass}
+          emptyStateTitle="Sin usuarios que coincidan"
+          emptyStateDescription="No encontramos usuarios ni mesas de ayuda para esa búsqueda. Probá con otro nombre, rol o mesa."
+          showClearButton
+          clearButtonText="Limpiar búsqueda"
+          clearButtonId="admin-users-search-clear"
         >
           <div slot="header">
             <DataTableHeaderCell sortKey="username">Usuario</DataTableHeaderCell
             >
           </div>
           <div slot="header">
+            <DataTableHeaderCell sortKey="name">Nombre</DataTableHeaderCell>
+          </div>
+          <div slot="header">
             <DataTableHeaderCell sortKey="role">Rol</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell sortKey="helpdesk">Mesa</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell>Participaciones</DataTableHeaderCell>
           </div>
           <div slot="header" class="text-right">
             <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
           </div>
 
           {
-            allUsers.length === 0 ? (
+            activeUsers.length === 0 ? (
               <div class="text-base-content/50 flex flex-col items-center gap-3 py-16">
                 <div class="bg-base-200 rounded-full p-4">
                   <Icon
@@ -99,32 +232,39 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                 </div>
                 <div class="space-y-1 text-center">
                   <p class="text-sm font-semibold">
-                    No hay usuarios registrados
+                    {inactiveUsers.length > 0
+                      ? "No hay usuarios activos"
+                      : "No hay usuarios registrados"}
                   </p>
                   <p class="text-xs">
-                    Creá el primer usuario desde el formulario.
+                    {inactiveUsers.length > 0
+                      ? "Los únicos usuarios están inactivos. Reactivalos desde la lista de abajo o creá uno nuevo."
+                      : "Creá el primer usuario desde el formulario."}
                   </p>
                 </div>
               </div>
             ) : (
-              allUsers.map((u) => (
+              activeUsers.map((u) => (
                 <article
                   data-table-row
                   data-sort-username={u.username}
+                  data-sort-name={u.agentName ?? ""}
                   data-sort-role={u.role}
+                  data-sort-helpdesk={u.helpdeskName ?? ""}
+                  data-search-text={`${u.username} ${u.agentName ?? ""} ${u.role.replace(/_/g, " ")} ${u.helpdeskName ?? ""}`}
                   class:list={[
                     rowGridClass,
-                    "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+                    "border-base-300 hover:bg-base-200/50 border-b px-5 py-4 transition-colors last:border-b-0",
                   ]}
                 >
                   <div class="min-w-0">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-4">
                       <div
                         class:list={[
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-sm",
                           u.role === "admin"
                             ? "bg-error text-error-content"
-                            : u.role === "supervisor"
+                            : isSupervisorRole(u.role)
                               ? "bg-info text-info-content"
                               : u.role === "team_leader" ||
                                   u.role === "team-leader" ||
@@ -138,19 +278,31 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                       >
                         {u.username.slice(0, 2).toUpperCase()}
                       </div>
-                      <span class="text-base-content truncate font-mono font-medium">
+                      <span
+                        class="text-base-content truncate font-mono text-sm font-medium"
+                        data-highlight-target
+                      >
                         {u.username}
                       </span>
                     </div>
                   </div>
 
+                  <div class="min-w-0">
+                    <span
+                      class="text-base-content block truncate text-sm"
+                      data-highlight-target
+                    >
+                      {u.agentName || "—"}
+                    </span>
+                  </div>
+
                   <div class="flex min-w-0 items-center gap-2">
                     <span
                       class:list={[
-                        "badge badge-sm font-bold tracking-wide whitespace-nowrap uppercase",
+                        "badge badge-xs font-bold tracking-wide whitespace-nowrap uppercase",
                         u.role === "admin"
                           ? "badge-error"
-                          : u.role === "supervisor"
+                          : isSupervisorRole(u.role)
                             ? "badge-info"
                             : u.role === "team_leader" ||
                                 u.role === "team-leader" ||
@@ -160,10 +312,11 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                                 ? "badge-warning"
                                 : "badge-neutral",
                       ]}
+                      data-highlight-target
                     >
                       {u.role === "admin"
                         ? "Admin"
-                        : u.role === "supervisor"
+                        : isSupervisorRole(u.role)
                           ? "Supervisor"
                           : u.role === "team_leader" ||
                               u.role === "team-leader" ||
@@ -175,53 +328,318 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                     </span>
                   </div>
 
-                  <div class="flex items-center justify-end gap-2">
-                    <ActionRoleButton
-                      data-action="change-role-btn"
-                      data-user-id={u.id}
-                      data-user-role={u.role}
-                      ariaLabel={`Cambiar rol de ${u.username}`}
-                    />
+                  <div class="flex min-w-0 items-center gap-2">
+                    {u.helpdeskName ? (
+                      <span
+                        class:list={[
+                          "badge badge-xs font-bold tracking-wide whitespace-nowrap uppercase",
+                          u.helpdeskName === MDA_TI_HELPDESK
+                            ? "badge-primary"
+                            : "badge-secondary",
+                        ]}
+                        data-highlight-target
+                      >
+                        {u.helpdeskName}
+                      </span>
+                    ) : (
+                      <span
+                        class="text-base-content/40 text-xs italic"
+                        data-highlight-target
+                      >
+                        Sin mesa de ayuda
+                      </span>
+                    )}
+                  </div>
 
+                  <div class="flex min-w-0 flex-wrap items-center gap-2 pr-6">
+                    {mesaHasParticipaciones(u.mesaName ?? u.helpdeskName) && (
+                      <>
+                        {u.enCronograma && (
+                          <span
+                            class="badge badge-sm badge-primary tooltip tooltip-top"
+                            data-chip="cronograma"
+                            data-tip="Figura en cronograma"
+                          >
+                            <Icon name="boxicons:calendar-filled" size={14} />
+                            <span class="sr-only">Cronograma</span>
+                          </span>
+                        )}
+                        {u.enAsistencia && (
+                          <span
+                            class="badge badge-sm badge-secondary tooltip tooltip-top"
+                            data-chip="asistencia"
+                            data-tip="Control de asistencia"
+                          >
+                            <Icon name="boxicons:user-check-filled" size={14} />
+                            <span class="sr-only">Asistencia</span>
+                          </span>
+                        )}
+                        {u.asignableCubic && (
+                          <span
+                            class="badge badge-sm badge-info tooltip tooltip-top"
+                            data-chip="cubics"
+                            data-tip="Asignable a cubics"
+                          >
+                            <Icon name="boxicons:desktop-filled" size={14} />
+                            <span class="sr-only">Cubics</span>
+                          </span>
+                        )}
+                        {u.incluidoCalidad && (
+                          <span
+                            class="badge badge-sm badge-warning tooltip tooltip-top"
+                            data-chip="calidad"
+                            data-tip="Incluido en calidad"
+                          >
+                            <Icon
+                              name="boxicons:bar-chart-big-filled"
+                              size={14}
+                            />
+                            <span class="sr-only">Calidad</span>
+                          </span>
+                        )}
+                        {u.asignableAgs && (
+                          <span
+                            class="badge badge-sm badge-accent tooltip tooltip-top"
+                            data-chip="ags"
+                            data-tip="Asignable AGS"
+                          >
+                            <Icon name="boxicons:git-branch-filled" size={14} />
+                            <span class="sr-only">AGS</span>
+                          </span>
+                        )}
+                        {!u.enCronograma &&
+                          !u.enAsistencia &&
+                          !u.asignableCubic &&
+                          !u.incluidoCalidad &&
+                          !u.asignableAgs && (
+                            <span class="text-base-content/60 text-xs italic">
+                              Sin participaciones
+                            </span>
+                          )}
+                      </>
+                    )}
+                  </div>
+
+                  <div class="flex items-center justify-end gap-3">
                     <ActionEditButton
-                      onclick={`document.getElementById('modal-rename-${u.id}').showModal()`}
-                      ariaLabel={`Renombrar usuario ${u.username}`}
+                      data-edit-user-btn
+                      data-user-id={u.id}
+                      data-user-role={normalizeRole(u.role)}
+                      data-user-username={u.username}
+                      data-user-name={u.agentName ?? ""}
+                      data-user-helpdesk={u.helpdeskName ?? ""}
+                      data-user-helpdesk-id={u.helpdeskId ?? ""}
+                      data-user-flags={JSON.stringify({
+                        enCronograma: !!u.enCronograma,
+                        enAsistencia: !!u.enAsistencia,
+                        asignableCubic: !!u.asignableCubic,
+                        incluidoCalidad: !!u.incluidoCalidad,
+                        asignableAgs: !!u.asignableAgs,
+                      })}
+                      class={
+                        u.id === currentUserId ? "btn-disabled" : undefined
+                      }
+                      disabled={u.id === currentUserId}
+                      title={
+                        u.id === currentUserId
+                          ? "No podés modificar tu propia cuenta"
+                          : undefined
+                      }
+                      onclick={`document.getElementById('modal-edit-user-${u.id}').showModal()`}
+                      ariaLabel={`Editar usuario ${u.username}`}
                     />
 
                     <ActionPasswordButton
+                      class={
+                        u.id === currentUserId ? "btn-disabled" : undefined
+                      }
+                      disabled={u.id === currentUserId}
+                      title={
+                        u.id === currentUserId
+                          ? "No podés blanquear tu propia contraseña acá"
+                          : undefined
+                      }
                       onclick={`document.getElementById('modal-reset-${u.id}').showModal()`}
                       ariaLabel={`Blanquear contraseña de ${u.username}`}
                     />
+
+                    <ActionButton
+                      id={`deactivate-user-${u.id}`}
+                      icon="boxicons:user-minus-filled"
+                      size="default"
+                      color="btn-error"
+                      class={
+                        u.id === currentUserId ? "btn-disabled" : undefined
+                      }
+                      disabled={u.id === currentUserId}
+                      title={
+                        u.id === currentUserId
+                          ? "No podés desactivar tu propia cuenta"
+                          : "Desactivar este usuario"
+                      }
+                      ariaLabel={`Desactivar usuario ${u.username}`}
+                      onclick={`document.getElementById('modal-deactivate-${u.id}').showModal()`}
+                    />
                   </div>
 
-                  {/* ── Modales (Fuera del flujo visual de la fila) ── */}
-                  <Modal id={`modal-rename-${u.id}`}>
+                  <Modal id={`modal-edit-user-${u.id}`}>
                     <Fragment slot="content">
                       <h3 class="text-base-content mb-1 text-base font-semibold">
-                        Renombrar usuario
+                        Editar usuario
                       </h3>
                       <p class="text-base-content/60 mb-4 text-xs">
-                        Usuario actual:{" "}
+                        Actualizá el rol, la mesa de ayuda, el nombre de red, el
+                        nombre visible y las participaciones de{" "}
                         <span class="font-mono font-semibold">
                           {u.username}
                         </span>
+                        .
                       </p>
                       <form method="POST" class="space-y-3" data-async-form>
                         <input
                           type="hidden"
                           name="action"
-                          value="rename-username"
+                          value="update-user"
                         />
                         <input type="hidden" name="userId" value={u.id} />
                         <FormField
-                          id={`new-username-${u.id}`}
-                          name="newUsername"
+                          id={`edit-user-username-${u.id}`}
+                          name="username"
                           required
-                          label="Nuevo nombre de red"
-                          placeholder={u.username}
+                          label="Nombre de red"
+                          value={u.username}
                           autocomplete="off"
                           inputClass="input-sm"
                         />
+                        <FormField
+                          id={`edit-user-name-${u.id}`}
+                          name="name"
+                          required
+                          label="Nombre completo"
+                          placeholder={u.agentName || u.username}
+                          value={u.agentName || ""}
+                          autocomplete="off"
+                          inputClass="input-sm"
+                          helpText="Se propaga a los cronogramas guardados."
+                        />
+                        <SelectField
+                          id={`edit-user-role-${u.id}`}
+                          name="newRole"
+                          label="Rol en sistema"
+                          selectClass="select-sm"
+                          options={[
+                            { value: "agent", label: "Agente" },
+                            { value: "referent", label: "Referente" },
+                            { value: "team_leader", label: "Team Leader" },
+                            { value: "supervisor", label: "Supervisor" },
+                            { value: "admin", label: "Administrador" },
+                          ]}
+                          value={normalizeRole(u.role)}
+                        />
+
+                        <SelectField
+                          id={`edit-user-helpdesk-${u.id}`}
+                          name="helpdesk"
+                          label="Mesa de ayuda"
+                          selectClass="select-sm"
+                          options={[
+                            { value: "", label: "Sin mesa de ayuda" },
+                            ...helpdeskOptions.map((hd) => ({
+                              value: `${hd.id}|${hd.name}`,
+                              label: hd.name,
+                            })),
+                          ]}
+                          value={`${u.helpdeskId ?? ""}|${u.helpdeskName ?? ""}`}
+                        />
+                        {mesaHasParticipaciones(
+                          u.mesaName ?? u.helpdeskName,
+                        ) ? (
+                          <fieldset
+                            class="fieldset"
+                            data-testid="participaciones-block"
+                          >
+                            <FormLegend class="text-base-content/70">
+                              Participaciones
+                            </FormLegend>
+                            <label class="label cursor-pointer justify-start gap-3 py-1">
+                              <input
+                                type="checkbox"
+                                name="enCronograma"
+                                id={`edit-enCronograma-${u.id}`}
+                                class="toggle toggle-sm toggle-secondary"
+                                checked={
+                                  !isSupervisorRole(u.role) && !!u.enCronograma
+                                }
+                                disabled={isSupervisorRole(u.role)}
+                                title="Un supervisor no figura en el cronograma como operador"
+                              />
+                              <span class="text-base-content text-sm">
+                                Cronograma
+                              </span>
+                            </label>
+                            <label class="label cursor-pointer justify-start gap-3 py-1">
+                              <input
+                                type="checkbox"
+                                name="enAsistencia"
+                                id={`edit-enAsistencia-${u.id}`}
+                                class="toggle toggle-sm toggle-secondary"
+                                checked={
+                                  !isSupervisorRole(u.role) && !!u.enAsistencia
+                                }
+                                disabled={
+                                  isSupervisorRole(u.role) || !u.enCronograma
+                                }
+                                title="Control de asistencia (requiere cronograma)"
+                              />
+                              <span class="text-base-content text-sm">
+                                Asistencia
+                              </span>
+                            </label>
+                            <label class="label cursor-pointer justify-start gap-3 py-1">
+                              <input
+                                type="checkbox"
+                                name="asignableCubic"
+                                class="toggle toggle-sm toggle-secondary"
+                                checked={!!u.asignableCubic}
+                              />
+                              <span class="text-base-content text-sm">
+                                Asignación de PCs (cubics)
+                              </span>
+                            </label>
+                            <label class="label cursor-pointer justify-start gap-3 py-1">
+                              <input
+                                type="checkbox"
+                                name="incluidoCalidad"
+                                class="toggle toggle-sm toggle-secondary"
+                                checked={!!u.incluidoCalidad}
+                              />
+                              <span class="text-base-content text-sm">
+                                Auditorías de calidad
+                              </span>
+                            </label>
+                            <label class="label cursor-pointer justify-start gap-3 py-1">
+                              <input
+                                type="checkbox"
+                                name="asignableAgs"
+                                class="toggle toggle-sm toggle-secondary"
+                                checked={!!u.asignableAgs}
+                              />
+                              <span class="text-base-content text-sm">
+                                Asignación AGS
+                              </span>
+                            </label>
+                          </fieldset>
+                        ) : (
+                          <div
+                            class="alert alert-ghost items-start gap-2 py-2"
+                            data-testid="participaciones-block"
+                          >
+                            <Icon name="boxicons:info-circle" size={18} />
+                            <span class="text-base-content/70 text-xs">
+                              Esta mesa no tiene secciones con participaciones.
+                            </span>
+                          </div>
+                        )}
                         <div class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3">
                           <ActionCancelButton
                             type="button"
@@ -232,7 +650,7 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                           />
                           <ActionConfirmButton
                             type="submit"
-                            color="btn-secondary"
+                            color="btn-primary"
                             label="Guardar"
                             icon="boxicons:check-filled"
                           />
@@ -240,6 +658,7 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                       </form>
                     </Fragment>
                   </Modal>
+                  {/* ── Modales (Fuera del flujo visual de la fila) ── */}
                   <Modal id={`modal-reset-${u.id}`}>
                     <Fragment slot="content">
                       <h3 class="text-base-content mb-1 text-base font-semibold">
@@ -287,6 +706,40 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
                       </form>
                     </Fragment>
                   </Modal>
+
+                  <Modal id={`modal-deactivate-${u.id}`}>
+                    <Fragment slot="content">
+                      <h3 class="text-base-content mb-1 text-base font-semibold">
+                        Desactivar usuario
+                      </h3>
+                      <p class="text-base-content/70 mb-4 text-sm">
+                        ¿Confirmás la baja de{" "}
+                        <span class="font-mono font-semibold">
+                          {u.username}
+                        </span>{" "}
+                        ({u.agentName || "sin nombre"}, rol {u.role})? No podrá
+                        iniciar sesión. Podés reactivarlo luego desde la pestaña
+                        Inactivos.
+                      </p>
+                      <form
+                        method="POST"
+                        class="flex justify-end gap-2"
+                        data-async-form
+                      >
+                        <input
+                          type="hidden"
+                          name="action"
+                          value="deactivate-user"
+                        />
+                        <input type="hidden" name="userId" value={u.id} />
+                        <ActionCancelButton onclick="this.closest('dialog').close()" />
+                        <ActionConfirmButton
+                          label="Desactivar"
+                          color="btn-error"
+                        />
+                      </form>
+                    </Fragment>
+                  </Modal>
                 </article>
               ))
             )
@@ -295,139 +748,65 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
       </div>
     </section>
 
-    <!-- ─── Form: Nuevo usuario ─── -->
-    <section class="lg:order-2" aria-labelledby="form-nuevo-usuario">
-      <SectionCard class="shadow-md lg:sticky lg:top-24">
-        <h2 id="form-nuevo-usuario" class="card-title gap-2 text-base">
-          <div
-            aria-hidden="true"
-            class="bg-secondary/10 text-secondary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-          >
-            <Icon name="boxicons:user-plus-filled" size={18} />
+    {
+      inactiveUsers.length > 0 && (
+        <section aria-labelledby="tabla-inactivos" class="mt-10">
+          <div class="flex items-center gap-4">
+            <h2
+              id="tabla-inactivos"
+              class="text-base-content text-lg font-semibold"
+            >
+              Usuarios inactivos
+            </h2>
+            <span class="badge badge-neutral badge-sm font-mono">
+              {inactiveUsers.length}
+            </span>
           </div>
-          Nuevo usuario
-        </h2>
-
-        <script is:inline define:vars={{ successMsg, errorMsg }}>
-          if (successMsg || errorMsg) {
-            window.addEventListener("load", () => {
-              if (successMsg) window.showToast?.(successMsg, "alert-success");
-              if (errorMsg) window.showToast?.(errorMsg, "alert-error");
-            });
-          }
-        </script>
-
-        <form method="POST" class="space-y-4" data-async-form>
-          <FormField
-            id="admin-username"
-            name="username"
-            required
-            label="Nombre de red"
-            placeholder="ej: jgonzalez"
-            autocomplete="off"
-            helpText="Credencial de dominio del operador."
-          />
-
-          <PasswordField
-            id="admin-password"
-            name="password"
-            required
-            label="Contraseña inicial"
-            confirmPassword={true}
-            confirmLabel="Repetir contraseña"
-            autocomplete="new-password"
-          />
-
-          <SelectField
-            id="admin-role"
-            name="role"
-            label="Rol en sistema"
-            options={[
-              { value: "agent", label: "Agente" },
-              { value: "referent", label: "Referente" },
-              { value: "team_leader", label: "Team Leader" },
-              { value: "supervisor", label: "Supervisor" },
-              { value: "admin", label: "Administrador" },
-            ]}
-            helpText="Define el nivel de acceso a módulos del portal."
-          />
-
-          <input type="hidden" name="action" value="create" />
-          <ActionConfirmButton
-            type="submit"
-            color="btn-secondary"
-            label="Dar de alta"
-            icon="boxicons:user-check-filled"
-            class="mt-2 w-full"
-          />
-        </form>
-      </SectionCard>
-    </section>
+          <div class="mt-4 flex flex-col">
+            {inactiveUsers.map((u) => (
+              <div
+                class="border-base-300 flex items-center justify-between gap-4 border-b px-5 py-4 opacity-60 last:border-b-0"
+                data-inactive-user-row
+              >
+                <div class="flex min-w-0 items-center gap-4">
+                  <span class="text-base-content truncate font-mono text-sm font-medium">
+                    {u.username}
+                  </span>
+                  <span class="text-base-content/70 truncate text-sm">
+                    {u.agentName || "—"}
+                  </span>
+                  <span class="text-base-content/50 text-xs">
+                    {u.disabledAt
+                      ? `Desactivado el ${u.disabledAt.toLocaleDateString("es-AR")}`
+                      : "Desactivado"}
+                  </span>
+                </div>
+                <form method="POST" data-async-form>
+                  <input type="hidden" name="action" value="reactivate-user" />
+                  <input type="hidden" name="userId" value={u.id} />
+                  <ActionConfirmButton
+                    label="Reactivar"
+                    color="btn-success"
+                    icon="boxicons:user-plus-filled"
+                  />
+                </form>
+              </div>
+            ))}
+          </div>
+        </section>
+      )
+    }
   </div>
 </PageContainer>
 
-<Modal id="modal-change-role">
-  <Fragment slot="content">
-    <h3 class="text-base-content mb-1 text-base font-semibold">
-      Cambiar rol de usuario
-    </h3>
-    <p class="text-base-content/60 mb-4 text-xs">
-      Modifica el rol del usuario en el sistema.
-    </p>
-    <form method="POST" class="space-y-4" data-async-form>
-      <input type="hidden" name="action" value="change-role" />
-      <input type="hidden" name="userId" id="change-role-user-id" />
-      <SelectField
-        id="change-role-select"
-        name="newRole"
-        label="Nuevo rol"
-        selectClass="select-sm"
-        options={[
-          { value: "agent", label: "Agente" },
-          { value: "referent", label: "Referente" },
-          { value: "team_leader", label: "Team Leader" },
-          { value: "supervisor", label: "Supervisor" },
-          { value: "admin", label: "Administrador" },
-        ]}
-      />
-
-      <div
-        id="role-desc-container"
-        class="bg-base-200 border-base-300 space-y-1 rounded-lg border p-3 text-xs transition-all duration-300"
-      >
-        <span class="text-base-content block font-bold">Permisos del rol:</span>
-        <p id="role-permissions-desc" class="text-base-content/70">
-          Selecciona un rol para ver sus permisos.
-        </p>
-      </div>
-
-      <div
-        class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3"
-      >
-        <ActionCancelButton
-          type="button"
-          label="Cancelar"
-          icon="boxicons:x-filled"
-          variant="error"
-          onclick="this.closest('dialog').close()"
-        />
-        <ActionConfirmButton
-          type="submit"
-          color="btn-primary"
-          label="Guardar"
-          icon="boxicons:check-filled"
-        />
-      </div>
-    </form>
-  </Fragment>
-</Modal>
+<UserCreateModal helpdeskOptions={helpdeskOptions} />
 
 <Modal
   id="modal-permissions-matrix"
   title="Matriz de permisos por rol"
   icon="boxicons:universal-access-filled"
   size="full"
-  class="!w-fit max-w-[calc(100vw-1rem)] !p-3 sm:!p-4"
+  class="w-fit! max-w-[calc(100vw-1rem)] p-3! sm:p-4!"
 >
   <Fragment slot="content">
     <p class="text-base-content/60 mb-4 text-xs">
@@ -555,81 +934,325 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
 <AsyncFormScript />
 
 <script>
+  import { getCleanBase } from "@lib/baseUrl";
+  import { normalizeRole } from "@lib/rbac";
   // La validación de contraseñas es gestionada internamente por el componente PasswordField
 
   function initUsersAdmin() {
-    const roleSelect = document.getElementById(
-      "change-role-select",
-    ) as HTMLSelectElement | null;
-    if (!roleSelect) return false;
+    const createBtn = document.getElementById("btn-nuevo-usuario");
+    if (createBtn?.dataset.usersAdminBound === "true") return true;
+    if (!document.querySelector("[data-edit-user-btn]") && !createBtn)
+      return false;
 
-    const roleDescriptions = {
-      admin:
-        "Acceso total al sistema. Puede gestionar usuarios, configuraciones generales, ver el sistema de diseño y acceder a todas las herramientas de supervisión.",
-      supervisor:
-        "Acceso completo a la sección de Supervisión. Puede ingresar a Cronograma, Auditorías de Calidad y Asignación de Autogestiones. Acceso general al panel de administración excepto la creación de usuarios.",
-      team_leader:
-        "Acceso intermedio. Puede modificar cronogramas, controlar la asistencia del equipo, auditar la calidad y realizar asignaciones de autogestión. Acceso general al panel de administración excepto la creación de usuarios.",
-      referent:
-        "Acceso limitado a la sección de Supervisión. Únicamente tiene permisos para ingresar a la pantalla de Asignación de Autogestiones.",
-      agent:
-        "Acceso operativo básico. Consulta de catálogos y herramientas comunes. No tiene acceso a pantallas de Supervisión ni de Administración.",
-    };
-
-    const modal = document.getElementById(
-      "modal-change-role",
-    ) as HTMLDialogElement | null;
-    const userIdInput = document.getElementById(
-      "change-role-user-id",
+    const adminUsernameInput = document.getElementById(
+      "admin-username",
     ) as HTMLInputElement | null;
-    const descEl = document.getElementById("role-permissions-desc");
-    const containerEl = document.getElementById("role-desc-container");
+    const adminHelpdeskSelect = document.getElementById(
+      "admin-helpdesk",
+    ) as HTMLSelectElement | null;
 
-    const updateDesc = (role: keyof typeof roleDescriptions) => {
-      if (descEl) {
-        descEl.textContent =
-          roleDescriptions[role] || "Sin descripción disponible.";
+    type SuggestResult =
+      | { ok: true; helpdesk: { invgateId: number; name: string } | null }
+      | { ok: false; message: string };
+
+    async function suggestMesaForUsername(
+      username: string,
+    ): Promise<SuggestResult> {
+      try {
+        const res = await fetch(
+          `${getCleanBase()}api/admin/suggest-helpdesk?username=${encodeURIComponent(username)}`,
+          { credentials: "same-origin" },
+        );
+        if (!res.ok) {
+          return {
+            ok: false,
+            message:
+              res.status === 401 || res.status === 403
+                ? "No tenés permiso para consultar mesas."
+                : "No se pudo consultar InvGate.",
+          };
+        }
+        const json = await res.json();
+        return { ok: true, helpdesk: json?.helpdesk ?? null };
+      } catch {
+        return {
+          ok: false,
+          message: "Error de conexión al consultar InvGate.",
+        };
       }
-      if (containerEl) {
-        containerEl.className =
-          "p-3 border rounded-lg text-xs space-y-1 transition-all duration-300";
-        if (role === "admin") {
-          containerEl.classList.add("bg-error/5", "border-error/30");
-        } else if (role === "supervisor") {
-          containerEl.classList.add("bg-info/5", "border-info/30");
-        } else if (role === "team_leader") {
-          containerEl.classList.add("bg-accent/5", "border-accent/30");
-        } else if (role === "referent") {
-          containerEl.classList.add("bg-warning/5", "border-warning/30");
-        } else {
-          containerEl.classList.add("bg-base-200", "border-base-300");
+    }
+
+    const SUGGEST_MSG_ID = "admin-helpdesk-suggest-msg";
+
+    function clearHelpdeskSuggestionMessage(): void {
+      document.getElementById(SUGGEST_MSG_ID)?.remove();
+    }
+
+    function showHelpdeskSuggestionMessage(
+      select: HTMLSelectElement,
+      text: string,
+    ): void {
+      clearHelpdeskSuggestionMessage();
+      const msg = document.createElement("p");
+      msg.id = SUGGEST_MSG_ID;
+      msg.className = "text-warning mt-1 text-xs";
+      msg.textContent = text;
+      select.insertAdjacentElement("afterend", msg);
+    }
+
+    // Solo se ofrece la sugerencia si la mesa ya figura entre las opciones
+    // asignables (activas y habilitadas). Si no, se avisa en vez de inyectar
+    // una opción no asignable.
+    function selectOrAddHelpdeskOption(
+      select: HTMLSelectElement,
+      invgateId: number,
+    ): boolean {
+      const byId = Array.from(select.options).find(
+        (o) => o.value.split("|")[0] === String(invgateId),
+      );
+      if (byId) {
+        select.value = byId.value;
+        clearHelpdeskSuggestionMessage();
+        return true;
+      }
+      showHelpdeskSuggestionMessage(
+        select,
+        "La mesa sugerida no está habilitada para asignación.",
+      );
+      return false;
+    }
+
+    adminUsernameInput?.addEventListener("blur", async () => {
+      const username = adminUsernameInput.value.trim();
+      if (!username) return;
+      clearHelpdeskSuggestionMessage();
+      if (adminHelpdeskSelect && !adminHelpdeskSelect.value) {
+        const result = await suggestMesaForUsername(username);
+        if (result.ok && result.helpdesk) {
+          const applied = selectOrAddHelpdeskOption(
+            adminHelpdeskSelect,
+            result.helpdesk.invgateId,
+          );
+          if (applied) refreshParticipacionesVisibility();
         }
       }
-    };
-
-    roleSelect?.addEventListener("change", (e) => {
-      const val = (e.target as HTMLSelectElement)
-        .value as keyof typeof roleDescriptions;
-      updateDesc(val);
     });
 
+    // Prefill del modal unificado por fila (rol, mesa, username, nombre, flags).
     document
-      .querySelectorAll('[data-action="change-role-btn"]')
+      .querySelectorAll<HTMLButtonElement>("[data-edit-user-btn]")
       .forEach((btn) => {
         btn.addEventListener("click", () => {
-          const userId = btn.getAttribute("data-user-id");
-          const userRole = btn.getAttribute(
-            "data-user-role",
-          ) as keyof typeof roleDescriptions;
+          const userId = btn.getAttribute("data-user-id") || "";
+          const role = btn.getAttribute("data-user-role") || "agent";
+          const username = btn.getAttribute("data-user-username") || "";
+          const name = btn.getAttribute("data-user-name") || "";
+          const helpdesk = (
+            btn.getAttribute("data-user-helpdesk") || ""
+          ).trim();
+          const helpdeskId = (
+            btn.getAttribute("data-user-helpdesk-id") || ""
+          ).trim();
+          let flags: Record<string, boolean> = {};
+          try {
+            flags = JSON.parse(btn.getAttribute("data-user-flags") || "{}");
+          } catch {
+            flags = {};
+          }
 
-          if (userIdInput && roleSelect && modal) {
-            userIdInput.value = userId || "";
-            roleSelect.value = userRole || "agent";
-            updateDesc(roleSelect.value as keyof typeof roleDescriptions);
-            modal.showModal();
+          const roleSel = document.getElementById(
+            `edit-user-role-${userId}`,
+          ) as HTMLSelectElement | null;
+          const hdSel = document.getElementById(
+            `edit-user-helpdesk-${userId}`,
+          ) as HTMLSelectElement | null;
+          const unameInput = document.getElementById(
+            `edit-user-username-${userId}`,
+          ) as HTMLInputElement | null;
+          const nameInput = document.getElementById(
+            `edit-user-name-${userId}`,
+          ) as HTMLInputElement | null;
+
+          if (roleSel) {
+            const canonical = normalizeRole(role);
+            const hasOption = Array.from(roleSel.options).some(
+              (o) => o.value === role,
+            );
+            roleSel.value = hasOption ? role : canonical;
+          }
+          if (unameInput) unameInput.value = username;
+          if (nameInput) nameInput.value = name;
+          if (hdSel) {
+            hdSel.value = "";
+            if (helpdeskId) {
+              // Match por id (prefijo del value "id|nombre"): robusto ante
+              // renombres de mesa y labels duplicados/"(sugerida)".
+              const byId = Array.from(hdSel.options).find(
+                (o) => o.value.split("|")[0] === helpdeskId,
+              );
+              if (byId) hdSel.value = byId.value;
+            } else if (helpdesk) {
+              const match = Array.from(hdSel.options).find(
+                (o) => (o.textContent ?? "").trim() === helpdesk,
+              );
+              if (match) hdSel.value = match.value;
+            }
+          }
+          for (const [flag, checked] of Object.entries(flags)) {
+            const cb = document.querySelector<HTMLInputElement>(
+              `#modal-edit-user-${userId} input[name="${flag}"]`,
+            );
+            if (cb) cb.checked = checked;
+          }
+
+          const cronEdit = document.getElementById(
+            `edit-enCronograma-${userId}`,
+          ) as HTMLInputElement | null;
+          if (cronEdit && cronEdit.dataset.asistenciaBound !== "true") {
+            cronEdit.dataset.asistenciaBound = "true";
+            cronEdit.addEventListener("change", () =>
+              syncAsistenciaToggle(
+                `edit-enCronograma-${userId}`,
+                `edit-enAsistencia-${userId}`,
+              ),
+            );
           }
         });
       });
+
+    const PARTICIPATION_PRESETS: Record<string, Record<string, boolean>> = {
+      agent: {
+        enCronograma: true,
+        enAsistencia: true,
+        asignableCubic: true,
+        incluidoCalidad: true,
+        asignableAgs: true,
+      },
+      referent: {
+        enCronograma: true,
+        enAsistencia: true,
+        asignableCubic: true,
+        incluidoCalidad: true,
+        asignableAgs: true,
+      },
+      team_leader: {
+        enCronograma: true,
+        enAsistencia: true,
+        asignableCubic: true,
+        incluidoCalidad: false,
+        asignableAgs: false,
+      },
+      supervisor: {
+        enCronograma: false,
+        enAsistencia: false,
+        asignableCubic: false,
+        incluidoCalidad: false,
+        asignableAgs: false,
+      },
+      admin: {
+        enCronograma: false,
+        enAsistencia: false,
+        asignableCubic: false,
+        incluidoCalidad: false,
+        asignableAgs: false,
+      },
+    };
+
+    // Asistencia ⊆ cronograma: el toggle de asistencia solo se habilita con
+    // cronograma activo (y nunca para supervisores). Al deshabilitarse, se apaga.
+    function syncAsistenciaToggle(cronId: string, asistId: string) {
+      const cron = document.getElementById(cronId) as HTMLInputElement | null;
+      const asist = document.getElementById(asistId) as HTMLInputElement | null;
+      if (!cron || !asist) return;
+      asist.disabled = !cron.checked || cron.disabled;
+      if (asist.disabled) asist.checked = false;
+    }
+
+    function applyPresets(role: string) {
+      const preset = PARTICIPATION_PRESETS[role];
+      if (!preset) return;
+      const form = document.getElementById("nuevo-usuario-form");
+      if (!form) return;
+      for (const [flagName, checked] of Object.entries(preset)) {
+        const cb = form.querySelector<HTMLInputElement>(
+          `input[name="${flagName}"]`,
+        );
+        if (!cb) continue;
+        cb.checked = checked;
+        cb.disabled = role === "supervisor" && flagName === "enCronograma";
+      }
+      syncAsistenciaToggle("create-enCronograma", "create-enAsistencia");
+    }
+
+    const createCronToggle = document.getElementById(
+      "create-enCronograma",
+    ) as HTMLInputElement | null;
+    if (
+      createCronToggle &&
+      createCronToggle.dataset.asistenciaBound !== "true"
+    ) {
+      createCronToggle.dataset.asistenciaBound = "true";
+      createCronToggle.addEventListener("change", () =>
+        syncAsistenciaToggle("create-enCronograma", "create-enAsistencia"),
+      );
+    }
+
+    const altaRoleSelect = document.getElementById(
+      "admin-role",
+    ) as HTMLSelectElement | null;
+    altaRoleSelect?.addEventListener("change", (e) => {
+      applyPresets((e.target as HTMLSelectElement).value);
+    });
+    applyPresets(altaRoleSelect?.value || "agent");
+
+    // Participaciones solo visibles para mesas con secciones participativas.
+    let participationMesas: string[] = [];
+    try {
+      participationMesas = JSON.parse(
+        (document.querySelector<HTMLElement>("[data-participation-mesas]")
+          ?.dataset.participationMesas as string) || "[]",
+      );
+    } catch {
+      participationMesas = [];
+    }
+    const altaHelpdeskSelect = document.getElementById(
+      "admin-helpdesk",
+    ) as HTMLSelectElement | null;
+    const participacionesFields = document.getElementById(
+      "participaciones-fields",
+    );
+    function refreshParticipacionesVisibility(): void {
+      const name = altaHelpdeskSelect?.value?.split("|")[1]?.trim() ?? "";
+      participacionesFields?.classList.toggle(
+        "hidden",
+        !participationMesas.includes(name),
+      );
+    }
+    altaHelpdeskSelect?.addEventListener("change", () => {
+      clearHelpdeskSuggestionMessage();
+      refreshParticipacionesVisibility();
+    });
+    refreshParticipacionesVisibility();
+
+    const createDialog = document.getElementById(
+      "modal-create-user",
+    ) as HTMLDialogElement | null;
+    const createForm = document.getElementById(
+      "nuevo-usuario-form",
+    ) as HTMLFormElement | null;
+    if (createBtn && createDialog && createForm) {
+      createBtn.addEventListener("click", () => {
+        createForm
+          .querySelectorAll(".pwd-error")
+          .forEach((el) => el.classList.add("hidden"));
+        clearHelpdeskSuggestionMessage();
+        createForm.reset();
+        applyPresets(altaRoleSelect?.value || "agent");
+        refreshParticipacionesVisibility();
+        createDialog.showModal();
+      });
+      createBtn.dataset.usersAdminBound = "true";
+    }
 
     return true;
   }
@@ -650,5 +1273,61 @@ const rowGridClass = "grid grid-cols-[1fr_140px_320px] items-center gap-4";
 
   document.addEventListener("astro:page-load", () => {
     setupUsersObserver();
+  });
+</script>
+
+<script>
+  import {
+    matchesSearchQuery,
+    highlightSearchTargets,
+  } from "@lib/clientSearch";
+
+  function initUsersSearch() {
+    const searchInput = document.querySelector<HTMLInputElement>(
+      "#admin-users-search",
+    );
+    if (!searchInput) return false;
+    if (searchInput.dataset.usersSearchBound === "true") return true;
+
+    function applyFilters() {
+      const query = searchInput?.value.trim() ?? "";
+      const rows = document.querySelectorAll<HTMLElement>(
+        "#usuarios-table [data-table-row]",
+      );
+      rows.forEach((row) => {
+        const searchText = row.dataset.searchText || "";
+        const isVisible = matchesSearchQuery(query, [searchText]);
+        row.classList.toggle("hidden", !isVisible);
+        highlightSearchTargets(row, isVisible ? query : "");
+      });
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    const clearButton = document.getElementById("admin-users-search-clear");
+    clearButton?.addEventListener("click", () => {
+      searchInput.value = "";
+      applyFilters();
+      searchInput.focus();
+    });
+    searchInput.dataset.usersSearchBound = "true";
+    return true;
+  }
+
+  function setupUsersSearchObserver() {
+    if (initUsersSearch()) return;
+
+    const observer = new MutationObserver((_, obs) => {
+      if (initUsersSearch()) {
+        obs.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupUsersSearchObserver();
+
+  document.addEventListener("astro:page-load", () => {
+    setupUsersSearchObserver();
   });
 </script>

@@ -4,6 +4,7 @@ import PageContainer from "@components/ui/PageContainer.astro";
 import QuickAccessCard from "@components/ui/QuickAccessCard.astro";
 import { Icon } from "astro-icon/components";
 import { normalizeRole, hasPermission } from "@lib/rbac";
+import { isSectionVisibleSync } from "@lib/helpdeskAccess";
 import { db } from "@db/index";
 import { agents } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -38,7 +39,9 @@ const isRouteLocked = (href: string): boolean => {
   ) {
     return true;
   }
-  return !hasPermission(href, userRole);
+  if (!hasPermission(href, userRole)) return true;
+  if (!isSectionVisibleSync(user?.helpdeskName, user?.role, href)) return true;
+  return false;
 };
 
 const mainModules = [
@@ -72,6 +75,31 @@ const mainModules = [
   },
 ];
 
+const visibleMainModules =
+  user && user.id !== 0
+    ? mainModules.filter(
+        (m) =>
+          !isRouteLocked(m.href) &&
+          isSectionVisibleSync(user.helpdeskName, user.role, m.href),
+      )
+    : [];
+
+// Reparto balanceado de columnas: máximo 4 por fila. Elegimos la cantidad de
+// columnas que minimiza la última fila incompleta sin pasar de 4.
+// 4→4 (1 fila), 5→3 (3+2), 6→3 (3+3), 7→4 (4+3), 8→4 (4+4).
+const moduleColumnOptions = [
+  "md:grid-cols-1",
+  "md:grid-cols-2",
+  "md:grid-cols-3",
+  "md:grid-cols-4",
+] as const;
+
+const moduleRows = Math.ceil(visibleMainModules.length / 4);
+const moduleColumnCount =
+  visibleMainModules.length > 0 ? Math.ceil(visibleMainModules.length / moduleRows) : 1;
+const moduleGridClass = moduleColumnOptions[moduleColumnCount - 1];
+const moduleCardLayout = moduleColumnCount >= 3 ? "vertical" : "horizontal";
+
 type BoxiconName = `boxicons:${string}`;
 
 interface QuickAccessItem {
@@ -95,7 +123,7 @@ const quickAccessItems: QuickAccessItem[] = [
     title: "Mesas de Ayuda",
     description:
       "Revisa derivaciones por tema para resolver casos con rapidez.",
-    icon: "boxicons:headphone-mic",
+    icon: "boxicons:headphone-mic-filled",
     iconTone: "bg-warning/10 text-warning",
   },
   {
@@ -143,6 +171,13 @@ const quickAccessItems: QuickAccessItem[] = [
     iconTone: "bg-accent/10 text-accent",
   },
 ];
+
+// Los accesos rápidos también respetan rol + mesa: si no hay permiso, el card
+// NO se renderiza (oculto, nunca deshabilitado).
+const visibleQuickAccessItems =
+  user && user.id !== 0
+    ? quickAccessItems.filter((item) => !isRouteLocked(item.href))
+    : quickAccessItems;
 ---
 
 <!--
@@ -188,47 +223,28 @@ const quickAccessItems: QuickAccessItem[] = [
     >
       <!-- Módulos Principales -->
       {
-        user && user.id !== 0 && (
-          <div
-            class:list={[
-              "grid grid-cols-1 gap-6 sm:grid-cols-2",
-              ["agent", "referent"].includes(userRole)
-                ? "lg:grid-cols-3"
-                : "lg:grid-cols-4",
-            ]}
-          >
-            {mainModules
-              .filter(
-                (mod) =>
-                  !(
-                    ["agent", "referent"].includes(userRole) &&
-                    mod.href === "/supervision/asistencia"
-                  ),
-              )
-              .map((mod) => {
-                const locked = isRouteLocked(mod.href);
-                return (
-                  <QuickAccessCard
-                    href={mod.href}
-                    title={mod.label}
-                    description={mod.sublabel}
-                    icon={mod.icon}
-                    iconTone={mod.tone}
-                    locked={locked}
-                    layout="horizontal"
-                  />
-                );
-              })}
+        visibleMainModules.length > 0 && (
+          <div class:list={["grid grid-cols-1 gap-6", moduleGridClass]}>
+            {visibleMainModules.map((mod) => (
+              <QuickAccessCard
+                href={mod.href}
+                title={mod.label}
+                description={mod.sublabel}
+                icon={mod.icon}
+                iconTone={mod.tone}
+                layout={moduleCardLayout}
+              />
+            ))}
           </div>
         )
       }
 
       <!-- Enlaces de acceso rápido -->
       <div
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
       >
         {
-          quickAccessItems.map((item) => (
+          visibleQuickAccessItems.map((item) => (
             <QuickAccessCard
               href={item.href}
               title={item.title}

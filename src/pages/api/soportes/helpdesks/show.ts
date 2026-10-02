@@ -2,18 +2,27 @@ import type { APIRoute } from "astro";
 import { db } from "@db/index";
 import { hiddenHelpdesks } from "@db/schema";
 import { eq } from "drizzle-orm";
-import { logAdminAction } from "@lib/auditLogger";
+import { logAdminActionStructured } from "@lib/auditLogger";
 import { jsonResponse } from "@lib/apiResponse";
-import { ROLE_HIERARCHY } from "@lib/rbac";
+import { can } from "@lib/roleConfig";
+import { validateRequestCsrf } from "@lib/csrf";
+import { checkSlidingRateLimit } from "@lib/rateLimit";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
-  if (
-    !user ||
-    ROLE_HIERARCHY[user.role as keyof typeof ROLE_HIERARCHY] <
-      ROLE_HIERARCHY.admin
-  ) {
+  if (!user || !can(user.role, "admin")) {
     return jsonResponse({ error: "Acceso denegado" }, 403);
+  }
+
+  if (!(await validateRequestCsrf(request, locals))) {
+    return jsonResponse({ error: "Token CSRF inválido o ausente" }, 403);
+  }
+
+  if (!checkSlidingRateLimit(`rate:show:${user.id}`, 10, 60_000)) {
+    return jsonResponse(
+      { error: "Demasiadas solicitudes. Intenta de nuevo en un minuto." },
+      429,
+    );
   }
 
   try {
@@ -31,9 +40,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .delete(hiddenHelpdesks)
       .where(eq(hiddenHelpdesks.invgateId, invgateId));
 
-    await logAdminAction(
+    await logAdminActionStructured(
       user.username || "sistema",
       `Mostro la mesa de ayuda ID ${invgateId}.`,
+      "helpdesk",
+      invgateId,
+      { hidden: true },
+      null,
     );
 
     return jsonResponse({ ok: true });

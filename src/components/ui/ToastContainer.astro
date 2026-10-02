@@ -2,7 +2,7 @@
 import { Icon } from "astro-icon/components";
 ---
 
-<div id="global-toast-container" class="toast toast-end z-50"></div>
+<div id="global-toast-container" class="toast toast-end"></div>
 
 <div id="toast-icon-templates" class="hidden" aria-hidden="true">
   <div id="template-success">
@@ -24,6 +24,53 @@ import { Icon } from "astro-icon/components";
 
   // Exponer a nivel global para llamadas dinámicas desde islas de servidor
   (window as any).showToast = showToast;
+
+  // Los modales del proyecto usan <dialog>.showModal(), que promueve el dialog a
+  // la "top layer": ningún z-index lo supera. Mientras haya un dialog abierto, el
+  // contenedor de toasts se reubica dentro del dialog más reciente, para que sus
+  // hijos se pinten por encima del modal. Al cerrarlos vuelve al body.
+  const container = document.getElementById("global-toast-container");
+  const openDialogs: HTMLElement[] = [];
+
+  function toastHost(): HTMLElement {
+    while (
+      openDialogs.length > 0 &&
+      !openDialogs[openDialogs.length - 1].isConnected
+    ) {
+      openDialogs.pop();
+    }
+    const tracked = openDialogs[openDialogs.length - 1];
+    if (tracked) return tracked;
+    const dialogs = document.querySelectorAll<HTMLDialogElement>("dialog[open]");
+    return dialogs[dialogs.length - 1] ?? document.body;
+  }
+
+  function syncToastHost() {
+    if (!container) return;
+    const host = toastHost();
+    if (container.parentElement !== host) host.appendChild(container);
+  }
+
+  if (container) {
+    new MutationObserver((records) => {
+      for (const record of records) {
+        const el = record.target as HTMLElement;
+        if (el.tagName !== "DIALOG") continue;
+        const index = openDialogs.indexOf(el);
+        if (el.hasAttribute("open")) {
+          if (index === -1) openDialogs.push(el);
+        } else if (index !== -1) {
+          openDialogs.splice(index, 1);
+        }
+      }
+      syncToastHost();
+    }).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["open"],
+    });
+  }
 
   function checkUrlToasts() {
     const url = new URL(window.location.href);

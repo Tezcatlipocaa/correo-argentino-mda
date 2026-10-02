@@ -9,7 +9,7 @@ import { revalidateAutomations } from "@lib/workflow/discovery";
  * reflejar los cambios de estado hechos directamente en InvGate.
  */
 export const GET: APIRoute = async ({ locals }) => {
-  const denied = requireReadAccess(locals, "automatizaciones");
+  const denied = await requireReadAccess(locals, "automatizaciones");
   if (denied) {
     return denied;
   }

@@ -9,7 +9,7 @@ import { resolveAutomationProgress } from "@lib/workflow/resolver";
  * persistido si existe y, si no, evita tasks/solutions/wf.request.
  */
 export const GET: APIRoute = async ({ params, locals }) => {
-  const denied = requireReadAccess(locals, "automatizaciones");
+  const denied = await requireReadAccess(locals, "automatizaciones");
   if (denied) {
     return denied;
   }

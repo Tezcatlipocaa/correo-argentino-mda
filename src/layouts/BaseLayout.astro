@@ -12,6 +12,7 @@ import {
   type NavItem,
 } from "@lib/navigation";
 import { normalizeRole, hasPermission } from "@lib/rbac";
+import { isSectionVisibleSync } from "@lib/helpdeskAccess";
 import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
 import { ClientRouter } from "astro:transitions";
 
@@ -102,7 +103,9 @@ const isRouteLocked = (href: string): boolean => {
   ) {
     return true;
   }
-  return !hasPermission(href, normalizedUserRole);
+  if (!hasPermission(href, normalizedUserRole)) return true;
+  if (!isSectionVisibleSync(user.helpdeskName, user.role, href)) return true;
+  return false;
 };
 
 let visibleNavSections = navSections
@@ -148,6 +151,17 @@ const globalFontFaceCss = `
         const theme =
           savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
         document.documentElement.setAttribute("data-theme", theme);
+
+        const root = document.documentElement;
+        const mode = localStorage.getItem("enlacesViewMode");
+        if (mode === "compact" || mode === "normal" || mode === "large") {
+          root.setAttribute("data-view-mode", mode);
+        }
+        const cols = localStorage.getItem("enlacesViewColumns");
+        if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
+          root.setAttribute("data-view-columns", cols);
+        }
+
         const toggle = document.getElementById("theme-toggle");
         if (toggle instanceof HTMLInputElement) {
           toggle.checked = theme === "dark";

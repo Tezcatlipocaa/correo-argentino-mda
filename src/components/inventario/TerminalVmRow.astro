@@ -10,6 +10,17 @@ interface Props {
 
 const { terminal, base, terminalRowGridClass = "grid grid-cols-12 items-start" } =
   Astro.props;
+
+const lastContactAge = (() => {
+  const raw = terminal.lastContactRaw;
+  if (!raw) return "error";
+  const parsed = new Date(raw.replace(" ", "T"));
+  if (Number.isNaN(parsed.getTime())) return "error";
+  const diffMs = Date.now() - parsed.getTime();
+  if (diffMs < 24 * 60 * 60 * 1000) return "success";
+  if (diffMs <= 30 * 24 * 60 * 60 * 1000) return "warning";
+  return "error";
+})();
 ---
 
 <article
@@ -73,8 +84,11 @@ const { terminal, base, terminalRowGridClass = "grid grid-cols-12 items-start" }
   </div>
 
   <div class="col-span-2 flex flex-col items-end justify-center font-mono">
-    <span class="text-base-content/70 truncate text-xs">
-      {terminal.lastContactDate}
+    <span class="flex flex-row items-center gap-1.5">
+      <span class:list={["status", `status-${lastContactAge}`]}></span>
+      <span class="text-base-content/70 truncate text-xs">
+        {terminal.lastContactDate}
+      </span>
     </span>
     <span class="text-base-content/50 truncate text-xs">
       {terminal.lastContactTime}

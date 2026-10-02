@@ -11,7 +11,7 @@ Generado el 2026-04-10. Ultima actualizacion: 2026-07-06.
 - Interactividad: React islands con `@astrojs/react`, `theme-change` para toggle de tema
 - Base de datos: SQLite con Drizzle ORM + `better-sqlite3`
 - Autenticacion: Sesion cookie-based HMAC + RBAC (5 roles: agent, referent, team_leader, supervisor, admin)
-- Deploy: Node standalone con PM2 (3 procesos: Astro SSR, ping-worker, sync-legacy-inventory)
+- Deploy: Node standalone con PM2 (5 procesos: Astro SSR, mda-ping-cubics, sync-legacy-inventory, sync-users, sync-office-links)
 
 ## Contexto de producto
 
@@ -501,7 +501,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 | Ruta                                    | Descripcion                             |
 | --------------------------------------- | --------------------------------------- |
 | `/supervision`                          | Redirecciona al dashboard               |
-| `/supervision/cronograma`               | Gestion de cronograma y horarios        |
+| `/supervision/cronograma`               | Gestion de cronograma, horarios y ubicaciones |
 | `/supervision/asistencia`               | Control de asistencia y cumplimiento    |
 | `/supervision/asignacion-autogestiones` | Asignacion Round-Robin de autogestiones |
 | `/supervision/calidad-operadores`       | Auditoria y puntuacion de calidad       |
@@ -511,11 +511,10 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 | Ruta                         | Descripcion                            |
 | ---------------------------- | -------------------------------------- |
 | `/admin`                     | Dashboard admin con resumen de sistema |
-| `/admin/usuarios`            | CRUD de usuarios del sistema           |
+| `/admin/usuarios`            | CRUD de usuarios + participaciones (enCronograma, enAsistencia, asignableCubic, incluidoCalidad, asignableAgs) |
 | `/admin/contactos`           | CRUD de contactos y categorias         |
 | `/admin/recursos`            | CRUD de enlaces y categorias           |
 | `/admin/auditoria`           | Logs de auditoria                      |
-| `/admin/operadores`          | CRUD de operadores N1/N2               |
 | `/admin/aplicativos`         | CRUD de aplicativos del catalogo       |
 | `/admin/invgate/ubicaciones` | Mapeo de ubicaciones InvGate           |
 

@@ -13,6 +13,7 @@ import { Icon } from "astro-icon/components";
 import FormField from "@components/ui/forms/FormField.astro";
 import PasswordField from "@components/ui/forms/PasswordField.astro";
 import { getCleanBase } from "@lib/baseUrl";
+import { computeFingerprint } from "@lib/sessionFingerprint";
 
 if (Astro.locals.user.id !== 0) {
   return Astro.redirect(getCleanBase());
@@ -42,6 +43,14 @@ if (Astro.request.method === "POST") {
       userFound.password,
     );
 
+    if (isPasswordValid && !userFound.active) {
+      // Cuenta desactivada: no se crea sesión. El chequeo va después de validar
+      // la contraseña para no filtrar el estado de cuentas a un atacante.
+      return Astro.redirect(
+        `${cleanBase}login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
+      );
+    }
+
     if (isPasswordValid) {
       const sessionId = generateSessionId();
       const expiresAtMs = Date.now() + 1000 * 60 * 60 * 24 * 7;
@@ -51,6 +60,9 @@ if (Astro.request.method === "POST") {
         id: sessionId,
         userId: userFound.id,
         expiresAt: expiresAtMs,
+        fingerprint: computeFingerprint(
+          Astro.request.headers.get("user-agent"),
+        ),
       });
 
       const signedId = signSessionId(sessionId);

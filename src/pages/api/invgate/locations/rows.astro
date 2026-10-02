@@ -1,5 +1,6 @@
 ---
 import UbicacionRow from "@components/admin/invgate/UbicacionRow.astro";
+import { getInternalOrigin } from "@lib/internalOrigin";
 
 const searchParams = Astro.url.searchParams;
 const page = searchParams.get("page") || "1";
@@ -7,7 +8,7 @@ const filter = searchParams.get("filter") || "all";
 const q = searchParams.get("q") || "";
 
 const cookie = Astro.request.headers.get("cookie") || "";
-const apiUrl = new URL("/api/invgate/locations", Astro.url.origin);
+const apiUrl = new URL("/api/invgate/locations", getInternalOrigin());
 apiUrl.searchParams.set("page", page);
 apiUrl.searchParams.set("filter", filter);
 apiUrl.searchParams.set("q", q);

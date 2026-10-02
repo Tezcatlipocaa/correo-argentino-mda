@@ -28,7 +28,7 @@ const MONTH_LABELS = [
 import { requireWriteAccess } from "@lib/rbac-middleware";
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const denied = requireWriteAccess(locals, "cronograma");
+  const denied = await requireWriteAccess(locals, "cronograma");
   if (denied) return denied;
 
   try {
@@ -43,7 +43,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const dbAgents = await db
       .select({
         id: agents.id,
-        name: agents.name,
         saturdayGroup: agents.saturdayGroup,
         saturdayHorario: agents.saturdayHorario,
       })
@@ -115,13 +114,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // 5. Transaction: Delete existing, insert schedules, insert agentSaturdayGroups, upsert saturdayRotationConfig
     await db.transaction((tx) => {
-      // 5.1 Batch delete schedules
+      // 5.1 Batch delete schedules (por agentId: los nombres stale no
+      // pueden dejar filas huérfanas en el mes)
       tx.delete(schedules)
         .where(
           and(
             inArray(
-              schedules.agentName,
-              dbAgents.map((a) => a.name),
+              schedules.agentId,
+              dbAgents.map((a) => a.id),
             ),
             like(schedules.date, `${monthPrefix}-%`),
           ),
@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for (let d = 1; d <= daysInMonth; d++) {
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           allInserts.push({
-            agentName: op.name,
+            agentId: op.id,
             date: dateStr,
             status: "Franco",
             comment: "",
@@ -188,7 +188,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  const denied = requireWriteAccess(locals, "cronograma");
+  const denied = await requireWriteAccess(locals, "cronograma");
   if (denied) return denied;
 
   try {

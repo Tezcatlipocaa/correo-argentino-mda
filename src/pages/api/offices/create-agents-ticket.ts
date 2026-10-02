@@ -17,7 +17,7 @@ import {
 import { resolveInvgateLocationId } from "@lib/invgate/resolveOfficeLocation";
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const denied = requireWriteAccess(locals, "usuarios");
+  const denied = await requireWriteAccess(locals, "usuarios");
   if (denied) return denied;
 
   const adminUsername = locals.user?.username;
@@ -32,6 +32,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const observaciones =
       typeof body?.observaciones === "string" ? body.observaciones : undefined;
     const sourceId = body?.sourceId;
+    // El modal ofrece "Crear sin verificar": el agente da por hecho que no hay
+    // ningun ticket activo. Queda asentado en la auditoria y en el ticket.
+    const verificacionOmitida = body?.duplicateCheckSkipped === true;
 
     if (typeof officeCode !== "string" || typeof officeName !== "string") {
       return jsonError(
@@ -155,6 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       officeName.trim(),
       officeCode.trim(),
       observaciones,
+      verificacionOmitida,
     );
 
     const payload = {
@@ -190,9 +194,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const username = locals.user?.username || "Sistema";
     const envLabel = USE_QA_INVGATE ? "[QA] " : "";
+    const skipNote = verificacionOmitida
+      ? " (creado SIN verificar tickets abiertos previos)"
+      : "";
     await logAdminAction(
       username,
-      `${envLabel}Creó ticket de InvGate por agentes caídos en ${officeName.trim()} (${officeCode.trim()})`,
+      `${envLabel}Creó ticket de InvGate por agentes caídos en ${officeName.trim()} (${officeCode.trim()})${skipNote}`,
     );
 
     const id = res.data?.request_id || res.data?.id;
@@ -202,6 +209,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // --- Reasignar el ticket al admin logueado como agente ---
+    const invgateBaseUrl = USE_QA_INVGATE
+      ? import.meta.env.INVGATE_QA_BASE_URL ||
+        process.env.INVGATE_QA_BASE_URL ||
+        ""
+      : import.meta.env.INVGATE_BASE_URL || process.env.INVGATE_BASE_URL || "";
+    const cleanBaseUrl = invgateBaseUrl.replace(/\/api\/v1\/?$/, "");
+    const ticketUrl = `${cleanBaseUrl}/requests/show/index/id/${id}`;
+
     const reassignRes = await postFn<{
       status?: string;
       info?: string;
@@ -213,26 +228,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
 
     if (!reassignRes.ok) {
-      return jsonError(
-        `El ticket fue creado (#${id}) pero no se pudo reasignar: ${reassignRes.message}`,
-        500,
-      );
+      return jsonResponse({
+        success: true,
+        id,
+        ticketUrl,
+        warning: `El ticket fue creado (#${id}) pero no se pudo reasignar: ${reassignRes.message}`,
+      });
     }
 
     if (reassignRes.data?.status && reassignRes.data.status !== "OK") {
-      return jsonError(
-        `El ticket fue creado (#${id}) pero la reasignación falló: ${reassignRes.data.error || reassignRes.data.info || "Error desconocido"}`,
-        500,
-      );
+      return jsonResponse({
+        success: true,
+        id,
+        ticketUrl,
+        warning: `El ticket fue creado (#${id}) pero la reasignación falló: ${reassignRes.data.error || reassignRes.data.info || "Error desconocido"}`,
+      });
     }
-
-    const invgateBaseUrl = USE_QA_INVGATE
-      ? import.meta.env.INVGATE_QA_BASE_URL ||
-        process.env.INVGATE_QA_BASE_URL ||
-        ""
-      : import.meta.env.INVGATE_BASE_URL || process.env.INVGATE_BASE_URL || "";
-    const cleanBaseUrl = invgateBaseUrl.replace(/\/api\/v1\/?$/, "");
-    const ticketUrl = `${cleanBaseUrl}/requests/show/index/id/${id}`;
 
     return jsonResponse({ success: true, id, ticketUrl });
   } catch (error: any) {

@@ -130,7 +130,7 @@ export const dom = {
   ) {
     const val = selectEl.value;
     const baseClass =
-      "select select-bordered h-9 py-1 rounded-xl w-full font-semibold focus:outline-none focus:border-secondary bg-base-100 pr-9 text-small ";
+      "select h-9 py-1 rounded-xl w-full font-semibold focus:outline-none focus:border-secondary bg-base-100 pr-9 text-small ";
 
     if (field === "asistencia") {
       selectEl.className = baseClass + "max-w-[220px]";

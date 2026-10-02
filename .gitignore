@@ -77,6 +77,7 @@ skills-lock.json
 test-insert.js
 test-playwright.js
 scratch/
+test_signature_success.png
 
 # Local storage fallback (when EXTERNAL_STORAGE_DIR is not set)
 /data/storage/
@@ -105,3 +106,16 @@ docs/superpowers/
 # generated reports and db backups
 scripts/reports
 scripts/backups
+
+# cross-process permissions cache invalidation marker
+.permissions-invalidation-timestamp
+
+# align-db-to-schema workdir (regenerada en cada corrida)
+.drizzle-canonical/
+
+# Certificados (nunca versionar)
+*.cer
+*.crt
+*.key
+*.pem
+*.pfx

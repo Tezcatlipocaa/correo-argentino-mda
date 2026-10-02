@@ -90,25 +90,25 @@ test.describe("Inventario T&T & STS", () => {
     }
   });
 
-  test("el toggle Solo con VM solo aparece con Solo T&T y aplica withVm", async ({
+  test("el filtro Con/Sin VM solo aparece con Solo T&T y aplica vmFilter", async ({
     page,
   }) => {
     await page.goto("/inventario-terminales");
     await page.getByRole("radio", { name: "T&T & STS" }).check();
     await page.waitForSelector("#view-ttsts:not(.hidden)");
 
-    const wrapper = page.locator("#tt-with-vm-wrapper");
+    const wrapper = page.locator("#tt-vm-filter-wrapper");
     await expect(wrapper).toBeHidden();
 
     await page.getByRole("radio", { name: "Solo T&T" }).check();
     await page.waitForTimeout(500);
     await expect(wrapper).toBeVisible();
 
-    await page.locator("#tt-with-vm").check();
+    await page.getByRole("radio", { name: "Sin VM" }).check();
     await page.waitForTimeout(500);
 
     const params = new URL(page.url()).searchParams;
-    expect(params.get("withVm")).toBe("true");
+    expect(params.get("vmFilter")).toBe("without");
   });
 
   test("el banner colapsable abre y cierra", async ({ page }) => {

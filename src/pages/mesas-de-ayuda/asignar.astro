@@ -10,8 +10,10 @@ import { isNull } from "drizzle-orm";
 import { invgateGet } from "@lib/invgateClient";
 import type { InvgateHelpdeskAndLevel } from "@/types/invgate";
 import { HIDDEN_HELPDESK_IDS } from "@lib/soportesConfig";
+import { getCsrfTokenForSession } from "@lib/csrf";
 
 const cleanBase = getCleanBase();
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
 
 const unassignedRecords = await db.query.supportGuides.findMany({
   where: isNull(supportGuides.invgate_id),
@@ -54,7 +56,10 @@ const helpdesks = allItems
       description="Vincula registros locales de Service Manager a las helpdesks de InvGate."
     />
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div
+      class="grid grid-cols-1 gap-4 md:grid-cols-2"
+      data-csrf-token={csrfToken}
+    >
       {
         unassignedRecords.map((guide) => {
           let topicsList: string[] = [];
@@ -89,10 +94,7 @@ const helpdesks = allItems
                 </div>
               )}
               <div class="mt-2 flex items-center gap-2">
-                <select
-                  id={selectId}
-                  class="select select-sm select-bordered flex-1 text-xs"
-                >
+                <select id={selectId} class="select select-sm flex-1 text-xs">
                   <option value="">Seleccionar helpdesk...</option>
                   {helpdesks.map((hd) => (
                     <option value={hd.id}>{hd.name}</option>
@@ -143,7 +145,13 @@ const helpdesks = allItems
           const res = await fetch(`${cleanBase}api/support-guides/assign`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ recordId, invgate_id: invgateId }),
+            body: JSON.stringify({
+              recordId,
+              invgate_id: invgateId,
+              csrf_token: document
+                .querySelector("[data-csrf-token]")
+                ?.getAttribute("data-csrf-token"),
+            }),
           });
 
           if (!res.ok) {

@@ -88,7 +88,12 @@ export const navSections: NavSection[] = [
       {
         href: "/mesas-de-ayuda",
         label: "Mesas de Ayuda",
-        icon: "boxicons:headphone-mic",
+        icon: "boxicons:headphone-mic-filled",
+      },
+      {
+        href: "/base-conocimiento",
+        label: "Base de conocimiento",
+        icon: "boxicons:book-library-filled",
       },
       {
         href: "/automatizaciones",
@@ -138,14 +143,14 @@ export const navSections: NavSection[] = [
             icon: "boxicons:group-filled",
           },
           {
-            href: "/admin/operadores",
-            label: "Operadores",
-            icon: "boxicons:user-id-card-filled",
-          },
-          {
             href: "/admin/auditoria",
             label: "Auditoría",
-            icon: "boxicons:history",
+            icon: "boxicons:history-filled",
+          },
+          {
+            href: "/admin/papelera",
+            label: "Papelera",
+            icon: "boxicons:trash-filled",
           },
           {
             href: "/admin/invgate/ubicaciones",
@@ -242,4 +247,27 @@ export function getResolvedSearchParams(
     }
   }
   return url.searchParams;
+}
+
+// En server islands el request apunta a /_server-islands/...; el permiso real
+// corresponde a la pagina padre (header Referer). Devuelve el pathname del
+// referer normalizado a ruta relativa, o el pathname original si no es una
+// island (mantiene deny-by-default para pedidos directos sin referer).
+export function getIslandEffectivePathname(
+  pathname: string,
+  referer: string | null,
+): string {
+  if (!pathname.toLowerCase().startsWith("/_server-islands/")) return pathname;
+  if (!referer) return pathname;
+  try {
+    const refererPath = new URL(referer).pathname;
+    const cleanBase = getCleanBase();
+    if (refererPath.startsWith(cleanBase)) {
+      return "/" + refererPath.slice(cleanBase.length);
+    }
+    if (refererPath === cleanBase.slice(0, -1)) return "/";
+    return refererPath;
+  } catch {
+    return pathname;
+  }
 }

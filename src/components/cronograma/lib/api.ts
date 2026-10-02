@@ -50,7 +50,8 @@ export async function fetchCronogramaData(
 }
 
 export interface EditPayload {
-  agentName: string;
+  agentId?: number;
+  agentName?: string;
   date: string;
   status?: string;
   comment?: string;
@@ -119,14 +120,6 @@ export interface OperatorPayload {
   horarioDefault?: string;
 }
 
-export async function createOperator(operator: OperatorPayload): Promise<any> {
-  return fetchJSON<any>("/api/cronograma/operators", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(operator),
-  });
-}
-
 export async function editOperator(
   operator: Required<Pick<OperatorPayload, "originalName" | "name">> &
     OperatorPayload,
@@ -163,7 +156,8 @@ export async function deleteMonth(year: number, month: number): Promise<void> {
 }
 
 export interface WeeklySchedulePayload {
-  agentName: string;
+  agentId?: number;
+  agentName?: string;
   esquema_semanal: Record<string, string>;
   esquema_horario: Record<string, string>;
   esquema_break_inicio: Record<string, string>;

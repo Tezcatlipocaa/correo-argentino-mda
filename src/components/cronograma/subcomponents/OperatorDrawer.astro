@@ -7,7 +7,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
 <!-- Operator Profile Modal -->
 <div
   id="operator-drawer-overlay"
-  class="bg-base-content/40 fixed inset-0 z-110 hidden items-center justify-center p-4 backdrop-blur-md transition-all duration-300"
+  class="bg-base-content/40 fixed inset-0 z-[160] hidden items-center justify-center p-4 backdrop-blur-md transition-all duration-300"
 >
   <div
     id="operator-drawer"
@@ -314,7 +314,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
 
         <select
           id="weekly-template-select"
-          class="select select-bordered select-sm bg-base-100 focus:border-secondary w-full rounded-xl text-xs font-bold focus:outline-none"
+          class="select select-sm bg-base-100 focus:border-secondary w-full rounded-xl text-xs font-bold focus:outline-none"
         >
           <!-- Loaded dynamically -->
         </select>
@@ -328,7 +328,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
             type="text"
             id="new-template-name"
             placeholder="Nombre de la plantilla..."
-            class="input input-xs input-bordered focus:border-secondary bg-base-100 flex-1 rounded-lg text-xs font-bold focus:outline-none"
+            class="input input-xs focus:border-secondary bg-base-100 flex-1 rounded-lg text-xs font-bold focus:outline-none"
           />
           <button
             type="button"

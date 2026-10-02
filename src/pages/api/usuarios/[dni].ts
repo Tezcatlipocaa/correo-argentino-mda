@@ -4,8 +4,13 @@ import { employees } from "@db/schema";
 import { eq, sql } from "drizzle-orm";
 import { jsonResponse, jsonError } from "@lib/apiResponse";
 import { logAdminAction } from "@lib/auditLogger";
+import { requireWriteAccess } from "@lib/rbac-middleware";
 
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async ({ params, request, locals }) => {
+  if (!locals.user || locals.user.id === 0) {
+    return jsonError("Sesión no iniciada", 401);
+  }
+
   const { dni } = params;
   if (!dni) {
     return jsonError("DNI del usuario requerido", 400);
@@ -14,6 +19,11 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   try {
     const body = await request.json();
     const { interno, telefono, sucursal } = body;
+
+    if (sucursal !== undefined) {
+      const denied = await requireWriteAccess(locals, "usuarios");
+      if (denied) return denied;
+    }
 
     const existing = await db
       .select()
@@ -36,7 +46,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
       .where(eq(employees.dni, dni));
 
     await logAdminAction(
-      "API (público)",
+      locals.user.username,
       `Actualizó datos de contacto del empleado ${existing[0].fullname} (${dni})`,
     );
 

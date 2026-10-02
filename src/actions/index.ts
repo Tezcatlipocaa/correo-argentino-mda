@@ -43,7 +43,7 @@ export const server = {
       ),
     }),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "calidad");
+      const denied = await requireWriteAccess(context.locals, "calidad");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",
@@ -216,7 +216,7 @@ export const server = {
       })
       .passthrough(),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "calidad");
+      const denied = await requireWriteAccess(context.locals, "calidad");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",
@@ -360,7 +360,7 @@ export const server = {
       id: z.string().transform((v) => parseInt(v, 10)),
     }),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "calidad");
+      const denied = await requireWriteAccess(context.locals, "calidad");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",
@@ -413,7 +413,7 @@ export const server = {
         .default(""),
     }),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "calidad");
+      const denied = await requireWriteAccess(context.locals, "calidad");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",

@@ -24,7 +24,7 @@ function TitleCard({
   onCopy,
 }: Props) {
   return (
-    <article className="card bg-base-200 card-compact border-base-300 h-32 border transition-transform hover:scale-102">
+    <article className="card bg-base-200 border-base-300 h-32 border transition-transform hover:scale-102">
       <header className="card-header flex items-center gap-x-2 p-3">
         <article
           className={`grid size-9 place-items-center rounded-md border border-neutral-800/70 p-2 text-neutral-800 ${title.tone}`}

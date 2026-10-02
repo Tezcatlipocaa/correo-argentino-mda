@@ -12,7 +12,10 @@ declare namespace App {
       id: number;
       username: string;
       role: string;
+      helpdeskId: number | null;
+      helpdeskName: string | null;
     };
+    sessionId: string | null;
   }
 }
 

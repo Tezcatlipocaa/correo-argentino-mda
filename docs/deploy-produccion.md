@@ -49,6 +49,7 @@ Completá las 6 variables en `.env`. En producción prestá atención a:
 | `INVGATE_BASE_URL`     | `https://correoargentino.sd.cloud.invgate.net/api/v1/`                     |
 | `INVGATE_API_USERNAME` | `portalmda`                                                                |
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
+| `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
@@ -132,17 +133,91 @@ El VirtualHost ya existe en `C:\xampp\apache\conf\extra\httpd-vhosts.conf`. En u
 </VirtualHost>
 ```
 
-> **Nota:** El `ServerName` real de tu servidor es `portal-mda.correo.local`. Asegurate de que `astro.config.mjs` tenga `site: "http://portal-mda.correo.local"` si usás URLs absolutas.
+> **Nota:** El hostname canónico es mda.correo.local (debe coincidir con el SAN del certificado). astro.config.mjs ya usa site: "https://mda.correo.local".
 
-Tu servidor ya tiene SSL cargado via:
+### 5.3. Habilitar HTTPS (certificado corporativo)
+
+Certificados en `C:\xampp\apache\conf\ssl\`:
+
+- `mda.correo.local.fullchain.crt` (leaf + intermedios)
+- `mda.correo.local.key`
+
+En `httpd.conf`, verificar/descomentar:
 
 ```apache
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+LoadModule headers_module modules/mod_headers.so
 Include conf/extra/httpd-ssl.conf
 ```
 
-Si querés HTTPS, agregá el mismo bloque en `*:443` dentro de `httpd-ssl.conf` con las directivas SSLCertificateFile y SSLCertificateKeyFile.
+> `httpd-ssl.conf` trae un vhost default (`<VirtualHost _default_:443>`) con el certificado dummy de XAMPP. Comentá ese bloque para que no responda antes que el vhost de MDA, y verificá la selección de vhosts con:
+>
+> ```powershell
+> C:\xampp\apache\bin\httpd.exe -S
+> ```
+>
+> Esperado: un vhost `*:443` con `mda.correo.local`.
 
-### 5.3. Verificar el archivo hosts (para pruebas locales)
+En `conf/extra/httpd-vhosts.conf`, reemplazar el vhost `*:80` por estos dos, y agregar el vhost `*:443`:
+
+```apache
+<VirtualHost *:80>
+    ServerName mda.correo.local
+    ServerAlias portal-mda.correo.local
+    Redirect permanent / https://mda.correo.local/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName localhost
+    ServerAlias 127.0.0.1
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:4321/
+    ProxyPassReverse / http://127.0.0.1:4321/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName mda.correo.local
+    ServerAlias portal-mda.correo.local
+
+    SSLEngine on
+    SSLCertificateFile "C:/xampp/apache/conf/ssl/mda.correo.local.fullchain.crt"
+    SSLCertificateKeyFile "C:/xampp/apache/conf/ssl/mda.correo.local.key"
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+
+    ProxyPreserveHost On
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "443"
+    ProxyPass / http://127.0.0.1:4321/
+    ProxyPassReverse / http://127.0.0.1:4321/
+
+    ErrorLog "logs/mda-ssl-error.log"
+    CustomLog "logs/mda-ssl-access.log" common
+</VirtualHost>
+```
+
+Firewall (PowerShell admin):
+
+```powershell
+New-NetFirewallRule -DisplayName "Apache HTTPS (443)" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443
+```
+
+Validar y reiniciar:
+
+```powershell
+C:\xampp\apache\bin\httpd.exe -t
+C:\xampp\apache\bin\httpd.exe -k restart
+```
+
+Verificar:
+
+```powershell
+C:\xampp\apache\bin\openssl.exe s_client -connect mda.correo.local:443 -servername mda.correo.local
+curl.exe -sI http://mda.correo.local/login
+curl.exe -sI https://mda.correo.local/login
+```
+
+### 5.4. Verificar el archivo hosts (para pruebas locales)
 
 Si accedés por nombre de dominio local:
 
@@ -150,7 +225,7 @@ Si accedés por nombre de dominio local:
 127.0.0.1  mda.correo.local
 ```
 
-### 5.4. Reiniciar Apache
+### 5.5. Reiniciar Apache
 
 ```powershell
 C:\xampp\apache\bin\httpd.exe -k restart
@@ -179,12 +254,101 @@ El proyecto incluye `scripts\auto-deploy.bat` con los pasos para actualizar desd
 @echo off
 cd C:\Projects\correo-argentino-mda
 git pull origin master
+call pm2 kill
 call npm install
+call npx tsx scripts/align-db-to-schema.mts
+call npx tsx scripts/backfill-asistencia.mts --apply
 call npm run build
-call pm2 restart all
+call pm2 start ecosystem.config.cjs
 ```
 
-Podés ejecutarlo manualmente cada vez que haya cambios, o desde un webhook de GitHub.
+`pm2 kill` corre ANTES de `npm install`: con procesos Node/PM2 vivos, Windows no permite reemplazar binarios nativos (`.node`) y deja `node_modules` inconsistente → el build genera un manifest SSR sin `rootDir` → crash loop en runtime. `npm run build` incluye el guard `scripts/verify-build.mjs` que aborta si `rootDir` falta. Ver `docs/lessons.md` (2026-09-07).
+
+Entre `npm install` y el build el auto-deploy alinea la DB host (`align-db-to-schema.mts`, idempotente, con backup) y corre el backfill one-time de `agents.en_asistencia` (`backfill-asistencia.mts --apply`, dry-run revisable a mano). Si cualquiera falla, aborta sin reiniciar PM2.
+
+### Tarea programada (Windows)
+
+| Campo          | Valor                                                                 |
+| -------------- | --------------------------------------------------------------------- |
+| Nombre         | `Auto deploy correo-argentino-mda`                                    |
+| Accion         | `C:\Projects\correo-argentino-mda\scripts\auto-deploy.bat`            |
+| WorkingDirectory | `C:\Projects\correo-argentino-mda\scripts` (directorio, NO el .bat)   |
+| Programacion   | Diaria 03:00                                                          |
+| Logon          | Password (`esté o no conectado`, usuario `otomasi`)                   |
+| Estado         | Habilitada                                                            |
+
+La tarea se re-crea por PowerShell (schtasks no edita WorkingDirectory; el módulo ScheduledTasks viejo no acepta `-LogonType` — con `-User`/`-Password` el logon queda tipo Password):
+
+```powershell
+$a = New-ScheduledTaskAction -Execute "C:\Projects\correo-argentino-mda\scripts\auto-deploy.bat" -WorkingDirectory "C:\Projects\correo-argentino-mda\scripts"
+$t = New-ScheduledTaskTrigger -Daily -At 3:00AM
+Register-ScheduledTask -TaskName "Auto deploy correo-argentino-mda" -Action $a -Trigger $t -User "CORREO\otomasi" -Password "<contrasena-otomasi>" -RunLevel Highest -Force
+```
+
+Si `-RunLevel` tampoco existe en el módulo, omitirlo (queda Limited — suficiente para npm/pm2 del perfil usuario).
+
+Nota: en logon no interactivo, `npm`/`pm2` deben resolverse desde el PATH del usuario (`C:\Program Files\nodejs` y `%APPDATA%\npm`); si el run no interactivo falla por esto, fijar el PATH al inicio del `.bat`.
+
+---
+
+## Migración B2: vínculo de horarios por ID (drop de `agent_name`)
+
+Correr **una única vez** al deployar B2, **antes** de que `align-db-to-schema.mts`/`db:push` dropee `schedules.agent_name`. El auto-deploy no incluye migraciones. Todo el flujo está en **un solo script** (`bootstrap-plan-a-b2.mts`), idempotente, dry-run por defecto, backup WAL-safe.
+
+### Caso pre-Plan-A (prod que nunca recibió Plan A: `schedules` sin `agent_id`, `agents` sin `user_id`)
+
+Checklist copiable (ventana de mantenimiento):
+
+```
+0. git pull                                              # los scripts deben existir en el repo
+1. Pausar la tarea programada de auto-deploy
+2. pm2 stop all                                          # ⚠ OBLIGATORIO: detener PM2 antes de migrar
+3. scripts\backup-db.bat                                 # backup externo (opcional; el script ya hace backup WAL-safe)
+4. npx tsx scripts/bootstrap-plan-a-b2.mts --populate    # dry-run: revisar el reporte
+5. npx tsx scripts/bootstrap-plan-a-b2.mts --apply --populate
+6. npm install && npm run build                          # build nuevo antes de levantar
+7. pm2 start all
+8. npx drizzle-kit push                                  # debe responder "No changes detected"
+```
+
+⚠ **Detener PM2 (paso 2) es obligatorio.** El código viejo escribe `schedules.agent_name`, columna que el align elimina: con la app corriendo, los guardados del cronograma fallarían (`NOT NULL constraint failed`) durante y después de la migración.
+
+El paso 5 hace **todo**: agrega `schedules.agent_id` + `agents.user_id`, backfillea vínculos por nombre/username, crea shells para nombres sin agente, sanea `hidden_helpdesks` huérfanas, corre `align-db-to-schema.mts` (drop de `agent_name`, paridad, FK, integridad) y la **Fase 5** (sincroniza `mesas` desde InvGate, asigna todos los usuarios a MDA TI, setea flags por rol y marca `assignable` para MDA TI/Coord).
+
+> ⚠ El saneo borra filas de `hidden_helpdesks` cuyo `invgate_id` no exista en `mesas` (preferencias de ocultamiento, no críticas). Si `mesas` no existe, se crea vacía y se sanean todas las filas. El dry-run lo reporta.
+
+### Fase 5 (`--populate`) — DB era master
+
+Si la DB es vieja (era master), tras el align `users` queda sin mesa (`helpdesk_id`/`helpdesk_name` NULL → fail-closed) y `agents` con los 4 flags en false (`GET /api/cronograma` filtra `enCronograma = true` → cronograma vacío). La Fase 5 resuelve esto:
+
+- Requiere env `INVGATE_API_KEY`, `INVGATE_BASE_URL`, `INVGATE_API_USERNAME` (los carga desde `.env`).
+- Sincroniza `mesas` desde InvGate (`fetchInvGateMesas`), asigna **todos** los usuarios a `TI_GSM_MDA TI` y setea flags por rol:
+
+  | Rol | cronograma | cubic | calidad | AGS |
+  |---|---|---|---|---|
+  | `supervisor` | ✗ | ✗ | ✗ | ✗ |
+  | `team_leader` | ✓ | ✓ | ✗ | ✗ |
+  | `agent`, `admin`, `referent` | ✓ | ✓ | ✓ | ✓ |
+
+- Idempotente y con backup. En dry-run pre-align muestra el preview (conteos) pero no escribe.
+- Asume que **todos** los usuarios pertenecen a MDA TI (caso actual). Si hubiera usuarios de otra mesa, revisar el reporte antes de aplicar.
+
+### Caso post-Plan-A (prod que ya corrió Plan A: tiene `agent_id`/`user_id`)
+
+Los pasos 2-3 del script son no-op; igual conviene ejecutarlo una vez (detecta el estado) o correr directo `npx tsx scripts/align-db-to-schema.mts`. `--populate` sigue siendo útil si faltan mesas/asignaciones.
+
+> Nunca correr `--apply` sin revisar el dry-run. Si se dropea `agent_name` antes de vincular, los horarios huérfanos (`agent_id IS NULL`) no se pueden vincular y quedan invisibles para los lectores id-only (cronograma, asistencia, disponibilidad).
+
+### Mesa asignable (`mesas.assignable`)
+
+`align-db-to-schema.mts`/`db:push` agrega `mesas.assignable` (default `false`): tras la migración, ninguna mesa es elegible en el select de alta/edición de usuario salvo MDA TI (exenta por código).
+
+**La migración one-shot ya lo cubre**: el paso 5 (`--apply --populate`) marca `assignable = 1` para `ALLOWED_HELPDESK_NAMES` (MDA TI y Coord). El script `seed-assignable-mesas.mts` queda solo como **respaldo/idempotente** si por algún motivo no se corrió el bootstrap:
+
+1. Dry-run: `npx tsx scripts/seed-assignable-mesas.mts`
+2. Aplicar: `npx tsx scripts/seed-assignable-mesas.mts --apply` (backup WAL-safe, idempotente; marca `true` las mesas de `ALLOWED_HELPDESK_NAMES`)
+
+Luego el admin cura el resto de mesas desde `/admin/usuarios/mesas-de-ayuda`.
 
 ---
 

@@ -2,8 +2,23 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
+import DetailList from "@components/ui/DetailList.astro";
+import FlagList from "@components/ui/FlagList.astro";
+import QuickAccessCard from "@components/ui/QuickAccessCard.astro";
 import { Icon } from "astro-icon/components";
-import { isAllowed } from "@lib/rolesMatrix";
+import {
+  formatSessionExpiry,
+  getProfileDetails,
+  getVisibleProfileAccess,
+} from "@lib/profileAccess";
+import { normalizeRole } from "@lib/rbac";
+import Modal from "@components/ui/Modal.astro";
+import PasswordField from "@components/ui/forms/PasswordField.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import ActionPasswordButton from "@components/ui/ActionPasswordButton.astro";
+import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
+import { getBaseNoSlash } from "@lib/baseUrl";
 
 const user = Astro.locals.user;
 if (!user || user.id === 0) {
@@ -42,198 +57,115 @@ const badgeClasses: Record<string, string> = {
   agent: "badge-neutral",
 };
 
-const roleIconClasses: Record<string, string> = {
-  admin: "bg-error/10 text-error",
-  supervisor: "bg-info/10 text-info",
-  team_leader: "bg-accent/10 text-accent",
-  "team-leader": "bg-accent/10 text-accent",
-  "team leader": "bg-accent/10 text-accent",
-  referent: "bg-warning/10 text-warning",
-  agent: "bg-secondary/10 text-secondary",
-};
+const role = normalizeRole(user.role);
+const roleLabel = roleLabelMap[role] ?? "Agente";
+const avatarClass = roleAvatarClasses[role] ?? roleAvatarClasses.agent;
+const badgeClass = badgeClasses[role] ?? badgeClasses.agent;
+const apiBase = getBaseNoSlash();
 
-const roleLabel = roleLabelMap[user.role] ?? "Agente";
-const avatarClass = roleAvatarClasses[user.role] ?? roleAvatarClasses.agent;
-const badgeClass = badgeClasses[user.role] ?? badgeClasses.agent;
-const iconClass = roleIconClasses[user.role] ?? roleIconClasses.agent;
+const { employee, agent, sessionExpiresAt } = await getProfileDetails({
+  userId: user.id,
+  username: user.username,
+  sessionId: Astro.locals.sessionId,
+});
 
-interface PermissionAction {
-  label: string;
-  featureName: string;
-}
+const displayName =
+  employee?.fullname?.trim() || agent?.name?.trim() || user.username;
+const initials =
+  displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || user.username.slice(0, 2).toUpperCase();
 
-interface CategoryCard {
-  title: string;
-  icon: string;
-  description: string;
-  actions: PermissionAction[];
-}
+const sessionExpiry = formatSessionExpiry(sessionExpiresAt);
+const accessSections = getVisibleProfileAccess(role, user.helpdeskName);
+const accessTotal = accessSections.reduce(
+  (total, section) => total + section.entries.length,
+  0,
+);
 
-const categories: CategoryCard[] = [
+const identityItems = [
+  { label: "Usuario", value: user.username, mono: true },
+  { label: "Nombre y apellido", value: employee?.fullname ?? "" },
+  { label: "DNI", value: employee?.dni ?? "", mono: true },
+  { label: "Legajo", value: employee?.interno ?? "", mono: true },
+  { label: "Puesto", value: employee?.position ?? "" },
+  { label: "Teléfono", value: employee?.telefono ?? "", mono: true },
   {
-    title: "Oficinas y Sucursales",
-    icon: "boxicons:building-house",
-    description:
-      "Acceso al directorio operativo de oficinas y datos de telegrafía.",
-    actions: [
-      {
-        label: "Consultar datos de oficinas y sucursales",
-        featureName: "Ver Oficinas",
-      },
-      {
-        label: "Administrar oficinas, sucursales y telegrafía",
-        featureName: "Administrar Contenido",
-      },
-    ],
+    label: "Sucursal",
+    value: employee?.officeName
+      ? `${employee.officeName} (${employee.sucursal ?? ""})`.trim()
+      : (employee?.sucursal ?? ""),
   },
   {
-    title: "Enlaces y Recursos",
-    icon: "boxicons:git-branch-filled",
-    description:
-      "Accesos directos a plataformas externas e internas de soporte.",
-    actions: [
-      {
-        label: "Acceder al catálogo de enlaces y recursos",
-        featureName: "Ver Enlaces",
-      },
-      {
-        label: "Administrar el catálogo de enlaces",
-        featureName: "Administrar Contenido",
-      },
-    ],
-  },
-  {
-    title: "Tipificación de Tickets",
-    icon: "boxicons:note",
-    description:
-      "Consulta y administración de títulos para la tipificación de tickets de soporte.",
-    actions: [
-      {
-        label: "Consultar títulos y tipificaciones",
-        featureName: "Ver Títulos",
-      },
-      {
-        label: "Administrar el catálogo de títulos",
-        featureName: "Administrar Títulos",
-      },
-      {
-        label: "Gestionar contenido del sistema de tipificación",
-        featureName: "Administrar Contenido",
-      },
-    ],
-  },
-  {
-    title: "Guía de Mesas de Ayuda",
-    icon: "boxicons:headphone",
-    description: "Matriz de derivación telefónica y canales de escalado.",
-    actions: [
-      {
-        label: "Consultar la matriz de soportes y derivaciones",
-        featureName: "Ver Mesas de Ayuda",
-      },
-      {
-        label: "Administrar datos de soportes y derivaciones",
-        featureName: "Administrar Contenido",
-      },
-    ],
-  },
-  {
-    title: "Inventario y Cubics",
-    icon: "boxicons:chip-filled",
-    description: "Estado, asignación y monitoreo de terminales remotas.",
-    actions: [
-      {
-        label: "Monitorear terminales remotas y equipos cubics",
-        featureName: "Ver Inventario",
-      },
-      {
-        label: "Administrar el inventario físico de equipos",
-        featureName: "Administrar Contenido",
-      },
-    ],
-  },
-  {
-    title: "Cronograma y Asistencia",
-    icon: "boxicons:calendar",
-    description:
-      "Planificación de guardias, turnos y control de asistencia del equipo.",
-    actions: [
-      {
-        label: "Visualizar cronogramas del equipo",
-        featureName: "Ver Cronogramas",
-      },
-      {
-        label: "Editar y gestionar cronogramas",
-        featureName: "Editar Cronogramas",
-      },
-      {
-        label: "Controlar la asistencia del equipo",
-        featureName: "Asistencia",
-      },
-    ],
-  },
-  {
-    title: "Calidad de Operador",
-    icon: "boxicons:user-id-card",
-    description:
-      "Auditorías de llamadas, métricas de rendimiento y asignación de autogestiones.",
-    actions: [
-      {
-        label: "Consultar métricas de calidad propias",
-        featureName: "Métricas Propias",
-      },
-      {
-        label: "Gestionar la calidad de los operadores",
-        featureName: "Gestión de Calidad",
-      },
-      {
-        label: "Asignar autogestiones de soporte",
-        featureName: "Autogestiones",
-      },
-    ],
-  },
-  {
-    title: "Firmas de Correo",
-    icon: "boxicons:edit-alt",
-    description: "Generador de firmas institucionales para correo electrónico.",
-    actions: [
-      {
-        label: "Generar firmas corporativas de correo",
-        featureName: "Generar Firmas",
-      },
-    ],
-  },
-  {
-    title: "Administración del Sistema",
-    icon: "boxicons:group",
-    description:
-      "Gestión de usuarios, roles, accesos y registros de auditoría del sistema.",
-    actions: [
-      {
-        label: "Gestionar usuarios, roles y accesos",
-        featureName: "Administrar Usuarios",
-      },
-      {
-        label: "Consultar logs de auditoría del sistema",
-        featureName: "Logs de Auditoría",
-      },
-    ],
+    label: "Id InvGate",
+    value: employee?.invgateId != null ? String(employee.invgateId) : "",
+    mono: true,
   },
 ];
 
-const visibleCategories = categories
-  .map((cat) => ({
-    ...cat,
-    actions: cat.actions.filter((act) => isAllowed(act.featureName, user.role)),
-  }))
-  .filter((cat) => cat.actions.length > 0);
+const accountItems = [
+  { label: "Rol", value: roleLabel },
+  { label: "Mesa de ayuda", value: user.helpdeskName ?? "Sin mesa asignada" },
+  {
+    label: "Estado InvGate",
+    value: employee?.invgateExists
+      ? "Sincronizado con InvGate"
+      : "Sin sincronizar con InvGate",
+  },
+  { label: "Vence", value: sessionExpiry ?? "" },
+];
+
+const operatorItems = [
+  { label: "Centro de asignación", value: agent?.location ?? "" },
+  { label: "Horario por defecto", value: agent?.horarioDefault ?? "" },
+  {
+    label: "Estado excepcional",
+    value: agent?.estadoExcepcional
+      ? `${agent.estadoExcepcional}${agent.estadoExcepcionalMotivo ? ` — ${agent.estadoExcepcionalMotivo}` : ""}`
+      : "",
+  },
+];
+
+const participations = agent
+  ? [
+      {
+        label: "Cronograma",
+        icon: "boxicons:calendar-filled",
+        active: agent.enCronograma,
+      },
+      {
+        label: "Asistencia",
+        icon: "boxicons:clock-filled",
+        active: agent.enAsistencia,
+      },
+      {
+        label: "Calidad",
+        icon: "boxicons:bar-chart-big-filled",
+        active: agent.incluidoCalidad,
+      },
+      {
+        label: "Cubics",
+        icon: "boxicons:desktop-filled",
+        active: agent.asignableCubic,
+      },
+      {
+        label: "Autogestiones",
+        icon: "boxicons:git-branch-filled",
+        active: agent.asignableAgs,
+      },
+    ]
+  : [];
 ---
 
 <BaseLayout title="Perfil">
   <PageContainer>
     <PageHeader
       title="Perfil"
-      description="Resumen de tu cuenta y los accesos habilitados en el sistema."
+      description="Tus datos, tu mesa de ayuda y los accesos habilitados hoy en el sistema."
     />
 
     <div class="flex flex-col gap-8">
@@ -246,102 +178,149 @@ const visibleCategories = categories
           aria-hidden="true"
         >
         </div>
-        <div class="card-body flex-row items-center gap-6 p-6 md:p-8">
-          <div
-            class:list={[
-              "flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-black shadow-inner ring-4 md:h-24 md:w-24 md:text-3xl",
-              avatarClass,
-            ]}
-            aria-hidden="true"
-          >
-            {user.username.slice(0, 2).toUpperCase()}
-          </div>
-          <div class="z-10 flex flex-col gap-1.5">
-            <h1
-              id="profile-heading"
-              class="text-base-content text-2xl font-bold tracking-tight md:text-3xl"
+        <div class="card-body gap-6 p-6 md:p-8">
+          <div class="z-10 flex flex-col items-start gap-5 md:flex-row md:items-center">
+            <div
+              class:list={[
+                "flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-black shadow-inner ring-4 md:h-24 md:w-24 md:text-3xl",
+                avatarClass,
+              ]}
+              aria-hidden="true"
             >
-              {user.username}
-            </h1>
-            <div class="flex items-center gap-2">
-              <span
-                class:list={[
-                  "badge badge-sm font-bold tracking-wider uppercase",
-                  badgeClass,
-                ]}
-              >
-                {roleLabel}
-              </span>
+              {initials}
+            </div>
+            <div class="flex min-w-0 flex-col gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <h1
+                  id="profile-heading"
+                  class="text-base-content text-2xl font-bold tracking-tight md:text-3xl"
+                >
+                  {displayName}
+                </h1>
+                <span
+                  class:list={[
+                    "badge badge-sm font-bold tracking-wider uppercase",
+                    badgeClass,
+                  ]}
+                >
+                  {roleLabel}
+                </span>
+              </div>
+              <p class="text-base-content/60 font-mono text-sm">
+                {user.username}
+              </p>
+              <div class="mt-1">
+                <ActionPasswordButton
+                  ariaLabel="Blanquear contraseña"
+                  label="Blanqueo de contraseña"
+                  aria-haspopup="dialog"
+                  onclick="document.getElementById('modal-self-password').showModal()"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="border-base-200 z-10 grid gap-6 border-t pt-6 md:grid-cols-2">
+            <div class="space-y-3">
+              <h2 class="text-base-content/70 flex items-center gap-2 text-sm font-bold tracking-tight">
+                <Icon
+                  name="boxicons:user-circle-filled"
+                  size={18}
+                  class="text-secondary shrink-0"
+                  aria-hidden="true"
+                />
+                Datos personales
+              </h2>
+              <DetailList items={identityItems} columns={2} />
+            </div>
+            <div class="space-y-3">
+              <h2 class="text-base-content/70 flex items-center gap-2 text-sm font-bold tracking-tight">
+                <Icon
+                  name="boxicons:key-filled"
+                  size={18}
+                  class="text-secondary shrink-0"
+                  aria-hidden="true"
+                />
+                Cuenta y acceso
+              </h2>
+              <DetailList items={accountItems} columns={2} />
             </div>
           </div>
         </div>
       </section>
 
-      <section aria-labelledby="bento-heading" class="space-y-6">
-        <h2
-          id="bento-heading"
-          class="text-base-content text-xl font-bold tracking-tight"
-        >
-          Acciones y accesos permitidos
-        </h2>
-
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {
-            visibleCategories.map((category) => (
-              <div class="card bg-base-100 border-base-300 hover:border-base-content/20 group relative overflow-hidden border shadow-sm transition-all duration-300 hover:shadow-md">
-                <div class="card-body flex h-full flex-col justify-between gap-4 p-6">
-                  <div class="space-y-3">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class:list={[
-                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110",
-                          iconClass,
-                        ]}
-                        aria-hidden="true"
-                      >
-                        <Icon name={category.icon} size={20} />
-                      </div>
-                      <h3 class="text-base-content text-base font-bold md:text-lg">
-                        {category.title}
-                      </h3>
-                    </div>
-
-                    <p class="text-base-content/60 text-xs">
-                      {category.description}
-                    </p>
-                  </div>
-
-                  <div class="border-base-200 mt-auto border-t pt-3">
-                    <span class="text-xxs text-base-content/40 mb-2 block font-bold tracking-wider uppercase">
-                      Accesos habilitados:
-                    </span>
-                    <ul class="space-y-2">
-                      {category.actions.map((action) => (
-                        <li class="flex items-center gap-2.5 text-sm">
-                          <div
-                            class="bg-success/15 text-success mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                            aria-hidden="true"
-                          >
-                            <Icon name="boxicons:check" size={14} />
-                          </div>
-                          <span class="text-base-content/85 font-medium">
-                            {action.label}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+      {
+        agent && (
+          <section
+            aria-labelledby="operator-heading"
+            class="card bg-base-100 border-base-300 border shadow-sm"
+          >
+            <div class="card-body gap-5 p-6">
+              <div class="space-y-1">
+                <h2
+                  id="operator-heading"
+                  class="text-base-content text-lg font-bold tracking-tight"
+                >
+                  Operativa y participaciones
+                </h2>
+                <p class="text-base-content/60 text-xs">
+                  Flags de tu ficha de operador: definen en qué módulos sos
+                  evaluado y qué turnos podés recibir.
+                </p>
               </div>
-            ))
-          }
+              <DetailList items={operatorItems} columns={2} />
+              <FlagList flags={participations} class="pt-2" />
+            </div>
+          </section>
+        )
+      }
+
+      <section aria-labelledby="access-heading" class="space-y-5">
+        <div class="flex flex-wrap items-end justify-between gap-2">
+          <h2
+            id="access-heading"
+            class="text-base-content text-xl font-bold tracking-tight"
+          >
+            Accesos permitidos
+          </h2>
+          <p class="text-base-content/60 text-xs">
+            {accessTotal} {accessTotal === 1 ? "módulo" : "módulos"} disponibles
+            para tu rol y tu mesa de ayuda.
+          </p>
         </div>
 
         {
-          visibleCategories.length === 0 && (
+          accessSections.map((section) => (
+            <div class="space-y-3">
+              <div class="flex flex-wrap items-baseline gap-x-2">
+                <h3 class="text-base-content/70 text-xs font-bold tracking-wider uppercase">
+                  {section.label}
+                </h3>
+                <p class="text-base-content/50 text-xs">
+                  {section.description}
+                </p>
+              </div>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {section.entries.map((entry) => (
+                  <QuickAccessCard
+                    href={entry.href}
+                    title={entry.title}
+                    description={entry.description}
+                    icon={entry.icon}
+                    iconTone={entry.iconTone}
+                    layout="compact"
+                  />
+                ))}
+              </div>
+            </div>
+          ))
+        }
+
+        {
+          accessTotal === 0 && (
             <div class="border-base-300 bg-base-200/50 rounded-2xl border border-dashed p-12 text-center">
               <Icon
-                name="boxicons:lock"
+                name="boxicons:lock-filled"
                 size={40}
                 class="text-base-content mx-auto mb-3 opacity-30"
                 aria-hidden="true"
@@ -350,14 +329,68 @@ const visibleCategories = categories
                 Sin accesos disponibles
               </h3>
               <p class="text-base-content/60 mt-1 text-sm">
-                Tu rol de usuario no tiene permisos asignados en ninguna
-                categoría del sistema. Contactá a un administrador si necesitás
-                acceso a alguna funcionalidad.
+                Tu rol y tu mesa de ayuda no habilitan ningún módulo del
+                sistema. Contactá a un administrador si necesitás acceso a
+                alguna funcionalidad.
               </p>
             </div>
           )
         }
       </section>
     </div>
+
+    <Modal id="modal-self-password" size="sm">
+      <Fragment slot="content">
+        <h3 class="mb-1 text-base font-semibold text-base-content">
+          Blanquear contraseña
+        </h3>
+        <p class="mb-4 text-xs text-base-content/60">
+          Cambiá la contraseña de tu cuenta. La sesión actual se mantendrá activa.
+        </p>
+        <form
+          method="POST"
+          action={`${apiBase}/api/profile/change-password`}
+          class="space-y-3"
+          data-async-form
+        >
+          <PasswordField
+            id="self-new-password"
+            name="newPassword"
+            required
+            label="Nueva contraseña"
+            confirmPassword={true}
+            confirmLabel="Repetir nueva contraseña"
+            autocomplete="new-password"
+            inputClass="input-sm"
+          />
+          <div class="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-base-200">
+            <ActionCancelButton
+              type="button"
+              variant="error"
+              icon="boxicons:x-filled"
+              onclick="this.closest('dialog').close()"
+            />
+            <ActionConfirmButton
+              type="submit"
+              color="btn-warning"
+              label="Guardar"
+              icon="boxicons:check-filled"
+            />
+          </div>
+        </form>
+      </Fragment>
+    </Modal>
   </PageContainer>
+
+  <AsyncFormScript />
+
+  <script>
+    document.addEventListener('async-form:success', (e) => {
+        const form = e.target as HTMLFormElement;
+        if (form.closest('#modal-self-password')) {
+          form.reset();
+          (document.getElementById('modal-self-password') as HTMLDialogElement | null)?.close();
+        }
+    });
+  </script>
 </BaseLayout>

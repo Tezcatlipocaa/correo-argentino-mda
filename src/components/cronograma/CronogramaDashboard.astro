@@ -2,6 +2,9 @@
 // CronogramaDashboard.astro
 import { Icon } from "astro-icon/components";
 import ActionButton from "@components/ui/ActionButton.astro";
+import Modal from "@components/ui/Modal.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import FilterButtonBar from "@components/ui/FilterButtonBar.astro";
 import SortDropdown from "@components/ui/SortDropdown.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
@@ -38,74 +41,72 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   class="flex min-h-0 w-full flex-1 flex-col"
 >
   <div
+    class="bg-base-100/95 flex shrink-0 flex-col justify-between pb-4 backdrop-blur-sm md:flex-row md:items-center"
+  >
+    <div id="view-switcher" class="flex shrink-0 flex-wrap items-center gap-3">
+      <!-- Vistas de Calendario -->
+      <div
+        class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
+      >
+        <button
+          type="button"
+          id="switch-to-monthly-btn"
+          class="btn btn-xs btn-secondary text-tiny shadow-secondary/15 h-7 rounded-lg px-3.5 font-black tracking-widest uppercase shadow-sm transition-all duration-200"
+        >
+          Mensual
+        </button>
+        <button
+          type="button"
+          id="switch-to-daily-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Diario
+        </button>
+      </div>
+
+      <!-- Vistas de Configuración y Turnos -->
+      <div
+        class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
+      >
+        <button
+          type="button"
+          id="switch-to-groups-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Grupos
+        </button>
+        <button
+          type="button"
+          id="switch-to-overtime-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Extras
+        </button>
+        <button
+          type="button"
+          id="switch-to-pasiva-btn"
+          class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
+        >
+          Pasivas
+        </button>
+      </div>
+    </div>
+
+    <CronoDatePicker
+      id="date-picker-container"
+      displayId="date-input-display"
+      inputId="date-input"
+      variant="top"
+      minW="min-w-40"
+      class="hidden"
+    />
+  </div>
+
+  <div
     id="cronograma-container"
     class="animate-in fade-in scrollbar-thin flex min-h-0 w-full flex-1 flex-col overflow-y-auto pb-2 duration-500"
   >
     <div class="flex min-h-0 w-full flex-1 flex-col">
-      <div
-        class="bg-base-100/95 sticky top-0 z-40 flex shrink-0 flex-col justify-between pb-4 backdrop-blur-sm md:flex-row md:items-center"
-      >
-        <div
-          id="view-switcher"
-          class="flex shrink-0 flex-wrap items-center gap-3"
-        >
-          <!-- Vistas de Calendario -->
-          <div
-            class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
-          >
-            <button
-              type="button"
-              id="switch-to-monthly-btn"
-              class="btn btn-xs btn-secondary text-tiny shadow-secondary/15 h-7 rounded-lg px-3.5 font-black tracking-widest uppercase shadow-sm transition-all duration-200"
-            >
-              Mensual
-            </button>
-            <button
-              type="button"
-              id="switch-to-daily-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Diario
-            </button>
-          </div>
-
-          <!-- Vistas de Configuración y Turnos -->
-          <div
-            class="bg-base-200/60 border-base-300 flex shrink-0 rounded-xl border p-1 shadow-sm"
-          >
-            <button
-              type="button"
-              id="switch-to-groups-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Grupos
-            </button>
-            <button
-              type="button"
-              id="switch-to-overtime-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Extras
-            </button>
-            <button
-              type="button"
-              id="switch-to-pasiva-btn"
-              class="btn btn-xs btn-outline text-base-content/60 hover:bg-base-200/50 text-tiny h-7 rounded-lg border-transparent px-3.5 font-black tracking-widest uppercase"
-            >
-              Pasivas
-            </button>
-          </div>
-        </div>
-
-        <CronoDatePicker
-          id="date-picker-container"
-          displayId="date-input-display"
-          inputId="date-input"
-          variant="top"
-          minW="min-w-40"
-          class="hidden"
-        />
-      </div>
 
       <!-- Daily View Section (Hidden by default) -->
       <div id="daily-view" class="hidden min-h-0 flex-1">
@@ -496,7 +497,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 >
                 <select
                   id="rotation-start-group"
-                  class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                  class="select select-sm text-base-content cursor-pointer font-bold"
                   required
                 >
                   <option value="A">Grupo A</option>
@@ -512,7 +513,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <input
                   type="text"
                   id="rotation-order"
-                  class="input input-sm input-bordered text-base-content font-bold"
+                  class="input input-sm text-base-content font-bold"
                   placeholder="A,B,C,D"
                   required
                 />
@@ -577,9 +578,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             </div>
 
             <div class="flex flex-col gap-1">
-              <label class="label-xxs text-base-content/40"
-                >Grupo Activo</label
-              >
+              <label class="label-xxs text-base-content/40">Grupo Activo</label>
               <div
                 class="bg-secondary/10 border-secondary/20 text-secondary flex h-8 items-center rounded-lg border px-3 py-1.5 text-xs font-bold shadow-sm select-none"
                 id="rotation-active-group-display"
@@ -706,7 +705,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                 <label class="label-xxs text-base-content/40">Referente</label>
                 <select
                   id="overtime-referente-select"
-                  class="select select-sm select-bordered text-base-content w-full cursor-pointer font-bold"
+                  class="select select-sm text-base-content w-full cursor-pointer font-bold"
                 >
                   <option value="">Sin asignar</option>
                 </select>
@@ -796,7 +795,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   <label class="label-xxs text-base-content/40">Operador</label>
                   <select
                     id="overtime-shift-agent"
-                    class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                    class="select select-sm text-base-content cursor-pointer font-bold"
                     required
                   >
                     <option value="">Seleccionar operador...</option>
@@ -806,7 +805,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   <label class="label-xxs text-base-content/40">Día</label>
                   <select
                     id="overtime-shift-day"
-                    class="select select-sm select-bordered text-base-content cursor-pointer font-bold"
+                    class="select select-sm text-base-content cursor-pointer font-bold"
                     required
                   >
                     <option value="saturday">Sábado</option>
@@ -819,7 +818,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                     <input
                       type="time"
                       id="overtime-shift-start"
-                      class="input input-sm input-bordered font-mono font-bold"
+                      class="input input-sm font-mono font-bold"
                       required
                     />
                   </div>
@@ -828,7 +827,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                     <input
                       type="time"
                       id="overtime-shift-end"
-                      class="input input-sm input-bordered font-mono font-bold"
+                      class="input input-sm font-mono font-bold"
                       required
                     />
                   </div>
@@ -1086,17 +1085,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 
     <div class="divider divider-horizontal m-0"></div>
 
-    <!-- Add Operator Trigger -->
-    <ActionButton
-      id="open-new-op-modal"
-      icon="boxicons:user-plus-filled"
-      ariaLabel="Agregar Operador"
-      title="Agregar Operador"
-      size="sm"
-    />
-
-    <div class="divider divider-horizontal m-0"></div>
-
     <!-- Manage Holidays Trigger -->
     <ActionButton
       id="open-holidays-modal"
@@ -1162,63 +1150,74 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 
   <RulesSettingsModal />
   <NewMonthModal />
-  <OperatorFormModal mode="create" />
-  <OperatorFormModal mode="edit" />
+  <OperatorFormModal />
   <HolidaysModal />
 
-  <dialog id="edit-saturday-schedule-modal" class="modal">
-    <div
-      class="modal-box border-base-300 bg-base-100 max-w-sm rounded-3xl border p-6 shadow-2xl"
-    >
-      <h3
-        class="text-base-content mb-4 flex items-center gap-2 text-sm font-black tracking-wider uppercase"
-      >
-        <Icon name="boxicons:clock-filled" size={18} class="text-secondary" />
-        Horario Sábado
-      </h3>
-      <p class="text-base-content/75 mb-4 text-xs">
-        Establece el sub-horario del sábado para <strong id="modal-agent-name"
-        ></strong>. Debe estar dentro de la franja general de 07:00 a 13:00 hs.
-      </p>
-      <form id="edit-saturday-schedule-form" class="space-y-4">
-        <input type="hidden" id="modal-agent-id" />
-        <input type="hidden" id="modal-agent-group" />
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label class="label-xxs text-base-content/40">Inicio</label>
-            <input
-              type="time"
+  <Modal
+    id="edit-saturday-schedule-modal"
+    title="Horario Sábado"
+    icon="boxicons:clock-filled"
+    titleClass="font-black text-lg uppercase tracking-tight"
+    size="sm"
+    zIndex="z-200"
+    actionsFooter
+  >
+    <Fragment slot="content">
+      <div class="space-y-4">
+        <p class="text-base-content/75 text-xs">
+          Establece el sub-horario del sábado para <strong id="modal-agent-name"
+          ></strong>. Debe estar dentro de la franja general de 07:00 a 13:00
+          hs.
+        </p>
+        <form id="edit-saturday-schedule-form" class="space-y-4">
+          <input type="hidden" id="modal-agent-id" />
+          <input type="hidden" id="modal-agent-group" />
+          <div class="grid grid-cols-2 gap-3">
+            <FormField
               id="modal-schedule-start"
-              class="input input-sm input-bordered w-full font-mono font-bold"
-              min="07:00"
-              max="13:00"
-              required
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="label-xxs text-base-content/40">Fin</label>
-            <input
+              name="modal-schedule-start"
+              label="Inicio"
               type="time"
-              id="modal-schedule-end"
-              class="input input-sm input-bordered w-full font-mono font-bold"
               min="07:00"
               max="13:00"
               required
+              size="sm"
+              inputClass="font-mono font-bold"
+            />
+            <FormField
+              id="modal-schedule-end"
+              name="modal-schedule-end"
+              label="Fin"
+              type="time"
+              min="07:00"
+              max="13:00"
+              required
+              size="sm"
+              inputClass="font-mono font-bold"
             />
           </div>
-        </div>
-        <div class="modal-action flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline border-base-300"
-            onclick="document.getElementById('edit-saturday-schedule-modal').close()"
-            >Cancelar</button
-          >
-          <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
-        </div>
-      </form>
-    </div>
-  </dialog>
+        </form>
+      </div>
+    </Fragment>
+    <Fragment slot="actions">
+      <ActionCancelButton
+        type="button"
+        label="Cancelar"
+        icon="boxicons:x-filled"
+        variant="error"
+        onclick="document.getElementById('edit-saturday-schedule-modal')?.close()"
+      />
+      <button
+        type="submit"
+        form="edit-saturday-schedule-form"
+        id="saturday-schedule-save-btn"
+        class="btn btn-sm md:btn-md btn-secondary gap-2"
+      >
+        <Icon name="boxicons:save-filled" size={20} is:inline />
+        Guardar
+      </button>
+    </Fragment>
+  </Modal>
 </div>
 
 <style is:global>
@@ -1773,8 +1772,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   #cronograma-app-container[data-user-role="referent"] #config-rules-btn,
   #cronograma-app-container[data-user-role="agent"] #open-holidays-modal,
   #cronograma-app-container[data-user-role="referent"] #open-holidays-modal,
-  #cronograma-app-container[data-user-role="agent"] #open-new-op-modal,
-  #cronograma-app-container[data-user-role="referent"] #open-new-op-modal,
   #cronograma-app-container[data-user-role="agent"] .edit-op-btn,
   #cronograma-app-container[data-user-role="referent"] .edit-op-btn,
   #cronograma-app-container[data-user-role="agent"] .delete-op-btn,
@@ -1876,12 +1873,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   /* Ocultar elementos marcados con no-export durante la exportación de imágenes */
   .exporting-image .no-export {
     display: none !important;
-  }
-
-  /* Agregar espacio extra en la parte inferior del card al exportar para que no quede pegado */
-  #saturday-rotation-card.exporting-image,
-  #overtime-card.exporting-image {
-    padding-bottom: 2.5rem !important;
   }
 
   #rotation-timeline-table th:first-child,

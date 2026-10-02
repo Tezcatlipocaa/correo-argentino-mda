@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from "crypto";
+import { test } from "@playwright/test";
 import { db } from "../../src/db/index";
 import { users, sessions } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
@@ -28,22 +29,40 @@ export async function createTestUserAndSession(
   const sessionId = `session_${suffix}`;
   const signedSessionId = signSessionId(sessionId);
 
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      username,
-      password: "hashed_fake_password",
-      role,
-    })
-    .returning({ id: users.id });
+  let newUserId: number | undefined;
 
-  await db.insert(sessions).values({
-    id: sessionId,
-    userId: newUser.id,
-    expiresAt: Date.now() + 1000 * 60 * 60 * 24,
-  });
+  try {
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        username,
+        password: "hashed_fake_password",
+        role,
+      })
+      .returning({ id: users.id });
+    newUserId = newUser.id;
 
-  return { userId: newUser.id, sessionId, signedSessionId, username };
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId: newUser.id,
+      expiresAt: Date.now() + 1000 * 60 * 60 * 24,
+    });
+
+    return { userId: newUser.id, sessionId, signedSessionId, username };
+  } catch (error) {
+    if (newUserId !== undefined) {
+      try {
+        await db.delete(sessions).where(eq(sessions.userId, newUserId));
+        await db.delete(users).where(eq(users.id, newUserId));
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "Failed to clean up partial test user",
+        );
+      }
+    }
+    throw error;
+  }
 }
 
 export async function cleanupTestUser(
@@ -54,15 +73,26 @@ export async function cleanupTestUser(
   await db.delete(users).where(eq(users.id, userId));
 }
 
+function resolveCookieDomain(): string {
+  try {
+    const baseURL = test.info().project.use.baseURL;
+    if (baseURL) return new URL(baseURL).hostname;
+  } catch {
+    // test.info() unavailable outside a test runtime
+  }
+  return "127.0.0.1";
+}
+
 export async function setSessionCookie(
   context: any,
   signedSessionId: string,
+  domain?: string,
 ): Promise<void> {
   await context.addCookies([
     {
       name: "session_id",
       value: signedSessionId,
-      domain: "127.0.0.1",
+      domain: domain ?? resolveCookieDomain(),
       path: "/",
     },
   ]);

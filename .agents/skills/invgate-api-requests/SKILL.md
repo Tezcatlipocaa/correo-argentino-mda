@@ -1,6 +1,6 @@
 ---
 name: invgate-api-requests
-description: Use when choosing InvGate Service Management API endpoints for GET requests, interpreting 4xx errors (428, 405), or deciding between offset and keyset pagination for querying incidents, users, helpdesks, or categories. Also when `/users` pagination loops infinitely (always returns all users ignoring page/page_size).
+description: Use when choosing InvGate Service Management API endpoints for GET requests, interpreting 4xx errors (428, 405), or deciding between offset and keyset pagination for querying incidents, users, helpdesks, or categories. Also when a list endpoint appears to filter but silently ignores the filter (`by.status` ignores `location_id`, `by.helpdesk` ignores `limit`/`page_key`), when `/users` pagination loops infinitely (always returns all users ignoring page/page_size), or when a duplicate-detection check over incidents times out.
 ---
 
 # InvGate API Requests
@@ -19,8 +19,8 @@ digraph invgate_query {
     "Need many by status?" [shape=diamond];
     "GET /incident?id=X" [shape=box];
     "GET /incidents?ids[]=X&ids[]=Y\n(response: {id: object})" [shape=box];
-    "GET /incidents.by.status\n?status_id=X\n(IDs only)" [shape=box];
-    "GET /incidents.by.agent?id=X\nor by.customer / by.helpdesk\n(full objects, keyset page, open only)" [shape=box];
+    "GET /incidents.by.status\n?status_id=X\n(IDs only, open only)" [shape=box];
+    "GET /incidents.by.agent?id=X\nor by.customer\n(full objects, keyset page, open only)" [shape=box];
     "Need full details\nby custom view?" [shape=diamond];
     "GET /incidents.details.by.view\n?view_id=X\n(full objects, keyset page)" [shape=box];
     "GET /incidents.last.hour\n(resp: {data[], next_page_key})" [shape=box];
@@ -29,7 +29,7 @@ digraph invgate_query {
     "Need incident data?" -> "Need full objects?" [label="list by filter"];
     "Know the incident ID(s)?" -> "GET /incident?id=X" [label="one"];
     "Know the incident ID(s)?" -> "GET /incidents?ids[]=X&ids[]=Y\n(response: {id: object})" [label="many"];
-    "Need full objects?" -> "GET /incidents.by.agent?id=X\nor by.customer / by.helpdesk\n(full objects, keyset page, open only)" [label="by agent/customer/helpdesk"];
+    "Need full objects?" -> "GET /incidents.by.agent?id=X\nor by.customer\n(full objects, keyset page, open only)" [label="by agent/customer"];
     "Need full objects?" -> "Need many by status?" [label="by status"];
     "Need full objects?" -> "GET /incidents.details.by.view\n?view_id=X\n(full objects, keyset page)" [label="by view"];
     "Need full objects?" -> "GET /incidents.last.hour\n(resp: {data[], next_page_key})" [label="last hour"];
@@ -38,7 +38,7 @@ digraph invgate_query {
 }
 ```
 
-**Note:** `by.agent` and `by.customer` only return **open** requests. `by.status` returns closed/finalized requests too (**verified in production 2026-09**: s5=998, s6=73025, s8=1368). `by.helpdesk` expects the helpdesk **level** id (helpdesksandlevels `type_id=1`), not the helpdesk id — with the helpdesk id it returns an empty list; its response has no `total` field. Whether `by.helpdesk` returns closed requests is unconfirmed (the verified queue contained only active tickets). For closed/completed incidents also consider a saved view + `incidents.by.view` / `incidents.details.by.view`.
+**Note:** `by.agent` and `by.customer` only return **open** requests. `by.helpdesk` returns the whole helpdesk node in one call (ignores `limit`/`page_key`/`location_id`/`status_ids[]`) and only statuses 1-4, so status 5 (Cerrado) never shows up there; además, el valor de `helpdesk_id` debe ser el id del **nivel** (`helpdesksandlevels` `type_id=1`), no el del helpdesk — con el id del helpdesk responde 200 con `requestIds: []`. Llamarlo **secuencialmente**: bajo concurrencia devuelve sets truncados. `by.status` es ambiguo entre corridas (una medición 2026-09 lo vio devolver finalizados — s5=998, s6=73025, s8=1368 — y otra del 2026-09-28 sólo abiertos); no asumir cerrados. Para incidentes cerrados/completados usar `/incident?id=X` o una vista guardada + `incidents.by.view` / `incidents.details.by.view`.
 
 **Tip:** After getting IDs from `by.status` or `by.view`, batch-fetch full objects with `/incidents?ids[]=id1&ids[]=id2&...` instead of individual `/incident?id=X` calls.
 
@@ -53,7 +53,7 @@ digraph invgate_query {
 | Incidents by status | `incidents.by.status` | `status_id` or `status_ids[]` | `{requestIds[], total}` — IDs only |
 | Incidents by agent | `incidents.by.agent` | `id` or `username` | `{requests: {id: object}, next_page_key}` |
 | Incidents by customer | `incidents.by.customer` | `id` or `username` | `{requests: {id: object}, next_page_key}` |
-| Incidents by helpdesk | `incidents.by.helpdesk` | `helpdesk_id` (not `id`) | `{requestIds[]}` — IDs only |
+| Incidents by helpdesk | `incidents.by.helpdesk` | `helpdesk_id` (not `id`) — ignores `limit`/`page_key`/`status_ids[]`, statuses 1-4 only, must be called serially | `{requestIds[]}` — whole node, IDs only |
 | Incidents by view | `incidents.by.view` | `view_id` | `{requestIds[]}` — IDs only |
 | Incidents detail by view | `incidents.details.by.view` | `view_id` | `{data[], next_page_key}` |
 | Last hour | `incidents.last.hour` | — | `{data[], next_page_key}` |
@@ -82,9 +82,11 @@ Used by: `categories`, `incidents.by.status`, `incidents.by.view`, `kb.articles`
 ⚠ `/users` **acepta** `page`/`page_size` pero los **ignora** — siempre devuelve la lista completa de usuarios en un solo array. No intentes paginarlo; procesá la respuesta completa directamente.
 
 ### Keyset-based (`limit` / `page_key` / `next_page_key`)
-Used by: `incidents.by.agent`, `incidents.by.customer`, `incidents.by.helpdesk`, `incidents.last.hour`, `incidents.details.by.view`, `users.by`
+Used by: `incidents.by.agent`, `incidents.by.customer`, `incidents.last.hour`, `incidents.details.by.view`, `users.by`
 
 First request: pass `limit` (items per page), omit `page_key`. Response includes `next_page_key`. Subsequent requests pass that key as `page_key`. When `next_page_key` is null, you've reached the last page.
+
+⚠ `incidents.by.helpdesk` **acepta** `limit`/`page_key` pero los **ignora** — devuelve el nodo entero en una sola llamada, solo estados 1-4, y devuelve sets truncados si se llama en paralelo. Ver la nota completa en `endpoints-reference.md`.
 
 ## Response Shapes & Types
 
@@ -189,6 +191,9 @@ interface InvgateUser {
 | `?ids=309,360` (comma string) on `/incidents` | 428 `"tipo string pasado es inválido"` | Use PHP array: `?ids[]=309&ids[]=360` |
 | `by.status` without `status_id` or `status_ids[]` | 200 with `{status:"ERROR"}` | Always pass `status_id` or `status_ids[]` |
 | `by.helpdesk` with `?id=X` | 200 with `"None of the provided helpdesk_ids is an INTEGER."` | Use `?helpdesk_id=X` instead |
+| `by.status` with `location_id` (or `status_ids[]` combined) expecting a narrowed set | 200 with the **unfiltered** `total` — the filter is silently dropped | No server-side location narrowing exists. Scan by `by.helpdesk` node instead, or paginate `by.status` globally and filter client-side |
+| `by.helpdesk` with `limit`/`page_key`/`status_ids[]` expecting filtering | 200 with the whole node, statuses 1-4 only, no pagination | One call per node, **sequentially** (parallel calls return truncated sets) |
+| Fetching 500+ ids in one `incidents?ids[]=...` call | ~10.5s, hits the 15s abort in `invgateClient` → `!ok` | Chunk at ≤200 ids |
 | `by.view` without `view_id` | 428 Precondition Required | `view_id` is required |
 | `by.agent`/`by.customer` without identifier | 200 with `{status:"ERROR"}` | Always pass `id`, `username`, or `email` |
 | Calling `incidents.by.status` expecting full objects | Only get `requestIds[]` | Batch-fetch with `/incidents?ids[]=...` |

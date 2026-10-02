@@ -35,7 +35,7 @@ const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
 const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 ---
 
-<header class="border-base-300 bg-base-100/95 z-30 mb-4 min-h-20 border-b">
+<header class="border-base-300 bg-base-100/95 z-[150] mb-4 min-h-20 border-b">
   <nav
     class="navbar text-base-content/95 flex h-full w-full items-center justify-between pr-2 md:pr-8"
   >
@@ -149,7 +149,7 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
             </div>
             <ul
               tabindex="0"
-              class="dropdown-content menu bg-base-100 border-base-300 rounded-box z-1 mt-3 w-52 border p-2 shadow select-none"
+              class="dropdown-content menu bg-base-100 border-base-300 rounded-box mt-3 w-52 border p-2 shadow select-none"
             >
               <li class="menu-title border-base-200 pointer-events-none mb-2 border-b px-4 py-2">
                 <span class="text-base-content block truncate text-xs font-semibold">
@@ -157,6 +157,12 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
                 </span>
                 <span class="text-xxs text-base-content/50 block truncate font-medium tracking-wider uppercase">
                   {roleLabel}
+                </span>
+                <span
+                  data-user-mesa
+                  class="text-xxs text-base-content/50 block truncate font-medium tracking-wider"
+                >
+                  {user.helpdeskName ?? "Sin mesa"}
                 </span>
               </li>
               <li>

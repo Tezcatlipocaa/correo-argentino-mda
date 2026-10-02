@@ -16,6 +16,16 @@ export const users = sqliteTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("agent"),
+  helpdeskId: integer("helpdesk_id").references(() => mesas.invgateId, {
+    onDelete: "set null",
+  }),
+  helpdeskName: text("helpdesk_name"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  disabledAt: integer("disabled_at", { mode: "timestamp" }),
+  disabledBy: integer("disabled_by").references(
+    (): AnySQLiteColumn => users.id,
+    { onDelete: "set null" },
+  ),
 });
 
 export const employees = sqliteTable("employees", {
@@ -51,6 +61,7 @@ export const sessions = sqliteTable("sessions", {
     .notNull()
     .references(() => users.id),
   expiresAt: integer("expiresAt").notNull(),
+  fingerprint: text("fingerprint"),
 });
 
 export const offices = sqliteTable(
@@ -309,6 +320,9 @@ export const agents = sqliteTable("agents", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
   username: text("username"),
+  userId: integer("user_id")
+    .unique()
+    .references(() => users.id, { onDelete: "set null" }),
   avatarInitials: text("avatar_initials"),
   notes: text("notes"),
   location: text("location").notNull().default("Monte Grande"),
@@ -336,6 +350,24 @@ export const agents = sqliteTable("agents", {
   estadoExcepcionalMinutos: integer("estado_excepcional_minutos"),
   saturdayGroup: text("saturday_group"),
   saturdayHorario: text("saturday_horario"),
+  enCronograma: integer("en_cronograma", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  // Control de asistencia. Invariante: enAsistencia ⊆ enCronograma (un
+  // operador no puede tener asistencia sin figurar en cronograma, porque
+  // asistencia controla el cumplimiento de los horarios del cronograma).
+  enAsistencia: integer("en_asistencia", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  asignableCubic: integer("asignable_cubic", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  incluidoCalidad: integer("incluido_calidad", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  asignableAgs: integer("asignable_ags", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export const cubicAssignments = sqliteTable(
@@ -387,7 +419,9 @@ export const schedules = sqliteTable(
   "schedules",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    agentName: text("agent_name").notNull(),
+    agentId: integer("agent_id").references(() => agents.id, {
+      onDelete: "set null",
+    }),
     date: text("date").notNull(),
     status: text("status").notNull(),
     comment: text("comment"),
@@ -399,7 +433,7 @@ export const schedules = sqliteTable(
     isOverride: integer("is_override", { mode: "boolean" }).default(false),
   },
   (table) => ({
-    agentNameIdx: index("schedules_agent_name_idx").on(table.agentName),
+    agentIdIdx: index("schedules_agent_id_idx").on(table.agentId),
     dateIdx: index("schedules_date_idx").on(table.date),
   }),
 );
@@ -447,69 +481,6 @@ export const workLocations = sqliteTable("work_locations", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
 });
-
-// 11. OPERADORES (Asignación de autogestiones)
-export const operators = sqliteTable("operators", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  status: text("status").notNull().default("disponible"),
-  locationId: text("location_id").references(() => workLocations.id),
-  currentMode: text("current_mode").notNull().default("presencial"),
-  lastAutogestionAssignedAt: integer("last_autogestion_assigned_at"),
-});
-
-export const operatorShifts = sqliteTable("operator_shifts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  operatorId: text("operator_id")
-    .notNull()
-    .references(() => operators.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // 'home' | 'presencial'
-  shiftStart: text("shift_start").notNull(),
-  shiftEnd: text("shift_end").notNull(),
-  breakTime: text("break_time").notNull(),
-});
-
-export const operatorSchedules = sqliteTable("operator_schedules", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  operatorId: text("operator_id")
-    .notNull()
-    .references(() => operators.id, { onDelete: "cascade" }),
-  dayOfWeek: text("day_of_week").notNull(),
-  modality: text("modality").notNull(),
-  shiftStart: text("shift_start"),
-  shiftEnd: text("shift_end"),
-  breakTime: text("break_time"),
-});
-
-export const workLocationsRelations = relations(workLocations, ({ many }) => ({
-  operators: many(operators),
-}));
-
-export const operatorsRelations = relations(operators, ({ one, many }) => ({
-  shifts: many(operatorShifts),
-  schedules: many(operatorSchedules),
-  location: one(workLocations, {
-    fields: [operators.locationId],
-    references: [workLocations.id],
-  }),
-}));
-
-export const operatorShiftsRelations = relations(operatorShifts, ({ one }) => ({
-  operator: one(operators, {
-    fields: [operatorShifts.operatorId],
-    references: [operators.id],
-  }),
-}));
-
-export const operatorSchedulesRelations = relations(
-  operatorSchedules,
-  ({ one }) => ({
-    operator: one(operators, {
-      fields: [operatorSchedules.operatorId],
-      references: [operators.id],
-    }),
-  }),
-);
 
 // 12. TABLA DE AUDITORIAS DE CALIDAD
 export const qualityAudits = sqliteTable(
@@ -695,7 +666,10 @@ export const supportGuides = sqliteTable("support_guides", {
 
 export const hiddenHelpdesks = sqliteTable("hidden_helpdesks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  invgateId: integer("invgate_id").notNull().unique(),
+  invgateId: integer("invgate_id")
+    .notNull()
+    .unique()
+    .references(() => mesas.invgateId, { onDelete: "cascade" }),
   hiddenBy: text("hidden_by").notNull(),
   hiddenAt: text("hidden_at").notNull(),
 });
@@ -705,6 +679,10 @@ export const auditLogs = sqliteTable("audit_logs", {
   username: text("username").notNull(),
   action: text("action").notNull(),
   timestamp: text("timestamp").notNull(),
+  entityType: text("entity_type"),
+  entityId: integer("entity_id"),
+  beforeState: text("before_state", { mode: "json" }),
+  afterState: text("after_state", { mode: "json" }),
 });
 
 // 15. CONTROL DE ASISTENCIA (Horarios reales y eventualidades)
@@ -909,6 +887,88 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
   }),
   assignedTo: one(users, {
     fields: [feedback.assignedToId],
+    references: [users.id],
+  }),
+}));
+
+export const kbArticles = sqliteTable(
+  "kb_articles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    helpdeskId: integer("helpdesk_id")
+      .notNull()
+      .references(() => mesas.invgateId, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    category: text("category"),
+    status: text("status").notNull().default("draft"),
+    authorUserId: integer("author_user_id")
+      .notNull()
+      .references(() => users.id),
+    publishedByUserId: integer("published_by_user_id").references(
+      () => users.id,
+    ),
+    publishedAt: integer("published_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).$onUpdateFn(
+      () => new Date(),
+    ),
+  },
+  (t) => ({
+    helpdeskStatusIdx: index("kb_articles_helpdesk_status_idx").on(
+      t.helpdeskId,
+      t.status,
+    ),
+  }),
+);
+
+export const kbArticlesRelations = relations(kbArticles, ({ one }) => ({
+  author: one(users, {
+    fields: [kbArticles.authorUserId],
+    references: [users.id],
+  }),
+  publishedBy: one(users, {
+    fields: [kbArticles.publishedByUserId],
+    references: [users.id],
+  }),
+  helpdesk: one(mesas, {
+    fields: [kbArticles.helpdeskId],
+    references: [mesas.invgateId],
+  }),
+}));
+
+export const kbCategories = sqliteTable(
+  "kb_categories",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    helpdeskId: integer("helpdesk_id")
+      .notNull()
+      .references(() => mesas.invgateId, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdByUserId: integer("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("kb_categories_helpdesk_name_unique").on(
+      table.helpdeskId,
+      table.name,
+    ),
+  ],
+);
+
+export const kbCategoriesRelations = relations(kbCategories, ({ one }) => ({
+  helpdesk: one(mesas, {
+    fields: [kbCategories.helpdeskId],
+    references: [mesas.invgateId],
+  }),
+  createdBy: one(users, {
+    fields: [kbCategories.createdByUserId],
     references: [users.id],
   }),
 }));
@@ -1142,5 +1202,42 @@ export const automationParents = sqliteTable(
   (table) => ({
     createdAtIdx: index("automation_parents_created_at_idx").on(table.createdAt),
     updatedAtIdx: index("automation_parents_updated_at_idx").on(table.updatedAt),
+  }),
+);
+
+// 19. ADMIN MESAS Y PAPELERA
+export const mesas = sqliteTable("mesas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  invgateId: integer("invgate_id").notNull().unique(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name"),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  // Curacion manual: si la mesa puede elegirse en el select de alta/edicion de
+  // usuario. Separado de `active` (ciclo de vida del sync de InvGate). La mesa
+  // principal MDA TI siempre es asignable (exenta del toggle).
+  assignable: integer("assignable", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  lastSyncedAt: text("last_synced_at").notNull(),
+});
+
+// 20. PAPELERA DE BORRADO RECUPERABLE (snapshots pre-delete)
+export const deletedRecords = sqliteTable(
+  "deleted_records",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    entity: text("entity").notNull(), // "oficina" | "cubic" | "agente" | entityName del handler
+    recordId: text("record_id").notNull(), // id original, en texto
+    label: text("label").notNull(), // legible: 'Oficina "Rafaela" (Q123)'
+    payload: text("payload", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull(), // { row: filaPadre, children?: { clave: filas[] } }
+    deletedBy: text("deleted_by").notNull(),
+    deletedAt: text("deleted_at").notNull(),
+    restoredAt: text("restored_at"),
+    purgedAt: text("purged_at"),
+  },
+  (t) => ({
+    entityIdx: index("deleted_records_entity_idx").on(t.entity, t.deletedAt),
   }),
 );
