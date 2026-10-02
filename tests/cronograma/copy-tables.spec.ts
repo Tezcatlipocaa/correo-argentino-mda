@@ -63,15 +63,21 @@ test.describe("cronograma — copiado de imágenes al portapapeles", () => {
           nonBgPixels++;
         }
       }
+      const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+      const headerBytes = Array.from(new Uint8Array(await imgBlob.slice(0, 8).arrayBuffer()));
+      const pngSignatureValid = pngSignature.every((b, i) => b === headerBytes[i]);
+
       return {
         width: bmp.width,
         height: bmp.height,
         size: imgBlob.size,
         nonBgPixels,
+        pngSignatureValid,
       };
     });
 
     expect(result.error).toBeUndefined();
+    expect(result.pngSignatureValid).toBe(true);
     expect(result.width).toBeGreaterThan(0);
     expect(result.height).toBeGreaterThan(0);
     expect(result.nonBgPixels).toBeGreaterThan(1000);
@@ -121,15 +127,22 @@ test.describe("cronograma — copiado de imágenes al portapapeles", () => {
           nonBgPixels++;
         }
       }
+
+      const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+      const headerBytes = Array.from(new Uint8Array(await imgBlob.slice(0, 8).arrayBuffer()));
+      const pngSignatureValid = pngSignature.every((b, i) => b === headerBytes[i]);
+
       return {
         width: bmp.width,
         height: bmp.height,
         size: imgBlob.size,
         nonBgPixels,
+        pngSignatureValid,
       };
     });
 
     expect(result.error).toBeUndefined();
+    expect(result.pngSignatureValid).toBe(true);
     expect(result.width).toBeGreaterThan(0);
     expect(result.height).toBeGreaterThan(0);
     expect(result.nonBgPixels).toBeGreaterThan(500);
