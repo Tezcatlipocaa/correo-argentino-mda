@@ -1,13 +1,13 @@
 # Implementation Plan: Bug Fixes — Tickets InvGate (Caracteres y Metadatos) y Comentarios de Calidad
 
-## Phase 1: Decodificación Universal de Entidades HTML
-- [ ] Task: TDD - Crear pruebas unitarias para decodificación de entidades HTML
-  - [ ] Escribir tests en `tests/unit/html-decoding.test.ts` con casos hexadecimales (`&#xED;`, `&#xE9;`, `&#xF3;`), decimales y named entities
-  - [ ] Confirmar que los tests fallen antes de implementar (Red Phase)
-- [ ] Task: Implementar decodificador universal en `cleanHtmlText`
-  - [ ] Actualizar `cleanHtmlText` en `src/lib/titleNormalizer.ts` para decodificar entidades hex y decimales
-  - [ ] Ejecutar tests y confirmar que pasen (Green Phase)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 1: Decodificación Universal de Entidades HTML [checkpoint: de8bfd8]
+- [x] Task: TDD - Crear pruebas unitarias para decodificación de entidades HTML [de8bfd8]
+  - [x] Escribir tests en `tests/unit/html-decoding.test.ts` con casos hexadecimales (`&#xED;`, `&#xE9;`, `&#xF3;`), decimales y named entities [de8bfd8]
+  - [x] Confirmar que los tests fallen antes de implementar (Red Phase) [de8bfd8]
+- [x] Task: Implementar decodificador universal en `cleanHtmlText` [de8bfd8]
+  - [x] Actualizar `cleanHtmlText` en `src/lib/titleNormalizer.ts` para decodificar entidades hex y decimales [de8bfd8]
+  - [x] Ejecutar tests y confirmar que pasen (Green Phase) [de8bfd8]
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [de8bfd8]
 
 ## Phase 2: Resolución Integral de Metadatos de Ticket InvGate
 - [ ] Task: TDD - Crear pruebas unitarias para mapeo de metadatos de ticket InvGate
