@@ -335,6 +335,19 @@ const cleanBase = getCleanBase();
       applyEffectiveColumns();
     });
     resizeObserver.observe(linksGrid);
+
+    // El observer del grid no cubre cambios de ALTA: si un item crece (descripciones,
+    // cambio de vista, fuentes), el contenedor conserva su tamaño porque su altura
+    // la fija masonry con las posiciones viejas, y nunca se relayoutea. Observar
+    // los items cubre esos casos sin volver a cargar la página.
+    let itemLayoutFrame = 0;
+    const itemResizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(itemLayoutFrame);
+      itemLayoutFrame = requestAnimationFrame(() => layoutMasonry());
+    });
+    linksGrid
+      .querySelectorAll<HTMLElement>(".grid-item")
+      .forEach((item) => itemResizeObserver.observe(item));
   }
 
   let isFiltered = false;
@@ -433,6 +446,9 @@ const cleanBase = getCleanBase();
       const grid = document.getElementById("important-links-grid") as HTMLElement | null;
       if (grid) {
         grid.classList.toggle("hide-descriptions", hideDescriptions);
+        // Las cards cambian de altura al instante: releer las posiciones ahora,
+        // sin esperar a que otro evento dispare el observer.
+        requestAnimationFrame(() => layoutMasonry());
       }
     });
   }
