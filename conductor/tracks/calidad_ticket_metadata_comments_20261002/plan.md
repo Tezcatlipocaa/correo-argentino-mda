@@ -9,16 +9,16 @@
   - [x] Ejecutar tests y confirmar que pasen (Green Phase) [de8bfd8]
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [de8bfd8]
 
-## Phase 2: Resolución Integral de Metadatos de Ticket InvGate
-- [ ] Task: TDD - Crear pruebas unitarias para mapeo de metadatos de ticket InvGate
-  - [ ] Escribir tests en `tests/unit/invgate-ticket-metadata.test.ts` para validar mapeo de `status_id`, `priority_id`, `user_id` y `category_id`
-  - [ ] Confirmar que los tests fallen antes de implementar (Red Phase)
-- [ ] Task: Implementar resolución de campos en `qualityMetadataFetcher.ts`
-  - [ ] Agregar mapeo de estados InvGate (`STATUS_NAMES`) y prioridades (`PRIORITY_NAMES`)
-  - [ ] Implementar resolución de cliente (`user?id=...`), operador asignado (`user?id=...`) y categoría
-  - [ ] Integrar fallbacks seguros si la API no responde o datos son nulos
-  - [ ] Ejecutar tests y confirmar que pasen (Green Phase)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 2: Resolución Integral de Metadatos de Ticket InvGate [checkpoint: 1ecb018]
+- [x] Task: TDD - Crear pruebas unitarias para mapeo de metadatos de ticket InvGate [1ecb018]
+  - [x] Escribir tests en `tests/unit/invgate-ticket-metadata.test.ts` para validar mapeo de `status_id`, `priority_id`, `user_id` y `category_id` [1ecb018]
+  - [x] Confirmar que los tests fallen antes de implementar (Red Phase) [1ecb018]
+- [x] Task: Implementar resolución de campos en `qualityMetadataFetcher.ts` [1ecb018]
+  - [x] Agregar mapeo de estados InvGate (`STATUS_NAMES`) y prioridades (`PRIORITY_NAMES`) [1ecb018]
+  - [x] Implementar resolución de cliente (`user?id=...`), operador asignado (`user?id=...`) y categoría [1ecb018]
+  - [x] Integrar fallbacks seguros si la API no responde o datos son nulos [1ecb018]
+  - [x] Ejecutar tests y confirmar que pasen (Green Phase) [1ecb018]
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [1ecb018]
 
 ## Phase 3: Mejoras Visuales, Visibilidad y Persistencia de Comentarios por Parámetro
 - [ ] Task: TDD - Pruebas de integración para persistencia y lectura de comentarios por parámetro
