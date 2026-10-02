@@ -1396,7 +1396,7 @@ const cleanBase = getCleanBase();
             comment
               ? `
             <div class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80 bg-base-200/50 rounded-lg px-2.5 py-1 border border-base-300/40">
-              <span class="text-primary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+              <span class="text-secondary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
               <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
             </div>
           `
@@ -1433,7 +1433,7 @@ const cleanBase = getCleanBase();
             comment
               ? `
             <div class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80 bg-base-200/50 rounded-lg px-2.5 py-1 border border-base-300/40">
-              <span class="text-primary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+              <span class="text-secondary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
               <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
             </div>
           `
@@ -1497,22 +1497,6 @@ const cleanBase = getCleanBase();
                 ${call.totalScore}%
               </div>
             </div>
-            ${
-              call.recordingUrl
-                ? `
-            <a 
-              href="${escapeHtml(call.recordingUrl)}" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              class="btn btn-circle btn-sm btn-outline btn-primary text-primary hover:text-primary-content ml-2" 
-              title="Escuchar / Descargar Grabación de Llamada"
-              download
-            >
-              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor;"><path d="m21.707 20.293-2.016-2.015A9.932 9.932 0 0 0 21 12c0-4.962-4.037-9-9-9-2.28 0-4.37.859-5.976 2.282L3.707 2.966 2.293 4.38l18 18 1.414-1.414zM12 5c3.86 0 7 3.14 7 7 0 1.547-.514 2.977-1.378 4.137L6.89 5.405A6.953 6.953 0 0 1 12 5zM3 12c0 4.962 4.037 9 9 9 1.83 0 3.535-.558 4.969-1.503l-1.472-1.472A6.955 6.955 0 0 1 12 19c-3.86 0-7-3.14-7-7 0-1.295.36-2.508.974-3.548L4.47 6.947A8.937 8.937 0 0 0 3 12z"></path><path d="M16 12a4 4 0 0 0-4-4v2a2 2 0 0 1 2 2h2z"></path></svg>
-            </a>
-            `
-                : ""
-            }
             ${
               isUserAgent
                 ? ""

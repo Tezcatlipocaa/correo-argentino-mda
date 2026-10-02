@@ -203,7 +203,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await agBtn.click();
     await expect(tabWise).toHaveClass(/hidden/);
     await expect(tabInvgate).toBeVisible();
-    await expect(page.locator("#btn-fetch-invgate-label")).toHaveText("Buscar Autogestión");
+    await expect(page.locator("#btn-fetch-invgate-label")).toHaveText("Buscar");
 
     // Volver a canal Llamada Wise
     const callBtn = page.locator('.channel-btn[data-channel="wise_call"]');
@@ -255,6 +255,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
 
     // 6. Mockear respuesta de InvGate con HTML en descripción y título homologado
     let mockTitle = "Aforadora- Consulta";
+    let mockSource = "Teléfono";
     await page.route("**/api/calidad/fetch-metadata*source=invgate*", async (route) => {
       await route.fulfill({
         status: 200,
@@ -268,6 +269,8 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
             priority: "Alta",
             status: "En curso",
             creator: "Juan Pérez",
+            helpdesk: "Mesa de Ayuda TI",
+            source: mockSource,
             description: "<p>Falla en equipo aforadora <strong>sucursal</strong>.<br>No imprime comprobante.</p>",
             date: "2026-10-01",
           },
@@ -286,6 +289,8 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await expect(page.locator("#tv-category")).toHaveText("Hardware");
     await expect(page.locator("#tv-priority")).toHaveText("Alta");
     await expect(page.locator("#tv-creator")).toHaveText("Juan Pérez");
+    await expect(page.locator("#tv-helpdesk")).toHaveText("Mesa de Ayuda TI");
+    await expect(page.locator("#tv-source")).toHaveText("Teléfono");
 
     const tvDescription = page.locator("#tv-description");
     await expect(tvDescription).toContainText("Falla en equipo aforadora sucursal.");
@@ -293,7 +298,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await expect(tvDescription).not.toContainText("<strong>");
     await expect(tvDescription).not.toContainText("<br>");
 
-    // 7. Verificar auto-evaluación asistida del parámetro Título (Homologado)
+    // 7. Verificar auto-evaluación asistida del parámetro Título y Origen (Ambos válidos)
     const tvTitleBadge = page.locator("#tv-title-match-badge");
     await expect(tvTitleBadge).toContainText("Título Homologado");
 
@@ -303,8 +308,15 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const titleRuleBadge = page.locator('.rule-auto-badge[data-rule-badge="call_ticket_titulo"]');
     await expect(titleRuleBadge).toHaveClass(/hidden/);
 
-    // 8. Probar búsqueda con Título No Homologado
+    const sourceCheckbox = page.locator('input[name="call_ticket_origen"]');
+    await expect(sourceCheckbox).toBeChecked();
+
+    const sourceRuleBadge = page.locator('.rule-auto-badge[data-rule-badge="call_ticket_origen"]');
+    await expect(sourceRuleBadge).toHaveClass(/hidden/);
+
+    // 8. Probar búsqueda con Título No Homologado y Origen No Válido (ej: Correo en llamada wise)
     mockTitle = "Titulo Inexistente No Homologado 999";
+    mockSource = "Correo";
     await page.locator("#invgate-search-id").fill("88443");
     await page.locator("#btn-fetch-invgate-api").click();
 
@@ -312,15 +324,24 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await expect(tvTitleBadge).toHaveText("No Homologado");
     await expect(tvTitleBadge).not.toContainText("⚠");
 
-    // Verificar que el checkbox se desmarca y aparece el badge de "Desactivado por regla"
+    // Verificar que el checkbox de título se desmarca y aparece el badge de "Desactivado por regla"
     await expect(titleCheckbox).not.toBeChecked();
     await expect(titleRuleBadge).not.toHaveClass(/hidden/);
     await expect(titleRuleBadge).toHaveText("Desactivado por regla");
+
+    // Verificar que el checkbox de origen se desmarca y muestra advertencia de regla
+    await expect(sourceCheckbox).not.toBeChecked();
+    await expect(sourceRuleBadge).not.toHaveClass(/hidden/);
+    await expect(sourceRuleBadge).toHaveText("Origen incorrecto");
 
     // 9. Verificar que si el usuario activa manualmente el checkbox, el badge de regla se oculta
     await titleCheckbox.check();
     await expect(titleCheckbox).toBeChecked();
     await expect(titleRuleBadge).toHaveClass(/hidden/);
+
+    await sourceCheckbox.check();
+    await expect(sourceCheckbox).toBeChecked();
+    await expect(sourceRuleBadge).toHaveClass(/hidden/);
 
     // 10. Verificar que el número de ticket se asignó en el formulario
     await expect(page.locator("#form-ticket-id")).toHaveValue("88442");

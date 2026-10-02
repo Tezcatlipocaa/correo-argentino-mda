@@ -54,7 +54,7 @@ const invgateAgParams = allParameters.filter(
         <div class="join bg-base-200/60 p-0.5 rounded-xl border border-base-200 shadow-2xs self-start sm:self-auto" id="channel-selector-join">
           <button
             type="button"
-            class="btn btn-xs sm:btn-sm join-item channel-btn btn-active bg-base-100 text-primary font-bold shadow-2xs transition-all border-transparent px-3"
+            class="btn btn-xs sm:btn-sm join-item channel-btn btn-active bg-base-100 text-secondary font-bold shadow-2xs transition-all border-transparent px-3"
             data-channel="wise_call"
           >
             <Icon name="boxicons:phone-ring" size={15} />
@@ -62,7 +62,7 @@ const invgateAgParams = allParameters.filter(
           </button>
           <button
             type="button"
-            class="btn btn-xs sm:btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
+            class="btn btn-xs sm:btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-secondary hover:bg-base-100/50 transition-all border-transparent px-3"
             data-channel="wise_email"
           >
             <Icon name="boxicons:envelope" size={15} />
@@ -70,7 +70,7 @@ const invgateAgParams = allParameters.filter(
           </button>
           <button
             type="button"
-            class="btn btn-xs sm:btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-base-content hover:bg-base-100/50 transition-all border-transparent px-3"
+            class="btn btn-xs sm:btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-secondary hover:bg-base-100/50 transition-all border-transparent px-3"
             data-channel="invgate_ticket"
           >
             <Icon name="boxicons:handshake" size={15} />
@@ -118,16 +118,16 @@ const invgateAgParams = allParameters.filter(
                     <button
                       type="button"
                       id="tab-search-wise"
-                      class="join-item btn btn-xs btn-ghost gap-1 font-bold transition-all text-primary bg-base-100 shadow-2xs"
+                      class="join-item btn btn-xs btn-ghost gap-1 font-bold transition-all text-base-content bg-base-100 shadow-2xs"
                       data-search-target="wise"
                     >
-                      <Icon name="boxicons:phone" size={14} class="text-primary" />
+                      <Icon name="boxicons:phone" size={14} class="text-violet-500" />
                       <span>Wise CX</span>
                     </button>
                     <button
                       type="button"
                       id="tab-search-invgate"
-                      class="join-item btn btn-xs btn-ghost gap-1 font-medium text-base-content/70 transition-all hover:text-base-content"
+                      class="join-item btn btn-xs btn-ghost gap-1 font-medium text-base-content/60 transition-all hover:text-base-content"
                       data-search-target="invgate"
                     >
                       <Icon name="boxicons:receipt" size={14} class="text-secondary" />
@@ -146,19 +146,20 @@ const invgateAgParams = allParameters.filter(
                       type="text"
                       id="wise-search-id"
                       placeholder="Caso Wise (ej: 534787)..."
-                      class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-primary focus:outline-hidden"
+                      class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-violet-500 focus:outline-hidden"
                     />
-                    <div class="text-base-content/40 absolute top-1.5 left-2">
+                    <div class="text-violet-500 absolute top-1.5 left-2">
                       <Icon name="boxicons:phone" size={13} />
                     </div>
                   </div>
                   <button
                     type="button"
                     id="btn-fetch-wise-api"
-                    class="btn btn-xs btn-neutral text-xs font-semibold gap-1 shrink-0 px-2.5 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                    class="btn btn-xs btn-neutral btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                    title="Buscar"
+                    aria-label="Buscar"
                   >
-                    <Icon name="boxicons:search" size={13} />
-                    <span>Buscar en Wise</span>
+                    <Icon name="boxicons:search" size={14} />
                   </button>
                 </div>
 
@@ -174,17 +175,19 @@ const invgateAgParams = allParameters.filter(
                       placeholder="Ticket InvGate (ej: 88442)..."
                       class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-secondary focus:outline-hidden"
                     />
-                    <div class="text-base-content/40 absolute top-1.5 left-2">
+                    <div class="text-secondary absolute top-1.5 left-2">
                       <Icon name="boxicons:receipt" size={13} />
                     </div>
                   </div>
                   <button
                     type="button"
                     id="btn-fetch-invgate-api"
-                    class="btn btn-xs btn-neutral text-xs font-semibold gap-1 shrink-0 px-2.5 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                    class="btn btn-xs btn-neutral btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                    title="Buscar"
+                    aria-label="Buscar"
                   >
-                    <Icon name="boxicons:search-alt" size={13} />
-                    <span id="btn-fetch-invgate-label">Buscar ticket</span>
+                    <Icon name="boxicons:search" size={14} />
+                    <span id="btn-fetch-invgate-label" class="sr-only">Buscar</span>
                   </button>
                 </div>
               </div>
@@ -426,6 +429,27 @@ const invgateAgParams = allParameters.filter(
                       -
                     </p>
                   </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:help-circle" size={13} class="text-info/70" />
+                      Mesa de Ayuda
+                    </span>
+                    <p id="tv-helpdesk" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                        <Icon name="boxicons:broadcast" size={13} class="text-primary/70" />
+                        Origen
+                      </span>
+                      <div id="tv-source-match-badge" class="shrink-0 flex items-center"></div>
+                    </div>
+                    <p id="tv-source" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
                 </div>
 
                 <!-- Descripción / Evidencia -->
@@ -550,7 +574,7 @@ const invgateAgParams = allParameters.filter(
                               </span>
                               <button
                                 type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
                                 data-action="toggle-obs"
                                 title="Agregar nota"
                               >
@@ -634,7 +658,7 @@ const invgateAgParams = allParameters.filter(
                               </span>
                               <button
                                 type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
                                 data-action="toggle-obs"
                                 title="Agregar nota"
                               >
@@ -721,7 +745,7 @@ const invgateAgParams = allParameters.filter(
                               </span>
                               <button
                                 type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
                                 data-action="toggle-obs"
                                 title="Agregar nota"
                               >
@@ -799,7 +823,7 @@ const invgateAgParams = allParameters.filter(
                               </span>
                               <button
                                 type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
                                 data-action="toggle-obs"
                                 title="Agregar nota"
                               >
@@ -886,7 +910,7 @@ const invgateAgParams = allParameters.filter(
                               </span>
                               <button
                                 type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
                                 data-action="toggle-obs"
                                 title="Agregar nota"
                               >
@@ -965,7 +989,7 @@ const invgateAgParams = allParameters.filter(
                               </span>
                               <button
                                 type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-primary transition-colors toggle-obs-btn"
+                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
                                 data-action="toggle-obs"
                                 title="Agregar nota"
                               >
@@ -1117,18 +1141,18 @@ const invgateAgParams = allParameters.filter(
 
     function setActiveSearchTab(target: "wise" | "invgate") {
       if (target === "wise") {
-        tabSearchWise?.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchWise?.classList.remove("font-medium", "text-base-content/70");
-        tabSearchInvgate?.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchInvgate?.classList.add("font-medium", "text-base-content/70");
+        tabSearchWise?.classList.add("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.remove("font-medium", "text-base-content/60");
+        tabSearchInvgate?.classList.remove("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.add("font-medium", "text-base-content/60");
 
         wiseSearchContainer?.classList.remove("hidden");
         invgateSearchContainer?.classList.add("hidden");
       } else {
-        tabSearchInvgate?.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchInvgate?.classList.remove("font-medium", "text-base-content/70");
-        tabSearchWise?.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-        tabSearchWise?.classList.add("font-medium", "text-base-content/70");
+        tabSearchInvgate?.classList.add("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.remove("font-medium", "text-base-content/60");
+        tabSearchWise?.classList.remove("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.add("font-medium", "text-base-content/60");
 
         invgateSearchContainer?.classList.remove("hidden");
         wiseSearchContainer?.classList.add("hidden");
@@ -1156,6 +1180,9 @@ const invgateAgParams = allParameters.filter(
     const tvPriority = document.getElementById("tv-priority");
     const tvStatus = document.getElementById("tv-status");
     const tvCreator = document.getElementById("tv-creator");
+    const tvHelpdesk = document.getElementById("tv-helpdesk");
+    const tvSource = document.getElementById("tv-source");
+    const tvSourceMatchBadge = document.getElementById("tv-source-match-badge");
     const tvDescription = document.getElementById("tv-description");
     const tvAudioContainer = document.getElementById("tv-audio-container");
     const tvAudioPlayer = document.getElementById(
@@ -1247,6 +1274,65 @@ const invgateAgParams = allParameters.filter(
       recalculateScores();
     }
 
+    // Auto-evaluación del parámetro Origen de la solicitud
+    function evaluateTicketSource(sourceStr: string) {
+      const channel = formChannelType?.value || "wise_call";
+      if (channel === "invgate_ticket") {
+        if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
+        return;
+      }
+
+      let checkboxName = "";
+      let isValid = false;
+
+      const norm = (sourceStr || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+      if (channel === "wise_call") {
+        checkboxName = "call_ticket_origen";
+        isValid = norm.includes("tel") || norm.includes("llamada");
+      } else if (channel === "wise_email") {
+        checkboxName = "email_mda_origen";
+        isValid = norm.includes("corr") || norm.includes("mail");
+      }
+
+      if (!checkboxName) return;
+
+      const checkbox = document.querySelector(
+        `input[name="${checkboxName}"]`,
+      ) as HTMLInputElement | null;
+
+      if (tvSourceMatchBadge) {
+        if (isValid) {
+          tvSourceMatchBadge.innerHTML = `
+            <span class="badge badge-xs badge-success font-semibold gap-1 text-[11px]" title="Origen coincide con el canal">
+              <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Válido
+            </span>
+          `;
+        } else {
+          tvSourceMatchBadge.innerHTML = `
+            <span class="badge badge-xs badge-warning font-semibold text-[11px]" title="El origen del ticket no coincide con el canal auditado">
+              No coincide
+            </span>
+          `;
+        }
+      }
+
+      if (isValid) {
+        if (checkbox) checkbox.checked = true;
+        setParamRuleBadge(checkboxName, false);
+      } else {
+        if (checkbox) checkbox.checked = false;
+        setParamRuleBadge(checkboxName, true, "Origen incorrecto");
+      }
+
+      recalculateScores();
+    }
+
     // Actualizar datos en el Visor de Ticket
     function populateTicketViewer(data: any) {
       const title = data.title || data.rawDetails?.title || "Sin título";
@@ -1255,6 +1341,9 @@ const invgateAgParams = allParameters.filter(
       const priority = data.priority || data.rawDetails?.priority || "Media";
       const status = data.status || data.rawDetails?.status || "Abierto";
       const creator = data.creator || data.rawDetails?.creator || "Desconocido";
+      const helpdesk =
+        data.helpdesk || data.rawDetails?.helpdesk || "Sin mesa asignada";
+      const source = data.source || data.rawDetails?.source || "Sin origen";
       const description =
         data.description ||
         data.rawDetails?.description ||
@@ -1265,6 +1354,8 @@ const invgateAgParams = allParameters.filter(
       if (tvPriority) tvPriority.textContent = priority;
       if (tvStatus) tvStatus.textContent = status;
       if (tvCreator) tvCreator.textContent = creator;
+      if (tvHelpdesk) tvHelpdesk.textContent = helpdesk;
+      if (tvSource) tvSource.textContent = source;
       if (tvDescription)
         tvDescription.textContent =
           cleanHtmlText(description) || "Sin descripción disponible";
@@ -1284,6 +1375,7 @@ const invgateAgParams = allParameters.filter(
       }
 
       evaluateTicketTitle(title);
+      evaluateTicketSource(source);
     }
 
     // Resetear visor de ticket
@@ -1293,8 +1385,11 @@ const invgateAgParams = allParameters.filter(
       if (tvPriority) tvPriority.textContent = "-";
       if (tvStatus) tvStatus.textContent = "-";
       if (tvCreator) tvCreator.textContent = "-";
+      if (tvHelpdesk) tvHelpdesk.textContent = "-";
+      if (tvSource) tvSource.textContent = "-";
       if (tvDescription) tvDescription.textContent = "-";
       if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
+      if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
       if (ticketViewerBadge) {
         ticketViewerBadge.textContent = "Sin ticket cargado";
         ticketViewerBadge.className = "badge badge-xs badge-ghost font-medium";
@@ -1323,11 +1418,11 @@ const invgateAgParams = allParameters.filter(
         if (!channel) return;
 
         channelButtons.forEach((b) => {
-          b.classList.remove("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-          b.classList.add("font-medium", "text-base-content/70");
+          b.classList.remove("btn-active", "bg-base-100", "text-secondary", "font-bold", "shadow-2xs");
+          b.classList.add("font-medium", "text-base-content/70", "hover:text-secondary");
         });
-        btn.classList.add("btn-active", "bg-base-100", "text-primary", "font-bold", "shadow-2xs");
-        btn.classList.remove("font-medium", "text-base-content/70");
+        btn.classList.add("btn-active", "bg-base-100", "text-secondary", "font-bold", "shadow-2xs");
+        btn.classList.remove("font-medium", "text-base-content/70", "hover:text-secondary");
         if (formChannelType) formChannelType.value = channel;
 
         // Toggle checklists
@@ -1368,13 +1463,9 @@ const invgateAgParams = allParameters.filter(
         if (channel === "invgate_ticket") {
           if (tabSearchWise) tabSearchWise.classList.add("hidden");
           setActiveSearchTab("invgate");
-          if (btnFetchInvgateLabel)
-            btnFetchInvgateLabel.textContent = "Buscar Autogestión";
         } else {
           if (tabSearchWise) tabSearchWise.classList.remove("hidden");
           setActiveSearchTab("wise");
-          if (btnFetchInvgateLabel)
-            btnFetchInvgateLabel.textContent = "Buscar ticket";
         }
 
         if (channel === "wise_call") {
@@ -1393,6 +1484,14 @@ const invgateAgParams = allParameters.filter(
         // Reset search feedback on tab switch
         if (wiseFeedbackAlert) wiseFeedbackAlert.classList.add("hidden");
         if (invgateFeedbackAlert) invgateFeedbackAlert.classList.add("hidden");
+
+        // Re-evaluar reglas automáticas con el nuevo canal si hay ticket cargado
+        if (tvTitle && tvTitle.textContent && tvTitle.textContent !== "-") {
+          evaluateTicketTitle(tvTitle.textContent);
+        }
+        if (tvSource && tvSource.textContent && tvSource.textContent !== "-") {
+          evaluateTicketSource(tvSource.textContent);
+        }
 
         recalculateScores();
       });

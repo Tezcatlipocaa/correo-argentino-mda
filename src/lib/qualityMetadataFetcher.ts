@@ -18,6 +18,8 @@ export interface ExtractedQualityMetadata {
   category?: string;
   status?: string;
   creator?: string;
+  helpdesk?: string;
+  source?: string;
   recordingUrl?: string;
   recordingId?: string;
   rawDetails?: Record<string, any>;
@@ -183,9 +185,26 @@ export const INVGATE_PRIORITY_NAMES: Record<number, string> = {
   4: "Urgente",
 };
 
+export const INVGATE_SOURCE_NAMES: Record<number, string> = {
+  1: "Correo",
+  2: "Portal Web",
+  3: "Teléfono",
+  4: "Chat",
+  5: "Presencial",
+  6: "Móvil",
+  7: "Monitoreo",
+  8: "API",
+};
+
 export function parseInvgateAgMetadata(
   incident: any,
-  extra?: { customerName?: string; categoryName?: string; operatorName?: string },
+  extra?: {
+    customerName?: string;
+    categoryName?: string;
+    operatorName?: string;
+    helpdeskName?: string;
+    sourceName?: string;
+  },
 ): ExtractedQualityMetadata {
   const caseNumber = (incident?.id ?? "").toString();
   const rawCreated = incident?.created_at;
@@ -232,6 +251,19 @@ export function parseInvgateAgMetadata(
     (typeof incident?.category === "string" ? incident.category : "") ??
     "";
 
+  const helpdeskName =
+    extra?.helpdeskName ??
+    incident?.helpdesk?.name ??
+    (typeof incident?.helpdesk === "string" ? incident.helpdesk : "") ??
+    "";
+
+  const sourceName =
+    extra?.sourceName ??
+    incident?.source?.name ??
+    (typeof incident?.source === "string" ? incident.source : null) ??
+    (typeof incident?.source_id === "number" ? INVGATE_SOURCE_NAMES[incident.source_id] : null) ??
+    "";
+
   const statusName =
     incident?.status?.name ??
     (typeof incident?.status === "string" ? incident.status : null) ??
@@ -248,7 +280,7 @@ export function parseInvgateAgMetadata(
 
   // Condición PAS: ubicación, cliente o helpdesk contiene 'pas'
   const locName = (incident?.location?.name || "").toLowerCase();
-  const hdName = (incident?.helpdesk?.name || "").toLowerCase();
+  const hdName = (helpdeskName || incident?.helpdesk?.name || "").toLowerCase();
   const isPas = locName.includes("pas") || hdName.includes("pas");
 
   return {
@@ -262,6 +294,8 @@ export function parseInvgateAgMetadata(
     title,
     description,
     category: categoryName,
+    helpdesk: helpdeskName || undefined,
+    source: sourceName || undefined,
     status: statusName,
     creator: creatorName,
     rawDetails: {
@@ -273,7 +307,8 @@ export function parseInvgateAgMetadata(
       creator: creatorName,
       priority: priorityName,
       location: incident?.location?.name || incident?.location,
-      helpdesk: incident?.helpdesk?.name || incident?.helpdesk,
+      helpdesk: helpdeskName || incident?.helpdesk?.name || incident?.helpdesk,
+      source: sourceName || incident?.source?.name || incident?.source,
     },
   };
 }
@@ -294,6 +329,7 @@ export async function fetchInvgateTicketMetadata(
     let customerName = "";
     let operatorName = "";
     let categoryName = "";
+    let helpdeskName = incident.helpdesk?.name || (typeof incident.helpdesk === "string" ? incident.helpdesk : "");
 
     // 1. Resolver cliente si existe user_id o creator_id
     const targetUserId = incident.user_id ?? incident.creator_id;
@@ -342,14 +378,88 @@ export async function fetchInvgateTicketMetadata(
       }
     }
 
+    // 4. Resolver Helpdesk si no vino con nombre y existe assigned_group_id o helpdesk_id
+    const targetGroupId =
+      incident.assigned_group_id ??
+      incident.helpdesk_id ??
+      (typeof incident.helpdesk === "number" ? incident.helpdesk : null);
+
+    if (!helpdeskName && targetGroupId) {
+      try {
+        const hdLevelsRes = await invgateGet<any>("helpdesksandlevels");
+        if (hdLevelsRes.ok && Array.isArray(hdLevelsRes.data)) {
+          const allHd = hdLevelsRes.data;
+          const found = allHd.find((h: any) => h.id === targetGroupId);
+
+          if (found) {
+            if (found.name) {
+              helpdeskName = found.name;
+            } else if (found.parent_id) {
+              // Es un subnivel (ej: Nivel 1) cuyo parent_id es la mesa raíz
+              const parent = allHd.find((h: any) => h.id === found.parent_id);
+              const parentName = parent?.name || `Mesa #${found.parent_id}`;
+              const levelSuffix = found.level_order ? ` Nivel ${found.level_order}` : "";
+              helpdeskName = `${parentName}${levelSuffix}`;
+            }
+          }
+        }
+
+        // Si no se encontró en helpdesksandlevels, intentar en helpdesks estándar
+        if (!helpdeskName) {
+          const hdRes = await invgateGet<any>("helpdesks");
+          if (hdRes.ok && Array.isArray(hdRes.data)) {
+            const found = hdRes.data.find((h: any) => h.id === targetGroupId);
+            if (found?.name) {
+              helpdeskName = found.name;
+            }
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
+    // 5. Resolver Source si existe source_id y no se pudo inferir estáticamente
+    let sourceName =
+      incident.source?.name ??
+      (typeof incident.source === "string" ? incident.source : null) ??
+      (typeof incident.source_id === "number" ? INVGATE_SOURCE_NAMES[incident.source_id] : null) ??
+      "";
+
+    if (!sourceName && incident.source_id) {
+      try {
+        const srcRes = await invgateGet<any>("incident.attributes.source");
+        if (srcRes.ok && Array.isArray(srcRes.data)) {
+          const found = srcRes.data.find((s: any) => s.id === incident.source_id);
+          if (found?.name) {
+            sourceName = found.name;
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
     if (!customerName && !incident.customer && !incident.creator && !incident.user) {
       customerName = "Desconocido";
     }
     if (!categoryName && !incident.category) {
       categoryName = "Sin categoría";
     }
+    if (!helpdeskName && !incident.helpdesk) {
+      helpdeskName = "Sin mesa asignada";
+    }
+    if (!sourceName && !incident.source) {
+      sourceName = "Sin origen";
+    }
 
-    const metadata = parseInvgateAgMetadata(incident, { customerName, categoryName, operatorName });
+    const metadata = parseInvgateAgMetadata(incident, {
+      customerName,
+      categoryName,
+      operatorName,
+      helpdeskName,
+      sourceName,
+    });
     return { ok: true, data: metadata };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error al consultar ticket de InvGate";
