@@ -1,22 +1,17 @@
 ---
 import { Icon } from "astro-icon/components";
 import FormField from "@components/ui/forms/FormField.astro";
-import logoFirma from "@assets/firma.png";
 import SectionCard from "@components/ui/SectionCard.astro";
+import { getCleanBase } from "@lib/baseUrl";
 
-interface Props {
-  origin?: string;
-}
-
-const { origin = "" } = Astro.props;
+const logoPath = `${getCleanBase()}firma.png`;
 ---
 
 <div class="space-y-8">
   <div
     class="grid grid-cols-1 items-start gap-8 md:grid-cols-2"
     id="signature-generator-container"
-    data-origin={origin}
-    data-logo-default={logoFirma.src}
+    data-logo-default={logoPath}
   >
     <SectionCard class="overflow-hidden shadow-md">
       <div class="mb-2 flex items-center gap-2">
@@ -228,7 +223,7 @@ const { origin = "" } = Astro.props;
             Descarga el logo oficial en tu computadora:
           </p>
           <a
-            href={logoFirma.src}
+            href={logoPath}
             download="firma-correo-argentino.png"
             class="btn btn-sm btn-neutral btn-outline mt-2 w-full"
           >
@@ -391,10 +386,7 @@ const { origin = "" } = Astro.props;
   function renderSignature() {
     if (!previewContainer || !codeOutput) return;
 
-    const logoPath = logoDefault;
-    const fullLogoUrl = logoPath.startsWith("http")
-      ? logoPath
-      : `${window.location.origin}${logoPath}`;
+    const fullLogoUrl = new URL(logoDefault, window.location.origin).href;
 
     const contactInfo = [
       formData.phone ? `Tel: ${formData.phone}` : "",
