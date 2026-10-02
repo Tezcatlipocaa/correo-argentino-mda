@@ -28,9 +28,12 @@
   *Link: [./tracks/calidad_modal_refine_20261002/index.md](./tracks/calidad_modal_refine_20261002/index.md)*
 - [x] **Track: Consulta de Mesa de Ayuda (Helpdesk) en Tickets InvGate**
   *Link: [./tracks/calidad_invgate_helpdesk_20261002/index.md](./tracks/calidad_invgate_helpdesk_20261002/index.md)*
----
-- [ ] **Track: Consulta de Origen de Solicitud (Source) en Tickets InvGate**
+- [x] **Track: Consulta de Origen de Solicitud (Source) en Tickets InvGate**
   *Link: [./tracks/calidad_invgate_source_20261002/index.md](./tracks/calidad_invgate_source_20261002/index.md)*
+---
+- [ ] **Track: Auto-evaluación Asistida del Origen del Ticket InvGate**
+  *Link: [./tracks/calidad_regla_origen_20261002/index.md](./tracks/calidad_regla_origen_20261002/index.md)*
+
 
 
 
