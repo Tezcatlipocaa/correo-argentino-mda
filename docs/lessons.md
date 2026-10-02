@@ -552,3 +552,13 @@ Cada entrada sigue este formato:
 **Solucion:** Mover el logo a `public/firma.png` (ruta fija, sin hash, servida por `express.static("dist/client")` antes del SSR) y armar la URL absoluta en el cliente con `new URL(getCleanBase() + "firma.png", window.location.origin)`. El HTML copiado usa esa URL absoluta estable.
 **Regla:** Ningún contenido que el usuario guarde fuera de la app debe referenciar `/_astro/...` ni un asset importado: usar `public/` + URL absoluta estable. Ojo: `server.mjs` sirve `public/` con `immutable`/`maxAge: "1y"`, así que cambiar el logo requiere un nombre de archivo nuevo (ej. `firma-v2.png`) o servir ese archivo con `max-age=0, must-revalidate` (si no, los clientes no lo revalidan ni con recarga forzada).
 **Archivos afectados:** public/firma.png, src/components/generador-firmas/SignatureGenerator.astro, src/pages/generador-firmas/index.astro, tests/generador-firmas/copy-signature.spec.ts
+
+---
+
+### 2026-10-02 — `astro dev` bloquea subrecursos cross-origin: el logo de la firma no se puede validar en desarrollo
+
+**Problema:** Al copiar la firma visual y pegarla en Outlook durante el desarrollo, el logo aparecía roto, aunque `/firma.png` existía y respondía 200 en el navegador. El log de `npm run dev` mostraba: `[WARN] [router] Blocked cross-origin request to /firma.png (Sec-Fetch-Site: cross-site, Sec-Fetch-Mode: no-cors). Cross-origin subresource requests are not allowed on the dev server for security reasons.`
+**Causa:** El cliente que pega (Outlook/WebView) pide el logo como subrecurso cross-site (`Sec-Fetch-Mode: no-cors`, con `Referer` externo). El router del **dev server** de Astro rechaza subrecursos cross-origin por seguridad. En producción el archivo lo sirve `express.static("dist/client")` (`server.mjs`) sin ese chequeo. Además el dev server puede escuchar solo en IPv6 (`[::1]:4321`): `http://127.0.0.1:4321` da ECONNREFUSED y algunos clientes (Outlook) resuelven `localhost` a IPv4.
+**Solucion:** Validar la carga del logo con un build de producción (`npm run build` + `node -r dotenv/config server.mjs` con un `PORT` propio), no con `astro dev`. Verificado: con el server de producción la misma petición cross-site devuelve `200 image/png` y Outlook muestra el logo. Para pruebas locales con clientes externos, levantar el dev server con `--host 127.0.0.1`.
+**Regla:** Ningún asset que un tercero (Outlook, un cliente de correo, otra app) deba bajar por URL se puede verificar en `astro dev`: el dev server bloquea subrecursos cross-origin y puede quedar IPv6-only. Probar en modo producción/preview.
+**Archivos afectados:** public/firma.png, server.mjs, docs/lessons.md
