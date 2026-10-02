@@ -11,10 +11,10 @@
 - [x] Task: Corregir posicionamiento del contenedor host en `exportAsClipboardImage` (`src/components/cronograma/lib/exporters.ts`) (2c5b604)
   - [x] Sustituir `left: -99999px` por posicionamiento offscreen seguro (`top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -9999;`) para evitar que el canvas de `html-to-image` dibuje fuera del viewport.
   - [x] Asegurar que `captureWidth`, `captureHeight` y el fondo del host contengan correctamente el clon con su margen.
-- [~] Task: Redirigir la captura de rotación de sábados a `#saturday-rotation-card`
-  - [ ] Modificar `handleCopyRotationImage` en `src/components/cronograma/lib/dashboard-client.ts` para que `targetEl` sea `saturdayCard`.
-  - [ ] Calibrar el ancho fijo (`width`) y padding para un encuadre nítido que incluya título, badge de grupo y grilla.
-- [ ] Task: Identificar y redirigir la captura de horas extras a la Columna 2+3
+- [x] Task: Redirigir la captura de rotación de sábados a `#saturday-rotation-card` (470bd53)
+  - [x] Modificar `handleCopyRotationImage` en `src/components/cronograma/lib/dashboard-client.ts` para que `targetEl` sea `saturdayCard`.
+  - [x] Calibrar el ancho fijo (`width`) y padding para un encuadre nítido que incluya título, badge de grupo y grilla.
+- [~] Task: Identificar y redirigir la captura de horas extras a la Columna 2+3
   - [ ] Agregar `id="overtime-compact-list-card"` al contenedor de la Columna 2+3 ("Turnos Guardados") en `src/components/cronograma/CronogramaDashboard.astro`.
   - [ ] Modificar `handleCopyOvertimeImage` en `src/components/cronograma/lib/dashboard-client.ts` para capturar dicho elemento con dimensiones óptimas.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
