@@ -33,7 +33,6 @@
 ---
 - [x] **Track: Auto-evaluación Asistida del Origen del Ticket InvGate**
   *Link: [./tracks/calidad_regla_origen_20261002/index.md](./tracks/calidad_regla_origen_20261002/index.md)*
-
-
-
-
+---
+- [ ] **Track: Corrección de Copiado de Imágenes en Cronograma (Grupos y Horas Extras)**
+  *Link: [./tracks/cronograma_copiar_tablas_bugfix_20261002/index.md](./tracks/cronograma_copiar_tablas_bugfix_20261002/index.md)*
