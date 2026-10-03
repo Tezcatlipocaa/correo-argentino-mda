@@ -1,11 +1,12 @@
 # Plan: Promedios por Canal y Promedio Total en Calidad
 
-## Phase 1: Lógica de Cálculo de Promedios y Pruebas Unitarias
-- [ ] Task: Escribir pruebas unitarias para funciones de cálculo de promedios por canal y consolidado
-  - [ ] Crear tests en `tests/unit/calidad-channel-averages.test.ts` que validen cálculo de promedio simple por canal, casos con 0 auditorías (retorno `--` o null), y promedio consolidado total de todas las muestras.
-- [ ] Task: Implementar/extraer función utilitaria helper para el cálculo de promedios
-  - [ ] Implementar la función de cálculo tipada (en helper o módulo exportable) para garantizar reutilización limpia y paso de pruebas en verde.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 1: Lógica de Cálculo de Promedios y Pruebas Unitarias [checkpoint: 3d87836]
+- [x] Task: Escribir pruebas unitarias para funciones de cálculo de promedios por canal y consolidado (3d87836)
+  - [x] Crear tests en `tests/unit/calidad-channel-averages.test.ts` que validen cálculo de promedio simple por canal, casos con 0 auditorías (retorno `--` o null), y promedio consolidado total de todas las muestras.
+- [x] Task: Implementar/extraer función utilitaria helper para el cálculo de promedios (3d87836)
+  - [x] Implementar la función de cálculo tipada (en helper o módulo exportable) para garantizar reutilización limpia y paso de pruebas en verde.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
 
 ## Phase 2: Interfaz Visual en Tabs y Resumen Consolidado
 - [ ] Task: Modificar el marcado HTML de las pestañas en `CalidadContent.astro`
