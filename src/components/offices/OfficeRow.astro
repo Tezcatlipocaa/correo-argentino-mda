@@ -205,8 +205,7 @@ const officeDirectoryRowGridClass = showActionsColumn
             name="boxicons:location-alt-filled"
             class="text-secondary shrink-0"
             size={16}
-            aria-hidden="true"
-          />
+            aria-hidden="true" is:inline />
           <span class="truncate" title={office.address} data-highlight-target>
             {office.address}
           </span>
@@ -442,8 +441,7 @@ const officeDirectoryRowGridClass = showActionsColumn
                       name="boxicons:group-filled"
                       size={16}
                       class="text-secondary"
-                      aria-hidden="true"
-                    />
+                      aria-hidden="true" is:inline />
                     Referentes del sitio
                   </h2>
                   <div
@@ -534,7 +532,8 @@ const officeDirectoryRowGridClass = showActionsColumn
                     size={16}
                     class="text-secondary"
                     aria-hidden="true"
-                  />
+                  
+            is:inline />
                   Equipos ({totalAssets})
                 </h2>
                 <div class="relative min-h-0 flex-1 lg:max-h-120">

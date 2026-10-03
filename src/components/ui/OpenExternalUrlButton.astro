@@ -59,7 +59,7 @@ const baseClasses = [
   canOpen
     ? appearanceClass
     : "btn-disabled border-base-300 bg-base-200 text-base-content/45",
-  isIconVariant ? "btn-square" : "gap-1",
+  isIconVariant ? "btn-square min-h-8 min-w-8" : "gap-1",
   className,
   buttonClass,
 ];
@@ -78,6 +78,7 @@ const baseClasses = [
         name="boxicons:arrow-up-right-square-filled"
         size={16}
         aria-hidden="true"
+        is:inline
       />
       {!isIconVariant && <span>{label}</span>}
     </a>
@@ -92,6 +93,7 @@ const baseClasses = [
         name="boxicons:arrow-up-right-square-filled"
         size={16}
         aria-hidden="true"
+        is:inline
       />
       {!isIconVariant && <span>{label}</span>}
     </button>

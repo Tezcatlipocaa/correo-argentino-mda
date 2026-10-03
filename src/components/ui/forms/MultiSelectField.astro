@@ -61,7 +61,7 @@ const selectedSet = new Set(selected);
               data-multiselect-remove={o.value}
               aria-label={`Quitar ${o.label}`}
             >
-              <Icon name="boxicons:x-filled" size={12} />
+              <Icon name="boxicons:x-filled" size={12} is:inline />
             </button>
             <input type="hidden" name={name} value={o.value} />
           </span>
@@ -79,7 +79,7 @@ const selectedSet = new Set(selected);
       autocomplete="off"
     />
     <ul
-      class="menu bg-base-100 border-base-300 rounded-box absolute top-full z-50 mt-1 hidden w-full overflow-x-hidden overflow-y-auto border shadow-lg"
+      class="menu bg-base-100 border-base-300 rounded-box absolute top-full z-50 mt-1 hidden w-full overflow-x-hidden overflow-y-auto border shadow-overlay"
       data-multiselect-list
       role="listbox"
     >

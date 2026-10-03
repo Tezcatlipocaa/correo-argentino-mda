@@ -603,7 +603,7 @@ function buildMonthlyCellHtml(
 
   const styles = getStatusStyles(status);
 
-  let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+  let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30" : "border-base-300/30"} ${styles.bgClass} ${isLicenseOverlap ? "border-error/40" : ""}`;
 
   let tooltipAttrs = "";
   const tooltipDir = rowIndex === 0 ? "tooltip-bottom" : "tooltip-top";
@@ -764,7 +764,7 @@ function updateMonthlyCellDisplay(
              state.isCoverageMinimized
                ? ""
                : `
-           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgb(0_0_0_/_0.1)]">
                <div class="bg-purple-500 w-full transition-[height] duration-500" style="height: ${pppPercent}%" title="P. Parque Patricios: ${c.ppp}"></div>
                <div class="bg-amber-500 w-full transition-[height] duration-500" style="height: ${pmgPercent}%" title="P. Monte Grande: ${c.pmg}"></div>
                <div class="bg-secondary w-full transition-[height] duration-500" style="height: ${hoPercent}%" title="HO: ${c.ho}"></div>
@@ -2184,14 +2184,12 @@ function setupEventListeners(): void {
     ) as HTMLButtonElement | null;
     const saturdayCard = document.getElementById("saturday-rotation-card");
     if (!copyBtn || !saturdayCard) return;
-    const targetEl =
-      document.getElementById("rotation-timeline-wrapper") || saturdayCard;
     await copyElementImageToClipboard(
       copyBtn,
-      targetEl,
+      saturdayCard,
       {
         padding: 16,
-        compact: true,
+        compact: false,
         width: 1034,
       },
       {
@@ -2211,17 +2209,17 @@ function setupEventListeners(): void {
     const copyBtn = document.getElementById(
       "copy-overtime-image-btn",
     ) as HTMLButtonElement | null;
-    const overtimeCard = document.getElementById("overtime-card");
-    if (!copyBtn || !overtimeCard) return;
-    const targetEl =
-      document.getElementById("overtime-timeline-wrapper") || overtimeCard;
+    const compactCard =
+      document.getElementById("overtime-compact-list-card") ||
+      document.getElementById("overtime-card");
+    if (!copyBtn || !compactCard) return;
     await copyElementImageToClipboard(
       copyBtn,
-      targetEl,
+      compactCard,
       {
         padding: 16,
-        compact: true,
-        width: 1388,
+        compact: false,
+        width: 720,
       },
       {
         success: "Horas extras copiadas al portapapeles.",

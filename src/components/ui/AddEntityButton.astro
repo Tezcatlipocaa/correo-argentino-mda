@@ -12,6 +12,6 @@ const { href, label, id, icon = "boxicons:plus-filled" } = Astro.props;
 ---
 
 <a id={id} href={href} class="btn btn-primary btn-sm gap-2">
-  <Icon name={icon} size={16} />
+  <Icon name={icon} size={16} is:inline />
   {label}
 </a>

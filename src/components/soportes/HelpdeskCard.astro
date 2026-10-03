@@ -2,8 +2,6 @@
 import { Icon } from "astro-icon/components";
 import { getCleanBase } from "@lib/baseUrl";
 import { getCsrfTokenForSession } from "@lib/csrf";
-import ActionExternalButton from "@components/ui/ActionExternalButton.astro";
-import OpenModalButton from "@components/ui/OpenModalButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import type { InvgateHelpdeskAndLevel } from "@/types/invgate";
 
@@ -33,7 +31,6 @@ const hdName = helpdesk.name || `Helpdesk #${helpdesk.id}`;
 const isActive = helpdesk.status_id === 1;
 const statusBadge = isActive ? "badge-success badge-soft" : "badge-ghost";
 const statusLabel = isActive ? "Activo" : "Inactivo";
-const hasRecords = records.length > 0;
 const modalId = `modal-details-${helpdesk.id}`;
 
 const invgateApiBase = import.meta.env.INVGATE_BASE_URL || "";
@@ -117,7 +114,7 @@ const searchableText = [
     <div class="flex-1 space-y-3">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1">
-          <h3
+          <h2
             class="card-title mb-2 flex items-center gap-1.5 truncate text-base"
           >
             <Icon
@@ -125,18 +122,24 @@ const searchableText = [
               size={22}
               class="text-secondary shrink-0"
               aria-hidden="true"
+              is:inline
             />
             <span
               class="text-base-content truncate font-bold"
               data-highlight-target>{hdName}</span
             >
-          </h3>
+          </h2>
           <div class="mt-1 flex flex-wrap items-center gap-1.5">
             <span
               class="badge badge-sm badge-ghost gap-1 font-mono text-xs"
               title={`${helpdesk.total_members} miembros`}
             >
-              <Icon name="boxicons:group-filled" size={12} aria-hidden="true" />
+              <Icon
+                name="boxicons:group-filled"
+                size={12}
+                aria-hidden="true"
+                is:inline
+              />
               {helpdesk.total_members}
             </span>
             <span
@@ -144,7 +147,11 @@ const searchableText = [
               data-incidents-for={helpdesk.id}
               title="Incidentes abiertos en InvGate"
             >
-              <Icon name="boxicons:envelope-filled" size={12} aria-hidden="true" />
+              <Icon
+                name="boxicons:envelope-filled"
+                size={12}
+                aria-hidden="true"
+              />
               <span data-incidents-count>0</span>
             </span>
             <span class:list={["badge badge-sm font-medium", statusBadge]}
@@ -165,7 +172,7 @@ const searchableText = [
             {
               parentName && (
                 <span
-                  class="badge badge-sm badge-ghost h-auto gap-1 text-left text-xs whitespace-nowrap max-w-72"
+                  class="badge badge-sm badge-ghost h-auto max-w-72 gap-1 text-left text-xs whitespace-nowrap"
                   title={`Mesa padre: ${parentName}`}
                   data-parent-badge
                 >
@@ -174,8 +181,9 @@ const searchableText = [
                     size={12}
                     class="shrink-0"
                     aria-hidden="true"
+                    is:inline
                   />
-                  <span class="truncate min-w-0" data-highlight-target>
+                  <span class="min-w-0 truncate" data-highlight-target>
                     {parentName}
                   </span>
                 </span>
@@ -295,7 +303,11 @@ const searchableText = [
             class="btn btn-sm btn-soft btn-error gap-1"
             title="Ocultar esta mesa de ayuda del listado"
           >
-            <Icon name="boxicons:low-vision-filled" size={16} aria-hidden="true" />
+            <Icon
+              name="boxicons:low-vision-filled"
+              size={16}
+              aria-hidden="true"
+            />
             <span class="hidden xl:inline">Ocultar</span>
           </button>
         )
@@ -317,12 +329,10 @@ const searchableText = [
           <a
             href={`${cleanBase}mesas-de-ayuda/edit?invgate_id=${helpdesk.id}`}
             class="btn btn-sm btn-accent btn-soft gap-1"
-            title={hasRecords ? "Editar información" : "Agregar información"}
+            title="Editar información"
           >
             <Icon name="boxicons:pencil-filled" size={16} aria-hidden="true" />
-            <span class="hidden xl:inline">
-              {hasRecords ? "Editar" : "Agregar"}
-            </span>
+            <span class="hidden xl:inline">Editar</span>
           </a>
         )
       }
@@ -330,7 +340,12 @@ const searchableText = [
   </div>
 </div>
 
-<Modal id={modalId} title={hdName} icon="boxicons:headphone-mic-filled" size="md">
+<Modal
+  id={modalId}
+  title={hdName}
+  icon="boxicons:headphone-mic-filled"
+  size="md"
+>
   <div slot="content" class="space-y-4">
     {
       parentName && (
@@ -379,7 +394,12 @@ const searchableText = [
       helpdesk.total_members > 0 && (
         <div data-members-for={helpdesk.id}>
           <p class="text-base-content/70 mb-2 flex items-center gap-1 text-xs font-bold tracking-wider uppercase">
-            <Icon name="boxicons:group-filled" size={16} aria-hidden="true" />
+            <Icon
+              name="boxicons:group-filled"
+              size={16}
+              aria-hidden="true"
+              is:inline
+            />
             Miembros asignados ({helpdesk.total_members})
           </p>
           <div
@@ -405,7 +425,7 @@ const searchableText = [
 </Modal>
 
 <script>
-import { getCleanBase } from "@lib/baseUrl";
+  import { getCleanBase } from "@lib/baseUrl";
 
   const cleanBase = getCleanBase();
 

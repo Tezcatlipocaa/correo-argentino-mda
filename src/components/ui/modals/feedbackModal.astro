@@ -19,13 +19,14 @@ const user = Astro.locals.user || { username: "Invitado" };
       aria-label="Cerrar modal"
       data-close-feedback-modal
     >
-      <Icon name="boxicons:x-filled" size={20} />
+      <Icon name="boxicons:x-filled" size={20} is:inline />
     </button>
 
     <h3
       class="text-base-content mb-4 flex items-center gap-2 text-lg font-bold"
     >
-      <Icon name="boxicons:mail-open-filled" size={24} class="text-primary" />
+      <Icon name="boxicons:mail-open-filled" size={24} class="text-primary" 
+            is:inline />
       <span>Enviar Comentarios o Reportes</span>
     </h3>
 

@@ -84,21 +84,9 @@ const visibleMainModules =
       )
     : [];
 
-// Reparto balanceado de columnas: máximo 4 por fila. Elegimos la cantidad de
-// columnas que minimiza la última fila incompleta sin pasar de 4.
-// 4→4 (1 fila), 5→3 (3+2), 6→3 (3+3), 7→4 (4+3), 8→4 (4+4).
-const moduleColumnOptions = [
-  "md:grid-cols-1",
-  "md:grid-cols-2",
-  "md:grid-cols-3",
-  "md:grid-cols-4",
-] as const;
-
-const moduleRows = Math.ceil(visibleMainModules.length / 4);
-const moduleColumnCount =
-  visibleMainModules.length > 0 ? Math.ceil(visibleMainModules.length / moduleRows) : 1;
-const moduleGridClass = moduleColumnOptions[moduleColumnCount - 1];
-const moduleCardLayout = moduleColumnCount >= 3 ? "vertical" : "horizontal";
+// Los módulos adicionales (los que sólo ven algunos roles, además de los 8
+// atajos que tiene todo usuario) se renderizan con la variante compacta de
+// QuickAccessCard, para que no compitan visualmente con los atajos por defecto.
 
 type BoxiconName = `boxicons:${string}`;
 
@@ -224,7 +212,9 @@ const visibleQuickAccessItems =
       <!-- Módulos Principales -->
       {
         visibleMainModules.length > 0 && (
-          <div class:list={["grid grid-cols-1 gap-6", moduleGridClass]}>
+          <div
+            class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
+          >
             {visibleMainModules.map((mod) => (
               <QuickAccessCard
                 href={mod.href}
@@ -232,7 +222,7 @@ const visibleQuickAccessItems =
                 description={mod.sublabel}
                 icon={mod.icon}
                 iconTone={mod.tone}
-                layout={moduleCardLayout}
+                layout="compact"
               />
             ))}
           </div>

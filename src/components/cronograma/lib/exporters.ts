@@ -277,9 +277,10 @@ export async function exportAsClipboardImage(
   // exactly clone + margin ring and nothing gets cropped.
   const host = document.createElement("div");
   host.style.position = "fixed";
-  host.style.left = "-99999px";
+  host.style.left = "0";
   host.style.top = "0";
-  host.style.zIndex = "-1";
+  host.style.zIndex = "-9999";
+  host.style.opacity = "0";
   host.style.pointerEvents = "none";
   const clone = element.cloneNode(true) as HTMLElement;
   clone.removeAttribute("id");
@@ -335,8 +336,11 @@ export async function exportAsClipboardImage(
 
   try {
     const toPng = await getToPng();
+    const rawBg = window.getComputedStyle(host).backgroundColor;
     const computedBg =
-      window.getComputedStyle(host).backgroundColor || "#ffffff";
+      !rawBg || rawBg === "rgba(0, 0, 0, 0)" || rawBg === "transparent"
+        ? "#ffffff"
+        : rawBg;
 
     // Height depends on width (text reflow), so measure after the clone is
     // laid out at targetWidth. flow-root on the host makes scrollHeight
@@ -347,6 +351,13 @@ export async function exportAsClipboardImage(
     const dataUrl = await toPng(host, {
       backgroundColor: computedBg,
       style: {
+        // html-to-image copies every computed longhand of the capture root onto
+        // the clone, including the host's offscreen `position: fixed/left`. Reset
+        // it here (options.style wins) or the clone renders outside the canvas.
+        position: "static",
+        left: "0",
+        top: "0",
+        opacity: "1",
         transform: "scale(1)",
         transformOrigin: "top left",
       },

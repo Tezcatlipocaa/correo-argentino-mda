@@ -67,7 +67,7 @@
   --color-secondary-content: #ebf0fa;
 
   --color-accent: #5f88d3;
-  --color-accent-content: #ebf0fa;
+  --color-accent-content: #0b1528;
 
   --color-neutral: #cacdce;
   --color-neutral-content: #191a1a;
@@ -196,6 +196,11 @@
   --shadow-glow-success: 0 0 8px rgba(6, 132, 68, 0.4);
   --shadow-glow-warning: 0 0 8px rgba(226, 173, 31, 0.4);
   --shadow-table-edge: 4px 0 10px -5px rgba(0, 0, 0, 0.05);
+
+  /* Escala de elevación (fase 2A) */
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.1);
+  --shadow-overlay: 0 8px 30px rgb(0 0 0 / 0.12);
+  --shadow-modal: 0 20px 50px rgb(0 0 0 / 0.2);
 }
 
 /* Garantia explicita: los colores de linea reservados no dependen de tokens semanticos */

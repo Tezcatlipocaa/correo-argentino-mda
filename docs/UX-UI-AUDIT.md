@@ -23,10 +23,10 @@ estructural e interacción duplicada (sección 3) y accesibilidad (sección 4).
 
 | Sección | Tema | Estado |
 | ------- | ---- | ------ |
-| 1 | Elementos rotos (clases muertas v4, íconos 404, h1 faltante, TDZ) | **Corregido** |
-| 2 | Sombras y elevación sin escala | Pendiente (deuda) |
-| 3 | Redundancia estructural / interacción duplicada | Pendiente (deuda) |
-| 4 | Accesibilidad (ids duplicados, saltos de heading, inputs sin nombre, touch targets) | Pendiente (deuda) |
+| 1 | Elementos rotos (clases muertas v4, íconos 404, h1 faltante, TDZ) | **Corregido** (fase 1) |
+| 2 | Sombras y elevación sin escala | **Corregido** (fase 2A) |
+| 3 | Redundancia estructural / interacción duplicada | **Diferido** — 100% React (`/titulos`); cubierto por `docs/superpowers/plans/2026-10-01-migracion-titulos-astro.md` |
+| 4 | Accesibilidad (ids duplicados, saltos de heading, inputs sin nombre, touch targets) | **Corregido** (fase 2A: ids/heading/credenciales · fase 2B: touch targets) |
 
 ---
 
@@ -87,7 +87,7 @@ guard del TDZ). **Resultado: 17/17 en verde.**
 
 ---
 
-## Sección 2 — Sombras y elevación (deuda)
+## Sección 2 — Sombras y elevación (RESUELTO en fase 2A)
 
 **No existe una escala de elevación.** Hay solo 3 tokens de sombra, y dos de
 ellos son semánticos, no de profundidad (`src/styles/global.css:196-198`):
@@ -161,7 +161,7 @@ revisar el anidamiento de `article`.
 
 ---
 
-## Sección 4 — Accesibilidad (deuda)
+## Sección 4 — Accesibilidad (RESUELTO en fase 2A, salvo touch targets)
 
 - **`id` duplicados de Iconify** (mismo `id` en varios `<svg>` del documento):
   presentes en `/oficinas` (7), `/admin/usuarios` (6), `/buscador-usuarios` (6),
@@ -254,3 +254,89 @@ Lo que el relevamiento revela sobre cómo está construida la interfaz:
 - **Reporte HTML + traces:** `npx playwright show-report`; traces en
   `test-results/ui-elementos-rotos-regress-*/trace.zip`.
 - **Lecciones operativas:** `docs/lessons.md` (entradas 2026-09-29).
+
+---
+
+## Estado de resolución — fase 2A (2026-09-30)
+
+Alcance: los hallazgos de UI que **no** tocan React. Spec de regresión:
+`tests/ui/fase2a-ux-consistency.spec.ts` (**27 tests, verde**). Build y suites
+completas en verde.
+
+### Correcciones al relevamiento (lo medido difirió de la primera pasada)
+
+- **Jerarquía de encabezados: sólo 3 problemas reales, no "casi todas las rutas".**
+  La métrica original contaba el modal "Acerca del proyecto" (cerrado, con
+  `visibility: hidden` pero con rects) y lo inyectaba en la secuencia de todas las
+  páginas, inventando un salto `h2 → h4` global. La métrica correcta excluye
+  `visibility: hidden`. Problemas reales: `/buscador-usuarios` (`h1 → h4`),
+  `/supervision/asignacion-autogestiones` (`h1 → h3`) y `/mesas-de-ayuda`
+  (`h1 → h3`), más el modal About al abrirse. Corregidos.
+- **Ids de SVG duplicados: la causa raíz es el chrome compartido.** El sidebar
+  (`src/layouts/_components/drawerContent.astro`) renderiza
+  `<Icon name={item.icon}>` dinámicamente desde `navigation.ts`, y los íconos de
+  esa lista eran exactamente los duplicados. Además, 53 componentes compartidos
+  renderizan íconos por prop (`name={...}`). La solución general aplicada:
+  `is:inline` en el sidebar, el navbar, el `ToastContainer` y en todos los
+  `<Icon name={...}>` (los íconos inline no emiten `<symbol id>`, sólo el primero
+  por request lo hacía). Efecto: 9 rutas con duplicados → 0.
+- **`/supervision/cronograma` sin encabezados: se mantiene por decisión de
+  producto** (vista de aplicación a pantalla completa, sin `PageHeader`). El spec
+  de fase 1 se ajustó para eximir a esa ruta de la aserción "un único h1".
+
+### Sección 2 (sombras) — resuelto
+
+Se agregó una escala de elevación en el `@theme` de `src/styles/global.css`
+(`--shadow-raised`, `--shadow-overlay`, `--shadow-modal`; se reusa
+`--shadow-table-edge`). Se reemplazaron los 20 `shadow-[...]` arbitrarios y los
+`box-shadow` crudos del cronograma por tokens; se unificó el rol modal
+(`shadow-modal`) y dropdown/tooltip/overlay (`shadow-overlay`); y se eliminó
+`shadow-sm` de las celdas del mes (venía de `getStatusStyles().bgClass` en
+`src/components/cronograma/lib/styles.ts`). Contrato cubierto por el spec: las
+celdas del mes no llevan utilidades de sombra.
+
+### Sección 4 (accesibilidad) — resuelto (touch targets incluidos en fase 2B)
+
+Ids duplicados, jerarquía de encabezados y nombres accesibles de credenciales
+(12 inputs) corregidos en la fase 2A. **Touch targets corregidos en la fase 2B**
+(ver abajo).
+
+### Sección 3 (redundancia) — diferida
+
+100% React (`/titulos`). Ver la nota de alcance diferido más arriba.
+
+---
+
+## Estado de resolución — fase 2B (objetivos táctiles)
+
+**Contrato adoptado:** todo control interactivo de **solo ícono** (sin texto
+visible) mide **≥32×32 px** en 12 rutas operativas. Verificado por
+`tests/ui/fase2b-touch-targets.spec.ts`.
+
+**El relevamiento sobreestimaba el problema.** La medición original (105 en
+`/oficinas`, 48 en cronograma) usaba una métrica naive que contaba estados
+ocultos (hover, modos inactivos, modales cerrados). Con la métrica corregida
+(solo elementos visibles, estado por defecto), el total real eran **37
+elementos en 4 rutas**, y de esos **solo 2 violaban WCAG 2.2 AA** (20 px, en el
+cronograma). `/oficinas` tenía 0 infractores.
+
+**Los 37 infractores se concentraban en 4 emisores**, todos corregidos con la
+misma unidad (`min-h-8 min-w-8`):
+
+| Emisor | Ruta(s) | Elementos |
+| ------ | ------- | --------- |
+| `src/components/ui/OpenExternalUrlButton.astro` (variante `icon`) | `/contactos` | 23 |
+| `src/pages/recursos/_components/LinkItem.astro` + `.../aplicativos/_components/CatalogAppCard.astro` (toggle de credenciales) | `/recursos`, `/recursos/aplicativos` | 16 |
+| `src/components/cronograma/CronogramaDashboard.astro` (nav de mes) | `/supervision/cronograma` | 2 |
+| `src/components/cronograma/lib/monthly-view.ts` (colapsar totales/cobertura) | `/supervision/cronograma` | 4 |
+
+`src/components/ui/CopyButton.astro` (variante `icon`) también se endureció de forma
+preventiva: sus instancias están ocultas hasta el hover, pero comparten el problema.
+
+**Verificación:** build + `verify-build` OK; `fase2b` 12/12; `fase2a` 27/27;
+fase 1 16/16; `vitest` 35 archivos / 255 tests; `.test.mjs` 20/20. Inspección
+visual de `/supervision/cronograma` (grilla densa), `/contactos` y `/recursos`:
+sin scroll horizontal ni desalineación.
+
+**Pendiente de React:** `/titulos` conserva `btn-xs` de 24 px en `TitleCard`
+(fuera de alcance por la restricción de no tocar `.tsx`).

@@ -56,6 +56,7 @@
 - **Icons**: `astro-icon` with `@iconify-json/boxicons`
 - **URL base helper**: `@lib/baseUrl` exposes `getCleanBase()` (with trailing `/`, for `` `${...}api/foo` ``) and `getBaseNoSlash()` (without trailing `/`, for `` `${...}/oficinas` ``). Always use it; never re-declare `const base = import.meta.env.BASE_URL || "/"` inline.
 - **Export PNG de cronograma**: la tabla mensual se renderiza server-side (`GET /api/cronograma/export.png?month=YYYY-MM` → `@resvg/resvg-js`). No reintroducir `html-to-image` para la tabla mensual: su costo es ~17 KB de estilos por nodo y un mes completo supera el límite de data URL de Chrome (ver `docs/lessons.md` 2026-09-30).
+- **Firma institucional (Outlook)**: el logo se sirve desde `public/firma.png` (ruta fija, sin hash) y el HTML copiado usa URL absoluta. No volver a `@assets/firma.png`: el hash cambia por build y rompe las firmas ya guardadas (ver `docs/lessons.md` 2026-10-02).
 - **Fonts**: `@fontsource-variable/geist` (UI), `@fontsource-variable/geist-mono` (technical data)
 - **Path aliases**: `@/*` → `src/*`, `@components/*`, `@db/*`, `@lib/*`, etc.
 - **Layout contract**: body `flex flex-col min-h-screen`, main `flex-1` (in `BaseLayout.astro`)
@@ -116,6 +117,6 @@
 ## HTTPS / reverse proxy (Apache XAMPP)
 
 - TLS termina en Apache (`:443`) con proxy a `127.0.0.1:4321`; `:80` redirige a `https://mda.correo.local/`. Runbook: `docs/deploy-produccion.md` §5.3.
-- `@astrojs/node` en modo `middleware` **ignora `X-Forwarded-Proto`** (solo detecta `req.socket.encrypted`): detrás del proxy `Astro.url.origin` queda en `http://`. Nunca usar `Astro.url.origin` para self-fetch server-side — usar `getInternalOrigin()` (`@lib/internalOrigin`, loopback directo a Express). Client-side `window.location.origin` sí es confiable.
+- `@astrojs/node` en modo `middleware` **ignora `X-Forwarded-Proto`** (solo detecta `req.socket.encrypted`): detrás del proxy `Astro.url.origin` queda en `http://`. Nunca usar `Astro.url.origin` para self-fetch server-side — usar `getInternalOrigin()` (`@lib/internalOrigin`, loopback directo a Express). Client-side `window.location.origin` sí es confiable. Todo self-fetch interno debe reenviar cookie **y** `user-agent` con `getInternalFetchHeaders(Astro.request)` (`@lib/internalOrigin`): el middleware liga la sesión al UA (`computeFingerprint`) y la **elimina** si no coincide (302 a `/login` → el endpoint responde 502 y el usuario queda deslogueado). Ver `docs/lessons.md` 2026-10-01.
 - Cookie de sesión `Secure` vía `SESSION_COOKIE_SECURE` (runtime `process.env` gana sobre build-time `import.meta.env`; en prod se define en `ecosystem.config.cjs`). `navigator.clipboard` exige contexto seguro (HTTPS).
 - Nunca commitear material de certificados (`.cer/.crt/.key/.pem/.pfx` ya gitignored). El CA corporativo debe estar en el trust store de los clientes; si no, browser warning y clipboard sigue bloqueado.

@@ -49,7 +49,8 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
         tabindex="0"
         class="btn btn-ghost btn-circle drawer-button lg:hidden"
       >
-        <Icon name="boxicons:menu-filled" size={24} />
+        <Icon name="boxicons:menu-filled" size={24} 
+            is:inline />
       </label>
     </div>
 
@@ -62,7 +63,8 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
         class="btn btn-ghost border-base-300 hover:bg-base-200 text-base-content/70 group inline-flex items-center justify-between gap-x-6 border px-4 text-sm font-normal normal-case md:w-52"
       >
         <div class="flex items-center gap-x-2">
-          <Icon name="boxicons:search" size={20} />
+          <Icon name="boxicons:search" size={20} 
+            is:inline />
           Buscar...
         </div>
         <div class="ml-auto flex items-center gap-1">
@@ -83,8 +85,10 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
           <Icon
             name="boxicons:help-circle-filled"
             size={24}
+           
             class="transition-transform duration-200 ease-out group-hover:scale-110"
-          />
+          
+            is:inline />
         </button>
 
         <!-- Divider -->
@@ -107,14 +111,18 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
           name="boxicons:sun-filled"
           class="swap-off group-hover:[transform:scale(1.1)]"
           size={20}
+         
           aria-hidden="true"
-        />
+        
+            is:inline />
         <Icon
           name="boxicons:moon-filled"
           class="swap-on group-hover:[transform:scale(1.1)]"
           size={20}
+         
           aria-hidden="true"
-        />
+        
+            is:inline />
       </label>
 
       <!-- User button -->
@@ -126,7 +134,9 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
                 <Icon
                   name="boxicons:arrow-out-right-stroke-circle-half-filled"
                   size={20}
-                />
+                 
+                
+            is:inline />
                 Iniciar sesión
               </a>
             </div>
@@ -149,7 +159,7 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
             </div>
             <ul
               tabindex="0"
-              class="dropdown-content menu bg-base-100 border-base-300 rounded-box mt-3 w-52 border p-2 shadow select-none"
+              class="dropdown-content menu bg-base-100 border-base-300 rounded-box mt-3 w-52 border p-2 shadow-overlay select-none"
             >
               <li class="menu-title border-base-200 pointer-events-none mb-2 border-b px-4 py-2">
                 <span class="text-base-content block truncate text-xs font-semibold">
@@ -170,7 +180,8 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
                   href={resolveUrl("/profile")}
                   class="gap-2 py-2 text-xs focus:bg-transparent focus:text-inherit"
                 >
-                  <Icon name="boxicons:user-filled" size={16} />
+                  <Icon name="boxicons:user-filled" size={16} 
+            is:inline />
                   Ver perfil
                 </a>
               </li>
@@ -181,7 +192,8 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
                   data-open-feedback-modal
                   class="w-full gap-2 py-2 text-left text-xs focus:bg-transparent focus:text-inherit"
                 >
-                  <Icon name="boxicons:envelope-open-filled" size={16} />
+                  <Icon name="boxicons:envelope-open-filled" size={16} 
+            is:inline />
                   Enviar sugerencia
                 </button>
               </li>
@@ -191,7 +203,8 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
                   href={resolveUrl("/logout")}
                   class="text-error hover:bg-error/10 gap-2 py-2 text-xs focus:bg-transparent"
                 >
-                  <Icon name="boxicons:door-open-alt-filled" size={16} />
+                  <Icon name="boxicons:door-open-alt-filled" size={16} 
+            is:inline />
                   Cerrar sesión
                 </a>
               </li>

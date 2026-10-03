@@ -45,7 +45,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
           class="btn btn-ghost btn-circle hover:bg-base-300"
           type="button"
         >
-          <Icon name="boxicons:x-filled" size={28} />
+          <Icon name="boxicons:x-filled" size={28} is:inline />
         </button>
       </div>
     </div>
@@ -247,8 +247,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
             <Icon
               name="boxicons:history-filled"
               size={14}
-              class="text-base-content/50"
-            />
+              class="text-base-content/50" is:inline />
             Historial de Asistencia
           </h3>
           <div
@@ -358,7 +357,7 @@ import SelectField from "@components/ui/forms/SelectField.astro";
             id="weekly-clear-btn"
             class="btn btn-xs btn-ghost text-error hover:bg-error/10 text-tiny gap-1 rounded-lg font-black tracking-wider uppercase transition-all"
           >
-            <Icon name="boxicons:trash-filled" size={13} />
+            <Icon name="boxicons:trash-filled" size={13} is:inline />
             Limpiar Todo
           </button>
         </div>
@@ -410,7 +409,8 @@ import SelectField from "@components/ui/forms/SelectField.astro";
               id="apply-weekly-days-btn"
               class="btn btn-xs btn-outline border-base-300 hover:border-secondary hover:bg-secondary/5 hover:text-secondary text-tiny h-9 gap-1.5 rounded-lg font-bold tracking-wider uppercase"
             >
-              <Icon name="boxicons:calendar-filled" size={13} />
+              <Icon name="boxicons:calendar-filled" size={13} 
+            is:inline />
               Solo Días
             </button>
             <button

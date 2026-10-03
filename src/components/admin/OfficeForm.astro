@@ -110,7 +110,8 @@ if (office?.type === "SUCURSAL") {
     <span
       class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
     >
-      <Icon name="boxicons:building-house-filled" size={15} />
+      <Icon name="boxicons:building-house-filled" size={15} 
+            is:inline />
     </span>
     Datos básicos
   </h2>
@@ -229,7 +230,7 @@ if (office?.type === "SUCURSAL") {
           <ul
             id="address-suggestions"
             role="listbox"
-            class="menu bg-base-100 rounded-box absolute top-full z-50 mt-1 hidden max-h-60 w-full overflow-y-auto shadow-lg"
+            class="menu bg-base-100 rounded-box absolute top-full z-50 mt-1 hidden max-h-60 w-full overflow-y-auto shadow-overlay"
           >
           </ul>
           <div id="address-building-preview" class="mt-2 hidden"></div>

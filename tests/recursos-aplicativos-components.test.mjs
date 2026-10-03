@@ -9,9 +9,9 @@ const exists = (path) => existsSync(fileUrl(path));
 
 const expectedFiles = [
   "src/pages/recursos/aplicativos/index.astro",
-  "src/pages/recursos/aplicativos/_components/CatalogAppCard.astro",
-  "src/pages/recursos/aplicativos/_components/CatalogSoftBadge.astro",
-  "src/pages/recursos/aplicativos/_components/CatalogBundleBanner.astro",
+  "src/components/catalogo/CatalogAppCard.astro",
+  "src/components/catalogo/CatalogSoftBadge.astro",
+  "src/components/catalogo/CatalogBundleBanner.astro",
   "src/components/catalogo/CatalogoContent.astro",
   "src/components/enlaces/EnlacesContent.astro",
   "src/components/ui/AnnouncementBanner.astro",
@@ -26,10 +26,10 @@ const catalogContent = await read(
   "src/components/catalogo/CatalogoContent.astro",
 );
 const appCard = await read(
-  "src/pages/recursos/aplicativos/_components/CatalogAppCard.astro",
+  "src/components/catalogo/CatalogAppCard.astro",
 );
 const bundleBanner = await read(
-  "src/pages/recursos/aplicativos/_components/CatalogBundleBanner.astro",
+  "src/components/catalogo/CatalogBundleBanner.astro",
 );
 const enlacesContent = await read(
   "src/components/enlaces/EnlacesContent.astro",
@@ -45,11 +45,11 @@ assert.match(catalogPage, /<CatalogoSkeleton\s+slot="fallback"/);
 // Los componentes se consumen desde CatalogoContent, no desde la pagina.
 assert.match(
   catalogContent,
-  /import\s+CatalogAppCard\s+from\s+"@pages\/recursos\/aplicativos\/_components\/CatalogAppCard\.astro"/,
+  /import\s+CatalogAppCard\s+from\s+"\.\/CatalogAppCard\.astro"/,
 );
 assert.match(
   catalogContent,
-  /import\s+CatalogBundleBanner\s+from\s+"@pages\/recursos\/aplicativos\/_components\/CatalogBundleBanner\.astro"/,
+  /import\s+CatalogBundleBanner\s+from\s+"\.\/CatalogBundleBanner\.astro"/,
 );
 
 // Contrato de props: caller y callee deben seguir hablando el mismo idioma.

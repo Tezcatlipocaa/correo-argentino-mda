@@ -174,7 +174,7 @@ links.forEach((link) => {
                     <div
                       class={`flex size-8 shrink-0 items-center justify-center rounded-md border ${toneColors[cat.tone] || toneColors.primary}`}
                     >
-                      <Icon name={cat.iconName} size={18} />
+                      <Icon name={cat.iconName} size={18} is:inline />
                     </div>
                     <span class="label-title truncate text-sm font-semibold">
                       {cat.title}
@@ -299,6 +299,9 @@ links.forEach((link) => {
           ariaLabel="Listado de enlaces en la categoría"
           headerGridClass={linksGridCols}
           rowGridClass={linksGridCols}
+          emptyStateTitle="No se encontraron enlaces"
+          emptyStateDescription="No hay enlaces cargados ni coincidencias para tu búsqueda. Probá con otro término o agregá el primero."
+          whenEmpty
         >
           <Fragment slot="header">
             <DataTableHeaderCell />
@@ -309,28 +312,7 @@ links.forEach((link) => {
 
           <div id="links-container" class="divide-base-200 divide-y">
             {
-              links.length === 0 ? (
-                <div
-                  class="text-base-content/50 flex flex-col items-center gap-3 py-16"
-                  id="empty-state"
-                >
-                  <div class="bg-base-200/40 rounded-full p-4">
-                    <Icon
-                      name="boxicons:data"
-                      size={32}
-                      class="opacity-30"
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div class="space-y-1 text-center">
-                    <p class="text-sm font-semibold">
-                      No hay enlaces registrados
-                    </p>
-                    <p class="text-xs">Comenzá agregando un nuevo sitio web.</p>
-                  </div>
-                </div>
-              ) : (
-                links.map((link) => (
+              links.map((link) => (
                   <div
                     class:list={[
                       "group hover:bg-base-200/30 link-row grid items-center px-4 py-3 transition-colors",
@@ -404,8 +386,7 @@ links.forEach((link) => {
                       </form>
                     </div>
                   </div>
-                ))
-              )
+              ))
             }
           </div>
         </DataTable>
@@ -468,8 +449,7 @@ links.forEach((link) => {
   const btnAddLink = document.getElementById(
     "btn-add-link",
   ) as HTMLAnchorElement | null;
-  const generalEmptyState = document.getElementById("empty-state");
-  const categoryEmptyState = document.getElementById("category-empty-state");
+    const categoryEmptyState = document.getElementById("category-empty-state");
   const reorderSpinner = document.getElementById("reorder-spinner");
 
   // Selection Handler
@@ -604,9 +584,16 @@ links.forEach((link) => {
     });
 
     // Handle Empty States
-    if (generalEmptyState) generalEmptyState.classList.add("hidden");
+    // «Categoría vacía» sólo cuando el filtro activo es una categoría (sin texto
+    // de búsqueda). Con texto libre el SearchEmptyState del DataTable ya se
+    // muestra y quedarían dos estados simultáneos en pantalla.
+    const categoryIsEmpty =
+      query === "" &&
+      visibleCount === 0 &&
+      activeCategoryId !== "all" &&
+      linkRows.length > 0;
 
-    if (visibleCount === 0) {
+    if (categoryIsEmpty) {
       categoryEmptyState?.classList.remove("hidden");
       categoryEmptyState?.classList.add("flex");
     } else {

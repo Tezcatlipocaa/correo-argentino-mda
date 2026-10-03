@@ -14,10 +14,10 @@
     "db:studio": "drizzle-kit studio",
     "db:backfill-asistencia": "tsx scripts/backfill-asistencia.mts",
     "db:seed-titles": "tsx src/db/seed-titles.ts",
-    "db:seed-etapas": "tsx src/scripts/seed-workflow-stages.ts",
+    "db:seed-etapas": "tsx scripts/seed-workflow-stages.ts",
     "warm:automations": "tsx scripts/warm-automations.ts",
     "reconcile:automation-parents": "tsx scripts/reconcile-automation-parents.ts",
-    "buildings:reconcile": "tsx src/scripts/reconcile-buildings.ts",
+    "buildings:reconcile": "tsx scripts/reconcile-buildings.ts",
     "test:unit": "vitest run"
   },
   "dependencies": {
@@ -46,7 +46,7 @@
     "html-to-image": "^1.11.13",
     "ldapjs": "^3.0.7",
     "leaflet": "^1.9.4",
-    "marked": "18.0.14",
+    "marked": "^18.0.14",
     "masonry-layout": "^4.2.2",
     "mysql2": "^3.22.5",
     "ping": "^1.0.0",

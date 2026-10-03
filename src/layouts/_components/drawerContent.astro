@@ -125,7 +125,9 @@ const {
                         )}
                         <Icon
                           name={item.icon}
+                          is:inline
                           size={24}
+                         
                           class="shrink-0 opacity-80 transition duration-200 ease-out group-hover:scale-110 group-hover:opacity-100"
                         />
                         <span class="truncate lg:hidden">{item.label}</span>
@@ -135,7 +137,8 @@ const {
                             size={14}
                             class="ml-auto shrink-0 opacity-60 lg:hidden"
                             aria-hidden="true"
-                          />
+                          
+            is:inline />
                         )}
                       </a>
                     </li>

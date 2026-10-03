@@ -4,6 +4,8 @@ import Modal from "@components/ui/Modal.astro";
 import InfoCard from "@components/ui/InfoCard.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import CopyButton from "@components/ui/CopyButton.astro";
+import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
+import TerminalSectionTitle from "@components/buscador-usuarios/TerminalSectionTitle.astro";
 ---
 
 <Modal
@@ -89,15 +91,8 @@ import CopyButton from "@components/ui/CopyButton.astro";
         <div
           class="border-base-300 relative flex min-h-0 flex-col border-r pr-4 md:col-span-2"
         >
-          <div
-            id="panel-details-scroll"
-            class="min-h-0 flex-1 space-y-2 overflow-y-auto"
-          >
-            <div
-              class="text-xxs text-base-content/50 border-base-300 mb-1 border-b pb-1 font-sans font-bold tracking-widest uppercase"
-            >
-              Detalles de Red
-            </div>
+          <div id="panel-details-scroll" class="min-h-0 flex-1 space-y-2 overflow-y-auto">
+            <TerminalSectionTitle>Detalles de Red</TerminalSectionTitle>
 
             <InfoCard
               icon="boxicons:user"
@@ -150,16 +145,17 @@ import CopyButton from "@components/ui/CopyButton.astro";
                 class="btn btn-secondary btn-sm hidden shrink-0 cursor-pointer px-2 font-sans"
                 title="Buscar supervisor en el portal"
               >
-                <Icon name="boxicons:search" size={16} class="shrink-0" />
+                <Icon
+                  name="boxicons:search"
+                  size={16}
+                  class="shrink-0"
+                  is:inline
+                />
                 <span class="text-xs">Buscar</span>
               </button>
             </InfoCard>
-
-            <div
-              class="text-xxs text-base-content/50 border-base-300 mt-3 mb-1 border-b pb-1 font-sans font-bold tracking-widest uppercase"
-            >
-              Seguridad y Acceso
-            </div>
+            
+            <TerminalSectionTitle>Seguridad y Acceso</TerminalSectionTitle>
 
             <InfoCard
               icon="boxicons:lock"
@@ -208,9 +204,7 @@ import CopyButton from "@components/ui/CopyButton.astro";
         <div
           class="flex min-h-0 flex-col gap-2.5 overflow-hidden md:col-span-3"
         >
-          <div
-            class="border-base-300 flex shrink-0 items-center justify-between border-b pb-2"
-          >
+          <div class="flex shrink-0 items-center justify-between">
             <div class="flex items-center gap-2">
               <span
                 class="text-xxs text-base-content/50 font-sans font-bold tracking-widest uppercase"
@@ -291,9 +285,11 @@ import CopyButton from "@components/ui/CopyButton.astro";
               type="button"
               data-filter="sistemas"
               class="btn btn-sm rounded-full"
-              ><Icon name="boxicons:desktop-filled" size={20} />Sistemas (<span
-                id="count-sistemas">0</span
-              >)</button
+              ><Icon
+                name="boxicons:desktop-filled"
+                size={20}
+                is:inline
+              />Sistemas (<span id="count-sistemas">0</span>)</button
             >
             <button
               type="button"
@@ -310,6 +306,12 @@ import CopyButton from "@components/ui/CopyButton.astro";
             class="bg-base-200/30 border-base-300 scrollbar-hide grid min-h-0 flex-1 auto-rows-max grid-cols-2 content-start gap-1.5 overflow-y-auto rounded-lg border p-3 transition-all"
           >
           </div>
+
+          <SearchEmptyState
+            id="terminal-groups-empty-state"
+            title="No se encontraron grupos"
+            description="Ningún grupo de dominio coincide con la búsqueda o con el filtro de categoría seleccionado."
+          />
         </div>
       </div>
 
@@ -367,12 +369,8 @@ import CopyButton from "@components/ui/CopyButton.astro";
         >
         </div>
 
-        <div class="grid grid-cols-2 gap-1.5 md:grid-cols-3">
-          <div
-            class="text-xxs text-base-content/50 border-base-300 col-span-full mt-1 mb-0.5 border-b pb-1 font-sans font-bold tracking-widest uppercase"
-          >
-            Cuenta InvGate
-          </div>
+        <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
+          <TerminalSectionTitle class="col-span-full">Cuenta InvGate</TerminalSectionTitle>
 
           <InfoCard
             icon="boxicons:user-id-card"
@@ -429,7 +427,12 @@ import CopyButton from "@components/ui/CopyButton.astro";
               class="btn btn-secondary btn-sm hidden shrink-0 cursor-pointer px-2 font-sans"
               title="Buscar jefe en el portal"
             >
-              <Icon name="boxicons:search" size={16} class="shrink-0" />
+              <Icon
+                name="boxicons:search"
+                size={16}
+                class="shrink-0"
+                is:inline
+              />
               <span class="text-xs">Buscar</span>
             </button>
           </div>
@@ -443,24 +446,16 @@ import CopyButton from "@components/ui/CopyButton.astro";
           />
 
           <!-- Teléfonos -->
-          <div
-            class="text-xxs text-base-content/50 border-base-300 col-span-full mt-2 mb-0.5 border-b pb-1 font-sans font-bold tracking-widest uppercase"
-          >
-            Teléfonos
-          </div>
+          <TerminalSectionTitle class="col-span-full">Teléfonos</TerminalSectionTitle>
           <div
             id="invgate-phones"
-            class="col-span-full grid grid-cols-2 gap-1.5"
+            class="col-span-full grid grid-cols-2 gap-2"
           >
           </div>
 
-          <div
-            class="text-xxs text-base-content/50 border-base-300 col-span-full mt-2 mb-0.5 border-b pb-1 font-sans font-bold tracking-widest uppercase"
-          >
-            Organización
-          </div>
+          <TerminalSectionTitle class="col-span-full">Organización</TerminalSectionTitle>
 
-          <div class="col-span-full grid grid-cols-2 gap-1.5">
+          <div class="col-span-full grid grid-cols-2 gap-2">
             <!-- Grupos -->
             <div
               class="bg-base-200/50 border-base-300 col-span-2 flex min-w-0 flex-col gap-1.5 rounded-lg border p-2"
@@ -469,7 +464,7 @@ import CopyButton from "@components/ui/CopyButton.astro";
                 <div
                   class="bg-secondary/10 text-secondary flex size-10 shrink-0 items-center justify-center rounded-md"
                 >
-                  <Icon name="boxicons:group-filled" size={24} />
+                  <Icon name="boxicons:group-filled" size={24} is:inline />
                 </div>
                 <span
                   class="text-base-content/50 text-xs font-bold tracking-wider uppercase select-none"
@@ -527,11 +522,7 @@ import CopyButton from "@components/ui/CopyButton.astro";
               </div>
             </div>
 
-            <div
-              class="text-xxs text-base-content/50 border-base-300 col-span-full mt-2 mb-0.5 border-b pb-1 font-sans font-bold tracking-widest uppercase"
-            >
-              Actividad
-            </div>
+            <TerminalSectionTitle class="col-span-full">Actividad</TerminalSectionTitle>
 
             <!-- Tickets relacionados -->
             <div
@@ -563,6 +554,15 @@ import CopyButton from "@components/ui/CopyButton.astro";
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Tooltip flotante de licencias: vive fuera del listado con scroll para
+           que no lo recorte el overflow de #terminal-groups-list. -->
+      <div
+        id="license-tooltip"
+        role="tooltip"
+        class="rounded-box border-neutral-content/15 bg-neutral text-neutral-content shadow-overlay pointer-events-none fixed z-[1000] hidden max-w-xs border p-3 text-left text-xs"
+      >
       </div>
 
       <!-- Footer -->
@@ -603,12 +603,5 @@ import CopyButton from "@components/ui/CopyButton.astro";
   }
   #panel-details-scroll::-webkit-scrollbar {
     display: none;
-  }
-</style>
-
-<style is:global>
-  #terminal-groups-list .tooltip > .tooltip-content {
-    max-width: 18rem;
-    white-space: normal;
   }
 </style>
