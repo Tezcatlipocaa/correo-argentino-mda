@@ -6,57 +6,72 @@ import {
   BookmarkIcon,
 } from "@heroicons/react/24/outline";
 
-import { Icon } from "@iconify/react";
+/**
+ * Hover de la banda por tono de categoría. Mapa estático (no compuesto) para
+ * que Tailwind genere las clases `group-hover:*` correspondientes.
+ */
+const TONE_HOVER: Record<string, string> = {
+  "bg-sky-300": "group-hover:bg-sky-300 hover:border-sky-300",
+  "bg-violet-300": "group-hover:bg-violet-300 hover:border-violet-300",
+  "bg-orange-300": "group-hover:bg-orange-300 hover:border-orange-300",
+  "bg-pink-300": "group-hover:bg-pink-300 hover:border-pink-300",
+  "bg-neutral-300": "group-hover:bg-neutral-300 hover:border-neutral-300",
+  "bg-green-300": "group-hover:bg-green-300 hover:border-green-300",
+  "bg-red-300": "group-hover:bg-red-300 hover:border-red-300",
+};
 
 interface Props {
   title: Title;
   isFavorite: boolean;
+  /** Sólo con sesión activa se muestra el botón de favoritos. */
+  canFavorite: boolean;
+  /** Toggle en vuelo: deshabilita el botón para evitar dobles clics. */
+  isFavoritePending: boolean;
   onOpen: (title: Title) => void;
-  onToggleFavorite: (title: string) => void;
+  onToggleFavorite: (titleId: number) => void;
   onCopy: (title: string) => void;
 }
 
 function TitleCard({
   title,
   isFavorite,
+  canFavorite,
+  isFavoritePending,
   onOpen,
   onToggleFavorite,
   onCopy,
 }: Props) {
+  const toneHover = TONE_HOVER[title.tone] ?? "";
   return (
-    <article className="card bg-base-200 border-base-300 h-32 border transition-transform hover:scale-102">
-      <header className="card-header flex items-center gap-x-2 p-3">
-        <article
-          className={`grid size-9 place-items-center rounded-md border border-neutral-800/70 p-2 text-neutral-800 ${title.tone}`}
+    <article
+      className={`group card bg-base-100 dark:bg-base-200 border-base-300 flex h-32 cursor-pointer flex-col border transition-colors select-none ${toneHover}`}
+    >
+      <header className="min-h-0 flex-1 p-3">
+        <h3
+          className="line-clamp-2 cursor-pointer text-xs font-semibold text-base-content/90  wrap-break-word"
+          onClick={() => onCopy(title.name)}
         >
-          <Icon icon={`boxicons:${title.icon}`} style={{ fontSize: 18 }} />
-        </article>
-        <article className="flex flex-col text-xs">
-          <h3
-            className="max-w-46 cursor-pointer truncate"
-            onClick={() => onCopy(title.name)}
-          >
-            {title.name}
-          </h3>
-          <p className="text-neutral-600 dark:text-neutral-400">
-            {title.category}
-          </p>
-        </article>
+          {title.name}
+        </h3>
       </header>
 
-      <article className="card-body flex flex-row items-end justify-between gap-x-1 p-3">
-        <label className="tooltip" data-tip="Favoritos">
-          <button
-            className="btn btn-ghost btn-xs shadow-none"
-            onClick={() => onToggleFavorite(title.name)}
-          >
-            {isFavorite ? (
-              <BookmarkIcon className="dark:text-primary size-4 fill-amber-300" />
-            ) : (
-              <BookmarkIcon className="size-4" />
-            )}
-          </button>
-        </label>
+      <article className="card-body flex shrink-0 flex-row items-end justify-between gap-x-1 px-1 pb-1">
+        {canFavorite && (
+          <label className="tooltip" data-tip="Favoritos">
+            <button
+              className="btn btn-ghost btn-xs shadow-none"
+              onClick={() => onToggleFavorite(title.id)}
+              disabled={isFavoritePending}
+              aria-busy={isFavoritePending}
+            >
+              {isFavorite ? (
+                <BookmarkIcon className="dark:text-primary size-4 fill-amber-300" />
+              ) : (
+                <BookmarkIcon className="size-4" />
+              )}
+            </button>
+          </label>
+        )}
         <div>
           <label className="tooltip" data-tip="Copiar título">
             <button
@@ -75,6 +90,18 @@ function TitleCard({
           </button>
         </div>
       </article>
+
+      <footer
+        className={`bg-base-200/60  rounded-b-md flex shrink-0 items-center gap-x-2 px-3 py-1.5 transition-colors ${toneHover}`}
+      >
+        <span
+          className={`size-2 shrink-0 rounded-full transition-colors ${title.tone} group-hover:bg-neutral-800`}
+          aria-hidden="true"
+        />
+        <span className="select-none truncate text-xs text-base-content/70 transition-colors group-hover:text-neutral-800">
+          {title.category}
+        </span>
+      </footer>
     </article>
   );
 }
