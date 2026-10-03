@@ -43,7 +43,7 @@
 - [x] **Track: Consulta y Visualización del Creador/Generador en Detalle del Ticket InvGate**
   *Link: [./tracks/calidad_invgate_creator_20261003/index.md](./tracks/calidad_invgate_creator_20261003/index.md)*
 ---
-- [~] **Track: Cálculo de Tiempo de Respuesta y Unificación de Campos en Mails Wise**
+- [x] **Track: Cálculo de Tiempo de Respuesta y Unificación de Campos en Mails Wise**
   *Link: [./tracks/calidad_mail_tiempo_respuesta_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_20261003/index.md)*
 
 
