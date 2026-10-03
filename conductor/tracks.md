@@ -40,8 +40,9 @@
 - [x] **Track: Promedios por Canal y Promedio Total en Calidad**
   *Link: [./tracks/calidad_promedios_canal_20261003/index.md](./tracks/calidad_promedios_canal_20261003/index.md)*
 ---
-- [ ] **Track: Consulta y Visualización del Creador/Generador en Detalle del Ticket InvGate**
+- [x] **Track: Consulta y Visualización del Creador/Generador en Detalle del Ticket InvGate**
   *Link: [./tracks/calidad_invgate_creator_20261003/index.md](./tracks/calidad_invgate_creator_20261003/index.md)*
+
 
 
 
