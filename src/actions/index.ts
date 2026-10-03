@@ -575,7 +575,7 @@ export const server = {
         .nullable(),
     }),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      const denied = await requireWriteAccess(context.locals, "automatizaciones");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",
@@ -631,7 +631,7 @@ export const server = {
       automationId: z.number().int().positive(),
     }),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      const denied = await requireWriteAccess(context.locals, "automatizaciones");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",
@@ -677,7 +677,7 @@ export const server = {
       notes: z.string().trim().max(500).optional().nullable(),
     }),
     handler: async (input, context) => {
-      const denied = requireWriteAccess(context.locals, "automatizaciones");
+      const denied = await requireWriteAccess(context.locals, "automatizaciones");
       if (denied) {
         throw new ActionError({
           code: "FORBIDDEN",
