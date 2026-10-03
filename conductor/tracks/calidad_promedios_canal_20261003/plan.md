@@ -8,12 +8,13 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 
-## Phase 2: Interfaz Visual en Tabs y Resumen Consolidado
-- [ ] Task: Modificar el marcado HTML de las pestañas en `CalidadContent.astro`
-  - [ ] Añadir contenedores/badges para los promedios dentro de cada pestaña (`#tab-avg-wise_call`, `#tab-avg-wise_email`, `#tab-avg-invgate_ticket`).
-  - [ ] Incorporar un indicador o pill estilizado destacado para el "Promedio General / Total" junto a la barra de tabs o cuota mensual.
-- [ ] Task: Actualizar la función client-side `updateChannelTabsAndList`
-  - [ ] Calcular promedios al vuelo para `wiseCalls`, `wiseEmails`, `invgateAgs` y el total acumulado `allAudits`.
-  - [ ] Formatear con porcentaje o un decimal (ej: `87.5%`) y aplicar clases semánticas DaisyUI acordes (success, warning, error, ghost).
-  - [ ] Manejar dinámicamente la reactividad ante nuevas auditorías, ediciones y eliminaciones.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 2: Interfaz Visual en Tabs y Resumen Consolidado [checkpoint: ffe266b]
+- [x] Task: Modificar el marcado HTML de las pestañas en `CalidadContent.astro` (ffe266b)
+  - [x] Añadir contenedores/badges para los promedios dentro de cada pestaña (`#tab-avg-wise_call`, `#tab-avg-wise_email`, `#tab-avg-invgate_ticket`).
+  - [x] Incorporar un indicador o pill estilizado destacado para el "Promedio General / Total" junto a la barra de tabs o cuota mensual.
+- [x] Task: Actualizar la función client-side `updateChannelTabsAndList` (ffe266b)
+  - [x] Calcular promedios al vuelo para `wiseCalls`, `wiseEmails`, `invgateAgs` y el total acumulado `allAudits`.
+  - [x] Formatear con porcentaje o un decimal (ej: `87.5%`) y aplicar clases semánticas DaisyUI acordes (success, warning, error, ghost).
+  - [x] Manejar dinámicamente la reactividad ante nuevas auditorías, ediciones y eliminaciones.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
