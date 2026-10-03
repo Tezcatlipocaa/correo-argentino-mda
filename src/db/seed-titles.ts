@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse } from "csv-parse/sync";
 import { db } from "./index";
 import { titles, titleCategory } from "./schema";
+import { formatTitleName } from "../lib/titleFormat";
 
 const filePath = path.join(process.cwd(), "src/data/titulos.csv");
 const csv = fs.readFileSync(filePath, "utf8");
@@ -63,7 +64,7 @@ async function seedTitles() {
     await db
       .insert(titles)
       .values({
-        name: row.name,
+        name: formatTitleName(row.name),
 
         categoryId,
 

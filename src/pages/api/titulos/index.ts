@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { titles, titleCategory } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { getModulePermissions } from "@/lib/rbac";
+import { formatTitleName } from "@/lib/titleFormat";
 
 export const GET: APIRoute = async () => {
   const data = await db
@@ -45,6 +46,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = await request.json();
   await db.insert(titles).values({
     ...body,
+    ...(typeof body.name === "string"
+      ? { name: formatTitleName(body.name) }
+      : {}),
     createdAt: new Date(),
     updatedAt: new Date(),
   });
