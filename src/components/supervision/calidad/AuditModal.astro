@@ -431,7 +431,7 @@ const invgateAgParams = allParameters.filter(
                   </div>
                   <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
                     <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <Icon name="boxicons:user-pin" size={13} class="text-primary/70" />
+                      <Icon name="boxicons:pin" size={13} class="text-primary/70" />
                       Creado por
                     </span>
                     <p id="tv-created-by" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
@@ -1456,21 +1456,32 @@ const invgateAgParams = allParameters.filter(
         const metaTake = document.getElementById("meta-take-container");
         const metaPas = document.getElementById("meta-pas-container");
 
-        if (metaDuration)
-          metaDuration.classList.toggle("hidden", channel !== "wise_call");
+        if (metaDuration) {
+          metaDuration.classList.toggle("hidden", channel === "invgate_ticket");
+          const legend = metaDuration.querySelector("legend");
+          if (legend) {
+            legend.textContent = channel === "wise_email" ? "Respuesta" : "Duración";
+          }
+          const formDurationInput = document.getElementById(
+            "form-duration",
+          ) as HTMLInputElement | null;
+          if (formDurationInput) {
+            formDurationInput.placeholder = channel === "wise_email" ? "19:14" : "02:15";
+          }
+        }
         if (metaRing)
           metaRing.classList.toggle("hidden", channel !== "wise_call");
         if (metaCreation)
-          metaCreation.classList.toggle("hidden", channel === "wise_call");
+          metaCreation.classList.toggle("hidden", channel !== "invgate_ticket");
         if (metaTake)
-          metaTake.classList.toggle("hidden", channel === "wise_call");
+          metaTake.classList.toggle("hidden", channel !== "invgate_ticket");
         if (metaPas)
           metaPas.classList.toggle("hidden", channel !== "invgate_ticket");
 
         const formDuration = document.getElementById(
           "form-duration",
         ) as HTMLInputElement | null;
-        if (channel !== "wise_call" && formDuration && !formDuration.value) {
+        if (channel === "invgate_ticket" && formDuration && !formDuration.value) {
           formDuration.value = "00:00";
         }
 

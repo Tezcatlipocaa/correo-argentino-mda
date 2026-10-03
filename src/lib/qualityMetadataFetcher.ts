@@ -35,6 +35,40 @@ export function formatSecondsToMinutes(seconds: number): string {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+export function formatDurationToTime(seconds: number): string {
+  if (isNaN(seconds) || seconds <= 0) return "00:00";
+  const hours = Math.floor(seconds / 3600);
+  const remainder = seconds % 3600;
+  const mins = Math.floor(remainder / 60);
+  const secs = Math.floor(remainder % 60);
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+export function calculateWiseEmailResponseTime(
+  createdAt?: string | null,
+  solvedAt?: string | null,
+  closedAt?: string | null,
+): string {
+  if (!createdAt) return "00:00";
+  const endStr = solvedAt || closedAt;
+  if (!endStr) return "00:00";
+
+  const startMs = Date.parse(createdAt.replace(" ", "T"));
+  const endMs = Date.parse(endStr.replace(" ", "T"));
+
+  if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) {
+    return "00:00";
+  }
+
+  const diffSeconds = Math.floor((endMs - startMs) / 1000);
+  return formatDurationToTime(diffSeconds);
+}
+
+
 export function parseWiseCallMetadata(caseData: any, activities: any[] = []): ExtractedQualityMetadata {
   const caseNumber = (caseData?.number ?? caseData?.id ?? "").toString();
   const dateStr = (caseData?.created_at || "").split(" ")[0] || new Date().toISOString().split("T")[0];
@@ -155,17 +189,21 @@ export function parseWiseEmailMetadata(caseData: any, operatorName = ""): Extrac
   const createdAt = caseData?.created_at || "";
   const dateStr = createdAt.split(" ")[0] || new Date().toISOString().split("T")[0];
   const takeTime = caseData?.first_read || caseData?.last_read || createdAt;
+  const duration = calculateWiseEmailResponseTime(createdAt, caseData?.solved_at, caseData?.closed_at);
 
   return {
     caseNumber,
     operator: operatorName,
     date: dateStr,
+    duration,
     creationTime: createdAt,
     takeTime,
     rawDetails: {
       caseId: caseData?.id,
       subject: caseData?.subject,
       channel: caseData?.source_channel,
+      solvedAt: caseData?.solved_at,
+      closedAt: caseData?.closed_at,
     },
   };
 }

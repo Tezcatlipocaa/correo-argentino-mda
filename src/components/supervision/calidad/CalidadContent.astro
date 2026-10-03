@@ -1502,14 +1502,21 @@ const cleanBase = getCleanBase();
               <div class="text-base font-mono font-bold text-base-content/80">${escapeHtml(call.duration || "00:00")}</div>
             </div>
             `
-                : call.takeTime || call.creationTime
+                : call.channelType === "wise_email"
                   ? `
+            <div class="text-right">
+              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Respuesta</div>
+              <div class="text-base font-mono font-bold text-base-content/80">${escapeHtml(call.duration || "00:00")}</div>
+            </div>
+            `
+                  : call.takeTime || call.creationTime
+                    ? `
             <div class="text-right">
               <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Toma / Lectura</div>
               <div class="text-xs font-mono font-bold text-base-content/80">${escapeHtml(call.takeTime || call.creationTime || "")}</div>
             </div>
             `
-                  : ""
+                    : ""
             }
             <div class="text-right">
               <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Score Total</div>
