@@ -18,12 +18,15 @@ export interface ExtractedQualityMetadata {
   category?: string;
   status?: string;
   creator?: string;
+  customer?: string;
+  createdBy?: string;
   helpdesk?: string;
   source?: string;
   recordingUrl?: string;
   recordingId?: string;
   rawDetails?: Record<string, any>;
 }
+
 
 export function formatSecondsToMinutes(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return "00:00";
@@ -200,6 +203,7 @@ export function parseInvgateAgMetadata(
   incident: any,
   extra?: {
     customerName?: string;
+    createdByName?: string;
     categoryName?: string;
     operatorName?: string;
     helpdeskName?: string;
@@ -270,13 +274,21 @@ export function parseInvgateAgMetadata(
     (typeof incident?.status_id === "number" ? INVGATE_STATUS_NAMES[incident.status_id] : null) ??
     "";
 
-  const creatorName =
+  const customerName =
     extra?.customerName ??
     incident?.customer?.name ??
-    incident?.creator?.name ??
     incident?.user?.name ??
     (typeof incident?.customer === "string" ? incident.customer : "") ??
     "";
+
+  const createdByName =
+    extra?.createdByName ??
+    incident?.creator?.name ??
+    (typeof incident?.creator === "string" ? incident.creator : "") ??
+    customerName ??
+    "";
+
+  const creatorName = customerName || createdByName || "";
 
   // Condición PAS: ubicación, cliente o helpdesk contiene 'pas'
   const locName = (incident?.location?.name || "").toLowerCase();
@@ -298,6 +310,8 @@ export function parseInvgateAgMetadata(
     source: sourceName || undefined,
     status: statusName,
     creator: creatorName,
+    customer: customerName || creatorName || undefined,
+    createdBy: createdByName || creatorName || undefined,
     rawDetails: {
       incidentId: incident?.id,
       title,
@@ -305,6 +319,8 @@ export function parseInvgateAgMetadata(
       status: statusName,
       category: categoryName,
       creator: creatorName,
+      customer: customerName || creatorName,
+      createdBy: createdByName || creatorName,
       priority: priorityName,
       location: incident?.location?.name || incident?.location,
       helpdesk: helpdeskName || incident?.helpdesk?.name || incident?.helpdesk,
@@ -312,6 +328,7 @@ export function parseInvgateAgMetadata(
     },
   };
 }
+
 
 export async function fetchInvgateTicketMetadata(
   ticketId: string | number,
@@ -327,12 +344,15 @@ export async function fetchInvgateTicketMetadata(
     const incident = res.data;
 
     let customerName = "";
+    let createdByName = "";
     let operatorName = "";
     let categoryName = "";
     let helpdeskName = incident.helpdesk?.name || (typeof incident.helpdesk === "string" ? incident.helpdesk : "");
 
-    // 1. Resolver cliente si existe user_id o creator_id
-    const targetUserId = incident.user_id ?? incident.creator_id;
+    // 1. Resolver solicitante (user_id) y creador (creator_id)
+    const targetUserId = incident.user_id;
+    const targetCreatorId = incident.creator_id;
+
     if (targetUserId) {
       try {
         const uRes = await invgateGet<any>(`user?id=${targetUserId}`);
@@ -345,7 +365,31 @@ export async function fetchInvgateTicketMetadata(
       }
     }
 
+    if (targetCreatorId) {
+      if (targetUserId && targetCreatorId === targetUserId) {
+        createdByName = customerName;
+      } else {
+        try {
+          const cRes = await invgateGet<any>(`user?id=${targetCreatorId}`);
+          if (cRes.ok && cRes.data) {
+            const c = cRes.data;
+            createdByName = `${c.name || ""} ${c.lastname || ""}`.trim() || c.username || "";
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
+
+    // Fallback cruzado si falta alguno de los dos
+    if (!customerName && createdByName) {
+      customerName = createdByName;
+    } else if (!createdByName && customerName) {
+      createdByName = customerName;
+    }
+
     // 2. Resolver operador si existe assigned_id
+
     if (incident.assigned_id) {
       try {
         const aRes = await invgateGet<any>(`user?id=${incident.assigned_id}`);
@@ -455,12 +499,14 @@ export async function fetchInvgateTicketMetadata(
 
     const metadata = parseInvgateAgMetadata(incident, {
       customerName,
+      createdByName,
       categoryName,
       operatorName,
       helpdeskName,
       sourceName,
     });
     return { ok: true, data: metadata };
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error al consultar ticket de InvGate";
     return { ok: false, error: msg };
