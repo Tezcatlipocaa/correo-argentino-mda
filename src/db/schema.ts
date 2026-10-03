@@ -1022,6 +1022,28 @@ export const titles = sqliteTable("titles", {
   ),
 });
 
+/**
+ * Favoritos de títulos por usuario (antes vivían en localStorage del browser).
+ * PK compuesta (user_id, title_id); cascada al borrar el usuario o el título.
+ */
+export const titleFavorites = sqliteTable(
+  "title_favorites",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.titleId] }),
+  }),
+);
+
 // 18. AUTOMATIZACIONES — ETAPAS DEL WORKFLOW (plantilla global configurada por admin)
 
 export const workflowStages = sqliteTable(

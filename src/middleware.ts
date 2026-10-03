@@ -78,6 +78,21 @@ function applyRateLimit(
       }
     }
 
+    // Favoritos de títulos: perfil propio y amplio (toggles por-usuario).
+    if (isWrite && relativePath === "/api/titulos/favoritos") {
+      const result = checkRateLimit(
+        `fav-write:${identifier}:${relativePath}`,
+        RATE_LIMITS.favoriteWrite,
+      );
+      if (!result.ok) {
+        return tooManyRequests(
+          "Demasiadas acciones. Probá en unos segundos.",
+          result.retryAfter,
+        );
+      }
+      return null;
+    }
+
     const key = `${isWrite ? "api-write" : "api-read"}:${identifier}:${relativePath}`;
     const profile = isWrite ? RATE_LIMITS.apiWrite : RATE_LIMITS.apiRead;
     const result = checkRateLimit(key, profile);
