@@ -431,6 +431,15 @@ const invgateAgParams = allParameters.filter(
                   </div>
                   <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
                     <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:user-pin" size={13} class="text-primary/70" />
+                      Creado por
+                    </span>
+                    <p id="tv-created-by" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
                       <Icon name="boxicons:help-circle" size={13} class="text-info/70" />
                       Mesa de Ayuda
                     </span>
@@ -451,6 +460,7 @@ const invgateAgParams = allParameters.filter(
                     </p>
                   </div>
                 </div>
+
 
                 <!-- Descripción / Evidencia -->
                 <div class="bg-base-200/40 border border-base-200 rounded-lg p-2.5">
@@ -1180,8 +1190,10 @@ const invgateAgParams = allParameters.filter(
     const tvPriority = document.getElementById("tv-priority");
     const tvStatus = document.getElementById("tv-status");
     const tvCreator = document.getElementById("tv-creator");
+    const tvCreatedBy = document.getElementById("tv-created-by");
     const tvHelpdesk = document.getElementById("tv-helpdesk");
     const tvSource = document.getElementById("tv-source");
+
     const tvSourceMatchBadge = document.getElementById("tv-source-match-badge");
     const tvDescription = document.getElementById("tv-description");
     const tvAudioContainer = document.getElementById("tv-audio-container");
@@ -1340,7 +1352,8 @@ const invgateAgParams = allParameters.filter(
         data.category || data.rawDetails?.category || "Sin categoría";
       const priority = data.priority || data.rawDetails?.priority || "Media";
       const status = data.status || data.rawDetails?.status || "Abierto";
-      const creator = data.creator || data.rawDetails?.creator || "Desconocido";
+      const creator = data.customer || data.creator || data.rawDetails?.customer || data.rawDetails?.creator || "Desconocido";
+      const createdBy = data.createdBy || data.rawDetails?.createdBy || creator;
       const helpdesk =
         data.helpdesk || data.rawDetails?.helpdesk || "Sin mesa asignada";
       const source = data.source || data.rawDetails?.source || "Sin origen";
@@ -1354,8 +1367,10 @@ const invgateAgParams = allParameters.filter(
       if (tvPriority) tvPriority.textContent = priority;
       if (tvStatus) tvStatus.textContent = status;
       if (tvCreator) tvCreator.textContent = creator;
+      if (tvCreatedBy) tvCreatedBy.textContent = createdBy;
       if (tvHelpdesk) tvHelpdesk.textContent = helpdesk;
       if (tvSource) tvSource.textContent = source;
+
       if (tvDescription)
         tvDescription.textContent =
           cleanHtmlText(description) || "Sin descripción disponible";
