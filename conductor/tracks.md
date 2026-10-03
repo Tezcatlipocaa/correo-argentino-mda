@@ -49,7 +49,7 @@
 - [x] **Track: Bugfix: Tiempo de Respuesta en Mails Wise basado en Primera Respuesta del Operador (user_reply)**
   *Link: [./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md)*
 ---
-- [ ] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
+- [~] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
   *Link: [./tracks/calidad_wise_autodetect_channel_20261003/index.md](./tracks/calidad_wise_autodetect_channel_20261003/index.md)*
 
 
