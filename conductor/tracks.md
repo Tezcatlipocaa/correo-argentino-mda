@@ -36,3 +36,7 @@
 ---
 - [x] **Track: Corrección de Copiado de Imágenes en Cronograma (Grupos y Horas Extras)**
   *Link: [./tracks/cronograma_copiar_tablas_bugfix_20261002/index.md](./tracks/cronograma_copiar_tablas_bugfix_20261002/index.md)*
+---
+- [ ] **Track: Promedios por Canal y Promedio Total en Calidad**
+  *Link: [./tracks/calidad_promedios_canal_20261003/index.md](./tracks/calidad_promedios_canal_20261003/index.md)*
+
