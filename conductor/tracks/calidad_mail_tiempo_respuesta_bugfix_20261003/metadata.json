@@ -1,0 +1,8 @@
+{
+  "track_id": "calidad_mail_tiempo_respuesta_bugfix_20261003",
+  "type": "bugfix",
+  "status": "new",
+  "created_at": "2026-10-03T17:18:20Z",
+  "updated_at": "2026-10-03T17:18:20Z",
+  "description": "Bugfix: cálculo de tiempo de respuesta en Mails Wise basado en primera respuesta real del operador (user_reply)"
+}

@@ -45,6 +45,10 @@
 ---
 - [x] **Track: Cálculo de Tiempo de Respuesta y Unificación de Campos en Mails Wise**
   *Link: [./tracks/calidad_mail_tiempo_respuesta_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_20261003/index.md)*
+---
+- [ ] **Track: Bugfix: Tiempo de Respuesta en Mails Wise basado en Primera Respuesta del Operador (user_reply)**
+  *Link: [./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md)*
+
 
 
 
