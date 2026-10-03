@@ -50,11 +50,12 @@ export function formatDurationToTime(seconds: number): string {
 
 export function calculateWiseEmailResponseTime(
   createdAt?: string | null,
+  replyAt?: string | null,
   solvedAt?: string | null,
   closedAt?: string | null,
 ): string {
   if (!createdAt) return "00:00";
-  const endStr = solvedAt || closedAt;
+  const endStr = replyAt || solvedAt || closedAt;
   if (!endStr) return "00:00";
 
   const startMs = Date.parse(createdAt.replace(" ", "T"));
@@ -184,12 +185,21 @@ export function parseWiseCallMetadata(caseData: any, activities: any[] = []): Ex
   };
 }
 
-export function parseWiseEmailMetadata(caseData: any, operatorName = ""): ExtractedQualityMetadata {
+export function parseWiseEmailMetadata(
+  caseData: any,
+  operatorName = "",
+  firstReplyAt?: string | null,
+): ExtractedQualityMetadata {
   const caseNumber = (caseData?.number ?? caseData?.id ?? "").toString();
   const createdAt = caseData?.created_at || "";
   const dateStr = createdAt.split(" ")[0] || new Date().toISOString().split("T")[0];
   const takeTime = caseData?.first_read || caseData?.last_read || createdAt;
-  const duration = calculateWiseEmailResponseTime(createdAt, caseData?.solved_at, caseData?.closed_at);
+  const duration = calculateWiseEmailResponseTime(
+    createdAt,
+    firstReplyAt,
+    caseData?.solved_at,
+    caseData?.closed_at,
+  );
 
   return {
     caseNumber,
@@ -202,6 +212,7 @@ export function parseWiseEmailMetadata(caseData: any, operatorName = ""): Extrac
       caseId: caseData?.id,
       subject: caseData?.subject,
       channel: caseData?.source_channel,
+      firstReplyAt: firstReplyAt || undefined,
       solvedAt: caseData?.solved_at,
       closedAt: caseData?.closed_at,
     },
@@ -658,7 +669,28 @@ export async function fetchQualityCaseMetadata(
         }
       }
 
-      const metadata = parseWiseEmailMetadata(caseData, operatorName);
+      // Obtener actividades para detectar la primera respuesta del operador (user_reply)
+      let firstReplyAt: string | undefined;
+      try {
+        const actRes = await wiseCxGet<any>(
+          `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,created_at`,
+        );
+        if (actRes.ok) {
+          const acts = Array.isArray(actRes.data)
+            ? actRes.data
+            : Array.isArray(actRes.data?.data)
+              ? actRes.data.data
+              : [];
+          const replyAct = acts.find((a: any) => a.type === "user_reply" && a.created_at);
+          if (replyAct?.created_at) {
+            firstReplyAt = replyAct.created_at;
+          }
+        }
+      } catch {
+        // Fallback silencioso a solved_at/closed_at
+      }
+
+      const metadata = parseWiseEmailMetadata(caseData, operatorName, firstReplyAt);
       return { ok: true, data: metadata };
     }
 
