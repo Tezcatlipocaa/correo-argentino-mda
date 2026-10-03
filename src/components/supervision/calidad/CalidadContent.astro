@@ -23,8 +23,14 @@ import { getResolvedSearchParams } from "@lib/navigation";
 import { formatMonthLabel } from "@lib/monthUtils";
 import { getCleanBase } from "@lib/baseUrl";
 import AuditModal from "./AuditModal.astro";
-import { calculateOperatorChannelStats } from "@lib/qualityCalculator";
+import {
+  calculateOperatorChannelStats,
+  calculateChannelAverages,
+  formatChannelAverageScore,
+  getChannelAverageBadgeClass,
+} from "@lib/qualityCalculator";
 import type { ChannelType } from "@/types/quality";
+
 
 const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 
@@ -1004,6 +1010,15 @@ const cleanBase = getCleanBase();
                   </div>
                   <div class="flex items-center gap-2">
                     <span
+                      id="total-samples-avg-badge"
+                      class="badge badge-neutral text-xs font-bold gap-1"
+                      title="Promedio General del Total de Muestras del Mes"
+                    >
+                      <Icon name="boxicons:calculator" size={14} />
+                      <span class="opacity-70 font-normal">Promedio Total:</span>
+                      <strong id="total-samples-avg-val">--</strong>
+                    </span>
+                    <span
                       id="quota-progress-badge"
                       class="badge badge-neutral text-xs font-bold"
                     >
@@ -1030,7 +1045,8 @@ const cleanBase = getCleanBase();
                   >
                     <Icon name="boxicons:phone-ring" size={16} />
                     <span>Llamadas Wise</span>
-                    <span class="badge badge-xs badge-ghost ml-1" id="tab-count-wise_call">0/4</span>
+                    <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_call">0/4</span>
+                    <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_call" title="Promedio de Llamadas Wise">--</span>
                   </button>
                   <button
                     type="button"
@@ -1039,7 +1055,8 @@ const cleanBase = getCleanBase();
                   >
                     <Icon name="boxicons:envelope" size={16} />
                     <span>Mails Wise</span>
-                    <span class="badge badge-xs badge-ghost ml-1" id="tab-count-wise_email">0/4</span>
+                    <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_email">0/4</span>
+                    <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_email" title="Promedio de Mails Wise">--</span>
                   </button>
                   <button
                     type="button"
@@ -1048,10 +1065,12 @@ const cleanBase = getCleanBase();
                   >
                     <Icon name="boxicons:handshake" size={16} />
                     <span>Autogestiones</span>
-                    <span class="badge badge-xs badge-ghost ml-1" id="tab-count-invgate_ticket">0/4</span>
+                    <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-invgate_ticket">0/4</span>
+                    <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-invgate_ticket" title="Promedio de Autogestiones">--</span>
                   </button>
                 </div>
               </div>
+
 
               {/* Grid de Auditorías del Canal Activo */}
               <div class="grid gap-6 mt-4" id="detail-calls-container">
@@ -1279,8 +1298,14 @@ const cleanBase = getCleanBase();
 
 <script>
   import { actions } from "astro:actions";
-  import { calculateAuditScores } from "@lib/qualityCalculator";
+  import {
+    calculateAuditScores,
+    calculateChannelAverages,
+    formatChannelAverageScore,
+    getChannelAverageBadgeClass,
+  } from "@lib/qualityCalculator";
   import { escapeHtml } from "@lib/sanitize";
+
   import { formatMonthLabel } from "@lib/monthUtils";
   import { getCleanBase } from "@lib/baseUrl";
   import type {
@@ -2527,14 +2552,50 @@ const cleanBase = getCleanBase();
             const wiseEmails = allAudits.filter((c: any) => c.channelType === "wise_email");
             const invgateAgs = allAudits.filter((c: any) => c.channelType === "invgate_ticket");
 
+            const averages = calculateChannelAverages(allAudits);
+
             const bCall = document.getElementById("tab-count-wise_call");
             const bEmail = document.getElementById("tab-count-wise_email");
             const bAg = document.getElementById("tab-count-invgate_ticket");
+
+            const bCallAvg = document.getElementById("tab-avg-wise_call");
+            const bEmailAvg = document.getElementById("tab-avg-wise_email");
+            const bAgAvg = document.getElementById("tab-avg-invgate_ticket");
+
+            const bTotalAvgVal = document.getElementById("total-samples-avg-val");
+            const bTotalAvgBadge = document.getElementById("total-samples-avg-badge");
             const bQuota = document.getElementById("quota-progress-badge");
 
             if (bCall) bCall.textContent = `${wiseCalls.length}/4`;
             if (bEmail) bEmail.textContent = `${wiseEmails.length}/4`;
             if (bAg) bAg.textContent = `${invgateAgs.length}/4`;
+
+            if (bCallAvg) {
+              bCallAvg.textContent = formatChannelAverageScore(averages.wiseCallsAvg);
+              bCallAvg.className = getChannelAverageBadgeClass(averages.wiseCallsAvg);
+            }
+            if (bEmailAvg) {
+              bEmailAvg.textContent = formatChannelAverageScore(averages.wiseEmailsAvg);
+              bEmailAvg.className = getChannelAverageBadgeClass(averages.wiseEmailsAvg);
+            }
+            if (bAgAvg) {
+              bAgAvg.textContent = formatChannelAverageScore(averages.invgateTicketAvg);
+              bAgAvg.className = getChannelAverageBadgeClass(averages.invgateTicketAvg);
+            }
+
+            if (bTotalAvgVal && bTotalAvgBadge) {
+              bTotalAvgVal.textContent = formatChannelAverageScore(averages.overallAvg);
+              const badgeClass =
+                averages.overallAvg === null
+                  ? "badge-neutral"
+                  : averages.overallAvg >= 85
+                    ? "badge-success text-success-content"
+                    : averages.overallAvg >= 70
+                      ? "badge-warning text-warning-content"
+                      : "badge-error text-error-content";
+              bTotalAvgBadge.className = `badge text-xs font-bold gap-1 ${badgeClass}`;
+            }
+
             if (bQuota) {
               const isFulfilled = wiseCalls.length >= 4 && wiseEmails.length >= 4 && invgateAgs.length >= 4;
               const effectiveCompleted =
@@ -2544,6 +2605,7 @@ const cleanBase = getCleanBase();
               bQuota.textContent = `${effectiveCompleted}/12 Completadas`;
               bQuota.className = `badge text-xs font-bold ${isFulfilled ? "badge-success text-success-content" : "badge-neutral"}`;
             }
+
 
             let filteredAudits: any[] = [];
             if (currentActiveChannel === "wise_call") filteredAudits = wiseCalls;
