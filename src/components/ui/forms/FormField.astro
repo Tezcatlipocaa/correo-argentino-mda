@@ -11,6 +11,7 @@ interface Props extends HTMLAttributes<"input"> {
   inputClass?: string;
   icon?: string;
   size?: "default" | "sm" | "xs";
+  reveal?: boolean;
 }
 
 const {
@@ -22,6 +23,7 @@ const {
   inputClass = "",
   icon,
   size = "default",
+  reveal = false,
   class: className = "",
   ...rest
 } = Astro.props;
@@ -45,6 +47,33 @@ const sizeClass = size === "sm" ? "input-sm" : size === "xs" ? "input-xs" : "";
           class="file-input file-w-full"
           {...rest}
         />
+      </div>
+    ) : type === "password" && reveal ? (
+      <div class="join w-full">
+        <input
+          type="password"
+          id={id}
+          name={name}
+          class:list={["input join-item w-full", sizeClass, inputClass]}
+          data-password-input
+          autocomplete="new-password"
+          {...rest}
+        />
+        <button
+          type="button"
+          class="btn join-item text-base-content/60"
+          data-toggle-password
+          title="Mostrar/Ocultar contraseña"
+          aria-label="Mostrar u ocultar contraseña"
+        >
+          <Icon name="boxicons:eye-filled" size={16} data-show-icon />
+          <Icon
+            name="boxicons:eye-slash-filled"
+            size={16}
+            class="hidden"
+            data-hide-icon
+          />
+        </button>
       </div>
     ) : icon ? (
       <label
@@ -73,3 +102,41 @@ const sizeClass = size === "sm" ? "input-sm" : size === "xs" ? "input-xs" : "";
     )
   }
 </fieldset>
+
+<script>
+  const initFormFieldReveal = () => {
+    document.querySelectorAll("[data-toggle-password]").forEach((btn) => {
+      if (btn.getAttribute("data-listener-added") === "true") return;
+      btn.setAttribute("data-listener-added", "true");
+
+      btn.addEventListener("click", () => {
+        const parent = btn.closest("div");
+        if (!parent) return;
+        const input = parent.querySelector(
+          "[data-password-input]",
+        ) as HTMLInputElement | null;
+        const showIcon = parent.querySelector(
+          "[data-show-icon]",
+        ) as HTMLElement | null;
+        const hideIcon = parent.querySelector(
+          "[data-hide-icon]",
+        ) as HTMLElement | null;
+
+        if (input) {
+          if (input.type === "password") {
+            input.type = "text";
+            showIcon?.classList.add("hidden");
+            hideIcon?.classList.remove("hidden");
+          } else {
+            input.type = "password";
+            showIcon?.classList.remove("hidden");
+            hideIcon?.classList.add("hidden");
+          }
+        }
+      });
+    });
+  };
+
+  initFormFieldReveal();
+  document.addEventListener("astro:page-load", initFormFieldReveal);
+</script>

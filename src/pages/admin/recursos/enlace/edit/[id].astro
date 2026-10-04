@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { processIconUpload } from "@lib/iconUpload";
 import { iconExists } from "@lib/storage";
-import { encrypt } from "@lib/encryption";
+import { encrypt, decrypt } from "@lib/encryption";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
@@ -56,6 +56,14 @@ if (existingLink) {
 }
 
 let formSnapshot = null;
+
+// Valor descifrado solo para mostrar en el formulario. La persistencia usa
+// siempre `link.credentialPassword` (cifrado) como fallback.
+let credentialPasswordValue = "";
+
+if (existingLink.credentialPassword) {
+  credentialPasswordValue = decrypt(existingLink.credentialPassword);
+}
 
 if (Astro.request.method === "POST") {
   const isAjax = Astro.request.headers
@@ -150,6 +158,8 @@ if (Astro.request.method === "POST") {
       link.deprecated = formSnapshot.get("deprecated") === "on";
       link.credentialUsername =
         formSnapshot.get("credentialUsername")?.toString() || "";
+      credentialPasswordValue =
+        formSnapshot.get("credentialPassword")?.toString() || "";
     }
   }
 }
@@ -243,6 +253,8 @@ if (Astro.request.method === "POST") {
           type="password"
           name="credentialPassword"
           label="Contraseña (Credenciales)"
+          value={credentialPasswordValue}
+          reveal
           placeholder="••••••••"
           helpText="(Opcional, dejar vacío para no modificar)"
         />
