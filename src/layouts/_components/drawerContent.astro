@@ -103,10 +103,11 @@ const {
                         }
                         tabindex={isLocked ? -1 : undefined}
                         class:list={[
-                          "group flex items-center gap-2.5 rounded-lg p-2.5 text-xs font-medium transition",
+                          "group relative flex items-center gap-2.5 rounded-lg p-2.5 text-xs font-medium transition",
                           "lg:justify-center lg:px-2.5",
                           "tooltip tooltip-right tooltip-neutral",
                           showBadge ? "indicator w-full" : "",
+                          !isLocked && !isActive ? "nav-shine-target" : "",
                           isLocked
                             ? "pointer-events-none cursor-not-allowed opacity-40 grayscale select-none"
                             : isActive
@@ -114,6 +115,9 @@ const {
                               : "text-secondary-content/70 hover:bg-white/10 hover:text-white",
                         ]}
                       >
+                        {!isLocked && !isActive && (
+                          <span class="nav-shine" aria-hidden="true" />
+                        )}
                         {showBadge && (
                           <span
                             class="indicator-item badge badge-error badge-xs text-tiny absolute -top-1.25 -right-1.25 z-10 flex size-4 items-center justify-center p-0 font-mono font-bold"
@@ -158,3 +162,46 @@ const {
     </section>
   </div>
 </aside>
+
+<style>
+  /*
+   * Brillo al pasar el mouse por un atajo: una capa overlay (no toca el
+   * layout ni los pseudo-elementos del tooltip de daisyUI, que usa
+   * ::before/::after del propio <a>).
+   */
+  .nav-shine {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .nav-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      color-mix(in oklab, var(--color-secondary-content) 26%, transparent) 50%,
+      transparent 65%
+    );
+    transform: translateX(-130%);
+    transition: transform 650ms ease;
+  }
+
+  .nav-shine-target:hover .nav-shine::after {
+    transform: translateX(130%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-shine-target:hover .nav-shine::after,
+    .nav-shine::after {
+      transition: none;
+      transform: none;
+      opacity: 0;
+    }
+  }
+</style>
