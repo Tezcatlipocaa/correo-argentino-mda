@@ -17,6 +17,7 @@ export const GET: APIRoute = async () => {
       route: titles.route,
       description: titles.description,
       articleOnKdb: titles.articleOnKdb,
+      articleOnKdbTitle: titles.articleOnKdbTitle,
     })
     .from(titles)
     .leftJoin(titleCategory, eq(titles.categoryId, titleCategory.id))

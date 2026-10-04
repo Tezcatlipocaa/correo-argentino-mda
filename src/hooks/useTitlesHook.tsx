@@ -15,6 +15,7 @@ export interface Title {
   route: string | null;
   description: string | null;
   articleOnKdb: string | null;
+  articleOnKdbTitle: string | null;
 }
 
 export interface TitleFormData {

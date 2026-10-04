@@ -42,9 +42,15 @@ const TONE_CHIP_ACTIVE: Record<string, string> = {
 interface Props {
   permissions: ModulePermission;
   loggedIn: boolean;
+  /** Base del front de InvGate para links a artículos de KB. */
+  invgateBase?: string;
 }
 
-export default function TitlesContainer({ permissions, loggedIn }: Props) {
+export default function TitlesContainer({
+  permissions,
+  loggedIn,
+  invgateBase = "",
+}: Props) {
   const {
     loading,
     filters,
@@ -216,6 +222,9 @@ export default function TitlesContainer({ permissions, loggedIn }: Props) {
         onDelete={handleDelete}
         onCopy={copyToClipboard}
         permissions={permissions}
+        invgateBase={invgateBase}
+        onFilterCategory={(category) => setActiveFilter(category)}
+        onSearchService={(service) => setSearchQuery(service)}
       />
       <TitleModal
         open={createModalOpen}

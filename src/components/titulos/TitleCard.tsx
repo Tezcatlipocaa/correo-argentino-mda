@@ -45,12 +45,10 @@ function TitleCard({
   return (
     <article
       className={`group card bg-base-100 dark:bg-base-200 border-base-300 flex h-32 cursor-pointer flex-col border transition-colors select-none ${toneHover}`}
+      onClick={() => onOpen(title)}
     >
       <header className="min-h-0 flex-1 p-3">
-        <h3
-          className="line-clamp-2 cursor-pointer text-xs font-semibold text-base-content/90  wrap-break-word"
-          onClick={() => onCopy(title.name)}
-        >
+        <h3 className="line-clamp-2 text-xs font-semibold text-base-content/90 wrap-break-word">
           {title.name}
         </h3>
       </header>
@@ -60,7 +58,10 @@ function TitleCard({
           <label className="tooltip" data-tip="Favoritos">
             <button
               className="btn btn-ghost btn-xs shadow-none"
-              onClick={() => onToggleFavorite(title.id)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleFavorite(title.id);
+              }}
               disabled={isFavoritePending}
               aria-busy={isFavoritePending}
             >
@@ -76,14 +77,20 @@ function TitleCard({
           <label className="tooltip" data-tip="Copiar título">
             <button
               className="btn btn-ghost btn-xs shadow-none"
-              onClick={() => onCopy(title.name)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCopy(title.name);
+              }}
             >
               <ClipboardIcon className="size-4" />
             </button>
           </label>
           <button
             className="btn btn-ghost btn-xs pr-0.5 shadow-none"
-            onClick={() => onOpen(title)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen(title);
+            }}
           >
             Ver más
             <ChevronRightIcon className="size-4" />
