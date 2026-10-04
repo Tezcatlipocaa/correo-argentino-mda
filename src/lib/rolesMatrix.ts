@@ -54,7 +54,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Ver Base de Conocimiento",
-    icon: "boxicons:book-library-filled",
+    icon: "boxicons:book-bookmark-filled",
     agent: kbRole("agent"),
     referent: kbRole("referent"),
     team_leader: kbRole("team_leader"),
@@ -63,7 +63,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Administrar Base de Conocimiento",
-    icon: "boxicons:book-library-filled",
+    icon: "boxicons:book-bookmark-filled",
     agent: kbRole("agent"),
     referent: kbRole("referent"),
     team_leader: kbRole("team_leader"),

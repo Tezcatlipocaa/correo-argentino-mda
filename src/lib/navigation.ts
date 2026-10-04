@@ -93,7 +93,7 @@ export const navSections: NavSection[] = [
       {
         href: "/base-conocimiento",
         label: "Base de conocimiento",
-        icon: "boxicons:book-library-filled",
+        icon: "boxicons:book-bookmark-filled",
       },
       {
         href: "/automatizaciones",
