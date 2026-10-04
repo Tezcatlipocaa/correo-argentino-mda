@@ -1010,7 +1010,16 @@ export const titles = sqliteTable("titles", {
     .references(() => titleCategory.id),
   route: text("route"),
   description: text("description"),
+  /** id (número, en texto) del artículo de KB de InvGate que mejor matchea. */
   articleOnKdb: text("article_on_kdb"),
+  /** Título del artículo de KB (para mostrarlo sin llamar a la API). */
+  articleOnKdbTitle: text("article_on_kdb_title"),
+  /** Score del match de KB (0..1); null si no hay/no se evaluó. */
+  kbMatchScore: real("kb_match_score"),
+  /** Nº de casos históricos analizados para derivar ruta/descripción. */
+  enrichedCases: integer("enriched_cases"),
+  /** Epoch de la última corrida de enriquecimiento; null = pendiente. */
+  enrichedAt: integer("enriched_at"),
   deprecated: integer("deprecated", {
     mode: "boolean",
   }).default(false),
