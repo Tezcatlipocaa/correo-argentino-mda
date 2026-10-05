@@ -469,7 +469,7 @@ export function renderOvertimeShiftsList(
         <span class="text-xs font-bold text-base-content truncate flex-1 select-none">${escapeHtml(op?.nombre || "#" + s.agentId)}</span>
         <span class="font-mono text-xs font-extrabold text-base-content/85 shrink-0 select-none">${s.startTime}–${s.endTime}</span>
         <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0 select-none">${dur}h</span>
-        <button type="button" class="btn btn-xs btn-ghost text-error opacity-0 group-hover:opacity-100 transition-opacity overtime-delete-shift-btn p-1 min-h-0 h-auto" data-shift-id="${s.id}" aria-label="Eliminar">
+        <button type="button" class="no-export btn btn-xs btn-ghost text-error opacity-0 group-hover:opacity-100 transition-opacity overtime-delete-shift-btn p-1 min-h-0 h-auto" data-shift-id="${s.id}" aria-label="Eliminar">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>`;

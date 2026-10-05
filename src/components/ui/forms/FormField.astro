@@ -54,7 +54,7 @@ const sizeClass = size === "sm" ? "input-sm" : size === "xs" ? "input-xs" : "";
           inputClass,
         ]}
       >
-        <Icon name={icon} size={16} class="shrink-0 opacity-50" />
+        <Icon name={icon} size={16} class="shrink-0 opacity-50" is:inline />
         <input type={type} id={id} name={name} class="grow" {...rest} />
       </label>
     ) : (

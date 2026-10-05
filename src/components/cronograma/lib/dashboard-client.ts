@@ -8,6 +8,7 @@ import {
 } from "./api";
 import { getStatusStyles } from "./styles";
 import { escapeHtml } from "@lib/sanitize";
+import { getCleanBase } from "@lib/baseUrl";
 import {
   getGanttPosition,
   getDaysInMonth,
@@ -602,7 +603,7 @@ function buildMonthlyCellHtml(
 
   const styles = getStatusStyles(status);
 
-  let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+  let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30" : "border-base-300/30"} ${styles.bgClass} ${isLicenseOverlap ? "border-error/40" : ""}`;
 
   let tooltipAttrs = "";
   const tooltipDir = rowIndex === 0 ? "tooltip-bottom" : "tooltip-top";
@@ -763,7 +764,7 @@ function updateMonthlyCellDisplay(
              state.isCoverageMinimized
                ? ""
                : `
-           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgb(0_0_0_/_0.1)]">
                <div class="bg-purple-500 w-full transition-[height] duration-500" style="height: ${pppPercent}%" title="P. Parque Patricios: ${c.ppp}"></div>
                <div class="bg-amber-500 w-full transition-[height] duration-500" style="height: ${pmgPercent}%" title="P. Monte Grande: ${c.pmg}"></div>
                <div class="bg-secondary w-full transition-[height] duration-500" style="height: ${hoPercent}%" title="HO: ${c.ho}"></div>
@@ -2122,10 +2123,6 @@ function setupEventListeners(): void {
   }
 
   async function handleExportAsImage() {
-    const tableContainer = document.querySelector("#monthly-table")
-      ?.parentElement as HTMLElement | null;
-    if (!tableContainer) return;
-
     const imgBtn = document.getElementById(
       "export-image-btn",
     ) as HTMLButtonElement | null;
@@ -2134,33 +2131,31 @@ function setupEventListeners(): void {
     const dateInput = document.getElementById(
       "date-input",
     ) as HTMLInputElement | null;
-    let monthName = "reporte";
-    if (dateInput && dateInput.value) {
-      const d = new Date(dateInput.value + "T12:00:00");
-      monthName = new Intl.DateTimeFormat("es-AR", {
-        month: "long",
-        year: "numeric",
-      }).format(d);
+    if (!dateInput || !dateInput.value) {
+      showToast("No hay un mes seleccionado.", "warning");
+      return;
     }
+    const month = dateInput.value.slice(0, 7);
 
     try {
-      const { exportAsImage } = await import("./exporters");
-      await exportAsImage(
-        tableContainer,
-        monthName,
-        () => {
-          if (imgBtn) {
-            imgBtn.disabled = true;
-            imgBtn.innerHTML = `<span class="loading loading-spinner loading-xs mr-1"></span> Procesando...`;
-          }
-        },
-        () => {
-          if (imgBtn) {
-            imgBtn.disabled = false;
-            imgBtn.innerHTML = originalText;
-          }
-        },
-      );
+      if (imgBtn) {
+        imgBtn.disabled = true;
+        imgBtn.innerHTML = `<span class="loading loading-spinner loading-xs mr-1"></span> Procesando...`;
+      }
+
+      const res = await fetch(`${getCleanBase()}api/cronograma/export.png?month=${month}`);
+      if (!res.ok) throw new Error(`export.png respondió ${res.status}`);
+      const blob = await res.blob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cronograma_${month}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
       showToast("Imagen exportada con éxito", "success");
     } catch (err: unknown) {
       console.error(err);
@@ -2168,6 +2163,11 @@ function setupEventListeners(): void {
         "Hubo un error al generar la imagen. Intenta imprimir el reporte.",
         "error",
       );
+    } finally {
+      if (imgBtn) {
+        imgBtn.disabled = false;
+        imgBtn.innerHTML = originalText;
+      }
     }
   }
 
@@ -2184,17 +2184,13 @@ function setupEventListeners(): void {
     ) as HTMLButtonElement | null;
     const saturdayCard = document.getElementById("saturday-rotation-card");
     if (!copyBtn || !saturdayCard) return;
-    const targetEl =
-      document.getElementById("rotation-timeline-wrapper") || saturdayCard;
     await copyElementImageToClipboard(
       copyBtn,
-      targetEl,
+      saturdayCard,
       {
         padding: 16,
-        compact: true,
+        compact: false,
         width: 1034,
-        onStart: () => saturdayCard.classList.add("exporting-image"),
-        onEnd: () => saturdayCard.classList.remove("exporting-image"),
       },
       {
         success: "Tabla de guardia copiada al portapapeles.",
@@ -2213,19 +2209,17 @@ function setupEventListeners(): void {
     const copyBtn = document.getElementById(
       "copy-overtime-image-btn",
     ) as HTMLButtonElement | null;
-    const overtimeCard = document.getElementById("overtime-card");
-    if (!copyBtn || !overtimeCard) return;
-    const targetEl =
-      document.getElementById("overtime-timeline-wrapper") || overtimeCard;
+    const compactCard =
+      document.getElementById("overtime-compact-list-card") ||
+      document.getElementById("overtime-card");
+    if (!copyBtn || !compactCard) return;
     await copyElementImageToClipboard(
       copyBtn,
-      targetEl,
+      compactCard,
       {
         padding: 16,
-        compact: true,
-        width: 1388,
-        onStart: () => overtimeCard.classList.add("exporting-image"),
-        onEnd: () => overtimeCard.classList.remove("exporting-image"),
+        compact: false,
+        width: 720,
       },
       {
         success: "Horas extras copiadas al portapapeles.",

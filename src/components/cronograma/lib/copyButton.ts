@@ -8,8 +8,6 @@ export interface CopyImageOptions {
   padding?: number;
   compact?: boolean;
   width?: number;
-  onStart?: () => void;
-  onEnd?: () => void;
 }
 
 export interface CopyMessages {
@@ -30,12 +28,7 @@ export async function copyElementImageToClipboard(
   try {
     btn.disabled = true;
     btn.innerHTML = SPINNER;
-    await exportAsClipboardImage(
-      target,
-      opts,
-      opts.onStart,
-      opts.onEnd,
-    );
+    await exportAsClipboardImage(target, opts);
     btn.classList.remove(baseClass);
     btn.classList.add("btn-success");
     btn.innerHTML = SUCCESS;

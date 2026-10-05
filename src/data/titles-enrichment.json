@@ -1,0 +1,4596 @@
+{
+  "generatedAt": "2026-10-04T21:04:57.723Z",
+  "count": 510,
+  "titles": [
+    {
+      "name": "Aforadora - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147658
+    },
+    {
+      "name": "Biblioteca Normativas - Consulta de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147659
+    },
+    {
+      "name": "Boca de red - Habilitación",
+      "article_on_kdb": "21",
+      "article_on_kdb_title": "Habilitación de boca de RED en oficina",
+      "kb_match_score": 1,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147659
+    },
+    {
+      "name": "Boca de red - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147660
+    },
+    {
+      "name": "Boca de red - Reparación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147660
+    },
+    {
+      "name": "CallCenter Giros - Error al conectarse a la base de datos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147661
+    },
+    {
+      "name": "CallCenter Giros - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147661
+    },
+    {
+      "name": "CallCenterScan - Consulta de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147662
+    },
+    {
+      "name": "CallCenterScan - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147662
+    },
+    {
+      "name": "CallCenterScan - No hay escáner configurado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147663
+    },
+    {
+      "name": "CallCenterScan - No se visualiza la imagen",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147663
+    },
+    {
+      "name": "Canal Directo - Solicitud de toner",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147664
+    },
+    {
+      "name": "Canal Directo - Solicitud de técnico",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147664
+    },
+    {
+      "name": "Celular - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147665
+    },
+    {
+      "name": "Celular - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147665
+    },
+    {
+      "name": "Celular - Pantalla dañada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147666
+    },
+    {
+      "name": "Celular - Provision",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147666
+    },
+    {
+      "name": "Celular - Sin señal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147667
+    },
+    {
+      "name": "Cierre - CDD (Nombre de Sitio/Depto)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147667
+    },
+    {
+      "name": "Cierre - SUC (Nombre del Sitio/NIS)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147667
+    },
+    {
+      "name": "Colector de datos - Archivos faltantes",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147668
+    },
+    {
+      "name": "Colector de datos - Bateria en mal funcionamiento",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147668
+    },
+    {
+      "name": "Colector de datos - Error conectando",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147669
+    },
+    {
+      "name": "Colector de datos - Error de java",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147669
+    },
+    {
+      "name": "Colector de datos - Falla en teclado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147669
+    },
+    {
+      "name": "Colector de datos - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147670
+    },
+    {
+      "name": "Colector de datos - No escanea",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147670
+    },
+    {
+      "name": "Colector de datos - No reconoce usuario",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147671
+    },
+    {
+      "name": "Colector de datos - Pines dañados",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147671
+    },
+    {
+      "name": "Colector de datos - Se apaga",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147671
+    },
+    {
+      "name": "Colector de datos - Se tilda",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147672
+    },
+    {
+      "name": "Comunidad Correo - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147672
+    },
+    {
+      "name": "Comunidad Correo - Firma digital",
+      "article_on_kdb": "250",
+      "article_on_kdb_title": "Comunidad Correo / Nucleus - Firmas digitales",
+      "kb_match_score": 1,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147672
+    },
+    {
+      "name": "Comunidad Correo - Usuario no habilitado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147673
+    },
+    {
+      "name": "Comunidad Correo - Usuario no registrado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147674
+    },
+    {
+      "name": "Comunidad Correo - Validación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147674
+    },
+    {
+      "name": "Comunidad Correo - WEB QR",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147674
+    },
+    {
+      "name": "Craddle - Cable dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147675
+    },
+    {
+      "name": "Craddle - No carga baterías",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147675
+    },
+    {
+      "name": "Craddle - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147676
+    },
+    {
+      "name": "Craddle - Pines dañados",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147676
+    },
+    {
+      "name": "DTD - Configuración de escáner",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147677
+    },
+    {
+      "name": "DTD - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147677
+    },
+    {
+      "name": "DTD - Error de escaneo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147677
+    },
+    {
+      "name": "DTD - Falla al ejecutar",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147678
+    },
+    {
+      "name": "DTD - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147678
+    },
+    {
+      "name": "Denarius - Consulta de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147679
+    },
+    {
+      "name": "Denarius - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147679
+    },
+    {
+      "name": "Denarius - Modificación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147679
+    },
+    {
+      "name": "Digidoc - Error de escaneo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147680
+    },
+    {
+      "name": "Digidoc - GPG error al descargar claves del servidor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147680
+    },
+    {
+      "name": "Digidoc - GPG faltan archivos de comando",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147681
+    },
+    {
+      "name": "Digidoc - Grupo de usuario no habilitado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147681
+    },
+    {
+      "name": "Digidoc - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147682
+    },
+    {
+      "name": "EI - Consulta de pieza",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147682
+    },
+    {
+      "name": "EI - No impacta declaración jurada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147682
+    },
+    {
+      "name": "EI - Plazo de guarda",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147683
+    },
+    {
+      "name": "EI - Solicitud de query",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147683
+    },
+    {
+      "name": "Electoral - WEB operadores",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147684
+    },
+    {
+      "name": "Endpoint Security - Activación de Eset",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147684
+    },
+    {
+      "name": "Endpoint Security - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147684
+    },
+    {
+      "name": "Endpoint Security - Error en actualización de módulos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147685
+    },
+    {
+      "name": "Endpoint Security - URL bloqueada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147685
+    },
+    {
+      "name": "Enlace - Acceso a RED WIFI",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147686
+    },
+    {
+      "name": "Enlace - Análisis de RED",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147686
+    },
+    {
+      "name": "Enlace - Análisis de RED WIFI",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147686
+    },
+    {
+      "name": "Enlace - Cableado estructurado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147687
+    },
+    {
+      "name": "Enlace - Caida de vinculo",
+      "article_on_kdb": "38",
+      "article_on_kdb_title": "Enlace- Caida de vinculo",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147687
+    },
+    {
+      "name": "Enlace - Direccionamiento IP",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147688
+    },
+    {
+      "name": "Enlace - Instalación de boca de RED",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147688
+    },
+    {
+      "name": "Enlace - Instalación de periscopio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147688
+    },
+    {
+      "name": "Enlace - Lentitud",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147689
+    },
+    {
+      "name": "Enlace - Microcortes",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147689
+    },
+    {
+      "name": "Enlace - Puerto bloqueado",
+      "article_on_kdb": "41",
+      "article_on_kdb_title": "Enlace- Puerto bloqueado",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147689
+    },
+    {
+      "name": "Enlace - Registro DNS",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147690
+    },
+    {
+      "name": "Enlace - Reserva de IP",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147690
+    },
+    {
+      "name": "Enlace - Revisión de boca de RED",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147691
+    },
+    {
+      "name": "Enlace - Revisión de cableado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147691
+    },
+    {
+      "name": "Enlace - Revisión de periscopio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147691
+    },
+    {
+      "name": "Enlace - Solicitud de IP",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147692
+    },
+    {
+      "name": "Equipo telefónico - Pieza desgastada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147692
+    },
+    {
+      "name": "FAX - Atasca el papel",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147693
+    },
+    {
+      "name": "Falla en aire acondicionado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147693
+    },
+    {
+      "name": "Falla en ventiladores",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147694
+    },
+    {
+      "name": "Fax - Falla en los cables",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147695
+    },
+    {
+      "name": "Fax - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147695
+    },
+    {
+      "name": "Fax - No tomas las hojas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147695
+    },
+    {
+      "name": "Filatelia - Error en proceso de facturación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147696
+    },
+    {
+      "name": "Fuente Tipografica - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147696
+    },
+    {
+      "name": "GYT - A excedido la cantidad máxima de intentos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147697
+    },
+    {
+      "name": "GYT - Actualización de maestro de clientes",
+      "article_on_kdb": "82",
+      "article_on_kdb_title": "GyT - Actualización maestro de clientes",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147697
+    },
+    {
+      "name": "GYT - Actualización de tablas",
+      "article_on_kdb": "67",
+      "article_on_kdb_title": "GyT - “Versión inválida. Ejecute actualización de tablas”",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147698
+    },
+    {
+      "name": "GYT - Consulta operativa",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147698
+    },
+    {
+      "name": "GYT - Entrada de datos sobrepaso el final del archivo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147698
+    },
+    {
+      "name": "GYT - Error de impresión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147699
+    },
+    {
+      "name": "GYT - Falla en la conexión ODBC a ORACLE",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147699
+    },
+    {
+      "name": "GYT - Falla reportes PDF",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147700
+    },
+    {
+      "name": "GYT - No responde",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147700
+    },
+    {
+      "name": "GYT - Un error de comunicación ha ocurrido",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147701
+    },
+    {
+      "name": "HH - Configuración",
+      "article_on_kdb": "4",
+      "article_on_kdb_title": "Configuración de impresora 4103",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147701
+    },
+    {
+      "name": "HH - Consulta",
+      "article_on_kdb": "61",
+      "article_on_kdb_title": "Mosaic- No se puede realizar la consulta",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147702
+    },
+    {
+      "name": "HH - Demoras (ordenes despliegue/repliegue)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147702
+    },
+    {
+      "name": "HH - Enrolamiento",
+      "article_on_kdb": "241",
+      "article_on_kdb_title": "HH- Enrolamiento - OfficeTrack Plus",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147702
+    },
+    {
+      "name": "HH - Equipo dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147703
+    },
+    {
+      "name": "HH - Extravío",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147703
+    },
+    {
+      "name": "HH - No cambio lockdown",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147703
+    },
+    {
+      "name": "HH - Pantalla rota",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147704
+    },
+    {
+      "name": "HH - Problemas con OfficeTrack",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147704
+    },
+    {
+      "name": "HH - Problemas con el Craddle",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147705
+    },
+    {
+      "name": "HH - Problemas de login",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147705
+    },
+    {
+      "name": "HH - Problemas de señal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147706
+    },
+    {
+      "name": "HH - Robo",
+      "article_on_kdb": "225",
+      "article_on_kdb_title": "Procedimiento para Notebooks - Reasignación, Robo o Pérdida",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147706
+    },
+    {
+      "name": "HOST - Eliminar trabajos en cola de impresión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147707
+    },
+    {
+      "name": "HOST - Redireccionamiento de impresiones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147707
+    },
+    {
+      "name": "HOST - Retorno a salto de línea",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147708
+    },
+    {
+      "name": "IPS - Consulta sobre piezas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147708
+    },
+    {
+      "name": "IPS - Imprime entrecortado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147709
+    },
+    {
+      "name": "IPS - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147709
+    },
+    {
+      "name": "IPS - No genera el formulario CN65",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147709
+    },
+    {
+      "name": "Impacto de Tareas - Sincronización completa",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147710
+    },
+    {
+      "name": "Impresora Térmica - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147710
+    },
+    {
+      "name": "Impresora Térmica - Falla en cables",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147711
+    },
+    {
+      "name": "Impresora Térmica - Imprime entre cortado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147711
+    },
+    {
+      "name": "Impresora Térmica - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147712
+    },
+    {
+      "name": "Impresora de label - Atasca el papel",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147713
+    },
+    {
+      "name": "Impresora de label - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147713
+    },
+    {
+      "name": "Impresora de label - Imprime defasado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147714
+    },
+    {
+      "name": "Impresora de label - Marca error",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147714
+    },
+    {
+      "name": "Impresora de label - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147715
+    },
+    {
+      "name": "Impresora de ticket - Atasca papel",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147715
+    },
+    {
+      "name": "Impresora de ticket - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147716
+    },
+    {
+      "name": "Impresora de ticket - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147717
+    },
+    {
+      "name": "Impresora de ticket - Estado de error",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147717
+    },
+    {
+      "name": "Impresora de ticket - Falla en rodillos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147718
+    },
+    {
+      "name": "Impresora de ticket - Imprime entre cortado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147718
+    },
+    {
+      "name": "Impresora de ticket - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147719
+    },
+    {
+      "name": "Impresora de ticket - No imprime",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147720
+    },
+    {
+      "name": "Impresora de ticket - No toma las facturas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147720
+    },
+    {
+      "name": "Impresora de ticket - Pedido de mantenimiento",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147721
+    },
+    {
+      "name": "Impresora de tickets - Cable USB dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147722
+    },
+    {
+      "name": "Indra - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147722
+    },
+    {
+      "name": "Intranet - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147722
+    },
+    {
+      "name": "Intranet - Lentitud",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147723
+    },
+    {
+      "name": "Intranet - Modificaciones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147723
+    },
+    {
+      "name": "Intranet - Publicación de documentos normativos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147723
+    },
+    {
+      "name": "Invgate - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147724
+    },
+    {
+      "name": "Invgate - Grupo faltante",
+      "article_on_kdb": "47",
+      "article_on_kdb_title": "InvGate- Grupo faltante",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147724
+    },
+    {
+      "name": "JAVA - Instalación de complementos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147724
+    },
+    {
+      "name": "Lapiz Optico - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147725
+    },
+    {
+      "name": "Lapiz Optico - No lee las piezas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147725
+    },
+    {
+      "name": "Lector de huellas - Cable dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147725
+    },
+    {
+      "name": "Lector de huellas - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147726
+    },
+    {
+      "name": "Lector de huellas - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147726
+    },
+    {
+      "name": "Lector de huellas - No toma la huella",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147726
+    },
+    {
+      "name": "Lectoras MRZ - Cable dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147727
+    },
+    {
+      "name": "Lectoras MRZ - No funciona el laser",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147727
+    },
+    {
+      "name": "Láser - Configuración de escáner",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147728
+    },
+    {
+      "name": "Láser - Configuración de impresora",
+      "article_on_kdb": "141",
+      "article_on_kdb_title": "Configuración - Impresora HP Laser Jet 426",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147729
+    },
+    {
+      "name": "Láser - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147729
+    },
+    {
+      "name": "Láser - Error de fusor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147730
+    },
+    {
+      "name": "Láser - Error en visor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147730
+    },
+    {
+      "name": "Láser - Mancha las hojas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147731
+    },
+    {
+      "name": "Láser - Pedido de mantenimiento",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147731
+    },
+    {
+      "name": "Láser - Traba las hojas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147732
+    },
+    {
+      "name": "Línea - Alta de línea",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147733
+    },
+    {
+      "name": "Línea - Falta de servicio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147733
+    },
+    {
+      "name": "Línea - Interno sin tono",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147734
+    },
+    {
+      "name": "Línea - No puede realizar llamadas salientes externas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147734
+    },
+    {
+      "name": "Línea - Teléfono analogico sin tono",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147734
+    },
+    {
+      "name": "MFA - Configuración doble factor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147735
+    },
+    {
+      "name": "MFA - Consulta operativa",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147735
+    },
+    {
+      "name": "MFA - Excedió la cantidad máxima de intentos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147736
+    },
+    {
+      "name": "MFA - Reset QR",
+      "article_on_kdb": "5",
+      "article_on_kdb_title": "MFA- Reset QR",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147736
+    },
+    {
+      "name": "MS Teams - Desbloqueo de dominio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147736
+    },
+    {
+      "name": "Mantenimiento Edilicio - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147737
+    },
+    {
+      "name": "MercadoPago - No impacta el pago del cliente",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147737
+    },
+    {
+      "name": "MercadoPago - No sale el comprobante",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147737
+    },
+    {
+      "name": "MercadoPago - Terminal no habilitada para el cobro",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147738
+    },
+    {
+      "name": "MiCorreo - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147738
+    },
+    {
+      "name": "MiCorreo - Incidente con sellos digitales",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147738
+    },
+    {
+      "name": "MiCorreo - Mensaje de error",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147739
+    },
+    {
+      "name": "MiCorreo - Problemas de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147740
+    },
+    {
+      "name": "MiCorreo - Problemas de pagos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147740
+    },
+    {
+      "name": "Microsoft Outlook - Acceso buzón genérico",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147741
+    },
+    {
+      "name": "Microsoft Outlook - Configuración de buzón",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147741
+    },
+    {
+      "name": "Microsoft Outlook - Configuración de firma",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147742
+    },
+    {
+      "name": "Microsoft Outlook - Configuración de idioma",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147742
+    },
+    {
+      "name": "Microsoft Outlook - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147743
+    },
+    {
+      "name": "Microsoft Outlook - Error 500",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147743
+    },
+    {
+      "name": "Microsoft Outlook - Falla al inicar sesion",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147744
+    },
+    {
+      "name": "Microsoft Outlook - No se pudo enviar el mensaje",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147744
+    },
+    {
+      "name": "Microsoft Outlook - No se pueden eliminar mails",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147745
+    },
+    {
+      "name": "Microsoft Outlook - Redirige a webmail",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147745
+    },
+    {
+      "name": "MidPoint - Cambio de mail registrado",
+      "article_on_kdb": "52",
+      "article_on_kdb_title": "MidPoint - Cambio de mail registrado ",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147745
+    },
+    {
+      "name": "MidPoint - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147746
+    },
+    {
+      "name": "MidPoint - Usuario deshabilitado",
+      "article_on_kdb": "53",
+      "article_on_kdb_title": "MidPoint - Usuario deshabilitado",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147746
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Genérico ante consultas o problema no identificado",
+      "enriched_at": 1791147746
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al cambiar contraseña",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Error al cambiar la contraseña/ No recibe el correo para restablecer la contraseña",
+      "enriched_at": 1791147747
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al generar CD",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "No permite generar Carta Documento",
+      "enriched_at": 1791147747
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al generar CD",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "No permite generar Carta Documento",
+      "enriched_at": 1791147748
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al generar telegrama",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "No permite generar Telegrama",
+      "enriched_at": 1791147748
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al habilitar firma",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "No puede habilitar la firma",
+      "enriched_at": 1791147749
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al importar PDF",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Error al importar PDF",
+      "enriched_at": 1791147749
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error al importar TXT",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Error al importar archivo TXT de destinatarios",
+      "enriched_at": 1791147749
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Error de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Errores o problemas / No puede ingresar al sistema",
+      "enriched_at": 1791147750
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Lentitud del sistema",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Lentitud general del sistema",
+      "enriched_at": 1791147750
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Login incorrecto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Usuario/Contraseña incorrecto",
+      "enriched_at": 1791147751
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - No recibe mail de validación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "No recibir el correo para validar la contraseña",
+      "enriched_at": 1791147751
+    },
+    {
+      "name": "Mis Comunicaciones Digitales - Registro",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Todo tipo de solución/incidencia al completar el Registro",
+      "enriched_at": 1791147752
+    },
+    {
+      "name": "Monitor - Falla en cables",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147752
+    },
+    {
+      "name": "Monitor - No da imagen",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147753
+    },
+    {
+      "name": "Monitor - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147753
+    },
+    {
+      "name": "Monitor - Se apaga solo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147754
+    },
+    {
+      "name": "Mosaic - Actualización de tarifas",
+      "article_on_kdb": "60",
+      "article_on_kdb_title": "Mosaic- Actualización de tarifas",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147754
+    },
+    {
+      "name": "Mosaic - Baja de operador",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147754
+    },
+    {
+      "name": "Mosaic - Baja de servidor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147755
+    },
+    {
+      "name": "Mosaic - CDS_TIME_OUT",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147756
+    },
+    {
+      "name": "Mosaic - Caidas en vuelo (Operación no impacta en mosaic)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147756
+    },
+    {
+      "name": "Mosaic - Cheque inexistente",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147757
+    },
+    {
+      "name": "Mosaic - Chequeo de servicios",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147757
+    },
+    {
+      "name": "Mosaic - Cierre de tesoro",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147758
+    },
+    {
+      "name": "Mosaic - Configuración carpeta de escaneos BUI",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "TI Tecnologia informatica    Gestión de Servicios    Soporte Técnico TI > Aplicaciones > M-O > Mosaic > Escaneo de BUIS en sucursal de mosaic",
+      "description": "",
+      "enriched_at": 1791147758
+    },
+    {
+      "name": "Mosaic - Configuración de unidad w",
+      "article_on_kdb": "139",
+      "article_on_kdb_title": "Mosaic- Configuracion de unidad X (Escaneos)",
+      "kb_match_score": 1,
+      "route": "",
+      "description": "Procedimiento de configuración de unidad W.",
+      "enriched_at": 1791147758
+    },
+    {
+      "name": "Mosaic - Configuración de unidad x",
+      "article_on_kdb": "139",
+      "article_on_kdb_title": "Mosaic- Configuracion de unidad X (Escaneos)",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147759
+    },
+    {
+      "name": "Mosaic - Consulta",
+      "article_on_kdb": "61",
+      "article_on_kdb_title": "Mosaic- No se puede realizar la consulta",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147759
+    },
+    {
+      "name": "Mosaic - Diferencia contable",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147759
+    },
+    {
+      "name": "Mosaic - El cheque no ha sido registrado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147760
+    },
+    {
+      "name": "Mosaic - El viejo proceso de firefox se está ejecutando",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147761
+    },
+    {
+      "name": "Mosaic - Eliminacion de pieza",
+      "article_on_kdb": "226",
+      "article_on_kdb_title": "Mosaic- Eliminación de pieza",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147761
+    },
+    {
+      "name": "Mosaic - Eliminación de chequera",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147761
+    },
+    {
+      "name": "Mosaic - Error #353 en sucursal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147762
+    },
+    {
+      "name": "Mosaic - Error #353 en terminal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147763
+    },
+    {
+      "name": "Mosaic - Error #355 en terminal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147763
+    },
+    {
+      "name": "Mosaic - Error 940 CDS find",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147764
+    },
+    {
+      "name": "Mosaic - Error al aperturar",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147764
+    },
+    {
+      "name": "Mosaic - Error al convertir TXT a PDF",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147765
+    },
+    {
+      "name": "Mosaic - Error cierre del dia",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147766
+    },
+    {
+      "name": "Mosaic - Error de wrapper",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147766
+    },
+    {
+      "name": "Mosaic - Error runtime",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147767
+    },
+    {
+      "name": "Mosaic - Falla de actualización de Bobs",
+      "article_on_kdb": "39",
+      "article_on_kdb_title": "Mosaic- Falla de actualizacion de bobs",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147767
+    },
+    {
+      "name": "Mosaic - Fallo de conexión al CD server",
+      "article_on_kdb": "3",
+      "article_on_kdb_title": "Mosaic- Fallo de conexión al cd server ",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147768
+    },
+    {
+      "name": "Mosaic - Fatal error #829",
+      "article_on_kdb": "62",
+      "article_on_kdb_title": "Mosaic- Fatal error #829",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147768
+    },
+    {
+      "name": "Mosaic - Fatal error #857",
+      "article_on_kdb": "63",
+      "article_on_kdb_title": "Mosaic- Fatal error #857",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147768
+    },
+    {
+      "name": "Mosaic - Inconsistencia en entrega de piezas ML",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "TI Sistemas  »  Desarrollo de aplicaciones  »  Sucursales y Central PAQ  »  Sucursales  »  Terminal SUC  »  Incidente Mosaic",
+      "description": "Piezas de Mercado Libre ingresadas en MOSAIC que figuran como entregadas o son dadas de baja automáticamente sin intervención del operador.",
+      "enriched_at": 1791147769
+    },
+    {
+      "name": "Mosaic - No host",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147769
+    },
+    {
+      "name": "Mosaic - No se pudo almacenar la huella digital",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147770
+    },
+    {
+      "name": "Mosaic - No se puede realizar la consulta",
+      "article_on_kdb": "61",
+      "article_on_kdb_title": "Mosaic- No se puede realizar la consulta",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147770
+    },
+    {
+      "name": "Mosaic - Operaciones WEB",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147770
+    },
+    {
+      "name": "Mosaic - Pieza existente en tabla de stock",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147771
+    },
+    {
+      "name": "Mosaic - Pieza no corresponde al grupo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147772
+    },
+    {
+      "name": "Mosaic - Redireccionameinto de impresión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147772
+    },
+    {
+      "name": "Mosaic - Reimpresion de label",
+      "article_on_kdb": "32",
+      "article_on_kdb_title": "Mosaic- Reimpresión de Label",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147772
+    },
+    {
+      "name": "Mosaic - Tranferencia de usuario",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147773
+    },
+    {
+      "name": "Mouse - Cable dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147774
+    },
+    {
+      "name": "Mouse - No responde",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147774
+    },
+    {
+      "name": "Mouse - Pieza desgastada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147774
+    },
+    {
+      "name": "Mudanza - CDD (Nombre de Sitio/Depto)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147775
+    },
+    {
+      "name": "Mudanza - Hardware",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147775
+    },
+    {
+      "name": "Mudanza - SUC (Nombre de Sitio/NIS)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147775
+    },
+    {
+      "name": "Netterm - Configuraciòn",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147776
+    },
+    {
+      "name": "Netterm - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147776
+    },
+    {
+      "name": "Netterm - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147777
+    },
+    {
+      "name": "Nettern - Error de conexión con el servidor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147777
+    },
+    {
+      "name": "Nombramiento Electoral - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147777
+    },
+    {
+      "name": "Notebook - Configuración WIFI",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147778
+    },
+    {
+      "name": "Notebook - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147778
+    },
+    {
+      "name": "Notebook - Código BitLocker",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147778
+    },
+    {
+      "name": "Notebook - Extravío",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147779
+    },
+    {
+      "name": "Notebook - Falla bateria",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147779
+    },
+    {
+      "name": "Notebook - Falla cargador",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147780
+    },
+    {
+      "name": "Notebook - Fuera de dominio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147780
+    },
+    {
+      "name": "Notebook - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147780
+    },
+    {
+      "name": "Notebook - Remasterizar",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147781
+    },
+    {
+      "name": "Notebook - Robo",
+      "article_on_kdb": "225",
+      "article_on_kdb_title": "Procedimiento para Notebooks - Reasignación, Robo o Pérdida",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147781
+    },
+    {
+      "name": "Notebook - Se reinicia",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147781
+    },
+    {
+      "name": "Notebook - Se tilda",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147781
+    },
+    {
+      "name": "Nucleus - Cambio de contraseña",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "Mesa de Ayuda TI > Accesos y Aplicaciones > Usuario WEB/Windows/WPS Office > WEB > Nucleus > Usuario/Contraseña",
+      "description": "",
+      "enriched_at": 1791147782
+    },
+    {
+      "name": "Nucleus - Usuario no habilitado",
+      "article_on_kdb": "251",
+      "article_on_kdb_title": "Nucleus - Usuario no habilitado",
+      "kb_match_score": 1,
+      "route": "Mesa de Ayuda TI » Accesos y Aplicaciones » Usuario WEB/Windows/WPS Office » WEB » Nucleus » Usuario no habilitado",
+      "description": "",
+      "enriched_at": 1791147782
+    },
+    {
+      "name": "OfficeTrack - Alta de transportista",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147782
+    },
+    {
+      "name": "OfficeTrack - Falta de capacitación (Firma digital)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147783
+    },
+    {
+      "name": "OfficeTrack - Falta de capacitación (Geolocalización manual)",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147783
+    },
+    {
+      "name": "OfficeTrack - No impactan las piezas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147784
+    },
+    {
+      "name": "OfficeTrack Plus - Dispositivo no reconocido en el servidor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147784
+    },
+    {
+      "name": "OfficeTrack Plus - No existen formularios",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147785
+    },
+    {
+      "name": "OfficeTrack Plus - No toma las credenciales",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147785
+    },
+    {
+      "name": "Oficios Judiciales - Error de balance",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147785
+    },
+    {
+      "name": "OnBase - Control del bloqueo de procesos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147786
+    },
+    {
+      "name": "OnBase - Error de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147786
+    },
+    {
+      "name": "OnBase - Error en lotes",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147787
+    },
+    {
+      "name": "Operativo Exámenes Médicos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147787
+    },
+    {
+      "name": "PC - Cables dañados",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147788
+    },
+    {
+      "name": "PC - Configuración",
+      "article_on_kdb": "4",
+      "article_on_kdb_title": "Configuración de impresora 4103",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147788
+    },
+    {
+      "name": "PC - Consulta",
+      "article_on_kdb": "61",
+      "article_on_kdb_title": "Mosaic- No se puede realizar la consulta",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147788
+    },
+    {
+      "name": "PC - Falla en puertos USB",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147789
+    },
+    {
+      "name": "PC - Fuera de dominio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147789
+    },
+    {
+      "name": "PC - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147790
+    },
+    {
+      "name": "PC - No inicia sistema operativo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147790
+    },
+    {
+      "name": "PC - Solicitud de mantenimiento",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147791
+    },
+    {
+      "name": "PDC - Actualización de Frama",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147791
+    },
+    {
+      "name": "PDC - Alta de Frama",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147792
+    },
+    {
+      "name": "PDC - Baja de Frama",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147792
+    },
+    {
+      "name": "PDC - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147793
+    },
+    {
+      "name": "PDC - Login incorrecto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147793
+    },
+    {
+      "name": "POS - Baja de terminal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147794
+    },
+    {
+      "name": "POS - Cierre de lote",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147794
+    },
+    {
+      "name": "POS - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147794
+    },
+    {
+      "name": "POS - Extracción ticket de configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147795
+    },
+    {
+      "name": "POS - Operaciones inhabilitadas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147796
+    },
+    {
+      "name": "POS - Pedido de insumos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147796
+    },
+    {
+      "name": "POS - Problema con cobranza",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147797
+    },
+    {
+      "name": "POS - Problema con extracciones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147797
+    },
+    {
+      "name": "POS - Problema de hardware",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147797
+    },
+    {
+      "name": "POS - Problemas de conexión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147798
+    },
+    {
+      "name": "POS - Reconfigurar a modo integrado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147798
+    },
+    {
+      "name": "POS - Reconfigurar a modo no integrado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147799
+    },
+    {
+      "name": "POS - Remplazo de terminal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147799
+    },
+    {
+      "name": "Pistola Lectora - Configurar",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147800
+    },
+    {
+      "name": "Pistola lectora - Cable roto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147800
+    },
+    {
+      "name": "Pistola lectora - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147800
+    },
+    {
+      "name": "Pistola lectora - No enciende laser",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147801
+    },
+    {
+      "name": "Pistola lectora - No lee codigos de barras",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147801
+    },
+    {
+      "name": "Portal Autogestión - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147801
+    },
+    {
+      "name": "Portal Autogestión - Problema de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147802
+    },
+    {
+      "name": "PrintestGUI - Prueba",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "PrintestGUI es una APP que se utiliza para calibrar varias Impresoras: Tiqueteras, Térmicas/Label",
+      "enriched_at": 1791147802
+    },
+    {
+      "name": "QlickSense - Acceso denegado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147803
+    },
+    {
+      "name": "Relevamiento - Operativo presentismo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147803
+    },
+    {
+      "name": "SAP - Activar interface",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147803
+    },
+    {
+      "name": "SAP - Asignación de transacción",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "TI Seguridad de la Información » Seguridad SAP » Nuevos requerimientos » Transacción",
+      "description": "Asignación de rol para operar en SAP.\nSe consulta al usuario:\n- Nombre de usuario en SAP\n- Nombre de la transacción",
+      "enriched_at": 1791147804
+    },
+    {
+      "name": "SAP - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147804
+    },
+    {
+      "name": "SAP - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147804
+    },
+    {
+      "name": "SAP - Error de carga 88",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147805
+    },
+    {
+      "name": "SAP - Falta de autorización",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147806
+    },
+    {
+      "name": "SAP - Habilitación de usuario",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147806
+    },
+    {
+      "name": "SAP - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147807
+    },
+    {
+      "name": "SAP - Reasignar transferencia",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147807
+    },
+    {
+      "name": "SAP - Rehabilitar cola de impresión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147807
+    },
+    {
+      "name": "SIE Online - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147808
+    },
+    {
+      "name": "SOP - Actualización de tablas",
+      "article_on_kdb": "247",
+      "article_on_kdb_title": "SOP- Actualización de Tablas",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147808
+    },
+    {
+      "name": "SOP - Actualización de versión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147809
+    },
+    {
+      "name": "SOP - Actualización unidad de negocio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147809
+    },
+    {
+      "name": "SOP - Alta de cola de impresión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147810
+    },
+    {
+      "name": "SOP - Blanqueo de contraseña administrativa",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147810
+    },
+    {
+      "name": "SOP - Blanqueo de usuario de Scanner",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147811
+    },
+    {
+      "name": "SOP - Borrar cola de impresión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147811
+    },
+    {
+      "name": "SOP - Configuración de fecha y hora",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147812
+    },
+    {
+      "name": "SOP - Error de escaneo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147812
+    },
+    {
+      "name": "SOP - Error en planillas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147813
+    },
+    {
+      "name": "SOP - Falla al generar circuito",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147813
+    },
+    {
+      "name": "SOP - Inconsistencia de datos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147814
+    },
+    {
+      "name": "SOP - No impactan las piezas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147814
+    },
+    {
+      "name": "SOP - Redireccionamiento de impresiones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147815
+    },
+    {
+      "name": "SOP - Rehabilitar bajada de tablas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147815
+    },
+    {
+      "name": "SOP Central - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147816
+    },
+    {
+      "name": "SOP Central - Demora en impacto de piezas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147816
+    },
+    {
+      "name": "SOP Central - Error en el servidor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147817
+    },
+    {
+      "name": "SOP Central - Falta menu distribucion",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147817
+    },
+    {
+      "name": "SOP Central - Falta operador HH",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147818
+    },
+    {
+      "name": "SOP Central - No figura circuito para cerrar",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147818
+    },
+    {
+      "name": "SOP Central - Nuevo enlace",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147818
+    },
+    {
+      "name": "SOP Central - Un incorrecta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147819
+    },
+    {
+      "name": "SOP Central - Usuario logueado en otro puesto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147819
+    },
+    {
+      "name": "SOP Central - Usuario no pertenece al grupo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147820
+    },
+    {
+      "name": "SOP Central - Usuario y contraseña incorrecto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147820
+    },
+    {
+      "name": "STS - Alta/baja de cliente",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147821
+    },
+    {
+      "name": "STS - Alta/cierre de oficina",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147821
+    },
+    {
+      "name": "STS - Carta documento duplicada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147822
+    },
+    {
+      "name": "STS - Configuración de impresiones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147823
+    },
+    {
+      "name": "STS - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147823
+    },
+    {
+      "name": "STS - Consulta DESA SIE",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147823
+    },
+    {
+      "name": "STS - Corrección de hora y fecha sistema",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147824
+    },
+    {
+      "name": "STS - Creación de casilla en host",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147824
+    },
+    {
+      "name": "STS - Desconexión de agentes",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147825
+    },
+    {
+      "name": "STS - Desvío de tráfico telegráfico",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147825
+    },
+    {
+      "name": "STS - Error inesperado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147826
+    },
+    {
+      "name": "STS - Imagen corrupta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147826
+    },
+    {
+      "name": "STS - Impresión TCL en formulario CDE",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "relacionada con la impresión de TCL utilizando el formulario CDE. Casos de impresión con más de 30 palabras ",
+      "enriched_at": 1791147827
+    },
+    {
+      "name": "STS - Modificación de telegrama",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147827
+    },
+    {
+      "name": "STS - No recibe seriales",
+      "article_on_kdb": "99",
+      "article_on_kdb_title": "STS - No recibe seriales de telegramas",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147828
+    },
+    {
+      "name": "STS - Parametrizar terminal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147828
+    },
+    {
+      "name": "STS - Re direccionamiento de impresiones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147829
+    },
+    {
+      "name": "STS - Reporte STSPROD",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147829
+    },
+    {
+      "name": "STS - Resguardo de trafico",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147830
+    },
+    {
+      "name": "SUBE - Error de conexión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147830
+    },
+    {
+      "name": "SUBE - Error de hardware",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147831
+    },
+    {
+      "name": "Servidor +N°Server - Sin conexión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "Deberá utilizarse cuando se detecte que un servidor (S) no responde o se encuentra sin conexión, permitiendo identificar rápidamente el equipo afectado",
+      "enriched_at": 1791147831
+    },
+    {
+      "name": "Servidor MOA - Falla en SO",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147832
+    },
+    {
+      "name": "Servidor MOA - Falla en actualización de tablas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147832
+    },
+    {
+      "name": "Servidor MOA - Falla en cables",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147833
+    },
+    {
+      "name": "Servidor MOA - Falla en discos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147833
+    },
+    {
+      "name": "Servidor MOA - Pedido de mantenimiento general",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147834
+    },
+    {
+      "name": "Servilog - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147834
+    },
+    {
+      "name": "Servilog - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147835
+    },
+    {
+      "name": "Share - Acceso a carpeta compartida",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147835
+    },
+    {
+      "name": "Share - Modificación de permisos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147836
+    },
+    {
+      "name": "Share - Permisos de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147836
+    },
+    {
+      "name": "Share - Solicitud de alta de usuario",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147836
+    },
+    {
+      "name": "Share - Solicitud de baja de usuario",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147837
+    },
+    {
+      "name": "Simon C# - Configuración",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147838
+    },
+    {
+      "name": "Simon C# - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147838
+    },
+    {
+      "name": "Simon C# - Mensaje de error",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147838
+    },
+    {
+      "name": "Sistema Central Paq - Borrado de pieza",
+      "article_on_kdb": "9",
+      "article_on_kdb_title": "Sistema Central Paq- Borrado de pieza",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147839
+    },
+    {
+      "name": "Sistema Central Paq - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147839
+    },
+    {
+      "name": "Sistema Central Paq - Detalle de envio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147839
+    },
+    {
+      "name": "Sistema Central Paq - Link de acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147840
+    },
+    {
+      "name": "Sistema Central Paq - Login incorrecto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147840
+    },
+    {
+      "name": "Sistema Central Paq - No carga OT",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147840
+    },
+    {
+      "name": "Sistema Central Paq - No figuran las piezas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147841
+    },
+    {
+      "name": "Sistema de turnos - Configuración de pantalla",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147841
+    },
+    {
+      "name": "Sistema de turnos - Cubic no enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147842
+    },
+    {
+      "name": "Sistema de turnos - Cubic no inicia el sistema operativo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147842
+    },
+    {
+      "name": "Sistema de turnos - Falla en los cables hdmi",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147843
+    },
+    {
+      "name": "Sistema de turnos - Falla en los cables power",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147843
+    },
+    {
+      "name": "Sistema de turnos - Tv falla pestaña",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147844
+    },
+    {
+      "name": "Sistema de turnos - Tv no enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147844
+    },
+    {
+      "name": "SoftPhone - Connection lost",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147844
+    },
+    {
+      "name": "SoftPhone - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147845
+    },
+    {
+      "name": "SoftPhone - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147845
+    },
+    {
+      "name": "SoftPhone - Servicio no autorizado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147845
+    },
+    {
+      "name": "SoftPhone - Terminal no registrada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147846
+    },
+    {
+      "name": "T&T - Alta de cola de impresión",
+      "article_on_kdb": "146",
+      "article_on_kdb_title": "Denarius - Alta de cola de impresión",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147846
+    },
+    {
+      "name": "T&T - Alta de nuevo puesto SOP",
+      "article_on_kdb": "189",
+      "article_on_kdb_title": "Alta de Nuevo Puesto SOP",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147846
+    },
+    {
+      "name": "T&T - Consulta",
+      "article_on_kdb": "61",
+      "article_on_kdb_title": "Mosaic- No se puede realizar la consulta",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147847
+    },
+    {
+      "name": "T&T - Demoras TTSPROD",
+      "article_on_kdb": "244",
+      "article_on_kdb_title": "T&T- Demoras TTSPROD",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147847
+    },
+    {
+      "name": "T&T - Demoras en el host",
+      "article_on_kdb": "44",
+      "article_on_kdb_title": "TYT- Demoras en el HOST",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147847
+    },
+    {
+      "name": "T&T - Desarchivo de pieza",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147848
+    },
+    {
+      "name": "T&T - Desbloquear usuario de host",
+      "article_on_kdb": "45",
+      "article_on_kdb_title": "TYT- Desbloquear usuario de Host",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147848
+    },
+    {
+      "name": "T&T - Host en mantenimiento",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147849
+    },
+    {
+      "name": "T&T - Modificacion de evento",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147849
+    },
+    {
+      "name": "T&T - No hay conexión con el servidor",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147850
+    },
+    {
+      "name": "T&T - No impacta piezas en backend",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147850
+    },
+    {
+      "name": "T&T - No impacta piezas en host",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147851
+    },
+    {
+      "name": "T&T - No impacta tareas D1",
+      "article_on_kdb": "49",
+      "article_on_kdb_title": "T&T- No impacta Tareas D1",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147851
+    },
+    {
+      "name": "T&T - No imprime planilla D1",
+      "article_on_kdb": "232",
+      "article_on_kdb_title": "T&T- No Imprime Planilla D1",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147851
+    },
+    {
+      "name": "T&T - Parametrizar terminal",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147852
+    },
+    {
+      "name": "T&T - Perdida de escaneos",
+      "article_on_kdb": "222",
+      "article_on_kdb_title": "Perdida de Escaneos Colectores de Datos",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147852
+    },
+    {
+      "name": "T&T - Rehabilitar cola de impresión",
+      "article_on_kdb": "46",
+      "article_on_kdb_title": "TYT- Rehabilitar cola de impresión",
+      "kb_match_score": 1,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147853
+    },
+    {
+      "name": "TOTEM Carga Virtual - Análisis de RED",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147853
+    },
+    {
+      "name": "TOTEM Carga Virtual - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147854
+    },
+    {
+      "name": "TOTEM Mediterranea - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147854
+    },
+    {
+      "name": "TOTEM Mediterranea - No imprime los turnos",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147854
+    },
+    {
+      "name": "TOTEM Mediterranea - No inicia sistema operativo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147855
+    },
+    {
+      "name": "TOTEM Mediterranea - Reubicación de equipo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147855
+    },
+    {
+      "name": "TV Mediterranea - No carga sistema de turno",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147855
+    },
+    {
+      "name": "TV Mediterranea - No da imagen",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147856
+    },
+    {
+      "name": "TV Mediterranea - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147856
+    },
+    {
+      "name": "TV Mediterranea - No se visualiza turno",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147857
+    },
+    {
+      "name": "TV Mediterranea - Reubicación de equipo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147857
+    },
+    {
+      "name": "TV Mediterranea - Se apaga solo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147857
+    },
+    {
+      "name": "Tablet - Cargador dañado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147858
+    },
+    {
+      "name": "Tablet - Problema de hardware",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147858
+    },
+    {
+      "name": "Teclado - Falla en cables",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147859
+    },
+    {
+      "name": "Teclado - Fallan teclas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147859
+    },
+    {
+      "name": "Teclado - No funciona parte numérica",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147859
+    },
+    {
+      "name": "Teclado - Piezas degastada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147860
+    },
+    {
+      "name": "TelegraphScan - Configuración de escáner",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147860
+    },
+    {
+      "name": "TelegraphScan - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147861
+    },
+    {
+      "name": "TelegraphScan - Error al escanear",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147861
+    },
+    {
+      "name": "TelegraphScan - Error al intentar enviar la imagen",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147862
+    },
+    {
+      "name": "TelegraphScan - Error en la lista de prioridades",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147862
+    },
+    {
+      "name": "TelegraphScan - Falla de actualización NETFRAMEWORK",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147863
+    },
+    {
+      "name": "TelegraphScan - No es posible obtener la lista de imágenes",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147863
+    },
+    {
+      "name": "Teléfono IP - Configuración de interno",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147864
+    },
+    {
+      "name": "Teléfono IP - Falla cable rulo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147864
+    },
+    {
+      "name": "Teléfono IP - Fuera de servicio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147865
+    },
+    {
+      "name": "Teléfono IP - No enciende",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147865
+    },
+    {
+      "name": "Teléfono IP - Sin tono",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147866
+    },
+    {
+      "name": "Trazabilidad - Acceso bloqueado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147866
+    },
+    {
+      "name": "Trazabilidad - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147866
+    },
+    {
+      "name": "Trazabilidad - Despliegue/repliegue",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147867
+    },
+    {
+      "name": "Trazabilidad - No aparece operativo",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147867
+    },
+    {
+      "name": "Trazabilidad - No tiene grupos asociados",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147867
+    },
+    {
+      "name": "Trazabilidad - Problemas de login",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147868
+    },
+    {
+      "name": "UER - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147868
+    },
+    {
+      "name": "UER - Error de tablas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147869
+    },
+    {
+      "name": "UER - Error en parametria",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147869
+    },
+    {
+      "name": "Ubuntu - Desbloqueo de teclado numérico",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147870
+    },
+    {
+      "name": "VPN - Error de autenticación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147870
+    },
+    {
+      "name": "VPN - Error de conexión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147871
+    },
+    {
+      "name": "VPN - Microcortes",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147871
+    },
+    {
+      "name": "Vencimiento de envíos - Pieza no encontrada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147872
+    },
+    {
+      "name": "W10 - Activación de producto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147872
+    },
+    {
+      "name": "W10 - Bitloker",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147872
+    },
+    {
+      "name": "W10 - Blue screen",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147873
+    },
+    {
+      "name": "W10 - Cambio de clave",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147873
+    },
+    {
+      "name": "W10 - Conexión a escritorio remoto",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147874
+    },
+    {
+      "name": "W10 - Configuración de escáner",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147874
+    },
+    {
+      "name": "W10 - Configuración de impresora",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": "",
+      "description": "",
+      "enriched_at": 1791147875
+    },
+    {
+      "name": "W10 - Habilitación de protocolo SMB1",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147875
+    },
+    {
+      "name": "W10 - Instalación de aplicaciones",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147875
+    },
+    {
+      "name": "W10 - Nombre normalizado",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147876
+    },
+    {
+      "name": "W10 - Terminal fuera de dominio",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147876
+    },
+    {
+      "name": "WEB - Consulta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147877
+    },
+    {
+      "name": "WEB - Error 404",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147877
+    },
+    {
+      "name": "WEB - Error 504",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147878
+    },
+    {
+      "name": "WEB - La conexión no es privada",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147878
+    },
+    {
+      "name": "WEB - No se puede acceder al sitio WEB",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147879
+    },
+    {
+      "name": "WISE - Acceso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147879
+    },
+    {
+      "name": "WMS - Contenedor inexistente",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147879
+    },
+    {
+      "name": "WMS - Demoras",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147880
+    },
+    {
+      "name": "WMS - Error al imprimir comprobante",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147880
+    },
+    {
+      "name": "WMS - Error de stock",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147881
+    },
+    {
+      "name": "WMS - Lentitud",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147881
+    },
+    {
+      "name": "WMS - Limpieza de líneas",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147881
+    },
+    {
+      "name": "WMS - No general OT",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147882
+    },
+    {
+      "name": "WPS - Configuración de aplicación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147883
+    },
+    {
+      "name": "WPS - Consulta de uso",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147883
+    },
+    {
+      "name": "WPS - Instalación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147883
+    },
+    {
+      "name": "WUI - Error de comunicación",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147884
+    },
+    {
+      "name": "WUI - Falla en la transmisión",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147885
+    },
+    {
+      "name": "WUI - Terminal no dada de alta",
+      "article_on_kdb": null,
+      "article_on_kdb_title": null,
+      "kb_match_score": null,
+      "route": null,
+      "description": null,
+      "enriched_at": 1791147885
+    }
+  ]
+}

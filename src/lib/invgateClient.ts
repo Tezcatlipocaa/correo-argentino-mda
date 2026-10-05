@@ -1,4 +1,5 @@
 import type { InvgateResult } from "@/types/invgate";
+import { recordInvGateCall } from "@lib/invgate/metrics";
 
 function getEnv(key: string): string {
   if (typeof import.meta !== "undefined" && import.meta.env) {
@@ -44,6 +45,8 @@ async function invgateRequest<T>(
 
   const url = `${baseUrl}${endpoint}`;
   let lastStatus = 0;
+
+  recordInvGateCall(endpoint);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);

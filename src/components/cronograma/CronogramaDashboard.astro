@@ -201,7 +201,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                       >Operador</th
                     >
                     <th
-                      class="bg-base-100 border-base-200/70 sticky left-64 z-50 w-44 min-w-44 border-r border-b px-4 py-3 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]"
+                      class="bg-base-100 border-base-200/70 sticky left-64 z-50 w-44 min-w-44 border-r border-b px-4 py-3 shadow-table-edge"
                       >Modalidad</th
                     >
                     <th class="border-base-200/70 border-b px-6 py-3">
@@ -282,7 +282,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   <button
                     type="button"
                     id="prev-month-btn"
-                    class="btn btn-xs btn-ghost p-1"
+                    class="btn btn-xs btn-ghost p-1 min-h-8 min-w-8"
                     title="Mes anterior"
                     aria-label="Mes anterior"
                   >
@@ -292,7 +292,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                   <button
                     type="button"
                     id="next-month-btn"
-                    class="btn btn-xs btn-ghost p-1"
+                    class="btn btn-xs btn-ghost p-1 min-h-8 min-w-8"
                     title="Mes siguiente"
                     aria-label="Mes siguiente"
                   >
@@ -686,7 +686,8 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
                       name="boxicons:calendar-filled"
                       size={14}
                       class="text-warning shrink-0"
-                    />
+                    
+            is:inline />
                     <span
                       id="overtime-weekend-date-display"
                       class="truncate text-xs tabular-nums"
@@ -865,6 +866,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 
             <!-- Columna 2+3: Lista compacta -->
             <div
+              id="overtime-compact-list-card"
               class="bg-base-200/40 border-base-300/60 space-y-3 rounded-xl border p-4 lg:col-span-2"
             >
               <p
@@ -926,7 +928,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   <!-- Quick Edit Context Menu -->
   <div
     id="quick-edit-menu"
-    class="bg-base-100/90 border-base-300 animate-in fade-in zoom-in-95 fixed z-100 hidden min-w-40 rounded-xl border p-1.5 shadow-2xl backdrop-blur-xl duration-100"
+    class="bg-base-100/90 border-base-300 animate-in fade-in zoom-in-95 fixed z-100 hidden min-w-40 rounded-xl border p-1.5 shadow-overlay backdrop-blur-xl duration-100"
   >
     <div class="border-base-200 mb-1 border-b px-3 py-2">
       <p
@@ -982,12 +984,12 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
     class="animate-in slide-in-from-right-10 fade-in fixed right-6 bottom-6 z-50 hidden duration-300"
   >
     <div
-      class="bg-warning/10 border-warning/30 text-base-content flex max-w-md min-w-95 items-center gap-5 rounded-3xl border-2 px-6 py-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-xl"
+      class="bg-warning/10 border-warning/30 text-base-content flex max-w-md min-w-95 items-center gap-5 rounded-3xl border-2 px-6 py-4 shadow-modal backdrop-blur-xl"
     >
       <div
         class="bg-warning/15 text-warning border-warning/20 flex h-10 w-10 shrink-0 animate-pulse items-center justify-center rounded-2xl border"
       >
-        <Icon name="boxicons:alert-triangle-filled" size={22} />
+        <Icon name="boxicons:alert-triangle-filled" size={22} is:inline />
       </div>
       <div class="min-w-0 flex-1">
         <span class="text-xxs text-warning font-black tracking-wider uppercase"
@@ -1022,7 +1024,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   <!-- Edit Mode Toolbar -->
   <div
     id="edit-mode-toolbar"
-    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 flex-wrap items-center justify-center gap-2 rounded-2xl border p-2 opacity-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-500"
+    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 flex-wrap items-center justify-center gap-2 rounded-2xl border p-2 opacity-0 shadow-overlay transition-all duration-500"
   >
     <!-- Brush Tools -->
     <div
@@ -1121,7 +1123,7 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   <!-- Pasiva Edit Mode Toolbar -->
   <div
     id="pasiva-edit-toolbar"
-    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 flex-wrap items-center justify-center gap-2 rounded-2xl border p-2 opacity-0 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-500"
+    class="bg-base-100 border-base-300 pointer-events-none fixed bottom-6 left-1/2 z-100 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 translate-y-32 flex-wrap items-center justify-center gap-2 rounded-2xl border p-2 opacity-0 shadow-overlay transition-all duration-500"
   >
     <div class="flex items-center gap-2 px-1">
       <Icon
@@ -1873,12 +1875,6 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   /* Ocultar elementos marcados con no-export durante la exportación de imágenes */
   .exporting-image .no-export {
     display: none !important;
-  }
-
-  /* Agregar espacio extra en la parte inferior del card al exportar para que no quede pegado */
-  #saturday-rotation-card.exporting-image,
-  #overtime-card.exporting-image {
-    padding-bottom: 2.5rem !important;
   }
 
   #rotation-timeline-table th:first-child,

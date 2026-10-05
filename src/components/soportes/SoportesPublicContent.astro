@@ -199,7 +199,12 @@ const totalMembers = visibleHelpdesks.reduce(
         aria-label="Limpiar todos los filtros"
         title="Limpiar todos los filtros"
       >
-        <Icon name="boxicons:trash-filled" size={16} aria-hidden="true" />
+        <Icon
+          name="boxicons:trash-filled"
+          size={16}
+          aria-hidden="true"
+          is:inline
+        />
         <span class="hidden lg:inline">Limpiar filtros</span>
       </button>
       {
@@ -286,6 +291,7 @@ const totalMembers = visibleHelpdesks.reduce(
               size={32}
               class="opacity-30"
               aria-hidden="true"
+              is:inline
             />
           </div>
           <p class="text-sm font-semibold">No hay mesas de ayuda disponibles</p>
@@ -298,7 +304,7 @@ const totalMembers = visibleHelpdesks.reduce(
 
     <SearchEmptyState
       id="no-results-state-soportes"
-      icon="boxicons:search-filled"
+      icon="boxicons:search"
       class="col-span-full hidden"
       title="Sin resultados"
       description="No se encontraron mesas de ayuda o áreas que coincidan con los filtros aplicados."

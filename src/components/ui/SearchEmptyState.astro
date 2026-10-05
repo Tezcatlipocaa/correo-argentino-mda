@@ -66,8 +66,7 @@ const {
             <div id={id ? `${id}-icon-search` : "empty-icon-search"}>
               <Icon
                 name={icon}
-                class="text-base-content/40 group-hover:text-primary size-9 transition-colors duration-300"
-              />
+                class="text-base-content/40 group-hover:text-primary size-9 transition-colors duration-300" is:inline />
             </div>
             <div
               id={id ? `${id}-icon-notfound` : "empty-icon-notfound"}
@@ -75,26 +74,24 @@ const {
             >
               <Icon
                 name={notFoundIcon}
-                class="text-error/60 group-hover:text-error size-9 transition-colors duration-300"
-              />
+                class="text-error/60 group-hover:text-error size-9 transition-colors duration-300" is:inline />
             </div>
           </>
         ) : (
           <Icon
             name={icon}
-            class="text-base-content/40 group-hover:text-primary size-9 transition-colors duration-300"
-          />
+            class="text-base-content/40 group-hover:text-primary size-9 transition-colors duration-300" is:inline />
         )
       }
     </div>
   </div>
 
-  <h3
+  <h2
     class="text-base-content mb-2 font-mono text-xl font-bold tracking-tight"
     id={id ? `${id}-title` : undefined}
   >
     {title}
-  </h3>
+  </h2>
   <p
     class="text-base-content/60 mb-6 max-w-sm text-sm"
     id={id ? `${id}-desc` : undefined}

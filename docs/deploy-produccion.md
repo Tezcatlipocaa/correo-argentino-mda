@@ -49,6 +49,7 @@ Completá las 6 variables en `.env`. En producción prestá atención a:
 | `INVGATE_BASE_URL`     | `https://correoargentino.sd.cloud.invgate.net/api/v1/`                     |
 | `INVGATE_API_USERNAME` | `portalmda`                                                                |
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
+| `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
@@ -132,15 +133,18 @@ El VirtualHost ya existe en `C:\xampp\apache\conf\extra\httpd-vhosts.conf`. En u
 </VirtualHost>
 ```
 
-> **Nota:** El hostname final del portal es `mda.correo.local` (`astro.config.mjs` → `site: "https://mda.correo.local"`). `portal-mda.correo.local` se mantiene como alias del vhost.
-
-Tu servidor ya tiene SSL cargado via:
-
-```apache
-Include conf/extra/httpd-ssl.conf
-```
+> **Nota:** El hostname canónico es `mda.correo.local` (debe coincidir con el SAN del certificado; `astro.config.mjs` usa `site: "https://mda.correo.local"`). `portal-mda.correo.local` se mantiene como alias del vhost.
 
 ### 5.3. Configurar HTTPS (certificado interno AD CS)
+
+En `httpd.conf`, verificar/descomentar:
+
+```apache
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+LoadModule headers_module modules/mod_headers.so
+Include conf/extra/httpd-ssl.conf
+```
 
 En B1842zacw1718 el certificado y la key ya están en disco:
 
@@ -209,14 +213,16 @@ C:\xampp\apache\bin\httpd.exe -k restart
 Verificación rápida desde el server:
 
 ```powershell
+C:\xampp\apache\bin\openssl.exe s_client -connect mda.correo.local:443 -servername mda.correo.local
 curl.exe -sI http://mda.correo.local  | Select-String "HTTP/"
 curl.exe -sI https://mda.correo.local | Select-String "HTTP/"
+curl.exe -sI http://mda.correo.local/login
+curl.exe -sI https://mda.correo.local/login
 ```
 
 El primero debe devolver 301. Los clientes fuera del dominio verán aviso de certificado: la raíz interna no está en sus stores (esperado para `.correo.local`).
 
-> La app ya está adaptada: cookie de sesión `secure` en build de producción (`src/lib/session.ts`), `site` HTTPS en `astro.config.mjs` y URL de la extensión en `src/components/buscador-usuarios/ChromeExtensionBanner.astro`.
-
+> La app ya está adaptada: cookie de sesión `secure` vía `SESSION_COOKIE_SECURE` (`src/lib/session.ts` y `ecosystem.config.cjs`), `site` HTTPS en `astro.config.mjs` y URL de la extensión en `src/components/buscador-usuarios/ChromeExtensionBanner.astro`.
 ### 5.4. Verificar el archivo hosts (para pruebas locales)
 
 Si accedés por nombre de dominio local:

@@ -78,6 +78,21 @@ function applyRateLimit(
       }
     }
 
+    // Favoritos de títulos: perfil propio y amplio (toggles por-usuario).
+    if (isWrite && relativePath === "/api/titulos/favoritos") {
+      const result = checkRateLimit(
+        `fav-write:${identifier}:${relativePath}`,
+        RATE_LIMITS.favoriteWrite,
+      );
+      if (!result.ok) {
+        return tooManyRequests(
+          "Demasiadas acciones. Probá en unos segundos.",
+          result.retryAfter,
+        );
+      }
+      return null;
+    }
+
     const key = `${isWrite ? "api-write" : "api-read"}:${identifier}:${relativePath}`;
     const profile = isWrite ? RATE_LIMITS.apiWrite : RATE_LIMITS.apiRead;
     const result = checkRateLimit(key, profile);
@@ -136,6 +151,7 @@ function setSecurityHeaders(response: Response): Response {
       "img-src 'self' data: blob: https://wms.ign.gob.ar",
       "font-src 'self'",
       "connect-src 'self' data: https://docs.google.com https://cdn.jsdelivr.net https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
+      "media-src 'self' data: blob: https:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -313,12 +329,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // Redirigir si no está autenticado e intenta acceder a supervisión o admin (insensible a mayúsculas/minúsculas)
+  // Redirigir si no está autenticado e intenta acceder a supervisión, admin o automatizaciones (insensible a mayúsculas/minúsculas)
   if (
     lowerPath === "/supervision" ||
     lowerPath.startsWith("/supervision/") ||
     lowerPath === "/admin" ||
-    lowerPath.startsWith("/admin/")
+    lowerPath.startsWith("/admin/") ||
+    lowerPath === "/automatizaciones" ||
+    lowerPath.startsWith("/automatizaciones/")
   ) {
     if (currentUser.id === 0) {
       return redirect(resolveUrl("/login"));

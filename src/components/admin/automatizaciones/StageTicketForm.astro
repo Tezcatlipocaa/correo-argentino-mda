@@ -1,0 +1,182 @@
+---
+import { Icon } from "astro-icon/components";
+import FormField from "@components/ui/forms/FormField.astro";
+import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+
+interface TicketValues {
+  id: number;
+  matchLabel: string;
+  displayName: string | null;
+  aliases: string[] | null;
+  matchDescription: string[] | null;
+  matchCategory: string | null;
+  nestChildren: boolean;
+  blocking: boolean;
+  kind: string;
+  position: number;
+}
+
+interface Props {
+  mode: "add" | "edit";
+  selfPath: string;
+  ticket?: TicketValues;
+  /** Orden sugerido para el alta (cantidad actual de tickets). */
+  defaultPosition?: number;
+}
+
+const { mode, selfPath, ticket, defaultPosition = 0 } = Astro.props;
+const isEdit = mode === "edit";
+
+const currentKind = isEdit ? (ticket!.kind ?? "ticket") : "ticket";
+const kindOptions = [
+  { value: "ticket", label: "Ticket" },
+  { value: "form", label: "Formulario" },
+  { value: "manual", label: "Manual" },
+  { value: "subprocess", label: "Subproceso" },
+  { value: "auto", label: "Tarea a Soporte TI" },
+];
+
+const idFor = (prefix: string): string =>
+  isEdit ? `${prefix}-${ticket!.id}` : `add-${prefix}`;
+
+const gridClass =
+  "grid grid-cols-1 items-end gap-3 md:grid-cols-[1.4fr_1fr_130px_120px_110px_auto]";
+const formClass = isEdit
+  ? `${gridClass} border-base-300 bg-base-100 rounded-lg border p-3`
+  : gridClass;
+---
+
+<form method="POST" action={selfPath} class={formClass} data-async-form>
+  {isEdit ? (
+    <input type="hidden" name="ticket_id" value={String(ticket!.id)} />
+  ) : (
+    <input type="hidden" name="action" value="add_ticket" />
+  )}
+  <FormField
+    id={idFor("tl")}
+    name="matchLabel"
+    label={isEdit ? "matchLabel" : "Agregar ticket — matchLabel"}
+    required
+    placeholder={isEdit ? undefined : "Ej: Relevamiento de conexiones"}
+    value={isEdit ? ticket!.matchLabel : undefined}
+    inputClass="input-sm font-mono"
+  />
+  <FormField
+    id={idFor("td")}
+    name="displayName"
+    label="Display (opcional)"
+    value={isEdit ? (ticket!.displayName ?? "") : undefined}
+    inputClass="input-sm"
+  />
+  <div class="flex flex-col gap-1">
+    <span class="text-base-content/60 text-xs font-medium uppercase">
+      Bloqueante
+    </span>
+    <input
+      type="checkbox"
+      name="blocking"
+      class="toggle toggle-sm"
+      checked={isEdit ? ticket!.blocking : true}
+    />
+  </div>
+  <div class="flex flex-col gap-1">
+    <span class="text-base-content/60 text-xs font-medium uppercase">
+      Tipo
+    </span>
+    <select name="kind" class="select select-bordered select-sm">
+      {
+        kindOptions.map((option) => (
+          <option value={option.value} selected={option.value === currentKind}>
+            {option.label}
+          </option>
+        ))
+      }
+    </select>
+  </div>
+  <FormField
+    id={idFor("tp")}
+    name="position"
+    label="Orden"
+    type="number"
+    min="0"
+    required
+    value={isEdit ? String(ticket!.position) : String(defaultPosition)}
+    inputClass="input-sm font-mono"
+  />
+  <div class="flex items-center justify-start gap-1">
+    {isEdit ? (
+      <>
+        <button
+          type="submit"
+          name="action"
+          value="update_ticket"
+          class="btn btn-ghost btn-sm text-base-content/70 hover:text-base-content"
+          aria-label={`Guardar cambios del ticket ${ticket!.matchLabel}`}
+        >
+          <Icon name="boxicons:save" size={18} aria-hidden="true" />
+        </button>
+        <button
+          type="submit"
+          name="action"
+          value="delete_ticket"
+          class="btn btn-ghost btn-sm text-error hover:bg-error/10"
+          aria-label={`Eliminar ticket ${ticket!.matchLabel}`}
+          onclick="return confirm('¿Eliminar este ticket esperado?')"
+        >
+          <Icon name="boxicons:trash" size={18} aria-hidden="true" />
+        </button>
+      </>
+    ) : (
+      <button type="submit" class="btn btn-primary btn-sm px-3 font-medium">
+        <Icon name="boxicons:plus" size={18} aria-hidden="true" />
+        Agregar
+      </button>
+    )}
+  </div>
+  <FormTextarea
+    id={idFor("ta")}
+    name="aliases"
+    label="Aliases (uno por línea)"
+    rows={2}
+    value={isEdit ? (ticket!.aliases ?? []).join("\n") : undefined}
+    textareaClass="textarea-sm font-mono"
+    class="md:col-span-full"
+    helpText={isEdit
+      ? "Labels alternativos de InvGate que también agrupan a esta card."
+      : "Opcional: labels alternativos que también agrupan a esta card."}
+  />
+  <FormTextarea
+    id={idFor("tdesc")}
+    name="matchDescription"
+    label="Descripción — keywords (una por línea)"
+    rows={2}
+    value={isEdit ? (ticket!.matchDescription ?? []).join("\n") : undefined}
+    textareaClass="textarea-sm font-mono"
+    class="md:col-span-full"
+    helpText={isEdit
+      ? "Frases que matchean la card cuando el título no alcanza (títulos duplicados)."
+      : "Opcional: frases que matchean la card cuando el título no alcanza."}
+  />
+  <FormField
+    id={idFor("tcat")}
+    name="matchCategory"
+    label="Categoría InvGate — sufijo de ruta (opcional)"
+    value={isEdit ? (ticket!.matchCategory ?? "") : undefined}
+    inputClass="input-sm font-mono"
+    class="md:col-span-full"
+    helpText={isEdit
+      ? "Matchea por ruta de categoría cuando el título no distingue (ej: 'Central Paq. » Implementación')."
+      : "Opcional: sufijo de ruta de categoría de InvGate que también matchea esta card."}
+  />
+  <label class="flex items-center gap-2 md:col-span-full">
+    <input
+      type="checkbox"
+      name="nestChildren"
+      class="toggle toggle-sm"
+      checked={isEdit ? ticket!.nestChildren : false}
+    />
+    <span class="text-base-content/70 text-sm">
+      Anidar los tickets matcheados como sub-nodos
+    </span>
+  </label>
+</form>

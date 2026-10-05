@@ -37,6 +37,16 @@ export function normalizeRole(role: string): Role {
   return "agent";
 }
 
+/**
+ * Sesión iniciada: el middleware asigna `id: 0` al usuario anónimo, así que
+ * `id !== 0` es el marcador de sesión activa.
+ */
+export function isLoggedIn(
+  user: { id: number } | null | undefined,
+): boolean {
+  return Boolean(user && user.id !== 0);
+}
+
 export interface RoutePermission {
   path: string;
   roles: Role[];
@@ -63,6 +73,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/admin/usuarios", roles: ["admin"] },
   { path: "/admin/usuarios/mesas-de-ayuda", roles: ["admin"] },
   { path: "/admin/auditoria", roles: ["admin"] },
+  { path: "/admin/automatizaciones/etapas", roles: ["admin"] },
   { path: "/admin/feedback", roles: ["admin"] },
   { path: "/admin/permisos", roles: ["admin"] },
   { path: "/admin/papelera", roles: ["admin"] },
@@ -251,6 +262,11 @@ export function getModulePermissions(
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   } else if (moduleName === "permisos") {
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
+    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
+  } else if (moduleName === "automatizaciones") {
+    // Monitoreo de automatizaciones InvGate: lectura para todos los roles.
+    // Escritura (cierre/reapertura local de casos) solo para admin.
+    perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   }
 

@@ -178,6 +178,181 @@ Cada entrada sigue este formato:
 **Regla:** Todo Icon dentro de un `<template>` clonado por JS o dentro de filas removibles debe usar `is:inline`. Los mesas-de-ayuda/edit.astro ya usaban esta solucion de facto (SVG crudo pegado a mano).
 **Archivos afectados:** src/components/admin/OfficeForm.astro
 
+---
+
+### 2026-09-05 — IDs internos de InvGate difieren por instancia (QA ≠ producción) y endpoints paginados
+
+**Problema:** El módulo /automatizaciones (migrado de invgate-automation) traía la constante AUTOMATION_CATEGORY_ID=86 validada en QA; en producción 86 es "Impresoras (GEN) - Configuración" y la hoja real es 3023 ("Automatización de sucursal" bajo TI Tecnologia informatica » Gestión de Servicios » Mesa de Coordinación » Proyectos). Además /categories y /incidents.by.status son paginados (máx 500/page) y el volumen real (2.859 categorías, 78k tickets) rompía la asunción de una sola página y del scan completo por render.
+**Causa:** Los IDs internos de InvGate no son estables entre instancias, y los shapes/paginaciones se validaron solo con el volumen chico de QA.
+**Solucion:** Resolución dinámica por nombres/rutas (categoría hoja por ruta verbatim de categorías; cola de tickets por helpdesk "Mesa de Coordinación" + nivel en helpdesksandlevels con desambiguación empírica contra la categoría, override INVGATE_AUTOMATION_GROUP_ID/INVGATE_AUTOMATION_CATEGORY_ID). Discovery via /incidents.by.helpdesk del nivel (~30 tickets en producción) + filtro de categoría local + dif de padres desaparecidos (re-chequeo bulk para "Recientes"). Soporte del formato de títulos de producción "Automatización de sucursal B0091" y del formulario inicial en la description del padre (QA lo trae en el primer comentario).
+**Regla:** Nunca hardcodear IDs internos de InvGate entre instancias: resolverlos por nombre/ruta verbatim o por vista configurada. Verificar paginación contra el volumen real de producción antes de asumir una sola página. Los títulos de tickets son datos: extender el parser ante formatos nuevos sin romper los anteriores.
+**Archivos afectados:** src/lib/workflow/category-resolver.ts, src/lib/workflow/discovery.ts, src/lib/workflow/resolver.ts, src/lib/workflow/branch-title.ts, src/lib/invgate/automation/*, .agents/skills/invgate-api-requests/endpoints-reference.md
+
+---
+
+### 2026-09-05 — View transitions: tema oscuro roto tras swap y morph ausente en contenido de server islands
+
+**Problema:** Con ClientRouter scoped a /automatizaciones: (1) al navegar al detalle el tema pasaba a oscuro (con SO en dark) y el toggle dejaba de funcionar; (2) la view transition solo se veía en el retorno al listado, no en la ida.
+**Causa:** (1) El swap de Astro no re-ejecuta scripts inline idénticos y el html nuevo llega sin data-theme — sin el atributo ganaba el `--prefersdark` de daisyUI (preferencia del SO) y el toggle moría: theme-change (scripts/toggle-mode.ts) bindea listeners por-elemento y los module scripts se ejecutan una sola vez por sesión. Además nada escribía localStorage("theme"): la persistencia documentada nunca funcionó. (2) El CSS `view-transition-name` que Astro emite en el head de la página no viaja con el contenido inyectado de una server island: los items tenían el atributo de scope pero 0 reglas de nombre → sin par de morph en la ida.
+**Solucion:** (1) applyTheme() + listener astro:after-swap en BaseLayout, y delegación en document que aplica y persiste el tema (data-theme + localStorage) al togglear — reemplaza el rol runtime de theme-change; toggle-mode.ts re-consulta el input vivo para aria-label/checked (observer en documentElement + after-swap). (2) view-transition-name como inline style en items del listado, header del detalle y skeleton del detalle (el inline style viaja siempre con el HTML).
+**Regla:** Con ClientRouter: (a) todo estado seteado por script inline en head debe re-aplicarse en astro:after-swap; (b) los module scripts corren una vez por sesión — re-vincular listeners via lifecycle events o usar delegación en document; (c) directivas transition:* dentro de server islands requieren CSS inline (el CSS hoisted al head no alcanza el contenido inyectado).
+**Archivos afectados:** src/layouts/BaseLayout.astro, scripts/toggle-mode.ts, src/pages/automatizaciones/_components/AutomationActiveList.astro, src/pages/automatizaciones/_components/AutomatizacionDetalleContent.astro, src/pages/automatizaciones/_components/AutomatizacionDetalleSkeleton.astro
+
+---
+
+### 2026-09-06 — Animación de `<details>` muerta por `display: flex` de DaisyUI `.card`
+
+**Problema:** En /automatizaciones, las cards `<details>` no animaban el expandir/colapsar pese a tener el CSS nativo correcto (`::details-content` con transición de `block-size` + `interpolate-size: allow-keywords`): la altura saltaba de 54px a 171px en un solo frame.
+**Causa:** DaisyUI `.card` aplica `display: flex; flex-direction: column` al `<details>`. En Chromium, un `<details>` con `display: flex` deja de interpolar la transición de `::details-content` (el pseudo-elemento pasa de `block-size: 0 / content-visibility: hidden` a `auto / visible` sin transición). Verificado en aislamiento: con `display: block` hay 18 alturas interpoladas; con `flex`, solo 2 (snap).
+**Solucion:** Forzar `display: block` scopeado a las cards del listado (`details.group { display: block }` en AutomationActiveList.astro). El layout apilado summary + contenido es idéntico con block. Diagnosticado comparando computed styles de `::details-content` en la app vs variantes de aislamiento (Playwright + muestreo de altura por rAF).
+**Regla:** Al animar `<details>` con `::details-content`, forzar `display: block` sobre el elemento si alguna clase (DaisyUI card u otra) le aplica flex/grid. Para diagnosticar animaciones CSS muertas: comparar computed styles del pseudo-elemento dentro de la app contra un HTML de aislamiento con las mismas reglas.
+**Archivos afectados:** src/pages/automatizaciones/_components/AutomationActiveList.astro
+
+---
+
+### 2026-09-06 — View transitions sin morph por server islands + datos de solución y ubicación no disponibles en producción
+
+**Problema:** En /automatizaciones/[id] el morph de view transition no arrastraba el contenido real al entrar desde el listado: el capture de la nueva página ocurría con el skeleton (el island `server:defer` resuelve DESPUÉS del capture) y luego el contenido aparecía de golpe. En producción además: (1) el bulk `/incidents?comments=1` OMITE `is_solution` (undefined; validado en vivo, hijos 77765/77775), (2) los formularios de producción NO traen la jerarquía de ubicaciones en el campo Sucursal ni el título (sin "Metro » BA » Merlo »..."), así que región/localidad quedaban null aunque el parser las soporta.
+**Causa:** El ClientRouter espera el fetch del documento y captura inmediatamente; los islands se resuelven post-capture. Los shapes de producción difieren de los validados en QA (is_solution solo llega por el endpoint dedicado; la jerarquía vive en el árbol de ubicaciones de InvGate, no en el ticket).
+**Solucion:** (1) Página de detalle SIN server:defer: `[id].astro` renderiza todo sincrónico con `await resolveAutomationDetail(id)` → el contenido existe al capture y el morph funciona. Mitigación de latencia: `prefetch: { prefetchAll: false, defaultStrategy: "hover" }` + `data-astro-prefetch="hover"` en "Ver detalle"/"Volver" (navegación medida: 170ms con prefetch caliente). Morph por elementos con nombres únicos por id: `automation-pretty|title|status|started|progress-${id}` (quitar el name del `li` completo, que morpheaba contra el skeleton). (2) Comentario de solución: `GET /incident.comment?request_id=` (ese endpoint SÍ trae is_solution); resolver lo consulta solo para nodos completados. (3) Región/localidad: fallback en cascada jerarquía del formulario → DB de oficinas por branchCode (`getBranchLocation`, offices.locality/county/regionId).
+**Ampliación (iteración 2):** `transition:persist` NO es aplicable a server islands: el contenido inyectado no deja wrapper en el DOM (el HTML se inserta plano, sin elemento estable que persistir), así que el morph de vuelta seguía en fade. Solución final: listado TAMBIÉN sincrónico (sin server:defer) → contenido real al capture en ambas direcciones. Para hidratar UI cliente (barra de progreso) tras navegaciones del ClientRouter, usar `document.addEventListener("astro:after-swap", ...)` — el MutationObserver no dispara de forma confiable tras el swap. Progreso instantáneo en revisitas: cache en sessionStorage con TTL (el hydrate consulta cache antes de fetchear; se dispara desde astro:after-swap, que corre dentro del callback de la transición → puede formar par de morph).
+**Regla:** Para morphs de view transition con datos dinámicos, el elemento ancla debe existir en el capture: o la página es SSR sincrónica, o el shell renderiza el header sin defer y el body queda diferido. No confiar en shapes de QA para producción: verificar en vivo cada campo (is_solution del bulk, jerarquía en formulario). Para datos derivados de ubicación de sucursal, la DB local de oficinas (código BXXXX) es fuente confiable.
+**Archivos afectados:** src/pages/automatizaciones/[id].astro, src/pages/automatizaciones/_components/AutomatizacionDetalleContent.astro, src/pages/automatizaciones/_components/AutomationActiveList.astro, src/pages/automatizaciones/_components/AutomationTimeline.astro, src/pages/automatizaciones/_components/InitialFormDetails.astro, src/components/ui/PageHeader.astro, src/lib/workflow/resolver.ts, src/lib/workflow/branch-location.ts, src/lib/invgate/automation/incidents.ts, src/lib/invgate/automation/types.ts, astro.config.mjs
+
+---
+
+### 2026-09-07 � Matcher de etapas: titulos feos a mano matchean por segmento posterior al " - "
+
+**Problema:** En /automatizaciones/[id] las etapas mostraban FALTANTE falso: tickets creados a mano titulados "AUTOMATICACION DE SUCURSAL B0168<L>\tLIBERTAD - SOLICITUD DE EQUIPAMIENTO" (columna fea de la Mesa) caian en "Sin etapa" porque el stepLabel (texto ANTES del primer " - ") era el segmento feo, no la gestion.
+
+**Causa:** El match solo evaluaba el stepLabel; la gestion real vive en el ULTIMO segmento del titulo ("... - SOLICITUD DE EQUIPAMIENTO"). Ademas, el matching inverso por tokens (nodo subconjunto de la plantilla) matchea titulos genericos de UNA palabra: "Direccion IP - Solicitud - Automatizacion..." matcheaba "Solicitud de equipamiento" con un solo token.
+
+**Solucion:** matchScore evalua TODOS los segmentos del titulo (split " - ") y se queda con el mejor score. El lado inverso (nodo corto, ej "Solicitud Smart Point") exige cobertura total del nodo Y al menos 2 tokens significantes matcheados contra la plantilla; un solo token generico no matchea.
+
+**Regla:** El matching de templates contra titulos de InvGate usa los segmentos del titulo (split " - "), no solo el stepLabel. Match inverso (titulo mas corto que el matchLabel) requiere >= 2 tokens: un token generico ("Solicitud", "Solucion") nunca matchea solo.
+
+**Archivos afectados:** src/lib/workflow/stages.ts, tests/workflow-stages.test.mjs
+
+---
+
+### 2026-09-10 — Workflow AUTSUC nuevo en producción: padres en el helpdesk (no en el nivel), solicitud en hijos "Instalaciones" y renombre de la categoría
+
+**Problema:** El discovery /automatizaciones dejó de traer los tickets padres: (1) falla "No se pudo resolver la categoría", (2) "Datos de solicitud" mostraba el último comentario ("Se reasigna a nueva mesa AUTSUC") en lugar del formulario, (3) no aparecía el último caso real creado con el workflow nuevo (#79867).
+
+**Causa:** El workflow cambió de formato: hoja renombrada a "Automatizar sucursal" (3023) bajo la misma rama Mesa de Coordinación » Proyectos; los padres del workflow nuevo (título "AUTSUC <Sucursal> (B####) <fecha>") se asignan DIRECTO al helpdesk "TI_GSM_MDC AUTSUC" (6409) sin pasar por su nivel (6410); el padre llega con description vacía y 0 comentarios — la solicitud vive en la description de los hijos vinculados "Instalaciones para AUTSUC #<id>". Además la prioridad de fuentes del initialForm (comentario primero) dejaba un comentario de reasignación encima del formulario de la description.
+
+**Solucion:** (a) queue-resolver: sondear el helpdesk Y sus niveles, y devolver todas las colas que contengan la categoría (2026-09 conviven 6409 + 6410); discovery unifica IDs entre colas. (b) category-resolver: primera ruta por el nombre nuevo "Automatizar sucursal" (manteniendo "Automatización de sucursal" como variante) con fallback por nombre regex y desambiguación por unicidad. (c) branch-title: patrones "AUTSUC <nombre> (B####)" y "sucursal B#### - <nombre>"; dedupe del "· <nombre>" cuando el título ya lo menciona (fix "B0168 - Libertad · Libertad"). (d) resolver: description del padre primero, luego comentario, luego fallback a los hijos "Instalaciones para AUTSUC" (nuevo parser instal-form.ts extrae Sucursal/Jefe/fecha programada reutilizando parseSucursalValue). (e) stages: strip de prefijos jerarquizados "1-"/"1.1-" en el matchkey.
+
+**Regla:** Ante cambios de mesa en InvGate: categoría y cola se revalidan por nombre (nunca IDs hardcodeados). Sondear TODAS las colas plausibles (helpdesk + niveles) porque acepta que los padres viven asignados al helpdesk sin nivel. El formulario inicial (solicitud) puede migrar de fuente (comentario → description → hijos vinculados): el parser hace fallback en cascada y nunca lanza.
+
+**Archivos afectados:** src/lib/workflow/queue-resolver.ts, src/lib/workflow/discovery.ts, src/lib/workflow/category-resolver.ts, src/lib/workflow/branch-title.ts, src/lib/workflow/resolver.ts, src/lib/workflow/instalaciones-form.ts, src/lib/workflow/stages.ts
+
+---
+
+### 2026-09-15 — SSR en streaming: la sidebar emitida después del slot falta durante la carga
+
+**Problema:** Al entrar a `/automatizaciones` (especialmente la primera vez, render frío/lento) la barra lateral no se mostraba mientras la página cargaba y aparecía recién al terminar.
+
+**Causa:** En `BaseLayout.astro` la sidebar (`<DrawerContent>`) se renderizaba DESPUÉS de `<main><slot /></main>`. Astro SSR responde en streaming (`transfer-encoding: chunked`): el `<main>` suspende en el frontmatter de la página (`AutomatizacionesContent.astro` espera `discoverAutomations()` + `getIncidentStatuses()` de InvGate), y todo lo que va después del slot —la sidebar— recién se emite al resolver. El navegador ya había pintado head + navbar + `<main>` vacío, así que se veía el shell sin barra lateral.
+
+**Solucion:** Mover `<DrawerContent />` ANTES de `<div class="drawer-content">` en `BaseLayout.astro`, de modo que el shell (toggle + sidebar) se emita antes de cualquier slot que pueda suspenderse. Validado que el layout queda idéntico en ≥1024px y <1024px (daisyUI coloca por grid `grid-column-start` explícito y el `input.drawer-toggle` sigue primero, así que los combinadores `~` se mantienen).
+
+**Regla:** En layouts con SSR streaming, el chrome persistente (sidebar/navbar) debe ir ANTES del `<slot />` en el orden del DOM. Lo que se emite después de un slot con `await` lento no se pinta hasta que ese slot resuelve. Verificar midiendo el orden en el HTML servido (`<aside …drawer-side` antes de `<main>`), no solo el render caliente.
+
+**Archivos afectados:** src/layouts/BaseLayout.astro, tests/automatizaciones-sidebar-shell.spec.ts
+
+---
+
+### 2026-09-15 — Primera carga de /automatizaciones: caches fríos + cadena secuencial de InvGate
+
+**Problema:** La primera carga de `/automatizaciones` tardaba ~6.9 s. El shell ya se pintaba (fix de streaming), pero el contenido esperaba el scan completo. Con cada restart de PM2 los caches en memoria arrancan vacíos y el primer usuario paga todo.
+
+**Causa:** `discoverAutomations()` encadena llamadas secuenciales a InvGate: `resolveAutomationCategoryId` (6 páginas de `/categories` en serie, ~1.9 s) → `resolveAutomationQueueIds` (getHelpdesks + getHelpdesksAndLevels en serie y **5 colas sondeadas en serie**, cada una 2 calls, ~3.5 s) → `incidents.by.helpdesk` → bulk. Además el discovery expiraba duro a los 5 min (el que llegaba justo pagaba ~1 s) y nada sobrevivía a un restart.
+
+**Solucion:** (1) Paralelizar: `/categories` en batches concurrentes de 6, sondeo de colas con `Promise.all`, categoría ∥ (helpdesks + levels), chunks de `/incidents` en batches de 4. Frío 6.9 s → ~2.9 s. (2) Persistir en SQLite (`invgate_cache`) la resolución de categoría/colas, los estados y el snapshot de discovery, con TTL 24 h / 30 min. (3) Stale-while-revalidate en `discoverAutomations` (sirve snapshot y refresca en background, single-flight) y seeding de `seenParentStatuses`/`finalizedSeen` desde el snapshot para no perder "Recientes" tras un restart. (4) Pre-warm: `scripts/warm-automations.ts` corrido desde `auto-deploy.bat` post `pm2 start`. Resultado: proceso nuevo con cache persistido ~4 ms; frío real (cache vacío) ~2.9 s.
+
+**Regla:** En módulos que agregan datos de APIs externas, separar el costo en (a) paralelizar llamadas independientes, (b) persistir las resoluciones estables cross-restart en SQLite, (c) servir stale + refrescar en background, y (d) pre-warm en el deploy. Los caches solo-en-memoria se pierden en cada restart y siempre golpean al primer usuario. El override por env debe aceptar multi-valor cuando la instancia tiene más de una cola.
+
+**Archivos afectados:** src/lib/invgate/automation/categories.ts, src/lib/invgate/automation/incidents.ts, src/lib/invgate/automation/statuses.ts, src/lib/invgate/cache.ts, src/lib/workflow/category-resolver.ts, src/lib/workflow/queue-resolver.ts, src/lib/workflow/discovery.ts, src/db/schema.ts, scripts/warm-automations.ts, scripts/auto-deploy.bat, .env.example, tests/workflow-queue-cache.test.mjs
+
+---
+
+### 2026-09-15 — Cierre local de automatizaciones: caches de detalle/discovery y epoch en segundos
+
+**Problema:** Al cerrar/reabrir un caso localmente, el detalle seguía mostrando "En curso" (sin banner) mientras que el listado ya lo reclasificaba.
+
+**Causa:** El cierre/reopertura se persisten en SQLite y se invalidaba el cache de discovery, pero `resolveAutomationDetail` tiene su propio cache en memoria (TTL 2 min): el reload del detalle servía el resultado viejo con `closure: null`. Además `formatEpochDateTime` espera epoch en **segundos** (como InvGate); guardar `Date.now()` (ms) producía fechas absurdas (año 58676) y rompía el orden de `recentFinalized` (mezcla ms/segundos).
+
+**Solucion:** Exportar `invalidateAutomationDetail(id)` en `resolver.ts` y llamarlo junto a `invalidateDiscoveryCache()` en las actions de cierre y reapertura. Persistir `closedAt` con `Math.floor(Date.now()/1000)` (segundos, consistente con InvGate y con el orden de finalizadas). El cierre automático al 100% se evalúa dentro del pipeline de detalle (oportunista) y limpia auto-cierres si el progreso retrocede.
+
+**Regla:** Cuando una acción cambia estado que alimenta vistas cacheadas, invalidar TODAS las capas de cache afectadas (discovery y detalle), no solo una. Los timestamps de dominio (cierres, snapshots que conviven con datos de InvGate) se guardan en segundos para que `formatEpochDateTime` y los `sort` por fecha funcionen. Un write feature debe invalidar cache en la misma transacción lógica que persiste el cambio.
+
+**Archivos afectados:** src/lib/workflow/closures.ts, src/lib/workflow/discovery.ts, src/lib/workflow/resolver.ts, src/actions/index.ts, src/lib/rbac.ts, src/pages/automatizaciones/_components/AutomatizacionDetalleContent.astro, src/pages/automatizaciones/_components/AutomationList.astro, src/pages/automatizaciones/[id].astro, src/db/schema.ts, tests/workflow-closures.test.mjs
+
+---
+
+### 2026-09-15 — Padres de automatización que desaparecen al reasignarse a otra mesa
+
+**Problema:** Casos recién iniciados aparecían en el portal y dejaban de figurar al completarse el formulario inicial, cuando el workflow reasignaba el padre a otra mesa. Ejemplo real: `#81683/#81679/#81676` (categoría 3023) pasaron del helpdesk AUTSUC (6409/nivel 6410) al nivel 2594 (`TECO_SoporteREDN2`) y desaparecieron.
+
+**Causa:** `discoverAutomations` listaba padres **solo** desde las colas resueltas vía `incidents.by.helpdesk`; al cambiar `assigned_group_id` el padre sale de esas colas. Peor: `reconcileVanishedParents` re-chequeaba un padre desaparecido y, si seguía activo, lo **descartaba** del seguimiento por "dejar de ser ticket de la cola".
+
+**Solucion:** Tracking persistido de padres activos por ID (`automation_tracked_parents`). El scan une IDs de cola ∪ trackeados y fetch en un solo bulk; los activos se recuerdan y los finalizados/ausentes se podan (los finalizados alimentan "Recientes"). Se eliminó el descarte de activos. Backfill por `incidents.by.status` (status 1-4, todas las mesas, 1 call + bulk) filtrado por categoría, en deploy (`warm-automations`) y worker PM2 diario (`reconcile-automation-parents`, 04:00). Verificado: recuperó los 15 padres activos (12 en cola + 3 movidos) y los 3 reaparecieron en el portal.
+
+**Regla:** No asumir que un ticket de un workflow permanece en la cola donde nació: los flujos lo reasignan de mesa. Trackear por identidad (id) persistida y reconciliar periódicamente por categoría (no por cola). Un "barrido por estado + filtro de categoría" sirve para backfill puntual porque `by.status` devuelve todos los IDs activos en una call. Nunca descartar del seguimiento a un ticket activo solo porque salió de la cola.
+
+**Archivos afectados:** src/lib/workflow/tracked-parents.ts, src/lib/workflow/discovery.ts, src/db/schema.ts, scripts/reconcile-automation-parents.ts, scripts/warm-automations.ts, ecosystem.config.cjs, tests/workflow-tracked-parents.test.mjs
+
+---
+
+### 2026-09-26 — Morph de /automatizaciones: el `view-transition-name` inline no está en el código
+
+**Problema:** La entrada del 2026-09-06 documenta como solución final del morph listado↔detalle el uso de `view-transition-name` inline en items del listado y header del detalle. Al analizar el módulo, `grep view-transition-name src` da 0 resultados y el historial git (un único commit del módulo) nunca lo contuvo: la navegación actual usa el fade por defecto del ClientRouter.
+**Causa:** El anclaje del morph nunca llegó al código commiteado (posible pérdida al consolidar/refactorizar); el ClientRouter sigue activo solo en `/automatizaciones` (`BaseLayout.astro`).
+**Solución:** No se re-implementa por ahora: queda documentado como mejora pendiente, no como bug. Si se retoma, recordar que la card destacada está duplicada en "Todas las automatizaciones" y que los nombres de transición deben ser únicos por página.
+**Regla:** Cuando una entrada de lessons describe una solución de UI, verificar con `grep`/selectores que el código la contenga antes de asumirla vigente: las refactorizaciones pueden haberla removido.
+**Archivos afectados:** src/layouts/BaseLayout.astro, src/pages/automatizaciones/_components/*.astro, docs/lessons.md
+
+---
+
+### 2026-09-26 — `npm run test:unit` (vitest) no resuelve los alias de tsconfig
+
+**Problema:** `npm run test:unit` falla en la colección de casi todos los `tests/*.test.mjs`: vitest no interpreta los `paths` de `tsconfig.json`, así que los imports `@db/*`, `@lib/*` de los módulos de `src/` rompen (`Cannot find package '@db/index'`). Además, la mayoría de esos `.test.mjs` son scripts standalone con su propio `check()` + `process.exit(1)` (pensados para `node --import tsx tests/foo.test.mjs`), no suites vitest: vitest los marca como "sin tests".
+**Causa:** El script `test:unit: vitest run` asume tests en formato vitest con alias configurados, pero el repo usa scripts `tsx` y no hay `vitest.config`.
+**Solución:** Para los tests del módulo automatizaciones correr `npx tsx tests/workflow-*.test.mjs` (todos pasan). El nuevo `tests/workflow-timeline-plan.test.mjs` sigue esa misma convención. Queda pendiente (fuera de alcance) reparar `test:unit` o reemplazarlo por un runner de los scripts.
+**Regla:** Antes de agregar tests, mirar cómo corren los existentes: en este repo los unit tests de workflow son scripts `tsx`, no vitest.
+**Archivos afectados:** package.json, tests/workflow-*.test.mjs
+
+---
+
+### 2026-10-02 - Listado pegado al snapshot persistido y sin paginacion
+
+**Problema:** Un caso cerrado en InvGate no reflejaba "Finalizado" en el portal ni con F5; recien aparecia al abrir el detalle (a veces ~15-20 min despues). Ademas, "Todas las automatizaciones" traia toda la tabla `automation_parents` y filtraba/ordenaba client-side: no escala al crecer el historial.
+
+**Causa:** (1) `resolveAutomationDetail` servia el snapshot persistido y lo marcaba fresco en memoria **sin disparar el refresh en background**, asi que el detalle quedaba pegado hasta que vencia el TTL del persistido (15 min). (2) El listado leia la DB, que solo actualiza el scan de discovery (cache 5 min / SWR hasta 30 min) y no habia revalidacion manual; el fetch de progreso no hacia write-back del estado del padre. (3) `listAutomationParents()` devolvia todas las filas.
+
+**Solucion:** (1) El path persistido dispara siempre `runDetailPipeline` (SWR) y el TTL default del detalle bajo a 5 min. (2) `resolveAutomationProgress` hace write-back de `status_id/updated_at/closed_at` a `automation_parents` (`upsertAutomationParentStatus`). (3) `discoverAutomationsWithMeta` expone `stale`; la vista muestra "Actualizando..." y recarga tras pegarle a `GET /api/automatizaciones/revalidate`, y hay boton "Actualizar" (`?refresh=1`) que fuerza `revalidateAutomations()`. (4) Paginacion server-side (`listAutomationParentsPage` + `listRecentAutomationParents`) con busqueda/filtro en SQL y `Pagination.astro` reutilizado; se elimino `automationListFilterClient.ts`.
+
+**Regla:** En el modulo automatizaciones, la DB de historial es la fuente del listado: cualquier snapshot que se sirva debe poder revalidarse (boton/auto) y toda resolucion que toque un padre debe escribir de vuelta su estado mutable. La busqueda/filtro de un listado paginado va en SQL, nunca client-side sobre la pagina visible.
+
+**Archivos afectados:** src/lib/workflow/resolver.ts, src/lib/workflow/discovery.ts, src/lib/workflow/parent-history.ts, src/lib/invgate/automation/cache-config.ts, src/pages/automatizaciones/_components/AutomatizacionesContent.astro, src/pages/api/automatizaciones/revalidate.ts, src/components/ui/Pagination.astro, src/components/ui/SearchBar.astro, tests/workflow-parent-history.test.mjs
+
+---
+
+### 2026-10-02 - Sucursal y registrador del detalle: un comentario debil bloqueaba el hijo Instalaciones
+
+**Problema:** En B0177 (#81683, Francisco Alvarez) la card "Sucursal" del detalle mostraba "---" mientras que en Tribunales de Banfield (#86762) si aparecia. Inversamente, el "registrado por" aparecia en B0177 pero no en #86762 ni en B0061 (#86717).
+
+**Causa:** (1) `parseInitialForm` devuelve un formulario "debil" (solo `otherFields`) ante cualquier linea "label: valor", y el primer comentario de #81683 era un aviso de Multitoma ("Se vincula tarea ... : #85967"). Ese resultado no-null bloqueaba el fallback `if (parsedForm === null)` al hijo "Instalaciones para AUTSUC", que es donde vive la sucursal real. (2) `initialForm.authorName` solo se resolvia cuando el form venia del primer comentario (`formSource === parentFormComment`); los forms tomados de la description del hijo quedaban sin autor.
+
+**Solucion:** `chooseInitialForm` (`src/lib/workflow/initial-source.ts`) elige la fuente con la sucursal como senal autoritativa: description sustantiva > comentario sustantivo > hijo Instalaciones si aun no hay sucursal. El registrador cae al `creator_id` del ticket padre cuando el form no vino de un comentario. Se agrego `branchName` al detalle como fallback de presentacion en la card Sucursal. La key persistida del detalle pasa a `automation.detail.v2.` para ignorar snapshots viejos.
+
+**Regla:** No asumir que "hay campos parseados" equivale a "hay formulario": validar sustancia (sucursal/jefe/rango IP/fecha) antes de descartar fuentes alternativas. Y todo dato que se muestra en el detalle debe poder resolverse para cualquier origen del form, no solo para el comentario.
+
+**Archivos afectados:** src/lib/workflow/initial-source.ts, src/lib/workflow/resolver.ts, src/pages/automatizaciones/_components/InitialFormDetails.astro, src/pages/automatizaciones/_components/AutomatizacionDetalleContent.astro, tests/workflow-initial-source.test.mjs
+
+---
+
 ### 2026-09-06 - Eliminacion del sistema de permisos DB (routeAccess/moduleAccess)
 
 **Problema:** El sistema de permisos en DB (tablas routes/modules/route_access/module_access/permission_audit_batches) generaba riesgo mayor que su valor: escalada de privilegios via overrides, divergencia sidebar/middleware y mismatch invgateId vs mesas.id.
@@ -483,3 +658,82 @@ Cada entrada sigue este formato:
 **Intento descartado (y por que):** reservar el ancho con un slot de spinner siempre visible (`invisible`/`visibility`) evita el CLS pero deja un hueco vacio al lado del label en el boton que no esta trabajando: el espacio se ve, solo que en lugar de con un spinner tiene nada. Se midio: **28px de ancho reservado** en `#confirm-agents-ticket-btn`. Ademas `invisible` no se puede transicionar, asi que no hay crossfade.
 **Regla:** En un boton DaisyUI el loading **reemplaza** al label, no se suma al lado: apilalos en la misma celda de grid y cruzalos por `opacity`. El loading no puede agregar ni quitar texto (cambiar el texto muta las metricas intrinsecas del boton y, con `flex-1`, desplaza a los hermanos). Si el label tiene que cambiar por semantica (no por loading), va en un span propio y se actualiza con `textContent`. Al testear un boton con loading hay que cubrir **dos** propiedades: (1) caja bilateral estable (`abs(despues - antes) <= 1px`; una comparacion unilateral del tipo "solo que no crezca" deja pasar el caso real, que aqui era un encogimiento de 21px) y (2) `ancho(data-btn-content) - ancho(data-btn-label) <= 1px` en idle, que es lo que detecta el hueco reservado (un `flex` con `gap` en vez de grid lo rompe). Ojo: sacar las clases `col-start-1 row-start-1` sin cambiar el contenedor **no** reproduce el fallo, porque el spinner cae a la fila de abajo y el ancho no cambia. Para poder observar el estado busy sin esperar a InvGate, el spec estira la respuesta con `page.route(...CHECK_ENDPOINT...)` + `route.continue()`; las opacidades se afirman con `toHaveCSS("opacity", ...)`, no con `toBeVisible()`, porque Playwright considera visible a un elemento con `opacity: 0`.
 **Archivos afectados:** src/components/offices/AgentsTicketModal.astro, tests/offices/agents-ticket-duplicate-check.spec.ts
+---
+
+### 2026-09-21 — HTTPS detrás de proxy: adapter en modo middleware ignora X-Forwarded-Proto
+
+**Problema:** Al habilitar TLS en Apache (redirect 80→443 + proxy a Astro) aparecían dos fallas silenciosas: (1) los self-fetch server-side a `Astro.url.origin` (`UbicacionesContent.astro`, `rows.astro`) habrían salido por Apache en http y fallado la validación TLS de Node contra la CA corporativa; (2) la cookie de sesión quedaba sin flag `Secure` (hardcodeado `false`).
+**Causa:** `@astrojs/node` 11.x en modo `middleware` construye el Request tomando el protocolo solo de `req.socket.encrypted` (`astro/dist/core/app/node.js`), ignorando `X-Forwarded-Proto`. Detrás del proxy el socket es HTTP → `Astro.url.origin` = `http://`. Además el flag `Secure` no era configurable y `import.meta.env` (build-time) podía pisar el env de runtime de PM2.
+**Solucion:** Helper `getInternalOrigin()` (`@lib/internalOrigin`): `INTERNAL_ORIGIN` o default `http://127.0.0.1:${PORT||4321}` para self-fetch directo a Express; `SESSION_COOKIE_SECURE` con runtime-first (`process.env` || `import.meta.env`) seteados en `ecosystem.config.cjs`; `site` a `https://mda.correo.local`; runbook de Apache 443 en `docs/deploy-produccion.md` §5.3.
+**Regla:** En modo middleware detrás de un proxy TLS no confiar en `Astro.url.origin`/`protocol` para self-fetch: ir directo al loopback. Los flags de seguridad por env deben priorizar runtime (`process.env`) sobre build-time (`import.meta.env`) para poder cambiarse sin rebuild. Material de certificados nunca al repo.
+**Archivos afectados:** src/lib/internalOrigin.ts, src/lib/session.ts, src/components/admin/invgate/UbicacionesContent.astro, src/pages/api/invgate/locations/rows.astro, astro.config.mjs, ecosystem.config.cjs, docs/deploy-produccion.md, .env.example, .gitignore, AGENTS.md
+
+---
+
+### 2026-09-30 — `html-to-image` volcó ~17 KB de estilos por nodo: SVG de 101 MB imposible de decodificar
+
+**Problema:** Los 3 botones de imagen del cronograma fallaban: el "Exportar Imagen (PNG)" mostraba "Hubo un error al generar la imagen" y no bajaba nada; los botones de copia podían devolver una imagen en blanco. La consola mostraba `Error generating image: [object Event]`.
+**Causa:** `html-to-image` construye un `data:image/svg+xml` con el estilo computado COMPLETO de cada nodo (~17.5 KB por nodo: Chrome expone ~340 propiedades). La tabla mensual (~2.900 nodos) serializaba **101.065.860 chars (~101 MB)**; Chrome no decodifica un data URL de ese tamaño y el `<img>` interno falla con un `Event`. `skipFonts: true` solo ahorraba ~40 KB: el problema es el volumen de estilos, no las fuentes. Medido con una sesión real en dev: los dos botones de copia chicos funcionaban (SVG 2.7-3.0 MB) pero escalan igual con más datos.
+**Solucion:** El export mensual se renderiza server-side: `GET /api/cronograma/export.png?month=YYYY-MM` construye un SVG determinístico con `buildCronogramaSvg` (`src/components/cronograma/lib/exportSvg.ts`, función pura) y lo rasteriza con `@resvg/resvg-js` (fuentes del sistema). El cliente descarga el blob. Los botones de copia siguen con `html-to-image` pero capturando la clase `exporting-image` en el CLON, no en la card visible (el parpadeo era esa mutación del DOM vivo).
+**Regla:** `html-to-image` no sirve para capturar DOM grande: su costo es lineal en nodos (≈17 KB de estilos por nodo) y Chrome corta el data URL mucho antes de que termine. Para capturas grandes o de un mes completo, renderizar server-side desde los datos. Todo builder de SVG/imagen debe tener un test de tamaño máximo (el unit test exige < 400 KB para 40 operadores × 31 días).
+**Archivos afectados:** src/components/cronograma/lib/exportSvg.ts, src/pages/api/cronograma/export.png.ts, src/components/cronograma/lib/exporters.ts, src/components/cronograma/lib/dashboard-client.ts, src/components/cronograma/CronogramaDashboard.astro, tests/unit/cronograma-export-svg.test.ts, tests/cronograma/export-image.spec.ts
+
+---
+
+### 2026-09-30 — Cambiar `astro.config.mjs` con el dev server vivo deja deps optimizadas obsoletas
+
+**Problema:** Tras agregar `vite.ssr.external` en `astro.config.mjs`, el flujo de copiar imagen falló en dev con `504 (Outdated Optimize Dep)` sobre URLs `.../node_modules/.vite/deps/*.js?v=...`, y el import dinámico de `html-to-image` lanzó `TypeError: Failed to fetch dynamically imported module`. Un test E2E falló por este motivo y no por el código.
+**Causa:** Vite pre-bundlea dependencias en `node_modules/.vite`; si la config de Vite cambia mientras el server corre, los `?v=` hashes quedan viejos y no se regeneran solos.
+**Solucion:** Reiniciar el dev server; si persiste, borrar `node_modules/.vite` antes de relanzarlo.
+**Regla:** Después de tocar `astro.config.mjs` (config de Vite) o instalar/quitar dependencias, reiniciar el dev server (o borrar `node_modules/.vite`). Un `504` + import dinámico roto en dev casi siempre es esto, no el código.
+**Archivos afectados:** astro.config.mjs
+
+---
+
+### 2026-09-30 — Un spec Playwright sin `dotenv/config` pasa vacíamente (cookie no valida → `/login`)
+
+**Problema:** Un spec E2E nuevo que usa `tests/helpers/auth.ts` reportó 12/12 verde cuando el plan preveía 4 fallos. Ninguna aserción se estaba ejercitando sobre la ruta real: todas redirigían a `/login`.
+**Causa:** faltaba `import "dotenv/config";` al inicio del spec. Sin esa línea, `process.env.SESSION_SECRET` es `undefined` en el proceso de Playwright, `signSessionId()` firma con el fallback `"fallback-secret-do-not-use-in-prod"`, que no coincide con el `SESSION_SECRET` que el dev server lee de `.env`. El middleware rechaza la cookie, redirige a `/login`, y en `/login` las aserciones (pocos elementos, un `h1`) se cumplen por vacuidad.
+**Solucion:** agregar `import "dotenv/config";` y, en el cuerpo del test, `expect(new URL(page.url()).pathname).toBe(route)` después del `goto`, para que el redirect falle de inmediato en vez de producir un falso positivo.
+**Regla:** Todo spec E2E que use `tests/helpers/auth.ts` debe (1) importar `dotenv/config` y (2) verificar el pathname tras navegar. Un test que "pasa" cuando debería fallar probablemente corre sobre `/login` (sesión no autenticada), no sobre la ruta objetivo.
+**Archivos afectados:** tests/helpers/auth.ts, tests/ui/*.spec.ts
+
+---
+
+### 2026-10-01 — Dos escalas de z-index conviviendo: los overlays de `/titulos` quedaron por debajo del header
+
+**Problema:** El panel lateral que abre "Ver más" en `/titulos` se desplegaba tapado por debajo del header. El modal de edición (`z-40`) y el de confirmación de borrado (`z-50`) tenían el mismo defecto, aunque todavía no se había reportado.
+**Causa:** Conviven dos escalas de capas. El layout creció hasta `z-[150]` (navbar sticky), `z-[160]` (sidebar), `z-200` (modales de la app) y `z-[250]` (toasts), pero los overlays de `src/components/titulos/**` quedaron en la escala vieja `z-40`/`z-50`, escrita antes de que el header tuviera z-index alto. Al ser el header `sticky` y `z-[150]`, cualquier panel con `z < 150` pinta físicamente por debajo.
+**Solucion:** Subir los overlays al tier de modal de la app: panel/form `z-200` y backdrop `z-[190]` (encima del sidebar `160`, debajo del panel). Verificación en vivo con `getComputedStyle().zIndex` + `document.elementFromPoint()` sobre la franja del header, más 2 tests E2E nuevos.
+**Regla:** Capas fijas de este repo: contenido `z-0..z-50`, header `z-[150]`, sidebar `z-[160]`, overlays/paneles `z-[190]`/`z-200`, toasts `z-[250]`. Antes de agregar un elemento `fixed`/`sticky`, comparar su z contra `z-[150]`: si es menor, el header lo tapa. Toda regresión de capa se verifica con `elementFromPoint`, no a ojo.
+**Archivos afectados:** src/components/titulos/TitleDrawer.tsx, src/components/titulos/TitleModal.tsx, src/components/titulos/TitleConfirmModal.tsx, src/layouts/_components/navbar.astro, tests/ui/elementos-rotos-regression.spec.ts
+
+---
+
+### 2026-10-01 — El self-fetch interno rompía la sesión: el fingerprint de User-Agent la borraba y el export daba 502
+
+**Problema:** `GET /api/cronograma/export.png` devolvía 502 en uso real ("Hubo un error al generar la imagen") y, como efecto colateral, el usuario quedaba deslogueado. El log del dev server mostraba `[302] /api/cronograma` seguido de `[502] /api/cronograma/export.png`.
+**Causa:** `computeFingerprint()` liga la sesión al sha256 del `User-Agent` (`src/lib/sessionFingerprint.ts`) y el middleware **elimina la sesión** y redirige a `/login` cuando no coincide (`src/middleware.ts:198-211`). El endpoint obtiene los datos con un self-fetch por loopback (`getInternalOrigin()`) que reenviaba **solo la cookie**; al llegar sin el UA del navegador (Node/undici), el fingerprint no coincidía, el middleware borraba la sesión, el self-fetch recibía 302 y el endpoint respondía 502. Los tests E2E no lo detectaban porque `tests/helpers/auth.ts` crea sesiones con `fingerprint = NULL` y `isFingerprintValid(null, ...)` siempre pasa: ningún test ejercitaba una sesión con fingerprint real.
+**Solucion:** Helper `getInternalFetchHeaders(request)` en `src/lib/internalOrigin.ts` que reenvía `cookie` **+ `user-agent`**; usado por el endpoint de export y por los otros dos self-fetch (`admin/invgate/UbicacionesContent.astro`, `api/invgate/locations/rows.astro`), que tenían el mismo bug latente. Test E2E nuevo que setea `fingerprint = computeFingerprint(navigator.userAgent)` en la sesión de prueba (rojo antes, verde después) y verifica que la sesión sigue viva tras exportar.
+**Regla:** Todo self-fetch server-side por loopback debe usar `getInternalFetchHeaders(Astro.request)` (cookie + user-agent), no solo la cookie: el middleware invalida la sesión si el UA no coincide. Los tests que crean sesiones a mano deben setear el `fingerprint` para no pasar de largo este control. Un 502 de un endpoint con self-fetch + usuario deslogueado ⇒ sospechar del fingerprint.
+**Archivos afectados:** src/lib/internalOrigin.ts, src/pages/api/cronograma/export.png.ts, src/components/admin/invgate/UbicacionesContent.astro, src/pages/api/invgate/locations/rows.astro, tests/cronograma/export-image.spec.ts
+
+---
+
+### 2026-10-02 — Assets hasheados de Astro no sirven en contenido guardado fuera de la app
+
+**Problema:** El HTML de la firma institucional que se copiaba al portapapeles referenciaba el logo como `/_astro/firma.<hash>.png`. Las firmas ya guardadas en Outlook mostraban el logo roto: la URL cambia en cada build (hash de Vite), así que tras el siguiente deploy el archivo `/_astro/firma.<hash>.png` dejaba de existir.
+**Causa:** Astro/Vite hashea los assets importados (`import logo from "@assets/firma.png"`), generando un nombre con hash que cambia por build. Cualquier contenido que el usuario guarda fuera de la app (la firma en Outlook, un HTML exportado) queda apuntando a una URL efímera.
+**Solucion:** Mover el logo a `public/firma.png` (ruta fija, sin hash, servida por `express.static("dist/client")` antes del SSR) y armar la URL absoluta en el cliente con `new URL(getCleanBase() + "firma.png", window.location.origin)`. El HTML copiado usa esa URL absoluta estable.
+**Regla:** Ningún contenido que el usuario guarde fuera de la app debe referenciar `/_astro/...` ni un asset importado: usar `public/` + URL absoluta estable. Ojo: `server.mjs` sirve `public/` con `immutable`/`maxAge: "1y"`, así que cambiar el logo requiere un nombre de archivo nuevo (ej. `firma-v2.png`) o servir ese archivo con `max-age=0, must-revalidate` (si no, los clientes no lo revalidan ni con recarga forzada).
+**Archivos afectados:** public/firma.png, src/components/generador-firmas/SignatureGenerator.astro, src/pages/generador-firmas/index.astro, tests/generador-firmas/copy-signature.spec.ts
+
+---
+
+### 2026-10-02 — `astro dev` bloquea subrecursos cross-origin: el logo de la firma no se puede validar en desarrollo
+
+**Problema:** Al copiar la firma visual y pegarla en Outlook durante el desarrollo, el logo aparecía roto, aunque `/firma.png` existía y respondía 200 en el navegador. El log de `npm run dev` mostraba: `[WARN] [router] Blocked cross-origin request to /firma.png (Sec-Fetch-Site: cross-site, Sec-Fetch-Mode: no-cors). Cross-origin subresource requests are not allowed on the dev server for security reasons.`
+**Causa:** El cliente que pega (Outlook/WebView) pide el logo como subrecurso cross-site (`Sec-Fetch-Mode: no-cors`, con `Referer` externo). El router del **dev server** de Astro rechaza subrecursos cross-origin por seguridad. En producción el archivo lo sirve `express.static("dist/client")` (`server.mjs`) sin ese chequeo. Además el dev server puede escuchar solo en IPv6 (`[::1]:4321`): `http://127.0.0.1:4321` da ECONNREFUSED y algunos clientes (Outlook) resuelven `localhost` a IPv4.
+**Solucion:** Validar la carga del logo con un build de producción (`npm run build` + `node -r dotenv/config server.mjs` con un `PORT` propio), no con `astro dev`. Verificado: con el server de producción la misma petición cross-site devuelve `200 image/png` y Outlook muestra el logo. Para pruebas locales con clientes externos, levantar el dev server con `--host 127.0.0.1`.
+**Regla:** Ningún asset que un tercero (Outlook, un cliente de correo, otra app) deba bajar por URL se puede verificar en `astro dev`: el dev server bloquea subrecursos cross-origin y puede quedar IPv6-only. Probar en modo producción/preview.
+**Archivos afectados:** public/firma.png, server.mjs, docs/lessons.md

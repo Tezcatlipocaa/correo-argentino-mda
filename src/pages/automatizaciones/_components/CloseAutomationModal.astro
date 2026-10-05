@@ -1,0 +1,105 @@
+---
+import Modal from "@components/ui/Modal.astro";
+import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
+import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import { DEFAULT_CLOSE_REASON } from "@lib/workflow/closures";
+
+interface Props {
+  automationId: number;
+  prettyId: string;
+}
+
+const { automationId, prettyId } = Astro.props;
+---
+
+<Modal
+  id="close-automation-modal"
+  title="Cerrar caso"
+  icon="boxicons:check-circle"
+>
+  <Fragment slot="content">
+    <input type="hidden" id="close-automation-id" value={automationId} />
+    <p class="text-base-content/70 mb-4 text-sm">
+      Vas a marcar <span class="font-mono">{prettyId}</span> como finalizado en el
+      portal. El ticket en InvGate no se modifica.
+    </p>
+    <FormTextarea
+      id="close-automation-reason"
+      name="reason"
+      label="Motivo del cierre"
+      rows={3}
+      value={DEFAULT_CLOSE_REASON}
+      required
+    />
+  </Fragment>
+  <Fragment slot="actions">
+    <div class="modal-action mt-6 flex justify-end gap-2">
+      <ActionCancelButton
+        type="button"
+        variant="error"
+        icon="boxicons:x-filled"
+        label="Cancelar"
+        data-close-close-automation
+      />
+      <ActionConfirmButton
+        type="button"
+        id="btn-confirm-close-automation"
+        color="btn-secondary"
+        icon="boxicons:check-filled"
+        label="Cerrar caso"
+        data-confirm-close-automation
+      />
+    </div>
+  </Fragment>
+</Modal>
+
+<script>
+  import { actions } from "astro:actions";
+  import { showToast } from "@/lib/toastClient";
+  import { setBusy } from "@/lib/clientBusy";
+  import { refreshAutomationDetail } from "@/lib/automationDetailClient";
+
+  document.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const openBtn = target.closest("[data-open-close-automation]");
+    if (openBtn) {
+      const modal = document.getElementById("close-automation-modal");
+      if (modal instanceof HTMLDialogElement) modal.showModal();
+      return;
+    }
+
+    const closeBtn = target.closest("[data-close-close-automation]");
+    if (closeBtn) {
+      const modal = document.getElementById("close-automation-modal");
+      if (modal instanceof HTMLDialogElement) modal.close();
+      return;
+    }
+
+    const confirmBtn = target.closest("[data-confirm-close-automation]");
+    if (!confirmBtn) return;
+
+    const idInput = document.getElementById("close-automation-id");
+    const reasonInput = document.getElementById("close-automation-reason");
+    const automationId =
+      idInput instanceof HTMLInputElement ? Number(idInput.value) : NaN;
+    const reason =
+      reasonInput instanceof HTMLTextAreaElement ? reasonInput.value : "";
+
+    if (!Number.isInteger(automationId)) return;
+
+    setBusy(confirmBtn, true);
+    const { error } = await actions.closeAutomation({ automationId, reason });
+    setBusy(confirmBtn, false);
+
+    if (error) {
+      showToast(error.message || "No se pudo cerrar el caso", "alert-error");
+      return;
+    }
+
+    showToast("Caso cerrado correctamente", "alert-success");
+    void refreshAutomationDetail();
+  });
+</script>

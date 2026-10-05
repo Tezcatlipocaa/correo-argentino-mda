@@ -59,7 +59,12 @@ test.describe("Regresión de elementos rotos", () => {
 
       expect(response?.status()).toBe(200);
       expect(new URL(page.url()).pathname).toBe(route);
-      await expect(page.locator("h1")).toHaveCount(1);
+      // /supervision/cronograma es una vista de aplicación a pantalla completa y
+      // deliberadamente NO lleva h1 ni PageHeader (decisión de producto,
+      // 2026-09-30). Para el resto de rutas se exige exactamente un h1.
+      if (route !== "/supervision/cronograma") {
+        await expect(page.locator("h1")).toHaveCount(1);
+      }
 
       for (const deadClass of DEAD_DAISYUI_V4_CLASSES) {
         await expect(
@@ -69,16 +74,6 @@ test.describe("Regresión de elementos rotos", () => {
       }
     });
   }
-
-  test("/supervision/cronograma renderiza el h1 visible 'Cronograma'", async ({
-    context,
-    page,
-  }) => {
-    await setSessionCookie(context, admin.signedSessionId);
-    await page.goto("/supervision/cronograma", { waitUntil: "domcontentloaded" });
-
-    await expect(page.locator("h1")).toHaveText("Cronograma");
-  });
 
   test("/recursos/aplicativos no dispara 404 de íconos (fallback SSR)", async ({
     context,
@@ -115,5 +110,100 @@ test.describe("Regresión de elementos rotos", () => {
     expect(response?.status()).toBe(200);
     await expect(page.locator("h1")).toHaveText("Nuevo enlace");
     await expect(page.locator('input[name="title"]')).toHaveCount(1);
+  });
+
+  test("/titulos: el panel de 'Ver más' se dibuja por encima del header", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, admin.signedSessionId);
+
+    await page.goto("/titulos", { waitUntil: "load" });
+    await page.waitForSelector('button:has-text("Ver más")', {
+      timeout: 30000,
+    });
+    await page.locator('button:has-text("Ver más")').first().click();
+    await page.waitForTimeout(900);
+
+    const result = await page.evaluate(() => {
+      const header = document.querySelector("header");
+      const panel = document.querySelector("aside.fixed.inset-y-0");
+      if (!header || !panel) return null;
+
+      const r = panel.getBoundingClientRect();
+      const inside = (el: Element | null, root: Element | null) =>
+        !!el && !!root && (el === root || root.contains(el));
+
+      // Punto DENTRO del panel, en la franja vertical que cubre el header.
+      const inPanel = document.elementFromPoint(
+        Math.round(r.left + r.width / 2),
+        Math.round(Math.min(r.top + 60, window.innerHeight / 2)),
+      );
+      // Punto SOBRE el header, fuera del panel: debe quedar tapado por el overlay.
+      const overHeader = document.elementFromPoint(
+        Math.max(16, Math.round(r.left - 80)),
+        40,
+      );
+
+      return {
+        headerZ: Number(getComputedStyle(header).zIndex),
+        panelZ: Number(getComputedStyle(panel).zIndex),
+        panelCoversHeaderTop: r.top <= 1,
+        panelIsTopmost: inside(inPanel, panel),
+        headerCovered: !inside(overHeader, header),
+      };
+    });
+
+    expect(result, "el panel de 'Ver más' debe existir").not.toBeNull();
+    expect(result!.panelZ).toBeGreaterThan(result!.headerZ);
+    expect(result!.panelCoversHeaderTop).toBe(true);
+    expect(
+      result!.panelIsTopmost,
+      "el panel debe pintar por encima del header en su propio área",
+    ).toBe(true);
+    expect(
+      result!.headerCovered,
+      "el header debe quedar cubierto por el overlay al abrir el panel",
+    ).toBe(true);
+  });
+
+  test("/titulos: el modal de edición se dibuja por encima del header", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, admin.signedSessionId);
+
+    await page.goto("/titulos", { waitUntil: "load" });
+    await page.waitForSelector('button:has-text("Ver más")', {
+      timeout: 30000,
+    });
+    await page.locator('button:has-text("Ver más")').first().click();
+    await page.waitForTimeout(900);
+    await page.locator('[data-tip="Editar"] button').click();
+    await page.waitForTimeout(700);
+
+    const result = await page.evaluate(() => {
+      const header = document.querySelector("header");
+      const openWrapper = Array.from(
+        document.querySelectorAll<HTMLElement>("div.fixed.inset-0"),
+      ).find((d) => {
+        const cs = getComputedStyle(d);
+        if (cs.visibility === "hidden" || Number(cs.opacity) < 0.5) return false;
+        return /Editar/.test(d.querySelector("h2")?.textContent ?? "");
+      });
+      if (!header || !openWrapper) return null;
+      return {
+        headerZ: Number(getComputedStyle(header).zIndex),
+        modalZ: Number(getComputedStyle(openWrapper).zIndex),
+        covered: !header.contains(document.elementFromPoint(16, 40)),
+      };
+    });
+
+    expect(result, "el modal de edición debe estar abierto").not.toBeNull();
+    expect(result!.modalZ).toBeGreaterThan(result!.headerZ);
+    expect(
+      result!.covered,
+      "el header debe quedar cubierto por el overlay del modal",
+    ).toBe(true);
   });
 });

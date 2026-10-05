@@ -316,6 +316,9 @@ const truncatePath = (filePath: string | null) => {
           ariaLabel="Listado de aplicativos registrados"
           headerGridClass={appsGridCols}
           rowGridClass={appsGridCols}
+          emptyStateTitle="No se encontraron aplicativos"
+          emptyStateDescription="No hay aplicativos cargados ni coincidencias para tu búsqueda. Probá con otro término o cargá el primero."
+          whenEmpty
         >
           <Fragment slot="header">
             <DataTableHeaderCell />
@@ -326,30 +329,7 @@ const truncatePath = (filePath: string | null) => {
 
           <div id="apps-container" class="divide-base-200 divide-y">
             {
-              allApps.length === 0 ? (
-                <div
-                  class="text-base-content/50 flex flex-col items-center gap-3 py-16"
-                  id="empty-state"
-                >
-                  <div class="bg-base-200/40 rounded-full p-4">
-                    <Icon
-                      name="boxicons:data"
-                      size={32}
-                      class="opacity-30"
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div class="space-y-1 text-center">
-                    <p class="text-sm font-semibold">
-                      No hay aplicativos registrados
-                    </p>
-                    <p class="text-xs">
-                      Comenzá cargando el primer aplicativo.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                allApps.map((app) => (
+              allApps.map((app) => (
                   <div
                     class:list={[
                       "group hover:bg-base-200/30 app-row grid items-center px-4 py-3 transition-colors",
@@ -421,8 +401,7 @@ const truncatePath = (filePath: string | null) => {
                       </form>
                     </div>
                   </div>
-                ))
-              )
+              ))
             }
           </div>
         </DataTable>
@@ -481,8 +460,7 @@ const truncatePath = (filePath: string | null) => {
   const btnAddApp = document.getElementById(
     "btn-add-app",
   ) as HTMLAnchorElement | null;
-  const generalEmptyState = document.getElementById("empty-state");
-  const categoryEmptyState = document.getElementById("category-empty-state");
+    const categoryEmptyState = document.getElementById("category-empty-state");
 
   // Selection Handler
   const selectCategory = (categoryId: string) => {
@@ -592,9 +570,16 @@ const truncatePath = (filePath: string | null) => {
       }
     });
 
-    if (generalEmptyState) generalEmptyState.classList.add("hidden");
+    // «Categoría vacía» sólo cuando el filtro activo es una categoría (sin texto
+    // de búsqueda). Con texto libre el SearchEmptyState del DataTable ya se
+    // muestra y quedarían dos estados simultáneos en pantalla.
+    const categoryIsEmpty =
+      query === "" &&
+      visibleCount === 0 &&
+      activeCategoryId !== "all" &&
+      appRows.length > 0;
 
-    if (visibleCount === 0) {
+    if (categoryIsEmpty) {
       categoryEmptyState?.classList.remove("hidden");
       categoryEmptyState?.classList.add("flex");
     } else {

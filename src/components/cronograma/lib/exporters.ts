@@ -204,72 +204,6 @@ export function exportCSV(
   URL.revokeObjectURL(url);
 }
 
-export async function exportAsImage(
-  tableContainer: HTMLElement,
-  monthName: string,
-  onStart?: () => void,
-  onEnd?: () => void,
-): Promise<void> {
-  if (onStart) onStart();
-
-  const originalWidth = tableContainer.style.width;
-  const originalHeight = tableContainer.style.height;
-  const originalMaxWidth = tableContainer.style.maxWidth;
-  const originalMaxHeight = tableContainer.style.maxHeight;
-  const originalOverflow = tableContainer.style.overflow;
-
-  try {
-    tableContainer.style.width = tableContainer.scrollWidth + "px";
-    tableContainer.style.height = tableContainer.scrollHeight + "px";
-    tableContainer.style.maxWidth = "none";
-    tableContainer.style.maxHeight = "none";
-    tableContainer.style.overflow = "visible";
-
-    // Force layout reflow
-    tableContainer.offsetHeight;
-
-    const toPng = await getToPng();
-    const computedBg =
-      window.getComputedStyle(tableContainer).backgroundColor || "#ffffff";
-
-    const dataUrl = await toPng(tableContainer, {
-      backgroundColor: computedBg,
-      style: {
-        transform: "scale(1)",
-        transformOrigin: "top left",
-        width: tableContainer.scrollWidth + "px",
-        height: tableContainer.scrollHeight + "px",
-      },
-      quality: 1.0,
-      pixelRatio: 2,
-    });
-
-    // Restore original styles
-    tableContainer.style.width = originalWidth;
-    tableContainer.style.height = originalHeight;
-    tableContainer.style.maxWidth = originalMaxWidth;
-    tableContainer.style.maxHeight = originalMaxHeight;
-    tableContainer.style.overflow = originalOverflow;
-
-    const link = document.createElement("a");
-    link.download = `cronograma_${monthName.toLowerCase().replace(/\s+/g, "_")}.png`;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (error: unknown) {
-    console.error("Error generating image:", error);
-    tableContainer.style.width = originalWidth;
-    tableContainer.style.height = originalHeight;
-    tableContainer.style.maxWidth = originalMaxWidth;
-    tableContainer.style.maxHeight = originalMaxHeight;
-    tableContainer.style.overflow = originalOverflow;
-    throw error;
-  } finally {
-    if (onEnd) onEnd();
-  }
-}
-
 let excelJsPromise: any = null;
 
 export async function exportScheduleToExcel(
@@ -329,10 +263,7 @@ export interface ExportImageOptions {
 export async function exportAsClipboardImage(
   element: HTMLElement,
   options: ExportImageOptions = {},
-  onStart?: () => void,
-  onEnd?: () => void,
 ): Promise<void> {
-  if (onStart) onStart();
   const { padding = 0, compact = false, width: fixedWidth } = options;
 
   // Fixed width mode: render at a device-independent width (e.g. 1034 / 1388)
@@ -346,12 +277,14 @@ export async function exportAsClipboardImage(
   // exactly clone + margin ring and nothing gets cropped.
   const host = document.createElement("div");
   host.style.position = "fixed";
-  host.style.left = "-99999px";
+  host.style.left = "0";
   host.style.top = "0";
-  host.style.zIndex = "-1";
+  host.style.zIndex = "-9999";
+  host.style.opacity = "0";
   host.style.pointerEvents = "none";
   const clone = element.cloneNode(true) as HTMLElement;
   clone.removeAttribute("id");
+  clone.classList.add("exporting-image");
   clone
     .querySelectorAll("[id]")
     .forEach((el) => el.removeAttribute("id"));
@@ -403,8 +336,11 @@ export async function exportAsClipboardImage(
 
   try {
     const toPng = await getToPng();
+    const rawBg = window.getComputedStyle(host).backgroundColor;
     const computedBg =
-      window.getComputedStyle(host).backgroundColor || "#ffffff";
+      !rawBg || rawBg === "rgba(0, 0, 0, 0)" || rawBg === "transparent"
+        ? "#ffffff"
+        : rawBg;
 
     // Height depends on width (text reflow), so measure after the clone is
     // laid out at targetWidth. flow-root on the host makes scrollHeight
@@ -415,6 +351,13 @@ export async function exportAsClipboardImage(
     const dataUrl = await toPng(host, {
       backgroundColor: computedBg,
       style: {
+        // html-to-image copies every computed longhand of the capture root onto
+        // the clone, including the host's offscreen `position: fixed/left`. Reset
+        // it here (options.style wins) or the clone renders outside the canvas.
+        position: "static",
+        left: "0",
+        top: "0",
+        opacity: "1",
         transform: "scale(1)",
         transformOrigin: "top left",
       },
@@ -448,6 +391,5 @@ export async function exportAsClipboardImage(
     ]);
   } finally {
     if (host.parentNode) document.body.removeChild(host);
-    if (onEnd) onEnd();
   }
 }
