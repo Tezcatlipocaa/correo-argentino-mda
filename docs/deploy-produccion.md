@@ -133,14 +133,9 @@ El VirtualHost ya existe en `C:\xampp\apache\conf\extra\httpd-vhosts.conf`. En u
 </VirtualHost>
 ```
 
-> **Nota:** El hostname canónico es mda.correo.local (debe coincidir con el SAN del certificado). astro.config.mjs ya usa site: "https://mda.correo.local".
+> **Nota:** El hostname canónico es `mda.correo.local` (debe coincidir con el SAN del certificado; `astro.config.mjs` usa `site: "https://mda.correo.local"`). `portal-mda.correo.local` se mantiene como alias del vhost.
 
-### 5.3. Habilitar HTTPS (certificado corporativo)
-
-Certificados en `C:\xampp\apache\conf\ssl\`:
-
-- `mda.correo.local.fullchain.crt` (leaf + intermedios)
-- `mda.correo.local.key`
+### 5.3. Configurar HTTPS (certificado interno AD CS)
 
 En `httpd.conf`, verificar/descomentar:
 
@@ -151,72 +146,83 @@ LoadModule headers_module modules/mod_headers.so
 Include conf/extra/httpd-ssl.conf
 ```
 
-> `httpd-ssl.conf` trae un vhost default (`<VirtualHost _default_:443>`) con el certificado dummy de XAMPP. Comentá ese bloque para que no responda antes que el vhost de MDA, y verificá la selección de vhosts con:
->
-> ```powershell
-> C:\xampp\apache\bin\httpd.exe -S
-> ```
->
-> Esperado: un vhost `*:443` con `mda.correo.local`.
+En B1842zacw1718 el certificado y la key ya están en disco:
 
-En `conf/extra/httpd-vhosts.conf`, reemplazar el vhost `*:80` por estos dos, y agregar el vhost `*:443`:
+| Archivo | Ruta | Notas |
+| ------- | ---- | ----- |
+| Certificado | `C:/xampp/apache/conf/ssl/Portal_MDA.cer` | PEM, hoja sola, CN `mda.correo.local`; SAN `mda.correo.local`, `b1842zacw1718.correo.local`, `10.254.59.95`; vence 20-sep-2028 |
+| Private key | `C:/xampp/apache/conf/ssl.key/Portal_MDA_key.pem` | RSA sin cifrar (PKCS#1) |
+
+La CA emisora (`correo-B1842ZACS0136-CA-1`) es raíz autofirmada y ya está en el store de Raíces de confianza de las máquinas del dominio (GPO). Por eso **no hace falta `SSLCertificateChainFile`**: Apache sirve solo la hoja.
+
+Editar `C:\xampp\apache\conf\extra\httpd-ssl.conf`, dentro de `<VirtualHost _default_:443>` (el archivo ya trae `Listen 443`):
+
+```apache
+<VirtualHost _default_:443>
+    DocumentRoot "C:/xampp/htdocs"
+    ServerName mda.correo.local:443
+    ServerAlias portal-mda.correo.local b1842zacw1718.correo.local
+
+    SSLEngine on
+    SSLCertificateFile    "C:/xampp/apache/conf/ssl/Portal_MDA.cer"
+    SSLCertificateKeyFile "C:/xampp/apache/conf/ssl.key/Portal_MDA_key.pem"
+
+    ProxyPreserveHost On
+
+    # Mismas exclusiones que el vhost :80 (phpMyAdmin y endpoint PHP legacy)
+    ProxyPass /phpmyadmin !
+    ProxyPass /api_mda_find_extension !
+
+    ProxyPass / http://localhost:4321/
+    ProxyPassReverse / http://localhost:4321/
+
+    ErrorLog "logs/correo-argentino-mda-ssl-error.log"
+    CustomLog "logs/correo-argentino-mda-ssl-access.log" common
+</VirtualHost>
+```
+
+> Reemplazar las directivas del bloque default (`DocumentRoot`, `ServerName www.example.com:443`, `SSLCertificateFile conf/ssl.crt/server.crt`, `SSLCertificateKeyFile conf/ssl.key/server.key`). No agregar un vhost nuevo: el default snakeoil quedaría como catch-all.
+
+En `C:\xampp\apache\conf\extra\httpd-vhosts.conf`, reemplazar el vhost `*:80` existente por un redirect permanente:
 
 ```apache
 <VirtualHost *:80>
-    ServerName mda.correo.local
-    ServerAlias portal-mda.correo.local
+    ServerName portal-mda.correo.local
+    ServerAlias mda.correo.local localhost 127.0.0.1
     Redirect permanent / https://mda.correo.local/
 </VirtualHost>
-
-<VirtualHost *:80>
-    ServerName localhost
-    ServerAlias 127.0.0.1
-    ProxyPreserveHost On
-    ProxyPass / http://127.0.0.1:4321/
-    ProxyPassReverse / http://127.0.0.1:4321/
-</VirtualHost>
-
-<VirtualHost *:443>
-    ServerName mda.correo.local
-    ServerAlias portal-mda.correo.local
-
-    SSLEngine on
-    SSLCertificateFile "C:/xampp/apache/conf/ssl/mda.correo.local.fullchain.crt"
-    SSLCertificateKeyFile "C:/xampp/apache/conf/ssl/mda.correo.local.key"
-    SSLProtocol -all +TLSv1.2 +TLSv1.3
-
-    ProxyPreserveHost On
-    RequestHeader set X-Forwarded-Proto "https"
-    RequestHeader set X-Forwarded-Port "443"
-    ProxyPass / http://127.0.0.1:4321/
-    ProxyPassReverse / http://127.0.0.1:4321/
-
-    ErrorLog "logs/mda-ssl-error.log"
-    CustomLog "logs/mda-ssl-access.log" common
-</VirtualHost>
 ```
 
-Firewall (PowerShell admin):
+Con el redirect, `http://mda.correo.local/api_mda_find_extension` y `/phpmyadmin` pasan a HTTPS (las exclusiones viven en el vhost `:443`). Los consumidores GET siguen funcionando por el 301.
+
+Requisitos previos: `mda.correo.local` debe resolver (DNS interno o `hosts`) y el firewall del server debe permitir TCP 443 entrante. Verificar:
 
 ```powershell
-New-NetFirewallRule -DisplayName "Apache HTTPS (443)" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443
+Resolve-DnsName mda.correo.local
+Get-NetFirewallRule -Enabled True -Direction Inbound -Action Allow |
+  Get-NetFirewallPortFilter | Where-Object LocalPort -eq 443
 ```
 
-Validar y reiniciar:
+Validar sintaxis y reiniciar:
 
 ```powershell
 C:\xampp\apache\bin\httpd.exe -t
 C:\xampp\apache\bin\httpd.exe -k restart
 ```
 
-Verificar:
+Verificación rápida desde el server:
 
 ```powershell
 C:\xampp\apache\bin\openssl.exe s_client -connect mda.correo.local:443 -servername mda.correo.local
+curl.exe -sI http://mda.correo.local  | Select-String "HTTP/"
+curl.exe -sI https://mda.correo.local | Select-String "HTTP/"
 curl.exe -sI http://mda.correo.local/login
 curl.exe -sI https://mda.correo.local/login
 ```
 
+El primero debe devolver 301. Los clientes fuera del dominio verán aviso de certificado: la raíz interna no está en sus stores (esperado para `.correo.local`).
+
+> La app ya está adaptada: cookie de sesión `secure` vía `SESSION_COOKIE_SECURE` (`src/lib/session.ts` y `ecosystem.config.cjs`), `site` HTTPS en `astro.config.mjs` y URL de la extensión en `src/components/buscador-usuarios/ChromeExtensionBanner.astro`.
 ### 5.4. Verificar el archivo hosts (para pruebas locales)
 
 Si accedés por nombre de dominio local:
@@ -235,7 +241,7 @@ C:\xampp\apache\bin\httpd.exe -k restart
 
 ## Paso 6: Verificar que funciona
 
-1. Abrí `http://portal-mda.correo.local` (o `http://localhost`) en el navegador
+1. Abrí `https://mda.correo.local` en el navegador
 2. Deberías ver la pantalla de login del Portal MDA
 3. Verificá que los logs de Apache no muestren errores de proxy:
    ```
