@@ -1,3 +1,4 @@
+import { getOfficeAddressKey } from "./officeAddress";
 import { buildBuildingKey, pickCanonicalAddress } from "./officeBuildingKey";
 
 export interface ReconcileOfficeRow {
@@ -28,7 +29,6 @@ export function groupOfficesByBuilding(
   const byKey = new Map<string, ReconcileOfficeRow[]>();
 
   for (const row of rows) {
-    if (!row.address) continue;
     const { key } = buildBuildingKey(row.address, row.provinceCode);
     if (!key) continue;
     const bucket = byKey.get(key) ?? [];
@@ -41,9 +41,7 @@ export function groupOfficesByBuilding(
   for (const [key, members] of byKey.entries()) {
     if (members.length < 2) continue;
 
-    const rawVariants = new Set(
-      members.map((m) => m.address.trim().toUpperCase()),
-    );
+    const rawVariants = new Set(members.map((m) => getOfficeAddressKey(m.address)));
     if (rawVariants.size < 2) continue;
 
     groups.push({
