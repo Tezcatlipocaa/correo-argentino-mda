@@ -1,0 +1,1893 @@
+---
+import { Icon } from "astro-icon/components";
+import FormField from "@components/ui/forms/FormField.astro";
+import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+import type { AuditParameter } from "@/types/quality";
+import { getCleanBase } from "@lib/baseUrl";
+
+interface Props {
+  allAgents: Array<{ id: number; name: string; username: string | null }>;
+  allParameters: AuditParameter[];
+  selectedMonth: string;
+  preselectedAgentId?: number;
+  approvedTitles: string[];
+}
+
+const {
+  allAgents,
+  allParameters,
+  selectedMonth,
+  preselectedAgentId,
+  approvedTitles,
+} = Astro.props;
+
+const cleanBase = getCleanBase();
+
+// Group parameters by channel
+const wiseCallParams = allParameters.filter(
+  (p) => p.channel === "wise_call" || !p.channel,
+);
+const wiseEmailParams = allParameters.filter((p) => p.channel === "wise_email");
+const invgateAgParams = allParameters.filter(
+  (p) => p.channel === "invgate_ticket",
+);
+---
+
+<div
+  id="new-audit-form-container"
+  class="space-y-6"
+  data-approved-titles={JSON.stringify(approvedTitles)}
+  data-clean-base={cleanBase}
+>
+  <input type="hidden" name="id" id="form-audit-id" value="" />
+  <input type="hidden" name="month" id="form-month" value={selectedMonth} />
+  <input
+    type="hidden"
+    name="channelType"
+    id="form-channel-type"
+    value="wise_call"
+  />
+  <input type="hidden" name="recordingUrl" id="form-recording-url" value="" />
+
+  <!-- BARRA DE CONFIGURACIÓN SUPERIOR: Operador, Mes y Canal -->
+  <div class="card bg-base-100 border border-base-200 shadow-sm p-4 sm:p-5">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+      <!-- Selector de Operador -->
+      <div class="md:col-span-5">
+        <label for="form-agent-id" class="label pb-1.5 pt-0">
+          <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/80 flex items-center gap-1.5">
+            <Icon name="boxicons:user-filled" size={16} class="text-primary" />
+            Operador a evaluar
+            <span class="text-error font-bold">*</span>
+          </span>
+        </label>
+        <select
+          name="agentId"
+          id="form-agent-id"
+          class="select select-bordered select-sm sm:select-md w-full font-bold focus:border-primary"
+          required
+        >
+          <option value="" disabled selected={!preselectedAgentId}>
+            Seleccionar operador...
+          </option>
+          {
+            allAgents.map((agent) => (
+              <option
+                value={agent.id}
+                selected={agent.id === preselectedAgentId}
+              >
+                {agent.name} {agent.username ? `(@${agent.username})` : ""}
+              </option>
+            ))
+          }
+        </select>
+      </div>
+
+      <!-- Período Evaluado -->
+      <div class="md:col-span-3">
+        <label class="label pb-1.5 pt-0">
+          <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/80 flex items-center gap-1.5">
+            <Icon name="boxicons:calendar-filled" size={16} class="text-primary" />
+            Período
+          </span>
+        </label>
+        <div class="flex items-center px-3 py-2 bg-base-200/50 border border-base-300 rounded-lg text-sm font-mono font-bold text-base-content h-[2.5rem]">
+          {selectedMonth}
+        </div>
+      </div>
+
+      <!-- Segmented Tabs Canales -->
+      <div class="md:col-span-4 flex flex-col items-start md:items-end">
+        <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/80 mb-1.5 flex items-center gap-1.5">
+          <Icon name="boxicons:broadcast" size={16} class="text-primary" />
+          Canal de atención
+        </span>
+        <div
+          class="join bg-base-200/70 p-1 rounded-xl border border-base-300 shadow-2xs w-full sm:w-auto"
+          id="channel-selector-join"
+        >
+          <button
+            type="button"
+            class="btn btn-sm join-item channel-btn btn-active bg-base-100 text-secondary font-bold shadow-2xs transition-all border-transparent flex-1 sm:flex-initial gap-1.5"
+            data-channel="wise_call"
+          >
+            <Icon name="boxicons:phone-ring" size={16} />
+            <span>Llamada Wise</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-secondary hover:bg-base-100/50 transition-all border-transparent flex-1 sm:flex-initial gap-1.5"
+            data-channel="wise_email"
+          >
+            <Icon name="boxicons:envelope" size={16} />
+            <span>Mail Wise</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm join-item channel-btn font-medium text-base-content/70 hover:text-secondary hover:bg-base-100/50 transition-all border-transparent flex-1 sm:flex-initial gap-1.5"
+            data-channel="invgate_ticket"
+          >
+            <Icon name="boxicons:handshake" size={16} />
+            <span>Autogestión</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID PRINCIPAL DE 2 COLUMNAS AMPLIAS: CONTEXTO (IZQ) vs EVALUACIÓN (DER) -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- COLUMNA IZQUIERDA: Contexto, Búsqueda, Metadatos y Visor -->
+    <div class="lg:col-span-5 space-y-4">
+      
+      <!-- Buscador Unificado con Selector de Servicio (Tabs) -->
+      <div
+        id="unified-search-card"
+        class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm space-y-3"
+      >
+        <div class="flex items-center justify-between border-b border-base-200 pb-2.5">
+          <span class="text-xs font-bold text-base-content flex items-center gap-2 uppercase tracking-wide">
+            <Icon name="boxicons:search" size={16} class="text-primary" />
+            Buscador Asistido de Metadatos
+          </span>
+          <div
+            class="join bg-base-200/60 p-0.5 rounded-lg border border-base-200"
+            id="search-service-tabs"
+          >
+            <button
+              type="button"
+              id="tab-search-wise"
+              class="join-item btn btn-xs btn-ghost gap-1.5 font-bold transition-all text-base-content bg-base-100 shadow-2xs"
+              data-search-target="wise"
+            >
+              <Icon name="boxicons:phone" size={14} class="text-violet-500" />
+              <span>Wise CX</span>
+            </button>
+            <button
+              type="button"
+              id="tab-search-invgate"
+              class="join-item btn btn-xs btn-ghost gap-1.5 font-medium text-base-content/60 transition-all hover:text-base-content"
+              data-search-target="invgate"
+            >
+              <Icon name="boxicons:receipt" size={14} class="text-secondary" />
+              <span>InvGate</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Búsqueda Wise CX -->
+        <div
+          id="wise-search-container"
+          class="flex items-center gap-2 transition-all"
+        >
+          <div class="relative flex-1">
+            <input
+              type="text"
+              id="wise-search-id"
+              placeholder="Nro Caso o ID Wise (ej: 534787)..."
+              class="input input-sm bg-base-200/40 w-full pl-8 font-mono text-xs font-semibold border-base-200 focus:border-violet-500 focus:outline-hidden rounded-xl"
+            />
+            <div class="text-violet-500 absolute top-2 left-2.5">
+              <Icon name="boxicons:phone" size={15} />
+            </div>
+          </div>
+          <button
+            type="button"
+            id="btn-fetch-wise-api"
+            class="btn btn-sm bg-violet-600 hover:bg-violet-700 text-white border-violet-600 shrink-0 gap-1.5 rounded-xl shadow-xs transition-all hover:scale-98 active:scale-95"
+            title="Buscar caso en Wise CX"
+          >
+            <Icon name="boxicons:search" size={15} class="text-white" is:inline />
+            <span class="text-xs font-bold">Buscar</span>
+          </button>
+        </div>
+
+        <!-- Barra de Búsqueda InvGate -->
+        <div
+          id="invgate-search-container"
+          class="flex items-center gap-2 hidden transition-all"
+        >
+          <div class="relative flex-1">
+            <input
+              type="text"
+              id="invgate-search-id"
+              placeholder="Nro Ticket InvGate (ej: 88442)..."
+              class="input input-sm bg-base-200/40 w-full pl-8 font-mono text-xs font-semibold border-base-200 focus:border-secondary focus:outline-hidden rounded-xl"
+            />
+            <div class="text-secondary absolute top-2 left-2.5">
+              <Icon name="boxicons:receipt" size={15} is:inline />
+            </div>
+          </div>
+          <button
+            type="button"
+            id="btn-fetch-invgate-api"
+            class="btn btn-sm btn-secondary shrink-0 gap-1.5 rounded-xl shadow-xs transition-all hover:scale-98 active:scale-95"
+            title="Buscar ticket en InvGate"
+          >
+            <Icon name="boxicons:search" size={15} is:inline />
+            <span class="text-xs font-bold">Buscar</span>
+          </button>
+        </div>
+
+        <!-- Feedback Alerts -->
+        <div
+          id="wise-feedback-alert"
+          class="hidden rounded-xl border p-2.5 text-xs font-medium transition-all"
+        ></div>
+        <div
+          id="invgate-feedback-alert"
+          class="hidden rounded-xl border p-2.5 text-xs font-medium transition-all"
+        ></div>
+      </div>
+
+      <!-- Reproductor y Descarga de Grabación Wise CX -->
+      <div
+        id="tv-audio-container"
+        class="bg-base-100 border border-primary/25 hidden rounded-2xl p-4 shadow-sm transition-all duration-200 space-y-2.5"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="bg-primary/10 text-primary rounded-xl p-2 shrink-0">
+              <Icon name="boxicons:volume-full" size={20} />
+            </div>
+            <div>
+              <span class="text-xs font-bold text-base-content block leading-tight">
+                Grabación de la llamada
+              </span>
+              <span class="text-xxs text-base-content/60">Audio provisto por Wise CX</span>
+            </div>
+          </div>
+          <span class="badge badge-sm badge-success font-semibold">Audio disponible</span>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
+          <audio
+            id="tv-audio-player"
+            controls
+            class="h-9 w-full rounded-lg"
+            preload="metadata"
+          ></audio>
+          <a
+            id="tv-audio-download"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            class="btn btn-sm btn-neutral shrink-0 gap-1.5 font-bold text-xs rounded-xl"
+            title="Descargar audio"
+          >
+            <Icon name="boxicons:archive-arrow-down" size={16} />
+            <span>MP3</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Datos Básicos de la Atención -->
+      <div class="bg-base-100 border border-base-200 p-4 rounded-2xl shadow-sm space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-base-200">
+          <span class="text-xs font-bold text-base-content flex items-center gap-2 uppercase tracking-wide">
+            <Icon name="boxicons:file-detail" size={16} class="text-primary" />
+            <span>Datos de la atención</span>
+          </span>
+          <span class="text-xxs text-base-content/50 font-medium">Requeridos para auditoría</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <FormField
+            id="form-call-id"
+            name="callId"
+            label="Nro Caso / ID Llamada"
+            placeholder="Ej: 534787"
+            size="sm"
+            inputClass="font-mono font-semibold text-xs"
+          />
+          <FormField
+            id="form-ticket-id"
+            name="ticketId"
+            label="Nro Ticket InvGate"
+            placeholder="Ej: 88442"
+            size="sm"
+            inputClass="font-mono font-semibold text-xs"
+          />
+          <div class="col-span-2">
+            <FormField
+              id="form-date"
+              name="date"
+              label="Fecha de atención"
+              type="date"
+              required
+              size="sm"
+              inputClass="font-semibold text-xs"
+            />
+          </div>
+
+          <!-- Secondary Metadata -->
+          <div id="meta-duration-container">
+            <FormField
+              id="form-duration"
+              name="duration"
+              label="Duración"
+              placeholder="02:15"
+              size="sm"
+              inputClass="font-mono font-semibold text-xs"
+            />
+          </div>
+          <div id="meta-ring-container">
+            <FormField
+              id="form-ring-time"
+              name="ringTime"
+              label="Tiempo ringueo"
+              placeholder="00:30"
+              size="sm"
+              inputClass="font-mono font-semibold text-xs"
+            />
+          </div>
+          <div id="meta-creation-container" class="hidden">
+            <FormField
+              id="form-creation-time"
+              name="creationTime"
+              label="Creación"
+              placeholder="YYYY-MM-DD HH:MM"
+              size="sm"
+              inputClass="font-mono font-semibold text-xs"
+            />
+          </div>
+          <div id="meta-take-container" class="hidden">
+            <FormField
+              id="form-take-time"
+              name="takeTime"
+              label="Toma / Lectura"
+              placeholder="YYYY-MM-DD HH:MM"
+              size="sm"
+              inputClass="font-mono font-semibold text-xs"
+            />
+          </div>
+          <div
+            id="meta-pas-container"
+            class="hidden col-span-2 flex items-center pt-1"
+          >
+            <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+              <input
+                type="checkbox"
+                name="isPas"
+                id="form-is-pas"
+                class="checkbox checkbox-xs checkbox-primary"
+              />
+              <span class="label-text text-xs font-bold">Es caso PAS</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Ticket Viewer Panel (InvGate) -->
+      <div
+        id="ticket-viewer-panel"
+        class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm"
+      >
+        <div
+          class="flex cursor-pointer items-center justify-between select-none"
+          id="ticket-viewer-header"
+        >
+          <div class="flex items-center gap-2">
+            <Icon name="boxicons:receipt" size={18} class="text-secondary" />
+            <span class="text-base-content text-xs font-bold uppercase tracking-wide">
+              Detalle del ticket InvGate
+            </span>
+            <span
+              id="ticket-viewer-badge"
+              class="badge badge-xs badge-ghost font-medium"
+            >Sin ticket cargado</span>
+          </div>
+          <div
+            class="text-base-content/60 flex items-center gap-1 text-xs font-medium"
+          >
+            <span id="ticket-viewer-toggle-text">Mostrar</span>
+            <Icon
+              name="boxicons:chevron-down"
+              size={16}
+              id="ticket-viewer-chevron"
+              class="transition-transform duration-200"
+            />
+          </div>
+        </div>
+
+        <div id="ticket-viewer-content" class="mt-3 hidden space-y-3">
+          <!-- Título & Validación asistida -->
+          <div class="bg-base-200/40 border border-base-200 rounded-xl p-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider block">
+                  Título en InvGate
+                </span>
+                <p
+                  id="tv-title"
+                  class="text-base-content text-xs font-semibold leading-relaxed break-words mt-0.5 font-sans"
+                >
+                  -
+                </p>
+              </div>
+              <div id="tv-title-match-badge" class="shrink-0 flex items-center"></div>
+            </div>
+          </div>
+
+          <!-- Grid de Metadatos -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5">
+              <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Icon name="boxicons:categories" size={13} class="text-primary/70" />
+                Categoría
+              </span>
+              <p id="tv-category" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5">
+              <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Icon name="boxicons:flag" size={13} class="text-warning/70" />
+                Prioridad
+              </span>
+              <p id="tv-priority" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5">
+              <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Icon name="boxicons:info-circle" size={13} class="text-info/70" />
+                Estado
+              </span>
+              <p id="tv-status" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5">
+              <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Icon name="boxicons:user" size={13} class="text-secondary/70" />
+                Solicitante
+              </span>
+              <p id="tv-creator" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5">
+              <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Icon name="boxicons:pin" size={13} class="text-primary/70" />
+                Creado por
+              </span>
+              <p id="tv-created-by" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5">
+              <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Icon name="boxicons:help-circle" size={13} class="text-info/70" />
+                Mesa de Ayuda
+              </span>
+              <p id="tv-helpdesk" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+            <div class="bg-base-200/40 border border-base-200 rounded-xl p-2.5 col-span-2">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Icon name="boxicons:broadcast" size={13} class="text-primary/70" />
+                  Origen
+                </span>
+                <div id="tv-source-match-badge" class="shrink-0 flex items-center"></div>
+              </div>
+              <p id="tv-source" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                -
+              </p>
+            </div>
+          </div>
+
+          <!-- Descripción / Evidencia -->
+          <div class="bg-base-200/40 border border-base-200 rounded-xl p-3">
+            <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider block">
+              Descripción / Evidencia
+            </span>
+            <div
+              id="tv-description"
+              class="text-base-content/85 mt-1 max-h-48 overflow-y-auto font-sans text-xs leading-relaxed whitespace-pre-wrap"
+            >
+              -
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- COLUMNA DERECHA: Puntuación en Tiempo Real, Criterios y Observaciones -->
+    <div class="lg:col-span-7 space-y-4">
+      
+      <!-- Card Puntuación en Tiempo Real -->
+      <div
+        class="bg-base-100 border border-base-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl p-4 sm:p-5 shadow-sm"
+      >
+        <div class="space-y-1">
+          <span class="text-base-content text-sm font-bold flex items-center gap-2">
+            <Icon name="boxicons:bar-chart-big-filled" size={20} class="text-primary" />
+            Puntuación en tiempo real
+          </span>
+          <p class="text-base-content/60 text-xs">
+            Cada criterio desmarcado deduce porcentaje sobre la base de 100%.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-5 sm:gap-6 self-end sm:self-auto">
+          <!-- Sección 1 -->
+          <div class="border-base-200 border-r pr-4 text-center">
+            <div class="text-base-content/50 text-xxs font-bold uppercase tracking-wider">
+              Sección 1
+            </div>
+            <div id="preview-s1" class="text-base-content/90 text-base font-bold mt-0.5 font-mono">
+              100%
+            </div>
+          </div>
+
+          <!-- Sección 2 -->
+          <div
+            id="preview-s2-block"
+            class="border-base-200 border-r pr-4 text-center transition-opacity"
+          >
+            <div class="text-base-content/50 text-xxs font-bold uppercase tracking-wider">
+              Sección 2
+            </div>
+            <div id="preview-s2" class="text-base-content/90 text-base font-bold mt-0.5 font-mono">
+              100%
+            </div>
+          </div>
+
+          <!-- TOTAL FINAL -->
+          <div class="text-center pl-1">
+            <div class="text-base-content/60 text-xxs font-black uppercase tracking-wider">
+              Total Final
+            </div>
+            <div id="preview-total" class="text-success text-3xl sm:text-4xl font-black font-mono tracking-tight leading-none mt-1">
+              100%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist: Canal 1 - Llamadas Wise -->
+      <div
+        id="channel-checklist-wise_call"
+        class="channel-checklist space-y-4"
+      >
+        <!-- S1: Gestión de la llamada -->
+        <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+          <div class="border-base-200 mb-3 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content uppercase tracking-wider">
+            <span>1. Gestión de la llamada / atención</span>
+            <span class="text-base-content/50 text-xxs font-semibold">Base: 100%</span>
+          </div>
+          <div class="space-y-1 divide-y divide-base-200/60">
+            {
+              wiseCallParams
+                .filter(
+                  (p) =>
+                    p.section === "items" ||
+                    p.category === "Items" ||
+                    p.category === "Interacción con Usuario",
+                )
+                .map((p) => (
+                  <div class="checklist-item py-2.5 px-1 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                      <label class="label cursor-pointer justify-start gap-3 p-0 items-start flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          name={p.code}
+                          class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                          data-weight={p.weight ?? 0}
+                          data-section="items"
+                          checked
+                        />
+                        <span class="label-text text-xs leading-snug text-base-content font-medium">
+                          {p.name}
+                          {p.weight ? (
+                            <span class="text-error font-semibold ml-1.5 text-xs">
+                              (-{p.weight}%)
+                            </span>
+                          ) : (
+                            <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                          )}
+                        </span>
+                      </label>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span
+                          class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                          data-rule-badge={p.code}
+                        >
+                          Regla
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                          data-action="toggle-obs"
+                          title="Agregar nota"
+                        >
+                          <Icon name="boxicons:message" size={14} />
+                          <span class="text-xxs hidden sm:inline">Nota</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="criteria-obs-wrapper hidden mt-2.5 pl-7">
+                      <input
+                        type="text"
+                        name={`${p.code}_comment`}
+                        placeholder="Motivo de penalización u observación..."
+                        class="input input-sm bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ))
+            }
+          </div>
+        </div>
+
+        <!-- S2: Ticket (Condicional) -->
+        <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+          <div class="border-base-200 mb-3 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content uppercase tracking-wider">
+            <span>2. Ticket (Gestión y registro)</span>
+            <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+              <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                ¿Se generó ticket?
+              </span>
+              <input
+                type="checkbox"
+                name="callGeneratedTicket"
+                id="toggle-call-generated-ticket"
+                class="toggle toggle-primary toggle-sm"
+                checked
+              />
+            </label>
+          </div>
+          <div
+            id="wise-call-ticket-block"
+            class="space-y-1 divide-y divide-base-200/60"
+          >
+            {
+              wiseCallParams
+                .filter(
+                  (p) =>
+                    p.section === "ticket" ||
+                    p.category === "Ticket" ||
+                    p.category === "Gestión del Ticket",
+                )
+                .map((p) => (
+                  <div class="checklist-item py-2.5 px-1 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                      <label class="label cursor-pointer justify-start gap-3 p-0 items-start flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          name={p.code}
+                          class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                          data-weight={p.weight ?? 0}
+                          data-section="ticket"
+                          checked
+                        />
+                        <span class="label-text text-xs leading-snug text-base-content font-medium">
+                          {p.name}
+                          {p.weight ? (
+                            <span class="text-error font-semibold ml-1.5 text-xs">
+                              (-{p.weight}%)
+                            </span>
+                          ) : (
+                            <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                          )}
+                        </span>
+                      </label>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span
+                          class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                          data-rule-badge={p.code}
+                        >
+                          Regla
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                          data-action="toggle-obs"
+                          title="Agregar nota"
+                        >
+                          <Icon name="boxicons:message" size={14} />
+                          <span class="text-xxs hidden sm:inline">Nota</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="criteria-obs-wrapper hidden mt-2.5 pl-7">
+                      <input
+                        type="text"
+                        name={`${p.code}_comment`}
+                        placeholder="Motivo de penalización u observación..."
+                        class="input input-sm bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ))
+            }
+          </div>
+          <!-- Estado Vacío Elegante (Sin Ticket) -->
+          <div
+            id="wise-call-ticket-placeholder"
+            class="hidden flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
+          >
+            <div class="p-3 bg-base-200 text-base-content/40 rounded-2xl mb-2">
+              <Icon name="boxicons:file" size={28} />
+            </div>
+            <h5 class="text-xs font-bold text-base-content mb-0.5">Sin ticket asociado</h5>
+            <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+              No se generó ticket para esta llamada. La evaluación computará únicamente la Sección 1.
+            </p>
+            <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
+              Sección 2 excluida
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist: Canal 2 - Mail Wise -->
+      <div
+        id="channel-checklist-wise_email"
+        class="channel-checklist hidden space-y-4"
+      >
+        <!-- S1: Gestión Correo -->
+        <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+          <div class="border-base-200 mb-3 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content uppercase tracking-wider">
+            <span>1. Gestión general del correo</span>
+            <span class="text-base-content/50 text-xxs font-semibold">Base: 100%</span>
+          </div>
+          <div class="space-y-1 divide-y divide-base-200/60">
+            {
+              wiseEmailParams
+                .filter((p) => p.section === "items")
+                .map((p) => (
+                  <div class="checklist-item py-2.5 px-1 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                      <label class="label cursor-pointer justify-start gap-3 p-0 items-start flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          name={p.code}
+                          class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                          data-weight={p.weight ?? 0}
+                          data-section="items"
+                          checked
+                        />
+                        <span class="label-text text-xs leading-snug text-base-content font-medium">
+                          {p.name}
+                          {p.weight ? (
+                            <span class="text-error font-semibold ml-1.5 text-xs">
+                              (-{p.weight}%)
+                            </span>
+                          ) : (
+                            <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                          )}
+                        </span>
+                      </label>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span
+                          class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                          data-rule-badge={p.code}
+                        >
+                          Regla
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                          data-action="toggle-obs"
+                          title="Agregar nota"
+                        >
+                          <Icon name="boxicons:message" size={14} />
+                          <span class="text-xxs hidden sm:inline">Nota</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="criteria-obs-wrapper hidden mt-2.5 pl-7">
+                      <input
+                        type="text"
+                        name={`${p.code}_comment`}
+                        placeholder="Motivo de penalización u observación..."
+                        class="input input-sm bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ))
+            }
+          </div>
+        </div>
+
+        <!-- S2: Items MDA (Condicional) -->
+        <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+          <div class="border-base-200 mb-3 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content uppercase tracking-wider">
+            <span>2. Items categoría MDA (Ticket)</span>
+            <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+              <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                ¿Se generó ticket?
+              </span>
+              <input
+                type="checkbox"
+                name="appliesMda"
+                id="toggle-applies-mda"
+                class="toggle toggle-primary toggle-sm"
+              />
+            </label>
+          </div>
+          <div
+            id="wise-email-mda-block"
+            class="hidden space-y-1 divide-y divide-base-200/60"
+          >
+            {
+              wiseEmailParams
+                .filter((p) => p.section === "mda")
+                .map((p) => (
+                  <div class="checklist-item py-2.5 px-1 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                      <label class="label cursor-pointer justify-start gap-3 p-0 items-start flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          name={p.code}
+                          class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                          data-weight={p.weight ?? 0}
+                          data-section="mda"
+                          checked
+                        />
+                        <span class="label-text text-xs leading-snug text-base-content font-medium">
+                          {p.name}
+                          {p.weight ? (
+                            <span class="text-error font-semibold ml-1.5 text-xs">
+                              (-{p.weight}%)
+                            </span>
+                          ) : (
+                            <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                          )}
+                        </span>
+                      </label>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span
+                          class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                          data-rule-badge={p.code}
+                        >
+                          Regla
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                          data-action="toggle-obs"
+                          title="Agregar nota"
+                        >
+                          <Icon name="boxicons:message" size={14} />
+                          <span class="text-xxs hidden sm:inline">Nota</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="criteria-obs-wrapper hidden mt-2.5 pl-7">
+                      <input
+                        type="text"
+                        name={`${p.code}_comment`}
+                        placeholder="Motivo de penalización u observación..."
+                        class="input input-sm bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ))
+            }
+          </div>
+          <!-- Estado Vacío Elegante (Sin Ticket) -->
+          <div
+            id="wise-email-mda-placeholder"
+            class="flex flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
+          >
+            <div class="p-3 bg-base-200 text-base-content/40 rounded-2xl mb-2">
+              <Icon name="boxicons:envelope-open" size={28} />
+            </div>
+            <h5 class="text-xs font-bold text-base-content mb-0.5">Sin ticket asociado</h5>
+            <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+              Este correo no requirió ticket MDA. La evaluación computará únicamente la Sección 1.
+            </p>
+            <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
+              Sección 2 excluida
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist: Canal 3 - Autogestiones -->
+      <div
+        id="channel-checklist-invgate_ticket"
+        class="channel-checklist hidden space-y-4"
+      >
+        <!-- S1: Gestión Caso -->
+        <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+          <div class="border-base-200 mb-3 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content uppercase tracking-wider">
+            <span>1. Gestión general del caso</span>
+            <span class="text-base-content/50 text-xxs font-semibold">Base: 100%</span>
+          </div>
+          <div class="space-y-1 divide-y divide-base-200/60">
+            {
+              invgateAgParams
+                .filter((p) => p.section === "items")
+                .map((p) => (
+                  <div class="checklist-item py-2.5 px-1 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                      <label class="label cursor-pointer justify-start gap-3 p-0 items-start flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          name={p.code}
+                          class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                          data-weight={p.weight ?? 0}
+                          data-section="items"
+                          checked
+                        />
+                        <span class="label-text text-xs leading-snug text-base-content font-medium">
+                          {p.name}
+                          {p.weight ? (
+                            <span class="text-error font-semibold ml-1.5 text-xs">
+                              (-{p.weight}%)
+                            </span>
+                          ) : (
+                            <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                          )}
+                        </span>
+                      </label>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span
+                          class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                          data-rule-badge={p.code}
+                        >
+                          Regla
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                          data-action="toggle-obs"
+                          title="Agregar nota"
+                        >
+                          <Icon name="boxicons:message" size={14} />
+                          <span class="text-xxs hidden sm:inline">Nota</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="criteria-obs-wrapper hidden mt-2.5 pl-7">
+                      <input
+                        type="text"
+                        name={`${p.code}_comment`}
+                        placeholder="Motivo de penalización u observación..."
+                        class="input input-sm bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ))
+            }
+          </div>
+        </div>
+
+        <!-- S2: Items MDA -->
+        <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+          <div class="border-base-200 mb-3 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content uppercase tracking-wider">
+            <span>2. Items categoría MDA</span>
+            <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+              <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                ¿Queda en MDA?
+              </span>
+              <input
+                type="checkbox"
+                name="staysInMda"
+                id="toggle-stays-mda"
+                class="toggle toggle-primary toggle-sm"
+                checked
+              />
+            </label>
+          </div>
+          <div
+            id="invgate-ag-mda-block"
+            class="space-y-1 divide-y divide-base-200/60"
+          >
+            {
+              invgateAgParams
+                .filter((p) => p.section === "mda")
+                .map((p) => (
+                  <div class="checklist-item py-2.5 px-1 transition-colors">
+                    <div class="flex items-start justify-between gap-3">
+                      <label class="label cursor-pointer justify-start gap-3 p-0 items-start flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          name={p.code}
+                          class="checkbox checkbox-primary checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                          data-weight={p.weight ?? 0}
+                          data-section="mda"
+                          checked
+                        />
+                        <span class="label-text text-xs leading-snug text-base-content font-medium">
+                          {p.name}
+                          {p.weight ? (
+                            <span class="text-error font-semibold ml-1.5 text-xs">
+                              (-{p.weight}%)
+                            </span>
+                          ) : (
+                            <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                          )}
+                        </span>
+                      </label>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span
+                          class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                          data-rule-badge={p.code}
+                        >
+                          Regla
+                        </span>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                          data-action="toggle-obs"
+                          title="Agregar nota"
+                        >
+                          <Icon name="boxicons:message" size={14} />
+                          <span class="text-xxs hidden sm:inline">Nota</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="criteria-obs-wrapper hidden mt-2.5 pl-7">
+                      <input
+                        type="text"
+                        name={`${p.code}_comment`}
+                        placeholder="Motivo de penalización u observación..."
+                        class="input input-sm bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ))
+            }
+          </div>
+          <!-- Estado Vacío Elegante (Derivado fuera de MDA) -->
+          <div
+            id="invgate-ag-mda-placeholder"
+            class="hidden flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
+          >
+            <div class="p-3 bg-base-200 text-base-content/40 rounded-2xl mb-2">
+              <Icon name="boxicons:share" size={28} />
+            </div>
+            <h5 class="text-xs font-bold text-base-content mb-0.5">Caso derivado fuera de MDA</h5>
+            <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
+              El caso no permanece en la mesa MDA. La evaluación computará únicamente la Sección 1.
+            </p>
+            <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
+              Sección 2 excluida
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notas / Observaciones Generales -->
+      <div class="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm">
+        <FormTextarea
+          id="form-notes"
+          name="notes"
+          label="Notas y observaciones generales"
+          placeholder="Ingrese observaciones cualitativas, sugerencias de mejora o detalles relevantes..."
+          rows={3}
+          textareaClass="textarea-sm font-medium"
+        />
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  import { actions } from "astro:actions";
+  import { getCleanBase } from "@lib/baseUrl";
+  import { matchApprovedTitle, cleanHtmlText } from "@/lib/titleNormalizer";
+
+  function initNewAuditForm() {
+    const container = document.getElementById("new-audit-form-container");
+    if (!container) return false;
+    if (container.dataset.formInitialized === "true") return true;
+    container.dataset.formInitialized = "true";
+
+    const cleanBase = container.dataset.cleanBase || getCleanBase();
+    let approvedTitles: string[] = [];
+    try {
+      approvedTitles = container.dataset.approvedTitles
+        ? JSON.parse(container.dataset.approvedTitles)
+        : [];
+    } catch {
+      approvedTitles = [];
+    }
+
+    const form = container.closest("form") || document.getElementById("editor-form") || document.getElementById("audit-form");
+    const formChannelType = document.getElementById("form-channel-type") as HTMLInputElement | null;
+    const channelButtons = container.querySelectorAll(".channel-btn");
+
+    // Search Tabs & Inputs
+    const tabSearchWise = document.getElementById("tab-search-wise");
+    const tabSearchInvgate = document.getElementById("tab-search-invgate");
+    const wiseSearchContainer = document.getElementById("wise-search-container");
+    const wiseSearchInput = document.getElementById("wise-search-id") as HTMLInputElement | null;
+    const btnFetchWise = document.getElementById("btn-fetch-wise-api") as HTMLButtonElement | null;
+    const wiseFeedbackAlert = document.getElementById("wise-feedback-alert");
+
+    const invgateSearchContainer = document.getElementById("invgate-search-container");
+    const invgateSearchInput = document.getElementById("invgate-search-id") as HTMLInputElement | null;
+    const btnFetchInvgate = document.getElementById("btn-fetch-invgate-api") as HTMLButtonElement | null;
+    const invgateFeedbackAlert = document.getElementById("invgate-feedback-alert");
+
+    // Audio & Ticket Elements
+    const tvAudioContainer = document.getElementById("tv-audio-container");
+    const tvAudioPlayer = document.getElementById("tv-audio-player") as HTMLAudioElement | null;
+    const tvAudioDownload = document.getElementById("tv-audio-download") as HTMLAnchorElement | null;
+    const formRecordingUrl = document.getElementById("form-recording-url") as HTMLInputElement | null;
+
+    const ticketViewerHeader = document.getElementById("ticket-viewer-header");
+    const ticketViewerContent = document.getElementById("ticket-viewer-content");
+    const ticketViewerBadge = document.getElementById("ticket-viewer-badge");
+    const ticketViewerToggleText = document.getElementById("ticket-viewer-toggle-text");
+    const ticketViewerChevron = document.getElementById("ticket-viewer-chevron");
+    const tvTitle = document.getElementById("tv-title");
+    const tvTitleMatchBadge = document.getElementById("tv-title-match-badge");
+    const tvCategory = document.getElementById("tv-category");
+    const tvPriority = document.getElementById("tv-priority");
+    const tvStatus = document.getElementById("tv-status");
+    const tvCreator = document.getElementById("tv-creator");
+    const tvCreatedBy = document.getElementById("tv-created-by");
+    const tvHelpdesk = document.getElementById("tv-helpdesk");
+    const tvSource = document.getElementById("tv-source");
+    const tvSourceMatchBadge = document.getElementById("tv-source-match-badge");
+    const tvDescription = document.getElementById("tv-description");
+
+    // Toggles
+    const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
+    const wiseCallTicketBlock = document.getElementById("wise-call-ticket-block");
+    const wiseCallTicketPlaceholder = document.getElementById("wise-call-ticket-placeholder");
+
+    const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
+    const wiseEmailMdaBlock = document.getElementById("wise-email-mda-block");
+    const wiseEmailMdaPlaceholder = document.getElementById("wise-email-mda-placeholder");
+
+    const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
+    const invgateAgMdaBlock = document.getElementById("invgate-ag-mda-block");
+    const invgateAgMdaPlaceholder = document.getElementById("invgate-ag-mda-placeholder");
+
+    // Default Date to Today
+    const formDate = document.getElementById("form-date") as HTMLInputElement | null;
+    if (formDate && !formDate.value) {
+      formDate.value = new Date().toISOString().substring(0, 10);
+    }
+
+    function setActiveSearchTab(target: "wise" | "invgate") {
+      if (target === "wise") {
+        tabSearchWise?.classList.add("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.remove("font-medium", "text-base-content/60");
+        tabSearchInvgate?.classList.remove("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.add("font-medium", "text-base-content/60");
+
+        wiseSearchContainer?.classList.remove("hidden");
+        invgateSearchContainer?.classList.add("hidden");
+      } else {
+        tabSearchInvgate?.classList.add("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchInvgate?.classList.remove("font-medium", "text-base-content/60");
+        tabSearchWise?.classList.remove("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
+        tabSearchWise?.classList.add("font-medium", "text-base-content/60");
+
+        invgateSearchContainer?.classList.remove("hidden");
+        wiseSearchContainer?.classList.add("hidden");
+      }
+    }
+
+    tabSearchWise?.addEventListener("click", () => setActiveSearchTab("wise"));
+    tabSearchInvgate?.addEventListener("click", () => setActiveSearchTab("invgate"));
+
+    // Accordion
+    ticketViewerHeader?.addEventListener("click", () => {
+      if (!ticketViewerContent) return;
+      const isHidden = ticketViewerContent.classList.contains("hidden");
+      if (isHidden) {
+        ticketViewerContent.classList.remove("hidden");
+        if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Ocultar";
+        if (ticketViewerChevron) ticketViewerChevron.classList.add("rotate-180");
+      } else {
+        ticketViewerContent.classList.add("hidden");
+        if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Mostrar";
+        if (ticketViewerChevron) ticketViewerChevron.classList.remove("rotate-180");
+      }
+    });
+
+    function setParamRuleBadge(code: string, active: boolean, text = "Desactivado por regla") {
+      const badge = container?.querySelector(`.rule-auto-badge[data-rule-badge="${code}"]`) as HTMLElement | null;
+      if (!badge) return;
+      if (active) {
+        badge.textContent = text;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    function clearAllRuleBadges() {
+      container?.querySelectorAll(".rule-auto-badge").forEach((el) => {
+        el.classList.add("hidden");
+      });
+    }
+
+    function evaluateTicketTitle(titleStr: string) {
+      if (!titleStr) return;
+      const channel = formChannelType?.value || "wise_call";
+      let checkboxName = "call_ticket_titulo";
+      if (channel === "wise_email") checkboxName = "email_mda_titulo";
+      else if (channel === "invgate_ticket") checkboxName = "ag_titulo";
+
+      const checkbox = container?.querySelector(`input[name="${checkboxName}"]`) as HTMLInputElement | null;
+      const match = matchApprovedTitle(titleStr, approvedTitles);
+
+      if (tvTitleMatchBadge) {
+        if (match.matched) {
+          tvTitleMatchBadge.innerHTML = `
+            <span class="badge badge-xs badge-success font-semibold gap-1 text-[11px]" title="Coincide con: ${match.matchedTitle}">
+              <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Título Homologado
+            </span>
+          `;
+          if (checkbox) checkbox.checked = true;
+          setParamRuleBadge(checkboxName, false);
+        } else {
+          tvTitleMatchBadge.innerHTML = `
+            <span class="badge badge-xs badge-warning font-semibold text-[11px]" title="No coincide con catálogo de títulos">
+              No Homologado
+            </span>
+          `;
+          if (checkbox) checkbox.checked = false;
+          setParamRuleBadge(checkboxName, true, "Desactivado por regla");
+        }
+      }
+      recalculateScores();
+    }
+
+    function evaluateTicketSource(sourceStr: string) {
+      const channel = formChannelType?.value || "wise_call";
+      if (channel === "invgate_ticket") {
+        if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
+        return;
+      }
+
+      let checkboxName = "";
+      let isValid = false;
+
+      const norm = (sourceStr || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+      if (channel === "wise_call") {
+        checkboxName = "call_ticket_origen";
+        isValid = norm.includes("tel") || norm.includes("llamada");
+      } else if (channel === "wise_email") {
+        checkboxName = "email_mda_origen";
+        isValid = norm.includes("corr") || norm.includes("mail");
+      }
+
+      if (!checkboxName) return;
+
+      const checkbox = container?.querySelector(`input[name="${checkboxName}"]`) as HTMLInputElement | null;
+
+      if (tvSourceMatchBadge) {
+        if (isValid) {
+          tvSourceMatchBadge.innerHTML = `
+            <span class="badge badge-xs badge-success font-semibold gap-1 text-[11px]" title="Origen coincide con el canal">
+              <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Válido
+            </span>
+          `;
+        } else {
+          tvSourceMatchBadge.innerHTML = `
+            <span class="badge badge-xs badge-warning font-semibold text-[11px]" title="El origen del ticket no coincide con el canal auditado">
+              No coincide
+            </span>
+          `;
+        }
+      }
+
+      if (isValid) {
+        if (checkbox) checkbox.checked = true;
+        setParamRuleBadge(checkboxName, false);
+      } else {
+        if (checkbox) checkbox.checked = false;
+        setParamRuleBadge(checkboxName, true, "Origen incorrecto");
+      }
+
+      recalculateScores();
+    }
+
+    function populateTicketViewer(data: any) {
+      const title = data.title || data.rawDetails?.title || "Sin título";
+      const category = data.category || data.rawDetails?.category || "Sin categoría";
+      const priority = data.priority || data.rawDetails?.priority || "Media";
+      const status = data.status || data.rawDetails?.status || "Abierto";
+      const creator = data.customer || data.creator || data.rawDetails?.customer || data.rawDetails?.creator || "Desconocido";
+      const createdBy = data.createdBy || data.rawDetails?.createdBy || creator;
+      const helpdesk = data.helpdesk || data.rawDetails?.helpdesk || "Sin mesa asignada";
+      const source = data.source || data.rawDetails?.source || "Sin origen";
+      const description = data.description || data.rawDetails?.description || "Sin descripción disponible";
+
+      if (tvTitle) tvTitle.textContent = title;
+      if (tvCategory) tvCategory.textContent = category;
+      if (tvPriority) tvPriority.textContent = priority;
+      if (tvStatus) tvStatus.textContent = status;
+      if (tvCreator) tvCreator.textContent = creator;
+      if (tvCreatedBy) tvCreatedBy.textContent = createdBy;
+      if (tvHelpdesk) tvHelpdesk.textContent = helpdesk;
+      if (tvSource) tvSource.textContent = source;
+
+      if (tvDescription) {
+        tvDescription.textContent = cleanHtmlText(description) || "Sin descripción disponible";
+      }
+
+      if (ticketViewerBadge) {
+        ticketViewerBadge.textContent = `Ticket #${data.caseNumber || data.rawDetails?.incidentId || ""}`;
+        ticketViewerBadge.className = "badge badge-xs badge-primary font-bold";
+      }
+
+      if (ticketViewerContent) {
+        ticketViewerContent.classList.remove("hidden");
+        if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Ocultar";
+        if (ticketViewerChevron) ticketViewerChevron.classList.add("rotate-180");
+      }
+
+      evaluateTicketTitle(title);
+      evaluateTicketSource(source);
+    }
+
+    function resetTicketViewer() {
+      if (tvTitle) tvTitle.textContent = "-";
+      if (tvCategory) tvCategory.textContent = "-";
+      if (tvPriority) tvPriority.textContent = "-";
+      if (tvStatus) tvStatus.textContent = "-";
+      if (tvCreator) tvCreator.textContent = "-";
+      if (tvCreatedBy) tvCreatedBy.textContent = "-";
+      if (tvHelpdesk) tvHelpdesk.textContent = "-";
+      if (tvSource) tvSource.textContent = "-";
+      if (tvDescription) tvDescription.textContent = "-";
+      if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
+      if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
+      if (ticketViewerBadge) {
+        ticketViewerBadge.textContent = "Sin ticket cargado";
+        ticketViewerBadge.className = "badge badge-xs badge-ghost font-medium";
+      }
+      if (ticketViewerContent) ticketViewerContent.classList.add("hidden");
+      if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Mostrar";
+      if (ticketViewerChevron) ticketViewerChevron.classList.remove("rotate-180");
+      clearAllRuleBadges();
+    }
+
+    let wiseFeedbackTimeout: any = null;
+    let invgateFeedbackTimeout: any = null;
+
+    function showFeedbackMessage(
+      el: HTMLElement | null,
+      content: string,
+      type: "success" | "error" | "warning" | "info",
+      isWise: boolean,
+    ) {
+      if (!el) return;
+      if (isWise && wiseFeedbackTimeout) clearTimeout(wiseFeedbackTimeout);
+      if (!isWise && invgateFeedbackTimeout) clearTimeout(invgateFeedbackTimeout);
+
+      el.innerHTML = content;
+      const typeClasses =
+        type === "success"
+          ? "border-success/30 bg-success/10 text-success"
+          : type === "warning"
+            ? "border-warning/30 bg-warning/10 text-warning"
+            : type === "info"
+              ? "border-info/30 bg-info/10 text-info"
+              : "border-error/30 bg-error/10 text-error";
+
+      el.className = `mt-2.5 flex items-center gap-2 rounded-xl border p-2.5 text-xs font-semibold shadow-2xs transition-all duration-200 ${typeClasses}`;
+      el.classList.remove("hidden");
+
+      const timeout = setTimeout(() => {
+        el.classList.add("hidden");
+      }, 5000);
+
+      if (isWise) wiseFeedbackTimeout = timeout;
+      else invgateFeedbackTimeout = timeout;
+    }
+
+    // Buscador Wise CX
+    if (btnFetchWise && wiseSearchInput) {
+      wiseSearchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          btnFetchWise.click();
+        }
+      });
+
+      btnFetchWise.addEventListener("click", async () => {
+        const id = wiseSearchInput.value.trim();
+        if (!id) {
+          showFeedbackMessage(wiseFeedbackAlert, "Ingrese un número o ID de caso Wise.", "warning", true);
+          return;
+        }
+
+        const channel = formChannelType?.value || "wise_call";
+        const originalHtml = btnFetchWise.innerHTML;
+        btnFetchWise.disabled = true;
+        btnFetchWise.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+        if (wiseFeedbackAlert) wiseFeedbackAlert.classList.add("hidden");
+
+        try {
+          const res = await fetch(`${cleanBase}api/calidad/fetch-metadata?channel=${channel}&id=${encodeURIComponent(id)}&source=wise`);
+          const json = await res.json();
+
+          if (!res.ok || !json.data) {
+            showFeedbackMessage(wiseFeedbackAlert, json.error || "No se encontró el caso en Wise CX.", "error", true);
+            return;
+          }
+
+          const d = json.data;
+          let channelSwitched = false;
+          if (d.detectedChannel && formChannelType && formChannelType.value !== d.detectedChannel) {
+            const targetBtn = container.querySelector(`.channel-btn[data-channel="${d.detectedChannel}"]`) as HTMLButtonElement | null;
+            if (targetBtn) {
+              targetBtn.click();
+              channelSwitched = true;
+            }
+          }
+
+          const formCallId = document.getElementById("form-call-id") as HTMLInputElement | null;
+          const formTicketId = document.getElementById("form-ticket-id") as HTMLInputElement | null;
+          const formDuration = document.getElementById("form-duration") as HTMLInputElement | null;
+          const formDateInput = document.getElementById("form-date") as HTMLInputElement | null;
+          const formRing = document.getElementById("form-ring-time") as HTMLInputElement | null;
+          const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
+          const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
+
+          if (formCallId && d.caseNumber) formCallId.value = d.caseNumber;
+          if (formDuration && d.duration) formDuration.value = d.duration;
+          if (formDateInput && d.date) formDateInput.value = d.date;
+          if (formRing && d.ringTime) formRing.value = d.ringTime;
+          if (formCreation && d.creationTime) formCreation.value = d.creationTime;
+          if (formTake && d.takeTime) formTake.value = d.takeTime;
+          if (formRecordingUrl && d.recordingUrl) formRecordingUrl.value = d.recordingUrl;
+
+          if (formTicketId && !formTicketId.value && d.rawDetails?.incidentId) {
+            formTicketId.value = d.rawDetails.incidentId.toString();
+          }
+
+          if (d.recordingUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
+            const caseId = d.caseNumber || "llamada";
+            const downloadUrl = `${cleanBase}api/calidad/download-audio?url=${encodeURIComponent(d.recordingUrl)}&filename=grabacion-caso-${encodeURIComponent(caseId)}.mp3&download=1`;
+            tvAudioPlayer.src = d.recordingUrl;
+            tvAudioPlayer.load();
+            tvAudioDownload.href = downloadUrl;
+            tvAudioContainer.classList.remove("hidden");
+          } else if (tvAudioContainer) {
+            tvAudioContainer.classList.add("hidden");
+            if (tvAudioPlayer) {
+              tvAudioPlayer.pause();
+              tvAudioPlayer.src = "";
+            }
+          }
+
+          const channelTag = d.detectedChannel === "wise_email" ? "Mail Wise" : "Llamada Wise";
+          const successMsg = channelSwitched
+            ? `✓ Detectado como ${channelTag} (canal cambiado): ${d.operator || ""} ${d.duration ? `(${d.duration})` : ""}`
+            : `✓ Datos obtenidos [${channelTag}]: ${d.operator || ""} ${d.duration ? `(${d.duration})` : ""}`;
+
+          showFeedbackMessage(wiseFeedbackAlert, successMsg, channelSwitched ? "info" : "success", true);
+        } catch {
+          showFeedbackMessage(wiseFeedbackAlert, "Error de red al consultar Wise CX.", "error", true);
+        } finally {
+          btnFetchWise.disabled = false;
+          btnFetchWise.innerHTML = originalHtml;
+        }
+      });
+    }
+
+    // Buscador InvGate
+    if (btnFetchInvgate && invgateSearchInput) {
+      invgateSearchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          btnFetchInvgate.click();
+        }
+      });
+
+      btnFetchInvgate.addEventListener("click", async () => {
+        const id = invgateSearchInput.value.trim();
+        if (!id) {
+          showFeedbackMessage(invgateFeedbackAlert, "Ingrese un número o ID de incidente InvGate.", "warning", false);
+          return;
+        }
+
+        const channel = formChannelType?.value || "wise_call";
+        const originalHtml = btnFetchInvgate.innerHTML;
+        btnFetchInvgate.disabled = true;
+        btnFetchInvgate.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+        if (invgateFeedbackAlert) invgateFeedbackAlert.classList.add("hidden");
+
+        try {
+          const res = await fetch(`${cleanBase}api/calidad/fetch-metadata?channel=invgate_ticket&id=${encodeURIComponent(id)}&source=invgate`);
+          const json = await res.json();
+
+          if (!res.ok || !json.data) {
+            showFeedbackMessage(invgateFeedbackAlert, json.error || "No se encontró el ticket en InvGate.", "error", false);
+            return;
+          }
+
+          const d = json.data;
+          const formCallId = document.getElementById("form-call-id") as HTMLInputElement | null;
+          const formTicketId = document.getElementById("form-ticket-id") as HTMLInputElement | null;
+          const formDateInput = document.getElementById("form-date") as HTMLInputElement | null;
+          const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
+          const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
+          const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
+
+          if (formTicketId && d.caseNumber) formTicketId.value = d.caseNumber;
+          if (channel === "invgate_ticket") {
+            if (formCallId && !formCallId.value && d.caseNumber) formCallId.value = d.caseNumber;
+            if (formDateInput && d.date) formDateInput.value = d.date;
+            if (formCreation && d.creationTime) formCreation.value = d.creationTime;
+            if (formTake && d.takeTime) formTake.value = d.takeTime;
+            if (formIsPas && typeof d.isPas === "boolean") formIsPas.checked = d.isPas;
+          }
+
+          populateTicketViewer(d);
+          showFeedbackMessage(invgateFeedbackAlert, `✓ Ticket #${d.caseNumber} cargado ${d.isPas ? "[PAS]" : ""}`, "success", false);
+        } catch {
+          showFeedbackMessage(invgateFeedbackAlert, "Error de red al consultar InvGate.", "error", false);
+        } finally {
+          btnFetchInvgate.disabled = false;
+          btnFetchInvgate.innerHTML = originalHtml;
+        }
+      });
+    }
+
+    // Toggle Handlers
+    toggleCallGeneratedTicket?.addEventListener("change", () => {
+      const active = toggleCallGeneratedTicket.checked;
+      wiseCallTicketBlock?.classList.toggle("hidden", !active);
+      wiseCallTicketPlaceholder?.classList.toggle("hidden", active);
+      recalculateScores();
+    });
+
+    toggleAppliesMda?.addEventListener("change", () => {
+      const active = toggleAppliesMda.checked;
+      wiseEmailMdaBlock?.classList.toggle("hidden", !active);
+      wiseEmailMdaPlaceholder?.classList.toggle("hidden", active);
+      recalculateScores();
+    });
+
+    toggleStaysMda?.addEventListener("change", () => {
+      const active = toggleStaysMda.checked;
+      invgateAgMdaBlock?.classList.toggle("hidden", !active);
+      invgateAgMdaPlaceholder?.classList.toggle("hidden", active);
+      recalculateScores();
+    });
+
+    // Toggle observation button
+    container.addEventListener("click", (e) => {
+      const target = (e.target as HTMLElement).closest(".toggle-obs-btn");
+      if (!target) return;
+      const item = target.closest(".checklist-item");
+      const wrapper = item?.querySelector(".criteria-obs-wrapper");
+      if (wrapper) {
+        wrapper.classList.toggle("hidden");
+        const inp = wrapper.querySelector("input");
+        if (!wrapper.classList.contains("hidden")) {
+          inp?.focus();
+        }
+      }
+    });
+
+    // Checkbox and observation change triggers
+    container.addEventListener("change", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("audit-checkbox")) {
+        const item = target.closest(".checklist-item");
+        const wrapper = item?.querySelector(".criteria-obs-wrapper");
+        const cb = target as HTMLInputElement;
+        if (!cb.checked) {
+          wrapper?.classList.remove("hidden");
+        }
+        recalculateScores();
+      }
+    });
+
+    // Channel Switch
+    channelButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const channel = btn.getAttribute("data-channel");
+        if (!channel) return;
+
+        channelButtons.forEach((b) => {
+          b.classList.remove("btn-active", "bg-base-100", "text-secondary", "font-bold", "shadow-2xs");
+          b.classList.add("font-medium", "text-base-content/70", "hover:text-secondary");
+        });
+        btn.classList.add("btn-active", "bg-base-100", "text-secondary", "font-bold", "shadow-2xs");
+        btn.classList.remove("font-medium", "text-base-content/70", "hover:text-secondary");
+        if (formChannelType) formChannelType.value = channel;
+
+        container.querySelectorAll(".channel-checklist").forEach((el) => el.classList.add("hidden"));
+        const targetChecklist = document.getElementById(`channel-checklist-${channel}`);
+        if (targetChecklist) targetChecklist.classList.remove("hidden");
+
+        const metaDuration = document.getElementById("meta-duration-container");
+        const metaRing = document.getElementById("meta-ring-container");
+        const metaCreation = document.getElementById("meta-creation-container");
+        const metaTake = document.getElementById("meta-take-container");
+        const metaPas = document.getElementById("meta-pas-container");
+
+        if (metaDuration) {
+          metaDuration.classList.toggle("hidden", channel === "invgate_ticket");
+          const legend = metaDuration.querySelector("legend");
+          if (legend) {
+            legend.textContent = channel === "wise_email" ? "Respuesta" : "Duración";
+          }
+          const formDurationInput = document.getElementById("form-duration") as HTMLInputElement | null;
+          if (formDurationInput) {
+            formDurationInput.placeholder = channel === "wise_email" ? "19:14" : "02:15";
+          }
+        }
+        if (metaRing) metaRing.classList.toggle("hidden", channel !== "wise_call");
+        if (metaCreation) metaCreation.classList.toggle("hidden", channel !== "invgate_ticket");
+        if (metaTake) metaTake.classList.toggle("hidden", channel !== "invgate_ticket");
+        if (metaPas) metaPas.classList.toggle("hidden", channel !== "invgate_ticket");
+
+        const formDuration = document.getElementById("form-duration") as HTMLInputElement | null;
+        if (channel === "invgate_ticket" && formDuration && !formDuration.value) {
+          formDuration.value = "00:00";
+        }
+
+        if (channel === "invgate_ticket") {
+          if (tabSearchWise) tabSearchWise.classList.add("hidden");
+          setActiveSearchTab("invgate");
+        } else {
+          if (tabSearchWise) tabSearchWise.classList.remove("hidden");
+          setActiveSearchTab("wise");
+        }
+
+        if (channel === "wise_call") {
+          if (toggleCallGeneratedTicket) {
+            toggleCallGeneratedTicket.checked = true;
+            wiseCallTicketBlock?.classList.remove("hidden");
+            wiseCallTicketPlaceholder?.classList.add("hidden");
+          }
+        }
+
+        if (wiseFeedbackAlert) wiseFeedbackAlert.classList.add("hidden");
+        if (invgateFeedbackAlert) invgateFeedbackAlert.classList.add("hidden");
+
+        if (tvTitle && tvTitle.textContent && tvTitle.textContent !== "-") {
+          evaluateTicketTitle(tvTitle.textContent);
+        }
+        if (tvSource && tvSource.textContent && tvSource.textContent !== "-") {
+          evaluateTicketSource(tvSource.textContent);
+        }
+
+        recalculateScores();
+      });
+    });
+
+    function recalculateScores() {
+      const channel = formChannelType?.value || "wise_call";
+      const checklist = document.getElementById(`channel-checklist-${channel}`);
+      if (!checklist) return;
+
+      let s1Deductions = 0;
+      let s2Deductions = 0;
+
+      checklist.querySelectorAll<HTMLInputElement>(".audit-checkbox").forEach((cb) => {
+        const weight = parseFloat(cb.getAttribute("data-weight") || "0");
+        const section = cb.getAttribute("data-section");
+        if (!cb.checked && weight > 0) {
+          if (section === "items") {
+            s1Deductions += weight;
+          } else {
+            s2Deductions += weight;
+          }
+        }
+      });
+
+      let s1Score = 0;
+      let s2Score = 0;
+      let total = 0;
+      let hasSection2 = true;
+
+      if (channel === "wise_call") {
+        hasSection2 = toggleCallGeneratedTicket?.checked ?? true;
+        const s1Raw = Math.max(0, 45 - s1Deductions);
+        s1Score = Math.round((s1Raw / 45) * 100);
+        if (hasSection2) {
+          const s2Raw = Math.max(0, 55 - s2Deductions);
+          s2Score = Math.round((s2Raw / 55) * 100);
+          total = s1Raw + s2Raw;
+        } else {
+          s2Score = 0;
+          total = s1Score;
+        }
+      } else {
+        if (channel === "wise_email") {
+          hasSection2 = toggleAppliesMda?.checked ?? false;
+        } else if (channel === "invgate_ticket") {
+          hasSection2 = toggleStaysMda?.checked ?? true;
+        }
+
+        s1Score = Math.max(0, Math.round(100 - s1Deductions));
+        s2Score = hasSection2 ? Math.max(0, Math.round(100 - s2Deductions)) : 0;
+        total = hasSection2 ? Math.round((s1Score + s2Score) / 2) : s1Score;
+      }
+
+      const pS1 = document.getElementById("preview-s1");
+      const pS2 = document.getElementById("preview-s2");
+      const pS2Block = document.getElementById("preview-s2-block");
+      const pTotal = document.getElementById("preview-total");
+
+      if (pS1) pS1.textContent = `${s1Score}%`;
+      if (pS2) {
+        pS2.textContent = hasSection2 ? `${s2Score}%` : "N/A";
+      }
+      if (pS2Block) pS2Block.style.opacity = hasSection2 ? "1" : "0.3";
+
+      if (pTotal) {
+        pTotal.textContent = `${total}%`;
+        pTotal.className = `text-3xl sm:text-4xl font-black font-mono tracking-tight leading-none mt-1 ${total >= 90 ? "text-success" : total >= 80 ? "text-warning" : "text-error"}`;
+      }
+    }
+
+    recalculateScores();
+
+    // FORM SUBMIT HANDLER
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const btnSubmit = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+        const originalText = btnSubmit ? btnSubmit.innerHTML : "";
+        if (btnSubmit) {
+          btnSubmit.disabled = true;
+          btnSubmit.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Guardando…';
+        }
+
+        const formData = new FormData(form as HTMLFormElement);
+        const agentIdVal = (formData.get("agentId") as string)?.trim();
+        if (!agentIdVal) {
+          alert("Debe seleccionar un operador a auditar.");
+          const selectAgent = document.getElementById("form-agent-id");
+          selectAgent?.focus();
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = originalText;
+          }
+          return;
+        }
+
+        if (toggleCallGeneratedTicket) {
+          formData.set("callGeneratedTicket", toggleCallGeneratedTicket.checked ? "true" : "false");
+        }
+        if (toggleAppliesMda) {
+          formData.set("appliesMda", toggleAppliesMda.checked ? "true" : "false");
+        }
+        if (toggleStaysMda) {
+          formData.set("staysInMda", toggleStaysMda.checked ? "true" : "false");
+        }
+
+        const activeChannel = (formData.get("channelType") as string) || "wise_call";
+        const callIdVal = (formData.get("callId") as string)?.trim() || "";
+        const ticketIdVal = (formData.get("ticketId") as string)?.trim() || "";
+
+        if (activeChannel === "wise_call" && !callIdVal) {
+          alert("El Nro de Caso / ID de Llamada es requerido.");
+          document.getElementById("form-call-id")?.focus();
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = originalText;
+          }
+          return;
+        }
+
+        if (activeChannel === "wise_email" && !callIdVal) {
+          alert("El Nro de Caso / Mail Wise es requerido.");
+          document.getElementById("form-call-id")?.focus();
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = originalText;
+          }
+          return;
+        }
+
+        if (activeChannel === "invgate_ticket") {
+          if (!ticketIdVal && !callIdVal) {
+            alert("El Nro de Caso / Ticket AG es requerido.");
+            document.getElementById("form-ticket-id")?.focus();
+            if (btnSubmit) {
+              btnSubmit.disabled = false;
+              btnSubmit.innerHTML = originalText;
+            }
+            return;
+          }
+          if (!callIdVal) {
+            formData.set("callId", ticketIdVal);
+          }
+        }
+
+        if (!formData.get("duration")) {
+          formData.set("duration", "00:00");
+        }
+        if (!formData.has("notes")) {
+          formData.set("notes", "");
+        }
+
+        try {
+          const result = await actions.saveAudit(formData);
+          if (result.error) {
+            console.error("Validation error:", result.error);
+            alert(`Error al validar el formulario: ${result.error.message || "Verifique los campos requeridos."}`);
+            if (btnSubmit) {
+              btnSubmit.disabled = false;
+              btnSubmit.innerHTML = originalText;
+            }
+          } else if (result.data?.success) {
+            const redirectUrl = new URL(`${window.location.origin}${cleanBase}supervision/calidad-operadores`);
+            if (formData.get("month")) {
+              redirectUrl.searchParams.set("month", formData.get("month") as string);
+            }
+            if (agentIdVal) {
+              redirectUrl.searchParams.set("agentId", agentIdVal);
+            }
+            redirectUrl.searchParams.set("toast_msg", "Auditoría guardada con éxito.");
+            redirectUrl.searchParams.set("toast_type", "success");
+            window.location.href = redirectUrl.toString();
+          } else {
+            alert("Error al guardar la auditoría.");
+            if (btnSubmit) {
+              btnSubmit.disabled = false;
+              btnSubmit.innerHTML = originalText;
+            }
+          }
+        } catch (err) {
+          console.error("Save audit error:", err);
+          alert("Ocurrió un error inesperado al guardar la auditoría.");
+          if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = originalText;
+          }
+        }
+      });
+    }
+
+    return true;
+  }
+
+  function setupNewAuditObserver() {
+    if (initNewAuditForm()) return;
+    const observer = new MutationObserver((_, obs) => {
+      if (initNewAuditForm()) {
+        obs.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupNewAuditObserver();
+  document.addEventListener("astro:page-load", setupNewAuditObserver);
+</script>

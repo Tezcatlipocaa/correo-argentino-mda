@@ -1,0 +1,76 @@
+---
+import FormShell from "@components/ui/FormShell.astro";
+import NewAuditForm from "@components/supervision/calidad/NewAuditForm.astro";
+import { db } from "@db/index";
+import { agents, users, auditParameters } from "@db/schema";
+import { and, eq } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
+import { getResolvedSearchParams } from "@lib/navigation";
+import { getCleanBase } from "@lib/baseUrl";
+import { getApprovedTitlesList } from "@/lib/qualityTitleMatcher";
+import { normalizeRole, hasPermission } from "@lib/rbac";
+import type { AuditParameter } from "@/types/quality";
+
+const user = Astro.locals.user;
+const role = normalizeRole(user.role);
+
+// Restricción: rol agent no puede crear auditorías
+if (role === "agent" || !hasPermission("/supervision/calidad-operadores/nueva", role)) {
+  return Astro.redirect("/supervision/calidad-operadores");
+}
+
+const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
+const cleanBase = getCleanBase();
+
+const currentActualMonth = (() => {
+  const now = new Date();
+  const mm = (now.getMonth() + 1).toString().padStart(2, "0");
+  const yyyy = now.getFullYear();
+  return `${mm}-${yyyy}`;
+})();
+
+const monthParam = searchParams.get("month");
+const selectedMonth = monthParam || currentActualMonth;
+
+const agentIdParam = searchParams.get("agentId") || searchParams.get("operator");
+const preselectedAgentId = agentIdParam ? parseInt(agentIdParam, 10) : undefined;
+
+// Fetch all agents included in quality
+const allAgents = await db
+  .select({ id: agents.id, name: agents.name, username: agents.username })
+  .from(agents)
+  .leftJoin(users, eq(users.id, agents.userId))
+  .where(and(eq(agents.incluidoCalidad, true), activeAgentCondition()))
+  .orderBy(agents.name);
+
+// Fetch active audit parameters
+const allParameters = await db
+  .select()
+  .from(auditParameters)
+  .orderBy(auditParameters.order);
+
+const activeParameters = allParameters.filter(
+  (p) => p.active !== false,
+) as unknown as AuditParameter[];
+const approvedTitles = await getApprovedTitlesList();
+---
+
+<FormShell
+  title="Nueva Auditoría de Calidad"
+  subtitle="Evaluación asistida de calidad para llamadas Wise CX, correos o autogestión InvGate."
+  backHref={`${cleanBase}supervision/calidad-operadores${selectedMonth ? `?month=${selectedMonth}` : ""}`}
+  cancelLabel="Cancelar"
+  saveLabel="Guardar auditoría"
+  saveIcon="boxicons:save-filled"
+  saveColor="btn-primary"
+  formId="audit-form"
+  containerWidth="xxl"
+>
+  <NewAuditForm
+    allAgents={allAgents}
+    allParameters={activeParameters}
+    selectedMonth={selectedMonth}
+    preselectedAgentId={preselectedAgentId}
+    approvedTitles={approvedTitles}
+  />
+</FormShell>
