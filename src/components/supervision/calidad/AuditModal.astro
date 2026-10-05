@@ -155,11 +155,11 @@ const invgateAgParams = allParameters.filter(
                   <button
                     type="button"
                     id="btn-fetch-wise-api"
-                    class="btn btn-xs btn-neutral btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                    class="btn btn-xs bg-violet-600 hover:bg-violet-700 text-white border-violet-600 btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
                     title="Buscar"
                     aria-label="Buscar"
                   >
-                    <Icon name="boxicons:search" size={14} />
+                    <Icon name="boxicons:search" size={14} class="text-white" is:inline />
                   </button>
                 </div>
 
@@ -176,17 +176,17 @@ const invgateAgParams = allParameters.filter(
                       class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-secondary focus:outline-hidden"
                     />
                     <div class="text-secondary absolute top-1.5 left-2">
-                      <Icon name="boxicons:receipt" size={13} />
+                      <Icon name="boxicons:receipt" size={13} is:inline />
                     </div>
                   </div>
                   <button
                     type="button"
                     id="btn-fetch-invgate-api"
-                    class="btn btn-xs btn-neutral btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
-                    title="Buscar"
-                    aria-label="Buscar"
+                    class="btn btn-xs btn-secondary btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                    title="Buscar ticket en InvGate"
+                    aria-label="Buscar ticket en InvGate"
                   >
-                    <Icon name="boxicons:search" size={14} />
+                    <Icon name="boxicons:search" size={14} is:inline />
                     <span id="btn-fetch-invgate-label" class="sr-only">Buscar</span>
                   </button>
                 </div>
