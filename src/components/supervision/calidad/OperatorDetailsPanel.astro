@@ -1,0 +1,304 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  isAgent?: boolean;
+}
+
+const { isAgent = false } = Astro.props;
+---
+
+<div class:list={[isAgent ? "col-span-full" : "w-full"]}>
+  <div class="no-print mb-2 flex items-center justify-between">
+    <button
+      id="btn-back-to-summary"
+      type="button"
+      class="btn btn-sm btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-200 w-fit pl-2"
+    >
+      <Icon name={isAgent ? "boxicons:arrow-to-left" : "boxicons:x"} size={18} />
+      <span>{isAgent ? "Volver" : "Cerrar Ficha"}</span>
+    </button>
+    <div class="flex items-center gap-2">
+      <button
+        id="btn-export-csv"
+        class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
+        title="Exportar Reporte de Operador a CSV"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2.5"
+          stroke="currentColor"
+          class="size-3.5 shrink-0"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+          />
+        </svg>
+        <span>Exportar CSV</span>
+      </button>
+      <button
+        class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
+        onclick="window.print()"
+      >
+        <Icon name="boxicons:printer" size={14} />
+        Exportar Reporte
+      </button>
+    </div>
+  </div>
+
+  <div class="bg-base-100 border-l-secondary border-base-200 mt-2 flex flex-col gap-6 rounded-2xl border-y border-r border-l-4 p-6 shadow-md sm:p-8">
+    {/* Top section: Avatar, Name and Monthly Score */}
+    <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
+        <div
+          class="bg-base-200 text-base-content/60 border-base-300 flex size-20 items-center justify-center rounded-2xl border text-3xl font-black shadow-inner"
+          id="detail-avatar"
+        >
+          --
+        </div>
+        <div>
+          <div class="text-base-content/50 mb-1 text-xs font-bold tracking-widest uppercase">
+            Perfil del Operador
+          </div>
+          <h3
+            class="text-base-content text-4xl font-black tracking-tighter"
+            id="detail-name"
+          >
+            --
+          </h3>
+          <div class="text-base-content/60 mt-2 flex flex-wrap items-center gap-3 text-xs font-medium">
+            <span class="flex items-center gap-1">
+              <Icon
+                name="boxicons:user-id-card"
+                size={18}
+                class="opacity-70"
+              />
+              <span id="detail-id" class="font-mono">
+                --
+              </span>
+            </span>
+            <span class="opacity-30">•</span>
+            <span class="flex items-center gap-1">
+              <Icon
+                name="boxicons:calendar"
+                size={18}
+                class="opacity-70"
+              />
+              <span id="detail-month">--</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Score Card */}
+      <div class="bg-base-200/50 border-base-200 w-full shrink-0 rounded-2xl border p-4 sm:w-fit sm:min-w-35 sm:text-right">
+        <div class="text-base-content/50 mb-1 text-xs font-bold tracking-widest uppercase">
+          Score Mensual
+        </div>
+        <div
+          class="text-secondary text-5xl font-black tracking-tighter"
+          id="detail-score"
+        >
+          --%
+        </div>
+      </div>
+    </div>
+
+    {/* Bottom section: Stats block */}
+    <div class="bg-base-200/20 border-base-200 flex w-full flex-wrap items-center gap-3 rounded-2xl border p-3 shadow-sm sm:gap-4 sm:p-4">
+      <div class="border-base-200 flex min-w-30 flex-1 flex-col border-r px-2 sm:px-3">
+        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
+          Score vs Mes Ant.
+        </span>
+        <span
+          id="detail-stat-diff"
+          class="text-base-content text-lg font-black sm:text-xl"
+        >
+          --
+        </span>
+      </div>
+      <div class="border-base-200 flex min-w-30 flex-1 flex-col border-r px-2 sm:px-3">
+        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
+          Duración Promedio
+        </span>
+        <span
+          id="detail-stat-aht"
+          class="text-base-content text-lg font-black sm:text-xl"
+        >
+          --
+        </span>
+      </div>
+      <div class="border-base-200 flex min-w-30 flex-1 flex-col border-r px-2 sm:px-3">
+        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
+          Interacción
+        </span>
+        <span
+          id="detail-stat-interaction"
+          class="text-base-content text-lg font-black sm:text-xl"
+        >
+          --
+        </span>
+      </div>
+      <div class="flex min-w-30 flex-1 flex-col px-2 sm:px-3">
+        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
+          Gestión
+        </span>
+        <span
+          id="detail-stat-management"
+          class="text-base-content text-lg font-black sm:text-xl"
+        >
+          --
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Insights y Tendencia */}
+<div class="mt-6 grid gap-6 sm:grid-cols-2">
+  {/* Tendencia */}
+  <div class="bg-base-100 border-base-200 rounded-2xl border p-6 shadow-md">
+    <h4 class="text-base-content/70 mb-4 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+      <Icon name="boxicons:chart-line" size={18} />
+      Tendencia (Últimos 6 meses)
+    </h4>
+    <div
+      class="flex h-20 items-end justify-between gap-2"
+      id="detail-history-chart"
+    >
+      {/* dynamic bars */}
+    </div>
+  </div>
+
+  {/* Áreas de Mejora */}
+  <div class="bg-base-100 border-warning/30 rounded-2xl border p-6 shadow-md">
+    <h4 class="text-warning-content/70 mb-4 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+      <Icon
+        name="boxicons:alert-octagon"
+        size={24}
+        class="text-warning"
+      />
+      Áreas de Mejora Detectadas
+    </h4>
+    <ul
+      class="text-base-content/80 space-y-2 text-sm font-medium"
+      id="detail-insights"
+    >
+      {/* dynamic insights */}
+    </ul>
+  </div>
+</div>
+
+{/* Observaciones del Mes */}
+<div class="bg-base-100 border-base-200 rounded-2xl border p-6 shadow-md mt-6">
+  <div class="mb-4 flex items-center justify-between">
+    <h4 class="text-base-content/70 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+      <Icon name="boxicons:note" size={18} />
+      Observaciones del Mes
+    </h4>
+    {!isAgent && (
+      <button
+        id="btn-edit-month-summary"
+        class="btn btn-sm btn-ghost btn-square"
+        title="Editar observaciones"
+      >
+        <Icon name="boxicons:edit-alt" size={18} />
+      </button>
+    )}
+  </div>
+  <p
+    id="detail-month-summary"
+    class="text-base-content/80 text-sm font-medium whitespace-pre-line empty:hidden"
+  >
+    {/* dynamic summary */}
+  </p>
+  <p
+    id="detail-month-summary-empty"
+    class="text-base-content/40 text-sm font-medium italic"
+  >
+    No hay observaciones para este mes.
+  </p>
+</div>
+
+{/* Section Titulo y Tabs de Canales */}
+<div class="border-base-300 flex flex-col gap-4 border-b pb-3 mt-8">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h4 class="text-base-content/80 flex items-center gap-2 font-bold tracking-wider uppercase">
+        <Icon name="boxicons:chart-bar-columns" size={24} />
+        Evaluaciones de Calidad del Operador
+      </h4>
+      <p class="text-base-content/50 text-xs">Cuota mensual requerida: 4 Llamadas Wise + 4 Mails Wise + 4 Autogestiones (12 en total)</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span
+        id="total-samples-avg-badge"
+        class="badge badge-neutral text-xs font-bold gap-1"
+        title="Promedio General del Total de Muestras del Mes"
+      >
+        <Icon name="boxicons:calculator" size={14} />
+        <span class="opacity-70 font-normal">Promedio Total:</span>
+        <strong id="total-samples-avg-val">--</strong>
+      </span>
+      <span
+        id="quota-progress-badge"
+        class="badge badge-neutral text-xs font-bold"
+      >
+        0/12 Completadas
+      </span>
+      {!isAgent && (
+        <button
+          id="btn-new-audit"
+          type="button"
+          class="btn btn-sm btn-primary rounded-lg text-xs font-bold uppercase gap-1"
+        >
+          <Icon name="boxicons:plus" size={16} />
+          Nueva Auditoría
+        </button>
+      )}
+    </div>
+  </div>
+
+  <!-- Tabs de separación por Canal -->
+  <div class="tabs tabs-boxed bg-base-200/60 p-1 w-fit" id="operator-channel-tabs">
+    <button
+      type="button"
+      class="tab tab-active operator-channel-tab text-xs font-bold gap-1.5"
+      data-channel="wise_call"
+    >
+      <Icon name="boxicons:phone-ring" size={16} />
+      <span>Llamadas Wise</span>
+      <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_call">0/4</span>
+      <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_call" title="Promedio de Llamadas Wise">--</span>
+    </button>
+    <button
+      type="button"
+      class="tab operator-channel-tab text-xs font-bold gap-1.5"
+      data-channel="wise_email"
+    >
+      <Icon name="boxicons:envelope" size={16} />
+      <span>Mails Wise</span>
+      <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_email">0/4</span>
+      <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_email" title="Promedio de Mails Wise">--</span>
+    </button>
+    <button
+      type="button"
+      class="tab operator-channel-tab text-xs font-bold gap-1.5"
+      data-channel="invgate_ticket"
+    >
+      <Icon name="boxicons:handshake" size={16} />
+      <span>Autogestiones</span>
+      <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-invgate_ticket">0/4</span>
+      <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-invgate_ticket" title="Promedio de Autogestiones">--</span>
+    </button>
+  </div>
+</div>
+
+{/* Grid de Auditorías del Canal Activo */}
+<div class="grid gap-6 mt-4" id="detail-calls-container">
+  {/* Renderizado dinámico vía JS */}
+</div>
