@@ -20,6 +20,15 @@
 - **Keep outputs minimal**: no preamble/postamble, no code explanations unless asked
 - **Never commit** unless explicitly requested
 
+## Issue tracking (hallazgos no bloqueantes)
+
+- **Al|TYP de implementación**, si encontrás un hallazgo **no bloqueante** (bug latente, deuda técnica, riesgo, inconsistencia) o una **oportunidad de mejora** que no vale bloquear el trabajo actual: **no lo fixes en el acto ni lo dejes solo en el chat** — registralo como issue.
+- Usar la skill global **`managing-github-issues`** (`skill` tool, nombre `managing-github-issues`) para redactar/decomponer/actualizar/cerrar issues. Nunca improvisar formato.
+- Crear/actualizar la issue **con el MCP `github`** (`github_issue_write`, `github_search_issues`, `github_issue_read`), nunca con `gh` CLI ni web. Buscar duplicados antes de crear.
+- Las issues funcionan como **registro acumulado del proyecto**: contexto, evidencia (paths, líneas), impacto y criterio de aceptación. Se resuelven **cuando se planifique**, no por enganche.
+- Labels de referencia: `hallazgo`, `deuda-tecnica`, `mejora`, `bug`. Severidad explícita en el título o label cuando aplique.
+- **Nunca commitear** código para "dejar el fix de paso" si no fue pedido — issue primero, fix después planificado.
+
 ## Quick start
 
 - `npm run dev` — dev server (port 4321)
