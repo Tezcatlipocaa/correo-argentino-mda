@@ -110,4 +110,84 @@ describe("InvGate Ticket Metadata Resolution", () => {
     expect(result.data?.creator).toBe("Desconocido");
     expect(result.data?.category).toBe("Sin categoría");
   });
+
+  it("resolves both Solicitante (user_id) and Creador (creator_id) when they differ", async () => {
+    const mockIncident = {
+      id: 77777,
+      title: "Solicitud generada por operador",
+      description: "Detalle",
+      status_id: 1,
+      priority_id: 2,
+      user_id: 101, // Solicitante: Pedro Pascal
+      creator_id: 202, // Creador: Maria Lopez (Agente)
+      created_at: 1727784000,
+    };
+
+    vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
+      if (endpoint === "incident?id=77777") {
+        return { ok: true, data: mockIncident, status: 200 };
+      }
+      if (endpoint === "user?id=101") {
+        return {
+          ok: true,
+          data: { id: 101, name: "Pedro", lastname: "Pascal", username: "ppascal" },
+          status: 200,
+        };
+      }
+      if (endpoint === "user?id=202") {
+        return {
+          ok: true,
+          data: { id: 202, name: "Maria", lastname: "Lopez", username: "mlopez" },
+          status: 200,
+        };
+      }
+      return { ok: false, error: "Not found", status: 404 };
+    });
+
+    const result = await fetchInvgateTicketMetadata(77777);
+    expect(result.ok).toBe(true);
+    expect(result.data).toBeDefined();
+    expect(result.data?.customer).toBe("Pedro Pascal");
+    expect(result.data?.createdBy).toBe("Maria Lopez");
+    expect(result.data?.creator).toBe("Pedro Pascal"); // Compatibilidad con solicitante
+    expect(result.data?.rawDetails?.createdBy).toBe("Maria Lopez");
+    expect(result.data?.rawDetails?.customer).toBe("Pedro Pascal");
+  });
+
+  it("reuses user fetch when user_id and creator_id are the same user without duplicate call", async () => {
+    const mockIncident = {
+      id: 88888,
+      title: "Autogestión por usuario final",
+      description: "Detalle",
+      status_id: 1,
+      priority_id: 2,
+      user_id: 505,
+      creator_id: 505,
+      created_at: 1727784000,
+    };
+
+    const getSpy = vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
+      if (endpoint === "incident?id=88888") {
+        return { ok: true, data: mockIncident, status: 200 };
+      }
+      if (endpoint === "user?id=505") {
+        return {
+          ok: true,
+          data: { id: 505, name: "Lucas", lastname: "Mora", username: "lmora" },
+          status: 200,
+        };
+      }
+      return { ok: false, error: "Not found", status: 404 };
+    });
+
+    const result = await fetchInvgateTicketMetadata(88888);
+    expect(result.ok).toBe(true);
+    expect(result.data?.customer).toBe("Lucas Mora");
+    expect(result.data?.createdBy).toBe("Lucas Mora");
+
+    // Verificar que user?id=505 solo se llamó 1 sola vez
+    const userCalls = getSpy.mock.calls.filter(([endpoint]) => endpoint === "user?id=505");
+    expect(userCalls.length).toBe(1);
+  });
 });
+

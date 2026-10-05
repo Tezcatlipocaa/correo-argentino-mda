@@ -192,6 +192,10 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const modal = page.locator("#audit-modal");
     await expect(modal).toHaveAttribute("open", "");
 
+    // Verificar que los botones de búsqueda tienen SVG con path renderizado (is:inline)
+    const wiseSvgPath = page.locator("#btn-fetch-wise-api svg path");
+    await expect(wiseSvgPath).toBeVisible();
+
     // 1. Verificar presencia de buscador unificado con pestañas (Wise CX / InvGate)
     const tabWise = page.locator("#tab-search-wise");
     const tabInvgate = page.locator("#tab-search-invgate");

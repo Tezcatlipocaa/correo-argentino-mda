@@ -36,3 +36,25 @@
 ---
 - [x] **Track: Corrección de Copiado de Imágenes en Cronograma (Grupos y Horas Extras)**
   *Link: [./tracks/cronograma_copiar_tablas_bugfix_20261002/index.md](./tracks/cronograma_copiar_tablas_bugfix_20261002/index.md)*
+---
+- [x] **Track: Promedios por Canal y Promedio Total en Calidad**
+  *Link: [./tracks/calidad_promedios_canal_20261003/index.md](./tracks/calidad_promedios_canal_20261003/index.md)*
+---
+- [x] **Track: Consulta y Visualización del Creador/Generador en Detalle del Ticket InvGate**
+  *Link: [./tracks/calidad_invgate_creator_20261003/index.md](./tracks/calidad_invgate_creator_20261003/index.md)*
+---
+- [x] **Track: Cálculo de Tiempo de Respuesta y Unificación de Campos en Mails Wise**
+  *Link: [./tracks/calidad_mail_tiempo_respuesta_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_20261003/index.md)*
+---
+- [x] **Track: Bugfix: Tiempo de Respuesta en Mails Wise basado en Primera Respuesta del Operador (user_reply)**
+  *Link: [./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md)*
+---
+- [x] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
+  *Link: [./tracks/calidad_wise_autodetect_channel_20261003/index.md](./tracks/calidad_wise_autodetect_channel_20261003/index.md)*
+
+
+
+
+
+
+
