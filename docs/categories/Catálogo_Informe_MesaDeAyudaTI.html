@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Informe - Árbol de categorías Mesa de Ayuda TI</title>
+<style>:root{
+  --paper:#F7F5F1;
+  --card:#FFFFFF;
+  --ink:#14161A;
+  --ink2:#4B5563;
+  --rule:#CFC8BB;
+  --rule2:#EDE9E1;
+  --accent:#B3261E;
+  --accent-soft:#F7E7E5;
+  --good:#14663F;
+  --good-soft:#E4F0EA;
+  --warn:#8A5A00;
+  --warn-soft:#FAEFDA;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font:17px/1.55 "Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.wrap{max-width:1200px;margin:0 auto;padding:0 clamp(16px,3vw,40px) 90px}
+
+/* ---------- masthead ---------- */
+header.top{background:var(--ink);color:#fff;padding:clamp(28px,4vw,56px) 0 clamp(24px,3vw,40px);margin:0 0 clamp(28px,4vw,52px)}header.top .inner{max-width:1200px;margin:0 auto;padding:0 clamp(16px,3vw,40px)}
+.eyebrow{
+  margin:0 0 18px;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:#FF7A6E;
+}
+h1{
+  margin:0 0 20px;
+  font-size:clamp(34px,6vw,72px);
+  line-height:.98;
+  letter-spacing:-.035em;
+  font-weight:800;
+  max-width:16ch;
+}
+.hero{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:1px;
+  background:#33383F;
+  border-top:2px solid var(--accent);
+  margin:30px 0 24px;
+}
+.hero div{background:var(--ink);padding:20px 20px 22px}
+.hero .hv{
+  display:block;
+  font-size:clamp(32px,4.4vw,54px);
+  line-height:1;
+  font-weight:800;
+  letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;
+}
+.hero .hv em{font-style:normal;color:#FF7A6E}
+.hero .hl{
+  display:block;
+  margin-top:10px;
+  font-size:13px;
+  line-height:1.4;
+  color:#B9C1CB;
+}
+.sub{
+  color:#D7DCE3;
+  font-size:16.5px;
+  max-width:72ch;
+  margin:0;
+}
+.prov{
+  margin-top:20px;
+  padding-top:14px;
+  border-top:1px solid #3A4048;
+  font-size:13.5px;
+  line-height:1.55;
+  color:#A9B2BD;
+  max-width:88ch;
+}
+.prov b{color:#fff}
+
+/* ---------- sections ---------- */
+section{border-top:1px solid var(--rule);padding:clamp(14px,1.8vw,22px) 0 0;margin-bottom:clamp(24px,3vw,42px)}
+h2{
+  margin:0 0 10px;
+  padding-bottom:16px;
+  border-bottom:3px solid var(--ink);
+  font-size:clamp(23px,3vw,38px);
+  line-height:1.1;
+  letter-spacing:-.02em;
+  font-weight:800;
+}
+h2 .n{
+  color:var(--accent);
+  font-weight:800;
+  margin-right:.35em;
+  font-variant-numeric:tabular-nums;
+}
+.lead{
+  color:var(--ink2);
+  font-size:17px;
+  line-height:1.5;
+  margin:14px 0 18px;
+  max-width:76ch;
+}
+.lead b,.lead strong{color:var(--ink)}
+
+/* ---------- stat strip (no boxes) ---------- */
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:0;
+  border-top:2px solid var(--ink);
+  border-bottom:1px solid var(--rule);
+  margin:8px 0 26px;
+}
+.kpi{padding:18px 22px 20px;border-right:1px solid var(--rule2)}
+.kpi:last-child{border-right:0}
+.kpi .v{
+  display:block;
+  font-size:clamp(34px,3.6vw,52px);
+  line-height:1;
+  font-weight:800;
+  letter-spacing:-.03em;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.kpi .l{
+  display:block;
+  margin-top:12px;
+  font-size:13.5px;
+  line-height:1.35;
+  color:var(--ink2);
+}
+.kpi.bad .v{color:var(--accent)}
+.kpi.ok .v{color:var(--good)}
+
+/* ---------- tables ---------- */
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-size:16px;
+  margin:6px 0 4px;
+  font-variant-numeric:tabular-nums;
+}
+thead th{
+  background:var(--ink);
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  text-align:left;
+  padding:12px 13px;
+  border:0;
+  vertical-align:bottom;
+}
+thead th.num{text-align:right}
+tbody td{
+  padding:10px 13px;
+  border:0;
+  border-bottom:1px solid var(--rule2);
+  vertical-align:top;
+}
+tbody td.num,tbody th.num{
+  text-align:right;
+  white-space:nowrap;
+  font-weight:600;
+}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:#FAF8F5}
+td.w{background:var(--good-soft);color:var(--good);font-weight:700}
+td.w::after{content:" \2713"}
+td.bad{background:var(--accent-soft);color:var(--accent)}
+tr.hi td{background:var(--rule2)}
+tr.hi td:first-child{font-weight:700}
+thead th[colspan]{text-align:center}
+
+/* ---------- bars ---------- */
+.bar{height:30px;min-width:150px;background:var(--rule2);position:relative;overflow:visible;display:flex;align-items:center}
+.bar i{display:block;flex:0 0 auto;height:30px;background:var(--ink)}
+.bar.warn i{background:var(--warn)}
+.bar.good i{background:var(--good)}
+.bar b{flex:0 0 auto;color:var(--ink);font-weight:600;padding-left:10px;line-height:30px;font-size:14px;white-space:nowrap;letter-spacing:.02em}
+
+/* ---------- callouts ---------- */
+.note{
+  background:var(--warn-soft);
+  border-left:8px solid var(--warn);
+  padding:16px 20px;
+  font-size:16.5px;
+  line-height:1.5;
+  margin-top:18px;
+  max-width:76ch;
+}
+.note b{color:var(--warn)}
+.note.ok{background:var(--good-soft);border-left-color:var(--good)}
+.note.ok b{color:var(--good)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+ul{margin:10px 0 0;padding-left:20px;font-size:16.5px}
+li{margin:4px 0}
+
+footer{
+  margin-top:34px;
+  padding-top:18px;
+  border-top:2px solid var(--ink);
+  color:var(--ink2);
+  font-size:13.5px;
+  line-height:1.7;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:760px){
+  .grid2{grid-template-columns:1fr}
+  .kpi{border-right:0;border-bottom:1px solid var(--rule2)}
+  .kpi:last-child{border-bottom:0}
+  table{display:block;overflow-x:auto;font-size:15px}
+  .lead{font-size:17px}
+}
+@media print{
+  html,body{background:#fff;font-size:11.5pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{max-width:none;padding:0}
+  header.top{margin-bottom:18px}
+  section,header.top{break-inside:avoid;border-radius:0;box-shadow:none}
+  thead{display:table-header-group}
+  h2{break-after:avoid}
+  .note{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="top">
+<div class="inner">
+  <p class="eyebrow">Mesa de Ayuda TI &middot; Informe para direcci&oacute;n</p>
+  <h1>Redise&ntilde;o del &aacute;rbol de categor&iacute;as</h1>
+  <div class="hero">
+    <div><span class="hv">52<em>%</em></span><span class="hl">de los nodos nunca recibi&oacute; un ticket (377 de 719)</span></div>
+    <div><span class="hv">4,71 <em>&rarr;</em> 3</span><span class="hl">selecciones para llegar a una categor&iacute;a</span></div>
+    <div><span class="hv">46<em>%</em></span><span class="hl">del volumen se cierra en 15 minutos o menos</span></div>
+    <div><span class="hv">0</span><span class="hl">tickets que hay que mover en la etapa sin riesgo</span></div>
+  </div>
+  <div class="sub">86.300 incidentes de producci&oacute;n (21-11-2025 a 29-09-2026), con foco en la rama <b>Mesa de Ayuda TI</b>: 11.875 tickets, 13,8% del portal. Objetivo: que una persona no t&eacute;cnica ubique su categor&iacute;a r&aacute;pido, sin crear categor&iacute;as nuevas.</div>
+  <div class="prov"><b>M&eacute;todo:</b> &aacute;rbol le&iacute;do por API de InvGate (2.884 categor&iacute;as, 13 ra&iacute;ces) y cruce con las 11.875 incidencias de la rama. Los 10 meses cubren toda la historia del portal: registro m&aacute;s antiguo del 21-11-2025 y movimiento todos los meses, sin huecos.</div>
+</div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <h2><span class="n">1.</span>Radiografía: dónde duele hoy</h2>
+  <p class="lead">Ocho n&uacute;meros del &aacute;rbol actual, todos medidos sobre el cruce entre categor&iacute;as e incidencias.</p>
+  <div class="kpis">
+    <div class="kpi bad"><div class="v">719</div><div class="l">nodos en la rama</div></div>
+    <div class="kpi bad"><div class="v">377</div><div class="l">nunca recibieron un ticket (52%)</div></div>
+    <div class="kpi bad"><div class="v">4,71</div><div class="l">selecciones promedio para ubicar una categoría</div></div>
+    <div class="kpi bad"><div class="v">552</div><div class="l">tickets (4,6%) que exigen 6 selecciones o más</div></div>
+    <div class="kpi bad"><div class="v">72</div><div class="l">hojas que repiten el nombre de su padre</div></div>
+    <div class="kpi bad"><div class="v">227</div><div class="l">ramas completas sin un solo ticket</div></div>
+    <div class="kpi"><div class="v">62,4%</div><div class="l">de los tickets entran por teléfono</div></div>
+    <div class="kpi"><div class="v">16</div><div class="l">hojas concentran el 50% de los tickets</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Punto flojo</th><th class="num">Magnitud</th><th>Cómo se mide</th><th>Por qué afecta al usuario</th></tr></thead>
+    <tbody>
+      <tr><td><b>Desperdicio estructural</b></td><td class="num">377 de 719 nodos<br>(52%)</td><td>Sub&aacute;rbol completo en 0 tickets</td><td>Opciones que no llevan a ning&uacute;n lado</td></tr>
+      <tr><td>Hojas muertas</td><td class="num">150</td><td>Hojas con 0 tickets</td><td>Aparecen en el desplegable como cualquier otra</td></tr>
+      <tr><td>Ramas vac&iacute;as</td><td class="num">227</td><td>Intermedios con sub&aacute;rbol entero en 0</td><td>Nadie las atraves&oacute; nunca</td></tr>
+      <tr><td><b>Profundidad excesiva</b></td><td class="num">hasta 7 selecciones<br>promedio 4,71</td><td>Profundidad de cada hoja, ponderada por volumen</td><td>A la 4&ordf; o 5&ordf; el usuario abandona y llama</td></tr>
+      <tr><td><b>Redundancia de nombres</b></td><td class="num">72 hojas</td><td>Hojas que repiten el nombre de su padre</td><td>"Mosaic &gt; Consulta &gt; Mosaic - Consulta": cu&aacute;l elegir</td></tr>
+      <tr><td>Niveles gen&eacute;ricos</td><td class="num">12 "Consulta"<br>13 "Fallas"</td><td>Intermedios con verbo comod&iacute;n</td><td>Un clic extra para lo mismo</td></tr>
+      <tr><td>Nodos de un solo hijo</td><td class="num">39</td><td>Intermedios con un &uacute;nico descendiente</td><td>Clic puro, sin decisi&oacute;n real</td></tr>
+      <tr><td>Anomal&iacute;as estructurales</td><td class="num">2</td><td>Intermedios con tickets propios</td><td>Rompen el modelo y confunden el reporte</td></tr>
+      <tr><td>Concentraci&oacute;n extrema</td><td class="num">16 hojas = 50%</td><td>Hojas necesarias para acumular la mitad del volumen</td><td>16 hojas cargan medio volumen entre 474 vac&iacute;as</td></tr>
+      <tr><td><b>Lenguaje de sistema</b></td><td class="num">casos verificados</td><td>Nombres que describen el sistema, no el problema del usuario</td><td>"Hace mucho riuido", "No inica Giros", "Nettern- Error de conexi&oacute;n", "Craddle", "Error 40020": tipeo y jerga interna</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2><span class="n">2.</span>La demanda está concentrada: pocas categorías hacen todo el trabajo</h2>
+  <p class="lead">Si el uso se concentra, el rediseño puede enfocarse en el tramo que importa y retirar el resto sin costo operativo.</p>
+  <table>
+    <thead><tr><th>Tramo</th><th class="num">Hojas</th><th class="num">% del catálogo</th><th class="num">Tickets</th><th class="num">% del volumen</th><th>Cobertura</th></tr></thead>
+    <tbody>
+      <tr class="hi"><td>top 5 hojas</td><td class="num">5</td><td class="num">1,0%</td><td class="num">2.980</td><td class="num">25,2%</td><td><div class="bar"><i style="width:25.2%"></i><b>25%</b></div></td></tr>
+      <tr class="hi"><td>top 10 hojas</td><td class="num">10</td><td class="num">2,0%</td><td class="num">4.645</td><td class="num">39,2%</td><td><div class="bar"><i style="width:39.2%"></i><b>39%</b></div></td></tr>
+      <tr><td>top 20 hojas</td><td class="num">20</td><td class="num">4,1%</td><td class="num">6.635</td><td class="num">56,0%</td><td><div class="bar"><i style="width:56%"></i><b>56%</b></div></td></tr>
+      <tr><td>top 50 hojas</td><td class="num">50</td><td class="num">10,2%</td><td class="num">9.308</td><td class="num">78,6%</td><td><div class="bar"><i style="width:78.6%"></i><b>79%</b></div></td></tr>
+      <tr><td>las 440 hojas restantes</td><td class="num">440</td><td class="num">89,8%</td><td class="num">2.567</td><td class="num">21,4%</td><td><div class="bar warn"><i style="width:21.4%"></i><b>21%</b></div></td></tr>
+    </tbody>
+  </table>
+  <div class="grid2" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Distribución de hojas por uso</th><th class="num">Hojas</th></tr></thead>
+      <tbody>
+        <tr><td>0 tickets en 10 meses</td><td class="num" style="color:var(--accent);font-weight:700">150</td></tr>
+        <tr><td>1 a 9 tickets</td><td class="num">214</td></tr>
+        <tr><td>10 a 49 tickets</td><td class="num">74</td></tr>
+        <tr><td>50 a 199 tickets</td><td class="num">39</td></tr>
+        <tr><td>200 tickets o más</td><td class="num">13</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>Volumen mensual de la rama</th><th class="num">Tickets</th></tr></thead>
+      <tbody>
+        <tr><td>nov-2025 (desde el 21)</td><td class="num">486</td></tr>
+        <tr><td>dic-2025</td><td class="num">1.574</td></tr>
+        <tr><td>ene-2026</td><td class="num">1.316</td></tr>
+        <tr><td>feb-2026</td><td class="num">751</td></tr>
+        <tr><td>mar-2026</td><td class="num">1.148</td></tr>
+        <tr><td>abr-2026</td><td class="num">726</td></tr>
+        <tr><td>may-2026</td><td class="num">975</td></tr>
+        <tr><td>jun-2026</td><td class="num">1.074</td></tr>
+        <tr><td>jul-2026</td><td class="num">1.500</td></tr>
+        <tr><td>ago-2026</td><td class="num">1.253</td></tr>
+        <tr><td>sep-2026</td><td class="num">1.072</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note ok"><b>Lectura para la decisi&oacute;n:</b> de 490 hojas, solo 340 recibieron tickets y 54 acumulan el 80% del volumen. Hay margen para retirar 377 nodos sin tocar un solo ticket.</div>
+</section>
+
+<section>
+  <h2><span class="n">3.</span>Casi la mitad del volumen se cierra en el acto</h2>
+  <p class="lead">Qu&eacute; tipo de trabajo entra por la rama: el tiempo entre creaci&oacute;n y cierre muestra que la mayor parte no es resoluci&oacute;n, sino gesti&oacute;n inmediata del operador.</p>
+  <div class="kpis">
+    <div class="kpi ok"><div class="v">46,2%</div><div class="l">de los tickets se cierra en 15 minutos o menos</div></div>
+    <div class="kpi ok"><div class="v">37,3%</div><div class="l">se cierra en 1 minuto o menos</div></div>
+    <div class="kpi"><div class="v">89,8%</div><div class="l">tiene fecha de resolución</div></div>
+    <div class="kpi"><div class="v">10,2%</div><div class="l">sigue abierto (1.212 tickets)</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Tiempo entre creación y cierre</th><th class="num">Tickets</th><th class="num">% de la rama</th><th class="num">Acumulado</th><th>Cobertura</th></tr></thead>
+    <tbody>
+      <tr class="hi"><td>1 minuto o menos</td><td class="num">4.432</td><td class="num">37,3%</td><td class="num">37,3%</td><td><div class="bar"><i style="width:37.3%"></i><b>37%</b></div></td></tr>
+      <tr class="hi"><td>de 1 a 5 minutos</td><td class="num">622</td><td class="num">5,2%</td><td class="num">42,6%</td><td><div class="bar"><i style="width:5.2%"></i></div></td></tr>
+      <tr><td>de 5 a 15 minutos</td><td class="num">438</td><td class="num">3,7%</td><td class="num">46,2%</td><td><div class="bar"><i style="width:3.7%"></i></div></td></tr>
+      <tr><td>de 15 minutos a 1 hora</td><td class="num">1.087</td><td class="num">9,2%</td><td class="num">55,4%</td><td><div class="bar"><i style="width:9.2%"></i></div></td></tr>
+      <tr><td>más de 1 hora</td><td class="num">4.084</td><td class="num">34,4%</td><td class="num">89,8%</td><td><div class="bar warn"><i style="width:34.4%"></i><b>34%</b></div></td></tr>
+      <tr><td>sin cerrar</td><td class="num">1.212</td><td class="num">10,2%</td><td class="num">100%</td><td><div class="bar warn"><i style="width:10.2%"></i></div></td></tr>
+    </tbody>
+  </table>
+  <p class="lead" style="margin-top:16px"><b>18 hojas concentran 2.547 tickets (21,4%) cerrados en 15 minutos o menos.</b> Son atajos: elegir la hoja <i>es</i> la soluci&oacute;n. Si el &aacute;rbol tarda en llegar, el costo se paga en cada llamada.</p>
+  <table>
+    <thead><tr><th>Hoja (nombre actual)</th><th class="num">Tickets</th><th class="num">Selecciones hoy</th><th class="num">Se cierra en ≤15 min</th></tr></thead>
+    <tbody>
+      <tr><td>Mosaic- Reimpresion de label</td><td class="num">548</td><td class="num">5</td><td class="num">81,6%</td></tr>
+      <tr><td>Consulta de uso</td><td class="num">381</td><td class="num">3</td><td class="num">83,2%</td></tr>
+      <tr><td>TYT- Re direccionamiento de impresiones</td><td class="num">255</td><td class="num">5</td><td class="num">94,9%</td></tr>
+      <tr><td>TYT- Rehabilitar cola de impresión</td><td class="num">184</td><td class="num">5</td><td class="num">95,1%</td></tr>
+      <tr><td>Mosaic- Configuracion de Unidad W</td><td class="num">178</td><td class="num">5</td><td class="num">93,3%</td></tr>
+      <tr><td>Servicio Energético</td><td class="num">146</td><td class="num">3</td><td class="num">95,9%</td></tr>
+      <tr><td>Sop Central- Link de acceso</td><td class="num">133</td><td class="num">4</td><td class="num">87,2%</td></tr>
+      <tr><td>Portal AG- Asistencia</td><td class="num">106</td><td class="num">5</td><td class="num">90,6%</td></tr>
+      <tr><td>STS- Redireccionamiento de impresiones</td><td class="num">104</td><td class="num">5</td><td class="num">93,3%</td></tr>
+      <tr><td>Usuario no habilitado</td><td class="num">98</td><td class="num">5</td><td class="num">85,7%</td></tr>
+    </tbody>
+  </table>
+  <p class="lead" style="margin-top:16px">Al otro extremo, el trabajo de ciclo largo es marginal: solo <b>4 hojas con volumen</b> casi nunca cierran en el acto.</p>
+  <table>
+    <thead><tr><th>Hoja con trabajo real</th><th class="num">Tickets</th><th class="num">Se cierra en ≤15 min</th><th class="num">Mediana de resolución</th></tr></thead>
+    <tbody>
+      <tr><td>Solicitud de Toner</td><td class="num">158</td><td class="num">1,3%</td><td class="num">138,5 h</td></tr>
+      <tr><td>Solicitud de Técnico</td><td class="num">85</td><td class="num">1,2%</td><td class="num">90,1 h</td></tr>
+      <tr><td>POS Problema de hardware</td><td class="num">36</td><td class="num">0%</td><td class="num">131,6 h</td></tr>
+      <tr><td>Turneros y TVs Mediterránea</td><td class="num">29</td><td class="num">0%</td><td class="num">43,1 h</td></tr>
+      <tr><td><b>Total trabajo de ciclo largo</b></td><td class="num"><b>308</b></td><td class="num">&mdash;</td><td class="num">2,6% de la rama</td></tr>
+    </tbody>
+  </table>
+  <div class="note ok"><b>Consecuencia para el dise&ntilde;o:</b> hay que optimizar para enrutar r&aacute;pido el 46% que se resuelve en el acto, no el 2,6% que necesita trabajo real. Las hojas de cierre inmediato hoy est&aacute;n a 3, 4 y hasta 5 selecciones. En C todas quedan a 3.</div>
+</section>
+
+<section>
+  <h2><span class="n">4.</span>Tres formas de reordenar, medidas contra el árbol actual</h2>
+  <p class="lead">Los tres modelos usan las mismas 340 hojas vivas. Se diferencian en el primer nivel, que es donde el usuario decide.</p>
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Indicador</th>
+        <th class="num" rowspan="2">Hoy</th>
+        <th class="num" colspan="3" style="text-align:center">Propuestas</th>
+      </tr>
+      <tr>
+        <th class="num">A &middot; intención<br><span style="font-weight:400">consultar / falla / cambio</span></th>
+        <th class="num">B &middot; sistema<br><span style="font-weight:400">elegir el sistema</span></th>
+        <th class="num">C &middot; híbrida<br><span style="font-weight:400">familia &gt; sistema</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><b>Nodos totales</b> (hoy 719)</td><td class="num bad">719</td><td class="num">453</td><td class="num w">392</td><td class="num">402</td></tr>
+      <tr><td>Opciones en la primera pantalla</td><td class="num bad">11 ramas</td><td class="num">5 intenciones</td><td class="num bad">52 sistemas</td><td class="num w">10 familias</td></tr>
+      <tr><td><b>Máximo de opciones en una misma pantalla</b></td><td class="num w">11</td><td class="num">42</td><td class="num bad">56</td><td class="num">28</td></tr>
+      <tr><td><b>Selecciones para llegar a la hoja</b> (máximo)</td><td class="num bad">7</td><td class="num">3</td><td class="num w">2</td><td class="num">3</td></tr>
+      <tr><td>Selecciones promedio, ponderado por tickets</td><td class="num bad">4,71</td><td class="num">3,00</td><td class="num w">2,00</td><td class="num">3,00</td></tr>
+      <tr><td>Tickets que llegan en 2 selecciones o menos</td><td class="num bad">209 (1,8%)</td><td class="num">0</td><td class="num w">11.875 (100%)</td><td class="num">0</td></tr>
+      <tr><td>Tickets que llegan en 3 selecciones o menos</td><td class="num bad">1.539 (13%)</td><td class="num w">11.875 (100%)</td><td class="num w">11.875 (100%)</td><td class="num w">11.875 (100%)</td></tr>
+      <tr><td>Tickets que exigen 6 selecciones o más</td><td class="num bad">552 (4,6%)</td><td class="num w">0</td><td class="num w">0</td><td class="num w">0</td></tr>
+      <tr><td>Hojas</td><td class="num bad">490</td><td class="num w">340</td><td class="num w">340</td><td class="num w">340</td></tr>
+      <tr><td>Hojas sin un solo ticket</td><td class="num bad">150</td><td class="num">150</td><td class="num">150</td><td class="num">150</td></tr>
+      <tr><td>Hojas que repiten el nombre de su padre</td><td class="num bad">72</td><td class="num w">0</td><td class="num w">0</td><td class="num w">0</td></tr>
+      <tr><td>Nodos intermedios con un solo hijo</td><td class="num bad">39</td><td class="num w">0</td><td class="num w">0</td><td class="num w">0</td></tr>
+      <tr><td>Nodos intermedios con tickets propios</td><td class="num bad">2</td><td class="num w">0</td><td class="num w">0</td><td class="num w">0</td></tr>
+      <tr><td>Categorías con el mismo nombre bajo el mismo padre</td><td class="num w">0</td><td class="num bad">64</td><td class="num bad">64</td><td class="num bad">64</td></tr>
+      <tr><td><b>Sistemas que necesitan dos padres a la vez</b></td><td class="num w">0</td><td class="num bad">36 <span style="font-weight:400">no implementable</span></td><td class="num w">0</td><td class="num w">0</td></tr>
+    </tbody>
+  </table>
+  <div class="grid2">
+    <div class="note"><b>El l&iacute;mite de A:</b> 36 sistemas sirven a m&aacute;s de una intenci&oacute;n ("Impresora l&aacute;ser" recibe consultas, fallas y cambios). InvGate admite un solo padre, as&iacute; que A obliga a duplicar esos nodos con sufijo. Por eso queda en 453 nodos.</div>
+    <div class="note ok"><b>Por qu&eacute; C:</b> mantiene el eje de B y agrega familias que bajan la primera pantalla de 52 a 10 opciones. Cada sistema aparece una vez, as&iacute; no hereda el problema de A. Peor pantalla: 28 opciones, contra 42 de A y 56 de B.</div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">5.</span>Qué hace falta para aplicarlo, y qué no</h2>
+  <table>
+    <thead><tr><th>Acción</th><th class="num">Alcance</th><th class="num">Tickets que hay que mover</th><th>Observación</th></tr></thead>
+    <tbody>
+      <tr><td>Reparentar para armar las 10 familias y los 52 sistemas</td><td class="num">340 hojas + 62 intermedios</td><td class="num" style="color:var(--good);font-weight:700">0</td><td>Cambia padre y nombre. Los tickets siguen donde est&aacute;n.</td></tr>
+      <tr><td>Retirar ramas y hojas vac&iacute;as</td><td class="num">377 nodos</td><td class="num" style="color:var(--good);font-weight:700">0</td><td>Nunca recibieron tickets: no hay nada que reasignar.</td></tr>
+      <tr><td>Fusionar hojas hom&oacute;nimas</td><td class="num">64 categor&iacute;as en 35 grupos</td><td class="num" style="color:var(--warn);font-weight:700">1.265 (10,6% de la rama)</td><td>&Uacute;nica parte que exige reasignar tickets cerrados. Fuera de alcance hoy: quedan conviviendo, con el registro de fusi&oacute;n para cuando se pueda.</td></tr>
+      <tr><td>Crear categor&iacute;as nuevas</td><td class="num">0</td><td class="num">0</td><td>El modelo se construye solo con categor&iacute;as existentes.</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>Costo total:</b> 1.265 tickets a reasignar (10,6%), 64 fusiones, 377 retiros, 0 categor&iacute;as nuevas. Solo la parte sin riesgo ya cubre el 89,4% del volumen sin mover un ticket.</div>
+</section>
+
+<section>
+  <h2><span class="n">6.</span>Dónde el rediseño NO ayuda: advertencia metodológica</h2>
+  <p class="lead">Para que el n&uacute;mero no se use mal: qu&eacute; <b>no</b> muestran los datos.</p>
+  <table>
+    <thead><tr><th>Hipótesis intuitiva</th><th class="num">Tiempo promedio de resolución</th><th>Qué dicen realmente los datos</th></tr></thead>
+    <tbody>
+      <tr><td>"Las categor&iacute;as m&aacute;s profundas tardan m&aacute;s en resolverse"</td><td class="num">5 selecciones o menos: <b>106,4 h</b><br>6 o m&aacute;s: <b>38,1 h</b></td><td><b>Falso, y al rev&eacute;s.</b> Las profundas resuelven m&aacute;s r&aacute;pido: son atajos del propio operador (reimpresi&oacute;n de etiqueta, desbloqueo de usuario). Las poco profundas son trabajo real, de d&iacute;as.</td></tr>
+      <tr><td>"Menos categor&iacute;as = mejores tiempos"</td><td class="num">&mdash;</td><td>No medible. El tiempo depende del tipo de caso, no del &aacute;rbol.</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>Conclusi&oacute;n honesta:</b> el redise&ntilde;o mejora <b>navegaci&oacute;n y autogesti&oacute;n</b>, no el tiempo de resoluci&oacute;n. Beneficia al 28,4% que carga su propio ticket desde la web y al operador que navega el &aacute;rbol con el cliente al tel&eacute;fono (62,4%). No promete bajar los tiempos: promete que ubicar la categor&iacute;a deje de ser un trabajo.</div>
+</section>
+
+<section>
+  <h2><span class="n">7.</span>Resumen para la decisión</h2>
+  <table>
+    <thead><tr><th>Situación hoy</th><th>Con la propuesta C</th></tr></thead>
+    <tbody>
+      <tr><td>719 nodos, m&aacute;s de la mitad sin usar</td><td>402 nodos, todos con funci&oacute;n</td></tr>
+      <tr><td>4,71 selecciones promedio, hasta 7</td><td>3 selecciones fijas</td></tr>
+      <tr><td>Primera pantalla de 11 ramas sin l&oacute;gica de usuario</td><td>10 familias reconocibles</td></tr>
+      <tr><td>72 hojas repiten el nombre de su padre</td><td>0</td></tr>
+      <tr><td>39 nodos intermedios de un solo hijo</td><td>0</td></tr>
+      <tr><td>377 nodos que nunca recibieron un ticket</td><td>retirados</td></tr>
+      <tr><td>36 sistemas imposibles de ubicar sin duplicar</td><td>0 conflictos estructurales</td></tr>
+      <tr><td>2.547 tickets de cierre inmediato (21,4%) repartidos a 3, 4 y 5 selecciones</td><td>todos a 3 selecciones</td></tr>
+    </tbody>
+  </table>
+  <p class="lead" style="margin-top:14px"><b>Decisi&oacute;n que se pide:</b> aprobar C como estructura objetivo y autorizar la etapa sin riesgo (reparentado + retiro de 377 nodos vac&iacute;os, 0 tickets movidos). Las 64 fusiones quedan pendientes: exigen reasignar 1.265 tickets cerrados.</p>
+</section>
+
+<footer>
+  Informe generado a partir del árbol de categorías y las 86.300 incidencias de producción del portal MDA.<br>
+  Evidencia adjunta: comparativa.csv &middot; cierres-rapidos.csv &middot; EVIDENCIA-150-sin-uso.csv &middot; EVIDENCIA-homonimas.csv &middot; FUSIONES-pendientes.csv &middot; ARBOL-MesaDeAyudaTI.html
+</footer>
+
+</div>
+</body>
+</html>
