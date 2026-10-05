@@ -52,6 +52,6 @@
 - [x] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
   *Link: [./tracks/calidad_wise_autodetect_channel_20261003/index.md](./tracks/calidad_wise_autodetect_channel_20261003/index.md)*
 ---
-- [ ] **Track: Refactor UI de Calidad: Barra Superior, Grilla de Operadores y Sección de Auditoría**
+- [~] **Track: Refactor UI de Calidad: Barra Superior, Grilla de Operadores y Sección de Auditoría**
   *Link: [./tracks/calidad_ui_refactor_20261005/index.md](./tracks/calidad_ui_refactor_20261005/index.md)*
 
