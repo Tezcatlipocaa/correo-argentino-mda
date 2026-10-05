@@ -128,3 +128,79 @@ export function calculateAuditScores(
     isCriticalFailure,
   );
 }
+
+export interface ChannelAveragesResult {
+  wiseCallsAvg: number | null;
+  wiseCallsCount: number;
+  wiseEmailsAvg: number | null;
+  wiseEmailsCount: number;
+  invgateTicketAvg: number | null;
+  invgateTicketCount: number;
+  totalCount: number;
+  overallAvg: number | null;
+}
+
+export function calculateChannelAverages(
+  audits: { channelType?: string; totalScore?: number | null }[],
+): ChannelAveragesResult {
+  const calls = audits.filter(
+    (a) => (a.channelType || "wise_call") === "wise_call",
+  );
+  const emails = audits.filter((a) => a.channelType === "wise_email");
+  const tickets = audits.filter((a) => a.channelType === "invgate_ticket");
+
+  const calcAvg = (items: { totalScore?: number | null }[]) => {
+    const validScores = items
+      .map((i) => (typeof i.totalScore === "number" ? i.totalScore : null))
+      .filter((s): s is number => s !== null);
+    if (validScores.length === 0) return null;
+    return Math.round(
+      validScores.reduce((sum, s) => sum + s, 0) / validScores.length,
+    );
+  };
+
+  const wiseCallsAvg = calcAvg(calls);
+  const wiseEmailsAvg = calcAvg(emails);
+  const invgateTicketAvg = calcAvg(tickets);
+
+  const allValidScores = audits
+    .map((a) => (typeof a.totalScore === "number" ? a.totalScore : null))
+    .filter((s): s is number => s !== null);
+
+  const overallAvg =
+    allValidScores.length > 0
+      ? Math.round(
+          allValidScores.reduce((sum, s) => sum + s, 0) / allValidScores.length,
+        )
+      : null;
+
+  return {
+    wiseCallsAvg,
+    wiseCallsCount: calls.length,
+    wiseEmailsAvg,
+    wiseEmailsCount: emails.length,
+    invgateTicketAvg,
+    invgateTicketCount: tickets.length,
+    totalCount: audits.length,
+    overallAvg,
+  };
+}
+
+export function formatChannelAverageScore(avg: number | null | undefined): string {
+  if (avg === null || avg === undefined || isNaN(avg)) return "--";
+  return `${Math.round(avg)}%`;
+}
+
+export function getChannelAverageBadgeClass(avg: number | null | undefined): string {
+  if (avg === null || avg === undefined || isNaN(avg)) {
+    return "badge badge-xs badge-ghost";
+  }
+  if (avg >= 85) {
+    return "badge badge-xs badge-success text-success-content font-bold";
+  }
+  if (avg >= 70) {
+    return "badge badge-xs badge-warning text-warning-content font-bold";
+  }
+  return "badge badge-xs badge-error text-error-content font-bold";
+}
+

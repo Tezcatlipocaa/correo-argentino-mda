@@ -18,11 +18,22 @@ export interface ExtractedQualityMetadata {
   category?: string;
   status?: string;
   creator?: string;
+  customer?: string;
+  createdBy?: string;
   helpdesk?: string;
   source?: string;
   recordingUrl?: string;
   recordingId?: string;
+  detectedChannel?: ChannelType;
   rawDetails?: Record<string, any>;
+}
+
+export function discernWiseChannel(sourceChannel?: string | null): ChannelType {
+  const sc = (sourceChannel || "").toLowerCase().trim();
+  if (sc === "email" || sc.includes("mail")) {
+    return "wise_email";
+  }
+  return "wise_call";
 }
 
 export function formatSecondsToMinutes(seconds: number): string {
@@ -31,6 +42,41 @@ export function formatSecondsToMinutes(seconds: number): string {
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
+
+export function formatDurationToTime(seconds: number): string {
+  if (isNaN(seconds) || seconds <= 0) return "00:00";
+  const hours = Math.floor(seconds / 3600);
+  const remainder = seconds % 3600;
+  const mins = Math.floor(remainder / 60);
+  const secs = Math.floor(remainder % 60);
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+export function calculateWiseEmailResponseTime(
+  createdAt?: string | null,
+  replyAt?: string | null,
+  solvedAt?: string | null,
+  closedAt?: string | null,
+): string {
+  if (!createdAt) return "00:00";
+  const endStr = replyAt || solvedAt || closedAt;
+  if (!endStr) return "00:00";
+
+  const startMs = Date.parse(createdAt.replace(" ", "T"));
+  const endMs = Date.parse(endStr.replace(" ", "T"));
+
+  if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) {
+    return "00:00";
+  }
+
+  const diffSeconds = Math.floor((endMs - startMs) / 1000);
+  return formatDurationToTime(diffSeconds);
+}
+
 
 export function parseWiseCallMetadata(caseData: any, activities: any[] = []): ExtractedQualityMetadata {
   const caseNumber = (caseData?.number ?? caseData?.id ?? "").toString();
@@ -139,6 +185,7 @@ export function parseWiseCallMetadata(caseData: any, activities: any[] = []): Ex
     ringTime: formatSecondsToMinutes(ringTimeSeconds),
     recordingUrl: recordingUrl || undefined,
     recordingId: recordingId || undefined,
+    detectedChannel: "wise_call",
     rawDetails: {
       caseId: caseData?.id,
       channel: caseData?.source_channel,
@@ -147,22 +194,37 @@ export function parseWiseCallMetadata(caseData: any, activities: any[] = []): Ex
   };
 }
 
-export function parseWiseEmailMetadata(caseData: any, operatorName = ""): ExtractedQualityMetadata {
+export function parseWiseEmailMetadata(
+  caseData: any,
+  operatorName = "",
+  firstReplyAt?: string | null,
+): ExtractedQualityMetadata {
   const caseNumber = (caseData?.number ?? caseData?.id ?? "").toString();
   const createdAt = caseData?.created_at || "";
   const dateStr = createdAt.split(" ")[0] || new Date().toISOString().split("T")[0];
   const takeTime = caseData?.first_read || caseData?.last_read || createdAt;
+  const duration = calculateWiseEmailResponseTime(
+    createdAt,
+    firstReplyAt,
+    caseData?.solved_at,
+    caseData?.closed_at,
+  );
 
   return {
     caseNumber,
     operator: operatorName,
     date: dateStr,
+    duration,
     creationTime: createdAt,
     takeTime,
+    detectedChannel: "wise_email",
     rawDetails: {
       caseId: caseData?.id,
       subject: caseData?.subject,
       channel: caseData?.source_channel,
+      firstReplyAt: firstReplyAt || undefined,
+      solvedAt: caseData?.solved_at,
+      closedAt: caseData?.closed_at,
     },
   };
 }
@@ -200,6 +262,7 @@ export function parseInvgateAgMetadata(
   incident: any,
   extra?: {
     customerName?: string;
+    createdByName?: string;
     categoryName?: string;
     operatorName?: string;
     helpdeskName?: string;
@@ -270,13 +333,21 @@ export function parseInvgateAgMetadata(
     (typeof incident?.status_id === "number" ? INVGATE_STATUS_NAMES[incident.status_id] : null) ??
     "";
 
-  const creatorName =
+  const customerName =
     extra?.customerName ??
     incident?.customer?.name ??
-    incident?.creator?.name ??
     incident?.user?.name ??
     (typeof incident?.customer === "string" ? incident.customer : "") ??
     "";
+
+  const createdByName =
+    extra?.createdByName ??
+    incident?.creator?.name ??
+    (typeof incident?.creator === "string" ? incident.creator : "") ??
+    customerName ??
+    "";
+
+  const creatorName = customerName || createdByName || "";
 
   // Condición PAS: ubicación, cliente o helpdesk contiene 'pas'
   const locName = (incident?.location?.name || "").toLowerCase();
@@ -298,6 +369,9 @@ export function parseInvgateAgMetadata(
     source: sourceName || undefined,
     status: statusName,
     creator: creatorName,
+    customer: customerName || creatorName || undefined,
+    createdBy: createdByName || creatorName || undefined,
+    detectedChannel: "invgate_ticket",
     rawDetails: {
       incidentId: incident?.id,
       title,
@@ -305,6 +379,8 @@ export function parseInvgateAgMetadata(
       status: statusName,
       category: categoryName,
       creator: creatorName,
+      customer: customerName || creatorName,
+      createdBy: createdByName || creatorName,
       priority: priorityName,
       location: incident?.location?.name || incident?.location,
       helpdesk: helpdeskName || incident?.helpdesk?.name || incident?.helpdesk,
@@ -312,6 +388,7 @@ export function parseInvgateAgMetadata(
     },
   };
 }
+
 
 export async function fetchInvgateTicketMetadata(
   ticketId: string | number,
@@ -327,12 +404,15 @@ export async function fetchInvgateTicketMetadata(
     const incident = res.data;
 
     let customerName = "";
+    let createdByName = "";
     let operatorName = "";
     let categoryName = "";
     let helpdeskName = incident.helpdesk?.name || (typeof incident.helpdesk === "string" ? incident.helpdesk : "");
 
-    // 1. Resolver cliente si existe user_id o creator_id
-    const targetUserId = incident.user_id ?? incident.creator_id;
+    // 1. Resolver solicitante (user_id) y creador (creator_id)
+    const targetUserId = incident.user_id;
+    const targetCreatorId = incident.creator_id;
+
     if (targetUserId) {
       try {
         const uRes = await invgateGet<any>(`user?id=${targetUserId}`);
@@ -345,7 +425,31 @@ export async function fetchInvgateTicketMetadata(
       }
     }
 
+    if (targetCreatorId) {
+      if (targetUserId && targetCreatorId === targetUserId) {
+        createdByName = customerName;
+      } else {
+        try {
+          const cRes = await invgateGet<any>(`user?id=${targetCreatorId}`);
+          if (cRes.ok && cRes.data) {
+            const c = cRes.data;
+            createdByName = `${c.name || ""} ${c.lastname || ""}`.trim() || c.username || "";
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
+
+    // Fallback cruzado si falta alguno de los dos
+    if (!customerName && createdByName) {
+      customerName = createdByName;
+    } else if (!createdByName && customerName) {
+      createdByName = customerName;
+    }
+
     // 2. Resolver operador si existe assigned_id
+
     if (incident.assigned_id) {
       try {
         const aRes = await invgateGet<any>(`user?id=${incident.assigned_id}`);
@@ -455,12 +559,14 @@ export async function fetchInvgateTicketMetadata(
 
     const metadata = parseInvgateAgMetadata(incident, {
       customerName,
+      createdByName,
       categoryName,
       operatorName,
       helpdeskName,
       sourceName,
     });
     return { ok: true, data: metadata };
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error al consultar ticket de InvGate";
     return { ok: false, error: msg };
@@ -529,53 +635,71 @@ export async function fetchQualityCaseMetadata(
     if (source === "invgate" || channel === "invgate_ticket") {
       return fetchInvgateTicketMetadata(cleanId);
     }
-    if (channel === "wise_call") {
+    if (source === "wise" || channel === "wise_call" || channel === "wise_email") {
       const caseData = await fetchWiseCaseData(cleanId);
       if (!caseData?.id) {
-        return { ok: false, error: `No se encontró la llamada Wise con número/ID ${cleanId}` };
+        return { ok: false, error: `No se encontró el caso Wise con número/ID ${cleanId}` };
       }
 
-      // Obtener actividades (pueden venir como array directo o bajo data)
-      const actRes = await wiseCxGet<any>(
-        `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,content,contact_from,contacts_to,attachments,recordings,created_at,sending_status`,
-      );
-      const activities = actRes.ok
-        ? (Array.isArray(actRes.data)
-            ? actRes.data
-            : Array.isArray(actRes.data?.data)
-              ? actRes.data.data
-              : [])
-        : [];
+      // Discernir canal real según source_channel del caso (email vs incoming_call)
+      const realChannel = discernWiseChannel(caseData.source_channel);
 
-      const metadata = parseWiseCallMetadata(caseData, activities);
-
-      // Si no pudimos resolver el nombre en los logs pero tenemos user_id, consultar el usuario
-      if (!metadata.operator && caseData.user_id) {
-        const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
-        if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
-          metadata.operator = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+      if (realChannel === "wise_email") {
+        let operatorName = "";
+        if (caseData.user_id) {
+          const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
+          if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
+            operatorName = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+          }
         }
-      }
 
-      return { ok: true, data: metadata };
-    }
-
-    if (channel === "wise_email") {
-      const caseData = await fetchWiseCaseData(cleanId);
-      if (!caseData?.id) {
-        return { ok: false, error: `No se encontró el correo Wise con número/ID ${cleanId}` };
-      }
-
-      let operatorName = "";
-      if (caseData.user_id) {
-        const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
-        if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
-          operatorName = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+        // Obtener actividades para detectar la primera respuesta del operador (user_reply)
+        let firstReplyAt: string | undefined;
+        try {
+          const actRes = await wiseCxGet<any>(
+            `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,created_at`,
+          );
+          if (actRes.ok) {
+            const acts = Array.isArray(actRes.data)
+              ? actRes.data
+              : Array.isArray(actRes.data?.data)
+                ? actRes.data.data
+                : [];
+            const replyAct = acts.find((a: any) => a.type === "user_reply" && a.created_at);
+            if (replyAct?.created_at) {
+              firstReplyAt = replyAct.created_at;
+            }
+          }
+        } catch {
+          // Fallback silencioso a solved_at/closed_at
         }
-      }
 
-      const metadata = parseWiseEmailMetadata(caseData, operatorName);
-      return { ok: true, data: metadata };
+        const metadata = parseWiseEmailMetadata(caseData, operatorName, firstReplyAt);
+        return { ok: true, data: metadata };
+      } else {
+        // Canal de llamada (wise_call)
+        const actRes = await wiseCxGet<any>(
+          `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,content,contact_from,contacts_to,attachments,recordings,created_at,sending_status`,
+        );
+        const activities = actRes.ok
+          ? (Array.isArray(actRes.data)
+              ? actRes.data
+              : Array.isArray(actRes.data?.data)
+                ? actRes.data.data
+                : [])
+          : [];
+
+        const metadata = parseWiseCallMetadata(caseData, activities);
+
+        if (!metadata.operator && caseData.user_id) {
+          const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
+          if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
+            metadata.operator = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+          }
+        }
+
+        return { ok: true, data: metadata };
+      }
     }
 
     if (channel === "invgate_ticket") {
