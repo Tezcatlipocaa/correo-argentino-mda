@@ -1,5 +1,4 @@
 ---
-import { Icon } from "astro-icon/components";
 import Modal from "@components/ui/Modal.astro";
 import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
@@ -87,7 +86,6 @@ const config = {
           type="button"
           class="w-full sm:w-auto"
           variant="error"
-          icon="boxicons:x-filled"
           onclick="document.getElementById('delete-category-modal').close()"
         />
         <ActionConfirmButton

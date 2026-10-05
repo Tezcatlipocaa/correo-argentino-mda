@@ -12,16 +12,6 @@ const user = Astro.locals.user || { username: "Invitado" };
 
 <Modal id="feedback_modal" size="lg" fixedFooter>
   <Fragment slot="content">
-    {/* Botón de cerrar (X) en la esquina superior derecha */}
-    <button
-      type="button"
-      class="btn btn-sm btn-circle btn-ghost absolute top-4 right-4"
-      aria-label="Cerrar modal"
-      data-close-feedback-modal
-    >
-      <Icon name="boxicons:x-filled" size={20} is:inline />
-    </button>
-
     <h3
       class="text-base-content mb-4 flex items-center gap-2 text-lg font-bold"
     >
@@ -173,7 +163,6 @@ const user = Astro.locals.user || { username: "Invitado" };
         <ActionCancelButton
           type="button"
           variant="error"
-          icon="boxicons:x-filled"
           label="Cancelar"
           class="w-full sm:w-auto"
           data-close-feedback-modal
