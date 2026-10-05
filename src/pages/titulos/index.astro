@@ -3,11 +3,18 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import TitlesContainer from "@components/titulos/TitlesContainer";
-import { getModulePermissions } from "@/lib/rbac";
+import { getModulePermissions, isLoggedIn } from "@/lib/rbac";
+import { getServerEnv } from "@lib/invgate/automation/env";
 
 const user = Astro.locals.user;
 
 const permissions = getModulePermissions("titulos", user.role);
+const loggedIn = isLoggedIn(user);
+
+/** Base del front de InvGate para armar los links a artículos de KB. */
+const invgateBase = (getServerEnv("INVGATE_BASE_URL") || "")
+  .replace(/\/api\/v1\/?$/, "")
+  .replace(/\/+$/, "");
 ---
 
 <BaseLayout>
@@ -16,6 +23,11 @@ const permissions = getModulePermissions("titulos", user.role);
       title="Títulos"
       description="Buscá y copiá los títulos rápidamente."
     />
-    <TitlesContainer permissions={permissions} client:idle />
+    <TitlesContainer
+      permissions={permissions}
+      loggedIn={loggedIn}
+      invgateBase={invgateBase}
+      client:idle
+    />
   </PageContainer>
 </BaseLayout>

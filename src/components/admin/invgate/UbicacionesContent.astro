@@ -318,7 +318,6 @@ const rowGridClass =
         <ActionCancelButton
           type="button"
           label="Cancelar"
-          icon="boxicons:x-filled"
           variant="error"
           onclick="document.getElementById('create_office_modal').close()"
         />
@@ -331,6 +330,11 @@ const rowGridClass =
       </div>
     </form>
   </div>
+  <form method="dialog" class="modal-backdrop">
+    <button class="h-full w-full p-0">
+      <span class="sr-only">Cerrar</span>
+    </button>
+  </form>
 </dialog>
 
 <script is:inline>

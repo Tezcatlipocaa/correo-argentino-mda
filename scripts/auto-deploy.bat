@@ -28,6 +28,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo 5b. Aplicando enriquecimiento de titulos (KB) desde el dump versionado...
+call npx tsx scripts/apply-titles-enrichment.mts
+if errorlevel 1 (
+    echo [MDA Auto-Deploy] ADVERTENCIA: apply de enriquecimiento de titulos fallo. Se continua.
+)
+
 echo 6. Compilando la nueva version de Astro (incluye guard verify-build)...
 call npm run build
 if errorlevel 1 (
@@ -41,6 +47,9 @@ if errorlevel 1 goto :error
 
 echo 8. Precalentando cache de automatizaciones (InvGate)...
 call node --import tsx scripts/warm-automations.ts
+if errorlevel 1 (
+    echo [MDA Auto-Deploy] ADVERTENCIA: warm-automations fallo. El listado de automatizaciones puede quedar vacio hasta el proximo scan. Revisar logs y env de InvGate.
+)
 
 echo [MDA Auto-Deploy] Actualizacion completada con exito!
 exit /b 0

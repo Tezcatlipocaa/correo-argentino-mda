@@ -12,15 +12,45 @@ import { TitleCardSkeleton } from "./TitleCardSkeleton";
 import {
   MagnifyingGlassIcon,
   PlusCircleIcon,
+  ArrowsUpDownIcon,
 } from "@heroicons/react/24/outline";
 
 import type { ModulePermission } from "@/lib/rbac";
+import TitlesImportExportModal from "./TitlesImportExportModal";
+
+/** Clases de hover/active por tono de categoría (mapa estático para Tailwind). */
+const TONE_CHIP: Record<string, string> = {
+  "bg-sky-300": "hover:bg-sky-300 hover:text-neutral-800",
+  "bg-violet-300": "hover:bg-violet-300 hover:text-neutral-800",
+  "bg-orange-300": "hover:bg-orange-300 hover:text-neutral-800",
+  "bg-pink-300": "hover:bg-pink-300 hover:text-neutral-800",
+  "bg-neutral-300": "hover:bg-neutral-300 hover:text-neutral-800",
+  "bg-green-300": "hover:bg-green-300 hover:text-neutral-800",
+  "bg-red-300": "hover:bg-red-300 hover:text-neutral-800",
+};
+
+const TONE_CHIP_ACTIVE: Record<string, string> = {
+  "bg-sky-300": "bg-sky-300 text-neutral-800",
+  "bg-violet-300": "bg-violet-300 text-neutral-800",
+  "bg-orange-300": "bg-orange-300 text-neutral-800",
+  "bg-pink-300": "bg-pink-300 text-neutral-800",
+  "bg-neutral-300": "bg-neutral-300 text-neutral-800",
+  "bg-green-300": "bg-green-300 text-neutral-800",
+  "bg-red-300": "bg-red-300 text-neutral-800",
+};
 
 interface Props {
   permissions: ModulePermission;
+  loggedIn: boolean;
+  /** Base del front de InvGate para links a artículos de KB. */
+  invgateBase?: string;
 }
 
-export default function TitlesContainer({ permissions }: Props) {
+export default function TitlesContainer({
+  permissions,
+  loggedIn,
+  invgateBase = "",
+}: Props) {
   const {
     loading,
     filters,
@@ -28,6 +58,7 @@ export default function TitlesContainer({ permissions }: Props) {
     searchQuery,
     activeFilter,
     favorites,
+    pendingFavorites,
     setSearchQuery,
     setActiveFilter,
     toggleFavorite,
@@ -35,8 +66,9 @@ export default function TitlesContainer({ permissions }: Props) {
     createTitle,
     updateTitle,
     deleteTitle,
+    refreshTitles,
     categories,
-  } = useTitles({ permissions });
+  } = useTitles({ permissions, loggedIn });
 
   const [selectedTitle, setSelectedTitle] = useState<Title | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -44,6 +76,7 @@ export default function TitlesContainer({ permissions }: Props) {
   const [editModalOpen, setEditModalOpen] = useState(false);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [importExportOpen, setImportExportOpen] = useState(false);
 
   const [titleToDelete, setTitleToDelete] = useState<Title | null>(null);
 
@@ -106,26 +139,49 @@ export default function TitlesContainer({ permissions }: Props) {
                     className="btn btn-xs skeleton h-6 w-16 shadow-none"
                   />
                 ))
-              : filters.map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`btn btn-xs hover:btn-primary shadow-none ${activeFilter === filter ? "btn-primary" : ""}`}
-                  >
-                    {filter}
-                  </button>
-                ))}
+              : filters.map((filter) => {
+                  const isActive = activeFilter === filter.label;
+                  const toneClass = filter.tone
+                    ? TONE_CHIP[filter.tone] ?? ""
+                    : "hover:btn-primary";
+                  const activeClass = filter.tone
+                    ? isActive
+                      ? TONE_CHIP_ACTIVE[filter.tone] ?? ""
+                      : ""
+                    : isActive
+                      ? "btn-primary"
+                      : "";
+                  return (
+                    <button
+                      key={filter.label}
+                      onClick={() => setActiveFilter(filter.label)}
+                      className={`btn btn-xs shadow-none ${toneClass} ${activeClass}`}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
           </div>
         </article>
-        {permissions.canWrite && (
+        <div className="ml-auto flex items-center gap-2">
           <button
-            className="btn btn-sm btn-primary ml-auto shadow-none"
-            onClick={handleCreate}
+            className="btn btn-sm btn-ghost shadow-none"
+            onClick={() => setImportExportOpen(true)}
+            title="Importar / Exportar"
           >
-            <PlusCircleIcon className="size-5" />
-            Nuevo título
+            <ArrowsUpDownIcon className="size-5" />
+            Importar / Exportar
           </button>
-        )}
+          {permissions.canWrite && (
+            <button
+              className="btn btn-sm btn-primary shadow-none"
+              onClick={handleCreate}
+            >
+              <PlusCircleIcon className="size-5" />
+              Nuevo título
+            </button>
+          )}
+        </div>
       </header>
       <section className="rounded-box min-h-128 pb-4">
         {loading ? (
@@ -146,7 +202,9 @@ export default function TitlesContainer({ permissions }: Props) {
                     key={title.id}
                     title={title}
                     onOpen={handleOpenDrawer}
-                    isFavorite={favorites.includes(title.name)}
+                    isFavorite={favorites.has(title.id)}
+                    canFavorite={loggedIn}
+                    isFavoritePending={pendingFavorites.has(title.id)}
                     onToggleFavorite={toggleFavorite}
                     onCopy={copyToClipboard}
                   />
@@ -164,6 +222,9 @@ export default function TitlesContainer({ permissions }: Props) {
         onDelete={handleDelete}
         onCopy={copyToClipboard}
         permissions={permissions}
+        invgateBase={invgateBase}
+        onFilterCategory={(category) => setActiveFilter(category)}
+        onSearchService={(service) => setSearchQuery(service)}
       />
       <TitleModal
         open={createModalOpen}
@@ -186,6 +247,12 @@ export default function TitlesContainer({ permissions }: Props) {
         message={`¿Seguro que deseas eliminar este título? Esta acción no se puede deshacer.`}
         onCancel={() => setDeleteModalOpen(false)}
         onConfirm={confirmDelete}
+      />
+      <TitlesImportExportModal
+        open={importExportOpen}
+        canImport={permissions.canWrite}
+        onClose={() => setImportExportOpen(false)}
+        onImported={refreshTitles}
       />
     </div>
   );

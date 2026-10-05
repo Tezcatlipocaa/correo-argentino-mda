@@ -1,12 +1,9 @@
 ---
-import { Icon } from "astro-icon/components";
-
 interface Props {
   href?: string;
   label?: string;
   size?: "xs" | "sm" | "default";
   type?: "button" | "submit";
-  icon?: string;
   variant?: "ghost" | "error";
   class?: string;
   id?: string;
@@ -18,7 +15,6 @@ const {
   label = "Cancelar",
   size = "default",
   type = "button",
-  icon,
   variant = "ghost",
   class: className = "",
   id,
@@ -38,12 +34,10 @@ const btnClasses = `btn ${sizeClass} ${variantClass} gap-2`;
 {
   href ? (
     <a id={id} href={href} class:list={[btnClasses, className]} {...attrs}>
-      {icon && <Icon name={icon} size={20} is:inline />}
       {label}
     </a>
   ) : (
     <button type={type} id={id} class:list={[btnClasses, className]} {...attrs}>
-      {icon && <Icon name={icon} size={20} is:inline />}
       {label}
     </button>
   )
