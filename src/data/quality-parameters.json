@@ -1,0 +1,848 @@
+{
+  "generatedAt": "2026-10-05T19:23:06.626Z",
+  "source": "mda.db",
+  "total": 84,
+  "activeCount": 52,
+  "parameters": [
+    {
+      "code": "ag_titulo",
+      "name": "Corrección del título de la solicitud (A)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 1,
+      "active": true
+    },
+    {
+      "code": "ag_analisis",
+      "name": "Análisis de la solicitud (B)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 2,
+      "active": true
+    },
+    {
+      "code": "ag_sondeo",
+      "name": "Sondeo, pruebas realizadas (C)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 3,
+      "active": true
+    },
+    {
+      "code": "ag_procedimiento",
+      "name": "Cumplimiento del procedimiento (D)",
+      "weight": 20,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 4,
+      "active": true
+    },
+    {
+      "code": "ag_documentacion",
+      "name": "Documentación de la gestión (E)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 5,
+      "active": true
+    },
+    {
+      "code": "ag_correccion_prioridad",
+      "name": "Corrección de prioridad",
+      "weight": 10,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 6,
+      "active": true
+    },
+    {
+      "code": "ag_correccion_tipo",
+      "name": "Corrección de Tipo de solicitud",
+      "weight": 10,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 7,
+      "active": true
+    },
+    {
+      "code": "ag_categorizacion",
+      "name": "Categorización (F)",
+      "weight": 20,
+      "category": "Items",
+      "channel": "invgate_ticket",
+      "section": "items",
+      "order": 8,
+      "active": true
+    },
+    {
+      "code": "ag_mda_sla_primera_respuesta",
+      "name": "SLA de Primera respuesta",
+      "weight": 20,
+      "category": "MDA",
+      "channel": "invgate_ticket",
+      "section": "mda",
+      "order": 9,
+      "active": true
+    },
+    {
+      "code": "ag_mda_sla_resolucion",
+      "name": "SLA de Resolución",
+      "weight": 20,
+      "category": "MDA",
+      "channel": "invgate_ticket",
+      "section": "mda",
+      "order": 10,
+      "active": true
+    },
+    {
+      "code": "ag_mda_seguimiento",
+      "name": "Seguimiento",
+      "weight": 20,
+      "category": "MDA",
+      "channel": "invgate_ticket",
+      "section": "mda",
+      "order": 11,
+      "active": true
+    },
+    {
+      "code": "ag_mda_categorizacion_final",
+      "name": "Categorización final",
+      "weight": 20,
+      "category": "MDA",
+      "channel": "invgate_ticket",
+      "section": "mda",
+      "order": 12,
+      "active": true
+    },
+    {
+      "code": "ag_mda_info_complementaria",
+      "name": "Información complementaria",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "invgate_ticket",
+      "section": "mda",
+      "order": 13,
+      "active": true
+    },
+    {
+      "code": "ag_mda_ortografia",
+      "name": "Ortografía",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "invgate_ticket",
+      "section": "mda",
+      "order": 14,
+      "active": true
+    },
+    {
+      "code": "categorizacion",
+      "name": "Categorización correcta",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "categorizacion_m7bjz",
+      "name": "Categorización",
+      "weight": 10,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "cierre",
+      "name": "Criterio de cierre",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "contencion",
+      "name": "Contención en la espera",
+      "weight": 3,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "control",
+      "name": "Control de la conversación",
+      "weight": 3,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "cordialidad",
+      "name": "Cordialidad y cortesía",
+      "weight": 3,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "criterio_de_cie_qzfjr",
+      "name": "Criterio de cierre",
+      "weight": 0,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "cumplimiento_de_rm7zn",
+      "name": "Cumplimiento de procedimiento",
+      "weight": 10,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "descripcion",
+      "name": "Descripción y evidencia",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "descripcion_evi_2rqrq",
+      "name": "Descripcion/ Evidencia",
+      "weight": 8,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "despedida",
+      "name": "Se despide cordialmente",
+      "weight": 3,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "escucha",
+      "name": "Escucha activa y atenta",
+      "weight": 6,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "exactitud",
+      "name": "Exactitud en ingreso",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "exactitud_en_el_8f048",
+      "name": "Exactitud en el ingreso de datos",
+      "weight": 8,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "interes",
+      "name": "Demuestra interés en resolver",
+      "weight": 3,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "lenguaje",
+      "name": "Lenguaje apropiado",
+      "weight": 5,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "origen",
+      "name": "Origen de la solicitud",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "origen_de_la_so_fvuc8",
+      "name": "Origen de la solicitud",
+      "weight": 6,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "ortografia",
+      "name": "Buena ortografía",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "ortografia_192ul",
+      "name": "Ortografía",
+      "weight": 8,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "prioridad",
+      "name": "Prioridad correcta",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "prioridad_9tbz1",
+      "name": "Prioridad",
+      "weight": 41,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "saludo",
+      "name": "Uso del saludo estándar",
+      "weight": 3,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "solicitud",
+      "name": "Solicitud de conformidad",
+      "weight": 0,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "sondeo",
+      "name": "Sondeo",
+      "weight": 6,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "tipo",
+      "name": "Tipo de solicitud",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "tipo_de_solicit_2pxgv",
+      "name": "Tipo de solicitud",
+      "weight": 6,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "titulo",
+      "name": "Título descriptivo",
+      "weight": 1,
+      "category": "Gestión del Ticket",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "titulo_1tgvj",
+      "name": "Título",
+      "weight": 5,
+      "category": "Interacción con Usuario",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 0,
+      "active": false
+    },
+    {
+      "code": "call_cordialidad",
+      "name": "Cordialidad y cortesía",
+      "weight": 3,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 1,
+      "active": true
+    },
+    {
+      "code": "call_saludo_estandar",
+      "name": "Uso del saludo estándar",
+      "weight": 3,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 2,
+      "active": true
+    },
+    {
+      "code": "call_interes_resolver",
+      "name": "Demuestra interés en resolver el problema",
+      "weight": 3,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 3,
+      "active": true
+    },
+    {
+      "code": "call_sondeo",
+      "name": "Sondeo",
+      "weight": 6,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 4,
+      "active": true
+    },
+    {
+      "code": "call_escucha_activa",
+      "name": "Escucha en forma activa y atenta",
+      "weight": 6,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 5,
+      "active": true
+    },
+    {
+      "code": "call_control_conversacion",
+      "name": "Control de la conversación",
+      "weight": 3,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 6,
+      "active": true
+    },
+    {
+      "code": "call_contencion_espera",
+      "name": "Contención en la espera",
+      "weight": 3,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 7,
+      "active": true
+    },
+    {
+      "code": "call_despedida_cordial",
+      "name": "Se despide cordialmente",
+      "weight": 3,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 8,
+      "active": true
+    },
+    {
+      "code": "call_lenguaje_apropiado",
+      "name": "Lenguaje apropiado",
+      "weight": 5,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 9,
+      "active": true
+    },
+    {
+      "code": "call_procedimiento",
+      "name": "Cumplimiento de procedimiento",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 10,
+      "active": true
+    },
+    {
+      "code": "call_solicitud",
+      "name": "Solicitud",
+      "weight": null,
+      "category": "Items",
+      "channel": "wise_call",
+      "section": "items",
+      "order": 11,
+      "active": false
+    },
+    {
+      "code": "call_ticket_origen",
+      "name": "Origen de la solicitud",
+      "weight": 6,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 11,
+      "active": true
+    },
+    {
+      "code": "call_ticket_tipo",
+      "name": "Tipo de solicitud",
+      "weight": 5,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 12,
+      "active": true
+    },
+    {
+      "code": "call_ticket_categorizacion",
+      "name": "Categorización",
+      "weight": 10,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 13,
+      "active": true
+    },
+    {
+      "code": "call_ticket_ortografia",
+      "name": "Ortografía",
+      "weight": 8,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 14,
+      "active": true
+    },
+    {
+      "code": "call_ticket_prioridad",
+      "name": "Prioridad",
+      "weight": 6,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 15,
+      "active": true
+    },
+    {
+      "code": "call_ticket_titulo",
+      "name": "Título",
+      "weight": 7,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 16,
+      "active": true
+    },
+    {
+      "code": "call_ticket_descripcion",
+      "name": "Descripción / Evidencia",
+      "weight": 7,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 17,
+      "active": true
+    },
+    {
+      "code": "call_ticket_exactitud_datos",
+      "name": "Exactitud en el ingreso de datos",
+      "weight": 6,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 18,
+      "active": true
+    },
+    {
+      "code": "call_ticket_reclamo_novedad",
+      "name": "Reclamo / Novedad",
+      "weight": 55,
+      "category": "Ticket",
+      "channel": "wise_call",
+      "section": "ticket",
+      "order": 20,
+      "active": false
+    },
+    {
+      "code": "email_interpretacion",
+      "name": "Interpretación de la solicitud (A)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 1,
+      "active": true
+    },
+    {
+      "code": "email_procedimientos",
+      "name": "Aplicación de procedimientos (B)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 2,
+      "active": true
+    },
+    {
+      "code": "email_gestion_herramientas",
+      "name": "Gestión Outlook / Invgate (C)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 3,
+      "active": true
+    },
+    {
+      "code": "email_redaccion",
+      "name": "Redacción y comunicación (D)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 4,
+      "active": true
+    },
+    {
+      "code": "email_claridad",
+      "name": "Comunicación y claridad (E)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 5,
+      "active": true
+    },
+    {
+      "code": "email_resolucion",
+      "name": "Resolución brindada (F)",
+      "weight": 10,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 6,
+      "active": true
+    },
+    {
+      "code": "email_seguimiento",
+      "name": "Seguimiento al cliente (G)",
+      "weight": 20,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 7,
+      "active": true
+    },
+    {
+      "code": "email_solicitud",
+      "name": "Solicitud",
+      "weight": null,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 8,
+      "active": true
+    },
+    {
+      "code": "email_sla_90min",
+      "name": "Responde dentro del tiempo establecido 90min",
+      "weight": 20,
+      "category": "Items",
+      "channel": "wise_email",
+      "section": "items",
+      "order": 9,
+      "active": true
+    },
+    {
+      "code": "email_mda_sla_resolucion",
+      "name": "SLA de Resolución",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 10,
+      "active": true
+    },
+    {
+      "code": "email_mda_seguimiento",
+      "name": "Seguimiento",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 11,
+      "active": true
+    },
+    {
+      "code": "email_mda_categorizacion_final",
+      "name": "Categorización final",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 12,
+      "active": true
+    },
+    {
+      "code": "email_mda_origen",
+      "name": "Origen de la solicitud",
+      "weight": 7,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 13,
+      "active": true
+    },
+    {
+      "code": "email_mda_tipo",
+      "name": "Tipo de solicitud",
+      "weight": 5,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 14,
+      "active": true
+    },
+    {
+      "code": "email_mda_categorizacion",
+      "name": "Categorización",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 15,
+      "active": true
+    },
+    {
+      "code": "email_mda_ortografia",
+      "name": "Ortografía",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 16,
+      "active": true
+    },
+    {
+      "code": "email_mda_prioridad",
+      "name": "Prioridad",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 17,
+      "active": true
+    },
+    {
+      "code": "email_mda_titulo",
+      "name": "Título",
+      "weight": 8,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 18,
+      "active": true
+    },
+    {
+      "code": "email_mda_descripcion",
+      "name": "Descripción / Evidencia",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 19,
+      "active": true
+    },
+    {
+      "code": "email_mda_exactitud_datos",
+      "name": "Exactitud en el ingreso de datos",
+      "weight": 10,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 20,
+      "active": true
+    },
+    {
+      "code": "email_mda_reclamo_novedad",
+      "name": "Reclamo / Novedad",
+      "weight": 100,
+      "category": "MDA",
+      "channel": "wise_email",
+      "section": "mda",
+      "order": 21,
+      "active": false
+    }
+  ]
+}

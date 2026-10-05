@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
     const result = await fetchQualityCaseMetadata(channel, id, source);
 
     if (!result.ok) {
-      return jsonError(result.error || "No se pudieron obtener los metadatos", 404);
+      return jsonError(result.error || "No se pudieron obtener los metadatos", result.status || 404);
     }
 
     return jsonResponse({

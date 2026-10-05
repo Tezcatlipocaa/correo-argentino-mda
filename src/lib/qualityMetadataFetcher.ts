@@ -392,14 +392,17 @@ export function parseInvgateAgMetadata(
 
 export async function fetchInvgateTicketMetadata(
   ticketId: string | number,
-): Promise<{ ok: boolean; data?: ExtractedQualityMetadata; error?: string }> {
+): Promise<{ ok: boolean; status?: number; data?: ExtractedQualityMetadata; error?: string }> {
   const cleanId = ticketId.toString().replace("#", "").trim();
-  if (!cleanId) return { ok: false, error: "Identificador de ticket InvGate requerido" };
+  if (!cleanId) return { ok: false, status: 400, error: "Identificador de ticket InvGate requerido" };
 
   try {
     const res = await invgateGet<any>(`incident?id=${cleanId}`);
     if (!res.ok || !res.data) {
-      return { ok: false, error: `No se encontró el incidente InvGate #${cleanId}` };
+      if (res.status === 404) {
+        return { ok: false, status: 404, error: `No se encontró el incidente InvGate #${cleanId}` };
+      }
+      return { ok: false, status: res.status || 502, error: res.message || `No se pudo obtener el incidente InvGate #${cleanId}` };
     }
     const incident = res.data;
 
@@ -569,11 +572,20 @@ export async function fetchInvgateTicketMetadata(
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error al consultar ticket de InvGate";
-    return { ok: false, error: msg };
+    return { ok: false, status: 500, error: msg };
   }
 }
 
-export async function fetchWiseCaseData(identifier: string | number) {
+export interface WiseCaseResult {
+  ok: boolean;
+  data?: any;
+  error?: string;
+  status?: number;
+}
+
+export async function fetchWiseCaseDataWithDetails(
+  identifier: string | number,
+): Promise<WiseCaseResult> {
   const cleanId = identifier.toString().replace("#", "").trim();
 
   // 1. Si es numérico largo (>= 8 dígitos), puede ser el ID interno de Wise CX
@@ -582,7 +594,10 @@ export async function fetchWiseCaseData(identifier: string | number) {
       `/core/v1/cases/${cleanId}?fields=id,number,group_id,user_id,contact_id,status,source_channel,tags,subject,created_at,solved_at,closed_at,last_read,first_read`,
     );
     if (direct.ok && direct.data?.id) {
-      return direct.data;
+      return { ok: true, data: direct.data };
+    }
+    if (!direct.ok && direct.message && (direct.message.includes("WISE_CX") || direct.message.includes("Autenticacion"))) {
+      return { ok: false, status: direct.status || 502, error: direct.message };
     }
   }
 
@@ -599,7 +614,11 @@ export async function fetchWiseCaseData(identifier: string | number) {
     const matched = listRes.data.data.find(
       (c: any) => c.number?.toString() === cleanId || c.id?.toString() === cleanId,
     );
-    if (matched) return matched;
+    if (matched) return { ok: true, data: matched };
+  } else if (!listRes.ok && listRes.message) {
+    if (listRes.message.includes("WISE_CX") || listRes.message.includes("Autenticacion") || listRes.status === 401 || listRes.status === 403) {
+      return { ok: false, status: listRes.status || 502, error: listRes.message };
+    }
   }
 
   // 3. Si no se encontró por cases.number, intentar por cases.id mediante filtering
@@ -613,33 +632,54 @@ export async function fetchWiseCaseData(identifier: string | number) {
     const matched = listByIdRes.data.data.find(
       (c: any) => c.number?.toString() === cleanId || c.id?.toString() === cleanId,
     );
-    if (matched) return matched;
+    if (matched) return { ok: true, data: matched };
   }
 
   // 4. Fallback: intentar consulta por ID estándar directo
   const fallback = await wiseCxGet<any>(`/core/v1/cases/${cleanId}`);
-  if (fallback.ok && fallback.data?.id) return fallback.data;
+  if (fallback.ok && fallback.data?.id) return { ok: true, data: fallback.data };
 
-  return null;
+  if (!listRes.ok && listRes.message) {
+    return { ok: false, status: listRes.status || 502, error: listRes.message };
+  }
+
+  return { ok: false, status: 404, error: `No se encontró el caso Wise con número/ID ${cleanId}` };
+}
+
+export async function fetchWiseCaseData(identifier: string | number) {
+  const res = await fetchWiseCaseDataWithDetails(identifier);
+  return res.ok && res.data ? res.data : null;
+}
+
+export interface FetchQualityCaseResult {
+  ok: boolean;
+  status?: number;
+  data?: ExtractedQualityMetadata;
+  error?: string;
 }
 
 export async function fetchQualityCaseMetadata(
   channel: ChannelType,
   identifier: string | number,
   source?: "wise" | "invgate",
-): Promise<{ ok: boolean; data?: ExtractedQualityMetadata; error?: string }> {
+): Promise<FetchQualityCaseResult> {
   const cleanId = identifier.toString().replace("#", "").trim();
-  if (!cleanId) return { ok: false, error: "Identificador de caso requerido" };
+  if (!cleanId) return { ok: false, status: 400, error: "Identificador de caso requerido" };
 
   try {
     if (source === "invgate" || channel === "invgate_ticket") {
       return fetchInvgateTicketMetadata(cleanId);
     }
     if (source === "wise" || channel === "wise_call" || channel === "wise_email") {
-      const caseData = await fetchWiseCaseData(cleanId);
-      if (!caseData?.id) {
-        return { ok: false, error: `No se encontró el caso Wise con número/ID ${cleanId}` };
+      const caseResult = await fetchWiseCaseDataWithDetails(cleanId);
+      if (!caseResult.ok || !caseResult.data?.id) {
+        return {
+          ok: false,
+          status: caseResult.status || 404,
+          error: caseResult.error || `No se encontró el caso Wise con número/ID ${cleanId}`,
+        };
       }
+      const caseData = caseResult.data;
 
       // Discernir canal real según source_channel del caso (email vs incoming_call)
       const realChannel = discernWiseChannel(caseData.source_channel);
