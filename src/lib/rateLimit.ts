@@ -25,6 +25,9 @@ export const RATE_LIMITS = {
   login: { limit: 10, windowMs: 60_000 },
   apiRead: { limit: 60, windowMs: 60_000 },
   apiWrite: { limit: 20, windowMs: 60_000 },
+  // Toggles de favoritos de títulos: escrituras chicas, por-usuario e
+  // idempotentes; no deben compartir el límite de las escrituras "duras".
+  favoriteWrite: { limit: 120, windowMs: 60_000 },
   upload: { limit: 10, windowMs: 60 * 60_000 },
   kbCategoryWrite: { limit: 20, windowMs: 60_000 },
 } as const satisfies Record<string, RateLimitProfile>;

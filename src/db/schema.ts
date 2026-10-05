@@ -1010,7 +1010,16 @@ export const titles = sqliteTable("titles", {
     .references(() => titleCategory.id),
   route: text("route"),
   description: text("description"),
+  /** id (número, en texto) del artículo de KB de InvGate que mejor matchea. */
   articleOnKdb: text("article_on_kdb"),
+  /** Título del artículo de KB (para mostrarlo sin llamar a la API). */
+  articleOnKdbTitle: text("article_on_kdb_title"),
+  /** Score del match de KB (0..1); null si no hay/no se evaluó. */
+  kbMatchScore: real("kb_match_score"),
+  /** Nº de casos históricos analizados para derivar ruta/descripción. */
+  enrichedCases: integer("enriched_cases"),
+  /** Epoch de la última corrida de enriquecimiento; null = pendiente. */
+  enrichedAt: integer("enriched_at"),
   deprecated: integer("deprecated", {
     mode: "boolean",
   }).default(false),
@@ -1021,6 +1030,28 @@ export const titles = sqliteTable("titles", {
     () => new Date(),
   ),
 });
+
+/**
+ * Favoritos de títulos por usuario (antes vivían en localStorage del browser).
+ * PK compuesta (user_id, title_id); cascada al borrar el usuario o el título.
+ */
+export const titleFavorites = sqliteTable(
+  "title_favorites",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.titleId] }),
+  }),
+);
 
 // 18. AUTOMATIZACIONES — ETAPAS DEL WORKFLOW (plantilla global configurada por admin)
 
