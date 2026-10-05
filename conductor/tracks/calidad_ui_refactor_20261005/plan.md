@@ -1,14 +1,14 @@
 # Plan de Implementación: Refactor UI de Calidad
 
 ## Fase 1: Nueva Sección de Creación de Auditorías (`/supervision/calidad-operadores/nueva`)
-- [ ] Task: Crear página `/supervision/calidad-operadores/nueva.astro` con `BaseLayout` y `FormShell.astro`
-  - [ ] Diseñar el layout amplio de la página con `FormShell` según estándar corporativo (`docs/FORM_STANDARD.md`)
-  - [ ] Implementar soporte para preselección de operador y mes mediante parámetros en la URL (`?agentId=...&month=...`)
-- [ ] Task: Migrar y adaptar el formulario de auditoría desde `AuditModal.astro`
-  - [ ] Modularizar el formulario en un componente dedicado (`NewAuditForm.astro`) aprovechando el ancho completo de pantalla
-  - [ ] Disponer ergonómicamente los selectores de canal, buscador dual (Wise CX / InvGate), metadatos, reproductor de llamadas y matriz de parámetros
-  - [ ] Conectar la acción de guardado con `/api/calidad/save-audit`, manejo de errores y redirección con toast a `/supervision/calidad-operadores`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Crear página `/supervision/calidad-operadores/nueva.astro` con `BaseLayout` y `FormShell.astro` [6153e6b]
+  - [x] Diseñar el layout amplio de la página con `FormShell` según estándar corporativo (`docs/FORM_STANDARD.md`)
+  - [x] Implementar soporte para preselección de operador y mes mediante parámetros en la URL (`?agentId=...&month=...`)
+- [x] Task: Migrar y adaptar el formulario de auditoría desde `AuditModal.astro` [6153e6b]
+  - [x] Modularizar el formulario en un componente dedicado (`NewAuditForm.astro`) aprovechando el ancho completo de pantalla
+  - [x] Disponer ergonómicamente los selectores de canal, buscador dual (Wise CX / InvGate), metadatos, reproductor de llamadas y matriz de parámetros
+  - [x] Conectar la acción de guardado con `/api/calidad/save-audit`, manejo de errores y redirección con toast a `/supervision/calidad-operadores`
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Fase 2: Barra Superior Unificada y Grilla de Operadores
 - [ ] Task: Implementar la nueva barra superior en `CalidadContent.astro`
