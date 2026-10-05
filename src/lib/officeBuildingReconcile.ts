@@ -19,9 +19,11 @@ export interface BuildingCandidateGroup {
  * Agrupa oficinas que comparten edificio pero tienen la dirección escrita
  * distinto. Un grupo es candidato solo si:
  *  - todas las filas comparten provincia (el key ya incluye provincia),
- *  - tienen al menos dos miembros,
- *  - y las direcciones crudas no son todas idénticas (si lo fueran, ya
- *    estarían agrupadas por siblingKey y no hay nada que unificar).
+ *  - y las direcciones normalizadas no son todas idénticas (si lo fueran, no
+ *    habría nada que unificar).
+ * La comparación usa la dirección normalizada (getOfficeAddressKey), no la
+ * cruda. La fila no trae region, así que un grupo candidato no garantiza que
+ * sea un grupo de siblingKey.
  */
 export function groupOfficesByBuilding(
   rows: ReconcileOfficeRow[],
@@ -39,8 +41,6 @@ export function groupOfficesByBuilding(
   const groups: BuildingCandidateGroup[] = [];
 
   for (const [key, members] of byKey.entries()) {
-    if (members.length < 2) continue;
-
     const rawVariants = new Set(members.map((m) => getOfficeAddressKey(m.address)));
     if (rawVariants.size < 2) continue;
 

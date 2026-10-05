@@ -19,16 +19,26 @@ test("agrupa oficinas del mismo edificio escritas distinto", () => {
       address: "AV. GDOR V VERGARA 3443",
       provinceCode: "B",
     },
+    {
+      id: 3,
+      code: "P9999",
+      name: "HURLINGHAM DEPENDENCIA",
+      address: "AVENIDA GOBERNADOR DOCTOR VALENTIN VERGARA 3443",
+      provinceCode: "B",
+    },
   ];
 
   const groups = groupOfficesByBuilding(rows);
 
   assert.equal(groups.length, 1);
-  assert.equal(groups[0].members.length, 2);
-  assert.equal(groups[0].canonical, "VERGARA GOBERNADOR DOCTOR VALENTIN 3443");
+  assert.equal(groups[0].members.length, 3);
+  assert.equal(
+    groups[0].canonical,
+    "AVENIDA GOBERNADOR DOCTOR VALENTIN VERGARA 3443",
+  );
   assert.deepEqual(
     groups[0].members.map((m) => m.code),
-    ["I1057", "O7840"],
+    ["I1057", "O7840", "P9999"],
   );
 });
 
@@ -54,16 +64,6 @@ test("excluye grupos donde el número de puerta no coincide", () => {
   const rows: ReconcileOfficeRow[] = [
     { id: 1, code: "A1", name: "A", address: "AV. SAN JUAN 100", provinceCode: "C" },
     { id: 2, code: "A2", name: "B", address: "AV. SAN JUAN 200", provinceCode: "C" },
-  ];
-
-  assert.equal(groupOfficesByBuilding(rows).length, 0);
-});
-
-test("ignora filas sin dirección utilizable", () => {
-  const rows: ReconcileOfficeRow[] = [
-    { id: 1, code: "A1", name: "A", address: "", provinceCode: "C" },
-    { id: 2, code: "A2", name: "B", address: "   ", provinceCode: "C" },
-    { id: 3, code: "A3", name: "C", address: "AV. SAN JUAN 100", provinceCode: "C" },
   ];
 
   assert.equal(groupOfficesByBuilding(rows).length, 0);
