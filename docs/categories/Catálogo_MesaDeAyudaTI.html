@@ -154,6 +154,7 @@ li[role="treeitem"]:focus>.row{outline:3px solid var(--acc);outline-offset:-2px}
 .k.zero{color:var(--dead)}
 .k.conf{border-color:var(--warn);color:var(--warn)}
 .k.pend{border-color:var(--acc);color:var(--acc)}
+.k.gone{border-color:var(--c2);color:var(--c2)}
 
 /* ---------- main ---------- */
 main{padding:18px clamp(16px,3vw,34px) 70px}
@@ -220,6 +221,14 @@ li{margin:1px 0}
 }
 .tag.pend{border-color:var(--acc);color:var(--acc)}
 .tag.conf{border-color:var(--warn);color:var(--warn)}
+.tag.gone{
+  border-color:var(--c2);
+  color:var(--c2);
+  text-transform:none;
+  letter-spacing:0;
+  font-weight:600;
+  font-family:Consolas,"Courier New",monospace;
+}
 .old{
   color:var(--dead);
   font-size:13px;
@@ -228,6 +237,33 @@ li{margin:1px 0}
 padding-left:33px;
 }
 .old b{color:var(--tx2);font-weight:500}
+.fuse{
+  margin:0 0 6px 33px;
+  padding:7px 10px;
+  border-left:2px solid var(--acc);
+  background:var(--panel2);
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--tx2);
+}
+.fuse .fh{
+  display:block;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--acc);
+  margin-bottom:4px;
+}
+.fuse .fh b{color:var(--tx);font-weight:700}
+.fuse .fi{
+  display:block;
+  font-family:Consolas,"Courier New",monospace;
+  font-size:11.5px;
+  font-variant-numeric:tabular-nums;
+}
+.fuse .fi b{color:var(--tx);font-weight:600}
+.fuse .fi .id{margin-right:7px}
 li.hit>.row{background:#1D3A26;box-shadow:inset 3px 0 0 var(--ok)}
 .ocho{display:none}
 
@@ -321,7 +357,7 @@ ul.root>li>ul>li>ul>li>ul>li>ul>li>ul>li.ccur>.row .nm{color:var(--dead);font-si
 <body>
 <header>
   <h1>Árbol de categorías TI &middot; Mesa de Ayuda TI (id 2)</h1>
-  <div class="sub">Base: 86.300 incidentes (2025-11-21 a 2026-09-29). Rama: 11.875 tickets. Sin reasignación masiva ni categorías nuevas.</div>
+  <div class="sub">Base: 86.472 incidentes creados entre 2025-11-21 y 2026-09-29. Rama: 11.875 tickets. Sin reasignación masiva ni categorías nuevas.</div>
   <div class="kpis" id="kpis"></div>
 </header>
 <div class="bar">
@@ -351,8 +387,10 @@ ul.root>li>ul>li>ul>li>ul>li>ul>li>ul>li.ccur>.row .nm{color:var(--dead);font-si
   <span><span class="k zero">0</span> sin volumen en 10 meses</span>
   <span><span class="k">[id]</span> id de la categoría en InvGate</span>
   <span><span class="k conf">2 padres</span> sistema duplicado, no implementable en A</span>
-  <span><span class="k pend">fusión pendiente</span> hoja con el mismo nombre en otro padre (64 en 35 grupos)</span>
+  <span><span class="k pend">fusión pendiente</span> mismo nombre bajo el mismo padre; gana la de más tickets y absorbe a las otras (35 grupos, 1.265 tk)</span>
+  <span><span class="k gone">se fusiona en [id]</span> esta desaparece; sus tickets pasan a la de mayor volumen</span>
   <span><span class="k">← nombre</span> de dónde venía esa categoría</span>
+  <span><span class="k">nombre</span> título ya corregido en las 3 propuestas (tildes y prefijo del padre); en Árbol actual va el de InvGate. El original queda en el tooltip, en [id] y en ← nombre</span>
 </div>
 <main>
   <div class="note" id="note"></div>
@@ -375,17 +413,93 @@ var EJ = arr(D.ejemplos);
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function cls(t){ return {l1:'c1', l2:'c2', l2d:'c2d', leaf:'cleaf', dead:'cdead', int:'cint', cur:'ccur'}[t] || 'cleaf'; }
 function isLeafish(t){ return t==='leaf'||t==='cur'||t==='int'||t==='dead'; }
-function dupMap(ns,m){ (ns||[]).forEach(function(n){ if(n.t==='leaf'){ m[n.n]=(m[n.n]||0)+1; } if(n.h){ dupMap(n.h,m); } }); return m; }
-function markDup(ns,m){ (ns||[]).forEach(function(n){ if(n.t==='leaf' && m[n.n]>1){ n.pend=true; } if(n.h){ markDup(n.h,m); } }); }
 
+/* ---------- títulos: se corrigen solo en las propuestas A/B/C ---------- */
+/* Los nombres viven en window.__ARBOL__ (evidencia cruda de InvGate) y no se tocan.
+   Esta capa solo cambia lo que se muestra: tildes, typos y el prefijo redundante
+   del padre ("Sop Central- Link de acceso" -> "Link de acceso"). El nombre
+   original queda en el title (tooltip), en [id] y en la línea ← de origen. */
+var FIXW = {
+  instalacion:'instalación', configuracion:'configuración', modificacion:'modificación',
+  impresion:'impresión', distribucion:'distribución', actualizacion:'actualización',
+  extraccion:'extracción', escaner:'escáner', conexion:'conexión',
+  telefono:'teléfono', telefonia:'telefonía', totem:'tótem', toner:'tóner',
+  laser:'láser', dano:'daño', danados:'dañados', energia:'energía', electrica:'eléctrica',
+  codigos:'códigos', contrasena:'contraseña', modulo:'módulo', examenes:'exámenes',
+  medicos:'médicos', senal:'señal', extravio:'extravío', perdida:'pérdida',
+  revision:'revisión', tecnico:'técnico', moviles:'móviles', autogestion:'autogestión',
+  bateria:'batería', quedo:'quedó', menu:'menú', sobrepaso:'sobrepasó',
+  aplicacion:'aplicación', geolocalizacion:'geolocalización',
+  reimpresion:'reimpresión', reenvio:'reenvío'
+};
+function matchCase(w, rep){
+  return (w[0] !== w[0].toLowerCase() ? rep[0].toUpperCase() + rep.slice(1) : rep);
+}
+function fixWords(s){
+  return String(s).replace(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+/g, function(w){
+    var f = FIXW[w.toLowerCase()];
+    return f ? matchCase(w, f) : w;
+  });
+}
+/* solo con guion: "Padre - Resto". Nunca por espacio, porque
+   "Error de servidor", "Instalacion de aplicativo" o "Otro equipo roto o
+   faltante" quedarían como "de servidor", "de aplicativo", "roto o faltante". */
+function stripPadre(raw, padre){
+  if(!padre || !raw) return raw;
+  var re = new RegExp('^' + padre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[-\u2013\u2014:]+\\s+', 'i');
+  var m = re.exec(raw);
+  if(!m) return raw;
+  var rest = raw.slice(m[0].length).trim();
+  return rest.length >= 3 && /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(rest) ? rest : raw;
+}
+function cleanName(raw, padre){
+  var out = fixWords(stripPadre(raw, padre));
+  return out === 'No Responde' ? 'No responde' : out;
+}
+function label(n, padre){
+  /* solo en las propuestas: en el árbol actual el nombre es el de InvGate */
+  if(view === 'cur' || !n || !n.n){ return n ? n.n : n; }
+  return cleanName(n.n, padre);
+}
+function cleanPath(p){
+  var seg = String(p).split(' > '), raw = [], out = [];
+  for(var i = 0; i < seg.length; i++){
+    var c = cleanName(seg[i], i ? raw[i - 1] : null);
+    raw.push(c);
+    out.push(esc(c));
+  }
+  return out.join(' &rsaquo; ');
+}
+function markFusions(ns){
+  (ns||[]).forEach(function(n){
+    if(n.h && n.h.length){
+      var buckets = {};
+      n.h.forEach(function(c){
+        if(c.t === 'leaf' && c.n){ (buckets[c.n] = buckets[c.n] || []).push(c); }
+      });
+      Object.keys(buckets).forEach(function(name){
+        var g = buckets[name];
+        if(g.length < 2) return;
+        g.sort(function(a,b){ return (b.v||0) - (a.v||0); });
+        var keeper = g[0];
+        keeper.pend = true;
+        keeper.fuse = g.slice(1).map(function(l){
+          return {id:l.id, v:l.v||0};
+        });
+        g.slice(1).forEach(function(l){ l.into = keeper.id; });
+      });
+    }
+    if(n.h){ markFusions(n.h); }
+  });
+}
 var NOTES = {
-  cur: '<b>Estado actual.</b> 719 nodos, 490 hojas, hasta 7 selecciones (promedio 4,71). El nivel 1 es el sector, no lo que el usuario necesita. 150 hojas sin tickets, 72 repiten el nombre del padre, 39 nodos tienen un solo hijo. Los nombres son de referencia: el personal ya reconoce sus ramas. Clic en una categoría para abrir o cerrar.',
+  cur: '<b>Estado actual.</b> 719 nodos, 490 hojas, hasta 7 selecciones (promedio 4,71). El nivel 1 es el sector, no lo que el usuario necesita. 150 hojas sin tickets, 9 intermedios con nombre genérico, 39 nodos tienen un solo hijo. Los nombres son de referencia: el personal ya reconoce sus ramas. Clic en una categoría para abrir o cerrar.',
   b:   '<b>Propuesta B - sistema &gt; síntoma.</b> Nivel 1 = sistema (52 opciones), nivel 2 = síntoma. <b>2 selecciones</b>, <b>cero conflictos</b>: cada sistema es un nodo con un solo padre, como exige InvGate. Elegir un sistema muestra todos sus problemas. La primera pantalla lista 52 nombres seguidos, sin agrupar.',
   c:   '<b>Propuesta C - híbrida (recomendada).</b> Nivel 1 = familia (10 agrupaciones), nivel 2 = sistema, nivel 3 = síntoma. <b>3 selecciones</b>, <b>cero conflictos</b>, primera pantalla de 52 a 10 opciones. Cada sistema aparece <b>una sola vez</b>, sin heredar el problema de A. Los nombres de familia ya existen en el árbol actual, así que el personal los reconoce. Peor pantalla: 28 opciones, contra 42 de A y 56 de B.',
   a:   '<b>Propuesta A - intención &gt; sistema &gt; síntoma.</b> Nivel 1 = intención, nivel 2 = sistema, nivel 3 = síntoma. <b>3 selecciones</b>. Los nodos con la marca <span class="tag conf" style="margin:0">2 padres</span> no son implementables: InvGate permite un solo padre, así que un sistema que sirve a dos intenciones obliga a duplicarlo.'
 };
 
-function render(nodes, parentEl, depth){
+function render(nodes, parentEl, depth, padre){
   nodes.forEach(function(n){
 var li = document.createElement('li');
     li.className = cls(n.t);
@@ -393,14 +507,17 @@ var li = document.createElement('li');
     li.tabIndex = 0;
     var row = document.createElement('div');
     row.className = 'row';
+    row.setAttribute('data-raw', n.n || '');
     var has = n.h && n.h.length;
     if(has){ li.setAttribute('aria-expanded', 'false'); }
     var tw = document.createElement('span');
     tw.className = 'tw';
     tw.textContent = has ? '▾' : '•';
-    var nm = document.createElement('span');
+var nm = document.createElement('span');
     nm.className = 'nm';
-    nm.textContent = n.n;
+    var lb = label(n, padre);
+    nm.textContent = lb;
+    if(lb !== n.n){ nm.title = n.n; }
     if(has){ nm.classList.add('clk'); }
     row.appendChild(tw);
     row.appendChild(nm);
@@ -426,6 +543,10 @@ var li = document.createElement('li');
       var t2 = document.createElement('span');
       t2.className = 'tag pend'; t2.textContent = 'fusión pendiente'; row.appendChild(t2);
     }
+    if(n.into){
+      var t3 = document.createElement('span');
+      t3.className = 'tag gone'; t3.textContent = 'se fusiona en [' + n.into + ']'; row.appendChild(t3);
+    }
     if(n.o && view !== 'cur' && n.t === 'leaf'){
       var od = document.createElement('span');
       od.className = 'old';
@@ -433,11 +554,35 @@ var li = document.createElement('li');
       row.appendChild(od);
     }
     li.appendChild(row);
+    if(n.fuse){
+      var fb = document.createElement('div');
+      fb.className = 'fuse';
+      var fh = document.createElement('span');
+      fh.className = 'fh';
+      var fvol = n.fuse.reduce(function(a,x){ return a + x.v; }, 0);
+      fh.innerHTML = 'absorbe <b>' + n.fuse.length + '</b> ' + (n.fuse.length === 1 ? 'categoría' : 'categorías') + ' &middot; <b>' + fvol.toLocaleString('es') + '</b> tk';
+      fb.appendChild(fh);
+      n.fuse.forEach(function(x){
+        var fi = document.createElement('span');
+        fi.className = 'fi';
+        var fid = document.createElement('span');
+        fid.className = 'id';
+        fid.textContent = x.id ? '[' + x.id + ']' : '[sin id]';
+        fi.appendChild(fid);
+        var fvn = document.createElement('b');
+        fvn.textContent = x.v.toLocaleString('es');
+        fi.appendChild(fvn);
+        fi.appendChild(document.createTextNode(' tk'));
+        fb.appendChild(fi);
+      });
+      li.appendChild(fb);
+    }
+
     if(has){
 var ul = document.createElement('ul');
       ul.className = 'ocho';
       ul.setAttribute('role', 'group');
-      render(n.h, ul, depth + 1);
+      render(n.h, ul, depth + 1, n.n);
       li.appendChild(ul);
     }
     parentEl.appendChild(li);
@@ -477,7 +622,7 @@ function applyFilter(){
     var li = l[i];
     var row = li.querySelector(':scope > .row');
     if(!row){ continue; }
-    var isHit = !!q && row.textContent.toLowerCase().indexOf(q) >= 0;
+    var isHit = !!q && (row.textContent + ' ' + (row.getAttribute('data-raw') || '')).toLowerCase().indexOf(q) >= 0;
     if(isHit){ li.classList.add('hit'); } else { li.classList.remove('hit'); }
     var ul = childUl(li);
     if(ul){
@@ -494,10 +639,10 @@ function build(){
   document.getElementById('cmp').style.display = 'none';
   document.getElementById('tree').style.display = '';
   var nodes = (view === 'cur') ? [D.actual] : (view === 'a' ? D.a : (view === 'b' ? D.b : D.c));
-  if(view !== 'cur'){ var m = dupMap(nodes, {}); markDup(nodes, m); }
+  if(view !== 'cur'){ markFusions(nodes); }
   var t = document.getElementById('tree');
   t.innerHTML = '';
-  render(nodes, t, 0);
+  render(nodes, t, 0, null);
   document.getElementById('note').innerHTML = NOTES[view];
   if(view === 'a' || view === 'b' || view === 'c'){ expandFirst(); } else { expandTo(2); }
   if(q){ applyFilter(); }
@@ -526,19 +671,22 @@ function buildCmp(){
   h += '<table><thead><tr><th class="num">Tickets</th><th class="num">Sel. hoy</th><th>Ruta en el árbol actual</th><th>Ruta en B</th><th>Ruta en C</th></tr></thead><tbody>';
   EJ.forEach(function(r){
     var seg = r.desde.split(' > ');
-    h += '<tr><td class="num">' + r.v + '</td><td class="num">' + seg.length + '</td>' +
-         '<td>' + esc(r.desde) + '</td><td>' + esc(r.hasta) + '</td><td>' + esc(r.hastaC) + '</td></tr>';
+h += '<tr><td class="num">' + r.v + '</td><td class="num">' + seg.length + '</td>' +
+         '<td>' + esc(r.desde) + '</td><td>' + cleanPath(r.hasta) + '</td><td>' + cleanPath(r.hastaC) + '</td></tr>';
   });
   h += '</tbody></table>';
   el.innerHTML = h;
   document.getElementById('foot').textContent = '';
 }
 
+/* revalidado contra la API el 05-10-2026: incidentes CREADOS en la ventana.
+   meta.total (86.300) es el corte al 29-09-2026 y no se toca: es evidencia. */
+var TOTAL_REVAL = 86472;
 function kpi(a, b){ return '<span class="kpi">' + a + ': <b>' + b + '</b></span>'; }
 function renderKpis(){
   var m = D.meta;
   document.getElementById('kpis').innerHTML =
-    kpi('incidentes prod', m.total.toLocaleString('es')) +
+    kpi('incidentes en la ventana', TOTAL_REVAL.toLocaleString('es')) +
     kpi('tickets rama', m.volRama.toLocaleString('es')) +
     kpi('nodos hoy', m.nodosHoy) +
     kpi('nunca usados', m.nodosHoySinUso + ' (52%)') +
