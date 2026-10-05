@@ -4,21 +4,11 @@ import readline from "node:readline";
 import { eq } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { offices, auditLogs } from "../src/db/schema";
-import { buildBuildingKey, pickCanonicalAddress } from "../src/lib/officeBuildingKey";
-
-interface OfficeRow {
-  id: number;
-  code: string;
-  name: string;
-  address: string | null;
-  provinceCode: string | null;
-}
-
-interface CandidateGroup {
-  key: string;
-  canonical: string;
-  members: OfficeRow[];
-}
+import {
+  groupOfficesByBuilding,
+  type BuildingCandidateGroup,
+  type ReconcileOfficeRow,
+} from "../src/lib/officeBuildingReconcile";
 
 const normalizeSearch = (value: string): string =>
   (value ?? "")
@@ -123,52 +113,38 @@ async function main() {
     })
     .from(offices);
 
-  const valid = (rows as OfficeRow[]).filter((r) => r.address);
-
-  const byKey = new Map<string, OfficeRow[]>();
-  for (const row of valid) {
-    const { key } = buildBuildingKey(row.address, row.provinceCode);
-    if (!key) continue;
-    const arr = byKey.get(key) ?? [];
-    arr.push(row);
-    byKey.set(key, arr);
-  }
-
-  const candidates: CandidateGroup[] = [];
-  for (const [key, members] of byKey.entries()) {
-    if (members.length < 2) continue;
-    if (args.province && !members.some((m) => m.provinceCode === args.province))
-      continue;
-
-    const normalizedVariants = new Set(
-      members.map((m) => buildBuildingKey(m.address, m.provinceCode).key),
-    );
-    const rawVariants = new Set(
-      members.map((m) => (m.address ?? "").trim().toUpperCase()),
-    );
-    if (rawVariants.size < 2) continue;
-
-    const canonical = pickCanonicalAddress(members.map((m) => m.address!));
-    candidates.push({ key, canonical, members });
-  }
-
-  candidates.sort(
-    (a, b) =>
-      b.members.length - a.members.length ||
-      a.key.localeCompare(b.key, "es-AR"),
+  const candidates = groupOfficesByBuilding(
+    (rows as { address: string | null; provinceCode: string | null }[])
+      .filter((r): r is ReconcileOfficeRow & { address: string; provinceCode: string } =>
+        Boolean(r.address),
+      )
+      .map((r) => ({
+        id: r.id,
+        code: r.code,
+        name: r.name,
+        address: r.address as string,
+        provinceCode: (r.provinceCode ?? "") as string,
+      })),
   );
 
-  const totalOffices = candidates.reduce((n, g) => n + g.members.length, 0);
+  const scoped =
+    args.province && args.province !== "all"
+      ? candidates.filter((g) =>
+          g.members.every((m) => m.provinceCode === args.province),
+        )
+      : candidates;
+
+  const totalOffices = scoped.reduce((n, g) => n + g.members.length, 0);
   console.log(
-    `\nGrupos candidatos de mismo edificio: ${candidates.length} (${totalOffices} oficinas)\n`,
+    `\nGrupos candidatos de mismo edificio: ${scoped.length} (${totalOffices} oficinas)\n`,
   );
 
   const scope =
     args.only.length > 0
-      ? candidates.filter((c) => args.only.includes(c.key))
-      : candidates;
+      ? scoped.filter((c) => args.only.includes(c.key))
+      : scoped;
 
-  const list = args.apply ? scope : candidates;
+  const list = args.apply ? scope : scoped;
 
   for (const group of list) {
     console.log(`=== Edificio [${group.key}] → canónica: ${group.canonical}`);
@@ -234,7 +210,7 @@ async function main() {
     return;
   }
 
-  const toApply: CandidateGroup[] = [];
+  const toApply: BuildingCandidateGroup[] = [];
   for (const group of scope) {
     if (args.interactive) {
       const ok = await promptConfirmation(
