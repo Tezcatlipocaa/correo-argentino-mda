@@ -47,6 +47,9 @@ if errorlevel 1 goto :error
 
 echo 8. Precalentando cache de automatizaciones (InvGate)...
 call node --import tsx scripts/warm-automations.ts
+if errorlevel 1 (
+    echo [MDA Auto-Deploy] ADVERTENCIA: warm-automations fallo. El listado de automatizaciones puede quedar vacio hasta el proximo scan. Revisar logs y env de InvGate.
+)
 
 echo [MDA Auto-Deploy] Actualizacion completada con exito!
 exit /b 0
