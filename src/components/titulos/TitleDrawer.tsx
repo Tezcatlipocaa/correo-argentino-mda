@@ -1,5 +1,7 @@
 import type { Title } from "@hooks/useTitlesHook";
 import { Icon } from "@iconify/react";
+import { kbArticleUrlFromBase } from "@lib/invgate/kb";
+import { splitTitleName, serviceChipLabel } from "@lib/titles/titleParts";
 
 import type { ModulePermission } from "@/lib/rbac";
 
@@ -11,6 +13,12 @@ interface Props {
   onDelete: (title: Title) => void;
   onCopy: (title: string) => void;
   permissions: ModulePermission;
+  /** Base del front de InvGate para links a artículos de KB. */
+  invgateBase?: string;
+  /** Filtra la vista principal por categoría y cierra el drawer. */
+  onFilterCategory: (category: string) => void;
+  /** Busca en el listado por servicio/CI y cierra el drawer. */
+  onSearchService: (service: string) => void;
 }
 
 export default function TitleDrawer({
@@ -21,7 +29,12 @@ export default function TitleDrawer({
   onDelete,
   onCopy,
   permissions,
+  invgateBase = "",
+  onFilterCategory,
+  onSearchService,
 }: Props) {
+  const parts = title ? splitTitleName(title.name) : null;
+  const service = title ? serviceChipLabel(title.name) : null;
   return (
     <>
       {/* Overlay */}
@@ -38,21 +51,50 @@ export default function TitleDrawer({
         }`}
       >
         <section className="px-4">
-          <header className="mb-4 flex items-center gap-x-2">
-            <article
-              className={`grid size-12 place-items-center rounded-md border border-neutral-800/70 p-2 text-neutral-800 ${
-                title?.tone || ""
-              }`}
+          <header className="mb-4 flex flex-col gap-2">
+<h3
+              className="cursor-pointer font-bold transition-colors hover:text-primary"
+              onClick={() => title && onCopy(title.name)}
+              title="Copiar título completo"
             >
-              {title?.icon && (
-                <Icon icon={`boxicons:${title.icon}`} style={{ fontSize: 22 }} />
-              )}
-            </article>
+              {parts?.detail || title?.name || ""}
+            </h3>
 
-            <article className="flex flex-col">
-              <h3 className="font-bold">{title?.name || ""}</h3>
-              <p className="text-xs opacity-70">{title?.category || ""}</p>
-            </article>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {title?.category && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFilterCategory(title.category!);
+                    onClose();
+                  }}
+                  className={`badge badge-sm cursor-pointer border-none text-neutral-800 ${title.tone}`}
+                  title={`Filtrar por ${title.category}`}
+                >
+                  {title.category}
+                </button>
+              )}
+              {service && (
+                <>
+                  <span className="text-base-content/40 text-xs" aria-hidden="true">
+                    &gt;
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSearchService(service);
+                      onClose();
+                    }}
+                    className={`badge badge-sm cursor-pointer border-none text-neutral-800 ${title?.tone ?? ""}`}
+                    title={`Buscar "${service}"`}
+                  >
+                    {service}
+                  </button>
+                </>
+              )}
+            </div>
+
+            
           </header>
 
           {title?.route ? (
@@ -80,6 +122,37 @@ export default function TitleDrawer({
             <div className="bg-base-200/40 mt-6 rounded-md p-4 text-sm">
               No hay información relacionada.
             </div>
+          )}
+
+          {title?.articleOnKdb && (
+            <>
+              <div className="divider mt-6 text-xs">
+                Base de conocimientos
+              </div>
+              <a
+                href={kbArticleUrlFromBase(invgateBase, title.articleOnKdb)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-base-200/40 hover:bg-base-200 flex items-start gap-2 rounded-md p-3 text-sm transition-colors group"
+              >
+                {/* Outline en reposo; filled + primary en hover (dos capas). */}
+                <span className="relative mt-0.5 grid size-[18px] shrink-0 place-items-center">
+                  <Icon
+                    icon="boxicons:book-open"
+                    style={{ fontSize: 18 }}
+                    className="text-base-content/70 transition-opacity group-hover:opacity-0"
+                  />
+                  <Icon
+                    icon="boxicons:book-open-filled"
+                    style={{ fontSize: 18 }}
+                    className="absolute inset-0 text-neutral-950 opacity-0 transition-opacity group-hover:opacity-100 dark:[&_path]:fill-primary"
+                  />
+                </span>
+                <span className="min-w-0">
+                  {title.articleOnKdbTitle ?? `Artículo #${title.articleOnKdb}`}
+                </span>
+              </a>
+            </>
           )}
         </section>
 

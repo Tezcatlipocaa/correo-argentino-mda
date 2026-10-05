@@ -1010,7 +1010,16 @@ export const titles = sqliteTable("titles", {
     .references(() => titleCategory.id),
   route: text("route"),
   description: text("description"),
+  /** id (número, en texto) del artículo de KB de InvGate que mejor matchea. */
   articleOnKdb: text("article_on_kdb"),
+  /** Título del artículo de KB (para mostrarlo sin llamar a la API). */
+  articleOnKdbTitle: text("article_on_kdb_title"),
+  /** Score del match de KB (0..1); null si no hay/no se evaluó. */
+  kbMatchScore: real("kb_match_score"),
+  /** Nº de casos históricos analizados para derivar ruta/descripción. */
+  enrichedCases: integer("enriched_cases"),
+  /** Epoch de la última corrida de enriquecimiento; null = pendiente. */
+  enrichedAt: integer("enriched_at"),
   deprecated: integer("deprecated", {
     mode: "boolean",
   }).default(false),
@@ -1021,6 +1030,28 @@ export const titles = sqliteTable("titles", {
     () => new Date(),
   ),
 });
+
+/**
+ * Favoritos de títulos por usuario (antes vivían en localStorage del browser).
+ * PK compuesta (user_id, title_id); cascada al borrar el usuario o el título.
+ */
+export const titleFavorites = sqliteTable(
+  "title_favorites",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => titles.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.titleId] }),
+  }),
+);
 
 // 18. AUTOMATIZACIONES — ETAPAS DEL WORKFLOW (plantilla global configurada por admin)
 
@@ -1084,6 +1115,20 @@ export const workflowStageTickets = sqliteTable(
     matchDescription: text("match_description", { mode: "json" })
       .$type<string[]>()
       .default([]),
+    /**
+     * Sufijo de la ruta de categoría de InvGate que también matchea esta card
+     * (ej: "Central Paq. » Implementación"). Se compara contra la ruta completa
+     * del ticket hijo (coincidencia por sufijo), cubriendo casos con título
+     * genérico o duplicado que el label no distingue.
+     */
+    matchCategory: text("match_category"),
+    /**
+     * true = los tickets matcheados se muestran anidados como sub-nodos de una
+     * card madre (mismo tratamiento que el equipamiento 1.1/1.2/1.3).
+     */
+    nestChildren: integer("nest_children", { mode: "boolean" })
+      .notNull()
+      .default(false),
     /** Etiqueta display si difiere del matchLabel; cae al matchLabel si es null. */
     displayName: text("display_name"),
     /** false = ticket informativo/registro (no bloquea la etapa). */

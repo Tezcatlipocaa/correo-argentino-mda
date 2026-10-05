@@ -15,6 +15,7 @@ export interface Title {
   route: string | null;
   description: string | null;
   articleOnKdb: string | null;
+  articleOnKdbTitle: string | null;
 }
 
 export interface TitleFormData {
@@ -34,8 +35,9 @@ export interface TitleCategory {
 
 interface Props {
   permissions: ModulePermission;
+  loggedIn: boolean;
 }
-export function useTitles({ permissions }: Props) {
+export function useTitles({ permissions, loggedIn }: Props) {
   const [titles, setTitles] = useState<Title[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("Todos");
@@ -43,36 +45,15 @@ export function useTitles({ permissions }: Props) {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<TitleCategory[]>([]);
 
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
-    const saved = localStorage.getItem("favorites");
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Favoritos por usuario (ids de título); se cargan de la API si hay sesión.
+  const [favorites, setFavorites] = useState<Set<number>>(() => new Set());
+  // Ids con un toggle en vuelo (para deshabilitar el botón y evitar dobles clics).
+  const [pendingFavorites, setPendingFavorites] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   // Debounce
   const debouncedSearch = useDebounce(searchQuery, 200);
-
-  // Fetch
-  useEffect(() => {
-    setLoading(true);
-    const fetchTitles = async () => {
-      try {
-        const res = await fetch("/api/titulos");
-        if (!res.ok) {
-          throw new Error("Error obteniendo títulos");
-        }
-        const data: Title[] = await res.json();
-        setTitles(data);
-      } catch (error) {
-        console.error("Error loading titles:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTitles();
-  }, []);
 
   const refreshTitles = useCallback(async () => {
     try {
@@ -213,29 +194,124 @@ export function useTitles({ permissions }: Props) {
     }
   };
 
-  // Favoritos
+  // Favoritos: cargar del perfil (API) cuando hay sesión.
   useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-  }, [favorites]);
+    if (!loggedIn) {
+      setFavorites(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/titulos/favoritos");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data?.favorites)) {
+          setFavorites(new Set<number>(data.favorites));
+        }
+      } catch {
+        /* sin red: se queda vacío */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
 
-  const toggleFavorite = (title: string) => {
-    setFavorites((prev) => {
-      if (prev.includes(title)) {
+  // Migración one-time: favoritos viejos del localStorage (por nombre) pasan a
+  // la DB (por id) y se limpia la clave local.
+  useEffect(() => {
+    if (!loggedIn || titles.length === 0) return;
+    const raw = localStorage.getItem("favorites");
+    if (!raw) return;
+    localStorage.removeItem("favorites");
+
+    let names: string[] = [];
+    try {
+      names = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (!Array.isArray(names) || names.length === 0) return;
+
+    const ids = names
+      .map((name) => titles.find((title) => title.name === name)?.id)
+      .filter((id): id is number => typeof id === "number");
+    if (ids.length === 0) return;
+
+    void (async () => {
+      for (const id of ids) {
+        try {
+          await fetch("/api/titulos/favoritos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ titleId: id }),
+          });
+        } catch {
+          /* se reintenta en la próxima visita */
+        }
+      }
+      setFavorites((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) next.add(id);
+        return next;
+      });
+    })();
+  }, [loggedIn, titles]);
+
+  const toggleFavorite = useCallback(
+    async (titleId: number) => {
+      if (!loggedIn) return;
+
+      const wasFavorite = favorites.has(titleId);
+      const titleName =
+        titles.find((title) => title.id === titleId)?.name ?? String(titleId);
+
+      setFavorites((prev) => {
+        const next = new Set(prev);
+        if (wasFavorite) next.delete(titleId);
+        else next.add(titleId);
+        return next;
+      });
+      setPendingFavorites((prev) => new Set(prev).add(titleId));
+
+      try {
+        const res = wasFavorite
+          ? await fetch(`/api/titulos/favoritos?titleId=${titleId}`, {
+              method: "DELETE",
+            })
+          : await fetch("/api/titulos/favoritos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ titleId }),
+            });
+        if (!res.ok) throw new Error();
+
         showToast(
-          `Título "${title}" eliminado de favoritos.`,
-          "alert-info",
+          wasFavorite
+            ? `Título "${titleName}" eliminado de favoritos.`
+            : `Título "${titleName}" agregado a favoritos.`,
+          wasFavorite ? "alert-info" : "alert-success",
           3000,
         );
-        return prev.filter((item) => item !== title);
+      } catch {
+        setFavorites((prev) => {
+          const next = new Set(prev);
+          if (wasFavorite) next.add(titleId);
+          else next.delete(titleId);
+          return next;
+        });
+        showToast("No se pudo actualizar favoritos", "alert-error", 3000);
+      } finally {
+        setPendingFavorites((prev) => {
+          const next = new Set(prev);
+          next.delete(titleId);
+          return next;
+        });
       }
-      showToast(
-        `Título "${title}" agregado a favoritos.`,
-        "alert-success",
-        3000,
-      );
-      return [...prev, title];
-    });
-  };
+    },
+    [favorites, loggedIn, titles],
+  );
 
   // Búsqueda y filtros
   const filteredTitles = useMemo(() => {
@@ -261,9 +337,9 @@ export function useTitles({ permissions }: Props) {
     }
 
     // Filtro de favoritos y categorías
-    if (activeFilter === "Favoritos") {
-      result = result.filter((title) => favorites.includes(title.name));
-    } else if (activeFilter !== "Todos") {
+    if (activeFilter === "Favoritos" && loggedIn) {
+      result = result.filter((title) => favorites.has(title.id));
+    } else if (activeFilter !== "Todos" && activeFilter !== "Favoritos") {
       result = result.filter(
         (title) => normalize(title.category) === normalize(activeFilter),
       );
@@ -271,11 +347,25 @@ export function useTitles({ permissions }: Props) {
     return result;
   }, [titles, favorites, debouncedSearch, activeFilter]);
 
+  // Filtros: chips con su tono (categorías) o neutros (Todos / Favoritos).
   const filters = useMemo(() => {
-    const categories = [...new Set(titles.map((t) => t.category))].sort();
+    const toneByCategory = new Map<string, string>();
+    for (const title of titles) {
+      if (title.category && !toneByCategory.has(title.category)) {
+        toneByCategory.set(title.category, title.tone);
+      }
+    }
+    const categories = [...toneByCategory.keys()].sort();
 
-    return ["Todos", "Favoritos", ...categories];
-  }, [titles]);
+    const out: { label: string; tone: string | null }[] = [
+      { label: "Todos", tone: null },
+    ];
+    if (loggedIn) out.push({ label: "Favoritos", tone: null });
+    for (const category of categories) {
+      out.push({ label: category, tone: toneByCategory.get(category) ?? null });
+    }
+    return out;
+  }, [titles, loggedIn]);
 
   const copyToClipboard = useCallback(async (text: string) => {
     try {
@@ -318,7 +408,9 @@ export function useTitles({ permissions }: Props) {
     activeFilter,
     setActiveFilter,
     favorites,
+    pendingFavorites,
     toggleFavorite,
+    refreshTitles,
 
     updateTitle,
     createTitle,
