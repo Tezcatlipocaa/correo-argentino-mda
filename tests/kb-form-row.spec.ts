@@ -18,6 +18,8 @@ let articleId: number;
 
 const row = (page: Page) => page.locator("[data-kb-fields-row]");
 const mesaCell = (page: Page) => row(page).locator("[data-kb-mesa-cell]");
+const categoryLink = (page: Page) =>
+  page.getByRole("link", { name: "Administrar categorías" });
 
 const fieldLabels = async (page: Page): Promise<string[]> => {
   const texts = await row(page).locator(".fieldset-legend").allTextContents();
@@ -124,5 +126,47 @@ test.describe("Base de conocimiento - fila de metadatos", () => {
     await expect(mesaCell(page).locator("select")).toHaveCount(0);
     await expect(row(page).locator("#kb-status")).toBeVisible();
     await expect(page.getByText("Estado actual")).toHaveCount(0);
+  });
+
+  test("creación: el link de categorías queda fuera de la fila y los campos alinean", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto("/base-conocimiento/create");
+    await expect(page.locator("#kb-article-form")).toBeVisible();
+
+    await expect(categoryLink(page)).toBeVisible();
+    await expect(
+      row(page).getByRole("link", { name: "Administrar categorías" }),
+    ).toHaveCount(0);
+
+    const cells = await row(page)
+      .locator("> *")
+      .evaluateAll((elements) =>
+        elements.map((el) => Math.round(el.getBoundingClientRect().height)),
+      );
+    expect(new Set(cells).size).toBe(1);
+  });
+
+  test("edición: el link de categorías queda fuera de la fila y los campos alinean", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto(`/base-conocimiento/edit/${articleId}`);
+    await expect(page.locator("#kb-article-form")).toBeVisible();
+
+    await expect(categoryLink(page)).toBeVisible();
+    await expect(
+      row(page).getByRole("link", { name: "Administrar categorías" }),
+    ).toHaveCount(0);
+
+    const cells = await row(page)
+      .locator("> *")
+      .evaluateAll((elements) =>
+        elements.map((el) => Math.round(el.getBoundingClientRect().height)),
+      );
+    expect(new Set(cells).size).toBe(1);
   });
 });
