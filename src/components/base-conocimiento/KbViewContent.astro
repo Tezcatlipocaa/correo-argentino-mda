@@ -182,6 +182,21 @@ const articleHtml = article
     list-style: decimal;
   }
 
+  .kb-article-body ul:has(> li > input[type="checkbox"]) {
+    list-style: none;
+    padding-left: 0.25rem;
+  }
+
+  .kb-article-body li > input[type="checkbox"] {
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .kb-article-body li > ul,
+  .kb-article-body li > ol {
+    margin: 0.25rem 0;
+  }
+
   .kb-article-body a {
     color: var(--color-secondary);
     text-decoration: underline;

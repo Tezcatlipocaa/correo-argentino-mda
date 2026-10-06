@@ -526,6 +526,25 @@ const cleanBase = getCleanBase();
     line-height: 1.25;
   }
 
+  .editor-preview ul:has(> li > input[type="checkbox"]),
+  .editor-preview-side ul:has(> li > input[type="checkbox"]) {
+    list-style: none;
+    padding-left: 0.25rem;
+  }
+
+  .editor-preview li > input[type="checkbox"],
+  .editor-preview-side li > input[type="checkbox"] {
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .editor-preview li > ul,
+  .editor-preview li > ol,
+  .editor-preview-side li > ul,
+  .editor-preview-side li > ol {
+    margin: 0.25rem 0;
+  }
+
   .editor-preview img {
     height: auto;
     max-width: 100%;
