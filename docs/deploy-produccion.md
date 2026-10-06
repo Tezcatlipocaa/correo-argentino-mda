@@ -2,6 +2,33 @@
 
 Poner el Portal MDA en producción sobre Windows Server con XAMPP (Apache) + PM2.
 
+> ## ⚠️ IMPORTANTE — PowerShell como Administrador
+>
+> **Todos** los comandos de este documento (deploy, build, `pm2 start/stop/kill`,
+> `npm install`, borrado de `dist/`) deben ejecutarse en una **PowerShell elevada
+> como Administrador**: clic derecho sobre Windows PowerShell → *Ejecutar como
+> administrador*, o *Ejecutar como administrador* en el menú contextual del
+> `.bat`. Verificar antes de empezar:
+>
+> ```powershell
+> ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+> # tiene que devolver True
+> ```
+>
+> Si devuelve `False`, **detenerse**. Con una consola sin elevación:
+>
+> - `pm2 stop all` / `pm2 kill` falla con `connect EPERM \\.\pipe\rpc.sock`
+>   (el named pipe del daemon no concede `connect` a un token sin admin), y el
+>   fallo **no se puede resolver** con `del "%USERPROFILE%\.pm2\rpc.sock"`.
+> - `npm install` deja `node_modules` inconsistente si algún proceso Node sigue
+>   vivo: los `.node` nativos (ej. `better-sqlite3.node`) están cargados en
+>   memoria y no se pueden reemplazar (`EBUSY/EPERM`).
+> - `taskkill /F /IM node.exe` puede no alcanzar los procesos de otro usuario.
+>
+> Además, el daemon de PM2 debe haber sido arrancado **por el mismo usuario y con
+> la misma elevación** que la consola que después lo opera. Si se mezclan, PM2
+> queda inutilizable y hay que matar el daemon desde una consola elevada.
+
 ---
 
 ## Requisitos en el servidor
@@ -433,6 +460,118 @@ npm run db:push
 ```
 
 Si necesitás los datos de producción, copiá `database/mda.db` desde el servidor anterior.
+
+### `Refused to apply style ... MIME type ('text/html')` — assets con hash viejo
+
+Síntoma en el navegador (consola):
+
+```
+Refused to apply style from 'https://mda.correo.local/_astro/BaseLayout.ZAHcvL_6.css'
+because its MIME type ('text/html') is not a supported stylesheet MIME type.
+```
+
+Ocurre con `.css`, pero también con cualquier `/_astro/*.js`, `*.woff2`, `*.svg`.
+
+**Causa:** doble. (1) `dist/client` y `dist/server` desalineados: el HTML que
+genera el proceso de Node referencia hashes de un build que **ya no existe** en
+`dist/client/_astro` (el navegador pide `BaseLayout.ZAHcvL_6.css` y en disco sólo
+está `BaseLayout.4TrmIHSh.css`). Ocurre cuando se corre `npm run build` con PM2
+vivo, o con dos builds simultáneos. (2) `server.mjs` no tiene guarda para
+`/_astro/*`: si `express.static("dist/client")` no encuentra el archivo, el
+request cae al handler SSR de Astro, que responde la página 404 en HTML con
+`Content-Type: text/html`. Un `.css` devuelto como HTML es exactamente este error.
+
+**Diagnóstico** (PowerShell **como Administrador**, con PM2 detenido):
+
+```powershell
+pm2 kill
+taskkill /F /IM node.exe
+
+# ¿Coincide lo que pide el server con lo que hay en disco?
+$refs = Select-String -Path dist\server\entry.mjs -Pattern '_astro/[A-Za-z0-9_.-]+' -AllMatches |
+        ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
+$missing = $refs | Where-Object { -not (Test-Path (Join-Path 'dist\client' $_)) }
+"referencias: $($refs.Count)  faltantes: $($missing.Count)"
+$missing
+```
+
+`faltantes: 0` en un healthy deploy. Si hay refs faltantes, el `dist` está incompleto.
+
+**Solución** — rebuild limpio, PM2 **siempre** detenido antes:
+
+```powershell
+pm2 kill
+taskkill /F /IM node.exe
+Remove-Item -Recurse -Force dist
+npm run build
+node scripts/verify-build.mjs
+pm2 start ecosystem.config.cjs
+```
+
+Luego una verificación de integridad (el chequeo que hoy falta en
+`verify-build.mjs`, que solo valida `rootDir`):
+
+```powershell
+$refs = Select-String -Path dist\server\entry.mjs -Pattern '_astro/[A-Za-z0-9_.-]+' -AllMatches |
+        ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
+$missing = $refs | Where-Object { -not (Test-Path (Join-Path 'dist\client' $_)) }
+if ($missing) { "DIST INCOMPLETO:"; $missing; exit 1 } else { "OK: $($refs.Count) assets presentes" }
+```
+
+**Nunca** validar assets contra `astro preview`: en `mode: "middleware"` no
+sirve `dist/client` y devuelve `200 text/html` para todo `/_astro/*`.
+Validar contra `dist/client/_astro` o contra el server real de PM2.
+
+### `pm2 stop all` falla con `connect EPERM \\.\pipe\rpc.sock`
+
+```
+[PM2] Spawning PM2 daemon with pm2_home=C:\Users\Otomasi\.pm2
+Error: connect EPERM \\.\pipe\rpc.sock
+    at PipeConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+  errno: -4048, code: 'EPERM', syscall: 'connect', address: '\\\\.\\pipe\\rpc.sock'
+```
+
+El patrón es revelador: PM2 **no encuentra** el daemon, intenta spawnear uno
+nuevo, y el daemon nuevo tampoco puede abrir el named pipe.
+
+**Causa:** la consola actual no tiene elevación de Administrador (o corre como
+otro usuario) mientras que el daemon existente corre elevado. La ACL del named
+pipe `\\.\pipe\rpc.sock` no concede `connect` a un token sin admin. Causa
+secundaria: daemon muerto con el archivo `rpc.sock` huérfano en
+`%USERPROFILE%\.pm2`.
+
+**Solución — primero y sin excepción, PowerShell como Administrador:**
+
+```powershell
+# 1. Verificar elevación. False => parar acá y reabrir la consola como admin.
+([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+# 2. Ver quién tiene el daemon
+tasklist /FI "IMAGENAME eq node.exe" /V
+dir "$env:USERPROFILE\.pm2"
+
+# 3. Matar todo (incluido el daemon huérfano) y borrar el pipe
+pm2 kill
+taskkill /F /IM node.exe
+Remove-Item -Force "$env:USERPROFILE\.pm2\rpc.sock" -ErrorAction SilentlyContinue
+
+# 4. Reconstruir y arrancar desde la MISMA consola elevada
+npm run build
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+Reglas que evitan que vuelva:
+
+- **Todo** deploy manual o programado corre en consola elevada.
+- El daemon de PM2 se arranca **una sola vez**, desde la consola elevada del
+  usuario real del servicio. Nunca mezclado: daemon de SYSTEM o de otro usuario
+  con consola sin admin.
+- La tarea programada de Windows debe correr con la opción *Ejecutar con
+  privilegios más altos* habilitada, y "Iniciar en" apuntando a la **carpeta**
+  (no al `.bat`, que daba `ERROR_DIRECTORY` 0x10B).
+- Con PM2 caído, **Apache devuelve 503**. Es el síntoma esperado, no un problema
+  de proxy: revolvé primero PM2.
 
 ---
 

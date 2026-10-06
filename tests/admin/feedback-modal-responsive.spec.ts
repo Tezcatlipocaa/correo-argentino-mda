@@ -245,8 +245,8 @@ test.describe("Feedback modal responsiveness", () => {
       "footer must not move when the region scrolls",
     ).toBeLessThanOrEqual(1);
 
-    // Close X must remain reachable (footer/close both functional)
-    await page.locator("[data-close-feedback-modal].btn-circle").click();
+    // Cancelar (footer) must remain reachable and close the modal
+    await page.locator("[data-close-feedback-modal]").click();
     await expect(page.locator("#feedback_modal")).not.toBeVisible();
   });
 

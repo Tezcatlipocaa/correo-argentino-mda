@@ -139,7 +139,7 @@ export const profileAccessCatalog: ProfileAccessEntry[] = [
   },
   {
     href: "/base-conocimiento",
-    title: "Base de conocimiento",
+    title: "Base de Conocimiento",
     description: "Guías, procedimientos y documentación de la mesa.",
     icon: "boxicons:book-filled",
     iconTone: "bg-info/10 text-info",

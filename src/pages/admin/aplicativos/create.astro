@@ -503,8 +503,11 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
       }
     }
 
-    // Antes del submit del formulario, serializar a JSON
-    form?.addEventListener("submit", () => {
+    // Serializar credenciales en el evento nativo `formdata`, que se dispara
+    // cada vez que se construye `new FormData(form)` (p. ej. desde
+    // AsyncFormScript). Es independiente del orden de listeners `submit`.
+    form?.addEventListener("formdata", (event) => {
+      const formData = (event as FormDataEvent).formData;
       const rows = document.querySelectorAll(".app-meta-row");
       const metaArray: Array<{ label: string; value: string }> = [];
 
@@ -522,6 +525,7 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
         }
       });
 
+      formData.set("metadata", JSON.stringify(metaArray));
       if (metadataJsonInput) {
         metadataJsonInput.value = JSON.stringify(metaArray);
       }

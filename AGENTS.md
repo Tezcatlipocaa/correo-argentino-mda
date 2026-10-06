@@ -20,6 +20,15 @@
 - **Keep outputs minimal**: no preamble/postamble, no code explanations unless asked
 - **Never commit** unless explicitly requested
 
+## Issue tracking (hallazgos no bloqueantes)
+
+- **Al|TYP de implementación**, si encontrás un hallazgo **no bloqueante** (bug latente, deuda técnica, riesgo, inconsistencia) o una **oportunidad de mejora** que no vale bloquear el trabajo actual: **no lo fixes en el acto ni lo dejes solo en el chat** — registralo como issue.
+- Usar la skill global **`managing-github-issues`** (`skill` tool, nombre `managing-github-issues`) para redactar/decomponer/actualizar/cerrar issues. Nunca improvisar formato.
+- Crear/actualizar la issue **con el MCP `github`** (`github_issue_write`, `github_search_issues`, `github_issue_read`), nunca con `gh` CLI ni web. Buscar duplicados antes de crear.
+- Las issues funcionan como **registro acumulado del proyecto**: contexto, evidencia (paths, líneas), impacto y criterio de aceptación. Se resuelven **cuando se planifique**, no por enganche.
+- Labels de referencia: `hallazgo`, `deuda-tecnica`, `mejora`, `bug`. Severidad explícita en el título o label cuando aplique.
+- **Nunca commitear** código para "dejar el fix de paso" si no fue pedido — issue primero, fix después planificado.
+
 ## Quick start
 
 - `npm run dev` — dev server (port 4321)
@@ -113,6 +122,8 @@
 - `ecosystem.config.cjs` — 5 processes: Astro SSR (port 4321), mda-ping-cubics, sync-legacy-inventory, sync-users, sync-office-links
 - `scripts/auto-deploy.bat` — git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia --apply → build (verify-build) → pm2 start
 - `scripts/backup-db.bat` — copies `database/mda.db` to backup directory
+- **PowerShell MUST run as Administrator** for every deploy/build/`pm2` command on the server. Not a recommendation. Without elevation `pm2` fails with `connect EPERM \\.\pipe\rpc.sock` (named-pipe ACL denies connect to a non-admin token) and `npm install` corrupts `node_modules` while Node processes are alive. Verify: `([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)` must return `True`. The PM2 daemon must be started once from an elevated console of the real service user and always operated from a console with the same elevation.
+- **Never build with PM2 alive, never two builds at once.** A stale/mismatched `dist/client` makes hashed assets 404, and `server.mjs` has no `/_astro/*` guard: the miss falls through to the SSR handler, which answers the HTML 404 page with `Content-Type: text/html`. Symptom in the browser: `Refused to apply style ... MIME type ('text/html')`. `verify-build.mjs` only checks `rootDir`, so it passes on a corrupt `dist`. Manual integrity check: every `_astro/<file>` referenced by `dist/server/entry.mjs` must exist under `dist/client` (expected: 0 missing). Never validate hashed assets with `astro preview` (in `mode: "middleware"` it does not serve `dist/client`). See `docs/lessons.md` 2026-10-05 and `docs/deploy-produccion.md` §Errores comunes.
 
 ## HTTPS / reverse proxy (Apache XAMPP)
 

@@ -6,13 +6,16 @@
 const counters = new Map<string, number>();
 let total = 0;
 
-/** Lee la env de forma segura en dev (Vite) y en el build standalone de Node. */
+/** Lee la env runtime-first (dotenv en el server) y fallback a import.meta en dev. */
 function readEnv(key: string): string {
+  const runtime = process.env[key];
+  if (typeof runtime === "string" && runtime.length > 0) return runtime;
+
   if (typeof import.meta !== "undefined" && import.meta.env) {
     const val = (import.meta.env as Record<string, unknown>)[key];
     if (typeof val === "string") return val;
   }
-  return process.env[key] ?? "";
+  return "";
 }
 
 export function isInvGateMetricsEnabled(): boolean {

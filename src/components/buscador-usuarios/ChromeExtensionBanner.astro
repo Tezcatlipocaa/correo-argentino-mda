@@ -1,8 +1,41 @@
 ---
 import { Icon } from "astro-icon/components";
 import CopyButton from "@components/ui/CopyButton.astro";
+import { db } from "@db/index";
+import { applications } from "@db/schema";
+import { eq } from "drizzle-orm";
+import { decryptData } from "@lib/encryption";
 
-const API_URL = "https://mda.correo.local/api/usuarios";
+const FALLBACK_API_URL = "https://mda.correo.local/api/usuarios";
+const MDA_FIND_TITLE = "Extensión MDA FIND";
+
+const isWebUrl = (value: string): boolean => /^https?:\/\//i.test(value);
+
+const mdaFindApp = await db.query.applications.findFirst({
+  where: eq(applications.title, MDA_FIND_TITLE),
+});
+
+const user = Astro.locals.user;
+const isAuthenticated = user && user.id !== 0;
+
+let entries: Array<{ label: string; value: string }> = [];
+
+if (isAuthenticated && mdaFindApp?.metadata) {
+  try {
+    const parsed = JSON.parse(decryptData(mdaFindApp.metadata));
+    if (Array.isArray(parsed)) {
+      entries = parsed.filter(
+        (meta) => meta && typeof meta === "object" && meta.label,
+      );
+    }
+  } catch (err) {
+    console.error("Error al desencriptar metadatos de la extensión MDA:", err);
+  }
+}
+
+if (entries.length === 0) {
+  entries = [{ label: "URL de la API", value: FALLBACK_API_URL }];
+}
 ---
 
 <div
@@ -37,30 +70,75 @@ const API_URL = "https://mda.correo.local/api/usuarios";
     actual.
   </p>
 
-  <div class="border-accent/10 relative z-10 mt-4 border-t pt-4">
-    <div
-      class="text-xxs text-base-content/40 mb-1.5 font-bold tracking-widest uppercase"
-    >
-      URL de la API
-    </div>
-    <div class="flex items-center gap-2">
-      <code
-        id="api-url-text"
-        class="bg-base-300/50 border-base-300 text-base-content/70 flex-1 truncate rounded-lg border px-2.5 py-1.5 font-mono text-xs select-all"
-        >{API_URL}</code
-      >
-      <CopyButton
-        variant="icon"
-        value={API_URL}
-        label="Copiar URL"
-        copiedLabel="Copiado"
-        ariaLabel="Copiar URL de la API"
-        id="copy-api-url-btn"
-        size="xs"
-        showTooltip={false}
-        class="shrink-0"
-      />
-    </div>
+  <div
+    class="border-accent/10 relative z-10 mt-4 space-y-3 border-t pt-4"
+  >
+    {
+      entries.map((meta) => (
+        <div>
+          <div
+            class="text-xxs text-base-content/40 mb-1.5 font-bold tracking-widest uppercase"
+          >
+            {meta.label}
+          </div>
+          {isWebUrl(meta.value) ? (
+            <div class="flex items-center gap-2">
+              <code
+                class="bg-base-300/50 border-base-300 text-base-content/70 flex-1 truncate rounded-lg border px-2.5 py-1.5 font-mono text-xs select-all"
+              >
+                {meta.value}
+              </code>
+              <CopyButton
+                variant="icon"
+                value={meta.value}
+                label={`Copiar ${meta.label}`}
+                copiedLabel="Copiado"
+                ariaLabel={`Copiar ${meta.label}`}
+                size="xs"
+                showTooltip={false}
+                class="shrink-0"
+              />
+            </div>
+          ) : (
+            <div class="flex items-center gap-2">
+              <input
+                type="password"
+                value={meta.value}
+                readonly
+                aria-label={`Valor de ${meta.label}`}
+                class="input input-sm bg-base-300/50 border-base-300 text-base-content/70 min-w-0 flex-1 font-mono text-xs"
+                data-password-input
+              />
+              <button
+                type="button"
+                class="btn btn-sm btn-ghost btn-square text-base-content/60 shrink-0"
+                data-toggle-password
+                title="Mostrar/Ocultar valor"
+                aria-label="Mostrar u ocultar valor"
+              >
+                <Icon name="boxicons:eye-filled" size={16} data-show-icon />
+                <Icon
+                  name="boxicons:eye-slash-filled"
+                  size={16}
+                  class="hidden"
+                  data-hide-icon
+                />
+              </button>
+              <CopyButton
+                variant="icon"
+                value={meta.value}
+                label={`Copiar ${meta.label}`}
+                copiedLabel="Copiado"
+                ariaLabel={`Copiar ${meta.label}`}
+                size="xs"
+                showTooltip={false}
+                class="shrink-0"
+              />
+            </div>
+          )}
+        </div>
+      ))
+    }
   </div>
 
   <a
@@ -80,3 +158,41 @@ const API_URL = "https://mda.correo.local/api/usuarios";
     />
   </a>
 </div>
+
+<script>
+  const initExtensionReveal = () => {
+    document.querySelectorAll("[data-toggle-password]").forEach((btn) => {
+      if (btn.getAttribute("data-listener-added") === "true") return;
+      btn.setAttribute("data-listener-added", "true");
+
+      btn.addEventListener("click", () => {
+        const parent = btn.closest("div");
+        if (!parent) return;
+        const input = parent.querySelector(
+          "[data-password-input]",
+        ) as HTMLInputElement | null;
+        const showIcon = parent.querySelector(
+          "[data-show-icon]",
+        ) as HTMLElement | null;
+        const hideIcon = parent.querySelector(
+          "[data-hide-icon]",
+        ) as HTMLElement | null;
+
+        if (input) {
+          if (input.type === "password") {
+            input.type = "text";
+            showIcon?.classList.add("hidden");
+            hideIcon?.classList.remove("hidden");
+          } else {
+            input.type = "password";
+            showIcon?.classList.remove("hidden");
+            hideIcon?.classList.add("hidden");
+          }
+        }
+      });
+    });
+  };
+
+  initExtensionReveal();
+  document.addEventListener("astro:page-load", initExtensionReveal);
+</script>
