@@ -39,7 +39,7 @@ export function renderMarkdown(
 
   let html: string;
   try {
-    html = marked.parse(md, { async: false });
+    html = marked.parse(md, { async: false, gfm: true, breaks: true });
   } catch {
     return markdownFallback(md);
   }

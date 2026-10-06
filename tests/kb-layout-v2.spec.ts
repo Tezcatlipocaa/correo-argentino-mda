@@ -143,6 +143,51 @@ test.describe("Base de conocimiento - layout v2", () => {
     expect(sizes[sizes.length - 1]).toBeLessThanOrEqual(paragraphSize);
   });
 
+  test("respeta saltos de línea, reduce el ritmo y no duplica el título", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const content = [
+      `Linea uno ${suffix}`,
+      `Linea dos ${suffix}`,
+      "",
+      `## Sección ${suffix}`,
+      "",
+      `Párrafo ${suffix}`,
+    ].join("\n");
+    const article = await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Saltos ${suffix}`,
+      content,
+      status: "published",
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto(`/base-conocimiento/${article.id}`);
+
+    await expect(
+      page.getByRole("heading", { name: article.title }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Artículo", exact: true }),
+    ).toHaveCount(0);
+
+    const body = page.locator(".kb-article-body");
+    await expect(body.locator("br")).toHaveCount(1);
+
+    const margins = await body.locator("h2").evaluate((el) => {
+      const styles = getComputedStyle(el);
+      return {
+        top: parseFloat(styles.marginTop),
+        bottom: parseFloat(styles.marginBottom),
+      };
+    });
+    expect(margins.top).toBe(28);
+    expect(margins.bottom).toBe(8);
+  });
+
   test("la vista previa del editor replica la escala de encabezados", async ({
     context,
     page,

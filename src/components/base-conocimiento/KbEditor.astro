@@ -256,7 +256,11 @@ const cleanBase = getCleanBase();
       ],
       previewRender(plainText, preview) {
         const sanitizedHtml = DOMPurify.sanitize(
-          marked.parse(plainText) as string,
+          marked.parse(plainText, {
+            async: false,
+            gfm: true,
+            breaks: true,
+          }) as string,
         );
         const wrapper = document.createElement("div");
         wrapper.innerHTML = sanitizedHtml;
