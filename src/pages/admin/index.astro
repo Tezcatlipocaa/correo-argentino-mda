@@ -53,6 +53,13 @@ const modulesGroup1: AdminModule[] = [
     href: "/admin/papelera",
     active: true,
   },
+  {
+    title: "Edificios (oficinas)",
+    icon: "boxicons:building-house-filled",
+    iconTone: "text-info",
+    href: "/admin/oficinas/edificios",
+    active: true,
+  },
 ];
 
 const modulesGroup2: AdminModule[] = [
@@ -113,7 +120,8 @@ const modulesGroupInvgate: AdminModule[] = [
             (mod.href === "/admin/usuarios" ||
               mod.href === "/admin/auditoria" ||
               mod.href === "/admin/feedback" ||
-              mod.href === "/admin/papelera") &&
+              mod.href === "/admin/papelera" ||
+              mod.href === "/admin/oficinas/edificios") &&
             !can(user.role, "admin");
 
           if (mod.active && mod.href && !isLocked) {
