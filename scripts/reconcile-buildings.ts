@@ -125,7 +125,15 @@ async function backupDatabase(): Promise<string> {
 
   // `new Database(dbPath)` CREA el archivo si falta: sin este chequeo, una base
   // ausente produce un snapshot de 0 bytes que el operador leeria como valido.
-  const dbStat = fs.statSync(dbPath);
+  let dbStat: fs.Stats;
+  try {
+    dbStat = fs.statSync(dbPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(`La base de datos en ${dbPath} no existe`);
+    }
+    throw error;
+  }
   if (!dbStat.isFile() || dbStat.size === 0) {
     throw new Error(
       `La base de datos en ${dbPath} no es un archivo con contenido`,
