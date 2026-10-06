@@ -43,7 +43,7 @@
 ## Testing
 
 - `npm run test:domain` — tests de dominio con `node:test` sobre los 7 archivos `*.test.ts` de `src/lib/` (52 tests). **No los cubre vitest**: `vitest.config.ts` incluye únicamente `tests/unit/**`.
-- `npm run test:unit` — vitest sobre `tests/unit/**` (47 archivos, 327 tests). Hay **1 fallo pre-existente** en `tests/unit/navigation/base-conocimiento.test.ts` (no relacionado con edificios); no scopear el glob, ya no hace falta.
+- `npm run test:unit` — vitest sobre `tests/unit/**` (48 archivos, 332 tests). Hay **1 fallo pre-existente** en `tests/unit/navigation/base-conocimiento.test.ts` (no relacionado con edificios); no scopear el glob, ya no hace falta.
 - `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por ese fallo pre-existente; el dominio corre primero para que una regresión real no quede enmascarada.
 - `npm run test:e2e` — Playwright completo (`tests/**/*.spec.ts`). Workers: 1 (serial). Requiere dev server; ver "Puertos de la suite E2E" abajo.
 - `npm run test:e2e:reconcile` — solo el spec de reconciliación de edificios (7 tests).
