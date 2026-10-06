@@ -141,6 +141,9 @@ test("renderiza checkboxes de tareas y listas anidadas en vista y vista previa",
     `    - Hijo ${suffix}`,
     "",
     '<input type="text" value="no">',
+    '<input type="CHECKBOX" checked>',
+    '<input type="checkbox " checked>',
+    '<input type="password" value="x">',
   ].join("\n");
   const article = await fixture.createArticle({
     mesa,
@@ -173,4 +176,6 @@ test("renderiza checkboxes de tareas y listas anidadas en vista y vista previa",
   const previewCheckboxes = preview.locator('input[type="checkbox"]');
   await expect(previewCheckboxes).toHaveCount(2);
   await expect(previewCheckboxes.nth(1)).toBeChecked();
+  await expect(previewCheckboxes.nth(1)).toBeDisabled();
+  await expect(preview.locator("input")).toHaveCount(2);
 });

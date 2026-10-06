@@ -255,13 +255,21 @@ const cleanBase = getCleanBase();
         "guide",
       ],
       previewRender(plainText, preview) {
-        const sanitizedHtml = DOMPurify.sanitize(
-          marked.parse(plainText, {
-            async: false,
-            gfm: true,
-            breaks: true,
-          }) as string,
-        );
+        const renderedHtml = marked.parse(plainText, {
+          async: false,
+          gfm: true,
+          breaks: true,
+        }) as string;
+        const inputGuard = document.createElement("template");
+        inputGuard.innerHTML = renderedHtml;
+        inputGuard.content.querySelectorAll("input").forEach((input) => {
+          if (input.getAttribute("type") !== "checkbox") {
+            input.remove();
+            return;
+          }
+          input.setAttribute("disabled", "");
+        });
+        const sanitizedHtml = DOMPurify.sanitize(inputGuard.innerHTML);
         const wrapper = document.createElement("div");
         wrapper.innerHTML = sanitizedHtml;
         wrapper.querySelectorAll("img").forEach((image) => {
