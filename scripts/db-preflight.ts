@@ -18,7 +18,26 @@ import path from "node:path";
  */
 const dbPath = path.resolve(process.cwd(), "database", "mda.db");
 
-if (process.argv.includes("--help") || process.argv.includes("-h")) {
+/**
+ * Detecta `--help`/`-h` ignorando los tokens que consumen `--export`,
+ * `--only` y `--province`: `--export -h` exporta a un archivo llamado `-h`,
+ * no pide ayuda. Un `includes()` plano confundiria ese valor con ayuda y
+ * saltearia la validacion, reproduciendo el bug original con la base ausente.
+ *
+ * Tiene que caminar igual que `parseArgs` (`scripts/reconcile-buildings.ts`)
+ * para que los dos no puedan divergir.
+ */
+export function wantsHelp(argv: string[]): boolean {
+  const valueFlags = new Set(["--export", "--only", "--province"]);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--help" || arg === "-h") return true;
+    if (valueFlags.has(arg)) i++; // el valor no puede ser una bandera
+  }
+  return false;
+}
+
+if (wantsHelp(process.argv.slice(2))) {
   // Sin validacion: la ayuda no debe requerir una base. Si `database/` falta,
   // `src/db/index.ts` falla al importar (comportamiento previo a esta rama) —
   // arreglar eso es un tema del arranque de la base, no de este script.

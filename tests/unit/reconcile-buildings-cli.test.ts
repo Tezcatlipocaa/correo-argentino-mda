@@ -21,11 +21,16 @@ const TSX_CLI = path.join(REPO_ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 // `npx` es un .cmd: spawnSync no lo abre sin shell, y shell:true interpretaría
 // el `|` de una clave como pipe. El bin de tsx está declarado en su
 // package.json (`"bin": "./dist/cli.mjs"`), así que lo invocamos con node.
-function runCli(args: string[]) {
+function runCli(args: string[], cwd: string = REPO_ROOT) {
   const result = spawnSync(
     process.execPath,
-    [TSX_CLI, "scripts/reconcile-buildings.ts", ...args],
-    { cwd: REPO_ROOT, encoding: "utf8", timeout: 60_000 },
+    // Ruta absoluta: con `cwd` temporal el entry relativo no existiría.
+    [
+      TSX_CLI,
+      path.join(REPO_ROOT, "scripts", "reconcile-buildings.ts"),
+      ...args,
+    ],
+    { cwd, encoding: "utf8", timeout: 60_000 },
   );
   // Un spawn fallido o un timeout devuelven `status: null`; sin este guard el
   // fallo se reporta como `expected null to be 1` y esconde la causa real.
@@ -145,5 +150,54 @@ describe("el dry-run y el export respetan --only (#163)", () => {
     expect(output).toContain(
       "Grupos candidatos de mismo edificio: 66 (229 oficinas)",
     );
+  }, 90_000);
+});
+
+describe("el guard de base antes de importar (#162)", () => {
+  it("rechaza una base ausente en español y no crea archivos", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "preflight-"));
+    fs.mkdirSync(path.join(dir, "database"), { recursive: true });
+    try {
+      const { status, output } = runCli([], dir);
+      expect(status).toBe(1);
+      expect(output).toContain("no existe. Copiala desde producción");
+      expect(fs.existsSync(path.join(dir, "database", "mda.db"))).toBe(false);
+      expect(fs.existsSync(path.join(dir, "database", "backups"))).toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }, 90_000);
+
+  it("no toma -h en posición de valor como pedido de ayuda", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "preflight-"));
+    fs.mkdirSync(path.join(dir, "database"), { recursive: true });
+    try {
+      const { status, output } = runCli(["--export", "-h"], dir);
+      // Si el guard lo tratara como --help, saltearía la validación,
+      // src/db/index crearía un mda.db de 0 bytes y moriría con
+      // SqliteError en inglés — el bug original.
+      expect(status).toBe(1);
+      expect(output).toContain("no existe. Copiala desde producción");
+      expect(fs.existsSync(path.join(dir, "database", "mda.db"))).toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }, 90_000);
+
+  it("--help sigue funcionando sin base", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "preflight-"));
+    // Sin `database/`, src/db/index.ts lanza TypeError al importar
+    // (comportamiento previo) y --help sale con 1: el directorio vacío
+    // es lo mínimo para que la ayuda corra.
+    fs.mkdirSync(path.join(dir, "database"), { recursive: true });
+    try {
+      const { status, output } = runCli(["--help"], dir);
+      expect(status).toBe(0);
+      expect(output).toContain(
+        "Uso: tsx scripts/reconcile-buildings.ts [opciones]",
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   }, 90_000);
 });
