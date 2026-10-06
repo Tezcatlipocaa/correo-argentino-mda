@@ -323,3 +323,126 @@ test("un admin no puede repetir la clave de un edificio en el mismo pedido", asy
   // Ademas del 400, el lote no puede haber tocado nada.
   expect(await readSeededOffices()).toEqual(before);
 });
+
+test("reenviar un lote ya aplicado no escribe auditoría nueva", async ({
+  page,
+  context,
+}) => {
+  await seedOffices();
+  await setSessionCookie(context, admin.signedSessionId);
+
+  const marker = `bajo el edificio "${ADDRESS_B}" [${EXPECTED_KEY}]`;
+  const matchingAudits = async (): Promise<
+    { id: number; action: string }[]
+  > => {
+    const rows = await db
+      .select({ id: auditLogs.id, action: auditLogs.action })
+      .from(auditLogs)
+      .where(eq(auditLogs.username, admin.username));
+    return rows.filter((row) => row.action.includes(marker));
+  };
+
+  // El primer test de este archivo ya dejo una fila de auditoría sobre este
+  // mismo edificio, así que se mide por DIFERENCIA contra el baseline: solo
+  // cuenta la fila que agrega este POST.
+  const baseline = new Set((await matchingAudits()).map((row) => row.id));
+
+  const first = await page.request.post(APPLY_URL_FRAGMENT, {
+    data: { groups: [{ key: EXPECTED_KEY, canonical: ADDRESS_B }] },
+  });
+  expect(first.status()).toBe(200);
+  expect(JSON.parse(await first.text()).updated).toBe(1);
+
+  const afterFirst = (await matchingAudits()).filter(
+    (row) => !baseline.has(row.id),
+  );
+  expect(afterFirst).toHaveLength(1);
+  // El mensaje se arma con las escrituras efectivas del grupo: solo
+  // E2EEDIF01 cambia (E2EEDIF02 ya guarda ADDRESS_B). Con el conteo viejo
+  // por `members.length` decía 2 y listaba también a E2EEDIF02.
+  expect(afterFirst[0].action).toContain("Unificó 1 oficinas");
+  expect(afterFirst[0].action).toContain(CODES[0]);
+  expect(afterFirst[0].action).not.toContain(CODES[1]);
+
+  const second = await page.request.post(APPLY_URL_FRAGMENT, {
+    data: { groups: [{ key: EXPECTED_KEY, canonical: ADDRESS_B }] },
+  });
+  expect(second.status()).toBe(200);
+  const secondBody = JSON.parse(await second.text());
+  expect(secondBody.updated).toBe(0);
+  expect(secondBody.backup).toBeNull();
+
+  const afterSecond = (await matchingAudits()).filter(
+    (row) => !baseline.has(row.id),
+  );
+  expect(afterSecond).toHaveLength(1);
+});
+
+test("un grupo sin miembros no genera fila de auditoría", async ({
+  page,
+  context,
+}) => {
+  await setSessionCookie(context, admin.signedSessionId);
+
+  const marker = "CALLE INEXISTENTE 9999";
+  const countMatchingAudits = async (): Promise<number> => {
+    const rows = await db
+      .select({ action: auditLogs.action })
+      .from(auditLogs)
+      .where(eq(auditLogs.username, admin.username));
+    return rows.filter((row) => row.action.includes(marker)).length;
+  };
+
+  // Delta antes/después, nunca un conteo total de la tabla: una corrida de
+  // Playwright externa escribe en la misma base, pero no en filas con este
+  // marcador.
+  const before = await countMatchingAudits();
+
+  const response = await page.request.post(APPLY_URL_FRAGMENT, {
+    data: {
+      groups: [{ key: "Z#9999|NADA+AQUI", canonical: marker }],
+    },
+  });
+  expect(response.status()).toBe(200);
+  expect(JSON.parse(await response.text()).updated).toBe(0);
+
+  // Antes de la corrección el grupo vacío emitía "Unificó 0 oficinas ..." y
+  // el delta daba 1.
+  expect(await countMatchingAudits()).toBe(before);
+});
+
+test("el schema rechaza un lote de más de 100 grupos con 400", async ({
+  page,
+  context,
+}) => {
+  await setSessionCookie(context, admin.signedSessionId);
+
+  // MAX_UPDATE_ROWS = 2000 es hoy una guarda de crecimiento inerte: la base
+  // real tiene ~5.200 buckets cuyo más grande tiene 26 filas, los 100
+  // buckets más grandes cubren apenas 487 filas y el schema capa `groups` en
+  // 100, así que superar 2.000 updates no es alcanzable vía API y este suite
+  // no lo prueba. Lo que sí es alcanzable es el cap del schema.
+  const groups = Array.from({ length: 100 }, (_, i) => ({
+    key: `Z#${9000 + i}|INEXISTENTE${i}`,
+    canonical: "AV. SAN JUAN 1349",
+  }));
+
+  const backupsBefore = listReconcileBackups().length;
+  const ok = await page.request.post(APPLY_URL_FRAGMENT, { data: { groups } });
+  expect(ok.status()).toBe(200);
+  expect(JSON.parse(await ok.text()).updated).toBe(0);
+  // Sin escrituras no hay snapshot: el backup vive dentro del
+  // `if (plan.updates.length > 0)`.
+  expect(listReconcileBackups().length).toBe(backupsBefore);
+
+  const tooMany = await page.request.post(APPLY_URL_FRAGMENT, {
+    data: {
+      groups: [
+        ...groups,
+        { key: "Z#9999|GRUPO-EXTRA", canonical: "AV. SAN JUAN 1349" },
+      ],
+    },
+  });
+  expect(tooMany.status()).toBe(400);
+  expect(normalizeSearchValue(await tooMany.text())).toContain("100");
+});

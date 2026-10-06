@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { eq } from "drizzle-orm";
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { can } from "@lib/roleConfig";
@@ -115,10 +116,12 @@ function buildPlan(
       (r) => keysByOfficeId.get(r.id) === group.key,
     );
 
+    const writtenForGroup: ReconcileTarget[] = [];
     for (const member of members) {
       if (processed.has(member.id)) continue;
       processed.add(member.id);
       if (member.address === canonical) continue;
+      writtenForGroup.push(member);
       updates.push({
         id: member.id,
         address: canonical,
@@ -128,8 +131,14 @@ function buildPlan(
       });
     }
 
+    // El recuento sale de las escrituras EFECTIVAS de este grupo: una fila que
+    // ya guarda la canónica no se escribe, y una oficina que aparezca en dos
+    // grupos se cuenta una sola vez (`processed`). Un grupo que no escribe nada
+    // no deja fila de auditoría.
+    if (writtenForGroup.length === 0) continue;
+
     auditMessages.push(
-      `Unificó ${members.length} oficinas bajo el edificio "${canonical}" [${group.key}] (${members
+      `Unificó ${writtenForGroup.length} oficinas bajo el edificio "${canonical}" [${group.key}] (${writtenForGroup
         .map((m) => m.code)
         .join(", ")})`,
     );
@@ -154,7 +163,13 @@ async function backupDatabase(): Promise<string> {
   const dbPath = path.resolve(process.cwd(), "database", "mda.db");
   const backupDir = path.resolve(process.cwd(), "database", "backups");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const dest = path.join(backupDir, `mda-reconcile-${stamp}.db`);
+  // El sufijo rompe la colisión entre dos POST simultáneos: `toISOString()` solo
+  // tiene resolución de milisegundos, así que dos pedidos elegían el mismo
+  // `dest` y escribían sobre el mismo archivo.
+  const dest = path.join(
+    backupDir,
+    `mda-reconcile-${stamp}-${randomUUID().slice(0, 8)}.db`,
+  );
 
   // `new Database(dbPath)` CREA el archivo si falta: sin este chequeo, una base
   // ausente (o vacia) produciria un snapshot de 0 bytes que el operador
@@ -178,24 +193,39 @@ async function backupDatabase(): Promise<string> {
   const handle = new Database(dbPath);
   try {
     await handle.backup(dest);
+  } catch (error) {
+    // `backup()` rechaza sin deshacer el destino: un snapshot a medias no
+    // puede quedar en database/backups/ fingiendo ser válido.
+    fs.rmSync(dest, { force: true });
+    throw error;
   } finally {
     handle.close();
   }
 
-  pruneReconcileBackups(backupDir);
+  // El origen ya se validó antes de abrir el handle; el destino también: un
+  // snapshot vacío no debe sobrevivir como uno de los `MAX_RECONCILE_BACKUPS`
+  // más nuevos.
+  const destStat = fs.statSync(dest);
+  if (!destStat.isFile() || destStat.size === 0) {
+    fs.rmSync(dest, { force: true });
+    throw new Error(`El snapshot ${dest} salió vacío y fue eliminado`);
+  }
+
+  pruneReconcileBackups(backupDir, dest);
 
   return dest;
 }
 
 /**
- * Deja solo los `MAX_RECONCILE_BACKUPS` snapshots mas recientes de esta ruta.
- * El timestamp ISO del nombre ordena lexicograficamente. Sin esta poda cada POST
- * deja ~19,7 MB y el rate limit de escritura del middleware (20/min por
- * usuario) llenaria el disco: el ENOSPC se lleva por delante los 5 procesos de
- * PM2. Solo toca el patron `mda-reconcile-*.db`: `database/backups/` puede
- * guardar backups de otros runbooks.
+ * Deja solo los `MAX_RECONCILE_BACKUPS` snapshots mas recientes de esta ruta,
+ * sin contar el recién escrito (`keep`). El timestamp ISO del nombre ordena
+ * lexicograficamente. Sin esta poda cada POST deja ~19,7 MB y el rate limit de
+ * escritura del middleware (20/min por usuario) llenaria el disco: el ENOSPC se
+ * lleva por delante los 5 procesos de PM2. Solo toca el patron
+ * `mda-reconcile-*.db`: `database/backups/` puede guardar backups de otros
+ * runbooks.
  */
-function pruneReconcileBackups(backupDir: string): void {
+function pruneReconcileBackups(backupDir: string, keep: string): void {
   let entries: string[];
   try {
     entries = fs.readdirSync(backupDir);
@@ -213,10 +243,16 @@ function pruneReconcileBackups(backupDir: string): void {
         return false;
       }
     })
-    // Mas nuevo primero: el stamp ISO del nombre ordena lexicograficamente.
-    .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
+    // Mas nuevo primero: el stamp ISO del nombre ordena lexicograficamente, y
+    // el sufijo uuid desempata dentro del mismo milisegundo.
+    .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0))
+    // `keep` se aparta del recorte: un salto de reloj hacia atrás hace que 5
+    // sellos existentes ordenen por encima del recién escrito y el prune lo
+    // borraba aunque la respuesta lo nominara como `backup`.
+    .filter((entry) => entry.full !== keep);
 
-  for (const stale of snapshots.slice(MAX_RECONCILE_BACKUPS)) {
+  // El `- 1` reserva el lugar que ocupa `keep` en el conjunto protegido.
+  for (const stale of snapshots.slice(MAX_RECONCILE_BACKUPS - 1)) {
     try {
       fs.unlinkSync(stale.full);
     } catch (error) {
@@ -293,7 +329,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       // grupos anteriores ya unificados sin que el cliente supiera cuantos.
       // El select y el calculo de `searchableText` viven fuera del callback
       // porque better-sqlite3 exige callbacks sincronos.
-      await db.transaction((tx) => {
+      db.transaction((tx) => {
         for (const update of plan.updates) {
           tx.update(offices)
             .set({
@@ -306,6 +342,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
+    // `logAdminAction` traga sus propios errores (try/catch + console.error),
+    // así que una auditoría fallida deja rastro en consola pero no puede hacer
+    // fallar la respuesta una vez confirmada la transacción.
     for (const message of plan.auditMessages) {
       await logAdminFromAstro(locals, message);
     }
