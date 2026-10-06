@@ -7,7 +7,6 @@ import { offices, auditLogs } from "../src/db/schema";
 import {
   groupOfficesByBuilding,
   type BuildingCandidateGroup,
-  type ReconcileOfficeRow,
 } from "../src/lib/officeBuildingReconcile";
 
 const normalizeSearch = (value: string): string =>
@@ -27,7 +26,7 @@ Opciones:
   --apply            Aplica los cambios (pide CONFIRMAR). Sin esto solo releva.
   --only <key>       Solo unifica el grupo con esa clave. Repetible.
   --interactive      Pregunta sí/no por cada grupo (escribir CONFIRMAR).
-  --province <code>  Filtra por provincia (ej. C, BA).
+  --province <code>  Filtra por provincia (ej. C, BA, o "all" para todas).
   --export <file>   Vuelca el reporte de grupos a CSV.
   --help             Muestra esta ayuda.
 
@@ -114,17 +113,19 @@ async function main() {
     .from(offices);
 
   const candidates = groupOfficesByBuilding(
-    (rows as { address: string | null; provinceCode: string | null }[])
-      .filter((r): r is ReconcileOfficeRow & { address: string; provinceCode: string } =>
-        Boolean(r.address),
-      )
-      .map((r) => ({
-        id: r.id,
-        code: r.code,
-        name: r.name,
-        address: r.address as string,
-        provinceCode: (r.provinceCode ?? "") as string,
-      })),
+    rows.flatMap((r) =>
+      r.address
+        ? [
+            {
+              id: r.id,
+              code: r.code,
+              name: r.name,
+              address: r.address,
+              provinceCode: r.provinceCode,
+            },
+          ]
+        : [],
+    ),
   );
 
   const scoped =
@@ -150,7 +151,7 @@ async function main() {
     console.log(`=== Edificio [${group.key}] → canónica: ${group.canonical}`);
     for (const m of group.members) {
       console.log(
-        `  ${m.code} · ${m.name} · ${m.address} (${m.provinceCode ?? "?"})`,
+        `  ${m.code} · ${m.name} · ${m.address} (${m.provinceCode})`,
       );
     }
     console.log("");
@@ -167,7 +168,7 @@ async function main() {
             m.code,
             `"${m.name}"`,
             `"${m.address}"`,
-            m.provinceCode ?? "",
+            m.provinceCode,
           ].join(","),
         );
       }
@@ -233,17 +234,6 @@ async function main() {
 
   let updated = 0;
   for (const group of toApply) {
-    const provinces = new Set(
-      group.members.map((m) => m.provinceCode ?? "").filter(Boolean),
-    );
-    if (provinces.size > 1) {
-      console.error(
-        `Grupo omitido (provincias mixtas): ${group.key} -> ${[
-          ...provinces,
-        ].join(", ")}`,
-      );
-      continue;
-    }
     for (const m of group.members) {
       const searchableText = normalizeSearch(
         [m.code, m.name, group.canonical].filter(Boolean).join(" "),
