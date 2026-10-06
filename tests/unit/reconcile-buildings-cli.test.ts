@@ -110,17 +110,18 @@ describe("el dry-run y el export respetan --only (#163)", () => {
   it("--export con --only escribe un CSV acotado", () => {
     const csv = path.join(os.tmpdir(), "reconcile-scope.csv");
     fs.rmSync(csv, { force: true });
+    try {
+      const { status } = runCli(["--only", KEY, "--export", csv]);
+      expect(status).toBe(0);
 
-    const { status } = runCli(["--only", KEY, "--export", csv]);
-    expect(status).toBe(0);
-
-    const lineas = fs.readFileSync(csv, "utf8").trim().split(/\r?\n/);
-    // Una línea de encabezado más las oficinas del grupo (2 en estos datos).
-    expect(lineas.length).toBeGreaterThan(1);
-    expect(lineas.length).toBeLessThan(20);
-    expect(lineas.slice(1).every((l) => l.startsWith(`${KEY},`))).toBe(true);
-
-    fs.rmSync(csv, { force: true });
+      const lineas = fs.readFileSync(csv, "utf8").trim().split(/\r?\n/);
+      // Una línea de encabezado más las oficinas del grupo (2 en estos datos).
+      expect(lineas.length).toBeGreaterThan(1);
+      expect(lineas.length).toBeLessThan(20);
+      expect(lineas.slice(1).every((l) => l.startsWith(`${KEY},`))).toBe(true);
+    } finally {
+      fs.rmSync(csv, { force: true });
+    }
   }, 90_000);
 
   it("una provincia sin grupos menciona el filtro de provincia, no --only", () => {

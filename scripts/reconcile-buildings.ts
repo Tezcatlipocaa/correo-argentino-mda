@@ -175,6 +175,10 @@ async function main() {
   // para después confirmar 1 hacía que el operador clickeara a ciegas.
   const list = scope;
 
+  if (args.only.length > 0) {
+    console.log(`Filtro --only: ${list.length} de ${scoped.length} grupo(s).`);
+  }
+
   for (const group of list) {
     console.log(`=== Edificio [${group.key}] → canónica: ${group.canonical}`);
     for (const m of group.members) {
@@ -226,11 +230,18 @@ async function main() {
   if (scope.length === 0) {
     if (args.only.length > 0) {
       console.log(
-        "Ningún grupo coincide con --only. La clave se imprime como PROVINCIA#NUMERO|tokens (la provincia es el prefijo).",
+        "Ningún grupo coincide con --only. La clave se imprime como PROVINCIA#NUMERO|tokens (la provincia es el prefijo), o se saca de la columna key del reporte de --export.",
+      );
+    } else if (args.province && args.province !== "all") {
+      // Un código mal escrito y un código válido sin grupos candidatos dan el
+      // mismo cero, así que no se puede aconsejar solo "revisá el código":
+      // p. ej. `--province D` tiene 105 oficinas y ningún grupo candidato.
+      console.log(
+        `Ningún grupo coincide con --province ${args.province}. Puede que el código esté mal o que esa provincia no tenga grupos candidatos; probá --province all para relevar todo.`,
       );
     } else {
       console.log(
-        "Ningún grupo coincide con --province. Verificá el código de provincia.",
+        "No hay grupos candidatos en la base (hacen falta 2 o más oficinas del mismo edificio con la dirección escrita distinto).",
       );
     }
     return;
