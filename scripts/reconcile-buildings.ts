@@ -149,6 +149,11 @@ async function backupDatabase(): Promise<string> {
   const handle = new Database(dbPath);
   try {
     await handle.backup(dest);
+  } catch (error) {
+    // `backup()` rechaza sin deshacer el destino: un snapshot a medias no
+    // puede quedar en database/backups/ fingiendo ser válido.
+    fs.rmSync(dest, { force: true });
+    throw error;
   } finally {
     handle.close();
   }
