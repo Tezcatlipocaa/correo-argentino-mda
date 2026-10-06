@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import { resolveUrl } from "@lib/url";
 import { renderMarkdown } from "@lib/markdown";
@@ -88,10 +89,13 @@ const articleHtml = article
           </div>
         </div>
         {canWrite && (
-          <a href={editHref} class="btn btn-secondary shrink-0 gap-2">
-            <Icon name="boxicons:pencil-filled" size={24} />
-            Editar artículo
-          </a>
+          <ActionButton
+            href={editHref}
+            size="md"
+            icon="boxicons:pencil-filled"
+            label="Editar artículo"
+            class="shrink-0"
+          />
         )}
       </div>
 

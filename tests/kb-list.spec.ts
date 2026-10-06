@@ -140,6 +140,85 @@ test.describe("Base de conocimiento - listado", () => {
     ).toHaveCount(0);
   });
 
+  test("las acciones de fila usan la familia compartida y miden igual", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const title = `Botones fila ${suffix}`;
+    const admin = await fixture.createUser("admin", mesa);
+    await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title,
+      category: `Categoría ${suffix}`,
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto("/base-conocimiento");
+
+    const row = articleRow(page, title);
+    const edit = row.getByRole("link", { name: `Editar ${title}` });
+    const view = row.getByRole("link", { name: `Ver ${title}` });
+    await expect(edit).toBeVisible();
+    await expect(view).toBeVisible();
+
+    const editBox = await edit.boundingBox();
+    const viewBox = await view.boundingBox();
+    expect(Math.round(editBox?.height ?? 0)).toBe(Math.round(viewBox?.height ?? 0));
+
+    const iconHeights = await Promise.all(
+      [edit, view].map((locator) =>
+        locator
+          .locator("svg")
+          .evaluate((el) => Math.round(el.getBoundingClientRect().height)),
+      ),
+    );
+    expect(iconHeights).toEqual([14, 14]);
+
+    await expect(view).toHaveClass(/btn-xs/);
+    await expect(view).toHaveClass(/btn-soft/);
+    await expect(view).toHaveClass(/btn-accent/);
+    await expect(edit).toHaveClass(/btn-xs/);
+  });
+
+  test("los botones de crear y editar artículo usan la familia compartida", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const title = `Botones header ${suffix}`;
+    const admin = await fixture.createUser("admin", mesa);
+    const article = await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title,
+      category: `Categoría ${suffix}`,
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto("/base-conocimiento");
+
+    const create = page.getByRole("link", { name: "Nuevo artículo" });
+    await expect(create).toBeVisible();
+    await expect(create).toHaveClass(/btn-primary/);
+    await expect(create).toHaveClass(/btn-sm/);
+    const createIconHeight = await create
+      .locator("svg")
+      .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    expect(createIconHeight).toBe(16);
+
+    await page.goto(`/base-conocimiento/${article.id}`);
+    const editHeader = page.getByRole("link", { name: "Editar artículo" });
+    await expect(editHeader).toBeVisible();
+    await expect(editHeader).toHaveClass(/btn-soft/);
+    await expect(editHeader).toHaveClass(/btn-secondary/);
+    const editIconHeight = await editHeader
+      .locator("svg")
+      .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    expect(editIconHeight).toBe(18);
+  });
+
   // NOTA: el empty state server-side "No hay artículos" (SearchEmptyState en
   // KbListContent.astro cuando `articles.length === 0`) NO se cubre a propósito.
   // Bajo la política admin-only, un admin tiene scope global, por lo que una
