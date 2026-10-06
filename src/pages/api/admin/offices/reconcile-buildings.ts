@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
@@ -9,6 +9,7 @@ import { db } from "@db/index";
 import { offices } from "@db/schema";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { normalizeSearchValue } from "@lib/clientSearch";
+import { buildBuildingKey } from "@lib/officeBuildingKey";
 import { z } from "zod";
 
 /**
@@ -60,10 +61,15 @@ interface ReconcilePlan {
 }
 
 /**
- * Arma el lote a partir de las filas que casan con alguna direccion canonica del
- * payload. Deduplica por id de oficina (misma canonica puede venir en dos
+ * Arma el lote a partir de las filas cuya clave de edificio coincide con la del
+ * grupo enviado. Deduplica por id de oficina (misma fila puede caer en dos
  * grupos) y descarta las filas que ya guardan exactamente la direccion destino,
  * de modo que `updates` solo contenga escrituras que cambian algo.
+ *
+ * Los miembros se resuelven por clave y NO por igualdad de direccion: el grupo
+ * se armo en la pagina justamente porque sus direcciones estaban escritas de
+ * forma distinta, asi que comparar contra la canonica dejaba afuera al miembro
+ * que aun no la usaba.
  *
  * Los mensajes de auditoria se generan por grupo (no por fila) y se emiten
  * despues del commit, siguiendo el mismo criterio que `handleReorder`.
@@ -71,6 +77,7 @@ interface ReconcilePlan {
 function buildPlan(
   groups: { key: string; canonical: string }[],
   targetRows: ReconcileTarget[],
+  keysByOfficeId: Map<number, string>,
 ): ReconcilePlan {
   const updates: ReconcilePlan["updates"] = [];
   const auditMessages: string[] = [];
@@ -79,7 +86,7 @@ function buildPlan(
   for (const group of groups) {
     const canonical = group.canonical;
     const members = targetRows.filter(
-      (r) => (r.address ?? "").trim().toUpperCase() === canonical,
+      (r) => keysByOfficeId.get(r.id) === group.key,
     );
 
     for (const member of members) {
@@ -219,22 +226,30 @@ export const POST: APIRoute = async ({ locals, request }) => {
     // El select va PRIMERO: define el lote, y sin filas que escribir no hay
     // nada que respaldar. Con el snapshot al principio, cada POST gastaba ~19,7 MB
     // (incluso para no cambiar nada) y sin poda llenaba el disco.
+    //
+    // Sin filtro de `active` a proposito: la pagina arma los grupos sobre TODAS
+    // las oficinas, asi que filtrar aca dejaria visibles en la pagina miembros
+    // que el endpoint nunca tocaria (y el grupo seguiria sin unificarse).
     const targetRows = await db
       .select({
         id: offices.id,
         code: offices.code,
         name: offices.name,
         address: offices.address,
+        provinceCode: offices.provinceCode,
       })
-      .from(offices)
-      .where(
-        inArray(
-          offices.address,
-          parsed.data.groups.flatMap((g) => g.canonical),
-        ),
-      );
+      .from(offices);
 
-    const plan = buildPlan(parsed.data.groups, targetRows);
+    // Una sola pasada por las filas para armar id -> clave; dentro del loop de
+    // grupos solo se consulta el mapa (6.449 filas x N grupos serian 400 mil
+    // recomputos de la normalizacion).
+    const keysByOfficeId = new Map<number, string>();
+    for (const row of targetRows) {
+      const { key } = buildBuildingKey(row.address, row.provinceCode);
+      if (key) keysByOfficeId.set(row.id, key);
+    }
+
+    const plan = buildPlan(parsed.data.groups, targetRows, keysByOfficeId);
 
     if (plan.updates.length > MAX_UPDATE_ROWS) {
       return jsonError(
@@ -274,7 +289,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
       updated: plan.updates.length,
       groups: parsed.data.groups.length,
       backup: backupName,
-      requested: parsed.data.groups.length,
     });
   } catch (error) {
     return jsonError(sanitizeError(error), 500);
