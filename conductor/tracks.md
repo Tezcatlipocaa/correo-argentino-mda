@@ -58,6 +58,6 @@
 - [x] **Track: Refactor Visual de Grilla y Tarjetas de Operadores en Calidad**
   *Link: [./tracks/calidad_grid_cards_refactor_20261005/index.md](./tracks/calidad_grid_cards_refactor_20261005/index.md)*
 ---
-- [ ] **Track: Refactor y Modernización del Modal de Parámetros de Calidad**
+- [~] **Track: Refactor y Modernización del Modal de Parámetros de Calidad**
   *Link: [./tracks/calidad_parameters_modal_refactor_20261005/index.md](./tracks/calidad_parameters_modal_refactor_20261005/index.md)*
 
