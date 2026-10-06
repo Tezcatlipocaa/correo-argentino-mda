@@ -3,19 +3,20 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Guarda contra URL de puerto hardcodeada en los specs (#167).
+ * Guarda contra origen con puerto hardcodeado en los specs.
  *
  * `playwright.config.ts:12` resuelve `baseURL` desde `PLAYWRIGHT_BASE_URL`,
- * pero varios specs comparan o navegan contra `http://localhost:4321` literal.
- * Con el dev server en otro puerto esos tests fallan sin que el producto tenga
- * nada que ver: la suite completa resultaba ininterpretable (63 de 517 fallos).
+ * pero varios specs comparan o navegan contra un `localhost`/`127.0.0.1` con
+ * puerto literal (cualquier esquema, cualquier puerto). Con el dev server en
+ * otro puerto esos tests fallan sin que el producto tenga nada que ver: la
+ * suite completa resultaba ininterpretable (63 de 517 fallos).
  *
- * La excepcion es `?? "http://localhost:4321"`, que es un fallback legitimo:
- * si el proyecto no define `baseURL`, ese valor es el correcto.
+ * La excepcion es un fallback tras `??`, que es legitimo: si el proyecto no
+ * define `baseURL`, ese valor es el correcto.
  */
 const SPECS_DIR = path.resolve(import.meta.dirname, "..");
-const LITERAL = /["'`]http:\/\/localhost:4321[^"'`]*["'`]/g;
-const FALLBACK = /http:\/\/localhost:4321/;
+const LITERAL = /["'`]https?:\/\/(?:localhost|127\.0\.0\.1):\d+[^"'`]*["'`]/g;
+const FALLBACK = /https?:\/\/(?:localhost|127\.0\.0\.1):\d+/;
 
 function collectSpecs(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
