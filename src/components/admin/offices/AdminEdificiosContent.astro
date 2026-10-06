@@ -4,6 +4,7 @@ import { offices } from "@db/schema";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { Icon } from "astro-icon/components";
 import { getCleanBase, getBaseNoSlash } from "@lib/baseUrl";
 import { groupOfficesByBuilding } from "@lib/officeBuildingReconcile";
@@ -50,10 +51,7 @@ const baseNoSlash = getBaseNoSlash();
 
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
     <div class="flex items-center gap-3">
-      <span
-        id="edificios-count-badge"
-        class="badge badge-ghost badge-lg text-base-content font-semibold"
-      >
+      <span class="badge badge-ghost badge-lg text-base-content font-semibold">
         {groups.length}
       </span>
       <span class="text-base-content/60 text-sm">
@@ -81,29 +79,35 @@ const baseNoSlash = getBaseNoSlash();
     emptyStateTitle="No hay edificios candidatos"
     emptyStateDescription="Ningún grupo de oficinas comparte un edificio con direcciones escritas de forma distinta."
     whenEmpty
+    defaultSortKey="oficinas"
+    defaultSortDirection="descending"
   >
     <div slot="header" class={headerGridClass}>
       <span></span>
-      <span>Edificio</span>
-      <span>Dirección canónica</span>
-      <span>Oficinas</span>
-      <span>Variantes detectadas</span>
-      <span></span>
+      <DataTableHeaderCell sortKey="id">Edificio</DataTableHeaderCell>
+      <DataTableHeaderCell>Dirección canónica</DataTableHeaderCell>
+      <DataTableHeaderCell sortKey="oficinas">Oficinas</DataTableHeaderCell>
+      <DataTableHeaderCell>Variantes detectadas</DataTableHeaderCell>
+      <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
     </div>
 
     {
       groups.map((group) => {
         const variants = [...new Set(group.members.map((m) => m.address))];
+        const visibleVariants = variants.slice(0, 3);
+        const hiddenVariants = variants.length - visibleVariants.length;
         return (
           <div
-            class={`${rowGridClass} rounded-box border border-base-300 bg-base-200/40 p-3`}
+            class:list={[
+              rowGridClass,
+              "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+            ]}
             data-table-row
             data-edificio-row
             data-group-key={group.key}
             data-oficinas={group.members.length}
             data-sort-id={group.key}
             data-sort-oficinas={group.members.length}
-            data-search-text={`${group.key} ${group.canonical} ${group.members.map((m) => `${m.code} ${m.name} ${m.address}`).join(" ")}`}
           >
             <input
               type="checkbox"
@@ -112,11 +116,11 @@ const baseNoSlash = getBaseNoSlash();
               aria-label={`Seleccionar edificio ${group.key}`}
             />
             <div class="min-w-0">
-              <span class="font-mono text-sm font-semibold truncate">
+              <span class="block truncate font-mono text-sm font-semibold">
                 {group.key}
               </span>
               <span class="block text-xs text-base-content/60">
-                {group.members[0]?.provinceCode}
+                {group.members[0]?.provinceCode || "—"}
               </span>
             </div>
             <input
@@ -124,15 +128,21 @@ const baseNoSlash = getBaseNoSlash();
               class="input input-sm w-full font-mono"
               data-edificio-canonical
               value={group.canonical}
+              required
               aria-label={`Dirección canónica para ${group.key}`}
             />
             <span class="badge badge-ghost badge-sm justify-center">
               {group.members.length}
             </span>
             <ul class="min-w-0 space-y-0.5 text-xs">
-              {variants.map((variant) => (
+              {visibleVariants.map((variant) => (
                 <li class="truncate text-base-content/70">· {variant}</li>
               ))}
+              {hiddenVariants > 0 && (
+                <li class="truncate text-base-content/70">
+                  +{hiddenVariants} más
+                </li>
+              )}
             </ul>
             <div class="text-right">
               <a
@@ -198,13 +208,25 @@ const baseNoSlash = getBaseNoSlash();
         0,
       );
 
+      const canonicals = selected.map((row) =>
+        (
+          row.querySelector<HTMLInputElement>("[data-edificio-canonical]")
+            ?.value ?? ""
+        ).trim(),
+      );
+
+      if (canonicals.some((canonical) => canonical === "")) {
+        (window as any).showToast?.(
+          "Definí la dirección canónica de los edificios seleccionados",
+          "alert-warning",
+        );
+        return;
+      }
+
       const payload = {
-        groups: selected.map((row) => ({
+        groups: selected.map((row, index) => ({
           key: row.dataset.groupKey ?? "",
-          canonical:
-            row
-              .querySelector<HTMLInputElement>("[data-edificio-canonical]")
-              ?.value.trim() ?? "",
+          canonical: canonicals[index] ?? "",
         })),
       };
 
@@ -220,8 +242,16 @@ const baseNoSlash = getBaseNoSlash();
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? "Error inesperado");
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status} al unificar los edificios`);
+        }
+
+        const data = (await response.json()) as { error?: string } | null;
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+
         window.location.reload();
       } catch (error) {
         (window as any).showToast?.(

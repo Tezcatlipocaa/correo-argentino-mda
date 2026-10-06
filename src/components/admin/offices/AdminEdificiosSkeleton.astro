@@ -2,6 +2,7 @@
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 
 const headerGridClass = "grid-cols-[44px_1.6fr_2.2fr_90px_1.6fr_150px] gap-4";
 const rowGridClass =
@@ -35,17 +36,20 @@ const rowGridClass =
     >
       <div slot="header" class={headerGridClass}>
         <span></span>
-        <span>Edificio</span>
-        <span>Dirección canónica</span>
-        <span>Oficinas</span>
-        <span>Variantes detectadas</span>
+        <DataTableHeaderCell sortKey="id">Edificio</DataTableHeaderCell>
+        <DataTableHeaderCell>Dirección canónica</DataTableHeaderCell>
+        <DataTableHeaderCell sortKey="oficinas">Oficinas</DataTableHeaderCell>
+        <DataTableHeaderCell>Variantes detectadas</DataTableHeaderCell>
         <span></span>
       </div>
 
       {
         Array.from({ length: 4 }).map(() => (
           <div
-            class={`${rowGridClass} rounded-box border border-base-300 bg-base-200/40 p-3`}
+            class:list={[
+              rowGridClass,
+              "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+            ]}
             data-table-row
           >
             <div class="skeleton h-4 w-full rounded"></div>
