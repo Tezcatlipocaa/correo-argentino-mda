@@ -25,6 +25,9 @@ function runCli(args: string[]) {
     [TSX_CLI, "scripts/reconcile-buildings.ts", ...args],
     { cwd: REPO_ROOT, encoding: "utf8", timeout: 60_000 },
   );
+  // Un spawn fallido o un timeout devuelven `status: null`; sin este guard el
+  // fallo se reporta como `expected null to be 1` y esconde la causa real.
+  if (result.error) throw result.error;
   return {
     status: result.status,
     output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
@@ -32,8 +35,12 @@ function runCli(args: string[]) {
 }
 
 describe("banderas con valor obligatorio (#161)", () => {
-  it("--province sin valor corta con código 1 y menciona la bandera", () => {
-    const { status, output } = runCli(["--province"]);
+  // Es el escenario reportado: bandera sin valor + `--apply`. Es seguro aunque
+  // la guarda desaparezca: `parseArgs` es la primera instrucción de `main()`,
+  // y sin la guarda el script llegaría al prompt de CONFIRMAR, donde stdin es
+  // EOF y cancela antes de tocar `backupDatabase()` ni escribir nada.
+  it("--apply --province sin valor corta con código 1 y menciona la bandera", () => {
+    const { status, output } = runCli(["--apply", "--province"]);
     expect(status).toBe(1);
     expect(output).toContain("--province");
     expect(output).toContain("requiere un valor");
