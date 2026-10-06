@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { offices, auditLogs } from "../src/db/schema";
@@ -109,14 +110,48 @@ async function promptConfirmation(message: string): Promise<boolean> {
   });
 }
 
-function backupDatabase() {
-  const dbPath = path.join(process.cwd(), "database", "mda.db");
-  const backupDir = path.join(process.cwd(), "database", "backups");
-  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+/**
+ * Snapshot WAL-safe de `database/mda.db` en `database/backups/`.
+ *
+ * Copiar el archivo NO alcanza: con `journal_mode = wal`, lo pendiente en el
+ * sidecar `-wal` no esta en `mda.db`, asi que `copyFileSync` puede producir un
+ * respaldo incompleto (#162). `handle.backup()` usa la API de backup de SQLite
+ * e incluye ese contenido. Mismo criterio que `scripts/backfill-asistencia.mts`
+ * y `scripts/normalize-participaciones.mts`.
+ */
+async function backupDatabase(): Promise<string> {
+  const dbPath = path.resolve(process.cwd(), "database", "mda.db");
+  const backupDir = path.resolve(process.cwd(), "database", "backups");
+
+  // `new Database(dbPath)` CREA el archivo si falta: sin este chequeo, una base
+  // ausente produce un snapshot de 0 bytes que el operador leeria como valido.
+  const dbStat = fs.statSync(dbPath);
+  if (!dbStat.isFile() || dbStat.size === 0) {
+    throw new Error(
+      `La base de datos en ${dbPath} no es un archivo con contenido`,
+    );
+  }
+
+  fs.mkdirSync(backupDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const dest = path.join(backupDir, `mda-reconcile-${stamp}.db`);
-  fs.copyFileSync(dbPath, dest);
+
+  // Handle propio y efimero: `db` (drizzle) no expone el handle crudo.
+  const handle = new Database(dbPath);
+  try {
+    await handle.backup(dest);
+  } finally {
+    handle.close();
+  }
+
+  const destStat = fs.statSync(dest);
+  if (!destStat.isFile() || destStat.size === 0) {
+    fs.rmSync(dest, { force: true });
+    throw new Error(`El snapshot ${dest} salio vacio y fue eliminado`);
+  }
+
   console.log(`Backup creado: ${dest}`);
+  return dest;
 }
 
 async function main() {
@@ -275,28 +310,36 @@ async function main() {
     return;
   }
 
-  backupDatabase();
+  await backupDatabase();
 
   let updated = 0;
-  for (const group of toApply) {
-    for (const m of group.members) {
-      const searchableText = normalizeSearch(
-        [m.code, m.name, group.canonical].filter(Boolean).join(" "),
-      );
-      await db
-        .update(offices)
-        .set({ address: group.canonical.toUpperCase(), searchableText })
-        .where(eq(offices.id, m.id));
-      updated++;
+  // Un solo lote atomico: sin esto, un throw a mitad de camino dejaba los
+  // grupos anteriores ya unificados y auditados (#162). El callback va
+  // sincronico: better-sqlite3 rechaza una transaccion cuyo callback devuelva
+  // una promesa, asi que las queries usan `.run()` y no `await`.
+  db.transaction((tx) => {
+    for (const group of toApply) {
+      for (const m of group.members) {
+        const searchableText = normalizeSearch(
+          [m.code, m.name, group.canonical].filter(Boolean).join(" "),
+        );
+        tx.update(offices)
+          .set({ address: group.canonical.toUpperCase(), searchableText })
+          .where(eq(offices.id, m.id))
+          .run();
+        updated++;
+      }
+      tx.insert(auditLogs)
+        .values({
+          username: "system:reconcile-buildings",
+          action: `Reconciliación de edificio: ${group.members.length} oficinas → "${group.canonical}" (${group.members
+            .map((m) => m.code)
+            .join(", ")})`,
+          timestamp: new Date().toISOString(),
+        })
+        .run();
     }
-    await db.insert(auditLogs).values({
-      username: "system:reconcile-buildings",
-      action: `Reconciliación de edificio: ${group.members.length} oficinas → "${group.canonical}" (${group.members
-        .map((m) => m.code)
-        .join(", ")})`,
-      timestamp: new Date().toISOString(),
-    });
-  }
+  });
 
   console.log(`\nListo. ${updated} oficinas actualizadas.`);
 }
