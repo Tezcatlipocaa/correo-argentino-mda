@@ -55,6 +55,6 @@
 - [x] **Track: Refactor UI de Calidad: Barra Superior, Grilla de Operadores y Sección de Auditoría**
   *Link: [./tracks/calidad_ui_refactor_20261005/index.md](./tracks/calidad_ui_refactor_20261005/index.md)*
 ---
-- [ ] **Track: Refactor Visual de Grilla y Tarjetas de Operadores en Calidad**
+- [x] **Track: Refactor Visual de Grilla y Tarjetas de Operadores en Calidad**
   *Link: [./tracks/calidad_grid_cards_refactor_20261005/index.md](./tracks/calidad_grid_cards_refactor_20261005/index.md)*
 
