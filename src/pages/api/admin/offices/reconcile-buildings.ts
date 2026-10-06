@@ -37,11 +37,37 @@ const payloadSchema = z.object({
         // medir: el upper de Unicode no preserva longitud, asi que 255
         // caracteres de "ss" (ß) pasaban el `.max(255)` del input y se
         // almacenaban como 510 caracteres.
-        canonical: z.string().trim().toUpperCase().min(3).max(255),
+        canonical: z
+          .string()
+          .trim()
+          .toUpperCase()
+          .min(3, {
+            message: "La dirección canónica debe tener al menos 3 caracteres",
+          })
+          .max(255),
       }),
     )
     .min(1)
-    .max(100),
+    .max(100)
+    // Una clave repetida en dos grupos se aplicaba a medias: `buildPlan` marca a
+    // los miembros con `processed`, asi que el segundo grupo no escribia nada
+    // pero igual emitia su fila de auditoria ("Unifico N oficinas" sobre un lote
+    // que no toco). La pagina nunca genera claves repetidas, pero un POST a
+    // mano si, y ahi el rechazo tiene que ser explicito.
+    .refine(
+      (groups) => {
+        const seen = new Set<string>();
+        return groups.every((group) => {
+          if (seen.has(group.key)) return false;
+          seen.add(group.key);
+          return true;
+        });
+      },
+      {
+        message:
+          "No se puede repetir la clave de un edificio en la misma operación",
+      },
+    ),
 });
 
 interface ReconcileTarget {

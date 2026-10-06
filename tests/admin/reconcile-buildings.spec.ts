@@ -6,6 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "../../src/db/index";
 import { offices, auditLogs, users, mesas } from "../../src/db/schema";
 import { buildBuildingKey } from "../../src/lib/officeBuildingKey";
+import { normalizeSearchValue } from "../../src/lib/clientSearch";
 import {
   createTestUserAndSession,
   cleanupTestUser,
@@ -71,13 +72,42 @@ async function seedOffices(): Promise<void> {
   ]);
 }
 
-async function readAddresses(): Promise<string[]> {
+/**
+ * Lee las filas sembradas de vuelta. `searchableText` es la SEGUNDA columna que
+ * escribe la ruta: sin esto, una regresion que la dejara stale pasaria el test
+ * y romperia en silencio la busqueda de oficinas. El fixture arranca con
+ * `searchableText` NULL, asi que la asercion no es change-detector.
+ */
+async function readSeededOffices(): Promise<
+  { code: string; name: string; address: string; searchableText: string }[]
+> {
   const rows = await db
-    .select({ code: offices.code, address: offices.address })
+    .select({
+      code: offices.code,
+      name: offices.name,
+      address: offices.address,
+      searchableText: offices.searchableText,
+    })
     .from(offices)
     .where(inArray(offices.code, CODES));
   expect(rows.map((r) => r.code).sort()).toEqual([...CODES].sort());
-  return rows.map((r) => r.address ?? "");
+  return rows.map((row) => ({
+    code: row.code,
+    name: row.name,
+    address: row.address ?? "",
+    searchableText: row.searchableText ?? "",
+  }));
+}
+
+/** La columna de busqueda que recalcula la ruta: code + name + direccion canonica. */
+function expectedSearchableText(office: {
+  code: string;
+  name: string;
+  address: string;
+}): string {
+  return normalizeSearchValue(
+    [office.code, office.name, office.address].filter(Boolean).join(" "),
+  );
 }
 
 test.beforeAll(async () => {
@@ -159,9 +189,34 @@ test("admin unifica el grupo seleccionado y deja auditoría", async ({
   await expect(row).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator("#edificios-apply")).toBeDisabled();
 
-  const addresses = await readAddresses();
-  expect(addresses[0]).toBe(addresses[1]);
-  expect(addresses[0]).toContain(STREET_TOKEN);
+  const rows = await readSeededOffices();
+  const canonical = rows[0].address;
+  expect(rows[1].address).toBe(canonical);
+  expect(canonical).toContain(STREET_TOKEN);
+
+  // `searchableText` es lo que la pagina de oficinas busca. Sin esto, una
+  // regresion que lo dejara con el valor viejo (o en NULL) pasaria el test y
+  // la oficina quedaria invisible en el buscador.
+  //
+  // Solo se exige para las filas cuya direccion CAMBIO: la ruta descarta las
+  // que ya guardan la canonica (`member.address === canonical`), asi que
+  // `ADDRESS_B` - que ya es la canonica que la pagina propone - queda con su
+  // `searchable_text` inicial (NULL) y la asercion de abajo lo fija.
+  const originalByCode = new Map([
+    [CODES[0], ADDRESS_A],
+    [CODES[1], ADDRESS_B],
+  ]);
+  let rewritten = 0;
+  for (const row of rows) {
+    if (row.address === originalByCode.get(row.code)) {
+      expect(row.searchableText).toBe("");
+      continue;
+    }
+    expect(row.searchableText).toBe(expectedSearchableText(row));
+    expect(row.searchableText).toContain(normalizeSearchValue(canonical));
+    rewritten += 1;
+  }
+  expect(rewritten).toBeGreaterThan(0);
 
   const audits = await db
     .select()
@@ -187,6 +242,9 @@ test("un supervisor no puede aplicar la unificación", async ({
       .where(eq(users.id, supervisor.userId));
 
     await setSessionCookie(context, supervisor.signedSessionId);
+    await seedOffices();
+
+    const before = (await readSeededOffices()).map((row) => row.address);
 
     const response = await page.request.post(APPLY_URL_FRAGMENT, {
       data: {
@@ -195,7 +253,73 @@ test("un supervisor no puede aplicar la unificación", async ({
     });
 
     expect(response.status()).toBe(403);
+
+    // El 403 tiene que venir ANTES de cualquier escritura, no despues: si el
+    // control de rol se moviera, el lote se aplicaria igual y el operador
+    // veria direcciones sobrescritas sin autorizacion. La busqueda va por el
+    // username del supervisor (el admin si escribe auditoria, legítimamente).
+    const supervisorAudits = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.username, supervisor.username));
+    expect(supervisorAudits).toEqual([]);
+
+    const after = (await readSeededOffices()).map((row) => row.address);
+    expect(after).toEqual(before);
   } finally {
     await cleanupTestUser(supervisor.userId, supervisor.sessionId);
   }
+});
+
+test("un admin no puede unificar con una dirección canónica vacía", async ({
+  page,
+  context,
+}) => {
+  await setSessionCookie(context, admin.signedSessionId);
+
+  // La isla frena el canonical vacio en el cliente; este POST a mano llega al
+  // guard del servidor (`trim().min(3)`), que antes no tenia cobertura.
+  const response = await page.request.post(APPLY_URL_FRAGMENT, {
+    data: {
+      groups: [{ key: EXPECTED_KEY, canonical: "   " }],
+    },
+  });
+
+  expect(response.status()).toBe(400);
+  // `response.text()` se puede leer una sola vez, asi que el cuerpo se captura
+  // una vez y se asserta sobre el string. El mensaje de la ruta se compara sin
+  // acentos para no atarlo a la redaccion exacta ("canónica" vs "canonica").
+  const body = normalizeSearchValue(await response.text());
+  expect(body).toContain("direccion canonica");
+  expect(body).toContain("3");
+});
+
+test("un admin no puede repetir la clave de un edificio en el mismo pedido", async ({
+  page,
+  context,
+}) => {
+  await seedOffices();
+  await setSessionCookie(context, admin.signedSessionId);
+
+  const before = await readSeededOffices();
+
+  // Sin este rechazo, el segundo grupo se aplicaba a medias: `processed`
+  // descartaba a sus miembros, se escribia solo el primer canonical y ambos
+  // grupos dejaban su fila de auditoria ("Unifico 2 oficinas" sobre un lote
+  // que solo toco una).
+  const response = await page.request.post(APPLY_URL_FRAGMENT, {
+    data: {
+      groups: [
+        { key: EXPECTED_KEY, canonical: "VERGARA 9999" },
+        { key: EXPECTED_KEY, canonical: "OTRA CANONICA 9999" },
+      ],
+    },
+  });
+
+  expect(response.status()).toBe(400);
+  const body = normalizeSearchValue(await response.text());
+  expect(body).toContain("repetir la clave");
+
+  // Ademas del 400, el lote no puede haber tocado nada.
+  expect(await readSeededOffices()).toEqual(before);
 });
