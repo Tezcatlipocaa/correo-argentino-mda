@@ -342,7 +342,7 @@ test("reenviar un lote ya aplicado no escribe auditoría nueva", async ({
     return rows.filter((row) => row.action.includes(marker));
   };
 
-  // El primer test de este archivo ya dejo una fila de auditoría sobre este
+  // El primer test de este archivo ya dejó una fila de auditoría sobre este
   // mismo edificio, así que se mide por DIFERENCIA contra el baseline: solo
   // cuenta la fila que agrega este POST.
   const baseline = new Set((await matchingAudits()).map((row) => row.id));
@@ -351,7 +351,18 @@ test("reenviar un lote ya aplicado no escribe auditoría nueva", async ({
     data: { groups: [{ key: EXPECTED_KEY, canonical: ADDRESS_B }] },
   });
   expect(first.status()).toBe(200);
-  expect(JSON.parse(await first.text()).updated).toBe(1);
+  // `APIResponse.text()` admite una sola lectura: el cuerpo se parsea una vez
+  // y se asserta sobre el objeto ya obtenido.
+  const firstBody = JSON.parse(await first.text());
+  expect(firstBody.updated).toBe(1);
+
+  // Cobertura del camino exitoso: hoy el único assertion de `backup` del
+  // archivo es `toBeNull()`, así que una regresión que rompiera el sufijo
+  // uuid o el nombre del snapshot pasaría inadvertida.
+  expect(firstBody.backup).toMatch(/^mda-reconcile-.+-[0-9a-f]{8}\.db$/);
+  expect(fs.existsSync(path.join(BACKUP_DIR, firstBody.backup))).toBe(true);
+  // El podador retiene como máximo MAX_RECONCILE_BACKUPS (5) snapshots.
+  expect(listReconcileBackups().length).toBeLessThanOrEqual(5);
 
   const afterFirst = (await matchingAudits()).filter(
     (row) => !baseline.has(row.id),

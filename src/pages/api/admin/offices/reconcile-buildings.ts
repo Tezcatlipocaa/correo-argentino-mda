@@ -149,7 +149,7 @@ function buildPlan(
 
 /**
  * Snapshot WAL-safe de `database/mda.db` en
- * `database/backups/mda-reconcile-<stamp>.db`. Es la convencion de los scripts
+ * `database/backups/mda-reconcile-<stamp>-<uuid>.db`. Es la convencion de los scripts
  * `scripts/*.mts`, NO la de `scripts/backup-db.bat` (que escribe fuera del
  * repo, en `..\..\correo-argentino-mda-database-backup`). `backup()` usa la API
  * de backup de SQLite, que incluye el contenido pendiente en `-wal` (a
