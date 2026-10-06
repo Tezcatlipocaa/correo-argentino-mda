@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 /**
@@ -91,5 +93,56 @@ describe("banderas con valor obligatorio (#161)", () => {
     const { output } = runCli(["--help"]);
     expect(output).toContain("Requiere un valor");
     expect(output).toContain("tsx scripts/reconcile-buildings.ts");
+  }, 90_000);
+});
+
+describe("el dry-run y el export respetan --only (#163)", () => {
+  const KEY = "B#3443|GOBERNADOR+VALENTIN+VERGARA";
+
+  it("el dry-run con --only lista solo el grupo acotado", () => {
+    const { status, output } = runCli(["--only", KEY]);
+    expect(status).toBe(0);
+    const bloques = output.split("=== Edificio [").length - 1;
+    expect(bloques).toBe(1);
+    expect(output).toContain(KEY);
+  }, 90_000);
+
+  it("--export con --only escribe un CSV acotado", () => {
+    const csv = path.join(os.tmpdir(), "reconcile-scope.csv");
+    fs.rmSync(csv, { force: true });
+
+    const { status } = runCli(["--only", KEY, "--export", csv]);
+    expect(status).toBe(0);
+
+    const lineas = fs.readFileSync(csv, "utf8").trim().split(/\r?\n/);
+    // Una línea de encabezado más las oficinas del grupo (2 en estos datos).
+    expect(lineas.length).toBeGreaterThan(1);
+    expect(lineas.length).toBeLessThan(20);
+    expect(lineas.slice(1).every((l) => l.startsWith(`${KEY},`))).toBe(true);
+
+    fs.rmSync(csv, { force: true });
+  }, 90_000);
+
+  it("una provincia sin grupos menciona el filtro de provincia, no --only", () => {
+    const { status, output } = runCli(["--apply", "--province", "D"]);
+    expect(status).toBe(0);
+    expect(output).toContain("--province");
+    expect(output).not.toContain("coincide con --only");
+  }, 90_000);
+
+  it("una clave inexistente menciona --only", () => {
+    const { status, output } = runCli(["--apply", "--only", "Z#1|NADA"]);
+    expect(status).toBe(0);
+    expect(output).toContain("--only");
+  }, 90_000);
+
+  it("sin filtros el dry-run lista todos los grupos", () => {
+    const { status, output } = runCli([]);
+    expect(status).toBe(0);
+    const bloques = output.split("=== Edificio [").length - 1;
+    expect(bloques).toBe(66);
+    expect(output).toContain(
+      "Grupos candidatos de mismo edificio: 66 (229 oficinas)",
+    );
   }, 90_000);
 });

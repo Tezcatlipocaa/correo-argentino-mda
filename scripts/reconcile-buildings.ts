@@ -170,7 +170,10 @@ async function main() {
       ? scoped.filter((c) => args.only.includes(c.key))
       : scoped;
 
-  const list = args.apply ? scope : scoped;
+  // El conjunto que se imprime y se exporta es el acotado por `--only`: el
+  // relevamiento amplio ya se declaró en la línea de conteo, y mostrar 66 grupos
+  // para después confirmar 1 hacía que el operador clickeara a ciegas.
+  const list = scope;
 
   for (const group of list) {
     console.log(`=== Edificio [${group.key}] → canónica: ${group.canonical}`);
@@ -221,9 +224,15 @@ async function main() {
   }
 
   if (scope.length === 0) {
-    console.log(
-      "Ningún grupo coincide con --only. Verificá la clave exacta (incluye provincia).",
-    );
+    if (args.only.length > 0) {
+      console.log(
+        "Ningún grupo coincide con --only. La clave se imprime como PROVINCIA#NUMERO|tokens (la provincia es el prefijo).",
+      );
+    } else {
+      console.log(
+        "Ningún grupo coincide con --province. Verificá el código de provincia.",
+      );
+    }
     return;
   }
 
