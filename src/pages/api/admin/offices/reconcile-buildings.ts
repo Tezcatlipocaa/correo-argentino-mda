@@ -11,32 +11,137 @@ import { logAdminFromAstro } from "@lib/auditLogger";
 import { normalizeSearchValue } from "@lib/clientSearch";
 import { z } from "zod";
 
+/**
+ * Tope de filas a escribir por pedido. El driver better-sqlite3 de Drizzle es
+ * sincrono (los `await` sobre `run`/`all` no ceden el event loop), asi que el
+ * lote bloquea el proceso SSR entero mientras dura. Sin este tope, un payload
+ * de 100 grupos nombrando una direccion muy repetida genero 644.900 sentencias
+ * y 41,6 s de bloqueo. El reconcile completo de los datos actuales son 229
+ * oficinas, asi que el tope deja margen de sobra para el uso real.
+ */
+const MAX_UPDATE_ROWS = 2000;
+
+/** Snapshots `mda-reconcile-*` que se conservan en `database/backups/`. */
+const MAX_RECONCILE_BACKUPS = 5;
+
 const payloadSchema = z.object({
   groups: z
     .array(
       z.object({
-        key: z.string().min(1),
-        canonical: z.string().trim().min(3).max(255),
+        // El `key` llega desde la tabla (form `C#3443|JUAN+SAN`) y hoy no se
+        // usa para la busqueda, pero se acota igual: sin tope, un payload con
+        // una clave de 5.000.000 de caracteres entra y se guarda.
+        key: z.string().min(1).max(100),
+        // Normaliza a la forma que realmente se escribe (trim + upper) ANTES de
+        // medir: el upper de Unicode no preserva longitud, asi que 255
+        // caracteres de "ss" (ß) pasaban el `.max(255)` del input y se
+        // almacenaban como 510 caracteres.
+        canonical: z.string().trim().toUpperCase().min(3).max(255),
       }),
     )
     .min(1)
     .max(100),
 });
 
+interface ReconcileTarget {
+  id: number;
+  code: string;
+  name: string;
+  address: string | null;
+}
+
+interface ReconcilePlan {
+  updates: {
+    id: number;
+    address: string;
+    searchableText: string;
+  }[];
+  auditMessages: string[];
+}
+
 /**
- * Backup WAL-safe del archivo SQLite antes de una escritura masiva.
- * Reutiliza el mismo destino que scripts/backup-db.bat (database/backups/).
+ * Arma el lote a partir de las filas que casan con alguna direccion canonica del
+ * payload. Deduplica por id de oficina (misma canonica puede venir en dos
+ * grupos) y descarta las filas que ya guardan exactamente la direccion destino,
+ * de modo que `updates` solo contenga escrituras que cambian algo.
+ *
+ * Los mensajes de auditoria se generan por grupo (no por fila) y se emiten
+ * despues del commit, siguiendo el mismo criterio que `handleReorder`.
+ */
+function buildPlan(
+  groups: { key: string; canonical: string }[],
+  targetRows: ReconcileTarget[],
+): ReconcilePlan {
+  const updates: ReconcilePlan["updates"] = [];
+  const auditMessages: string[] = [];
+  const processed = new Set<number>();
+
+  for (const group of groups) {
+    const canonical = group.canonical;
+    const members = targetRows.filter(
+      (r) => (r.address ?? "").trim().toUpperCase() === canonical,
+    );
+
+    for (const member of members) {
+      if (processed.has(member.id)) continue;
+      processed.add(member.id);
+      if (member.address === canonical) continue;
+      updates.push({
+        id: member.id,
+        address: canonical,
+        searchableText: normalizeSearchValue(
+          [member.code, member.name, canonical].filter(Boolean).join(" "),
+        ),
+      });
+    }
+
+    auditMessages.push(
+      `Unificó ${members.length} oficinas bajo el edificio "${canonical}" [${group.key}] (${members
+        .map((m) => m.code)
+        .join(", ")})`,
+    );
+  }
+
+  return { updates, auditMessages };
+}
+
+/**
+ * Snapshot WAL-safe de `database/mda.db` en
+ * `database/backups/mda-reconcile-<stamp>.db`. Es la convencion de los scripts
+ * `scripts/*.mts`, NO la de `scripts/backup-db.bat` (que escribe fuera del
+ * repo, en `..\..\correo-argentino-mda-database-backup`). `backup()` usa la API
+ * de backup de SQLite, que incluye el contenido pendiente en `-wal` (a
+ * diferencia de copiar el archivo); el handle se abre read-write, igual que en
+ * los runbooks hermanos.
+ *
+ * La ruta se deriva de `process.cwd()`, igual que en `scripts/reconcile-buildings.ts`:
+ * son dos lugares que derivan el mismo path y pueden desalinearse.
  */
 async function backupDatabase(): Promise<string> {
   const dbPath = path.resolve(process.cwd(), "database", "mda.db");
   const backupDir = path.resolve(process.cwd(), "database", "backups");
-  fs.mkdirSync(backupDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const dest = path.join(backupDir, `mda-reconcile-${stamp}.db`);
 
+  // `new Database(dbPath)` CREA el archivo si falta: sin este chequeo, una base
+  // ausente (o vacia) produciria un snapshot de 0 bytes que el operador
+  // leeria como un backup valido.
+  let dbStat: fs.Stats;
+  try {
+    dbStat = fs.statSync(dbPath);
+  } catch {
+    throw new Error(`No se encontro la base de datos en ${dbPath}`);
+  }
+  if (!dbStat.isFile() || dbStat.size === 0) {
+    throw new Error(
+      `La base de datos en ${dbPath} no es un archivo con contenido`,
+    );
+  }
+
+  fs.mkdirSync(backupDir, { recursive: true });
+
   // Handle propio y efimero: `db` (drizzle) no expone el handle crudo de
-  // better-sqlite3. `backup()` usa la API de backup de SQLite, que incluye el
-  // contenido pendiente en `-wal` (a diferencia de copiar el archivo).
+  // better-sqlite3.
   const handle = new Database(dbPath);
   try {
     await handle.backup(dest);
@@ -44,7 +149,50 @@ async function backupDatabase(): Promise<string> {
     handle.close();
   }
 
+  pruneReconcileBackups(backupDir);
+
   return dest;
+}
+
+/**
+ * Deja solo los `MAX_RECONCILE_BACKUPS` snapshots mas recientes de esta ruta.
+ * El timestamp ISO del nombre ordena lexicograficamente. Sin esta poda cada POST
+ * deja ~19,7 MB y el rate limit de escritura del middleware (20/min por
+ * usuario) llenaria el disco: el ENOSPC se lleva por delante los 5 procesos de
+ * PM2. Solo toca el patron `mda-reconcile-*.db`: `database/backups/` puede
+ * guardar backups de otros runbooks.
+ */
+function pruneReconcileBackups(backupDir: string): void {
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(backupDir);
+  } catch {
+    return;
+  }
+
+  const snapshots = entries
+    .filter((name) => /^mda-reconcile-.*\.db$/.test(name))
+    .map((name) => ({ name, full: path.join(backupDir, name) }))
+    .filter(({ full }) => {
+      try {
+        return fs.statSync(full).isFile();
+      } catch {
+        return false;
+      }
+    })
+    // Mas nuevo primero: el stamp ISO del nombre ordena lexicograficamente.
+    .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
+
+  for (const stale of snapshots.slice(MAX_RECONCILE_BACKUPS)) {
+    try {
+      fs.unlinkSync(stale.full);
+    } catch (error) {
+      console.error(
+        "[reconcile-buildings] No se pudo podar el snapshot:",
+        error,
+      );
+    }
+  }
 }
 
 export const POST: APIRoute = async ({ locals, request }) => {
@@ -68,8 +216,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   try {
-    const backupPath = await backupDatabase();
-
+    // El select va PRIMERO: define el lote, y sin filas que escribir no hay
+    // nada que respaldar. Con el snapshot al principio, cada POST gastaba ~19,7 MB
+    // (incluso para no cambiar nada) y sin poda llenaba el disco.
     const targetRows = await db
       .select({
         id: offices.id,
@@ -85,37 +234,46 @@ export const POST: APIRoute = async ({ locals, request }) => {
         ),
       );
 
-    let updated = 0;
-    for (const group of parsed.data.groups) {
-      const canonical = group.canonical.toUpperCase();
-      const members = targetRows.filter(
-        (r) => (r.address ?? "").trim().toUpperCase() === canonical,
-      );
+    const plan = buildPlan(parsed.data.groups, targetRows);
 
-      for (const member of members) {
-        const searchableText = normalizeSearchValue(
-          [member.code, member.name, canonical].filter(Boolean).join(" "),
-        );
-        await db
-          .update(offices)
-          .set({ address: canonical, searchableText })
-          .where(eq(offices.id, member.id));
-        updated++;
-      }
-
-      await logAdminFromAstro(
-        locals,
-        `Unificó ${members.length} oficinas bajo el edificio "${canonical}" (${members
-          .map((m) => m.code)
-          .join(", ")})`,
+    if (plan.updates.length > MAX_UPDATE_ROWS) {
+      return jsonError(
+        `La operación tocaría ${plan.updates.length} oficinas y supera el máximo de ${MAX_UPDATE_ROWS} por pedido. Unificá los edificios en tandas más chicas.`,
+        400,
       );
+    }
+
+    let backupName: string | null = null;
+
+    if (plan.updates.length > 0) {
+      backupName = path.basename(await backupDatabase());
+
+      // Un solo lote atomico: sin esto, un throw a mitad de camino dejaba los
+      // grupos anteriores ya unificados sin que el cliente supiera cuantos.
+      // El select y el calculo de `searchableText` viven fuera del callback
+      // porque better-sqlite3 exige callbacks sincronos.
+      await db.transaction((tx) => {
+        for (const update of plan.updates) {
+          tx.update(offices)
+            .set({
+              address: update.address,
+              searchableText: update.searchableText,
+            })
+            .where(eq(offices.id, update.id))
+            .run();
+        }
+      });
+    }
+
+    for (const message of plan.auditMessages) {
+      await logAdminFromAstro(locals, message);
     }
 
     return jsonResponse({
       success: true,
-      updated,
+      updated: plan.updates.length,
       groups: parsed.data.groups.length,
-      backup: path.basename(backupPath),
+      backup: backupName,
       requested: parsed.data.groups.length,
     });
   } catch (error) {
