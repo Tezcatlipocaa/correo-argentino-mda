@@ -177,6 +177,14 @@ test.describe("Base de conocimiento - layout v2", () => {
     const body = page.locator(".kb-article-body");
     await expect(body.locator("br")).toHaveCount(1);
 
+    const paragraphMarginBottom = parseFloat(
+      await body
+        .locator("p")
+        .first()
+        .evaluate((el) => getComputedStyle(el).marginBottom),
+    );
+    expect(paragraphMarginBottom).toBe(14);
+
     const margins = await body.locator("h2").evaluate((el) => {
       const styles = getComputedStyle(el);
       return {
@@ -200,6 +208,7 @@ test.describe("Base de conocimiento - layout v2", () => {
       `#### Cuatro ${suffix}`,
       `##### Cinco ${suffix}`,
       `###### Seis ${suffix}`,
+      `Linea uno ${suffix}\nLinea dos ${suffix}`,
     ].join("\n\n");
 
     await setSessionCookie(context, admin.signedSessionId);
@@ -213,6 +222,7 @@ test.describe("Base de conocimiento - layout v2", () => {
     const preview = page.locator(".EasyMDEContainer .editor-preview-full");
     await expect(preview).toBeVisible();
     await expect(preview.locator("h6")).toBeVisible();
+    await expect(preview.locator("br")).toHaveCount(1);
 
     const sizes: number[] = [];
     for (let level = 1; level <= 6; level += 1) {
