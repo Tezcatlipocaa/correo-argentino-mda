@@ -634,7 +634,13 @@ Cada entrada sigue este formato:
 **Problema:** Al arrancar procesos en segundo plano con `Start-Process` seguido de `Start-Sleep` en el mismo comando, el dev server moría; y arrancar `node server.mjs` con `$env:PORT` terminó ocupando el `4321` del dev server (el env var no llegó al hijo), dejando el entorno contaminado.
 **Causa:** El timeout del tool mata el árbol de procesos del comando, incluyendo el hijo lanzado con `Start-Process`. `Start-Process` no hereda de forma fiable las variables de entorno fijadas con `$env:` en la misma sesión de PowerShell.
 **Solucion:** Lanzar el dev server detached en su **propio** comando: `Start-Process -FilePath "cmd.exe" -ArgumentList "/c","npx astro dev --port 4321 > ... 2>&1" -WorkingDirectory <repo> -WindowStyle Hidden`, y verificar en un **segundo** comando. Para propagar env vars, pasar el entorno explícito (`psi.EnvironmentVariables`) o un `cmd /c "set PORT=... && node ..."` (PowerShell 5.1 no soporta `&&`).
-**Regla:** Nunca combinar `Start-Process` con `Start-Sleep` en un mismo comando para un servidor de larga vida: el timeout del tool se lleva el proceso. Verificar el puerto antes de arrancar para no pisar el dev server.
+
+**Dos trampas adicionales, descubiertas el 2026-10-06 al correr la suite E2E en un puerto libre:**
+
+1. El **destino del redirect va entre comillas**: `> "%TEMP%\astro.log" 2>&1`. Sin las comillas, si la ruta tiene un espacio (en esta máquina `%TEMP%` tiene uno), `cmd` corta la ruta y el comando muere sin dejar error.
+2. **PowerShell 5.1 rechaza `cmd /c` posicional** (`No se encuentra ningún parámetro de posición`). Hay que pasar `-ArgumentList "/c","..."` con el `/c` dentro del arreglo de argumentos.
+
+**Regla:** Nunca combinar `Start-Process` con `Start-Sleep` en un mismo comando para un servidor de larga vida: el timeout del tool se lleva el proceso. Verificar el puerto antes de arrancar para no pisar el dev server. Antes de arrancar, **verificar qué puerto está libre**: `Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4321,4322 } | Select-Object LocalPort,OwningProcess`. En esta máquina el 4321 lo ocupa a veces otro proyecto local (`seguimiento-gimnasio`). Antes del 2026-10-06, 28 asserts de `tests/admin/rbac.spec.ts` comparaban contra el puerto literal, así que correr la suite en un puerto alternativo no producía una señal válida.
 **Archivos afectados:** —
 
 ### 2026-09-28 - Los endpoints de filtro de InvGate ignoran parametros en silencio (causa del timeout al crear ticket de agentes)

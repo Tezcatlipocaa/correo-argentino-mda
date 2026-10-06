@@ -59,3 +59,9 @@ docs/superpowers/
 # generated reports and db backups
 scripts/reports/
 scripts/backups/
+
+# docs — prose and tables. Prettier's markdown table realignment produces large
+# mechanical diffs that read like content regressions; 16 files under docs/ were
+# unformatted at 2026-10-06. Generated plan/spec docs are covered by
+# docs/superpowers/ above.
+/docs/
