@@ -24,7 +24,9 @@ import {
   COORD_HELPDESK,
 } from "../../src/lib/helpdeskAccess";
 
-const BASE = "http://localhost:4321";
+function base(): string {
+  return test.info().project.use.baseURL ?? "http://localhost:4321";
+}
 const SECRET = process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
 const PASSWORD = "Password.123";
 
@@ -42,7 +44,7 @@ async function fetchManual(
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.cookie) headers.set("cookie", init.cookie);
-  return fetch(`${BASE}${path}`, {
+  return fetch(`${base()}${path}`, {
     ...init,
     headers,
     redirect: "manual",

@@ -435,7 +435,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     expect(response.status()).toBe(REDIRECT);
     const location = new URL(
       response.headers().location,
-      "http://localhost:4321",
+      test.info().project.use.baseURL ?? "http://localhost:4321",
     );
     expect(location.pathname).toBe("/base-conocimiento/create");
     expect(location.searchParams.get("toast_msg")).toBe(
@@ -620,7 +620,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     expect(forced.status()).toBe(REDIRECT);
     const forcedLocation = new URL(
       forced.headers().location,
-      "http://localhost:4321",
+      test.info().project.use.baseURL ?? "http://localhost:4321",
     );
     expect(forcedLocation.pathname).toBe("/");
     expect(forcedLocation.searchParams.get("toast_msg")).toBe(
@@ -667,7 +667,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     expect(response.status()).toBe(REDIRECT);
     const location = new URL(
       response.headers().location,
-      "http://localhost:4321",
+      test.info().project.use.baseURL ?? "http://localhost:4321",
     );
     expect(location.pathname).toBe("/base-conocimiento/create");
     expect(location.searchParams.get("nueva_categoria")).toBe(nombre);
@@ -706,7 +706,7 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     expect(response.status()).toBe(REDIRECT);
     const location = new URL(
       response.headers().location,
-      "http://localhost:4321",
+      test.info().project.use.baseURL ?? "http://localhost:4321",
     );
     expect(location.pathname).toBe("/base-conocimiento/categorias");
 

@@ -11,8 +11,9 @@ test.describe("cronograma — copiado de imágenes al portapapeles", () => {
     userId = user.userId;
     sessionId = user.sessionId;
     await setSessionCookie(context, user.signedSessionId);
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://localhost:4321" });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4321" });
+    const base = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(base).origin });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(base.replace("localhost", "127.0.0.1")).origin });
   });
 
   test.afterEach(async () => {

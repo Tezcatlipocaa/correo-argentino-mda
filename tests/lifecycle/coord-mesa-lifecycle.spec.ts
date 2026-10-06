@@ -20,7 +20,9 @@ import {
 } from "../../src/lib/helpdeskAccess";
 import { setSessionCookie } from "../helpers/auth";
 
-const BASE = "http://localhost:4321";
+function base(): string {
+  return test.info().project.use.baseURL ?? "http://localhost:4321";
+}
 const SECRET =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
 const PASSWORD = "CambiarEst0!Clave";
@@ -39,7 +41,7 @@ async function adminForm(
   cookie: string,
   form: Record<string, string>,
 ): Promise<{ status: number; json: any }> {
-  const res = await fetch(`${BASE}/admin/usuarios`, {
+  const res = await fetch(`${base()}/admin/usuarios`, {
     method: "POST",
     headers: {
       cookie,

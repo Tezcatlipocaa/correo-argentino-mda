@@ -114,8 +114,9 @@ test.describe("cronograma — export PNG server-side", () => {
   });
 
   test("copiar la tabla de guardia no muta el card visible durante la captura", async ({ context, page }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://localhost:4321" });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4321" });
+    const base = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(base).origin });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(base.replace("localhost", "127.0.0.1")).origin });
     await page.goto("/supervision/cronograma");
     await page.waitForSelector("#monthly-table");
     await page.click("#switch-to-groups-btn");
@@ -141,8 +142,9 @@ test.describe("cronograma — export PNG server-side", () => {
   });
 
   test("copiar guardia y horas extras produce imágenes con contenido (no en blanco)", async ({ context, page }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://localhost:4321" });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4321" });
+    const base = test.info().project.use.baseURL ?? "http://localhost:4321";
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(base).origin });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(base.replace("localhost", "127.0.0.1")).origin });
     await page.goto("/supervision/cronograma");
     await page.waitForSelector("#monthly-table");
 
