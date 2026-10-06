@@ -10,15 +10,18 @@ import path from "node:path";
  * guard, una base ausente dejaba un `mda.db` de 0 bytes y el script moria
  * despues con `SqliteError: no such table: offices` en ingles (#162).
  *
- * Con `--help` no hay validacion (la ayuda no debe requerir una base), pero
- * hay que asegurar que el directorio exista: better-sqlite3 lanza
- * `TypeError: Cannot open database because the directory does not exist` si
- * falta, y romperia `--help` igual.
+ * Con `--help` no hay validacion y no se crea nada en disco (la ayuda no
+ * debe requerir una base). Si `database/` falta, la importacion de
+ * `../src/db/index` falla igual con `TypeError: Cannot open database because
+ * the directory does not exist` — comportamiento previo a esta rama, owned
+ * por ese modulo, no por este script.
  */
 const dbPath = path.resolve(process.cwd(), "database", "mda.db");
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  // Sin validacion: la ayuda no debe requerir una base. Si `database/` falta,
+  // `src/db/index.ts` falla al importar (comportamiento previo a esta rama) —
+  // arreglar eso es un tema del arranque de la base, no de este script.
 } else {
   let dbStat: fs.Stats;
   try {
