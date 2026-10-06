@@ -20,14 +20,14 @@ function printHelp() {
 Reconciliación de oficinas del mismo edificio
 =============================================
 
-Uso: tsx src/scripts/reconcile-buildings.ts [opciones]
+Uso: tsx scripts/reconcile-buildings.ts [opciones]
 
 Opciones:
   --apply            Aplica los cambios (pide CONFIRMAR). Sin esto solo releva.
-  --only <key>       Solo unifica el grupo con esa clave. Repetible.
+  --only <key>       Solo unifica el grupo con esa clave. Repetible. Requiere un valor.
   --interactive      Pregunta sí/no por cada grupo (escribir CONFIRMAR).
-  --province <code>  Filtra por provincia (ej. C, BA, o "all" para todas).
-  --export <file>   Vuelca el reporte de grupos a CSV.
+  --province <code>  Filtra por provincia (ej. C, BA, o "all" para todas). Requiere un valor.
+  --export <file>    Vuelca el reporte de grupos a CSV. Requiere un valor.
   --help             Muestra esta ayuda.
 
 Ejemplos:
@@ -50,6 +50,23 @@ Notas:
 `);
 }
 
+/**
+ * Lee el valor de una bandera y corta si no existe.
+ *
+ * Sin esta guarda, `--province` al final de los argumentos dejaba
+ * `args.province === undefined`, que `args.province && ...` tomaba como "sin
+ * filtro": combinado con `--apply` reconciliaba todo el país (#161). El corte
+ * ocurre dentro de `parseArgs`.
+ */
+function readFlagValue(flag: string, value: string | undefined): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    console.error(`${flag} requiere un valor.`);
+    process.exit(1);
+  }
+  return normalized;
+}
+
 function parseArgs(argv: string[]) {
   const args = {
     apply: false,
@@ -64,9 +81,17 @@ function parseArgs(argv: string[]) {
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--interactive") args.interactive = true;
-    else if (arg === "--province") args.province = argv[++i];
-    else if (arg === "--export") args.exportCsv = argv[++i];
-    else if (arg === "--only") args.only.push(argv[++i]);
+    else if (arg === "--province") {
+      const value = readFlagValue("--province", argv[++i]);
+      // El chequeo de scope compara contra "all" en minúscula, así que ese
+      // sentinela se normaliza sin mayúsculas; el resto va a mayúsculas para
+      // coincidir con provinceCode.
+      args.province =
+        value.toLowerCase() === "all" ? "all" : value.toUpperCase();
+    } else if (arg === "--export")
+      args.exportCsv = readFlagValue("--export", argv[++i]);
+    else if (arg === "--only")
+      args.only.push(readFlagValue("--only", argv[++i]));
   }
   return args;
 }
@@ -150,9 +175,7 @@ async function main() {
   for (const group of list) {
     console.log(`=== Edificio [${group.key}] → canónica: ${group.canonical}`);
     for (const m of group.members) {
-      console.log(
-        `  ${m.code} · ${m.name} · ${m.address} (${m.provinceCode})`,
-      );
+      console.log(`  ${m.code} · ${m.name} · ${m.address} (${m.provinceCode})`);
     }
     console.log("");
   }
@@ -191,7 +214,9 @@ async function main() {
     console.log(
       "  npm run buildings:reconcile -- --export reporte.csv     (ver columna key)",
     );
-    console.log("  npm run buildings:reconcile -- --help               (ayuda completa)");
+    console.log(
+      "  npm run buildings:reconcile -- --help               (ayuda completa)",
+    );
     return;
   }
 
