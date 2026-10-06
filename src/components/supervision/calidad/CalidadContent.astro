@@ -502,7 +502,7 @@ const cleanBase = getCleanBase();
                               </span>
                               {op.averageScore >= 90 && (
                                 <Icon
-                                  name="boxicons:badge-check"
+                                  name="boxicons:check"
                                   class="text-secondary shrink-0"
                                   size={18}
                                   title="Insignia de Excelencia"
@@ -620,110 +620,122 @@ const cleanBase = getCleanBase();
   id="parameters-modal"
   title="Configuración de Parámetros de Calidad"
   icon="boxicons:cog"
-  titleClass="font-black text-lg uppercase tracking-tight"
-  size="2xl"
+  titleClass="font-black text-base uppercase tracking-tight"
+  size="3xl"
   zIndex="z-200"
-  class="flex h-[80vh] w-11/12 flex-col sm:h-150"
+  fixedFooter={true}
+  class="flex flex-col h-[90vh] sm:h-[82vh] max-h-[780px] w-11/12 sm:max-w-3xl"
 >
   <Fragment slot="content">
-    <!-- Channel Selector in Parameters Modal -->
-    <div class="flex items-center justify-between gap-2 mb-3 bg-base-200/40 p-2 rounded-xl border border-base-300">
-      <span class="text-xs font-bold uppercase tracking-wider text-base-content/60 pl-1">Canal:</span>
-      <div class="join">
+    <!-- Compact Header Bar with Channel & Section Tabs -->
+    <div class="bg-base-200/50 rounded-xl p-3 border border-base-200/80 space-y-2.5 mb-4 shrink-0">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <!-- Channel Selector -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 text-xs no-scrollbar">
+          <span class="text-xs font-semibold text-base-content/60 mr-1 shrink-0">Canal:</span>
+          <div class="join shrink-0 shadow-2xs">
+            <button
+              type="button"
+              class="btn btn-xs join-item param-channel-btn btn-active btn-primary font-bold transition-all"
+              data-channel="wise_call"
+            >
+              Llamada Wise
+            </button>
+            <button
+              type="button"
+              class="btn btn-xs join-item param-channel-btn font-semibold hover:bg-base-200 transition-all"
+              data-channel="wise_email"
+            >
+              Mail Wise
+            </button>
+            <button
+              type="button"
+              class="btn btn-xs join-item param-channel-btn font-semibold hover:bg-base-200 transition-all"
+              data-channel="invgate_ticket"
+            >
+              Autogestión
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Weight & Criteria Summary Badge -->
+        <div
+          id="param-summary-badge"
+          class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium bg-base-100 border border-base-200/80 shrink-0 self-start sm:self-auto transition-colors"
+          title="Resumen de criterios y porcentaje asignado"
+        >
+          <span id="param-summary-count" class="font-bold text-base-content">0 criterios</span>
+          <span class="text-base-content/30">•</span>
+          <span id="param-summary-weight" class="font-mono font-bold text-primary">Peso total: 0%</span>
+        </div>
+      </div>
+
+      <!-- Sub-section Tabs -->
+      <div class="tabs tabs-box bg-base-100/90 p-1 rounded-lg border border-base-200/60 overflow-x-auto flex">
         <button
           type="button"
-          class="btn btn-xs join-item param-channel-btn btn-active btn-primary font-bold uppercase"
-          data-channel="wise_call"
+          id="param-tab-s1-btn"
+          class="tab tab-active parameter-tab flex-1 text-xs font-bold transition-all py-1.5"
+          data-tab="s1"
         >
-          Llamada Wise
+          Interacción con Usuario
         </button>
         <button
           type="button"
-          class="btn btn-xs join-item param-channel-btn font-bold uppercase"
-          data-channel="wise_email"
+          id="param-tab-s2-btn"
+          class="tab parameter-tab flex-1 text-xs font-bold transition-all py-1.5"
+          data-tab="s2"
         >
-          Mail Wise
-        </button>
-        <button
-          type="button"
-          class="btn btn-xs join-item param-channel-btn font-bold uppercase"
-          data-channel="invgate_ticket"
-        >
-          Autogestión
+          Gestión del Ticket
         </button>
       </div>
     </div>
 
-    <!-- Tabs Header -->
-    <div class="tabs bg-base-200/50 mb-4 shrink-0 rounded-xl p-1">
-      <button
-        type="button"
-        id="param-tab-s1-btn"
-        class="tab tab-active parameter-tab flex-1 text-xs font-bold uppercase"
-        data-tab="s1"
-      >
-        Interacción con Usuario
-      </button>
-      <button
-        type="button"
-        id="param-tab-s2-btn"
-        class="tab parameter-tab flex-1 text-xs font-bold uppercase"
-        data-tab="s2"
-      >
-        Gestión del Ticket
-      </button>
-    </div>
-
-    <!-- Lists Container -->
-    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+    <!-- Lists Container with Independent Scroll -->
+    <div class="min-h-0 flex-1 space-y-3 pb-2">
       <!-- Section 1 List -->
-      <div id="param-list-s1" class="parameter-list-pane space-y-3">
+      <div id="param-list-s1" class="parameter-list-pane space-y-2">
         <!-- populated dynamically -->
       </div>
 
       <!-- Section 2 List -->
-      <div id="param-list-s2" class="parameter-list-pane hidden space-y-3">
+      <div id="param-list-s2" class="parameter-list-pane hidden space-y-2">
         <!-- populated dynamically -->
       </div>
     </div>
   </Fragment>
+
   <Fragment slot="actions">
-    <!-- Action Buttons -->
-    <div
-      class="modal-action border-base-200 mt-6 flex shrink-0 justify-between border-t pt-4"
-    >
-      <div class="flex gap-2">
+    <!-- Fixed Footer Actions -->
+    <div class="flex items-center justify-between gap-3 w-full">
+      <div class="flex items-center gap-2">
         <button
           type="button"
-          id="btn-add-param-s1"
-          class="btn btn-sm btn-primary add-param-btn gap-1 text-xs font-black uppercase"
+          id="btn-add-param"
+          class="btn btn-sm btn-primary gap-1 text-xs font-bold transition-transform active:scale-95"
+          title="Agregar nuevo criterio a la sección activa"
         >
           <Icon name="boxicons:plus" size={16} />
-          <span id="btn-add-param-s1-label">Agregar Criterio</span>
+          <span id="btn-add-param-label">Agregar criterio</span>
         </button>
-        <button
-          type="button"
-          id="btn-add-param-s2"
-          class="btn btn-sm btn-primary add-param-btn hidden gap-1 text-xs font-black uppercase"
-        >
-          <Icon name="boxicons:plus" size={16} />
-          <span id="btn-add-param-s2-label">Agregar Criterio</span>
-        </button>
+        <!-- Compatibilidad oculta para selectores legacy -->
+        <button type="button" id="btn-add-param-s1" class="hidden"></button>
+        <button type="button" id="btn-add-param-s2" class="hidden"></button>
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
         <button
           type="button"
           id="btn-close-parameters-modal"
-          class="btn btn-sm btn-ghost hover:bg-base-200 text-xs font-black uppercase"
+          class="btn btn-sm btn-ghost text-xs font-semibold hover:bg-base-200"
         >
           Cancelar
         </button>
         <button
           type="button"
           id="btn-save-parameters"
-          class="btn btn-sm btn-secondary text-xs font-black uppercase"
+          class="btn btn-sm btn-secondary text-xs font-bold shadow-xs hover:shadow-md"
         >
-          Guardar Cambios
+          Guardar cambios
         </button>
       </div>
     </div>
@@ -2122,11 +2134,13 @@ const cleanBase = getCleanBase();
     const btnCloseParametersModal = document.getElementById(
       "btn-close-parameters-modal",
     );
+    const btnAddParam = document.getElementById("btn-add-param");
     const btnAddParamS1 = document.getElementById("btn-add-param-s1");
     const btnAddParamS2 = document.getElementById("btn-add-param-s2");
 
     let localParams: any[] = [];
     let activeParamChannel: string = "wise_call";
+    let activeParamTab: "s1" | "s2" = "s1";
 
     const channelLabels: Record<string, { s1: string; s2: string; addS1: string; addS2: string }> = {
       wise_call: {
@@ -2149,17 +2163,71 @@ const cleanBase = getCleanBase();
       },
     };
 
+    const isMatchingChannel = (p: any) => {
+      const ch = p.channel || "wise_call";
+      return ch === activeParamChannel;
+    };
+
+    const isS1 = (p: any) => {
+      return (
+        p.section === "items" ||
+        p.category === "Items" ||
+        p.category === "Interacción con Usuario"
+      );
+    };
+
+    const isS2 = (p: any) => {
+      return (
+        p.section === "ticket" ||
+        p.section === "mda" ||
+        p.category === "Gestión del Ticket" ||
+        p.category === "Ticket" ||
+        p.category === "MDA"
+      );
+    };
+
     function updateParamTabLabels() {
       const labels = channelLabels[activeParamChannel] || channelLabels.wise_call;
       const tab1Btn = document.getElementById("param-tab-s1-btn");
       const tab2Btn = document.getElementById("param-tab-s2-btn");
-      const add1Label = document.getElementById("btn-add-param-s1-label");
-      const add2Label = document.getElementById("btn-add-param-s2-label");
 
       if (tab1Btn) tab1Btn.textContent = labels.s1;
       if (tab2Btn) tab2Btn.textContent = labels.s2;
-      if (add1Label) add1Label.textContent = labels.addS1;
-      if (add2Label) add2Label.textContent = labels.addS2;
+    }
+
+    function updateParamSummary() {
+      const summaryCountEl = document.getElementById("param-summary-count");
+      const summaryWeightEl = document.getElementById("param-summary-weight");
+      const summaryBadgeEl = document.getElementById("param-summary-badge");
+      if (!summaryCountEl || !summaryWeightEl || !summaryBadgeEl) return;
+
+      const currentActive = localParams.filter(
+        (p) =>
+          !p.isDeleted &&
+          isMatchingChannel(p) &&
+          (activeParamTab === "s1" ? isS1(p) : isS2(p)),
+      );
+      const count = currentActive.length;
+      const totalWeight =
+        Math.round(
+          currentActive.reduce(
+            (sum, p) => sum + (parseFloat(p.weight) || 0),
+            0,
+          ) * 10,
+        ) / 10;
+
+      summaryCountEl.textContent = `${count} criterio${count === 1 ? "" : "s"}`;
+      summaryWeightEl.textContent = `Peso total: ${totalWeight}%`;
+
+      if (count > 0 && Math.abs(totalWeight - 100) < 0.05) {
+        summaryBadgeEl.className =
+          "inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-semibold bg-success/10 text-success border border-success/30 shrink-0 self-start sm:self-auto transition-colors";
+        summaryBadgeEl.title = "La suma de pesos es exactamente 100%";
+      } else {
+        summaryBadgeEl.className =
+          "inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-semibold bg-warning/10 text-warning border border-warning/30 shrink-0 self-start sm:self-auto transition-colors";
+        summaryBadgeEl.title = `Atención: el peso total (${totalWeight}%) difiere del 100% recomendado`;
+      }
     }
 
     // Channel buttons in parameters modal
@@ -2169,8 +2237,12 @@ const cleanBase = getCleanBase();
         if (!ch) return;
         activeParamChannel = ch;
 
-        document.querySelectorAll(".param-channel-btn").forEach((b) => b.classList.remove("btn-active", "btn-primary"));
+        document.querySelectorAll(".param-channel-btn").forEach((b) => {
+          b.classList.remove("btn-active", "btn-primary");
+          b.classList.add("font-semibold");
+        });
         btn.classList.add("btn-active", "btn-primary");
+        btn.classList.remove("font-semibold");
 
         updateParamTabLabels();
         renderParametersList();
@@ -2187,9 +2259,15 @@ const cleanBase = getCleanBase();
         }));
 
         activeParamChannel = "wise_call";
+        activeParamTab = "s1";
+
         const chBtns = document.querySelectorAll(".param-channel-btn");
-        chBtns.forEach((b) => b.classList.remove("btn-active", "btn-primary"));
+        chBtns.forEach((b) => {
+          b.classList.remove("btn-active", "btn-primary");
+          b.classList.add("font-semibold");
+        });
         chBtns[0]?.classList.add("btn-active", "btn-primary");
+        chBtns[0]?.classList.remove("font-semibold");
 
         // Reset tabs to S1
         const tabs = document.querySelectorAll(".parameter-tab");
@@ -2198,8 +2276,6 @@ const cleanBase = getCleanBase();
 
         document.getElementById("param-list-s1")?.classList.remove("hidden");
         document.getElementById("param-list-s2")?.classList.add("hidden");
-        document.getElementById("btn-add-param-s1")?.classList.remove("hidden");
-        document.getElementById("btn-add-param-s2")?.classList.add("hidden");
 
         updateParamTabLabels();
         renderParametersList();
@@ -2210,18 +2286,6 @@ const cleanBase = getCleanBase();
     if (btnCloseParametersModal) {
       btnCloseParametersModal.addEventListener("click", () => {
         parametersModal.close();
-      });
-    }
-
-    if (btnAddParamS1) {
-      btnAddParamS1.addEventListener("click", () => {
-        handleAddParam("items");
-      });
-    }
-
-    if (btnAddParamS2) {
-      btnAddParamS2.addEventListener("click", () => {
-        handleAddParam(activeParamChannel === "wise_call" ? "ticket" : "mda");
       });
     }
 
@@ -2257,50 +2321,153 @@ const cleanBase = getCleanBase();
       }
     };
 
+    if (btnAddParam) {
+      btnAddParam.addEventListener("click", () => {
+        handleAddParam(
+          activeParamTab === "s1"
+            ? "items"
+            : (activeParamChannel === "wise_call" ? "ticket" : "mda"),
+        );
+      });
+    }
+
+    if (btnAddParamS1) {
+      btnAddParamS1.addEventListener("click", () => {
+        handleAddParam("items");
+      });
+    }
+
+    if (btnAddParamS2) {
+      btnAddParamS2.addEventListener("click", () => {
+        handleAddParam(activeParamChannel === "wise_call" ? "ticket" : "mda");
+      });
+    }
+
+    function handleMoveParam(actualIndex: number, direction: -1 | 1) {
+      const currentList = localParams
+        .map((p, i) => ({ p, i }))
+        .filter(
+          (item) =>
+            isMatchingChannel(item.p) &&
+            (activeParamTab === "s1" ? isS1(item.p) : isS2(item.p)) &&
+            (item.p.active || !item.p.id || item.p.isDeleted),
+        );
+
+      const pos = currentList.findIndex((item) => item.i === actualIndex);
+      if (pos === -1) return;
+
+      const targetPos = pos + direction;
+      if (targetPos < 0 || targetPos >= currentList.length) return;
+
+      const targetActualIndex = currentList[targetPos].i;
+
+      // Intercambiar en localParams
+      const temp = localParams[actualIndex];
+      localParams[actualIndex] = localParams[targetActualIndex];
+      localParams[targetActualIndex] = temp;
+
+      renderParametersList();
+    }
+
     function renderParameterRow(
       param: any,
       actualIndex: number,
       displayIndex: number,
+      isFirst: boolean,
+      isLast: boolean,
     ) {
       const isDeleted = param.isDeleted;
       const isNew = !param.id;
 
       return `
-        <div class="flex items-center gap-3 bg-base-200/40 p-2 rounded-xl border border-base-300 transition-colors ${isDeleted ? "opacity-40 bg-error/5 border-error/20 line-through" : ""}" data-index="${actualIndex}">
-          <div class="flex items-center justify-center size-8 rounded-lg bg-base-100 font-mono text-xs text-base-content/50 border border-base-200 shrink-0">
-            ${isNew ? '<span class="text-success font-black">+</span>' : displayIndex}
+        <div class="group flex items-center gap-2 sm:gap-3 bg-base-100 hover:bg-base-200/40 p-2 sm:p-2.5 rounded-xl border border-base-200/80 shadow-2xs transition-colors ${
+          isDeleted ? "opacity-45 bg-error/5 border-error/20 line-through" : ""
+        }" data-index="${actualIndex}">
+          <!-- Reorder Controls -->
+          <div class="flex flex-col gap-0.5 shrink-0 ${isDeleted ? "invisible pointer-events-none" : ""}">
+            <button
+              type="button"
+              class="btn btn-ghost btn-2xs size-4.5 p-0 text-base-content/40 hover:text-primary hover:bg-base-200 param-btn-move-up ${isFirst ? "opacity-20 pointer-events-none" : ""}"
+              data-index="${actualIndex}"
+              title="Mover arriba"
+              aria-label="Mover arriba"
+              ${isFirst ? "disabled" : ""}
+            >
+              <svg class="size-3" viewBox="0 0 24 24" fill="currentColor"><path d="M5 15h14l-7-7z"/></svg>
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-2xs size-4.5 p-0 text-base-content/40 hover:text-primary hover:bg-base-200 param-btn-move-down ${isLast ? "opacity-20 pointer-events-none" : ""}"
+              data-index="${actualIndex}"
+              title="Mover abajo"
+              aria-label="Mover abajo"
+              ${isLast ? "disabled" : ""}
+            >
+              <svg class="size-3" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9h14l-7 7z"/></svg>
+            </button>
           </div>
-          <input 
-            type="text" 
-            value="${escapeHtml(param.name)}" 
-            placeholder="Nombre del criterio..."
-            class="input input-sm flex-1 font-semibold bg-base-100 focus:outline-none focus:border-primary param-input-name"
-            ${isDeleted ? "disabled" : ""}
-            data-index="${actualIndex}"
-          />
-          <div class="flex items-center gap-1 shrink-0">
-            <span class="text-xs font-bold text-base-content/40 uppercase">Peso:</span>
+
+          <!-- Number Indicator -->
+          <div class="flex items-center justify-center size-7 rounded-lg bg-base-200/70 font-mono text-xs font-semibold text-base-content/60 shrink-0">
+            ${isNew ? '<span class="text-success font-black text-sm">+</span>' : displayIndex}
+          </div>
+
+          <!-- Parameter Name Input -->
+          <div class="flex-1 min-w-0">
             <input 
-              type="number" 
-              step="0.1" 
-              min="0"
-              value="${param.weight}" 
-              class="input input-sm w-16 text-center font-bold bg-base-100 focus:outline-none focus:border-primary param-input-weight"
+              type="text" 
+              value="${escapeHtml(param.name)}" 
+              placeholder="Nombre del criterio de evaluación..."
+              class="input input-sm w-full font-medium bg-base-200/30 hover:bg-base-200/50 focus:bg-base-100 border border-transparent focus:border-secondary rounded-lg text-xs sm:text-sm text-base-content transition-colors param-input-name"
               ${isDeleted ? "disabled" : ""}
               data-index="${actualIndex}"
+              aria-label="Nombre del criterio"
             />
           </div>
-          <div class="shrink-0">
+
+          <!-- Weight Input with % suffix -->
+          <div class="flex items-center gap-1 shrink-0">
+            <span class="text-[11px] font-bold text-base-content/50 uppercase tracking-wider hidden sm:inline">Peso:</span>
+            <div class="relative">
+              <input 
+                type="number" 
+                step="0.1" 
+                min="0"
+                max="100"
+                value="${param.weight}" 
+                class="input input-sm w-16 sm:w-20 text-center font-mono font-bold text-xs sm:text-sm bg-base-200/30 hover:bg-base-200/50 focus:bg-base-100 border border-transparent focus:border-secondary rounded-lg param-input-weight pr-5"
+                ${isDeleted ? "disabled" : ""}
+                data-index="${actualIndex}"
+                aria-label="Peso del criterio"
+              />
+              <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-base-content/40 pointer-events-none">%</span>
+            </div>
+          </div>
+
+          <!-- Actions: Delete or Restore -->
+          <div class="shrink-0 flex items-center">
             ${
               isDeleted
                 ? `
-              <button type="button" class="btn btn-sm btn-circle btn-ghost text-success param-btn-restore animate-fade-in" data-index="${actualIndex}" title="Restaurar">
-                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor;"><path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              <button 
+                type="button" 
+                class="btn btn-xs btn-ghost text-success hover:bg-success/10 font-bold param-btn-restore gap-1" 
+                data-index="${actualIndex}" 
+                title="Restaurar criterio"
+                aria-label="Restaurar criterio"
+              >
+                Restaurar
               </button>
             `
                 : `
-              <button type="button" class="btn btn-sm btn-circle btn-ghost text-error hover:bg-error/10 param-btn-delete animate-fade-in" data-index="${actualIndex}" title="Eliminar">
-                <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor;"><path d="m20.37 5.91-1 .92a2 2 0 0 1-1.39.57H6A2 2 0 0 1 4.6 6.84l-1-.93L2.24 7.27l1 .93a4 4 0 0 0 2.76 1.14h12A4 4 0 0 0 20.76 8.2l1-.93zm-3.5 4v9a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-9h-2v9a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-9zM8.5 3h7V1h-7z"/></svg>
+              <button 
+                type="button" 
+                class="btn btn-xs sm:btn-sm btn-ghost btn-square text-base-content/30 hover:text-error hover:bg-error/10 param-btn-delete rounded-lg transition-colors" 
+                data-index="${actualIndex}" 
+                title="Descartar criterio"
+                aria-label="Descartar criterio"
+              >
+                <svg class="size-4" viewBox="0 0 24 24" fill="currentColor"><path d="m20.37 5.91-1 .92a2 2 0 0 1-1.39.57H6A2 2 0 0 1 4.6 6.84l-1-.93L2.24 7.27l1 .93a4 4 0 0 0 2.76 1.14h12A4 4 0 0 0 20.76 8.2l1-.93zm-3.5 4v9a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-9h-2v9a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-9zM8.5 3h7V1h-7z"/></svg>
               </button>
             `
             }
@@ -2314,55 +2481,54 @@ const cleanBase = getCleanBase();
       const s2Container = document.getElementById("param-list-s2");
       if (!s1Container || !s2Container) return;
 
-      const isMatchingChannel = (p: any) => {
-        const ch = p.channel || "wise_call";
-        return ch === activeParamChannel;
-      };
-
-      const isS1 = (p: any) => {
-        return p.section === "items" || p.category === "Items" || p.category === "Interacción con Usuario";
-      };
-
-      const isS2 = (p: any) => {
-        return p.section === "ticket" || p.section === "mda" || p.category === "Gestión del Ticket" || p.category === "Ticket" || p.category === "MDA";
-      };
-
-      let s1Count = 0;
-      const s1Html = localParams
+      const s1Items = localParams
         .map((p, i) => ({ p, i }))
         .filter(
           (item) =>
             isMatchingChannel(item.p) &&
             isS1(item.p) &&
             (item.p.active || !item.p.id || item.p.isDeleted),
+        );
+
+      const s1Html = s1Items
+        .map((item, idx) =>
+          renderParameterRow(
+            item.p,
+            item.i,
+            idx + 1,
+            idx === 0,
+            idx === s1Items.length - 1,
+          ),
         )
-        .map((item) => {
-          s1Count++;
-          return renderParameterRow(item.p, item.i, s1Count);
-        })
         .join("");
 
-      let s2Count = 0;
-      const s2Html = localParams
+      const s2Items = localParams
         .map((p, i) => ({ p, i }))
         .filter(
           (item) =>
             isMatchingChannel(item.p) &&
             isS2(item.p) &&
             (item.p.active || !item.p.id || item.p.isDeleted),
+        );
+
+      const s2Html = s2Items
+        .map((item, idx) =>
+          renderParameterRow(
+            item.p,
+            item.i,
+            idx + 1,
+            idx === 0,
+            idx === s2Items.length - 1,
+          ),
         )
-        .map((item) => {
-          s2Count++;
-          return renderParameterRow(item.p, item.i, s2Count);
-        })
         .join("");
 
       s1Container.innerHTML =
         s1Html ||
-        '<p class="text-xs text-base-content/40 italic text-center py-4">No hay parámetros activos en esta categoría para este canal.</p>';
+        '<p class="text-xs text-base-content/40 italic text-center py-6">No hay criterios activos en esta sección para este canal.</p>';
       s2Container.innerHTML =
         s2Html ||
-        '<p class="text-xs text-base-content/40 italic text-center py-4">No hay parámetros activos en esta categoría para este canal.</p>';
+        '<p class="text-xs text-base-content/40 italic text-center py-6">No hay criterios activos en esta sección para este canal.</p>';
 
       // Attach input change listeners
       s1Container
@@ -2385,6 +2551,35 @@ const cleanBase = getCleanBase();
       s2Container
         .querySelectorAll(".param-btn-restore")
         .forEach((btn) => btn.addEventListener("click", handleRestoreParam));
+
+      // Attach move up / move down button listeners
+      s1Container.querySelectorAll(".param-btn-move-up").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt((e.currentTarget as HTMLElement).getAttribute("data-index") || "0", 10);
+          handleMoveParam(idx, -1);
+        });
+      });
+      s1Container.querySelectorAll(".param-btn-move-down").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt((e.currentTarget as HTMLElement).getAttribute("data-index") || "0", 10);
+          handleMoveParam(idx, 1);
+        });
+      });
+      s2Container.querySelectorAll(".param-btn-move-up").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt((e.currentTarget as HTMLElement).getAttribute("data-index") || "0", 10);
+          handleMoveParam(idx, -1);
+        });
+      });
+      s2Container.querySelectorAll(".param-btn-move-down").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const idx = parseInt((e.currentTarget as HTMLElement).getAttribute("data-index") || "0", 10);
+          handleMoveParam(idx, 1);
+        });
+      });
+
+      // Update summary badge
+      updateParamSummary();
     }
 
     function attachInputListeners(input: Element) {
@@ -2395,6 +2590,7 @@ const cleanBase = getCleanBase();
           localParams[idx].name = target.value;
         } else if (target.classList.contains("param-input-weight")) {
           localParams[idx].weight = parseFloat(target.value) || 0;
+          updateParamSummary();
         }
       });
     }
@@ -2418,27 +2614,23 @@ const cleanBase = getCleanBase();
     paramTabs.forEach((tab) => {
       tab.addEventListener("click", (e) => {
         const target = e.currentTarget as HTMLElement;
-        const tabName = target.getAttribute("data-tab");
+        const tabName = target.getAttribute("data-tab") as "s1" | "s2";
+        activeParamTab = tabName || "s1";
 
         paramTabs.forEach((t) => t.classList.remove("tab-active"));
         target.classList.add("tab-active");
 
         const paneS1 = document.getElementById("param-list-s1");
         const paneS2 = document.getElementById("param-list-s2");
-        const btnAddS1 = document.getElementById("btn-add-param-s1");
-        const btnAddS2 = document.getElementById("btn-add-param-s2");
 
         if (tabName === "s1") {
           paneS1?.classList.remove("hidden");
           paneS2?.classList.add("hidden");
-          btnAddS1?.classList.remove("hidden");
-          btnAddS2?.classList.add("hidden");
         } else {
           paneS1?.classList.add("hidden");
           paneS2?.classList.remove("hidden");
-          btnAddS1?.classList.add("hidden");
-          btnAddS2?.classList.remove("hidden");
         }
+        updateParamSummary();
       });
     });
 
@@ -2448,8 +2640,20 @@ const cleanBase = getCleanBase();
         (p) => !p.isDeleted && !p.name.trim(),
       );
       if (emptyParams.length > 0) {
-        alert("Por favor, complete el nombre de todos los parámetros.");
+        alert("Por favor, complete el nombre de todos los criterios activos.");
         return;
+      }
+
+      // Validar si el peso no suma 100% en la sección activa
+      const currentActive = localParams.filter(
+        (p) => !p.isDeleted && isMatchingChannel(p) && (activeParamTab === "s1" ? isS1(p) : isS2(p)),
+      );
+      const totalWeight = Math.round(currentActive.reduce((sum, p) => sum + (parseFloat(p.weight) || 0), 0) * 10) / 10;
+      if (currentActive.length > 0 && Math.abs(totalWeight - 100) > 0.05) {
+        const proceed = confirm(
+          `Atención: El peso total de los criterios en esta sección es ${totalWeight}%, lo cual difiere del 100% recomendado.\n\n¿Deseas guardar los cambios de todas formas?`
+        );
+        if (!proceed) return;
       }
 
       const originalText = btnSaveParams.innerHTML;
