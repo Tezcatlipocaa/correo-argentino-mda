@@ -49,7 +49,7 @@
 - `npm run test:e2e:reconcile` — solo el spec de reconciliación de edificios (7 tests).
 - `npx playwright show-report` — reporte HTML + trazas.
 - No hay CI: los tests corren a mano.
-- La sección **Testing policy** (arriba) gobierna cómo se *escriben* los tests; esta gobierna cómo se *ejecutan*.
+- La sección **Testing policy** (arriba) gobierna cómo se _escriben_ los tests; esta gobierna cómo se _ejecutan_.
 
 ### Puertos de la suite E2E
 
