@@ -42,10 +42,20 @@
 
 ## Testing
 
-- `npx playwright test` — E2E tests (`tests/**/*.spec.ts`). Workers: 1 (serial). Requires dev server at `http://localhost:4321`.
-- Artifact after runs: HTML report + traces (see Testing policy).
-- `npm run test:unit -- tests/unit` — vitest unit tests. Bare `npm run test:unit` also globs Playwright specs and stale `*.mjs` asserts (pre-existing failures) — always scope to `tests/unit`.
-- No CI — tests run manually.
+- `npm run test:domain` — tests de dominio con `node:test` sobre `src/lib/*.test.ts` (address, buildingKey, buildingReconcile). **21 tests, corren siempre.** No los cubre vitest: `vitest.config.ts` incluye únicamente `tests/unit/**`.
+- `npm run test:unit` — vitest sobre `tests/unit/**` (47 archivos, 327 tests). Hay **1 fallo pre-existente** en `tests/unit/navigation/base-conocimiento.test.ts` (no relacionado con edificios); no scopear el glob, ya no hace falta.
+- `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por ese fallo pre-existente; el dominio pasa siempre y corre primero para que una regresión real no quede enmascarada.
+- `npm run test:e2e` — Playwright completo (`tests/**/*.spec.ts`). Workers: 1 (serial). Requiere dev server; ver "Puertos de la suite E2E" abajo.
+- `npm run test:e2e:reconcile` — solo el spec de reconciliación de edificios (7 tests).
+- `npx playwright show-report` — reporte HTML + trazas.
+- No hay CI: los tests corren a mano.
+
+### Puertos de la suite E2E
+
+- `playwright.config.ts` resuelve `baseURL` desde `PLAYWRIGHT_BASE_URL`, con default `http://localhost:4321`.
+- **Verificar el puerto antes de arrancar**: `Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4321,4322,4323 }`. En esta máquina varios puertos los ocupa a veces otro proyecto local.
+- Arrancar el dev server en su **propio comando**, con el destino del redirect entre comillas (`%TEMP%` tiene espacios): ver `docs/lessons.md`.
+- **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
 
 ## DB & Drizzle
 
