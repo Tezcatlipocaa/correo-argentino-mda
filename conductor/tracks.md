@@ -51,7 +51,7 @@
 - [x] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
   *Link: [./tracks/calidad_wise_autodetect_channel_20261003/index.md](./tracks/calidad_wise_autodetect_channel_20261003/index.md)*
 ---
-- [~] **Track: Modal de Calidad — Lógica Reclamo/Novedad, Tildar/Destildar Masivo y Exportación Excel/CSV**
+- [x] **Track: Modal de Calidad — Lógica Reclamo/Novedad, Tildar/Destildar Masivo y Exportación Excel/CSV**
   *Link: [./tracks/calidad_reclamo_checkall_export_20261006/index.md](./tracks/calidad_reclamo_checkall_export_20261006/index.md)*
 
 

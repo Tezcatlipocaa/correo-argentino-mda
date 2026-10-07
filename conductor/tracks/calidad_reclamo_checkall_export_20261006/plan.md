@@ -30,26 +30,26 @@
 
 ---
 
-## Phase 3: Exportación de Auditorías — Revisión CSV y Exportación a Excel (.xlsx)
+## Phase 3: Exportación de Auditorías — Revisión CSV y Exportación a Excel (.xlsx) [checkpoint: 92150e6e]
 
-- [ ] Task: Tests de estructura y generación de datos exportables
-  - [ ] Crear tests unitarios para verificar la estructura de columnas y formateo de datos exportados (CSV y Excel).
-- [ ] Task: Revisión y enriquecimiento de la exportación CSV
-  - [ ] Actualizar la generación del archivo CSV en `CalidadContent.astro` asegurando todas las columnas requeridas (identificadores, auditor, scores S1/S2/Total, modo ticket/reclamo, observaciones).
-  - [ ] Garantizar codificación UTF-8 con BOM y separador `;` para apertura perfecta en Excel local.
-- [ ] Task: Implementación de Exportación Nativa a Excel (.xlsx)
-  - [ ] Incorporar utilidad / librería para generación de hojas de cálculo `.xlsx` en el cliente o vía endpoint liviano.
-  - [ ] Configurar encabezados con formato, anchos automáticos de columna y celdas numéricas para scores.
-  - [ ] Añadir botón "Exportar Excel (.xlsx)" en la barra superior de acciones junto al botón CSV.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Tests de estructura y generación de datos exportables [92150e6e]
+  - [x] Crear tests unitarios para verificar la estructura de columnas y formateo de datos exportados (CSV y Excel).
+- [x] Task: Revisión y enriquecimiento de la exportación CSV [92150e6e]
+  - [x] Actualizar la generación del archivo CSV en `CalidadContent.astro` asegurando todas las columnas requeridas (identificadores, auditor, scores S1/S2/Total, modo ticket/reclamo, observaciones).
+  - [x] Garantizar codificación UTF-8 con BOM y separador `;` para apertura perfecta en Excel local.
+- [x] Task: Implementación de Exportación Nativa a Excel (.xlsx) [92150e6e]
+  - [x] Incorporar utilidad / librería para generación de hojas de cálculo `.xlsx` en el cliente o vía endpoint liviano.
+  - [x] Configurar encabezados con formato, anchos automáticos de columna y celdas numéricas para scores.
+  - [x] Añadir botón "Exportar Excel (.xlsx)" en la barra superior de acciones junto al botón CSV.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 92150e6e]
 
 ---
 
-## Phase 4: Integración, Verificación End-to-End y Regresión
+## Phase 4: Integración, Verificación End-to-End y Regresión [checkpoint: 92150e6e]
 
-- [ ] Task: Verificación integral de la suite de tests
-  - [ ] Ejecutar la suite completa de tests (`npm run test:unit -- tests/unit`) y asegurar 100% de aprobación.
-- [ ] Task: Verificación manual y de experiencia de usuario en navegador
-  - [ ] Probar flujo completo: creación de auditoría de llamada en modo Reclamo/Novedad, uso de marcar/desmarcar todos, guardado y verificación en el resumen mensual.
-  - [ ] Probar descarga de CSV y Excel (.xlsx) verificando que abran sin advertencias y con datos correctos.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Verificación integral de la suite de tests [92150e6e]
+  - [x] Ejecutar la suite completa de tests (`npm run test:unit -- tests/unit`) y asegurar 100% de aprobación.
+- [x] Task: Verificación manual y de experiencia de usuario en navegador [92150e6e]
+  - [x] Probar flujo completo: creación de auditoría de llamada en modo Reclamo/Novedad, uso de marcar/desmarcar todos, guardado y verificación en el resumen mensual.
+  - [x] Probar descarga de CSV y Excel (.xlsx) verificando que abran sin advertencias y con datos correctos.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 92150e6e]
