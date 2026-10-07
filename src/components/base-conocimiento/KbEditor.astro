@@ -534,6 +534,67 @@ const cleanBase = getCleanBase();
     line-height: 1.25;
   }
 
+  .editor-preview {
+    color: var(--color-base-content);
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .editor-preview > :first-child {
+    margin-top: 0;
+  }
+
+  .editor-preview > :last-child {
+    margin-bottom: 0;
+  }
+
+  .editor-preview h1,
+  .editor-preview h2,
+  .editor-preview h3,
+  .editor-preview h4,
+  .editor-preview h5,
+  .editor-preview h6 {
+    margin: 1.75rem 0 0.5rem;
+  }
+
+  .editor-preview p {
+    margin: 0 0 0.875rem;
+  }
+
+  .editor-preview ul,
+  .editor-preview ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .editor-preview ul {
+    list-style: disc;
+  }
+
+  .editor-preview ol {
+    list-style: decimal;
+  }
+
+  .editor-preview a {
+    color: var(--color-secondary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .editor-preview strong {
+    font-weight: 700;
+  }
+
+  .editor-preview hr {
+    border-color: var(--color-base-300);
+    margin: 1.5rem 0;
+  }
+
+  .editor-preview blockquote,
+  .editor-preview table {
+    margin: 1rem 0;
+  }
+
   .editor-preview ul:has(> li > input[type="checkbox"]),
   .editor-preview-side ul:has(> li > input[type="checkbox"]) {
     list-style: none;
