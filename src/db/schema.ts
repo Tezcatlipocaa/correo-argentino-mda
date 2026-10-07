@@ -509,6 +509,7 @@ export const qualityAudits = sqliteTable(
     isPas: integer("is_pas", { mode: "boolean" }).notNull().default(false),
     appliesMda: integer("applies_mda", { mode: "boolean" }).notNull().default(false),
     staysInMda: integer("stays_in_mda", { mode: "boolean" }).notNull().default(true),
+    isReclamoNovedad: integer("is_reclamo_novedad", { mode: "boolean" }).notNull().default(false),
     recordingUrl: text("recording_url"),
   },
   (table) => ({

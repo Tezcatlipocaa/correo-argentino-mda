@@ -240,6 +240,14 @@ export const server = {
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
           )
           .default(true),
+        callTicketMode: z.string().optional(),
+        isReclamoNovedad: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1" || v === "reclamo",
+          )
+          .default(false),
         appliesMda: z
           .any()
           .transform(
@@ -292,10 +300,23 @@ export const server = {
           .orderBy(auditParameters.order);
       }
 
-      // 2. Determinar si aplica Sección 2
+      // 2. Determinar si aplica Sección 2 y si es Reclamo / Novedad
       let hasSection2 = true;
+      let isReclamoNovedad = input.isReclamoNovedad;
+
       if (input.channelType === "wise_call") {
-        hasSection2 = input.callGeneratedTicket;
+        if (input.callTicketMode === "reclamo") {
+          hasSection2 = true;
+          isReclamoNovedad = true;
+        } else if (input.callTicketMode === "ninguno") {
+          hasSection2 = false;
+          isReclamoNovedad = false;
+        } else if (input.callTicketMode === "nuevo") {
+          hasSection2 = true;
+          isReclamoNovedad = false;
+        } else {
+          hasSection2 = input.callGeneratedTicket;
+        }
       } else if (input.channelType === "wise_email") {
         hasSection2 = input.appliesMda;
       } else if (input.channelType === "invgate_ticket") {
@@ -344,6 +365,7 @@ export const server = {
           checkedCodes,
           hasSection2,
           input.isCriticalFailure,
+          isReclamoNovedad,
         );
 
       const auditData = {
@@ -364,6 +386,7 @@ export const server = {
         isPas: input.isPas,
         appliesMda: input.channelType === "wise_call" ? hasSection2 : input.appliesMda,
         staysInMda: input.staysInMda,
+        isReclamoNovedad,
         isCriticalFailure: input.isCriticalFailure,
         recordingUrl: input.recordingUrl || null,
       };

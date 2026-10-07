@@ -227,6 +227,7 @@ const operatorsQuality = finalAgents.map((agent) => {
         ? (audit.appliesMda ?? true)
         : audit.appliesMda,
       staysInMda: audit.staysInMda,
+      isReclamoNovedad: audit.isReclamoNovedad ?? false,
       recordingUrl: audit.recordingUrl,
       comments: parameterComments,
       section1: {
@@ -1802,7 +1803,10 @@ const cleanBase = getCleanBase();
           tvAudioDownload.href = downloadUrl;
           tvAudioContainer.classList.remove("hidden");
         }
-        if (toggleCallGeneratedTicket) {
+        if ((callData.channelType || "wise_call") === "wise_call") {
+          const isReclamo = !!callData.isReclamoNovedad;
+          (window as any).setAuditTicketMode?.(isReclamo ? "reclamo" : "nuevo");
+        } else if (toggleCallGeneratedTicket) {
           toggleCallGeneratedTicket.checked = (callData.channelType || "wise_call") === "wise_call"
             ? (callData.appliesMda ?? true)
             : (callData.appliesMda !== false);
@@ -1866,6 +1870,7 @@ const cleanBase = getCleanBase();
         if (formIsPas) formIsPas.checked = false;
         if (caseSearchInput) caseSearchInput.value = "";
         if (alertBox) alertBox.classList.add("hidden");
+        (window as any).setAuditTicketMode?.("nuevo");
         if (toggleCallGeneratedTicket) {
           toggleCallGeneratedTicket.checked = true;
           toggleCallGeneratedTicket.dispatchEvent(new Event("change"));
@@ -1932,10 +1937,18 @@ const cleanBase = getCleanBase();
 
       const formData = new FormData(auditForm);
       const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
+      const callTicketModeInput = document.getElementById("call-ticket-mode") as HTMLInputElement | null;
+      const isReclamoInput = document.getElementById("form-is-reclamo-novedad") as HTMLInputElement | null;
       const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
       const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
       if (toggleCallGeneratedTicket) {
         formData.set("callGeneratedTicket", toggleCallGeneratedTicket.checked ? "true" : "false");
+      }
+      if (callTicketModeInput) {
+        formData.set("callTicketMode", callTicketModeInput.value);
+      }
+      if (isReclamoInput) {
+        formData.set("isReclamoNovedad", isReclamoInput.value);
       }
       if (toggleAppliesMda) {
         formData.set("appliesMda", toggleAppliesMda.checked ? "true" : "false");

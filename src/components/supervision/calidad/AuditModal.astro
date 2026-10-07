@@ -20,7 +20,19 @@ const approvedTitles = await getApprovedTitlesList();
 const wiseCallParams = allParameters.filter(
   (p) => p.channel === "wise_call" || !p.channel,
 );
+const wiseCallTicketParams = wiseCallParams.filter(
+  (p) =>
+    (p.section === "ticket" ||
+      p.category === "Ticket" ||
+      p.category === "Gestión del Ticket") &&
+    p.code !== "call_ticket_reclamo_novedad",
+);
 const wiseEmailParams = allParameters.filter((p) => p.channel === "wise_email");
+const wiseEmailMdaParams = wiseEmailParams.filter(
+  (p) =>
+    (p.section === "mda" || p.category === "MDA") &&
+    p.code !== "email_mda_reclamo_novedad",
+);
 const invgateAgParams = allParameters.filter(
   (p) => p.channel === "invgate_ticket",
 );
@@ -540,10 +552,37 @@ const invgateAgParams = allParameters.filter(
               <!-- S1: Gestión de la llamada -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
                 <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
-                  <span>1. Gestión de la llamada / atención</span>
-                  <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  <div class="flex items-center gap-2">
+                    <span>1. Gestión de la llamada / atención</span>
+                    <span class="text-base-content/40 text-xxs font-semibold">Base: 45 pts</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      data-target-group="wise-call-s1"
+                      data-action="check-all"
+                      title="Marcar todos los ítems de llamada"
+                    >
+                      <Icon name="boxicons:check-double" size={13} />
+                      <span class="text-3xs">Todos</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      data-target-group="wise-call-s1"
+                      data-action="uncheck-all"
+                      title="Desmarcar todos los ítems de llamada"
+                    >
+                      <Icon name="boxicons:x" size={13} />
+                      <span class="text-3xs">Ninguno</span>
+                    </button>
+                  </div>
                 </div>
-                <div class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                <div
+                  data-checklist-group="wise-call-s1"
+                  class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                >
                   {
                     wiseCallParams
                       .filter(
@@ -607,86 +646,142 @@ const invgateAgParams = allParameters.filter(
                 </div>
               </div>
 
-              <!-- S2: Ticket (Condicional) -->
+              <!-- S2: Ticket (Condicional con selector claro Ticket nuevo vs Reclamo/Novedad) -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
-                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
-                  <span>2. Ticket (Gestión y registro)</span>
-                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                    <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
-                      ¿Se generó ticket?
-                    </span>
-                    <input
-                      type="checkbox"
-                      name="callGeneratedTicket"
-                      id="toggle-call-generated-ticket"
-                      class="toggle toggle-primary toggle-xs"
-                      checked
-                    />
-                  </label>
+                <div class="border-base-200 mb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 text-xs font-bold text-base-content">
+                  <div class="flex items-center gap-2">
+                    <span>2. Ticket (Gestión y registro)</span>
+                    <span class="text-base-content/40 text-xxs font-semibold">Base: 55 pts</span>
+                  </div>
+                  <!-- Selector Segmentado Claro -->
+                  <div class="join bg-base-200/70 p-0.5 rounded-lg border border-base-200 shadow-2xs self-start sm:self-auto" id="ticket-mode-join">
+                    <button
+                      type="button"
+                      class="btn btn-2xs join-item ticket-mode-btn btn-active bg-base-100 text-primary font-bold shadow-2xs border-transparent transition-all px-2.5"
+                      data-mode="nuevo"
+                      title="Evaluar parámetros del ticket generado"
+                    >
+                      <Icon name="boxicons:file-plus" size={13} />
+                      <span>Ticket nuevo</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-2xs join-item ticket-mode-btn font-medium text-base-content/70 hover:text-primary hover:bg-base-100/50 border-transparent transition-all px-2.5"
+                      data-mode="reclamo"
+                      title="Ticket ya existente. Otorga 100% automático (55 pts) sin evaluar parámetros"
+                    >
+                      <Icon name="boxicons:badge-check" size={13} />
+                      <span>Reclamo / Novedad</span>
+                    </button>
+                  </div>
+                  <!-- Hidden inputs para persistencia -->
+                  <input type="hidden" name="callTicketMode" id="call-ticket-mode" value="nuevo" />
+                  <input type="hidden" name="callGeneratedTicket" id="toggle-call-generated-ticket" value="true" />
+                  <input type="hidden" name="isReclamoNovedad" id="form-is-reclamo-novedad" value="false" />
                 </div>
+
+                <!-- Sub-barra con acciones de selección masiva en caso de ticket nuevo -->
+                <div id="wise-call-ticket-actions" class="flex items-center justify-between px-1 mb-2">
+                  <span class="text-3xs text-base-content/50 uppercase font-semibold">Parámetros a evaluar:</span>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      data-target-group="wise-call-s2"
+                      data-action="check-all"
+                      title="Marcar todos los ítems de ticket"
+                    >
+                      <Icon name="boxicons:check-double" size={13} />
+                      <span class="text-3xs">Todos</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      data-target-group="wise-call-s2"
+                      data-action="uncheck-all"
+                      title="Desmarcar todos los ítems de ticket"
+                    >
+                      <Icon name="boxicons:x" size={13} />
+                      <span class="text-3xs">Ninguno</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Tarjeta Visual Informativa: Reclamo / Novedad (100% Automático) -->
+                <div
+                  id="wise-call-reclamo-card"
+                  class="hidden flex-col items-center justify-center p-5 text-center rounded-xl bg-success/5 border border-success/20 my-1 animate-fade-in"
+                >
+                  <div class="p-2.5 bg-success/15 text-success rounded-full mb-2">
+                    <Icon name="boxicons:badge-check" size={24} />
+                  </div>
+                  <h5 class="text-xs font-bold text-base-content mb-0.5">Reclamo / Novedad existente</h5>
+                  <p class="text-xxs text-base-content/70 max-w-sm leading-relaxed mb-2">
+                    La atención correspondió a una consulta, reclamo o novedad de un ticket preexistente. No requiere evaluación individual de campos de ticket.
+                  </p>
+                  <div class="badge badge-success badge-sm font-bold gap-1 shadow-2xs">
+                    <Icon name="boxicons:check" size={14} />
+                    <span>Puntaje Sección 2: 55 / 55 pts (100%)</span>
+                  </div>
+                </div>
+
                 <div
                   id="wise-call-ticket-block"
+                  data-checklist-group="wise-call-s2"
                   class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
                 >
                   {
-                    wiseCallParams
-                      .filter(
-                        (p) =>
-                          p.section === "ticket" ||
-                          p.category === "Ticket" ||
-                          p.category === "Gestión del Ticket",
-                      )
-                      .map((p) => (
-                        <div class="checklist-item py-2 px-1 transition-colors">
-                          <div class="flex items-start justify-between gap-2.5">
-                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
-                              <input
-                                type="checkbox"
-                                name={p.code}
-                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                                data-weight={p.weight ?? 0}
-                                data-section="ticket"
-                                checked
-                              />
-                              <span class="label-text text-xs leading-snug text-base-content font-medium">
-                                {p.name}
-                                {p.weight ? (
-                                  <span class="text-error font-semibold ml-1 text-xs">
-                                    (-{p.weight}%)
-                                  </span>
-                                ) : (
-                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
-                                )}
-                              </span>
-                            </label>
-                            <div class="flex items-center gap-1 shrink-0">
-                              <span
-                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
-                                data-rule-badge={p.code}
-                              >
-                                Regla
-                              </span>
-                              <button
-                                type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
-                                data-action="toggle-obs"
-                                title="Agregar nota"
-                              >
-                                <Icon name="boxicons:message" size={13} />
-                                <span class="text-3xs hidden sm:inline">Nota</span>
-                              </button>
-                            </div>
-                          </div>
-                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                    wiseCallTicketParams.map((p) => (
+                      <div class="checklist-item py-2 px-1 transition-colors">
+                        <div class="flex items-start justify-between gap-2.5">
+                          <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
                             <input
-                              type="text"
-                              name={`${p.code}_comment`}
-                              placeholder="Motivo de penalización u observación..."
-                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                              type="checkbox"
+                              name={p.code}
+                              class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                              data-weight={p.weight ?? 0}
+                              data-section="ticket"
+                              checked
                             />
+                            <span class="label-text text-xs leading-snug text-base-content font-medium">
+                              {p.name}
+                              {p.weight ? (
+                                <span class="text-error font-semibold ml-1 text-xs">
+                                  (-{p.weight}%)
+                                </span>
+                              ) : (
+                                <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                              )}
+                            </span>
+                          </label>
+                          <div class="flex items-center gap-1 shrink-0">
+                            <span
+                              class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                              data-rule-badge={p.code}
+                            >
+                              Regla
+                            </span>
+                            <button
+                              type="button"
+                              class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                              data-action="toggle-obs"
+                              title="Agregar nota"
+                            >
+                              <Icon name="boxicons:message" size={13} />
+                              <span class="text-3xs hidden sm:inline">Nota</span>
+                            </button>
                           </div>
                         </div>
-                      ))
+                        <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                          <input
+                            type="text"
+                            name={`${p.code}_comment`}
+                            placeholder="Motivo de penalización u observación..."
+                            class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    ))
                   }
                 </div>
                 <!-- Estado Vacío Elegante (Sin Ticket) -->
@@ -716,10 +811,37 @@ const invgateAgParams = allParameters.filter(
               <!-- S1: Gestión Correo -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
                 <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
-                  <span>1. Gestión general del correo</span>
-                  <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  <div class="flex items-center gap-2">
+                    <span>1. Gestión general del correo</span>
+                    <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      data-target-group="wise-email-s1"
+                      data-action="check-all"
+                      title="Marcar todos los ítems de correo"
+                    >
+                      <Icon name="boxicons:check-double" size={13} />
+                      <span class="text-3xs">Todos</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      data-target-group="wise-email-s1"
+                      data-action="uncheck-all"
+                      title="Desmarcar todos los ítems de correo"
+                    >
+                      <Icon name="boxicons:x" size={13} />
+                      <span class="text-3xs">Ninguno</span>
+                    </button>
+                  </div>
                 </div>
-                <div class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                <div
+                  data-checklist-group="wise-email-s1"
+                  class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                >
                   {
                     wiseEmailParams
                       .filter((p) => p.section === "items")
@@ -781,77 +903,103 @@ const invgateAgParams = allParameters.filter(
               <!-- S2: Items MDA (Condicional) -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
                 <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
-                  <span>2. Items categoría MDA (Ticket)</span>
-                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                    <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
-                      ¿Se generó ticket?
-                    </span>
-                    <input
-                      type="checkbox"
-                      name="appliesMda"
-                      id="toggle-applies-mda"
-                      class="toggle toggle-primary toggle-xs"
-                    />
-                  </label>
+                  <div class="flex items-center gap-2">
+                    <span>2. Items categoría MDA (Ticket)</span>
+                    <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  </div>
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-1">
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                        data-target-group="wise-email-s2"
+                        data-action="check-all"
+                        title="Marcar todos los ítems de MDA"
+                      >
+                        <Icon name="boxicons:check-double" size={13} />
+                        <span class="text-3xs">Todos</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                        data-target-group="wise-email-s2"
+                        data-action="uncheck-all"
+                        title="Desmarcar todos los ítems de MDA"
+                      >
+                        <Icon name="boxicons:x" size={13} />
+                        <span class="text-3xs">Ninguno</span>
+                      </button>
+                    </div>
+                    <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                      <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                        ¿Aplica ticket MDA?
+                      </span>
+                      <input
+                        type="checkbox"
+                        name="appliesMda"
+                        id="toggle-applies-mda"
+                        class="toggle toggle-primary toggle-xs"
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div
                   id="wise-email-mda-block"
+                  data-checklist-group="wise-email-s2"
                   class="hidden space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
                 >
                   {
-                    wiseEmailParams
-                      .filter((p) => p.section === "mda")
-                      .map((p) => (
-                        <div class="checklist-item py-2 px-1 transition-colors">
-                          <div class="flex items-start justify-between gap-2.5">
-                            <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
-                              <input
-                                type="checkbox"
-                                name={p.code}
-                                class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
-                                data-weight={p.weight ?? 0}
-                                data-section="mda"
-                                checked
-                              />
-                              <span class="label-text text-xs leading-snug text-base-content font-medium">
-                                {p.name}
-                                {p.weight ? (
-                                  <span class="text-error font-semibold ml-1 text-xs">
-                                    (-{p.weight}%)
-                                  </span>
-                                ) : (
-                                  <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
-                                )}
-                              </span>
-                            </label>
-                            <div class="flex items-center gap-1 shrink-0">
-                              <span
-                                class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
-                                data-rule-badge={p.code}
-                              >
-                                Regla
-                              </span>
-                              <button
-                                type="button"
-                                class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
-                                data-action="toggle-obs"
-                                title="Agregar nota"
-                              >
-                                <Icon name="boxicons:message" size={13} />
-                                <span class="text-3xs hidden sm:inline">Nota</span>
-                              </button>
-                            </div>
-                          </div>
-                          <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                    wiseEmailMdaParams.map((p) => (
+                      <div class="checklist-item py-2 px-1 transition-colors">
+                        <div class="flex items-start justify-between gap-2.5">
+                          <label class="label cursor-pointer justify-start gap-2.5 p-0 items-start flex-1 min-w-0">
                             <input
-                              type="text"
-                              name={`${p.code}_comment`}
-                              placeholder="Motivo de penalización u observación..."
-                              class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                              type="checkbox"
+                              name={p.code}
+                              class="checkbox checkbox-primary checkbox-xs sm:checkbox-sm audit-checkbox mt-0.5 shrink-0"
+                              data-weight={p.weight ?? 0}
+                              data-section="mda"
+                              checked
                             />
+                            <span class="label-text text-xs leading-snug text-base-content font-medium">
+                              {p.name}
+                              {p.weight ? (
+                                <span class="text-error font-semibold ml-1 text-xs">
+                                  (-{p.weight}%)
+                                </span>
+                              ) : (
+                                <span class="ml-1 text-xs opacity-50 font-normal">(n/a)</span>
+                              )}
+                            </span>
+                          </label>
+                          <div class="flex items-center gap-1 shrink-0">
+                            <span
+                              class="badge badge-warning badge-xs rule-auto-badge hidden font-semibold text-3xs"
+                              data-rule-badge={p.code}
+                            >
+                              Regla
+                            </span>
+                            <button
+                              type="button"
+                              class="btn btn-ghost btn-2xs text-base-content/40 hover:text-secondary transition-colors toggle-obs-btn"
+                              data-action="toggle-obs"
+                              title="Agregar nota"
+                            >
+                              <Icon name="boxicons:message" size={13} />
+                              <span class="text-3xs hidden sm:inline">Nota</span>
+                            </button>
                           </div>
                         </div>
-                      ))
+                        <div class="criteria-obs-wrapper hidden mt-2 pl-6">
+                          <input
+                            type="text"
+                            name={`${p.code}_comment`}
+                            placeholder="Motivo de penalización u observación..."
+                            class="input input-xs bg-base-200/30 border border-base-200 focus:border-primary text-xs w-full placeholder:text-base-content/40 rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    ))
                   }
                 </div>
                 <!-- Estado Vacío Elegante (Sin Ticket) -->
@@ -881,10 +1029,37 @@ const invgateAgParams = allParameters.filter(
               <!-- S1: Gestión Caso -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
                 <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
-                  <span>1. Gestión general del caso</span>
-                  <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  <div class="flex items-center gap-2">
+                    <span>1. Gestión general del caso</span>
+                    <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      data-target-group="invgate-ag-s1"
+                      data-action="check-all"
+                      title="Marcar todos los ítems de autogestión"
+                    >
+                      <Icon name="boxicons:check-double" size={13} />
+                      <span class="text-3xs">Todos</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      data-target-group="invgate-ag-s1"
+                      data-action="uncheck-all"
+                      title="Desmarcar todos los ítems de autogestión"
+                    >
+                      <Icon name="boxicons:x" size={13} />
+                      <span class="text-3xs">Ninguno</span>
+                    </button>
+                  </div>
                 </div>
-                <div class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin">
+                <div
+                  data-checklist-group="invgate-ag-s1"
+                  class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                >
                   {
                     invgateAgParams
                       .filter((p) => p.section === "items")
@@ -946,22 +1121,50 @@ const invgateAgParams = allParameters.filter(
               <!-- S2: Items MDA -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
                 <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
-                  <span>2. Items categoría MDA</span>
-                  <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                    <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
-                      ¿Queda en MDA?
-                    </span>
-                    <input
-                      type="checkbox"
-                      name="staysInMda"
-                      id="toggle-stays-mda"
-                      class="toggle toggle-primary toggle-xs"
-                      checked
-                    />
-                  </label>
+                  <div class="flex items-center gap-2">
+                    <span>2. Items categoría MDA</span>
+                    <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
+                  </div>
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-1">
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                        data-target-group="invgate-ag-s2"
+                        data-action="check-all"
+                        title="Marcar todos los ítems de MDA"
+                      >
+                        <Icon name="boxicons:check-double" size={13} />
+                        <span class="text-3xs">Todos</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                        data-target-group="invgate-ag-s2"
+                        data-action="uncheck-all"
+                        title="Desmarcar todos los ítems de MDA"
+                      >
+                        <Icon name="boxicons:x" size={13} />
+                        <span class="text-3xs">Ninguno</span>
+                      </button>
+                    </div>
+                    <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
+                      <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
+                        ¿Queda en MDA?
+                      </span>
+                      <input
+                        type="checkbox"
+                        name="staysInMda"
+                        id="toggle-stays-mda"
+                        class="toggle toggle-primary toggle-xs"
+                        checked
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div
                   id="invgate-ag-mda-block"
+                  data-checklist-group="invgate-ag-s2"
                   class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
                 >
                   {
@@ -1802,17 +2005,112 @@ const invgateAgParams = allParameters.filter(
     const toggleCallGeneratedTicket = document.getElementById(
       "toggle-call-generated-ticket",
     ) as HTMLInputElement;
+    const callTicketModeInput = document.getElementById(
+      "call-ticket-mode",
+    ) as HTMLInputElement;
+    const formIsReclamoInput = document.getElementById(
+      "form-is-reclamo-novedad",
+    ) as HTMLInputElement;
+    const ticketModeButtons = document.querySelectorAll<HTMLButtonElement>(
+      ".ticket-mode-btn",
+    );
     const wiseCallTicketBlock = document.getElementById(
       "wise-call-ticket-block",
+    );
+    const wiseCallTicketActions = document.getElementById(
+      "wise-call-ticket-actions",
+    );
+    const wiseCallReclamoCard = document.getElementById(
+      "wise-call-reclamo-card",
     );
     const wiseCallTicketPlaceholder = document.getElementById(
       "wise-call-ticket-placeholder",
     );
 
+    function setTicketMode(mode: "nuevo" | "reclamo") {
+      if (callTicketModeInput) callTicketModeInput.value = mode;
+      if (formIsReclamoInput) formIsReclamoInput.value = mode === "reclamo" ? "true" : "false";
+      if (toggleCallGeneratedTicket) toggleCallGeneratedTicket.checked = true;
+
+      ticketModeButtons.forEach((btn) => {
+        const btnMode = btn.getAttribute("data-mode");
+        const isActive = btnMode === mode;
+        btn.classList.toggle("btn-active", isActive);
+        btn.classList.toggle("bg-base-100", isActive);
+        btn.classList.toggle("text-primary", isActive);
+        btn.classList.toggle("font-bold", isActive);
+        btn.classList.toggle("shadow-2xs", isActive);
+        btn.classList.toggle("text-base-content/70", !isActive);
+        btn.classList.toggle("font-medium", !isActive);
+      });
+
+      if (mode === "reclamo") {
+        wiseCallTicketBlock?.classList.add("hidden");
+        wiseCallTicketActions?.classList.add("hidden");
+        wiseCallReclamoCard?.classList.remove("hidden");
+        wiseCallReclamoCard?.classList.add("flex");
+        wiseCallTicketPlaceholder?.classList.add("hidden");
+      } else {
+        wiseCallTicketBlock?.classList.remove("hidden");
+        wiseCallTicketActions?.classList.remove("hidden");
+        wiseCallReclamoCard?.classList.add("hidden");
+        wiseCallReclamoCard?.classList.remove("flex");
+        wiseCallTicketPlaceholder?.classList.add("hidden");
+      }
+
+      recalculateScores();
+    }
+
+    ticketModeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-mode") as "nuevo" | "reclamo";
+        setTicketMode(mode || "nuevo");
+      });
+    });
+
+    (window as any).setAuditTicketMode = setTicketMode;
+
+    // Botones de marcado / desmarcado masivo de sección ("Todos" / "Ninguno")
+    document.querySelectorAll<HTMLButtonElement>(".toggle-all-section-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetGroup = btn.getAttribute("data-target-group");
+        const action = btn.getAttribute("data-action");
+        if (!targetGroup) return;
+
+        const container = document.querySelector(`[data-checklist-group="${targetGroup}"]`);
+        if (!container) return;
+
+        const shouldCheck = action === "check-all";
+        container.querySelectorAll<HTMLInputElement>(".audit-checkbox").forEach((cb) => {
+          cb.checked = shouldCheck;
+          // Si desmarca, revela observaciones si corresponde
+          const item = cb.closest(".checklist-item");
+          const wrapper = item?.querySelector(".criteria-obs-wrapper");
+          const inp = wrapper?.querySelector<HTMLInputElement>("input");
+          if (!shouldCheck) {
+            wrapper?.classList.remove("hidden");
+          } else {
+            if (inp && !inp.value.trim()) {
+              wrapper?.classList.add("hidden");
+            }
+          }
+        });
+
+        recalculateScores();
+      });
+    });
+
     toggleCallGeneratedTicket?.addEventListener("change", () => {
       const active = toggleCallGeneratedTicket.checked;
-      wiseCallTicketBlock?.classList.toggle("hidden", !active);
-      wiseCallTicketPlaceholder?.classList.toggle("hidden", active);
+      if (!active) {
+        wiseCallTicketBlock?.classList.add("hidden");
+        wiseCallTicketActions?.classList.add("hidden");
+        wiseCallReclamoCard?.classList.add("hidden");
+        wiseCallTicketPlaceholder?.classList.remove("hidden");
+      } else {
+        const mode = (callTicketModeInput?.value as "nuevo" | "reclamo") || "nuevo";
+        setTicketMode(mode);
+      }
       recalculateScores();
     });
 
@@ -1939,13 +2237,20 @@ const invgateAgParams = allParameters.filter(
       let hasSection2 = true;
 
       if (channel === "wise_call") {
+        const mode = (callTicketModeInput?.value as "nuevo" | "reclamo") || "nuevo";
+        const isReclamo = mode === "reclamo";
         hasSection2 = toggleCallGeneratedTicket?.checked ?? true;
         const s1Raw = Math.max(0, 45 - s1Deductions);
         s1Score = Math.round((s1Raw / 45) * 100);
         if (hasSection2) {
-          const s2Raw = Math.max(0, 55 - s2Deductions);
-          s2Score = Math.round((s2Raw / 55) * 100);
-          total = s1Raw + s2Raw;
+          if (isReclamo) {
+            s2Score = 100;
+            total = s1Raw + 55;
+          } else {
+            const s2Raw = Math.max(0, 55 - s2Deductions);
+            s2Score = Math.round((s2Raw / 55) * 100);
+            total = s1Raw + s2Raw;
+          }
         } else {
           s2Score = 0;
           total = s1Score;
