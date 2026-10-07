@@ -15,6 +15,9 @@ import { db } from "@db/index";
 import { provinces } from "@db/schema";
 import { officeTypeLabelByType } from "@lib/officeHelpers";
 import { getInternalFetchHeaders, getInternalOrigin } from "@lib/internalOrigin";
+import { getCleanBase } from "@lib/baseUrl";
+
+const cleanBase = getCleanBase();
 
 const allProvinces = await db.select().from(provinces).orderBy(provinces.name);
 
@@ -103,7 +106,7 @@ const rowGridClass =
           la base de datos de MDA. Sincronice los datos para comenzar.
         </p>
         <a
-          href="/admin/invgate/ubicaciones?sync=true"
+          href={`${cleanBase}admin/invgate/ubicaciones?sync=true`}
           class="btn btn-primary btn-md gap-2"
         >
           <Icon
@@ -166,7 +169,7 @@ const rowGridClass =
           {/* Filter buttons */}
           <div class="join border-base-200 rounded-lg border">
             <a
-              href={`/admin/invgate/ubicaciones?filter=all&q=${encodeURIComponent(q)}`}
+              href={`${cleanBase}admin/invgate/ubicaciones?filter=all&q=${encodeURIComponent(q)}`}
               class:list={[
                 "join-item btn btn-md",
                 filter === "all" ? "btn-active btn-neutral" : "bg-base-100",
@@ -175,7 +178,7 @@ const rowGridClass =
               Todos
             </a>
             <a
-              href={`/admin/invgate/ubicaciones?filter=matched&q=${encodeURIComponent(q)}`}
+              href={`${cleanBase}admin/invgate/ubicaciones?filter=matched&q=${encodeURIComponent(q)}`}
               class:list={[
                 "join-item btn btn-md",
                 filter === "matched" ? "btn-active btn-neutral" : "bg-base-100",
@@ -184,7 +187,7 @@ const rowGridClass =
               Matcheados
             </a>
             <a
-              href={`/admin/invgate/ubicaciones?filter=unmatched&q=${encodeURIComponent(q)}`}
+              href={`${cleanBase}admin/invgate/ubicaciones?filter=unmatched&q=${encodeURIComponent(q)}`}
               class:list={[
                 "join-item btn btn-md",
                 filter === "unmatched"
@@ -199,7 +202,7 @@ const rowGridClass =
           <div class="flex gap-2">
             {/* Trigger Sync */}
             <a
-              href="/admin/invgate/ubicaciones?sync=true"
+              href={`${cleanBase}admin/invgate/ubicaciones?sync=true`}
               class="btn btn-outline btn-md gap-2"
               title="Volver a sincronizar"
             >
@@ -288,7 +291,11 @@ const rowGridClass =
     <h3 class="text-base-content mb-4 text-lg font-bold">
       Crear nueva oficina
     </h3>
-    <form id="create_office_form" class="space-y-4">
+    <form
+      id="create_office_form"
+      class="space-y-4"
+      data-api-url={`${cleanBase}api/admin/offices/create`}
+    >
       <FormField id="office-code" name="code" label="Código NIS" required />
       <FormField id="office-name" name="name" label="Nombre" required />
       <FormField id="office-address" name="address" label="Dirección" />
@@ -405,7 +412,8 @@ const rowGridClass =
       }
 
       try {
-        const res = await fetch("/api/admin/offices/create", {
+        const apiUrl = form.dataset.apiUrl || "/api/admin/offices/create";
+        const res = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -461,7 +469,9 @@ const rowGridClass =
 
 <script>
   import { highlightSearchTargets } from "@lib/clientSearch";
+  import { getCleanBase } from "@lib/baseUrl";
 
+  const cleanBase = getCleanBase();
   const sentinel = document.getElementById("locations-sentinel");
   const container = document.getElementById("locations-container");
   const spinner = document.getElementById("locations-spinner");
@@ -495,7 +505,7 @@ const rowGridClass =
       if (query) params.set("q", query);
 
       const response = await fetch(
-        `/api/invgate/locations/rows?${params.toString()}`,
+        `${cleanBase}api/invgate/locations/rows?${params.toString()}`,
       );
       if (!response.ok) throw new Error("API call failed");
 
