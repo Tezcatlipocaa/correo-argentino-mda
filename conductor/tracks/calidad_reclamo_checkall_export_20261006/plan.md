@@ -2,10 +2,10 @@
 
 ## Phase 1: Modal de Auditoría — Lógica de Reclamo/Novedad vs Ticket Nuevo
 
-- [ ] Task: Unit tests para cálculo de scores con Reclamo/Novedad vs Ticket Nuevo
-  - [ ] Escribir tests en `tests/unit/qualityCalculator.test.ts` (o suite equivalente) validando que el modo Reclamo/Novedad asigne automáticamente 100% (55/55 pts en llamadas, 100% en mails) a la sección 2.
-  - [ ] Validar que el modo Ticket Nuevo calcule scores basándose en las deducciones de los parámetros evaluados.
-  - [ ] Confirmar fallo inicial de los tests (Fase Roja de TDD).
+- [x] Task: Unit tests para cálculo de scores con Reclamo/Novedad vs Ticket Nuevo [7f68937]
+  - [x] Escribir tests en `tests/unit/qualityCalculator.test.ts` (o suite equivalente) validando que el modo Reclamo/Novedad asigne automáticamente 100% (55/55 pts en llamadas, 100% en mails) a la sección 2.
+  - [x] Validar que el modo Ticket Nuevo calcule scores basándose en las deducciones de los parámetros evaluados.
+  - [x] Confirmar fallo inicial de los tests (Fase Roja de TDD).
 - [ ] Task: Implementación del selector visual en `AuditModal.astro`
   - [ ] Reemplazar el toggle simple `¿Se generó ticket?` por un selector claro y segmentado entre "Ticket nuevo generado" y "Reclamo / Novedad existente".
   - [ ] Adaptar la interfaz para ocultar/deshabilitar los 8 checks individuales cuando se elija "Reclamo / Novedad" con mensaje informativo.
