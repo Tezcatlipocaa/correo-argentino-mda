@@ -241,6 +241,7 @@ export const server = {
           )
           .default(true),
         callTicketMode: z.string().optional(),
+        emailTicketMode: z.string().optional(),
         isReclamoNovedad: z
           .any()
           .transform(
@@ -318,7 +319,14 @@ export const server = {
           hasSection2 = input.callGeneratedTicket;
         }
       } else if (input.channelType === "wise_email") {
-        hasSection2 = input.appliesMda;
+        hasSection2 = true;
+        if (input.emailTicketMode === "reclamo") {
+          isReclamoNovedad = true;
+        } else if (input.emailTicketMode === "nuevo") {
+          isReclamoNovedad = false;
+        } else {
+          isReclamoNovedad = input.isReclamoNovedad;
+        }
       } else if (input.channelType === "invgate_ticket") {
         hasSection2 = input.staysInMda;
       }
@@ -384,7 +392,12 @@ export const server = {
         creationTime: input.creationTime || null,
         takeTime: input.takeTime || null,
         isPas: input.isPas,
-        appliesMda: input.channelType === "wise_call" ? hasSection2 : input.appliesMda,
+        appliesMda:
+          input.channelType === "wise_call"
+            ? hasSection2
+            : input.channelType === "wise_email"
+              ? true
+              : input.appliesMda,
         staysInMda: input.staysInMda,
         isReclamoNovedad,
         isCriticalFailure: input.isCriticalFailure,

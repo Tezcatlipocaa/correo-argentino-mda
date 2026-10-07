@@ -556,26 +556,27 @@ const invgateAgParams = allParameters.filter(
                     <span>1. Gestión de la llamada / atención</span>
                     <span class="text-base-content/40 text-xxs font-semibold">Base: 45 pts</span>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div class="inline-flex items-center rounded-md bg-base-200/60 border border-base-300/60 p-0.5 shadow-2xs">
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-secondary hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-secondary/50"
                       data-target-group="wise-call-s1"
                       data-action="check-all"
                       title="Marcar todos los ítems de llamada"
                     >
-                      <Icon name="boxicons:check-double" size={13} />
-                      <span class="text-3xs">Todos</span>
+                      <Icon name="boxicons:checkbox-checked" size={13} class="text-secondary shrink-0" />
+                      <span>Todos</span>
                     </button>
+                    <span class="w-px h-2.5 bg-base-300/80 mx-0.5 select-none" aria-hidden="true"></span>
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-base-content/30"
                       data-target-group="wise-call-s1"
                       data-action="uncheck-all"
                       title="Desmarcar todos los ítems de llamada"
                     >
-                      <Icon name="boxicons:x" size={13} />
-                      <span class="text-3xs">Ninguno</span>
+                      <Icon name="boxicons:checkbox" size={13} class="text-base-content/40 shrink-0" />
+                      <span>Ninguno</span>
                     </button>
                   </div>
                 </div>
@@ -654,23 +655,23 @@ const invgateAgParams = allParameters.filter(
                     <span class="text-base-content/40 text-xxs font-semibold">Base: 55 pts</span>
                   </div>
                   <!-- Selector Segmentado Claro -->
-                  <div class="join bg-base-200/70 p-0.5 rounded-lg border border-base-200 shadow-2xs self-start sm:self-auto" id="ticket-mode-join">
+                  <div class="inline-flex items-center p-0.5 rounded-lg bg-base-200/90 border border-base-300/80 shadow-2xs gap-0.5 self-start sm:self-auto" id="ticket-mode-join">
                     <button
                       type="button"
-                      class="btn btn-2xs join-item ticket-mode-btn btn-active bg-base-100 text-primary font-bold shadow-2xs border-transparent transition-all px-2.5"
+                      class="btn btn-2xs h-6 min-h-6 px-2.5 text-xxs rounded-md ticket-mode-btn btn-active bg-secondary text-secondary-content font-bold shadow-xs border-transparent transition-all gap-1.5 focus-visible:ring-2 focus-visible:ring-secondary/50"
                       data-mode="nuevo"
                       title="Evaluar parámetros del ticket generado"
                     >
-                      <Icon name="boxicons:file-plus" size={13} />
+                      <Icon name="boxicons:file-plus" size={12} />
                       <span>Ticket nuevo</span>
                     </button>
                     <button
                       type="button"
-                      class="btn btn-2xs join-item ticket-mode-btn font-medium text-base-content/70 hover:text-primary hover:bg-base-100/50 border-transparent transition-all px-2.5"
+                      class="btn btn-2xs h-6 min-h-6 px-2.5 text-xxs rounded-md ticket-mode-btn text-base-content/75 font-medium hover:text-secondary hover:bg-base-100/80 border-transparent transition-all gap-1.5 focus-visible:ring-2 focus-visible:ring-secondary/50"
                       data-mode="reclamo"
                       title="Ticket ya existente. Otorga 100% automático (55 pts) sin evaluar parámetros"
                     >
-                      <Icon name="boxicons:badge-check" size={13} />
+                      <Icon name="boxicons:badge-check" size={12} />
                       <span>Reclamo / Novedad</span>
                     </button>
                   </div>
@@ -683,26 +684,27 @@ const invgateAgParams = allParameters.filter(
                 <!-- Sub-barra con acciones de selección masiva en caso de ticket nuevo -->
                 <div id="wise-call-ticket-actions" class="flex items-center justify-between px-1 mb-2">
                   <span class="text-3xs text-base-content/50 uppercase font-semibold">Parámetros a evaluar:</span>
-                  <div class="flex items-center gap-1">
+                  <div class="inline-flex items-center rounded-md bg-base-200/60 border border-base-300/60 p-0.5 shadow-2xs">
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-secondary hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-secondary/50"
                       data-target-group="wise-call-s2"
                       data-action="check-all"
                       title="Marcar todos los ítems de ticket"
                     >
-                      <Icon name="boxicons:check-double" size={13} />
-                      <span class="text-3xs">Todos</span>
+                      <Icon name="boxicons:checkbox-checked" size={13} class="text-secondary shrink-0" />
+                      <span>Todos</span>
                     </button>
+                    <span class="w-px h-2.5 bg-base-300/80 mx-0.5 select-none" aria-hidden="true"></span>
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-base-content/30"
                       data-target-group="wise-call-s2"
                       data-action="uncheck-all"
                       title="Desmarcar todos los ítems de ticket"
                     >
-                      <Icon name="boxicons:x" size={13} />
-                      <span class="text-3xs">Ninguno</span>
+                      <Icon name="boxicons:checkbox" size={13} class="text-base-content/40 shrink-0" />
+                      <span>Ninguno</span>
                     </button>
                   </div>
                 </div>
@@ -815,26 +817,27 @@ const invgateAgParams = allParameters.filter(
                     <span>1. Gestión general del correo</span>
                     <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div class="inline-flex items-center rounded-md bg-base-200/60 border border-base-300/60 p-0.5 shadow-2xs">
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-secondary hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-secondary/50"
                       data-target-group="wise-email-s1"
                       data-action="check-all"
                       title="Marcar todos los ítems de correo"
                     >
-                      <Icon name="boxicons:check-double" size={13} />
-                      <span class="text-3xs">Todos</span>
+                      <Icon name="boxicons:checkbox-checked" size={13} class="text-secondary shrink-0" />
+                      <span>Todos</span>
                     </button>
+                    <span class="w-px h-2.5 bg-base-300/80 mx-0.5 select-none" aria-hidden="true"></span>
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-base-content/30"
                       data-target-group="wise-email-s1"
                       data-action="uncheck-all"
                       title="Desmarcar todos los ítems de correo"
                     >
-                      <Icon name="boxicons:x" size={13} />
-                      <span class="text-3xs">Ninguno</span>
+                      <Icon name="boxicons:checkbox" size={13} class="text-base-content/40 shrink-0" />
+                      <span>Ninguno</span>
                     </button>
                   </div>
                 </div>
@@ -900,53 +903,92 @@ const invgateAgParams = allParameters.filter(
                 </div>
               </div>
 
-              <!-- S2: Items MDA (Condicional) -->
+              <!-- S2: Items MDA (Ticket) -->
               <div class="bg-base-100 border border-base-200 rounded-xl p-3.5 shadow-2xs">
-                <div class="border-base-200 mb-2.5 flex items-center justify-between border-b pb-2 text-xs font-bold text-base-content">
+                <div class="border-base-200 mb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 text-xs font-bold text-base-content">
                   <div class="flex items-center gap-2">
                     <span>2. Items categoría MDA (Ticket)</span>
                     <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
                   </div>
-                  <div class="flex items-center gap-2.5">
-                    <div class="flex items-center gap-1">
-                      <button
-                        type="button"
-                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
-                        data-target-group="wise-email-s2"
-                        data-action="check-all"
-                        title="Marcar todos los ítems de MDA"
-                      >
-                        <Icon name="boxicons:check-double" size={13} />
-                        <span class="text-3xs">Todos</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
-                        data-target-group="wise-email-s2"
-                        data-action="uncheck-all"
-                        title="Desmarcar todos los ítems de MDA"
-                      >
-                        <Icon name="boxicons:x" size={13} />
-                        <span class="text-3xs">Ninguno</span>
-                      </button>
-                    </div>
-                    <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
-                      <span class="label-text text-xxs font-bold uppercase tracking-wider text-base-content/70">
-                        ¿Aplica ticket MDA?
-                      </span>
-                      <input
-                        type="checkbox"
-                        name="appliesMda"
-                        id="toggle-applies-mda"
-                        class="toggle toggle-primary toggle-xs"
-                      />
-                    </label>
+                  <!-- Selector Segmentado Claro (idéntico a Llamada Wise) -->
+                  <div
+                    class="inline-flex items-center p-0.5 rounded-lg bg-base-200/90 border border-base-300/80 shadow-2xs gap-0.5 self-start sm:self-auto"
+                    id="email-ticket-mode-join"
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-2xs h-6 min-h-6 px-2.5 text-xxs rounded-md email-ticket-mode-btn btn-active bg-secondary text-secondary-content font-bold shadow-xs border-transparent transition-all gap-1.5 focus-visible:ring-2 focus-visible:ring-secondary/50"
+                      data-mode="nuevo"
+                      title="Evaluar parámetros del ticket generado en MDA"
+                    >
+                      <Icon name="boxicons:file-plus" size={12} />
+                      <span>Ticket nuevo</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-2xs h-6 min-h-6 px-2.5 text-xxs rounded-md email-ticket-mode-btn text-base-content/75 font-medium hover:text-secondary hover:bg-base-100/80 border-transparent transition-all gap-1.5 focus-visible:ring-2 focus-visible:ring-secondary/50"
+                      data-mode="reclamo"
+                      title="Ticket ya existente. Otorga 100% automático sin evaluar parámetros"
+                    >
+                      <Icon name="boxicons:badge-check" size={12} />
+                      <span>Reclamo / Novedad</span>
+                    </button>
+                  </div>
+                  <!-- Hidden inputs para persistencia -->
+                  <input type="hidden" name="emailTicketMode" id="email-ticket-mode" value="nuevo" />
+                  <input type="hidden" name="appliesMda" id="toggle-applies-mda" value="true" />
+                </div>
+
+                <!-- Sub-barra con acciones de selección masiva para Mail Wise S2 -->
+                <div id="wise-email-mda-actions" class="flex items-center justify-between px-1 mb-2">
+                  <span class="text-3xs text-base-content/50 uppercase font-semibold">Parámetros a evaluar:</span>
+                  <div class="inline-flex items-center rounded-md bg-base-200/60 border border-base-300/60 p-0.5 shadow-2xs">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-secondary hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-secondary/50"
+                      data-target-group="wise-email-s2"
+                      data-action="check-all"
+                      title="Marcar todos los ítems de MDA"
+                    >
+                      <Icon name="boxicons:checkbox-checked" size={13} class="text-secondary shrink-0" />
+                      <span>Todos</span>
+                    </button>
+                    <span class="w-px h-2.5 bg-base-300/80 mx-0.5 select-none" aria-hidden="true"></span>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-base-content/30"
+                      data-target-group="wise-email-s2"
+                      data-action="uncheck-all"
+                      title="Desmarcar todos los ítems de MDA"
+                    >
+                      <Icon name="boxicons:checkbox" size={13} class="text-base-content/40 shrink-0" />
+                      <span>Ninguno</span>
+                    </button>
                   </div>
                 </div>
+
+                <!-- Tarjeta Visual Informativa: Reclamo / Novedad para Mail Wise (100% Automático) -->
+                <div
+                  id="wise-email-reclamo-card"
+                  class="hidden flex-col items-center justify-center p-5 text-center rounded-xl bg-success/5 border border-success/20 my-1 animate-fade-in"
+                >
+                  <div class="p-2.5 bg-success/15 text-success rounded-full mb-2">
+                    <Icon name="boxicons:badge-check" size={24} />
+                  </div>
+                  <h5 class="text-xs font-bold text-base-content mb-0.5">Reclamo / Novedad existente</h5>
+                  <p class="text-xxs text-base-content/70 max-w-sm leading-relaxed mb-2">
+                    La gestión del correo correspondió a una consulta, reclamo o novedad de un ticket preexistente. No requiere evaluación individual de campos de ticket.
+                  </p>
+                  <div class="badge badge-success badge-sm font-bold gap-1 shadow-2xs">
+                    <Icon name="boxicons:check" size={14} />
+                    <span>Puntaje Sección 2: 100% (Automático)</span>
+                  </div>
+                </div>
+
                 <div
                   id="wise-email-mda-block"
                   data-checklist-group="wise-email-s2"
-                  class="hidden space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
+                  class="space-y-0.5 divide-y divide-base-200/60 max-h-[380px] overflow-y-auto pr-1.5 scrollbar-thin"
                 >
                   {
                     wiseEmailMdaParams.map((p) => (
@@ -1002,22 +1044,6 @@ const invgateAgParams = allParameters.filter(
                     ))
                   }
                 </div>
-                <!-- Estado Vacío Elegante (Sin Ticket) -->
-                <div
-                  id="wise-email-mda-placeholder"
-                  class="flex flex-col items-center justify-center p-6 text-center rounded-xl bg-base-200/30 border border-dashed border-base-300 my-1"
-                >
-                  <div class="p-2.5 bg-base-200 text-base-content/40 rounded-xl mb-2">
-                    <Icon name="boxicons:envelope-open" size={24} />
-                  </div>
-                  <h5 class="text-xs font-bold text-base-content mb-0.5">Sin ticket asociado</h5>
-                  <p class="text-xxs text-base-content/50 max-w-xs leading-relaxed">
-                    Este correo no requirió ticket MDA. La evaluación computará únicamente la Sección 1.
-                  </p>
-                  <span class="badge badge-xs badge-ghost mt-2 font-semibold text-xxs">
-                    Sección 2 excluida
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -1033,26 +1059,27 @@ const invgateAgParams = allParameters.filter(
                     <span>1. Gestión general del caso</span>
                     <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div class="inline-flex items-center rounded-md bg-base-200/60 border border-base-300/60 p-0.5 shadow-2xs">
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-secondary hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-secondary/50"
                       data-target-group="invgate-ag-s1"
                       data-action="check-all"
                       title="Marcar todos los ítems de autogestión"
                     >
-                      <Icon name="boxicons:check-double" size={13} />
-                      <span class="text-3xs">Todos</span>
+                      <Icon name="boxicons:checkbox-checked" size={13} class="text-secondary shrink-0" />
+                      <span>Todos</span>
                     </button>
+                    <span class="w-px h-2.5 bg-base-300/80 mx-0.5 select-none" aria-hidden="true"></span>
                     <button
                       type="button"
-                      class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-base-content/30"
                       data-target-group="invgate-ag-s1"
                       data-action="uncheck-all"
                       title="Desmarcar todos los ítems de autogestión"
                     >
-                      <Icon name="boxicons:x" size={13} />
-                      <span class="text-3xs">Ninguno</span>
+                      <Icon name="boxicons:checkbox" size={13} class="text-base-content/40 shrink-0" />
+                      <span>Ninguno</span>
                     </button>
                   </div>
                 </div>
@@ -1126,26 +1153,27 @@ const invgateAgParams = allParameters.filter(
                     <span class="text-base-content/40 text-xxs font-semibold">Base: 100%</span>
                   </div>
                   <div class="flex items-center gap-2.5">
-                    <div class="flex items-center gap-1">
+                    <div class="inline-flex items-center rounded-md bg-base-200/60 border border-base-300/60 p-0.5 shadow-2xs">
                       <button
                         type="button"
-                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-primary transition-colors toggle-all-section-btn"
+                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-secondary hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-secondary/50"
                         data-target-group="invgate-ag-s2"
                         data-action="check-all"
                         title="Marcar todos los ítems de MDA"
                       >
-                        <Icon name="boxicons:check-double" size={13} />
-                        <span class="text-3xs">Todos</span>
+                        <Icon name="boxicons:checkbox-checked" size={13} class="text-secondary shrink-0" />
+                        <span>Todos</span>
                       </button>
+                      <span class="w-px h-2.5 bg-base-300/80 mx-0.5 select-none" aria-hidden="true"></span>
                       <button
                         type="button"
-                        class="btn btn-ghost btn-2xs text-base-content/60 hover:text-error transition-colors toggle-all-section-btn"
+                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-100 transition-all cursor-pointer toggle-all-section-btn focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-base-content/30"
                         data-target-group="invgate-ag-s2"
                         data-action="uncheck-all"
                         title="Desmarcar todos los ítems de MDA"
                       >
-                        <Icon name="boxicons:x" size={13} />
-                        <span class="text-3xs">Ninguno</span>
+                        <Icon name="boxicons:checkbox" size={13} class="text-base-content/40 shrink-0" />
+                        <span>Ninguno</span>
                       </button>
                     </div>
                     <label class="label cursor-pointer gap-2 p-0 hover:opacity-85 transition-opacity">
@@ -1156,7 +1184,7 @@ const invgateAgParams = allParameters.filter(
                         type="checkbox"
                         name="staysInMda"
                         id="toggle-stays-mda"
-                        class="toggle toggle-primary toggle-xs"
+                        class="toggle toggle-secondary toggle-xs"
                         checked
                       />
                     </label>
@@ -1721,6 +1749,16 @@ const invgateAgParams = allParameters.filter(
           evaluateTicketSource(tvSource.textContent);
         }
 
+        if (channel === "wise_call") {
+          const mode = (callTicketModeInput?.value as "nuevo" | "reclamo") || "nuevo";
+          if (formIsReclamoInput) formIsReclamoInput.value = mode === "reclamo" ? "true" : "false";
+        } else if (channel === "wise_email") {
+          const mode = (emailTicketModeInput?.value as "nuevo" | "reclamo") || "nuevo";
+          if (formIsReclamoInput) formIsReclamoInput.value = (toggleAppliesMda?.checked && mode === "reclamo") ? "true" : "false";
+        } else {
+          if (formIsReclamoInput) formIsReclamoInput.value = "false";
+        }
+
         recalculateScores();
       });
     });
@@ -2036,11 +2074,11 @@ const invgateAgParams = allParameters.filter(
         const btnMode = btn.getAttribute("data-mode");
         const isActive = btnMode === mode;
         btn.classList.toggle("btn-active", isActive);
-        btn.classList.toggle("bg-base-100", isActive);
-        btn.classList.toggle("text-primary", isActive);
+        btn.classList.toggle("bg-secondary", isActive);
+        btn.classList.toggle("text-secondary-content", isActive);
         btn.classList.toggle("font-bold", isActive);
-        btn.classList.toggle("shadow-2xs", isActive);
-        btn.classList.toggle("text-base-content/70", !isActive);
+        btn.classList.toggle("shadow-xs", isActive);
+        btn.classList.toggle("text-base-content/75", !isActive);
         btn.classList.toggle("font-medium", !isActive);
       });
 
@@ -2116,18 +2154,65 @@ const invgateAgParams = allParameters.filter(
 
     const toggleAppliesMda = document.getElementById(
       "toggle-applies-mda",
-    ) as HTMLInputElement;
-    const wiseEmailMdaBlock = document.getElementById("wise-email-mda-block");
-    const wiseEmailMdaPlaceholder = document.getElementById(
-      "wise-email-mda-placeholder",
+    ) as HTMLInputElement | null;
+    const emailTicketModeInput = document.getElementById(
+      "email-ticket-mode",
+    ) as HTMLInputElement | null;
+    const emailTicketModeJoin = document.getElementById(
+      "email-ticket-mode-join",
     );
+    const emailTicketModeButtons = document.querySelectorAll<HTMLButtonElement>(
+      ".email-ticket-mode-btn",
+    );
+    const wiseEmailMdaActions = document.getElementById(
+      "wise-email-mda-actions",
+    );
+    const wiseEmailReclamoCard = document.getElementById(
+      "wise-email-reclamo-card",
+    );
+    const wiseEmailMdaBlock = document.getElementById("wise-email-mda-block");
 
-    toggleAppliesMda?.addEventListener("change", () => {
-      const active = toggleAppliesMda.checked;
-      wiseEmailMdaBlock?.classList.toggle("hidden", !active);
-      wiseEmailMdaPlaceholder?.classList.toggle("hidden", active);
+    function setEmailTicketMode(mode: "nuevo" | "reclamo") {
+      if (emailTicketModeInput) emailTicketModeInput.value = mode;
+      if (formIsReclamoInput && (formChannelType?.value || "wise_call") === "wise_email") {
+        formIsReclamoInput.value = mode === "reclamo" ? "true" : "false";
+      }
+
+      emailTicketModeButtons.forEach((btn) => {
+        const btnMode = btn.getAttribute("data-mode");
+        const isActive = btnMode === mode;
+        btn.classList.toggle("btn-active", isActive);
+        btn.classList.toggle("bg-secondary", isActive);
+        btn.classList.toggle("text-secondary-content", isActive);
+        btn.classList.toggle("font-bold", isActive);
+        btn.classList.toggle("shadow-xs", isActive);
+        btn.classList.toggle("text-base-content/75", !isActive);
+        btn.classList.toggle("font-medium", !isActive);
+      });
+
+      if (mode === "reclamo") {
+        wiseEmailMdaBlock?.classList.add("hidden");
+        wiseEmailMdaActions?.classList.add("hidden");
+        wiseEmailReclamoCard?.classList.remove("hidden");
+        wiseEmailReclamoCard?.classList.add("flex");
+      } else {
+        wiseEmailMdaBlock?.classList.remove("hidden");
+        wiseEmailMdaActions?.classList.remove("hidden");
+        wiseEmailReclamoCard?.classList.add("hidden");
+        wiseEmailReclamoCard?.classList.remove("flex");
+      }
+
       recalculateScores();
+    }
+
+    emailTicketModeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-mode") as "nuevo" | "reclamo";
+        setEmailTicketMode(mode || "nuevo");
+      });
     });
+
+    (window as any).setAuditEmailTicketMode = setEmailTicketMode;
 
     const toggleStaysMda = document.getElementById(
       "toggle-stays-mda",
@@ -2257,14 +2342,23 @@ const invgateAgParams = allParameters.filter(
         }
       } else {
         if (channel === "wise_email") {
-          hasSection2 = toggleAppliesMda?.checked ?? false;
+          hasSection2 = true;
+          const emailMode = (emailTicketModeInput?.value as "nuevo" | "reclamo") || "nuevo";
+          const isReclamo = emailMode === "reclamo";
+          s1Score = Math.max(0, Math.round(100 - s1Deductions));
+          if (isReclamo) {
+            s2Score = 100;
+            total = Math.round((s1Score + 100) / 2);
+          } else {
+            s2Score = Math.max(0, Math.round(100 - s2Deductions));
+            total = Math.round((s1Score + s2Score) / 2);
+          }
         } else if (channel === "invgate_ticket") {
           hasSection2 = toggleStaysMda?.checked ?? true;
+          s1Score = Math.max(0, Math.round(100 - s1Deductions));
+          s2Score = hasSection2 ? Math.max(0, Math.round(100 - s2Deductions)) : 0;
+          total = hasSection2 ? Math.round((s1Score + s2Score) / 2) : s1Score;
         }
-
-        s1Score = Math.max(0, Math.round(100 - s1Deductions));
-        s2Score = hasSection2 ? Math.max(0, Math.round(100 - s2Deductions)) : 0;
-        total = hasSection2 ? Math.round((s1Score + s2Score) / 2) : s1Score;
       }
 
       const pS1 = document.getElementById("preview-s1");

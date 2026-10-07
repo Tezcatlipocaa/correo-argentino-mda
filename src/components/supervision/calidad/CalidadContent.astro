@@ -1815,6 +1815,9 @@ const cleanBase = getCleanBase();
         if ((callData.channelType || "wise_call") === "wise_call") {
           const isReclamo = !!callData.isReclamoNovedad;
           (window as any).setAuditTicketMode?.(isReclamo ? "reclamo" : "nuevo");
+        } else if (callData.channelType === "wise_email") {
+          const isReclamo = !!callData.isReclamoNovedad;
+          (window as any).setAuditEmailTicketMode?.(isReclamo ? "reclamo" : "nuevo");
         } else if (toggleCallGeneratedTicket) {
           toggleCallGeneratedTicket.checked = (callData.channelType || "wise_call") === "wise_call"
             ? (callData.appliesMda ?? true)
@@ -1822,8 +1825,7 @@ const cleanBase = getCleanBase();
           toggleCallGeneratedTicket.dispatchEvent(new Event("change"));
         }
         if (toggleAppliesMda) {
-          toggleAppliesMda.checked = !!callData.appliesMda;
-          toggleAppliesMda.dispatchEvent(new Event("change"));
+          toggleAppliesMda.value = "true";
         }
         if (toggleStaysMda) {
           toggleStaysMda.checked = callData.staysInMda ?? true;
@@ -1880,13 +1882,13 @@ const cleanBase = getCleanBase();
         if (caseSearchInput) caseSearchInput.value = "";
         if (alertBox) alertBox.classList.add("hidden");
         (window as any).setAuditTicketMode?.("nuevo");
+        (window as any).setAuditEmailTicketMode?.("nuevo");
         if (toggleCallGeneratedTicket) {
           toggleCallGeneratedTicket.checked = true;
           toggleCallGeneratedTicket.dispatchEvent(new Event("change"));
         }
         if (toggleAppliesMda) {
-          toggleAppliesMda.checked = false;
-          toggleAppliesMda.dispatchEvent(new Event("change"));
+          toggleAppliesMda.value = "true";
         }
         if (toggleStaysMda) {
           toggleStaysMda.checked = true;
@@ -1960,7 +1962,7 @@ const cleanBase = getCleanBase();
         formData.set("isReclamoNovedad", isReclamoInput.value);
       }
       if (toggleAppliesMda) {
-        formData.set("appliesMda", toggleAppliesMda.checked ? "true" : "false");
+        formData.set("appliesMda", "true");
       }
       if (toggleStaysMda) {
         formData.set("staysInMda", toggleStaysMda.checked ? "true" : "false");
