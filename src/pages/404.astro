@@ -1,6 +1,9 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { Icon } from "astro-icon/components";
+import { getCleanBase } from "@lib/baseUrl";
+
+const homeUrl = getCleanBase();
 ---
 
 <BaseLayout title="Página no encontrada">
@@ -21,6 +24,6 @@ import { Icon } from "astro-icon/components";
         La ruta solicitada no existe o fue movida.
       </p>
     </div>
-    <a href="/" class="btn btn-primary btn-lg"> Volver al inicio </a>
+    <a href={homeUrl} class="btn btn-primary btn-lg"> Volver al inicio </a>
   </div>
 </BaseLayout>
