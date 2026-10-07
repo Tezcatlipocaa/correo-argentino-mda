@@ -2,6 +2,7 @@
 import { getResolvedSearchParams } from "@lib/navigation";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
+import Modal from "@components/ui/Modal.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
@@ -283,11 +284,13 @@ const rowGridClass =
   }
 </PageContainer>
 
-<dialog id="create_office_modal" class="modal">
-  <div class="modal-box max-w-lg">
-    <h3 class="text-base-content mb-4 text-lg font-bold">
-      Crear nueva oficina
-    </h3>
+<Modal
+  id="create_office_modal"
+  title="Crear nueva oficina"
+  icon="boxicons:building-house-filled"
+  size="lg"
+>
+  <Fragment slot="content">
     <form id="create_office_form" class="space-y-4">
       <FormField id="office-code" name="code" label="Código NIS" required />
       <FormField id="office-name" name="name" label="Nombre" required />
@@ -329,13 +332,8 @@ const rowGridClass =
         />
       </div>
     </form>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button class="h-full w-full p-0">
-      <span class="sr-only">Cerrar</span>
-    </button>
-  </form>
-</dialog>
+  </Fragment>
+</Modal>
 
 <script is:inline>
   function copyToClipboard(text) {
