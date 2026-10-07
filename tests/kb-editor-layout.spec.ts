@@ -30,6 +30,22 @@ const WIDE_MARKDOWN = [
   "> Cita de ejemplo para medir el ancho del panel.",
 ].join("\n");
 
+const TYPO_MARKDOWN = [
+  "* asdas",
+  "* dasdas",
+  "* adsda",
+  "* ads",
+  "",
+  "> dasdas",
+  "",
+  "1. dasdas",
+  "2. dasdas",
+  "3. dasda",
+  "4. asda",
+  "",
+  "[dasdasda](https://ejemplo.local/x)",
+].join("\n");
+
 type Box = { left: number; right: number; width: number };
 
 const form = (page: Page) => page.locator("#kb-article-form");
@@ -337,5 +353,79 @@ test.describe("Base de conocimiento - layout del editor", () => {
       WIDE_MARKDOWN,
     );
     await expectNoHorizontalPageScroll(page, "normal tras volver");
+  });
+
+  test("preview: refleja la tipografía del markdown (listas, cita, link, espaciado)", async ({
+    page,
+  }) => {
+    await setSessionCookie(page.context(), admin.signedSessionId);
+    await page.goto("/base-conocimiento/create");
+    await expect(form(page)).toBeVisible();
+    await setEasyMdeContent(page, TYPO_MARKDOWN);
+
+    await previewButton(page).click();
+    const preview = fullPreview(page);
+    await expect(preview).toBeVisible();
+    await expect(preview.locator("ul")).toBeVisible();
+    await expect(preview.locator("blockquote")).toBeVisible();
+
+    const styles = await preview.evaluate((root) => {
+      const read = (selector: string) => {
+        const el = root.querySelector(selector);
+        if (!el) return null;
+        const s = getComputedStyle(el);
+        return {
+          listStyleType: s.listStyleType,
+          paddingLeft: parseFloat(s.paddingLeft),
+          marginTop: parseFloat(s.marginTop),
+          marginBottom: parseFloat(s.marginBottom),
+          textDecorationLine: s.textDecorationLine,
+          color: s.color,
+        };
+      };
+      return {
+        ul: read("ul"),
+        ol: read("ol"),
+        quote: read("blockquote"),
+        paragraph: read("p"),
+        link: read("a"),
+        bodyColor: getComputedStyle(root).color,
+      };
+    });
+
+    expect(styles.ul?.listStyleType, "la lista no muestra viñetas").toBe(
+      "disc",
+    );
+    expect(
+      styles.ul?.paddingLeft ?? 0,
+      "la lista no tiene sangría",
+    ).toBeGreaterThan(0);
+    expect(
+      styles.ul?.marginBottom ?? 0,
+      "la lista no tiene margen vertical",
+    ).toBeGreaterThan(0);
+    expect(styles.ol?.listStyleType, "la lista no muestra numeración").toBe(
+      "decimal",
+    );
+    expect(
+      styles.ol?.marginTop ?? 0,
+      "la lista numerada no tiene margen vertical",
+    ).toBeGreaterThan(0);
+    expect(
+      styles.quote?.marginTop ?? 0,
+      "la cita no tiene margen vertical",
+    ).toBeGreaterThan(0);
+    expect(
+      styles.paragraph?.marginBottom ?? 0,
+      "los párrafos no se separan",
+    ).toBeGreaterThan(0);
+    expect(
+      styles.link?.textDecorationLine ?? "",
+      "el link no se subraya",
+    ).toContain("underline");
+    expect(
+      styles.link?.color,
+      "el link no se distingue del texto",
+    ).not.toBe(styles.bodyColor);
   });
 });

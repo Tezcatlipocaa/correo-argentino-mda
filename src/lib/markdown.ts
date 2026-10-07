@@ -39,7 +39,7 @@ export function renderMarkdown(
 
   let html: string;
   try {
-    html = marked.parse(md, { async: false });
+    html = marked.parse(md, { async: false, gfm: true, breaks: true });
   } catch {
     return markdownFallback(md);
   }
@@ -72,10 +72,12 @@ export function renderMarkdown(
       "hr",
       "br",
       "img",
+      "input",
     ],
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
       img: ["src", "alt", "title", "width", "height"],
+      input: ["type", "checked", "disabled"],
       th: ["colspan", "rowspan", "align"],
       td: ["colspan", "rowspan", "align"],
     },
@@ -126,6 +128,21 @@ export function renderMarkdown(
         }
 
         return { tagName: "img", attribs: nextAttribs };
+      },
+      input: (_tagName, attribs) => {
+        if (attribs.type !== "checkbox") {
+          return { tagName: "span", attribs: {}, text: "" };
+        }
+
+        const nextAttribs: Record<string, string> = {
+          type: "checkbox",
+          disabled: "",
+        };
+        if (attribs.checked !== undefined) {
+          nextAttribs.checked = "";
+        }
+
+        return { tagName: "input", attribs: nextAttribs };
       },
     },
   });

@@ -125,3 +125,57 @@ test("sanitiza el markdown abierto en la vista previa del editor", async ({
   expect(inlineHandlerAttributes).toEqual([]);
   expect(dialogs).toEqual([]);
 });
+
+test("renderiza checkboxes de tareas y listas anidadas en vista y vista previa", async ({
+  context,
+  page,
+}) => {
+  const suffix = uniqueToken();
+  const mesa = await fixture.createMesa();
+  const admin = await fixture.createUser("admin", mesa);
+  const content = [
+    `- [ ] Pendiente ${suffix}`,
+    `- [x] Listo ${suffix}`,
+    "",
+    `- Padre ${suffix}`,
+    `    - Hijo ${suffix}`,
+    "",
+    '<input type="text" value="no">',
+    '<input type="CHECKBOX" checked>',
+    '<input type="checkbox " checked>',
+    '<input type="password" value="x">',
+  ].join("\n");
+  const article = await fixture.createArticle({
+    mesa,
+    authorUserId: admin.userId,
+    title: `Tareas ${suffix}`,
+    content,
+    status: "published",
+  });
+
+  await setSessionCookie(context, admin.signedSessionId);
+  await page.goto(`/base-conocimiento/${article.id}`);
+
+  const body = page.locator(".kb-article-body");
+  await expect(body).toBeVisible();
+
+  const checkboxes = body.locator('input[type="checkbox"]');
+  await expect(checkboxes).toHaveCount(2);
+  await expect(checkboxes.nth(0)).not.toBeChecked();
+  await expect(checkboxes.nth(1)).toBeChecked();
+  await expect(checkboxes.nth(1)).toBeDisabled();
+  await expect(body.locator("input")).toHaveCount(2);
+  await expect(body.locator("ul li ul li")).toHaveCount(1);
+
+  await page.goto(`/base-conocimiento/edit/${article.id}`);
+  await expect(page.locator("#kb-article-form")).toBeVisible();
+  await setEasyMdeContent(page, content);
+  await page.locator(".EasyMDEContainer .editor-toolbar button.preview").click();
+  const preview = page.locator(".EasyMDEContainer .editor-preview-full");
+  await expect(preview).toBeVisible();
+  const previewCheckboxes = preview.locator('input[type="checkbox"]');
+  await expect(previewCheckboxes).toHaveCount(2);
+  await expect(previewCheckboxes.nth(1)).toBeChecked();
+  await expect(previewCheckboxes.nth(1)).toBeDisabled();
+  await expect(preview.locator("input")).toHaveCount(2);
+});

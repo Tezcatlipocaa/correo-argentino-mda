@@ -300,6 +300,15 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
 
     await expect(page.locator("#kb-category")).toHaveValue(nombre);
 
+    // Con base raíz el doble prefijo no puede manifestarse; este assert sólo
+    // detecta composiciones que dupliquen la sección. La cobertura con base
+    // distinta de "/" vive en tests/unit/kb/redirects.test.ts.
+    const finalUrl = new URL(page.url());
+    expect(finalUrl.pathname).toBe("/base-conocimiento/create");
+    expect(finalUrl.pathname).not.toContain(
+      "/base-conocimiento/base-conocimiento",
+    );
+
     const [creada] = await db
       .select()
       .from(kbCategories)

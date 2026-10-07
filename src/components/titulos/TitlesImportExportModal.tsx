@@ -6,6 +6,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { showToast } from "@lib/toastClient";
+import { getCleanBase } from "@lib/baseUrl";
 
 interface Props {
   open: boolean;
@@ -42,6 +43,7 @@ export default function TitlesImportExportModal({
   onClose,
   onImported,
 }: Props) {
+  const cleanBase = getCleanBase();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -55,7 +57,7 @@ export default function TitlesImportExportModal({
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch("/api/titulos/import", { method: "POST", body });
+      const res = await fetch(`${cleanBase}api/titulos/import`, { method: "POST", body });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error || "No se pudo importar");
@@ -129,7 +131,7 @@ export default function TitlesImportExportModal({
             <div className="flex flex-wrap gap-2">
               <a
                 className="btn btn-sm shadow-none"
-                href="/api/titulos/export.csv"
+                href={`${cleanBase}api/titulos/export.csv`}
                 download
               >
                 <ArrowDownTrayIcon className="size-4" />

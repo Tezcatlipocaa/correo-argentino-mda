@@ -6,8 +6,9 @@ export function redirectWithToast(
   path: string,
   message: string,
   type: ToastType = "success",
+  base: string = getBaseNoSlash(),
 ): Response {
-  const cleanBase = getBaseNoSlash();
+  const cleanBase = base;
   const hashIndex = path.indexOf("#");
   const pathname = hashIndex >= 0 ? path.slice(0, hashIndex) : path;
   const hash = hashIndex >= 0 ? path.slice(hashIndex) : "";
