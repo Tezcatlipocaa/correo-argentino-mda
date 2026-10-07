@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import FormLegend from "@components/ui/forms/FormLegend.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import type { AuditParameter } from "@/types/quality";
 import { getCleanBase } from "@lib/baseUrl";
@@ -15,6 +16,12 @@ interface Props {
 const { allParameters, selectedMonth } = Astro.props;
 const cleanBase = getCleanBase();
 const approvedTitles = await getApprovedTitlesList();
+
+// Base web de InvGate (INVGATE_BASE_URL apunta a /api/v1) para deep-links al ticket
+const invgateApiBase = import.meta.env.INVGATE_BASE_URL || "";
+const invgateWebBase = invgateApiBase
+  ? invgateApiBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
+  : "";
 
 // Group parameters by channel and section
 const wiseCallParams = allParameters.filter(
@@ -49,6 +56,7 @@ const invgateAgParams = allParameters.filter(
     <div
       id="audit-modal-container"
       data-approved-titles={JSON.stringify(approvedTitles)}
+      data-invgate-web-base={invgateWebBase}
     >
       <!-- Modal Header: Título y Selector de Canales alineados -->
       <div
@@ -114,106 +122,15 @@ const invgateAgParams = allParameters.filter(
           <!-- COLUMNA IZQUIERDA: CONTEXTO (Búsqueda, Audio, Datos Atención, Ticket Viewer) -->
           <div id="modal-grid-context" class="lg:col-span-5 space-y-3.5">
 
-            <!-- Buscador Unificado con Selector de Servicio (Tabs) -->
+            <!-- Feedback Alerts (compartidos por ambas búsquedas) -->
             <div
-              id="unified-search-card"
-              class="bg-base-100 border border-base-200 rounded-xl p-3 shadow-2xs space-y-2.5"
-            >
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                <!-- Selector de Servicio (Tabs: Wise CX / InvGate) -->
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider hidden sm:inline">Buscar:</span>
-                  <div
-                    class="join bg-base-200/60 p-0.5 rounded-lg border border-base-200"
-                    id="search-service-tabs"
-                  >
-                    <button
-                      type="button"
-                      id="tab-search-wise"
-                      class="join-item btn btn-xs btn-ghost gap-1 font-bold transition-all text-base-content bg-base-100 shadow-2xs"
-                      data-search-target="wise"
-                    >
-                      <Icon name="boxicons:phone" size={14} class="text-violet-500" />
-                      <span>Wise CX</span>
-                    </button>
-                    <button
-                      type="button"
-                      id="tab-search-invgate"
-                      class="join-item btn btn-xs btn-ghost gap-1 font-medium text-base-content/60 transition-all hover:text-base-content"
-                      data-search-target="invgate"
-                    >
-                      <Icon name="boxicons:receipt" size={14} class="text-secondary" />
-                      <span>InvGate</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Barra de Búsqueda Wise CX -->
-                <div
-                  id="wise-search-container"
-                  class="flex-1 flex items-center gap-1.5 transition-all"
-                >
-                  <div class="relative flex-1">
-                    <input
-                      type="text"
-                      id="wise-search-id"
-                      placeholder="Caso Wise (ej: 534787)..."
-                      class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-violet-500 focus:outline-hidden"
-                    />
-                    <div class="text-violet-500 absolute top-1.5 left-2">
-                      <Icon name="boxicons:phone" size={13} />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    id="btn-fetch-wise-api"
-                    class="btn btn-xs bg-violet-600 hover:bg-violet-700 text-white border-violet-600 btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
-                    title="Buscar"
-                    aria-label="Buscar"
-                  >
-                    <Icon name="boxicons:search" size={14} class="text-white" is:inline />
-                  </button>
-                </div>
-
-                <!-- Barra de Búsqueda InvGate -->
-                <div
-                  id="invgate-search-container"
-                  class="flex-1 flex items-center gap-1.5 hidden transition-all"
-                >
-                  <div class="relative flex-1">
-                    <input
-                      type="text"
-                      id="invgate-search-id"
-                      placeholder="Ticket InvGate (ej: 88442)..."
-                      class="input input-xs bg-base-200/30 w-full pl-7 font-mono text-xs font-semibold border-base-200 focus:border-secondary focus:outline-hidden"
-                    />
-                    <div class="text-secondary absolute top-1.5 left-2">
-                      <Icon name="boxicons:receipt" size={13} is:inline />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    id="btn-fetch-invgate-api"
-                    class="btn btn-xs btn-secondary btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
-                    title="Buscar ticket en InvGate"
-                    aria-label="Buscar ticket en InvGate"
-                  >
-                    <Icon name="boxicons:search" size={14} is:inline />
-                    <span id="btn-fetch-invgate-label" class="sr-only">Buscar</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Feedback Alerts -->
-              <div
-                id="wise-feedback-alert"
-                class="hidden rounded-lg border p-2 text-xs font-medium transition-all"
-              ></div>
-              <div
-                id="invgate-feedback-alert"
-                class="hidden rounded-lg border p-2 text-xs font-medium transition-all"
-              ></div>
-            </div>
+              id="wise-feedback-alert"
+              class="hidden rounded-xl border p-2.5 text-xs font-medium shadow-2xs transition-all"
+            ></div>
+            <div
+              id="invgate-feedback-alert"
+              class="hidden rounded-xl border p-2.5 text-xs font-medium shadow-2xs transition-all"
+            ></div>
 
             <!-- Reproductor y Descarga de Grabación Wise CX -->
             <div
@@ -265,22 +182,57 @@ const invgateAgParams = allParameters.filter(
               </div>
 
               <div class="grid grid-cols-2 gap-2.5">
-                <FormField
-                  id="form-call-id"
-                  name="callId"
-                  label="Nro Caso / Llamada"
-                  placeholder="Ej: 534787"
-                  size="xs"
-                  inputClass="font-mono font-semibold text-xs"
-                />
-                <FormField
-                  id="form-ticket-id"
-                  name="ticketId"
-                  label="Nro Ticket InvGate"
-                  placeholder="Ej: 88442"
-                  size="xs"
-                  inputClass="font-mono font-semibold text-xs"
-                />
+                <!-- Campo Case ID: búsqueda API Wise CX integrada -->
+                <fieldset class="fieldset min-w-0">
+                  <FormLegend class="font-bold tracking-wider">
+                    Nro Caso / Llamada
+                  </FormLegend>
+                  <div class="join w-full">
+                    <input
+                      type="text"
+                      id="form-call-id"
+                      name="callId"
+                      placeholder="Ej: 534787"
+                      class="input input-xs join-item w-full min-w-0 bg-base-200/30 font-mono font-semibold text-xs border-base-200 focus:border-violet-500 focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      id="btn-fetch-wise-api"
+                      class="btn btn-xs bg-violet-600 hover:bg-violet-700 text-white border-violet-600 join-item btn-square shrink-0 transition-all hover:scale-98 active:scale-95 shadow-2xs"
+                      title="Buscar el caso en Wise CX y completar los datos"
+                      aria-label="Buscar el caso en Wise CX"
+                    >
+                      <Icon name="boxicons:search" size={14} is:inline />
+                    </button>
+                  </div>
+                </fieldset>
+
+                <!-- Campo Ticket ID: búsqueda API InvGate integrada -->
+                <fieldset class="fieldset min-w-0">
+                  <FormLegend class="font-bold tracking-wider">
+                    Nro Ticket InvGate
+                  </FormLegend>
+                  <div class="join w-full">
+                    <input
+                      type="text"
+                      id="form-ticket-id"
+                      name="ticketId"
+                      placeholder="Ej: 88442"
+                      class="input input-xs join-item w-full min-w-0 bg-base-200/30 font-mono font-semibold text-xs border-base-200 focus:border-secondary focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      id="btn-fetch-invgate-api"
+                      class="btn btn-xs btn-secondary join-item btn-square shrink-0 transition-all hover:scale-98 active:scale-95"
+                      title="Buscar el ticket en InvGate y completar los datos"
+                      aria-label="Buscar el ticket en InvGate"
+                    >
+                      <Icon name="boxicons:search" size={14} is:inline />
+                      <span id="btn-fetch-invgate-label" class="sr-only">Buscar</span>
+                    </button>
+                  </div>
+                </fieldset>
+
                 <div class="col-span-2">
                   <FormField
                     id="form-date"
@@ -364,20 +316,34 @@ const invgateAgParams = allParameters.filter(
                 class="flex cursor-pointer items-center justify-between select-none"
                 id="ticket-viewer-header"
               >
-                <div class="flex items-center gap-2">
-                  <Icon name="boxicons:receipt" size={17} class="text-secondary" />
-                  <span class="text-base-content text-xs font-bold">
+                <div class="flex min-w-0 items-center gap-2">
+                  <Icon name="boxicons:receipt" size={17} class="text-secondary shrink-0" />
+                  <span class="text-base-content text-xs font-bold truncate">
                     Detalle del ticket InvGate
                   </span>
                   <span
                     id="ticket-viewer-badge"
-                    class="badge badge-xs badge-ghost font-medium"
+                    class="badge badge-xs badge-ghost font-medium shrink-0 max-w-36 truncate"
+                    title="Sin ticket cargado"
                     >Sin ticket cargado</span
                   >
                 </div>
                 <div
-                  class="text-base-content/60 flex items-center gap-1 text-xs font-medium"
+                  class="text-base-content/60 flex shrink-0 items-center gap-1.5 text-xs font-medium"
                 >
+                  <!-- Deep-link al ticket dentro de InvGate -->
+                  <a
+                    id="btn-open-invgate-ticket"
+                    href={invgateWebBase ? `${invgateWebBase}/requests/show/index/id/0` : "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-ghost btn-xs gap-1 font-semibold text-secondary hover:bg-secondary/10 transition-colors"
+                    title="Abrir el ticket en InvGate"
+                    aria-label="Abrir el ticket en InvGate"
+                  >
+                    <Icon name="boxicons:window-arrow-out" size={13} />
+                    <span class="hidden sm:inline">Abrir en InvGate</span>
+                  </a>
                   <span id="ticket-viewer-toggle-text">Mostrar</span>
                   <Icon
                     name="boxicons:chevron-down"
@@ -1361,26 +1327,17 @@ const invgateAgParams = allParameters.filter(
     ) as HTMLInputElement | null;
     const channelButtons = document.querySelectorAll(".channel-btn");
 
-    // Search Toolbars, Tabs & Inputs
-    const tabSearchWise = document.getElementById("tab-search-wise");
-    const tabSearchInvgate = document.getElementById("tab-search-invgate");
-
-    const wiseSearchContainer = document.getElementById(
-      "wise-search-container",
-    );
+    // Search Inputs (integrados en "Datos de la atención")
     const wiseSearchInput = document.getElementById(
-      "wise-search-id",
+      "form-call-id",
     ) as HTMLInputElement | null;
     const btnFetchWise = document.getElementById(
       "btn-fetch-wise-api",
     ) as HTMLButtonElement | null;
     const wiseFeedbackAlert = document.getElementById("wise-feedback-alert");
 
-    const invgateSearchContainer = document.getElementById(
-      "invgate-search-container",
-    );
     const invgateSearchInput = document.getElementById(
-      "invgate-search-id",
+      "form-ticket-id",
     ) as HTMLInputElement | null;
     const btnFetchInvgate = document.getElementById(
       "btn-fetch-invgate-api",
@@ -1392,28 +1349,27 @@ const invgateAgParams = allParameters.filter(
       "invgate-feedback-alert",
     );
 
-    function setActiveSearchTab(target: "wise" | "invgate") {
-      if (target === "wise") {
-        tabSearchWise?.classList.add("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
-        tabSearchWise?.classList.remove("font-medium", "text-base-content/60");
-        tabSearchInvgate?.classList.remove("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
-        tabSearchInvgate?.classList.add("font-medium", "text-base-content/60");
+    // Deep-link al ticket en InvGate
+    const invgateWebBase = container?.dataset.invgateWebBase || "";
+    const btnOpenInvgateTicket = document.getElementById(
+      "btn-open-invgate-ticket",
+    ) as HTMLAnchorElement | null;
 
-        wiseSearchContainer?.classList.remove("hidden");
-        invgateSearchContainer?.classList.add("hidden");
+    function syncInvgateDeepLink() {
+      if (!btnOpenInvgateTicket) return;
+      const ticketId = invgateSearchInput?.value.trim();
+      if (!invgateWebBase || !ticketId) {
+        btnOpenInvgateTicket.setAttribute("aria-disabled", "true");
+        btnOpenInvgateTicket.classList.add("opacity-40", "pointer-events-none");
+        btnOpenInvgateTicket.removeAttribute("href");
       } else {
-        tabSearchInvgate?.classList.add("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
-        tabSearchInvgate?.classList.remove("font-medium", "text-base-content/60");
-        tabSearchWise?.classList.remove("btn-active", "bg-base-100", "text-base-content", "font-bold", "shadow-2xs");
-        tabSearchWise?.classList.add("font-medium", "text-base-content/60");
-
-        invgateSearchContainer?.classList.remove("hidden");
-        wiseSearchContainer?.classList.add("hidden");
+        btnOpenInvgateTicket.removeAttribute("aria-disabled");
+        btnOpenInvgateTicket.classList.remove("opacity-40", "pointer-events-none");
+        btnOpenInvgateTicket.href = `${invgateWebBase}/requests/show/index/id/${encodeURIComponent(ticketId)}`;
       }
     }
 
-    tabSearchWise?.addEventListener("click", () => setActiveSearchTab("wise"));
-    tabSearchInvgate?.addEventListener("click", () => setActiveSearchTab("invgate"));
+    invgateSearchInput?.addEventListener("input", syncInvgateDeepLink);
 
     // Live Ticket Viewer Elements
     const ticketViewerHeader = document.getElementById("ticket-viewer-header");
@@ -1453,7 +1409,9 @@ const invgateAgParams = allParameters.filter(
     ) as HTMLInputElement | null;
 
     // Ticket Viewer Accordion Toggle
-    ticketViewerHeader?.addEventListener("click", () => {
+    ticketViewerHeader?.addEventListener("click", (ev) => {
+      // El deep-link a InvGate no debe togglear el acordeón
+      if ((ev.target as HTMLElement)?.closest("#btn-open-invgate-ticket")) return;
       if (!ticketViewerContent) return;
       const isHidden = ticketViewerContent.classList.contains("hidden");
       if (isHidden) {
@@ -1644,8 +1602,11 @@ const invgateAgParams = allParameters.filter(
           cleanHtmlText(description) || "Sin descripción disponible";
 
       if (ticketViewerBadge) {
-        ticketViewerBadge.textContent = `Ticket #${data.caseNumber || data.rawDetails?.incidentId || ""}`;
-        ticketViewerBadge.className = "badge badge-xs badge-primary font-bold";
+        const ticketLabel = `Ticket #${data.caseNumber || data.rawDetails?.incidentId || ""}`;
+        ticketViewerBadge.textContent = ticketLabel;
+        ticketViewerBadge.setAttribute("title", ticketLabel);
+        ticketViewerBadge.classList.remove("badge-ghost", "font-medium");
+        ticketViewerBadge.classList.add("badge-neutral", "font-semibold");
       }
 
       // Expandir visor para visualización inmediata
@@ -1680,11 +1641,14 @@ const invgateAgParams = allParameters.filter(
       if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
       if (ticketViewerBadge) {
         ticketViewerBadge.textContent = "Sin ticket cargado";
-        ticketViewerBadge.className = "badge badge-xs badge-ghost font-medium";
+        ticketViewerBadge.setAttribute("title", "Sin ticket cargado");
+        ticketViewerBadge.classList.remove("badge-neutral", "font-semibold");
+        ticketViewerBadge.classList.add("badge-ghost", "font-medium");
       }
       if (ticketViewerContent) ticketViewerContent.classList.add("hidden");
       if (ticketViewerToggleText) ticketViewerToggleText.textContent = "Mostrar";
       if (ticketViewerChevron) ticketViewerChevron.classList.remove("rotate-180");
+      syncInvgateDeepLink();
       clearAllRuleBadges();
     }
 
@@ -1758,15 +1722,6 @@ const invgateAgParams = allParameters.filter(
           formDuration.value = "00:00";
         }
 
-        // Toggle Search Tabs / Bars
-        if (channel === "invgate_ticket") {
-          if (tabSearchWise) tabSearchWise.classList.add("hidden");
-          setActiveSearchTab("invgate");
-        } else {
-          if (tabSearchWise) tabSearchWise.classList.remove("hidden");
-          setActiveSearchTab("wise");
-        }
-
         if (channel === "wise_call") {
           const formAuditId = document.getElementById(
             "form-audit-id",
@@ -1813,7 +1768,7 @@ const invgateAgParams = allParameters.filter(
     function showFeedbackMessage(
       el: HTMLElement | null,
       content: string,
-      type: "success" | "error" | "warning",
+      type: "success" | "error" | "warning" | "info",
       isWise: boolean,
     ) {
       if (!el) return;
@@ -1826,9 +1781,11 @@ const invgateAgParams = allParameters.filter(
           ? "border-success/30 bg-success/10 text-success"
           : type === "warning"
             ? "border-warning/30 bg-warning/10 text-warning"
-            : "border-error/30 bg-error/10 text-error";
+            : type === "info"
+              ? "border-info/30 bg-info/10 text-info"
+              : "border-error/30 bg-error/10 text-error";
 
-      el.className = `mt-2 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold shadow-2xs transition-all duration-200 ${typeClasses}`;
+      el.className = `flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-2xs transition-all duration-200 ${typeClasses}`;
       el.classList.remove("hidden");
 
       const timeout = setTimeout(() => {
@@ -1936,6 +1893,7 @@ const invgateAgParams = allParameters.filter(
           if (formTicketId && !formTicketId.value && d.rawDetails?.incidentId) {
             formTicketId.value = d.rawDetails.incidentId.toString();
           }
+          syncInvgateDeepLink();
 
           // Reproductor de audio independiente
           if (d.recordingUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
@@ -2056,6 +2014,7 @@ const invgateAgParams = allParameters.filter(
           ) as HTMLInputElement;
 
           if (formTicketId && d.caseNumber) formTicketId.value = d.caseNumber;
+          syncInvgateDeepLink();
           if (channel === "invgate_ticket") {
             if (formCallId && !formCallId.value && d.caseNumber)
               formCallId.value = d.caseNumber;
@@ -2459,8 +2418,9 @@ const invgateAgParams = allParameters.filter(
     (window as any).resetTicketViewer = () => {
       resetTicketViewer();
       resetAudioPlayer();
+      syncInvgateDeepLink();
     };
-    (window as any).setActiveSearchTab = setActiveSearchTab;
+    (window as any).syncInvgateDeepLink = syncInvgateDeepLink;
     return true;
   }
 

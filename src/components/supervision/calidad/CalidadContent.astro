@@ -1751,6 +1751,7 @@ const cleanBase = getCleanBase();
         if (formAuditId) formAuditId.value = String(callData.id);
         if (formCallId) formCallId.value = callData.callId;
         if (formTicketId) formTicketId.value = callData.ticketId;
+        (window as any).syncInvgateDeepLink?.();
         if (formDuration) formDuration.value = callData.duration;
         if (formDate) formDate.value = callData.date.substring(0, 10);
         if (formNotes) formNotes.value = callData.notes || "";
@@ -1838,8 +1839,6 @@ const cleanBase = getCleanBase();
         const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
         const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
         const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
-        const caseSearchInput = document.getElementById("case-search-id") as HTMLInputElement | null;
-        const alertBox = document.getElementById("fetch-feedback-alert");
 
         const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
         const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
@@ -1849,8 +1848,7 @@ const cleanBase = getCleanBase();
         if (formCreation) formCreation.value = "";
         if (formTake) formTake.value = "";
         if (formIsPas) formIsPas.checked = false;
-        if (caseSearchInput) caseSearchInput.value = "";
-        if (alertBox) alertBox.classList.add("hidden");
+        (window as any).syncInvgateDeepLink?.();
         (window as any).setAuditTicketMode?.("nuevo");
         (window as any).setAuditEmailTicketMode?.("nuevo");
         if (toggleCallGeneratedTicket) {
