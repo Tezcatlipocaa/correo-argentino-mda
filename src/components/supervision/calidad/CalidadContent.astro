@@ -384,6 +384,14 @@ const cleanBase = getCleanBase();
         <Icon name="boxicons:chevron-right" size={24} />
       </button>
       <div class="divider divider-horizontal mx-1 hidden sm:flex"></div>
+      <button
+        id="btn-export-excel"
+        class="btn btn-sm btn-outline btn-success gap-1.5 text-xs font-bold uppercase"
+        title="Exportar Reporte a Excel (.xlsx)"
+      >
+        <Icon name="boxicons:file" size={18} />
+        <span>Exportar Excel</span>
+      </button>
       {
         !isAgent && (
           <button
@@ -640,44 +648,6 @@ const cleanBase = getCleanBase();
                   <Icon name="boxicons:arrow-to-left" size={18} />
                   Volver al resumen
                 </button>
-                <div class="flex items-center gap-2">
-                  <button
-                    id="btn-export-excel"
-                    class="btn btn-xs btn-outline btn-success text-xxs gap-1.5 font-bold uppercase"
-                    title="Exportar Reporte de Operador a Excel (.xlsx)"
-                  >
-                    <Icon name="boxicons:file" size={14} />
-                    <span>Exportar Excel</span>
-                  </button>
-                  <button
-                    id="btn-export-csv"
-                    class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
-                    title="Exportar Reporte de Operador a CSV"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="2.5"
-                      stroke="currentColor"
-                      class="size-3.5 shrink-0"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                      />
-                    </svg>
-                    <span>Exportar CSV</span>
-                  </button>
-                  <button
-                    class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
-                    onclick="window.print()"
-                  >
-                    <Icon name="boxicons:printer" size={14} />
-                    Exportar Reporte
-                  </button>
-                </div>
               </div>
 
               {isAgent ? (
@@ -3090,188 +3060,20 @@ const cleanBase = getCleanBase();
     if (btnExportExcel) {
       btnExportExcel.addEventListener("click", () => {
         const el = document.getElementById("operators-data");
-        if (!el) return;
-        let operatorsData: Record<string, any> = {};
-        try {
-          operatorsData = JSON.parse(el.getAttribute("data-operators") || "{}");
-        } catch (e) {
-          console.error("Error parsing operators data", e);
-          return;
-        }
-
-        const selectedOp = operatorsData[activeAgentId || ""];
-        if (!selectedOp) {
-          alert("Por favor, seleccione un operador.");
-          return;
-        }
-
+        const cleanBase = el?.getAttribute("data-clean-base") || "/";
         const monthSelector = document.getElementById(
           "month-selector",
         ) as HTMLSelectElement;
         const monthStr = monthSelector ? monthSelector.value : "";
-        const cleanBase = el.getAttribute("data-clean-base") || "/";
 
-        const exportUrl = `${cleanBase}api/calidad/export-excel?agentId=${encodeURIComponent(activeAgentId || "")}&month=${encodeURIComponent(monthStr)}`;
+        const params = new URLSearchParams();
+        if (monthStr) params.set("month", monthStr);
+
+        const exportUrl = `${cleanBase}api/calidad/export-excel?${params.toString()}`;
         window.location.href = exportUrl;
       });
     }
 
-    // --- EXPORT TO CSV ---
-    const btnExportCSV = document.getElementById("btn-export-csv");
-    if (btnExportCSV) {
-      btnExportCSV.addEventListener("click", () => {
-        const el = document.getElementById("operators-data");
-        if (!el) return;
-        let operatorsData: Record<string, any> = {};
-        try {
-          operatorsData = JSON.parse(el.getAttribute("data-operators") || "{}");
-        } catch (e) {
-          console.error("Error parsing operators data", e);
-          return;
-        }
-
-        const selectedOp = operatorsData[activeAgentId || ""];
-        if (!selectedOp) {
-          alert("Por favor, seleccione un operador.");
-          return;
-        }
-
-        const monthSelector = document.getElementById(
-          "month-selector",
-        ) as HTMLSelectElement;
-        const monthStr = monthSelector ? monthSelector.value : "calidad";
-
-        // Obtener todos los parámetros configurados en el sistema
-        const params = getAuditParameters();
-
-        const channelLabelMap: Record<string, string> = {
-          wise_call: "Llamada Wise",
-          wise_email: "Mail Wise",
-          invgate_ticket: "Autogestión",
-        };
-
-        // Headers for CSV
-        const headers = [
-          "Periodo",
-          "Canal",
-          "Operador",
-          "Usuario",
-          "Fecha",
-          "ID Llamada / Caso",
-          "ID Ticket / AG",
-          "Duracion",
-          "Tiempo Ringueo",
-          "Creacion",
-          "Toma / Lectura",
-          "Es PAS",
-          "Modo Ticket",
-          "Puntaje Secc. 1",
-          "Puntaje Secc. 2",
-          "Puntaje Total",
-        ];
-
-        // Añadir una columna por cada parámetro dinámico
-        params.forEach((param: any) => {
-          headers.push(`[${param.code}] ${param.name}`);
-        });
-
-        // La columna de observaciones va al final
-        headers.push("Observaciones");
-
-        const csvRows = [headers.join(";")];
-
-        selectedOp.calls.forEach((call: any) => {
-          let ticketMode = "Ticket Nuevo";
-          if (call.isReclamoNovedad) {
-            ticketMode = "Reclamo / Novedad (100%)";
-          } else if (call.channelType === "wise_call" && call.appliesMda === false) {
-            ticketMode = "Sin Ticket";
-          } else if (call.channelType === "wise_email" && call.appliesMda === false) {
-            ticketMode = "Sin Ticket MDA";
-          } else if (call.channelType === "invgate_ticket" && call.staysInMda === false) {
-            ticketMode = "Derivado fuera de MDA";
-          }
-
-          const row = [
-            call.month,
-            channelLabelMap[call.channelType || "wise_call"] || (call.channelType || "wise_call"),
-            selectedOp.name,
-            selectedOp.username || "",
-            call.date ? call.date.substring(0, 10) : "",
-            call.callId,
-            call.ticketId,
-            call.duration || "",
-            call.ringTime || "",
-            call.creationTime || "",
-            call.takeTime || "",
-            call.isPas ? "Si" : "No",
-            ticketMode,
-            call.section1.score,
-            call.section2.score,
-            call.totalScore,
-          ];
-
-          // Determinar cumplimiento para cada parámetro dinámico
-          params.forEach((param: any) => {
-            let compliance = "N/A";
-
-            if (call.isReclamoNovedad && (param.section === "ticket" || param.section === "mda")) {
-              compliance = "Eximido (Reclamo)";
-            } else if (
-              call.section1 &&
-              call.section1.details &&
-              call.section1.details.hasOwnProperty(param.code)
-            ) {
-              compliance = call.section1.details[param.code]
-                ? "Cumple"
-                : "No cumple";
-            } else if (
-              call.section2 &&
-              call.section2.details &&
-              call.section2.details.hasOwnProperty(param.code)
-            ) {
-              compliance = call.section2.details[param.code]
-                ? "Cumple"
-                : "No cumple";
-            }
-
-            row.push(compliance);
-          });
-
-          // Agregar la observación al final de la fila
-          row.push(call.notes || "");
-
-          const escapedRow = row.map((val) => {
-            const valStr = typeof val === "string" ? val : String(val);
-            if (
-              valStr.includes(";") ||
-              valStr.includes("\n") ||
-              valStr.includes("\r") ||
-              valStr.includes('"')
-            ) {
-              return `"${valStr.replace(/"/g, '""')}"`;
-            }
-            return valStr;
-          });
-          csvRows.push(escapedRow.join(";"));
-        });
-
-        // Add UTF-8 BOM so Excel displays accents correctly
-        const csvContent = "\uFEFF" + csvRows.join("\n");
-        const blob = new Blob([csvContent], {
-          type: "text/csv;charset=utf-8;",
-        });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        const fileName = `auditorias_${selectedOp.username || activeAgentId}_${monthStr}.csv`;
-        link.setAttribute("download", fileName);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      });
-    }
 
     // Auto-select operator on page load if agentId is in URL or if user is an agent
     const urlParams = new URLSearchParams(window.location.search);
