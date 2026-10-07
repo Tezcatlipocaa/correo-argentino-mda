@@ -3,7 +3,7 @@ import { getCleanBase } from "@lib/baseUrl";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import { Icon } from "astro-icon/components";
+import AdminShortcutRow from "@components/admin/AdminShortcutRow.astro";
 import SyncDashboard from "@components/admin/SyncDashboard.astro";
 import AdminInvGateQAStatusCard from "@components/ui/AdminInvGateQAStatusCard.astro";
 import AdminWiseCxStatusCard from "@components/ui/AdminWiseCxStatusCard.astro";
@@ -28,28 +28,28 @@ const modulesGroup1: AdminModule[] = [
   {
     title: "Usuarios",
     icon: "boxicons:group-filled",
-    iconTone: "text-secondary",
+    iconTone: "bg-secondary/10 text-secondary",
     href: "/admin/usuarios",
     active: true,
   },
   {
     title: "Sugerencias y Reportes",
     icon: "boxicons:mail-open-filled",
-    iconTone: "text-primary",
+    iconTone: "bg-primary/10 text-primary",
     href: "/admin/feedback",
     active: true,
   },
   {
     title: "Auditoría",
-    icon: "boxicons:history",
-    iconTone: "text-neutral",
+    icon: "boxicons:history-filled",
+    iconTone: "bg-neutral/10 text-neutral",
     href: "/admin/auditoria",
     active: true,
   },
   {
     title: "Papelera",
-    icon: "boxicons:trash",
-    iconTone: "text-error",
+    icon: "boxicons:trash-filled",
+    iconTone: "bg-error/10 text-error",
     href: "/admin/papelera",
     active: true,
   },
@@ -59,21 +59,21 @@ const modulesGroup2: AdminModule[] = [
   {
     title: "Recursos",
     icon: "boxicons:link-filled",
-    iconTone: "text-accent",
+    iconTone: "bg-accent/10 text-accent",
     href: "/admin/recursos",
     active: true,
   },
   {
     title: "Aplicativos",
     icon: "boxicons:grid-circle-diagonal-right-filled",
-    iconTone: "text-accent",
+    iconTone: "bg-accent/10 text-accent",
     href: "/admin/aplicativos",
     active: true,
   },
   {
     title: "Contactos",
     icon: "boxicons:phone-filled",
-    iconTone: "text-primary",
+    iconTone: "bg-primary/10 text-primary",
     href: "/admin/contactos",
     active: true,
   },
@@ -83,7 +83,7 @@ const modulesGroupInvgate: AdminModule[] = [
   {
     title: "Ubicaciones InvGate",
     icon: "boxicons:map-filled",
-    iconTone: "text-secondary",
+    iconTone: "bg-secondary/10 text-secondary",
     href: "/admin/invgate/ubicaciones",
     active: true,
   },
@@ -116,66 +116,17 @@ const modulesGroupInvgate: AdminModule[] = [
               mod.href === "/admin/papelera") &&
             !can(user.role, "admin");
 
-          if (mod.active && mod.href && !isLocked) {
-            return (
-              <a
-                href={resolveUrl(mod.href)}
-                class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
-                aria-label={`Ir a ${mod.title}`}
-              >
-                <Icon
-                  name={mod.icon}
-                  size={24}
-                  class:list={["shrink-0 transition-colors", mod.iconTone]}
-                  aria-hidden="true" is:inline />
-                <span class="text-base-content flex flex-1 flex-wrap items-center gap-2 text-base font-semibold md:text-lg">
-                  {mod.title}
-                  {mod.href === "/admin/feedback" &&
-                    unassignedFeedbackCount > 0 && (
-                      <span class="badge badge-error badge-sm rounded-md px-2 py-0.5 text-xs font-semibold">
-                        {unassignedFeedbackCount} solicitudes sin asignar
-                      </span>
-                    )}
-                </span>
-                <Icon
-                  name="boxicons:arrow-right-stroke-circle-filled"
-                  size={22}
-                  class="text-base-content/30 group-hover:text-base-content/60 transition-colors duration-150"
-                  aria-hidden="true"
-                />
-              </a>
-            );
-          } else {
-            return (
-              <div
-                aria-disabled="true"
-                title={isLocked ? "Acceso restringido por rol" : "Próximamente"}
-                class="flex cursor-not-allowed items-center gap-4 px-6 py-5 opacity-40 select-none"
-              >
-                <Icon
-                  name={mod.icon}
-                  size={24}
-                  class:list={["shrink-0", mod.iconTone]}
-                  aria-hidden="true" is:inline />
-                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
-                  {mod.title}
-                </span>
-                {isLocked ? (
-                  <Icon
-                    name="boxicons:lock"
-                    size={22}
-                    class="text-base-content/60"
-                    aria-hidden="true"
-                  
-            is:inline />
-                ) : (
-                  <span class="badge badge-ghost badge-sm font-medium">
-                    Pronto
-                  </span>
-                )}
-              </div>
-            );
-          }
+          return (
+            <AdminShortcutRow
+              title={mod.title}
+              icon={mod.icon}
+              iconTone={mod.iconTone}
+              href={mod.href}
+              active={mod.active}
+              locked={isLocked}
+              badgeCount={mod.href === "/admin/feedback" ? unassignedFeedbackCount : 0}
+            />
+          );
         })
       }
     </div>
@@ -184,52 +135,15 @@ const modulesGroupInvgate: AdminModule[] = [
       class="card bg-base-100 border-base-300 divide-base-200 divide-y overflow-hidden border"
     >
       {
-        modulesGroup2.map((mod) => {
-          if (mod.active && mod.href) {
-            return (
-              <a
-                href={resolveUrl(mod.href)}
-                class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
-                aria-label={`Ir a ${mod.title}`}
-              >
-                <Icon
-                  name={mod.icon}
-                  size={24}
-                  class:list={["shrink-0 transition-colors", mod.iconTone]}
-                  aria-hidden="true" is:inline />
-                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
-                  {mod.title}
-                </span>
-                <Icon
-                  name="boxicons:arrow-right-stroke-circle-filled"
-                  size={22}
-                  class="text-base-content/30 group-hover:text-base-content/60 transition-colors duration-150"
-                  aria-hidden="true"
-                />
-              </a>
-            );
-          } else {
-            return (
-              <div
-                aria-disabled="true"
-                title="Próximamente"
-                class="flex cursor-not-allowed items-center gap-4 px-6 py-5 opacity-40 select-none"
-              >
-                <Icon
-                  name={mod.icon}
-                  size={24}
-                  class:list={["shrink-0", mod.iconTone]}
-                  aria-hidden="true" is:inline />
-                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
-                  {mod.title}
-                </span>
-                <span class="badge badge-ghost badge-sm font-medium">
-                  Pronto
-                </span>
-              </div>
-            );
-          }
-        })
+        modulesGroup2.map((mod) => (
+          <AdminShortcutRow
+            title={mod.title}
+            icon={mod.icon}
+            iconTone={mod.iconTone}
+            href={mod.href}
+            active={mod.active}
+          />
+        ))
       }
     </div>
 
@@ -242,60 +156,16 @@ const modulesGroupInvgate: AdminModule[] = [
             mod.href === "/admin/invgate/ubicaciones" &&
             !can(user.role, "team_leader");
 
-          if (mod.active && mod.href && !isLocked) {
-            return (
-              <a
-                href={resolveUrl(mod.href)}
-                class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
-                aria-label={`Ir a ${mod.title}`}
-              >
-                <Icon
-                  name={mod.icon}
-                  size={24}
-                  class:list={["shrink-0 transition-colors", mod.iconTone]}
-                  aria-hidden="true" is:inline />
-                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
-                  {mod.title}
-                </span>
-                <Icon
-                  name="boxicons:arrow-right-stroke-circle-filled"
-                  size={22}
-                  class="text-base-content/30 group-hover:text-base-content/60 transition-colors duration-150"
-                  aria-hidden="true"
-                />
-              </a>
-            );
-          } else {
-            return (
-              <div
-                aria-disabled="true"
-                title={isLocked ? "Acceso restringido por rol" : "Próximamente"}
-                class="flex cursor-not-allowed items-center gap-4 px-6 py-5 opacity-40 select-none"
-              >
-                <Icon
-                  name={mod.icon}
-                  size={24}
-                  class:list={["shrink-0", mod.iconTone]}
-                  aria-hidden="true" is:inline />
-                <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
-                  {mod.title}
-                </span>
-                {isLocked ? (
-                  <Icon
-                    name="boxicons:lock"
-                    size={22}
-                    class="text-base-content/60"
-                    aria-hidden="true"
-                  
-            is:inline />
-                ) : (
-                  <span class="badge badge-ghost badge-sm font-medium">
-                    Pronto
-                  </span>
-                )}
-              </div>
-            );
-          }
+          return (
+            <AdminShortcutRow
+              title={mod.title}
+              icon={mod.icon}
+              iconTone={mod.iconTone}
+              href={mod.href}
+              active={mod.active}
+              locked={isLocked}
+            />
+          );
         })
       }
     </div>
