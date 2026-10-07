@@ -335,6 +335,7 @@ const cleanBase = getCleanBase();
 <div
   id="operators-data"
   data-operators={JSON.stringify(operatorsDataMap)}
+  data-clean-base={cleanBase}
   class="hidden"
 >
 </div>
@@ -640,6 +641,14 @@ const cleanBase = getCleanBase();
                   Volver al resumen
                 </button>
                 <div class="flex items-center gap-2">
+                  <button
+                    id="btn-export-excel"
+                    class="btn btn-xs btn-outline btn-success text-xxs gap-1.5 font-bold uppercase"
+                    title="Exportar Reporte de Operador a Excel (.xlsx)"
+                  >
+                    <Icon name="boxicons:file" size={14} />
+                    <span>Exportar Excel</span>
+                  </button>
                   <button
                     id="btn-export-csv"
                     class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
@@ -3074,6 +3083,37 @@ const cleanBase = getCleanBase();
       }
     });
 
+    // --- EXPORT TO EXCEL (.xlsx) ---
+    const btnExportExcel = document.getElementById("btn-export-excel");
+    if (btnExportExcel) {
+      btnExportExcel.addEventListener("click", () => {
+        const el = document.getElementById("operators-data");
+        if (!el) return;
+        let operatorsData: Record<string, any> = {};
+        try {
+          operatorsData = JSON.parse(el.getAttribute("data-operators") || "{}");
+        } catch (e) {
+          console.error("Error parsing operators data", e);
+          return;
+        }
+
+        const selectedOp = operatorsData[activeAgentId || ""];
+        if (!selectedOp) {
+          alert("Por favor, seleccione un operador.");
+          return;
+        }
+
+        const monthSelector = document.getElementById(
+          "month-selector",
+        ) as HTMLSelectElement;
+        const monthStr = monthSelector ? monthSelector.value : "";
+        const cleanBase = el.getAttribute("data-clean-base") || "/";
+
+        const exportUrl = `${cleanBase}api/calidad/export-excel?agentId=${encodeURIComponent(activeAgentId || "")}&month=${encodeURIComponent(monthStr)}`;
+        window.location.href = exportUrl;
+      });
+    }
+
     // --- EXPORT TO CSV ---
     const btnExportCSV = document.getElementById("btn-export-csv");
     if (btnExportCSV) {
@@ -3122,6 +3162,7 @@ const cleanBase = getCleanBase();
           "Creacion",
           "Toma / Lectura",
           "Es PAS",
+          "Modo Ticket",
           "Puntaje Secc. 1",
           "Puntaje Secc. 2",
           "Puntaje Total",
@@ -3138,6 +3179,17 @@ const cleanBase = getCleanBase();
         const csvRows = [headers.join(";")];
 
         selectedOp.calls.forEach((call: any) => {
+          let ticketMode = "Ticket Nuevo";
+          if (call.isReclamoNovedad) {
+            ticketMode = "Reclamo / Novedad (100%)";
+          } else if (call.channelType === "wise_call" && call.appliesMda === false) {
+            ticketMode = "Sin Ticket";
+          } else if (call.channelType === "wise_email" && call.appliesMda === false) {
+            ticketMode = "Sin Ticket MDA";
+          } else if (call.channelType === "invgate_ticket" && call.staysInMda === false) {
+            ticketMode = "Derivado fuera de MDA";
+          }
+
           const row = [
             call.month,
             channelLabelMap[call.channelType || "wise_call"] || (call.channelType || "wise_call"),
@@ -3151,6 +3203,7 @@ const cleanBase = getCleanBase();
             call.creationTime || "",
             call.takeTime || "",
             call.isPas ? "Si" : "No",
+            ticketMode,
             call.section1.score,
             call.section2.score,
             call.totalScore,
@@ -3160,8 +3213,9 @@ const cleanBase = getCleanBase();
           params.forEach((param: any) => {
             let compliance = "N/A";
 
-            // Buscar en detalles de Sección 1 (Interacción)
-            if (
+            if (call.isReclamoNovedad && (param.section === "ticket" || param.section === "mda")) {
+              compliance = "Eximido (Reclamo)";
+            } else if (
               call.section1 &&
               call.section1.details &&
               call.section1.details.hasOwnProperty(param.code)
@@ -3169,9 +3223,7 @@ const cleanBase = getCleanBase();
               compliance = call.section1.details[param.code]
                 ? "Cumple"
                 : "No cumple";
-            }
-            // Buscar en detalles de Sección 2 (Gestión)
-            else if (
+            } else if (
               call.section2 &&
               call.section2.details &&
               call.section2.details.hasOwnProperty(param.code)
