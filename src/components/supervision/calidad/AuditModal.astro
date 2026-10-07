@@ -329,10 +329,14 @@ const invgateAgParams = allParameters.filter(
                     id="form-take-time"
                     name="takeTime"
                     label="Toma / Lectura"
-                    placeholder="YYYY-MM-DD HH:MM"
+                    placeholder="00:00:00"
                     size="xs"
                     inputClass="font-mono font-semibold text-xs"
                   />
+                  <p
+                    id="take-time-hint"
+                    class="text-xxs text-secondary font-semibold pl-1 hidden font-sans mt-0.5"
+                  ></p>
                 </div>
                 <div
                   id="meta-pas-container"
@@ -468,6 +472,15 @@ const invgateAgParams = allParameters.filter(
                       <div id="tv-source-match-badge" class="shrink-0 flex items-center"></div>
                     </div>
                     <p id="tv-source" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
+                      -
+                    </p>
+                  </div>
+                  <div class="bg-base-200/40 border border-base-200 rounded-lg p-2">
+                    <span class="text-xxs text-base-content/50 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Icon name="boxicons:timer" size={13} class="text-secondary/70" />
+                      1ra Respuesta
+                    </span>
+                    <p id="tv-response-time" class="text-base-content truncate font-sans text-xs font-semibold mt-0.5">
                       -
                     </p>
                   </div>
@@ -1423,6 +1436,8 @@ const invgateAgParams = allParameters.filter(
     const tvCreatedBy = document.getElementById("tv-created-by");
     const tvHelpdesk = document.getElementById("tv-helpdesk");
     const tvSource = document.getElementById("tv-source");
+    const tvResponseTime = document.getElementById("tv-response-time");
+    const formTakeHint = document.getElementById("take-time-hint");
 
     const tvSourceMatchBadge = document.getElementById("tv-source-match-badge");
     const tvDescription = document.getElementById("tv-description");
@@ -1601,6 +1616,29 @@ const invgateAgParams = allParameters.filter(
       if (tvHelpdesk) tvHelpdesk.textContent = helpdesk;
       if (tvSource) tvSource.textContent = source;
 
+      if (tvResponseTime) {
+        const human = data.rawDetails?.responseHuman;
+        tvResponseTime.textContent = data.takeTime ? `${data.takeTime}${human ? ` (${human})` : ""}` : "-";
+      }
+
+      if (formTakeHint) {
+        if (data.rawDetails?.reassignedWithoutComment) {
+          formTakeHint.textContent = `Sin comentarios. Verificar en InvGate.`;
+          formTakeHint.classList.remove("hidden");
+        } else {
+          const human = data.rawDetails?.responseHuman;
+          if (human) {
+            formTakeHint.textContent = `~${human}`;
+            formTakeHint.classList.remove("hidden");
+          } else if (data.takeTime) {
+            formTakeHint.textContent = data.takeTime;
+            formTakeHint.classList.remove("hidden");
+          } else {
+            formTakeHint.classList.add("hidden");
+          }
+        }
+      }
+
       if (tvDescription)
         tvDescription.textContent =
           cleanHtmlText(description) || "Sin descripción disponible";
@@ -1632,6 +1670,11 @@ const invgateAgParams = allParameters.filter(
       if (tvCreator) tvCreator.textContent = "-";
       if (tvHelpdesk) tvHelpdesk.textContent = "-";
       if (tvSource) tvSource.textContent = "-";
+      if (tvResponseTime) tvResponseTime.textContent = "-";
+      if (formTakeHint) {
+        formTakeHint.textContent = "";
+        formTakeHint.classList.add("hidden");
+      }
       if (tvDescription) tvDescription.textContent = "-";
       if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
       if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
@@ -1969,9 +2012,16 @@ const invgateAgParams = allParameters.filter(
           '<span class="loading loading-spinner loading-xs"></span>';
         if (invgateFeedbackAlert) invgateFeedbackAlert.classList.add("hidden");
 
+        const formAgentId = document.getElementById(
+          "form-agent-id",
+        ) as HTMLInputElement;
+        const agentIdParam = formAgentId?.value
+          ? `&agentId=${encodeURIComponent(formAgentId.value)}`
+          : "";
+
         try {
           const res = await fetch(
-            `${cleanBase}api/calidad/fetch-metadata?channel=invgate_ticket&id=${encodeURIComponent(id)}&source=invgate`,
+            `${cleanBase}api/calidad/fetch-metadata?channel=invgate_ticket&id=${encodeURIComponent(id)}&source=invgate${agentIdParam}`,
           );
           const json = await res.json();
 
@@ -2012,7 +2062,7 @@ const invgateAgParams = allParameters.filter(
             if (formDate && d.date) formDate.value = d.date;
             if (formCreation && d.creationTime)
               formCreation.value = d.creationTime;
-            if (formTake && d.takeTime) formTake.value = d.takeTime;
+            if (d.takeTime && formTake) formTake.value = d.takeTime;
             if (formIsPas && typeof d.isPas === "boolean")
               formIsPas.checked = d.isPas;
           }
@@ -2020,12 +2070,21 @@ const invgateAgParams = allParameters.filter(
           // Cargar datos en el Visor de Ticket y auto-evaluar título
           populateTicketViewer(d);
 
-          showFeedbackMessage(
-            invgateFeedbackAlert,
-            `✓ Ticket #${d.caseNumber} cargado ${d.isPas ? "[PAS]" : ""}`,
-            "success",
-            false,
-          );
+          if (d.rawDetails?.reassignedWithoutComment) {
+            showFeedbackMessage(
+              invgateFeedbackAlert,
+              `✓ Ticket #${d.caseNumber} cargado. Sin comentarios del operador evaluado. Verificar en InvGate.`,
+              "warning",
+              false,
+            );
+          } else {
+            showFeedbackMessage(
+              invgateFeedbackAlert,
+              `✓ Ticket #${d.caseNumber} cargado ${d.isPas ? "[PAS]" : ""}`,
+              "success",
+              false,
+            );
+          }
         } catch (err) {
           showFeedbackMessage(
             invgateFeedbackAlert,
