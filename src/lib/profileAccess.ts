@@ -70,7 +70,7 @@ export const profileAccessCatalog: ProfileAccessEntry[] = [
     title: "Calidad de operadores",
     description: "Auditorías de llamadas y métricas de rendimiento.",
     icon: "boxicons:bar-chart-big-filled",
-    iconTone: "bg-primary/10 text-primary",
+    iconTone: "bg-warning/10 text-warning",
     group: "supervision",
   },
   {
@@ -86,7 +86,7 @@ export const profileAccessCatalog: ProfileAccessEntry[] = [
     title: "Títulos",
     description: "Títulos normalizados listos para la tipificación de tickets.",
     icon: "boxicons:list-ul-filled",
-    iconTone: "bg-primary/10 text-primary",
+    iconTone: "bg-warning/10 text-warning",
     group: "operacion",
   },
   {
@@ -94,7 +94,7 @@ export const profileAccessCatalog: ProfileAccessEntry[] = [
     title: "Mesas de Ayuda",
     description: "Matriz de soportes, derivaciones y canales de escalado.",
     icon: "boxicons:headphone-mic-filled",
-    iconTone: "bg-warning/10 text-warning",
+    iconTone: "bg-accent/10 text-accent",
     group: "operacion",
   },
   {
@@ -190,7 +190,7 @@ export const profileAccessCatalog: ProfileAccessEntry[] = [
     title: "Sugerencias y reportes",
     description: "Reclamos, solicitudes y errores reportados por usuarios.",
     icon: "boxicons:mail-open-filled",
-    iconTone: "bg-primary/10 text-primary",
+    iconTone: "bg-warning/10 text-warning",
     group: "admin",
   },
   {
