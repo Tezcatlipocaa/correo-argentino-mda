@@ -1,17 +1,37 @@
 ---
 import { Icon } from "astro-icon/components";
 
+export type EntityButtonSize = "sm" | "md" | "responsive";
+
 interface Props {
   href: string;
   label: string;
   id?: string;
   icon?: string;
+  size?: EntityButtonSize;
+  iconSize?: number;
 }
 
-const { href, label, id, icon = "boxicons:plus-filled" } = Astro.props;
+const {
+  href,
+  label,
+  id,
+  icon = "boxicons:plus-filled",
+  size = "sm",
+  iconSize,
+} = Astro.props;
+
+const sizeClasses: Record<EntityButtonSize, string> = {
+  sm: "btn-sm",
+  md: "btn-md",
+  responsive: "btn-sm md:btn-md",
+};
+
+const resolvedIconSize =
+  iconSize ?? (size === "md" ? 20 : size === "responsive" ? 18 : 16);
 ---
 
-<a id={id} href={href} class="btn btn-primary btn-sm gap-2">
-  <Icon name={icon} size={16} is:inline />
+<a id={id} href={href} class:list={["btn btn-primary gap-2", sizeClasses[size]]}>
+  <Icon name={icon} size={resolvedIconSize} is:inline />
   {label}
 </a>
