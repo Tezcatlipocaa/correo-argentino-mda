@@ -196,26 +196,39 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const wiseSvgPath = page.locator("#btn-fetch-wise-api svg path");
     await expect(wiseSvgPath).toBeVisible();
 
-    // 1. Verificar presencia de buscador unificado con pestañas (Wise CX / InvGate)
-    const tabWise = page.locator("#tab-search-wise");
-    const tabInvgate = page.locator("#tab-search-invgate");
-    await expect(tabWise).toBeVisible();
-    await expect(tabInvgate).toBeVisible();
+    // 1. Los campos de búsqueda están unificados en "Datos de la atención"
+    // (no existe la tarjeta #unified-search-card ni sus tabs duplicados)
+    await expect(page.locator("#unified-search-card")).not.toBeAttached();
+    await expect(page.locator("#tab-search-wise")).not.toBeAttached();
+    await expect(page.locator("#tab-search-invgate")).not.toBeAttached();
 
-    // 2. Verificar que en Autogestión se oculta pestaña Wise CX
+    const callIdInput = page.locator("#form-call-id");
+    const ticketIdInput = page.locator("#form-ticket-id");
+    const btnFetchWise = page.locator("#btn-fetch-wise-api");
+    const btnFetchInvgate = page.locator("#btn-fetch-invgate-api");
+
+    await expect(callIdInput).toBeVisible();
+    await expect(ticketIdInput).toBeVisible();
+    await expect(btnFetchWise).toBeVisible();
+    await expect(btnFetchInvgate).toBeVisible();
+    await expect(page.locator("#btn-fetch-invgate-label")).toHaveText("Buscar");
+
+    // 2. Ambos botones siguen disponibles en Autogestión (ya no hay tabs que oculten)
     const agBtn = page.locator('.channel-btn[data-channel="invgate_ticket"]');
     await agBtn.click();
-    await expect(tabWise).toHaveClass(/hidden/);
-    await expect(tabInvgate).toBeVisible();
-    await expect(page.locator("#btn-fetch-invgate-label")).toHaveText("Buscar");
+    await expect(btnFetchWise).toBeVisible();
+    await expect(btnFetchInvgate).toBeVisible();
 
     // Volver a canal Llamada Wise
     const callBtn = page.locator('.channel-btn[data-channel="wise_call"]');
     await callBtn.click();
-    await expect(tabWise).not.toHaveClass(/hidden/);
+    await expect(btnFetchWise).toBeVisible();
+
+    // 2b. El deep-link a InvGate arranca deshabilitado sin ticket cargado
+    const btnOpenInvgate = page.locator("#btn-open-invgate-ticket");
+    await expect(btnOpenInvgate).toHaveClass(/pointer-events-none/);
 
     // 3. Probar que al buscar en Wise CX NO se llena el Detalle del Ticket y el audio es independiente
-    await tabWise.click();
     await page.route("**/api/calidad/fetch-metadata*source=wise*", async (route) => {
       await route.fulfill({
         status: 200,
@@ -233,8 +246,8 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
       });
     });
 
-    await page.locator("#wise-search-id").fill("534787");
-    await page.locator("#btn-fetch-wise-api").click();
+    await callIdInput.fill("534787");
+    await btnFetchWise.click();
 
     // Detalle del Ticket NO debe haberse cargado desde Wise
     const tvTitlePre = page.locator("#tv-title");
@@ -282,10 +295,9 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
       });
     });
 
-    // Cambiar a pestaña InvGate y realizar búsqueda
-    await tabInvgate.click();
-    await page.locator("#invgate-search-id").fill("88442");
-    await page.locator("#btn-fetch-invgate-api").click();
+    // Buscar en InvGate desde el campo #form-ticket-id
+    await ticketIdInput.fill("88442");
+    await btnFetchInvgate.click();
 
     // 6. Verificar que el visor de ticket se actualizó y la descripción no tiene tags HTML
     const tvTitle = page.locator("#tv-title");
@@ -321,8 +333,8 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     // 8. Probar búsqueda con Título No Homologado y Origen No Válido (ej: Correo en llamada wise)
     mockTitle = "Titulo Inexistente No Homologado 999";
     mockSource = "Correo";
-    await page.locator("#invgate-search-id").fill("88443");
-    await page.locator("#btn-fetch-invgate-api").click();
+    await ticketIdInput.fill("88443");
+    await btnFetchInvgate.click();
 
     // Verificar que badge dice "No Homologado" sin símbolo ⚠
     await expect(tvTitleBadge).toHaveText("No Homologado");
@@ -349,6 +361,45 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
 
     // 10. Verificar que el número de ticket se asignó en el formulario
     await expect(page.locator("#form-ticket-id")).toHaveValue("88442");
+
+    // 10b. El badge no debe desbordar su caja ni perder el shrink-0 al
+    // cambiar de estado (regresión: el JS pisaba el className completo)
+    const viewerBadge = page.locator("#ticket-viewer-badge");
+    await expect(viewerBadge).toContainText("88442");
+    await expect(viewerBadge).toHaveClass(/shrink-0/);
+    await expect(viewerBadge).toHaveClass(/badge-neutral/);
+    await expect(viewerBadge).not.toHaveClass(/badge-primary/);
+    const badgeBox = await viewerBadge.boundingBox();
+    if (badgeBox) {
+      // El texto debe caber dentro del ancho del badge
+      const textWidth = await viewerBadge.evaluate(
+        (el) => el.scrollWidth,
+      );
+      expect(textWidth).toBeLessThanOrEqual(Math.ceil(badgeBox.width) + 1);
+    }
+
+    // 11. El deep-link a InvGate apunta al ticket cargado y abre en pestaña nueva
+    await expect(btnOpenInvgate).not.toHaveClass(/pointer-events-none/);
+    await expect(btnOpenInvgate).toHaveAttribute("target", "_blank");
+    await expect(btnOpenInvgate).toHaveAttribute("rel", /noopener/);
+    await expect(btnOpenInvgate).toHaveAttribute(
+      "href",
+      /\/requests\/show\/index\/id\/88442$/,
+    );
+
+    // 12. Enter en el campo dispara la búsqueda (mismo resultado que el botón).
+    // El mock responde con caseNumber fijo "88442", así que el input se
+    // resincroniza a ese valor y el deep-link debe reflejarlo.
+    mockTitle = "Titulo Cargado Mediante Enter";
+    mockSource = "Teléfono";
+    await ticketIdInput.fill("88450");
+    await ticketIdInput.press("Enter");
+    await expect(tvTitle).toHaveText("Titulo Cargado Mediante Enter");
+    await expect(ticketIdInput).toHaveValue("88442");
+    await expect(btnOpenInvgate).toHaveAttribute(
+      "href",
+      /\/requests\/show\/index\/id\/88442$/,
+    );
 
     // Cerrar modal
     await page.locator("#btn-close-modal").click();

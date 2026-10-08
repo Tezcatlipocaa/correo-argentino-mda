@@ -13,6 +13,7 @@ export function calculateMultiChannelAuditScores(
   compliantIdsOrCodes: Set<number | string>,
   hasSection2: boolean,
   isCriticalFailure = false,
+  isReclamoNovedad = false,
 ): MultiChannelScoreResult {
   let s1Deductions = 0;
   let s2Deductions = 0;
@@ -45,17 +46,32 @@ export function calculateMultiChannelAuditScores(
     const s1Raw = Math.max(0, 45 - s1Deductions);
     section1Score = Math.round((s1Raw / 45) * 100);
     if (hasSection2) {
-      const s2Raw = Math.max(0, 55 - s2Deductions);
-      section2Score = Math.round((s2Raw / 55) * 100);
-      totalScore = s1Raw + s2Raw;
+      if (isReclamoNovedad) {
+        section2Score = 100;
+        totalScore = s1Raw + 55;
+      } else {
+        const s2Raw = Math.max(0, 55 - s2Deductions);
+        section2Score = Math.round((s2Raw / 55) * 100);
+        totalScore = s1Raw + s2Raw;
+      }
     } else {
       section2Score = 0;
       totalScore = section1Score;
     }
   } else {
     section1Score = Math.max(0, 100 - s1Deductions);
-    section2Score = hasSection2 ? Math.max(0, 100 - s2Deductions) : 0;
-    totalScore = hasSection2 ? Math.round((section1Score + section2Score) / 2) : section1Score;
+    if (hasSection2) {
+      if (isReclamoNovedad) {
+        section2Score = 100;
+        totalScore = Math.round((section1Score + 100) / 2);
+      } else {
+        section2Score = Math.max(0, 100 - s2Deductions);
+        totalScore = Math.round((section1Score + section2Score) / 2);
+      }
+    } else {
+      section2Score = 0;
+      totalScore = section1Score;
+    }
   }
 
   return {

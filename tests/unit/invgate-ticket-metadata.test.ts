@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   parseInvgateAgMetadata,
   fetchInvgateTicketMetadata,
+  calculateInvgateAgResponseTime,
+  formatSecondsToHoursMinutesSeconds,
+  formatHumanDuration,
   INVGATE_STATUS_NAMES,
   INVGATE_PRIORITY_NAMES,
 } from "../../src/lib/qualityMetadataFetcher";
@@ -45,7 +48,7 @@ describe("InvGate Ticket Metadata Resolution", () => {
     };
 
     vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
-      if (endpoint === "incident?id=12345") {
+      if (endpoint.startsWith("incident?id=12345")) {
         return { ok: true, data: mockIncident, status: 200 };
       }
       if (endpoint === "user?id=501") {
@@ -124,7 +127,7 @@ describe("InvGate Ticket Metadata Resolution", () => {
     };
 
     vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
-      if (endpoint === "incident?id=77777") {
+      if (endpoint.startsWith("incident?id=77777")) {
         return { ok: true, data: mockIncident, status: 200 };
       }
       if (endpoint === "user?id=101") {
@@ -167,7 +170,7 @@ describe("InvGate Ticket Metadata Resolution", () => {
     };
 
     const getSpy = vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
-      if (endpoint === "incident?id=88888") {
+      if (endpoint.startsWith("incident?id=88888")) {
         return { ok: true, data: mockIncident, status: 200 };
       }
       if (endpoint === "user?id=505") {
@@ -189,5 +192,170 @@ describe("InvGate Ticket Metadata Resolution", () => {
     const userCalls = getSpy.mock.calls.filter(([endpoint]) => endpoint === "user?id=505");
     expect(userCalls.length).toBe(1);
   });
+
+  describe("Response Time & First Intervention Calculation", () => {
+    it("formats duration helpers properly", () => {
+      expect(formatSecondsToHoursMinutesSeconds(0)).toBe("00:00:00");
+      expect(formatSecondsToHoursMinutesSeconds(1320)).toBe("00:22:00"); // 22 minutes
+      expect(formatSecondsToHoursMinutesSeconds(7853)).toBe("02:10:53"); // 2h 10m 53s
+
+      expect(formatHumanDuration(0)).toBe("0 min");
+      expect(formatHumanDuration(45)).toBe("45s");
+      expect(formatHumanDuration(150)).toBe("2m 30s");
+      expect(formatHumanDuration(1320)).toBe("22 min");
+      expect(formatHumanDuration(7853)).toBe("2h 10m");
+    });
+
+    it("calculates exact response time from ticket creation to first operator comment (user example 22 min)", () => {
+      const incident = {
+        id: 79399,
+        created_at: 1788874500, // T0
+        user_id: 5001, // Solicitante
+        comments: [
+          {
+            author_id: 999, // Operador
+            created_at: 1788875820, // T0 + 1320s (22 min)
+            message: "<p>Comentario del operador</p>",
+          },
+        ],
+      };
+
+      const res = calculateInvgateAgResponseTime(incident);
+      expect(res.diffSeconds).toBe(1320);
+      expect(res.formattedDuration).toBe("00:22:00");
+      expect(res.humanText).toBe("22 min");
+
+      const metadata = parseInvgateAgMetadata(incident);
+      expect(metadata.takeTime).toBe("00:22:00");
+      expect(metadata.creationTime).toBeDefined();
+      expect(metadata.creationTime).not.toBe(metadata.takeTime);
+      expect(metadata.rawDetails?.responseHuman).toBe("22 min");
+    });
+
+    it("skips customer comments and calculates response time based on the first operator comment", () => {
+      const incident = {
+        id: 79350,
+        created_at: 1788871000,
+        user_id: 1623, // Solicitante
+        comments: [
+          {
+            author_id: 1623, // El propio cliente agregando datos
+            created_at: 1788871060, // 1 min después
+            message: "<p>Aporto más información</p>",
+          },
+          {
+            author_id: 5402, // Operador / MDA
+            created_at: 1788873016, // 2016 segundos después (33m 36s)
+            message: "<p>Estimado, tomamos el caso</p>",
+          },
+        ],
+      };
+
+      const res = calculateInvgateAgResponseTime(incident);
+      expect(res.diffSeconds).toBe(2016);
+      expect(res.formattedDuration).toBe("00:33:36");
+      expect(res.humanText).toBe("33 min");
+    });
+
+    it("falls back to solved_at if there are no comments", () => {
+      const incident = {
+        id: 88991,
+        created_at: 1727780000,
+        solved_at: 1727780600, // 600 segundos (10 min)
+        comments: [],
+      };
+
+      const res = calculateInvgateAgResponseTime(incident);
+      expect(res.diffSeconds).toBe(600);
+      expect(res.formattedDuration).toBe("00:10:00");
+      expect(res.humanText).toBe("10 min");
+    });
+
+    it("falls back to updated_at / last_update if reassigned without comments", () => {
+      const incident = {
+        id: 88992,
+        created_at: 1727780000,
+        last_update: 1727780300, // 300 segundos (5 min)
+      };
+
+      const res = calculateInvgateAgResponseTime(incident);
+      expect(res.diffSeconds).toBe(300);
+      expect(res.formattedDuration).toBe("00:05:00");
+      expect(res.humanText).toBe("5 min");
+    });
+
+    it("returns 00:00:00 if ticket has no interventions yet", () => {
+      const incident = {
+        id: 88993,
+        created_at: 1727780000,
+        last_update: 1727780000,
+      };
+
+      const res = calculateInvgateAgResponseTime(incident);
+      expect(res.diffSeconds).toBe(0);
+      expect(res.formattedDuration).toBe("00:00:00");
+      expect(res.humanText).toBe("0 min");
+    });
+
+    it("ticket #77448: does NOT attribute third-party comments (Silva 12 days later) to the evaluated operator (Bazualdo)", () => {
+      // Simulación fiel de ticket #77448:
+      // T0: 1788352784 (09:40) creado por cliente (1195)
+      // Bazualdo (4517) tomó y reasignó el ticket a Tortuguitas a las 10:04 sin dejar comentario
+      // Silva (4348) comentó 12 días después (1789394109) al cambiar el teclado
+      const incident77448 = {
+        id: 77448,
+        created_at: 1788352784,
+        user_id: 1195, // Solicitante
+        assigned_id: 4348, // Técnico de Tortuguitas
+        comments: [
+          { author_id: 1195, created_at: 1788352845, message: "Recepcion nave 3" },
+          { author_id: 1195, created_at: 1788974643, message: "Recordar solicitud" },
+          { author_id: 4348, created_at: 1789394109, message: "Se realiza cambio de teclado" }, // +12 días
+        ],
+      };
+
+      // Si evaluamos a Bazualdo (ID 4517):
+      const resBazualdo = calculateInvgateAgResponseTime(incident77448, {
+        targetOperatorId: 4517,
+      });
+
+      // No debe atribuir los 12 días (289 horas) a Bazualdo
+      expect(resBazualdo.diffSeconds).toBe(0);
+      expect(resBazualdo.formattedDuration).toBe("");
+      expect(resBazualdo.reassignedWithoutComment).toBe(true);
+      expect(resBazualdo.hasOperatorComment).toBe(false);
+
+      // parseInvgateAgMetadata no debe inventar 289h en takeTime
+      const metadata = parseInvgateAgMetadata(incident77448, {
+        targetOperatorId: 4517,
+      });
+      expect(metadata.takeTime).toBe("");
+      expect(metadata.rawDetails?.reassignedWithoutComment).toBe(true);
+    });
+
+    it("evaluates comment only if author matches targetOperatorId", () => {
+      const incident = {
+        id: 77100,
+        created_at: 1788000000,
+        user_id: 100,
+        comments: [
+          { author_id: 200, created_at: 1788000600, message: "Comentario de otro operador" }, // +10 min
+          { author_id: 300, created_at: 1788001200, message: "Comentario de operador evaluado" }, // +20 min
+        ],
+      };
+
+      const res = calculateInvgateAgResponseTime(incident, {
+        targetOperatorId: 300,
+      });
+
+      expect(res.diffSeconds).toBe(1200);
+      expect(res.formattedDuration).toBe("00:20:00");
+      expect(res.humanText).toBe("20 min");
+      expect(res.hasOperatorComment).toBe(true);
+      expect(res.reassignedWithoutComment).toBe(false);
+    });
+  });
 });
+
+
 

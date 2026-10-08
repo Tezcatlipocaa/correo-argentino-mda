@@ -56,6 +56,223 @@ export function formatDurationToTime(seconds: number): string {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+export function formatSecondsToHoursMinutesSeconds(seconds: number): string {
+  if (isNaN(seconds) || seconds <= 0) return "00:00:00";
+  const hours = Math.floor(seconds / 3600);
+  const remainder = seconds % 3600;
+  const mins = Math.floor(remainder / 60);
+  const secs = Math.floor(remainder % 60);
+  return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+export function formatHumanDuration(seconds: number): string {
+  if (isNaN(seconds) || seconds <= 0) return "0 min";
+  const hours = Math.floor(seconds / 3600);
+  const remainder = seconds % 3600;
+  const mins = Math.floor(remainder / 60);
+  const secs = Math.floor(remainder % 60);
+
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  if (mins > 0) {
+    return secs > 0 && mins < 5 ? `${mins}m ${secs}s` : `${mins} min`;
+  }
+  return `${secs}s`;
+}
+
+export interface InvgateResponseTimeOptions {
+  targetOperatorId?: number | null;
+  targetOperatorUsername?: string | null;
+  targetOperatorName?: string | null;
+}
+
+export interface InvgateResponseTimeResult {
+  diffSeconds: number;
+  formattedDuration: string;
+  humanText: string;
+  reassignedWithoutComment?: boolean;
+  hasOperatorComment?: boolean;
+}
+
+export function calculateInvgateAgResponseTime(
+  incident: any,
+  options?: InvgateResponseTimeOptions,
+): InvgateResponseTimeResult {
+  let createdEpoch: number | null = null;
+  if (typeof incident?.created_at === "number") {
+    createdEpoch = incident.created_at;
+  } else if (typeof incident?.created_at === "string" && incident.created_at.trim()) {
+    const parsed = Date.parse(incident.created_at.replace(" ", "T"));
+    if (!isNaN(parsed)) {
+      createdEpoch = Math.floor(parsed / 1000);
+    }
+  }
+
+  if (createdEpoch === null || isNaN(createdEpoch)) {
+    return {
+      diffSeconds: 0,
+      formattedDuration: "00:00:00",
+      humanText: "0 min",
+      reassignedWithoutComment: false,
+      hasOperatorComment: false,
+    };
+  }
+
+  // 1. Buscar comentarios para determinar la primera intervención de operador
+  const comments = Array.isArray(incident?.comments) ? incident.comments : [];
+  const customerUserId = incident?.user_id ?? null;
+  const targetOpId = options?.targetOperatorId ?? null;
+
+  let earliestOperatorCommentEpoch: number | null = null;
+  let earliestAnyNonCustomerCommentEpoch: number | null = null;
+  let hasTargetComment = false;
+
+  for (const c of comments) {
+    let cEpoch: number | null = null;
+    if (typeof c?.created_at === "number") {
+      cEpoch = c.created_at;
+    } else if (typeof c?.created_at === "string" && c.created_at.trim()) {
+      const parsed = Date.parse(c.created_at.replace(" ", "T"));
+      if (!isNaN(parsed)) cEpoch = Math.floor(parsed / 1000);
+    }
+
+    if (cEpoch === null || isNaN(cEpoch)) continue;
+
+    if (cEpoch >= createdEpoch) {
+      const isCustomer = customerUserId !== null && c.author_id === customerUserId;
+
+      if (targetOpId !== null) {
+        // Modo específico: el comentario sólo cuenta si el autor es el operador evaluado
+        if (c.author_id === targetOpId) {
+          hasTargetComment = true;
+          if (earliestOperatorCommentEpoch === null || cEpoch < earliestOperatorCommentEpoch) {
+            earliestOperatorCommentEpoch = cEpoch;
+          }
+        }
+      } else {
+        // Modo general: si no es el cliente o es solución
+        if (!isCustomer || c.is_solution) {
+          if (earliestOperatorCommentEpoch === null || cEpoch < earliestOperatorCommentEpoch) {
+            earliestOperatorCommentEpoch = cEpoch;
+          }
+        }
+      }
+
+      if (!isCustomer) {
+        if (earliestAnyNonCustomerCommentEpoch === null || cEpoch < earliestAnyNonCustomerCommentEpoch) {
+          earliestAnyNonCustomerCommentEpoch = cEpoch;
+        }
+      }
+    }
+  }
+
+  // Si se especificó un targetOperatorId y dicho operador NO dejó comentarios:
+  if (targetOpId !== null && !hasTargetComment) {
+    // ¿El caso fue solucionado directamente por el operador evaluado?
+    let solvedEpoch: number | null = null;
+    if (typeof incident?.solved_at === "number") {
+      solvedEpoch = incident.solved_at;
+    } else if (typeof incident?.solved_at === "string" && incident.solved_at.trim()) {
+      const parsed = Date.parse(incident.solved_at.replace(" ", "T"));
+      if (!isNaN(parsed)) solvedEpoch = Math.floor(parsed / 1000);
+    }
+
+    if (
+      solvedEpoch !== null &&
+      !isNaN(solvedEpoch) &&
+      solvedEpoch >= createdEpoch &&
+      incident.assigned_id === targetOpId
+    ) {
+      const diffSeconds = Math.max(0, solvedEpoch - createdEpoch);
+      return {
+        diffSeconds,
+        formattedDuration: formatSecondsToHoursMinutesSeconds(diffSeconds),
+        humanText: formatHumanDuration(diffSeconds),
+        reassignedWithoutComment: false,
+        hasOperatorComment: false,
+      };
+    }
+
+    // El operador evaluado no dejó comentarios y no lo solucionó directamente.
+    // Reasignó el caso a otra mesa/operador o fue derivado sin comentarios.
+    // Regla de dominio: NO atribuir comentarios de terceros (otras áreas días después) ni fechas de última actualización.
+    return {
+      diffSeconds: 0,
+      formattedDuration: "",
+      humanText: "Sin comentarios del operador evaluado. Verificar en InvGate.",
+      reassignedWithoutComment: true,
+      hasOperatorComment: false,
+    };
+  }
+
+  // Candidatos para determinar el momento de la primera intervención
+  const candidateTimestamps: number[] = [];
+
+  // Prioridad 1: Primer comentario del operador / mesa
+  if (earliestOperatorCommentEpoch !== null) {
+    candidateTimestamps.push(earliestOperatorCommentEpoch);
+  }
+
+  // Prioridad 2: Momento en que fue solucionado el incidente (solved_at)
+  let solvedEpoch: number | null = null;
+  if (typeof incident?.solved_at === "number") {
+    solvedEpoch = incident.solved_at;
+  } else if (typeof incident?.solved_at === "string" && incident.solved_at.trim()) {
+    const parsed = Date.parse(incident.solved_at.replace(" ", "T"));
+    if (!isNaN(parsed)) solvedEpoch = Math.floor(parsed / 1000);
+  }
+  if (solvedEpoch !== null && !isNaN(solvedEpoch) && solvedEpoch >= createdEpoch) {
+    candidateTimestamps.push(solvedEpoch);
+  }
+
+  // Prioridad 3: first_response_at explícito si existe
+  let firstResponseEpoch: number | null = null;
+  const rawFirstResp = incident?.first_response_at;
+  if (typeof rawFirstResp === "number") {
+    firstResponseEpoch = rawFirstResp;
+  } else if (typeof rawFirstResp === "string" && rawFirstResp.trim()) {
+    const parsed = Date.parse(rawFirstResp.replace(" ", "T"));
+    if (!isNaN(parsed)) firstResponseEpoch = Math.floor(parsed / 1000);
+  }
+  if (firstResponseEpoch !== null && !isNaN(firstResponseEpoch) && firstResponseEpoch >= createdEpoch) {
+    candidateTimestamps.push(firstResponseEpoch);
+  }
+
+  let interventionEpoch: number | null = null;
+  if (candidateTimestamps.length > 0) {
+    interventionEpoch = Math.min(...candidateTimestamps);
+  } else if (earliestAnyNonCustomerCommentEpoch !== null) {
+    interventionEpoch = earliestAnyNonCustomerCommentEpoch;
+  } else {
+    // Fallback: si no hubo comentarios ni solución, verificar si hubo actualización/reasignación
+    let updateEpoch: number | null = null;
+    const rawUpdate = incident?.updated_at || incident?.last_update;
+    if (typeof rawUpdate === "number") {
+      updateEpoch = rawUpdate;
+    } else if (typeof rawUpdate === "string" && rawUpdate.trim()) {
+      const parsed = Date.parse(rawUpdate.replace(" ", "T"));
+      if (!isNaN(parsed)) updateEpoch = Math.floor(parsed / 1000);
+    }
+
+    if (updateEpoch !== null && !isNaN(updateEpoch) && updateEpoch > createdEpoch) {
+      interventionEpoch = updateEpoch;
+    }
+  }
+
+  const diffSeconds = interventionEpoch !== null ? Math.max(0, interventionEpoch - createdEpoch) : 0;
+  const formattedDuration = formatSecondsToHoursMinutesSeconds(diffSeconds);
+  const humanText = formatHumanDuration(diffSeconds);
+
+  return {
+    diffSeconds,
+    formattedDuration,
+    humanText,
+    reassignedWithoutComment: false,
+    hasOperatorComment: earliestOperatorCommentEpoch !== null,
+  };
+}
+
 export function calculateWiseEmailResponseTime(
   createdAt?: string | null,
   replyAt?: string | null,
@@ -267,6 +484,9 @@ export function parseInvgateAgMetadata(
     operatorName?: string;
     helpdeskName?: string;
     sourceName?: string;
+    targetOperatorId?: number | null;
+    targetOperatorUsername?: string | null;
+    targetOperatorName?: string | null;
   },
 ): ExtractedQualityMetadata {
   const caseNumber = (incident?.id ?? "").toString();
@@ -278,20 +498,54 @@ export function parseInvgateAgMetadata(
         ? rawCreated.split(" ")[0]
         : new Date().toISOString().split("T")[0];
 
-  const rawTake = incident?.updated_at || incident?.first_response_at || rawCreated;
-  const takeTime =
-    typeof rawTake === "number"
-      ? new Date(rawTake * 1000).toISOString().replace("T", " ").substring(0, 19)
-      : typeof rawTake === "string"
-        ? rawTake
-        : "";
-
   const creationTime =
     typeof rawCreated === "number"
       ? new Date(rawCreated * 1000).toISOString().replace("T", " ").substring(0, 19)
       : typeof rawCreated === "string"
         ? rawCreated
         : "";
+
+  let takeTime = "";
+  let responseHuman = "";
+  let responseTimeSeconds = 0;
+  let reassignedWithoutComment = false;
+  let hasOperatorComment = false;
+
+  if (
+    typeof incident?.take_time === "string" &&
+    /^\d{1,3}:\d{2}(:\d{2})?$/.test(incident.take_time.trim())
+  ) {
+    takeTime = incident.take_time.trim();
+  } else if (
+    typeof incident?.takeTime === "string" &&
+    /^\d{1,3}:\d{2}(:\d{2})?$/.test(incident.takeTime.trim())
+  ) {
+    takeTime = incident.takeTime.trim();
+  } else {
+    const resTime = calculateInvgateAgResponseTime(incident, {
+      targetOperatorId: extra?.targetOperatorId,
+      targetOperatorUsername: extra?.targetOperatorUsername,
+      targetOperatorName: extra?.targetOperatorName,
+    });
+    takeTime = resTime.formattedDuration;
+    responseHuman = resTime.humanText;
+    responseTimeSeconds = resTime.diffSeconds;
+    reassignedWithoutComment = !!resTime.reassignedWithoutComment;
+    hasOperatorComment = !!resTime.hasOperatorComment;
+  }
+
+  if (!responseHuman && takeTime) {
+    const parts = takeTime.split(":").map(Number);
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      const sec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      responseHuman = formatHumanDuration(sec);
+      responseTimeSeconds = sec;
+    } else if (parts.length === 2 && !parts.some(isNaN)) {
+      const sec = parts[0] * 60 + parts[1];
+      responseHuman = formatHumanDuration(sec);
+      responseTimeSeconds = sec;
+    }
+  }
 
   const priorityName =
     incident?.priority?.name ??
@@ -385,6 +639,10 @@ export function parseInvgateAgMetadata(
       location: incident?.location?.name || incident?.location,
       helpdesk: helpdeskName || incident?.helpdesk?.name || incident?.helpdesk,
       source: sourceName || incident?.source?.name || incident?.source,
+      responseTimeSeconds,
+      responseHuman,
+      reassignedWithoutComment,
+      hasOperatorComment,
     },
   };
 }
@@ -392,16 +650,34 @@ export function parseInvgateAgMetadata(
 
 export async function fetchInvgateTicketMetadata(
   ticketId: string | number,
+  options?: InvgateResponseTimeOptions,
 ): Promise<{ ok: boolean; data?: ExtractedQualityMetadata; error?: string }> {
   const cleanId = ticketId.toString().replace("#", "").trim();
   if (!cleanId) return { ok: false, error: "Identificador de ticket InvGate requerido" };
 
   try {
-    const res = await invgateGet<any>(`incident?id=${cleanId}`);
+    const res = await invgateGet<any>(`incident?id=${cleanId}&comments=true`);
     if (!res.ok || !res.data) {
       return { ok: false, error: `No se encontró el incidente InvGate #${cleanId}` };
     }
     const incident = res.data;
+
+    let targetOpId = options?.targetOperatorId ?? null;
+    if (targetOpId === null && options?.targetOperatorUsername) {
+      try {
+        const uByRes = await invgateGet<any>(
+          `users.by?username=${encodeURIComponent(options.targetOperatorUsername)}&exact_match=true`,
+        );
+        if (uByRes.ok && uByRes.data) {
+          const list = Array.isArray(uByRes.data) ? uByRes.data : Object.values(uByRes.data);
+          if (list.length > 0 && typeof (list[0] as any)?.id === "number") {
+            targetOpId = (list[0] as any).id;
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
 
     let customerName = "";
     let createdByName = "";
@@ -564,6 +840,9 @@ export async function fetchInvgateTicketMetadata(
       operatorName,
       helpdeskName,
       sourceName,
+      targetOperatorId: targetOpId,
+      targetOperatorUsername: options?.targetOperatorUsername,
+      targetOperatorName: options?.targetOperatorName,
     });
     return { ok: true, data: metadata };
 
@@ -627,13 +906,14 @@ export async function fetchQualityCaseMetadata(
   channel: ChannelType,
   identifier: string | number,
   source?: "wise" | "invgate",
+  options?: InvgateResponseTimeOptions,
 ): Promise<{ ok: boolean; data?: ExtractedQualityMetadata; error?: string }> {
   const cleanId = identifier.toString().replace("#", "").trim();
   if (!cleanId) return { ok: false, error: "Identificador de caso requerido" };
 
   try {
     if (source === "invgate" || channel === "invgate_ticket") {
-      return fetchInvgateTicketMetadata(cleanId);
+      return fetchInvgateTicketMetadata(cleanId, options);
     }
     if (source === "wise" || channel === "wise_call" || channel === "wise_email") {
       const caseData = await fetchWiseCaseData(cleanId);
@@ -703,7 +983,7 @@ export async function fetchQualityCaseMetadata(
     }
 
     if (channel === "invgate_ticket") {
-      const res = await invgateGet<any>(`incident?id=${cleanId}`);
+      const res = await invgateGet<any>(`incident?id=${cleanId}&comments=true`);
       if (!res.ok || !res.data) {
         return { ok: false, error: `No se encontró el incidente InvGate #${cleanId}` };
       }
