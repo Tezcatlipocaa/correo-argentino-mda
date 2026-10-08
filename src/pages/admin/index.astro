@@ -8,7 +8,7 @@ import SyncDashboard from "@components/admin/SyncDashboard.astro";
 import AdminInvGateQAStatusCard from "@components/ui/AdminInvGateQAStatusCard.astro";
 import AdminWiseCxStatusCard from "@components/ui/AdminWiseCxStatusCard.astro";
 import { resolveUrl } from "@lib/url";
-import { can } from "@lib/roleConfig";
+import { hasPermission } from "@lib/rbac";
 import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
 
 const user = Astro.locals.user;
@@ -53,13 +53,6 @@ const modulesGroup1: AdminModule[] = [
     href: "/admin/papelera",
     active: true,
   },
-  {
-    title: "Edificios (oficinas)",
-    icon: "boxicons:building-house-filled",
-    iconTone: "text-info",
-    href: "/admin/oficinas/edificios",
-    active: true,
-  },
 ];
 
 const modulesGroup2: AdminModule[] = [
@@ -94,6 +87,13 @@ const modulesGroupInvgate: AdminModule[] = [
     href: "/admin/invgate/ubicaciones",
     active: true,
   },
+  {
+    title: "Edificios (oficinas)",
+    icon: "boxicons:building-house-filled",
+    iconTone: "bg-success/10 text-success",
+    href: "/admin/oficinas/edificios",
+    active: true,
+  },
 ];
 ---
 
@@ -116,13 +116,9 @@ const modulesGroupInvgate: AdminModule[] = [
     >
       {
         modulesGroup1.map((mod) => {
-          const isLocked =
-            (mod.href === "/admin/usuarios" ||
-              mod.href === "/admin/auditoria" ||
-              mod.href === "/admin/feedback" ||
-              mod.href === "/admin/papelera" ||
-              mod.href === "/admin/oficinas/edificios") &&
-            !can(user.role, "admin");
+          const isLocked = mod.href
+            ? !hasPermission(mod.href, user.role)
+            : false;
 
           return (
             <AdminShortcutRow
@@ -160,9 +156,9 @@ const modulesGroupInvgate: AdminModule[] = [
     >
       {
         modulesGroupInvgate.map((mod) => {
-          const isLocked =
-            mod.href === "/admin/invgate/ubicaciones" &&
-            !can(user.role, "team_leader");
+          const isLocked = mod.href
+            ? !hasPermission(mod.href, user.role)
+            : false;
 
           return (
             <AdminShortcutRow
