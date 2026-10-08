@@ -8,15 +8,15 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: fb4de88]
 
 ## Phase 2: Paridad y Adaptación de Features en Formularios (`NewAuditForm` y `AuditModal`)
-- [ ] Task: Integrar selector Reclamo / Novedad y cálculo dinámico de puntuación en `NewAuditForm.astro`
-    - [ ] Incorporar selector de modo Ticket Nuevo vs Reclamo / Novedad en llamadas y correos Wise CX
-    - [ ] Sincronizar cálculo de scores (sección 2 al 100% en Reclamo/Novedad) y asegurar persistencia de `is_reclamo_novedad`
-- [ ] Task: Integrar búsqueda directa en inputs y deep-link a InvGate
-    - [ ] Integrar botón de búsqueda en `#form-call-id` (Wise CX) y `#form-ticket-id` (InvGate) con soporte Enter
-    - [ ] Incorporar feedback de validación de operador y deep-link al ticket
-- [ ] Task: Integrar controles de selección masiva (Tildar / Destildar todo)
-    - [ ] Añadir controles por sección con feedback visual y actualización automática del score
-- [ ] Task: Garantizar paridad en `AuditModal.astro` para visualización y edición inline
+- [x] Task: Integrar selector Reclamo / Novedad y cálculo dinámico de puntuación en `NewAuditForm.astro`
+    - [x] Incorporar selector de modo Ticket Nuevo vs Reclamo / Novedad en llamadas y correos Wise CX
+    - [x] Sincronizar cálculo de scores (sección 2 al 100% en Reclamo/Novedad) y asegurar persistencia de `is_reclamo_novedad`
+- [x] Task: Integrar búsqueda directa en inputs y deep-link a InvGate
+    - [x] Integrar botón de búsqueda en `#form-call-id` (Wise CX) y `#form-ticket-id` (InvGate) con soporte Enter
+    - [x] Incorporar feedback de validación de operador y deep-link al ticket
+- [x] Task: Integrar controles de selección masiva (Tildar / Destildar todo)
+    - [x] Añadir controles por sección con feedback visual y actualización automática del score
+- [x] Task: Garantizar paridad en `AuditModal.astro` para visualización y edición inline
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Integración en Barra Superior, Exportación y Panel de Operador
