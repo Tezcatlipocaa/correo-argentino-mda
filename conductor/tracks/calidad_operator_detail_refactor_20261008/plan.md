@@ -23,18 +23,18 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Priorización de Evaluaciones (Tabs/Filtros) y Acordeón Único
-- [~] Task: Reorganizar sección de evaluaciones con tabs/filtros y cuota consistente
-    - [ ] Implementar tabs: Todas, Llamadas Wise, Mails Wise, Autogestiones
-    - [ ] Formatear estado de progreso consistente (ej. `1 de 12 completadas`)
-    - [ ] Mantener "Nueva Auditoría" como única acción primaria visible para supervisores
-- [ ] Task: Rediseñar cabecera y estructura de auditorías en acordeón único
-    - [ ] Compactar cabecera mostrando: resultado/score, duración/respuesta, ticket y fecha
-    - [ ] Implementar lógica interactiva de acordeón exclusivo (máximo una auditoría abierta simultáneamente)
-    - [ ] Organizar criterios en 2 columnas con alto contraste DaisyUI y estado explícito para no evaluados ("No evaluado" / "N/A")
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Reorganizar sección de evaluaciones con tabs/filtros y cuota consistente
+    - [x] Implementar tabs: Todas, Llamadas Wise, Mails Wise, Autogestiones
+    - [x] Formatear estado de progreso consistente (ej. `1 de 12 completadas`)
+    - [x] Mantener "Nueva Auditoría" como única acción primaria visible para supervisores
+- [x] Task: Rediseñar cabecera y estructura de auditorías en acordeón único
+    - [x] Compactar cabecera mostrando: resultado/score, duración/respuesta, ticket y fecha
+    - [x] Implementar lógica interactiva de acordeón exclusivo (máximo una auditoría abierta simultáneamente)
+    - [x] Organizar criterios en 2 columnas con alto contraste DaisyUI y estado explícito para no evaluados ("No evaluado" / "N/A")
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Verificación Integral, Pruebas y Cierre
-- [ ] Task: Ejecutar suite de pruebas unitarias (`npm run test:unit -- tests/unit`)
+- [~] Task: Ejecutar suite de pruebas unitarias (`npm run test:unit -- tests/unit`)
 - [ ] Task: Ejecutar y verificar suite de pruebas E2E de Playwright (`tests/calidad-*.spec.ts`)
 - [ ] Task: Ejecutar build SSR de producción para verificar manifest y bundles (`npm run build`)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

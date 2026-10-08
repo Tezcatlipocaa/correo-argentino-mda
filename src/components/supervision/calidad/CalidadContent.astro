@@ -888,10 +888,10 @@ const cleanBase = getCleanBase();
           : "text-error";
     const badgeClass =
       call.totalScore >= 90
-        ? "badge-success"
+        ? "badge-success text-success-content"
         : call.totalScore >= 80
-          ? "badge-warning"
-          : "badge-error";
+          ? "badge-warning text-warning-content"
+          : "badge-error text-error-content";
 
     // Filtrar parámetros dinámicos para el canal de la auditoría
     const params: AuditParameter[] = getAuditParameters();
@@ -923,27 +923,37 @@ const cleanBase = getCleanBase();
           ? Boolean(call.appliesMda)
           : Boolean(call.staysInMda);
 
+    let s1PassedCount = 0;
+    const s1TotalCount = s1Params.length;
     const s1ListHTML = s1Params
       .map((param) => {
-        const isChecked =
-          param.code in call.section1.details
-            ? Boolean(call.section1.details[param.code])
-            : false;
+        const isEvaluated = param.code in call.section1.details;
+        const isChecked = isEvaluated
+          ? Boolean(call.section1.details[param.code])
+          : false;
+        if (isEvaluated && isChecked) s1PassedCount++;
+
+        const statusBadge = isEvaluated
+          ? (isChecked
+              ? `<span class="badge badge-xs badge-success text-3xs font-bold gap-1 text-success-content shrink-0"><svg class="size-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9.707-9.707-1.414-1.414z"/></svg> Cumple</span>`
+              : `<span class="badge badge-xs badge-error text-3xs font-bold gap-1 text-error-content shrink-0"><svg class="size-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> No Cumple</span>`)
+          : `<span class="badge badge-xs badge-ghost text-base-content/40 text-3xs font-medium shrink-0">No evaluado</span>`;
+
         const comment = call.comments?.[param.code];
         return `
-        <li class="flex flex-col group/item border-b border-base-200/40 last:border-b-0 py-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70 font-medium group-hover/item:text-base-content transition-colors text-xs">
+        <li class="flex flex-col group/item border-b border-base-200/60 last:border-b-0 py-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-base-content/85 font-medium group-hover/item:text-base-content transition-colors text-xs leading-snug">
               ${escapeHtml(param.name)}
-              <span class="text-xs opacity-50 font-normal ml-1.5">(${param.weight})</span>
+              <span class="text-3xs opacity-50 font-normal font-mono ml-1">(${param.weight}%)</span>
             </span>
-            <span class="${isChecked ? "text-success" : "text-error"}" title="${isChecked ? "Cumple" : "No Cumple"}">${isChecked ? ICON_CHECK : ICON_X}</span>
+            ${statusBadge}
           </div>
           ${
             comment
               ? `
-            <div class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80 bg-base-200/50 rounded-lg px-2.5 py-1 border border-base-300/40">
-              <span class="text-secondary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+            <div class="mt-1.5 flex items-start gap-1.5 text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
+              <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
               <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
             </div>
           `
@@ -954,33 +964,43 @@ const cleanBase = getCleanBase();
       })
       .join("");
 
+    let s2PassedCount = 0;
+    const s2TotalCount = s2Params.length;
     const s2ListHTML = !hasS2
-      ? `<li class="text-xs text-base-content/40 italic py-2">${
+      ? `<li class="text-xs text-base-content/40 italic py-3 text-center bg-base-200/30 rounded-xl border border-dashed border-base-300/60">${
           call.channelType === "wise_call"
             ? "No aplica evaluación de ticket (no se generó ticket)."
             : "No aplica ticket MDA."
         }</li>`
       : s2Params
           .map((param) => {
-            const isChecked =
-              param.code in call.section2.details
-                ? Boolean(call.section2.details[param.code])
-                : call.section2.score === 100;
+            const isEvaluated = param.code in call.section2.details;
+            const isChecked = isEvaluated
+              ? Boolean(call.section2.details[param.code])
+              : call.section2.score === 100;
+            if (isChecked) s2PassedCount++;
+
+            const statusBadge = isEvaluated || call.section2.score === 100
+              ? (isChecked
+                  ? `<span class="badge badge-xs badge-success text-3xs font-bold gap-1 text-success-content shrink-0"><svg class="size-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9.707-9.707-1.414-1.414z"/></svg> Cumple</span>`
+                  : `<span class="badge badge-xs badge-error text-3xs font-bold gap-1 text-error-content shrink-0"><svg class="size-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> No Cumple</span>`)
+              : `<span class="badge badge-xs badge-ghost text-base-content/40 text-3xs font-medium shrink-0">No evaluado</span>`;
+
             const comment = call.comments?.[param.code];
             return `
-        <li class="flex flex-col group/item border-b border-base-200/40 last:border-b-0 py-1.5">
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70 font-medium group-hover/item:text-base-content transition-colors text-xs">
+        <li class="flex flex-col group/item border-b border-base-200/60 last:border-b-0 py-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-base-content/85 font-medium group-hover/item:text-base-content transition-colors text-xs leading-snug">
               ${escapeHtml(param.name)}
-              <span class="text-xs opacity-50 font-normal ml-1.5">(${param.weight})</span>
+              <span class="text-3xs opacity-50 font-normal font-mono ml-1">(${param.weight}%)</span>
             </span>
-            <span class="${isChecked ? "text-success" : "text-error"}" title="${isChecked ? "Cumple" : "No Cumple"}">${isChecked ? ICON_CHECK : ICON_X}</span>
+            ${statusBadge}
           </div>
           ${
             comment
               ? `
-            <div class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80 bg-base-200/50 rounded-lg px-2.5 py-1 border border-base-300/40">
-              <span class="text-secondary text-xxs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+            <div class="mt-1.5 flex items-start gap-1.5 text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
+              <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
               <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
             </div>
           `
@@ -993,121 +1013,141 @@ const cleanBase = getCleanBase();
 
     const notesSection = call.notes
       ? `
-        <div class="col-span-full border-t border-base-200/50 pt-4 mt-4">
-          <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Notas / Observaciones de la llamada</div>
-          <p class="text-sm text-base-content/70 whitespace-pre-line">${escapeHtml(call.notes)}</p>
+        <div class="col-span-full">
+          <div class="text-3xs font-bold uppercase tracking-wider text-base-content/40 mb-1">Notas / Observaciones de la evaluación</div>
+          <p class="text-xs text-base-content/80 whitespace-pre-line bg-base-100 p-2.5 rounded-xl border border-base-200/80">${escapeHtml(call.notes)}</p>
         </div>
       `
       : "";
 
+    const durationTitle =
+      call.channelType === "wise_call"
+        ? "Duración de llamada"
+        : call.channelType === "wise_email"
+          ? "Tiempo de respuesta"
+          : "Toma / Lectura";
+    const durationText =
+      call.channelType === "wise_call"
+        ? (call.duration || "00:00")
+        : call.channelType === "wise_email"
+          ? (call.duration || "00:00")
+          : (call.takeTime || call.creationTime || "--");
+
+    const channelTag =
+      call.channelType === "wise_call"
+        ? "Llamada Wise"
+        : call.channelType === "wise_email"
+          ? "Mail Wise"
+          : "Autogestión";
+
     return `
-      <div class="call-card-container rounded-3xl border border-base-300 bg-base-100 overflow-hidden shadow-md relative group">
+      <div class="call-card call-card-container rounded-2xl border border-base-200/90 bg-base-100 overflow-hidden shadow-2xs relative group hover:border-base-300 transition-colors" data-call-id="${call.id}">
         
         <!-- Decoration Left Border -->
-        <div class="absolute left-0 top-0 bottom-0 w-2 ${badgeClass.replace("badge-", "bg-")} opacity-80 group-hover:opacity-100 transition-opacity"></div>
+        <div class="absolute left-0 top-0 bottom-0 w-1.5 ${call.totalScore >= 90 ? "bg-success" : call.totalScore >= 80 ? "bg-warning" : "bg-error"}"></div>
         
-        <!-- Card Header -->
-        <div class="flex flex-wrap items-center justify-between border-b border-base-200 bg-base-100 p-6 pl-8">
-          <div class="flex items-center gap-5">
-            <div class="flex size-12 items-center justify-center rounded-2xl bg-base-200 font-black text-base-content/70 border border-base-300 shadow-inner">
-              #${index + 1}
+        <!-- Compact Card Header (Clickable Accordion) -->
+        <div class="call-card-header flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-3.5 pl-5 cursor-pointer hover:bg-base-200/40 transition-colors select-none">
+          <div class="flex flex-wrap items-center gap-2.5 sm:gap-3.5 min-w-0">
+            <!-- 1. Resultado / Score -->
+            <div class="badge ${badgeClass} font-black font-mono text-xs py-2 px-2.5 shadow-2xs shrink-0">
+              ${call.totalScore}%
             </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-mono text-lg font-black tracking-tight text-base-content">${escapeHtml(call.callId)}</span>
-                ${call.isPas ? '<span class="badge badge-secondary badge-sm font-bold uppercase tracking-wider text-xxs px-2 py-1.5 shadow-sm">PAS</span>' : ""}
-              </div>
-              <div class="text-xs font-medium text-base-content/50 mt-1 uppercase tracking-widest">Ticket: <span class="font-mono text-base-content/70">${escapeHtml(call.ticketId || "--")}</span> ${call.date ? `<span class="opacity-50 ml-1">(${call.date})</span>` : ""}</div>
+
+            <!-- 2. Duración -->
+            <div class="flex items-center gap-1 text-xs font-mono font-bold text-base-content/80 shrink-0" title="${durationTitle}">
+              <svg class="size-3.5 opacity-50 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M13 7h-2v6h5v-2h-3z"/></svg>
+              <span>${escapeHtml(durationText)}</span>
             </div>
+
+            <span class="text-base-content/20 text-xs hidden sm:inline">•</span>
+
+            <!-- 3. Ticket / Nro de Caso -->
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="font-mono text-xs font-bold text-base-content truncate">${escapeHtml(call.ticketId ? `#${call.ticketId}` : call.callId)}</span>
+              ${call.isPas ? '<span class="badge badge-secondary badge-xs font-bold uppercase tracking-wider text-3xs px-1.5 py-0.5 shadow-2xs shrink-0">PAS</span>' : ""}
+              ${call.callId && call.ticketId && call.callId !== call.ticketId ? `<span class="text-3xs text-base-content/40 font-mono truncate hidden md:inline">(${escapeHtml(call.callId)})</span>` : ""}
+            </div>
+
+            <span class="text-base-content/20 text-xs hidden sm:inline">•</span>
+
+            <!-- 4. Fecha -->
+            <span class="text-xs text-base-content/50 font-medium shrink-0">
+              ${escapeHtml(call.date || "--")}
+            </span>
+
+            <span class="badge badge-xs badge-neutral font-medium text-3xs ml-1 shrink-0">
+              ${channelTag}
+            </span>
           </div>
-          <div class="flex items-center gap-8 mt-4 sm:mt-0">
-            ${
-              call.channelType === "wise_call"
-                ? `
-            <div class="text-right">
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Duración</div>
-              <div class="text-base font-mono font-bold text-base-content/80">${escapeHtml(call.duration || "00:00")}</div>
-            </div>
-            `
-                : call.channelType === "wise_email"
-                  ? `
-            <div class="text-right">
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Respuesta</div>
-              <div class="text-base font-mono font-bold text-base-content/80">${escapeHtml(call.duration || "00:00")}</div>
-            </div>
-            `
-                  : call.takeTime || call.creationTime
-                    ? `
-            <div class="text-right">
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Toma / Lectura</div>
-              <div class="text-xs font-mono font-bold text-base-content/80">${escapeHtml(call.takeTime || call.creationTime || "")}</div>
-            </div>
-            `
-                    : ""
-            }
-            <div class="text-right">
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1">Score Total</div>
-              <div class="badge ${badgeClass} font-black shadow-sm text-sm py-3 px-3">
-                ${call.totalScore}%
-              </div>
-            </div>
+
+          <!-- Actions: Edit & Expand Chevron -->
+          <div class="flex items-center gap-1 shrink-0 ml-auto sm:ml-0">
             ${
               isUserAgent
                 ? ""
                 : `
             <button 
-              class="btn btn-circle btn-ghost btn-sm text-base-content/50 hover:text-secondary ml-1 edit-audit-btn" 
+              type="button"
+              class="btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-secondary edit-audit-btn" 
               data-call-id="${call.id}"
               title="Editar Auditoría"
             >
-              <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor;"><path d="m18.988 2.012-3 3L19.988 9.012l3-3zM3.988 17.012v4h4l12.75-12.75-4-4z"></path></svg>
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="m18.988 2.012-3 3L19.988 9.012l3-3zM3.988 17.012v4h4l12.75-12.75-4-4z"/></svg>
             </button>
             `
             }
             <button 
-              class="btn btn-circle btn-ghost btn-sm text-base-content/50 hover:text-base-content hover:bg-base-200 ml-1" 
-              onclick="this.closest('.call-card-container').querySelector('.call-card-details').classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180');"
+              type="button"
+              class="btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content accordion-toggle-btn"
               title="Expandir / Minimizar detalles"
             >
-              <svg class="size-6 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: currentColor;"><path d="M16.293 9.293 12 13.586 7.707 9.293l-1.414 1.414L12 16.414l5.707-5.707z"></path></svg>
+              <svg class="size-4.5 transition-transform duration-200 accordion-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.293 9.293 12 13.586 7.707 9.293l-1.414 1.414L12 16.414l5.707-5.707z"/></svg>
             </button>
           </div>
         </div>
         
-        <!-- Details Grid -->
-        <div class="call-card-details hidden grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-base-200 bg-base-200/20">
+        <!-- Details Grid (2 columnas con alto contraste y resumen de sección) -->
+        <div class="call-card-details hidden grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-base-200/80 bg-base-200/20 border-t border-base-200/80">
           
           <!-- Section 1 -->
-          <div class="p-6 pl-8">
-            <div class="mb-6 flex items-center justify-between border-b border-base-300/50 pb-3">
-              <h5 class="font-bold text-xs uppercase tracking-widest text-base-content/70">${call.channelType === "wise_call" ? "Interacción con Usuario" : call.channelType === "wise_email" ? "Gestión del Correo" : "Gestión del Caso"}</h5>
+          <div class="p-4 sm:p-5">
+            <div class="mb-3 flex items-center justify-between border-b border-base-200/80 pb-2">
+              <div>
+                <h5 class="font-bold text-xs uppercase tracking-wider text-base-content/80">${call.channelType === "wise_call" ? "Interacción con Usuario" : call.channelType === "wise_email" ? "Gestión del Correo" : "Gestión del Caso"}</h5>
+                <span class="text-3xs font-semibold text-base-content/50">${s1PassedCount} de ${s1TotalCount} criterios cumplidos</span>
+              </div>
               <div class="flex items-baseline gap-1">
-                <span class="text-xl font-black ${s1ScoreColor}">${call.section1.score}</span>
-                <span class="text-xs font-bold text-base-content/30">/${call.section1.maxScore}</span>
+                <span class="text-xl font-black font-mono ${s1ScoreColor}">${call.section1.score}</span>
+                <span class="text-3xs font-bold text-base-content/40">/${call.section1.maxScore}</span>
               </div>
             </div>
-            <ul class="space-y-3.5 text-sm">
+            <ul class="space-y-1 text-xs">
               ${s1ListHTML}
             </ul>
           </div>
           
           <!-- Section 2 -->
-          <div class="p-6">
-            <div class="mb-6 flex items-center justify-between border-b border-base-300/50 pb-3">
-              <h5 class="font-bold text-xs uppercase tracking-widest text-base-content/70">${call.channelType === "wise_call" ? (!hasS2 ? "Gestión del Ticket (No Aplica)" : "Gestión del Ticket") : call.channelType === "wise_email" ? (call.appliesMda ? "Ticket MDA" : "Ticket MDA (No Aplica)") : (call.staysInMda ? "Ticket MDA" : "Ticket MDA (No Aplica)")}</h5>
+          <div class="p-4 sm:p-5">
+            <div class="mb-3 flex items-center justify-between border-b border-base-200/80 pb-2">
+              <div>
+                <h5 class="font-bold text-xs uppercase tracking-wider text-base-content/80">${call.channelType === "wise_call" ? (!hasS2 ? "Gestión del Ticket (No Aplica)" : "Gestión del Ticket") : call.channelType === "wise_email" ? (call.appliesMda ? "Ticket MDA" : "Ticket MDA (No Aplica)") : (call.staysInMda ? "Ticket MDA" : "Ticket MDA (No Aplica)")}</h5>
+                <span class="text-3xs font-semibold text-base-content/50">${hasS2 ? `${s2PassedCount} de ${s2TotalCount} criterios cumplidos` : "No aplica evaluación de ticket"}</span>
+              </div>
               <div class="flex items-baseline gap-1">
-                <span class="text-xl font-black ${s2ScoreColor}">${call.section2.score}</span>
-                <span class="text-xs font-bold text-base-content/30">/${call.section2.maxScore}</span>
+                <span class="text-xl font-black font-mono ${s2ScoreColor}">${call.section2.score}</span>
+                <span class="text-3xs font-bold text-base-content/40">/${call.section2.maxScore}</span>
               </div>
             </div>
-            <ul class="space-y-3.5 text-sm">
+            <ul class="space-y-1 text-xs">
               ${s2ListHTML}
             </ul>
           </div>
 
-          <div class="col-span-full p-6 pl-8 border-t border-base-200 bg-base-200/40">
+          <!-- Notes / Observaciones -->
+          <div class="col-span-full p-4 sm:p-5 border-t border-base-200/80 bg-base-200/40">
             ${notesSection}
-            ${!call.notes ? '<p class="text-xs text-base-content/40 italic">Sin observaciones o notas registradas.</p>' : ""}
+            ${!call.notes ? '<p class="text-3xs text-base-content/40 italic">Sin observaciones o notas registradas para esta evaluación.</p>' : ""}
           </div>
 
         </div>
@@ -2076,7 +2116,7 @@ const cleanBase = getCleanBase();
         }
       }
 
-      currentActiveChannel = "wise_call";
+      currentActiveChannel = "all";
 
       const updateChannelTabsAndList = () => {
         const allAudits = operator.calls || [];
@@ -2092,6 +2132,7 @@ const cleanBase = getCleanBase();
 
         const averages = calculateChannelAverages(allAudits);
 
+        const bAll = document.getElementById("tab-count-all");
         const bCall = document.getElementById("tab-count-wise_call");
         const bEmail = document.getElementById("tab-count-wise_email");
         const bAg = document.getElementById("tab-count-invgate_ticket");
@@ -2106,6 +2147,7 @@ const cleanBase = getCleanBase();
         );
         const bQuota = document.getElementById("quota-progress-badge");
 
+        if (bAll) bAll.textContent = `${allAudits.length}`;
         if (bCall) bCall.textContent = `${wiseCalls.length}/4`;
         if (bEmail) bEmail.textContent = `${wiseEmails.length}/4`;
         if (bAg) bAg.textContent = `${invgateAgs.length}/4`;
@@ -2137,14 +2179,19 @@ const cleanBase = getCleanBase();
         }
 
         if (bQuota) {
-          bQuota.textContent = `${averages.totalAuditsCount}/12 Completadas`;
+          const completedCount = Number(averages?.totalAuditsCount ?? allAudits.length ?? 0);
+          bQuota.textContent = `${completedCount} de 12 Completadas`;
           bQuota.className = `badge text-xs font-bold ${averages.quotaFulfilled ? "badge-success text-success-content" : "badge-neutral"}`;
         }
 
         let filteredCalls: QualityCall[] = [];
         let channelEmptyMsg = "";
 
-        if (currentActiveChannel === "wise_call") {
+        if (currentActiveChannel === "all") {
+          filteredCalls = allAudits;
+          channelEmptyMsg =
+            "No hay evaluaciones registradas para este operador en este mes.";
+        } else if (currentActiveChannel === "wise_call") {
           filteredCalls = wiseCalls;
           channelEmptyMsg =
             "No hay llamadas Wise registradas para este operador en este mes.";
@@ -2161,8 +2208,8 @@ const cleanBase = getCleanBase();
         if (callsContainer) {
           if (filteredCalls.length === 0) {
             callsContainer.innerHTML = `
-              <div class="col-span-full py-8 text-center bg-base-200/40 rounded-2xl border border-base-300">
-                <p class="text-sm text-base-content/50">${channelEmptyMsg}</p>
+              <div class="col-span-full py-8 text-center bg-base-200/40 rounded-2xl border border-base-200/80">
+                <p class="text-xs text-base-content/50">${channelEmptyMsg}</p>
               </div>
             `;
           } else {
@@ -2170,31 +2217,41 @@ const cleanBase = getCleanBase();
               .map((c, idx) => renderCallCard(c, idx))
               .join("");
 
+            // Acordeón Exclusivo: máximo una auditoría abierta simultáneamente
             callsContainer
-              .querySelectorAll(".call-card-toggle")
-              .forEach((btn) => {
-                btn.addEventListener("click", () => {
-                  const card = btn.closest(".call-card");
+              .querySelectorAll(".call-card-header, .accordion-toggle-btn")
+              .forEach((trigger) => {
+                trigger.addEventListener("click", (e) => {
+                  if ((e.target as HTMLElement).closest(".edit-audit-btn")) return;
+                  const card = (trigger as HTMLElement).closest(".call-card-container");
                   if (!card) return;
                   const details = card.querySelector(".call-card-details");
-                  const icon = btn.querySelector(".toggle-icon");
-                  if (details) {
-                    details.classList.toggle("hidden");
-                    if (icon) {
-                      icon.classList.toggle("rotate-180");
-                    }
+                  const arrow = card.querySelector(".accordion-arrow");
+                  const isCurrentlyOpen = details && !details.classList.contains("hidden");
+
+                  // Cerrar cualquier otra auditoría abierta
+                  callsContainer.querySelectorAll(".call-card-container").forEach((otherCard) => {
+                    otherCard.querySelector(".call-card-details")?.classList.add("hidden");
+                    otherCard.querySelector(".accordion-arrow")?.classList.remove("rotate-180");
+                  });
+
+                  // Si la actual estaba cerrada, abrirla
+                  if (!isCurrentlyOpen && details) {
+                    details.classList.remove("hidden");
+                    arrow?.classList.add("rotate-180");
                   }
                 });
               });
 
+            // Botón de Edición
             callsContainer
               .querySelectorAll(".edit-audit-btn")
               .forEach((btn) => {
                 btn.addEventListener("click", (e) => {
                   e.stopPropagation();
-                  const callIdStr = (
-                    btn.closest(".call-card") as HTMLElement
-                  ).getAttribute("data-call-id");
+                  const callIdStr =
+                    btn.getAttribute("data-call-id") ||
+                    (btn.closest(".call-card-container") as HTMLElement)?.getAttribute("data-call-id");
                   if (callIdStr) {
                     const callId = parseInt(callIdStr, 10);
                     const call = (operator.calls || []).find(
@@ -2204,7 +2261,7 @@ const cleanBase = getCleanBase();
                       openAuditModal(
                         operator.id,
                         call,
-                        call.channelType || currentActiveChannel,
+                        call.channelType || (currentActiveChannel === "all" ? "wise_call" : currentActiveChannel),
                       );
                     }
                   }
@@ -2221,7 +2278,7 @@ const cleanBase = getCleanBase();
             .forEach((b) => b.classList.remove("tab-active"));
           tabBtn.classList.add("tab-active");
           currentActiveChannel =
-            tabBtn.getAttribute("data-channel") || "wise_call";
+            tabBtn.getAttribute("data-channel") || "all";
           updateChannelTabsAndList();
         };
       });
@@ -2229,10 +2286,10 @@ const cleanBase = getCleanBase();
       document.querySelectorAll(".operator-channel-tab").forEach((b) => {
         b.classList.toggle(
           "tab-active",
-          b.getAttribute("data-channel") === "wise_call",
+          b.getAttribute("data-channel") === "all",
         );
       });
-      currentActiveChannel = "wise_call";
+      currentActiveChannel = "all";
       updateChannelTabsAndList();
     };
 

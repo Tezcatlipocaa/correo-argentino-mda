@@ -232,11 +232,11 @@ const { isAgent = false } = Astro.props;
 </div>
 
 {/* Section Titulo y Tabs de Canales */}
-<div class="border-base-300 flex flex-col gap-4 border-b pb-3 mt-8">
+<div class="border-base-200/80 flex flex-col gap-3.5 border-b pb-3.5 mt-6">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h4 class="text-base-content/80 flex items-center gap-2 font-bold tracking-wider uppercase">
-        <Icon name="boxicons:chart-bar-columns" size={24} />
+      <h4 class="text-base-content/90 flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
+        <Icon name="boxicons:chart-bar-columns" size={20} class="text-primary" />
         Evaluaciones de Calidad del Operador
       </h4>
       <p class="text-base-content/50 text-xs">Cuota mensual requerida: 4 Llamadas Wise + 4 Mails Wise + 4 Autogestiones (12 en total)</p>
@@ -244,24 +244,24 @@ const { isAgent = false } = Astro.props;
     <div class="flex items-center gap-2">
       <span
         id="total-samples-avg-badge"
-        class="badge badge-neutral text-xs font-bold gap-1"
+        class="badge badge-neutral text-xs font-bold gap-1 shadow-2xs"
         title="Promedio General del Total de Muestras del Mes"
       >
         <Icon name="boxicons:calculator" size={14} />
-        <span class="opacity-70 font-normal">Promedio Total:</span>
+        <span class="opacity-70 font-normal">Promedio:</span>
         <strong id="total-samples-avg-val">--</strong>
       </span>
       <span
         id="quota-progress-badge"
-        class="badge badge-neutral text-xs font-bold"
+        class="badge badge-neutral text-xs font-bold shadow-2xs"
       >
-        0/12 Completadas
+        0 de 12 completadas
       </span>
       {!isAgent && (
         <button
           id="btn-new-audit"
           type="button"
-          class="btn btn-sm btn-primary rounded-lg text-xs font-bold uppercase gap-1"
+          class="btn btn-sm btn-primary rounded-xl text-xs font-bold uppercase gap-1.5 shadow-2xs"
         >
           <Icon name="boxicons:plus" size={16} />
           Nueva Auditoría
@@ -270,34 +270,43 @@ const { isAgent = false } = Astro.props;
     </div>
   </div>
 
-  <!-- Tabs de separación por Canal -->
-  <div class="tabs tabs-boxed bg-base-200/60 p-1 w-fit" id="operator-channel-tabs">
+  <!-- Tabs de separación por Canal / Filtro -->
+  <div class="tabs tabs-boxed bg-base-200/60 p-1 w-fit flex flex-wrap gap-1" id="operator-channel-tabs">
     <button
       type="button"
-      class="tab tab-active operator-channel-tab text-xs font-bold gap-1.5"
+      class="tab tab-active operator-channel-tab text-xs font-bold gap-1.5 rounded-lg"
+      data-channel="all"
+    >
+      <Icon name="boxicons:layer" size={15} />
+      <span>Todas</span>
+      <span class="badge badge-xs badge-neutral ml-1 font-mono font-bold" id="tab-count-all">0</span>
+    </button>
+    <button
+      type="button"
+      class="tab operator-channel-tab text-xs font-bold gap-1.5 rounded-lg"
       data-channel="wise_call"
     >
-      <Icon name="boxicons:phone-ring" size={16} />
+      <Icon name="boxicons:phone-ring" size={15} />
       <span>Llamadas Wise</span>
       <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_call">0/4</span>
       <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_call" title="Promedio de Llamadas Wise">--</span>
     </button>
     <button
       type="button"
-      class="tab operator-channel-tab text-xs font-bold gap-1.5"
+      class="tab operator-channel-tab text-xs font-bold gap-1.5 rounded-lg"
       data-channel="wise_email"
     >
-      <Icon name="boxicons:envelope" size={16} />
+      <Icon name="boxicons:envelope" size={15} />
       <span>Mails Wise</span>
       <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_email">0/4</span>
       <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_email" title="Promedio de Mails Wise">--</span>
     </button>
     <button
       type="button"
-      class="tab operator-channel-tab text-xs font-bold gap-1.5"
+      class="tab operator-channel-tab text-xs font-bold gap-1.5 rounded-lg"
       data-channel="invgate_ticket"
     >
-      <Icon name="boxicons:handshake" size={16} />
+      <Icon name="boxicons:handshake" size={15} />
       <span>Autogestiones</span>
       <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-invgate_ticket">0/4</span>
       <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-invgate_ticket" title="Promedio de Autogestiones">--</span>
@@ -306,6 +315,6 @@ const { isAgent = false } = Astro.props;
 </div>
 
 {/* Grid de Auditorías del Canal Activo */}
-<div class="grid gap-6 mt-4" id="detail-calls-container">
+<div class="space-y-3 mt-4" id="detail-calls-container">
   {/* Renderizado dinámico vía JS */}
 </div>
