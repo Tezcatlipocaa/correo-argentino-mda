@@ -66,6 +66,7 @@ test.describe("Atajos del Panel de Administración", () => {
       "Sugerencias y Reportes",
       "Auditoría",
       "Papelera",
+      "Usuarios sin ubicación",
       "Recursos",
       "Aplicativos",
       "Contactos",
