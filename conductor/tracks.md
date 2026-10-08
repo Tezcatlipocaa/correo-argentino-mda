@@ -66,7 +66,7 @@
 - [x] **Track: Unificación de Búsqueda API en Campos de Atención y Enlace Directo InvGate**
   *Link: [./tracks/calidad_busqueda_unificada_campos_20261007/index.md](./tracks/calidad_busqueda_unificada_campos_20261007/index.md)*
 ---
-- [~] **Track: Adaptación e Integración de Features de Calidad en Refactor de UI**
+- [x] **Track: Adaptación e Integración de Features de Calidad en Refactor de UI**
   *Link: [./tracks/calidad_adaptacion_features_ui_20261008/index.md](./tracks/calidad_adaptacion_features_ui_20261008/index.md)*
 
 
