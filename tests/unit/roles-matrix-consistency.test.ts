@@ -28,6 +28,9 @@ const MAPPED: Record<string, (role: string) => boolean> = {
   "Ver Oficinas": (r) => hasPermission("/oficinas", r),
   "Ver Enlaces": (r) => hasPermission("/recursos", r),
   "Ver Títulos": (r) => hasPermission("/titulos", r),
+  "Ver Automatizaciones": (r) => hasPermission("/automatizaciones", r),
+  "Cerrar Automatizaciones": (r) =>
+    getModulePermissions("automatizaciones", r).canWrite,
   "Ver Base de Conocimiento": (r) => hasPermission("/base-conocimiento", r),
   "Administrar Base de Conocimiento": (r) => getModulePermissions("base-conocimiento", r).canWrite,
   "Ver Mesas de Ayuda": (r) => hasPermission("/mesas-de-ayuda", r),

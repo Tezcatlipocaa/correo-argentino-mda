@@ -118,6 +118,18 @@ check(
   getModulePermissions("automatizaciones", "agent").canWrite === false,
 );
 check(
+  "rbac: referent no puede escribir automatizaciones",
+  getModulePermissions("automatizaciones", "referent").canWrite === false,
+);
+check(
+  "rbac: team_leader no puede escribir automatizaciones",
+  getModulePermissions("automatizaciones", "team_leader").canWrite === false,
+);
+check(
+  "rbac: supervisor sí puede escribir automatizaciones",
+  getModulePermissions("automatizaciones", "supervisor").canWrite === true,
+);
+check(
   "rbac: admin sí puede escribir automatizaciones",
   getModulePermissions("automatizaciones", "admin").canWrite === true,
 );
