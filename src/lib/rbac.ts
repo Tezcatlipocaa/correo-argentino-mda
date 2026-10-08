@@ -143,10 +143,15 @@ export const routePermissions: RoutePermission[] = [
   { path: "/oficinas", roles: ALL_ROLES },
   { path: "/recursos", roles: ALL_ROLES },
   { path: "/titulos", roles: ALL_ROLES },
+  // Monitoreo de automatizaciones: lectura para todos los logueados. La
+  // escritura (cerrar/reabrir/editar datos) se decide por módulo en
+  // getModulePermissions (supervisor+), no por esta whitelist.
+  { path: "/automatizaciones", roles: ALL_ROLES },
   { path: "/base-conocimiento", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/admin", roles: ALL_ROLES },
   { path: "/api/aplicativos", roles: ALL_ROLES },
   { path: "/api/asistencia", roles: ALL_ROLES },
+  { path: "/api/automatizaciones", roles: ALL_ROLES },
   { path: "/api/cronograma", roles: ALL_ROLES },
   { path: "/api/disponibilidad", roles: ALL_ROLES },
   { path: "/api/download", roles: ALL_ROLES },
@@ -264,10 +269,11 @@ export function getModulePermissions(
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   } else if (moduleName === "automatizaciones") {
-    // Monitoreo de automatizaciones InvGate: lectura para todos los roles.
-    // Escritura (cierre/reapertura local de casos) solo para admin.
+    // Monitoreo de automatizaciones InvGate: lectura para todos los roles
+    // logueados. Escritura (cerrar/reabrir localmente y editar datos manuales)
+    // para supervisor+, que es la política de cierre desde el portal.
     perm.canRead = true;
-    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
+    perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
   }
 
   return perm;

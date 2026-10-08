@@ -295,7 +295,7 @@ BaseLayout (flex flex-col min-h-screen)
 | 8   | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
-| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Cierre local (portal, no InvGate) por admin desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes |
+| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Lectura (listado y detalle) para todos los usuarios con sesion iniciada. Cierre/reapertura local (portal, no InvGate) y edicion de datos manuales para `supervisor`+ desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes |
 
 ### Supervision (sub-rutas)
 
