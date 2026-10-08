@@ -77,7 +77,7 @@ export function renderMarkdown(
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
       img: ["src", "alt", "title", "width", "height"],
-      input: ["type", "checked", "disabled"],
+      input: ["type", "checked", "disabled", "aria-hidden", "tabindex"],
       th: ["colspan", "rowspan", "align"],
       td: ["colspan", "rowspan", "align"],
     },
@@ -137,6 +137,8 @@ export function renderMarkdown(
         const nextAttribs: Record<string, string> = {
           type: "checkbox",
           disabled: "",
+          "aria-hidden": "true",
+          tabindex: "-1",
         };
         if (attribs.checked !== undefined) {
           nextAttribs.checked = "";
