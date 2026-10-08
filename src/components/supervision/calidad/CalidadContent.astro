@@ -2761,6 +2761,132 @@ const cleanBase = getCleanBase();
       });
     }
 
+    // --- EXPORT OPERATOR REPORT TO CSV ---
+    const btnExportCsv = document.getElementById("btn-export-csv");
+    if (btnExportCsv) {
+      btnExportCsv.addEventListener("click", () => {
+        const el = document.getElementById("operators-data");
+        const monthSelector = document.getElementById(
+          "month-selector",
+        ) as HTMLSelectElement;
+        const monthStr = monthSelector ? monthSelector.value : "";
+        const operatorsData = JSON.parse(
+          el?.getAttribute("data-operators") || "{}",
+        );
+        const selectedOp = activeAgentId ? operatorsData[activeAgentId] : null;
+
+        if (!selectedOp || !selectedOp.calls || selectedOp.calls.length === 0) {
+          alert("No hay auditorías registradas para exportar en este período.");
+          return;
+        }
+
+        const paramsData = JSON.parse(
+          el?.getAttribute("data-parameters") || "[]",
+        );
+        const csvRows: string[] = [];
+
+        function escapeCsvCell(val: any): string {
+          const str = val === null || val === undefined ? "" : String(val);
+          if (str.includes(";") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }
+
+        const baseHeaders = [
+          "ID Auditoría",
+          "Fecha",
+          "Canal",
+          "Operador",
+          "Usuario",
+          "Nro Caso / Identificador",
+          "Nro Ticket InvGate",
+          "Duración / Tiempo Resp.",
+          "Ringueo",
+          "Creación",
+          "Toma",
+          "PAS",
+          "Modalidad Ticket",
+          "Score S1",
+          "Score S2",
+          "Score Total",
+        ];
+        const paramHeaders = paramsData.map(
+          (p: any) => `[${p.channel || "general"}] ${p.name} (-${p.weight}%)`,
+        );
+        csvRows.push(
+          [...baseHeaders, ...paramHeaders, "Observaciones"]
+            .map(escapeCsvCell)
+            .join(";"),
+        );
+
+        selectedOp.calls.forEach((call: any) => {
+          const row: any[] = [
+            call.id,
+            call.date ? call.date.substring(0, 10) : "",
+            call.channelType === "wise_email"
+              ? "Mail Wise"
+              : call.channelType === "invgate_ticket"
+                ? "Autogestión"
+                : "Llamada Wise",
+            selectedOp.name,
+            selectedOp.username || "",
+            call.callId,
+            call.ticketId || "",
+            call.duration || "",
+            call.ringTime || "",
+            call.creationTime || "",
+            call.takeTime || "",
+            call.isPas ? "Sí" : "No",
+            call.isReclamoNovedad ? "Reclamo / Novedad (100%)" : "Ticket Nuevo",
+            call.section1Score ?? "",
+            call.section2Score ?? "",
+            call.totalScore ?? "",
+          ];
+
+          paramsData.forEach((param: any) => {
+            let compliance = "N/A";
+            if (
+              call.channelType === param.channel ||
+              (!param.channel && call.channelType === "wise_call")
+            ) {
+              if (
+                call.isReclamoNovedad &&
+                (param.section === "ticket" || param.section === "mda")
+              ) {
+                compliance = "Eximido (Reclamo)";
+              } else if (
+                call.scores &&
+                typeof call.scores[param.id] === "boolean"
+              ) {
+                compliance = call.scores[param.id] ? "Cumple" : "No cumple";
+              }
+            }
+            row.push(compliance);
+          });
+
+          row.push(call.notes || "");
+          csvRows.push(row.map(escapeCsvCell).join(";"));
+        });
+
+        const csvContent = "\uFEFF" + csvRows.join("\n");
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `auditorias_${selectedOp.username || activeAgentId}_${monthStr || "total"}.csv`,
+        );
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+    }
+
 
     // Auto-select operator on page load if agentId is in URL or if user is an agent
     const urlParams = new URLSearchParams(window.location.search);

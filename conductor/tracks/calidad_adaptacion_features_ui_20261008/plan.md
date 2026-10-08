@@ -20,10 +20,10 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 2f92d06]
 
 ## Phase 3: Integración en Barra Superior, Exportación y Panel de Operador
-- [ ] Task: Integrar exportación Excel (.xlsx) y CSV enriquecido en la barra superior unificada
-    - [ ] Conectar acciones de descarga nativa Excel multi-hoja en la barra de herramientas de `CalidadContent.astro`
-    - [ ] Asegurar que el botón global "Nueva Auditoría" dirija correctamente a `/supervision/calidad-operadores/nueva`
-- [ ] Task: Conectar `OperatorDetailsPanel.astro` con `AuditModal` para ver/editar auditorías históricas
+- [x] Task: Integrar exportación Excel (.xlsx) y CSV enriquecido en la barra superior unificada
+    - [x] Conectar acciones de descarga nativa Excel multi-hoja en la barra de herramientas de `CalidadContent.astro`
+    - [x] Asegurar que el botón global "Nueva Auditoría" dirija correctamente a `/supervision/calidad-operadores/nueva`
+- [x] Task: Conectar `OperatorDetailsPanel.astro` con `AuditModal` para ver/editar auditorías históricas
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Verificación Integral, Pruebas y Cierre
