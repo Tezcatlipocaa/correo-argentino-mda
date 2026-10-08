@@ -1815,7 +1815,7 @@ const cleanBase = getCleanBase();
 
       if (dScore) {
         dScore.textContent = `${operator.averageScore}%`;
-        dScore.className = `text-5xl font-black tracking-tighter ${operator.averageScore >= 90 ? "text-success" : operator.averageScore >= 80 ? "text-warning" : "text-error"}`;
+        dScore.className = `text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none ${operator.averageScore >= 90 ? "text-success" : operator.averageScore >= 80 ? "text-warning" : "text-error"}`;
       }
 
       if (dStatDiff) {
@@ -1827,17 +1827,17 @@ const cleanBase = getCleanBase();
           const diff = currentScore - prevScore;
           if (diff > 0) {
             dStatDiff.textContent = `+${diff}%`;
-            dStatDiff.className = "text-xl font-black text-success";
+            dStatDiff.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-success";
           } else if (diff < 0) {
             dStatDiff.textContent = `${diff}%`;
-            dStatDiff.className = "text-xl font-black text-error";
+            dStatDiff.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-error";
           } else {
-            dStatDiff.textContent = `0%`;
-            dStatDiff.className = "text-xl font-black text-base-content/40";
+            dStatDiff.textContent = "0%";
+            dStatDiff.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/60";
           }
         } else {
-          dStatDiff.textContent = "N/A";
-          dStatDiff.className = "text-xl font-black text-base-content/40";
+          dStatDiff.textContent = "Sin datos";
+          dStatDiff.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40";
         }
       }
 
@@ -1871,8 +1871,10 @@ const cleanBase = getCleanBase();
           );
           const avgSecs = totalSecs / callAudits.length;
           dStatAht.textContent = formatSecondsToDuration(avgSecs);
+          dStatAht.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content";
         } else {
-          dStatAht.textContent = "00:00";
+          dStatAht.textContent = "Sin datos";
+          dStatAht.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40";
         }
       }
 
@@ -1886,8 +1888,10 @@ const cleanBase = getCleanBase();
             ) / allAudits.length,
           );
           dStatInteraction.textContent = `${avg}%`;
+          dStatInteraction.className = `text-base sm:text-lg font-black font-mono mt-0.5 ${avg >= 90 ? "text-success" : avg >= 80 ? "text-warning" : "text-error"}`;
         } else {
-          dStatInteraction.textContent = "--%";
+          dStatInteraction.textContent = "Sin datos";
+          dStatInteraction.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40";
         }
       }
 
@@ -1901,8 +1905,10 @@ const cleanBase = getCleanBase();
             ) / allAudits.length,
           );
           dStatManagement.textContent = `${avg}%`;
+          dStatManagement.className = `text-base sm:text-lg font-black font-mono mt-0.5 ${avg >= 90 ? "text-success" : avg >= 80 ? "text-warning" : "text-error"}`;
         } else {
-          dStatManagement.textContent = "--%";
+          dStatManagement.textContent = "Sin datos";
+          dStatManagement.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40";
         }
       }
 

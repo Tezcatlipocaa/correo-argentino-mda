@@ -1,17 +1,17 @@
 # Implementation Plan: Refactor Integral UI/UX de Ficha de Operador (OperatorDetailsPanel)
 
 ## Phase 1: Rediseño del Encabezado Compacto y Banda de Métricas
-- [ ] Task: Rediseñar estructura HTML/Astro del encabezado en `OperatorDetailsPanel.astro`
-    - [ ] Unificar en una sola fila compacta: avatar, nombre del operador, legajo/username (`@username`), período y score mensual principal
-    - [ ] Implementar menú dropdown secundario para las opciones de exportación (CSV e Imprimir)
-    - [ ] Sustituir "Cerrar Ficha" por botón de cierre estándar con icono accesible
-- [ ] Task: Implementar banda horizontal de 4 métricas compactas
-    - [ ] Diseñar bloque para: Score vs Mes Anterior, Duración Promedio (AHT), Interacción (S1) y Gestión (S2)
-    - [ ] Actualizar script en `CalidadContent.astro` para manejar estados vacíos con "Sin datos" (sin `N/A`, `--%` o `undefined`) y contexto de período
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Rediseñar estructura HTML/Astro del encabezado en `OperatorDetailsPanel.astro`
+    - [x] Unificar en una sola fila compacta: avatar, nombre del operador, legajo/username (`@username`), período y score mensual principal
+    - [x] Implementar menú dropdown secundario para las opciones de exportación (CSV e Imprimir)
+    - [x] Sustituir "Cerrar Ficha" por botón de cierre estándar con icono accesible
+- [x] Task: Implementar banda horizontal de 4 métricas compactas
+    - [x] Diseñar bloque para: Score vs Mes Anterior, Duración Promedio (AHT), Interacción (S1) y Gestión (S2)
+    - [x] Actualizar script en `CalidadContent.astro` para manejar estados vacíos con "Sin datos" (sin `N/A`, `--%` o `undefined`) y contexto de período
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Tendencia Histórica, Tarjeta Dinámica de Calidad y Observaciones
-- [ ] Task: Refactorizar visualización de Tendencia Histórica
+- [~] Task: Refactorizar visualización de Tendencia Histórica
     - [ ] Calcular tendencia a partir de todas las auditorías registradas en 6 meses
     - [ ] Implementar estado vacío descriptivo si no hay datos suficientes en vez de gráfica plana de ceros
 - [ ] Task: Implementar tarjeta dinámica de resumen de calidad / áreas de mejora

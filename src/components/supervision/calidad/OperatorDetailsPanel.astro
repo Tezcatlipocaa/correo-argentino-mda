@@ -9,149 +9,140 @@ const { isAgent = false } = Astro.props;
 ---
 
 <div class:list={[isAgent ? "col-span-full" : "w-full"]}>
-  <div class="no-print mb-2 flex items-center justify-between">
-    <button
-      id="btn-back-to-summary"
-      type="button"
-      class="btn btn-sm btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-200 w-fit pl-2"
-    >
-      <Icon name={isAgent ? "boxicons:arrow-to-left" : "boxicons:x"} size={18} />
-      <span>{isAgent ? "Volver" : "Cerrar Ficha"}</span>
-    </button>
-    <div class="flex items-center gap-2">
-      <button
-        id="btn-export-csv"
-        class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
-        title="Exportar Reporte de Operador a CSV"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="2.5"
-          stroke="currentColor"
-          class="size-3.5 shrink-0"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-          />
-        </svg>
-        <span>Exportar CSV</span>
-      </button>
-      <button
-        class="btn btn-xs btn-outline btn-secondary text-xxs gap-1.5 font-bold uppercase"
-        onclick="window.print()"
-      >
-        <Icon name="boxicons:printer" size={14} />
-        Exportar Reporte
-      </button>
-    </div>
-  </div>
-
-  <div class="bg-base-100 border-l-secondary border-base-200 mt-2 flex flex-col gap-6 rounded-2xl border-y border-r border-l-4 p-6 shadow-md sm:p-8">
-    {/* Top section: Avatar, Name and Monthly Score */}
-    <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
+  <!-- Encabezado Compacto y Banda de Métricas -->
+  <div class="bg-base-100 border-base-200/80 rounded-2xl border p-4 shadow-xs sm:p-5">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <!-- Izquierda: Avatar + Nombre + Legajo/User + Período -->
+      <div class="flex items-center gap-3.5 min-w-0">
         <div
-          class="bg-base-200 text-base-content/60 border-base-300 flex size-20 items-center justify-center rounded-2xl border text-3xl font-black shadow-inner"
+          class="bg-secondary/10 text-secondary border-secondary/20 flex size-12 shrink-0 items-center justify-center rounded-xl border text-lg font-black tracking-wider shadow-2xs"
           id="detail-avatar"
         >
           --
         </div>
-        <div>
-          <div class="text-base-content/50 mb-1 text-xs font-bold tracking-widest uppercase">
-            Perfil del Operador
-          </div>
-          <h3
-            class="text-base-content text-4xl font-black tracking-tighter"
-            id="detail-name"
-          >
-            --
-          </h3>
-          <div class="text-base-content/60 mt-2 flex flex-wrap items-center gap-3 text-xs font-medium">
-            <span class="flex items-center gap-1">
-              <Icon
-                name="boxicons:user-id-card"
-                size={18}
-                class="opacity-70"
-              />
-              <span id="detail-id" class="font-mono">
-                --
-              </span>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h3
+              class="text-base-content text-xl sm:text-2xl font-black tracking-tight truncate"
+              id="detail-name"
+            >
+              --
+            </h3>
+            <span
+              id="detail-id"
+              class="badge badge-sm badge-ghost font-mono text-3xs font-semibold text-base-content/70"
+            >
+              --
             </span>
-            <span class="opacity-30">•</span>
+          </div>
+          <div class="text-base-content/60 mt-0.5 flex items-center gap-2 text-xs font-medium">
             <span class="flex items-center gap-1">
-              <Icon
-                name="boxicons:calendar"
-                size={18}
-                class="opacity-70"
-              />
-              <span id="detail-month">--</span>
+              <Icon name="boxicons:calendar" size={14} class="text-primary shrink-0" />
+              <span id="detail-month" class="font-semibold text-base-content/80">--</span>
             </span>
           </div>
         </div>
       </div>
 
-      {/* Score Card */}
-      <div class="bg-base-200/50 border-base-200 w-full shrink-0 rounded-2xl border p-4 sm:w-fit sm:min-w-35 sm:text-right">
-        <div class="text-base-content/50 mb-1 text-xs font-bold tracking-widest uppercase">
-          Score Mensual
+      <!-- Derecha: Score Mensual Integrado + Menú Acciones + Botón Cerrar -->
+      <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-base-200/60">
+        <!-- Score Mensual Principal Compacto -->
+        <div class="flex items-baseline gap-2 bg-base-200/50 border border-base-200/80 rounded-xl px-3.5 py-1.5 shadow-2xs">
+          <span class="text-3xs font-black uppercase tracking-wider text-base-content/50">Score Mes</span>
+          <span
+            class="text-secondary text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none"
+            id="detail-score"
+          >
+            --%
+          </span>
         </div>
-        <div
-          class="text-secondary text-5xl font-black tracking-tighter"
-          id="detail-score"
+
+        <!-- Acciones Secundarias: Dropdown Exportar -->
+        <div class="dropdown dropdown-end">
+          <button
+            tabindex="0"
+            type="button"
+            class="btn btn-sm btn-ghost border border-base-200/80 text-xs font-bold gap-1 text-base-content/70 hover:text-base-content rounded-xl"
+            title="Opciones de exportación"
+            aria-label="Opciones de exportación"
+          >
+            <Icon name="boxicons:download" size={16} />
+            <span class="hidden md:inline">Exportar</span>
+            <Icon name="boxicons:chevron-down" size={14} class="opacity-60" />
+          </button>
+          <ul
+            tabindex="0"
+            class="dropdown-content menu bg-base-100 rounded-box border-base-200 z-50 w-52 border p-1.5 shadow-lg text-xs font-medium mt-1"
+          >
+            <li>
+              <button
+                id="btn-export-csv"
+                type="button"
+                class="flex items-center gap-2 py-2 text-base-content/80 hover:text-secondary"
+                title="Exportar Reporte de Operador a CSV"
+              >
+                <Icon name="boxicons:file" size={16} class="text-secondary" />
+                <span>Exportar CSV</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="flex items-center gap-2 py-2 text-base-content/80 hover:text-secondary"
+                onclick="window.print()"
+                title="Imprimir o guardar reporte en PDF"
+              >
+                <Icon name="boxicons:printer" size={16} class="text-secondary" />
+                <span>Imprimir Reporte</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Botón Cerrar Estándar -->
+        <button
+          id="btn-back-to-summary"
+          type="button"
+          class="btn btn-sm btn-ghost btn-circle text-base-content/60 hover:text-base-content hover:bg-base-200"
+          title={isAgent ? "Volver" : "Cerrar ficha"}
+          aria-label={isAgent ? "Volver" : "Cerrar ficha"}
         >
-          --%
-        </div>
+          <Icon name={isAgent ? "boxicons:arrow-to-left" : "boxicons:x"} size={20} />
+        </button>
       </div>
     </div>
 
-    {/* Bottom section: Stats block */}
-    <div class="bg-base-200/20 border-base-200 flex w-full flex-wrap items-center gap-3 rounded-2xl border p-3 shadow-sm sm:gap-4 sm:p-4">
-      <div class="border-base-200 flex min-w-30 flex-1 flex-col border-r px-2 sm:px-3">
-        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
-          Score vs Mes Ant.
-        </span>
-        <span
-          id="detail-stat-diff"
-          class="text-base-content text-lg font-black sm:text-xl"
-        >
-          --
+    <!-- Banda de 4 Métricas Compactas -->
+    <div class="mt-4 pt-3.5 border-t border-base-200/70 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+      <!-- Métrica 1: Score Anterior -->
+      <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">vs Mes Anterior</span>
+        <span id="detail-stat-diff" class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content">
+          Sin datos
         </span>
       </div>
-      <div class="border-base-200 flex min-w-30 flex-1 flex-col border-r px-2 sm:px-3">
-        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
-          Duración Promedio
-        </span>
-        <span
-          id="detail-stat-aht"
-          class="text-base-content text-lg font-black sm:text-xl"
-        >
-          --
+
+      <!-- Métrica 2: Duración Media (AHT) -->
+      <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Duración Media (AHT)</span>
+        <span id="detail-stat-aht" class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content">
+          Sin datos
         </span>
       </div>
-      <div class="border-base-200 flex min-w-30 flex-1 flex-col border-r px-2 sm:px-3">
-        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
-          Interacción
-        </span>
-        <span
-          id="detail-stat-interaction"
-          class="text-base-content text-lg font-black sm:text-xl"
-        >
-          --
+
+      <!-- Métrica 3: Interacción (S1) -->
+      <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Interacción (S1)</span>
+        <span id="detail-stat-interaction" class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content">
+          Sin datos
         </span>
       </div>
-      <div class="flex min-w-30 flex-1 flex-col px-2 sm:px-3">
-        <span class="text-xxs text-base-content/40 font-bold tracking-wider uppercase">
-          Gestión
-        </span>
-        <span
-          id="detail-stat-management"
-          class="text-base-content text-lg font-black sm:text-xl"
-        >
-          --
+
+      <!-- Métrica 4: Gestión (S2) -->
+      <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Gestión (S2)</span>
+        <span id="detail-stat-management" class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content">
+          Sin datos
         </span>
       </div>
     </div>
