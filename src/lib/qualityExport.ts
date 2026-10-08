@@ -70,6 +70,27 @@ export function getAuditExportHeaders(
 }
 import { XLSX_STYLE_INDEX, type XlsxCellData, type XlsxColWidth } from "./xlsx";
 
+/**
+ * Resuelve la celda "Cumple" de un ítem a partir de su score.
+ *
+ * Un ítem sin score guardado NO es un cumplimiento: en la sección 2 la fila se
+ * omite cuando el flag invalida esa sección (llamada sin ticket, mail sin
+ * ticket MDA, autogestión derivada fuera de MDA). Marcarlo "CUMPLE" por
+ * defecto sería un falso positivo en un archivo que va a supervisión.
+ */
+function cumpleCell(sc: { score: boolean } | undefined): {
+  label: string;
+  styleId: number;
+  meets: boolean | undefined;
+} {
+  if (!sc) {
+    return { label: "N/A", styleId: XLSX_STYLE_INDEX.DATA_CENTER, meets: undefined };
+  }
+  return sc.score
+    ? { label: "CUMPLE", styleId: XLSX_STYLE_INDEX.CUMPLE_TRUE, meets: true }
+    : { label: "NO CUMPLE", styleId: XLSX_STYLE_INDEX.CUMPLE_FALSE, meets: false };
+}
+
 export interface QualityAuditExportData {
   id: number;
   sampleIndex?: number;
@@ -280,11 +301,11 @@ export function buildOperatorFullEvaluationSheet(
         setCell(row, 5, item.name, XLSX_STYLE_INDEX.DATA_TEXT);
         setCell(row, 6, item.ref, XLSX_STYLE_INDEX.DATA_PERCENT);
         const sc = scoreMap.get(item.code);
-        const meets = sc ? sc.score : true;
+        const { label, styleId, meets } = cumpleCell(sc);
         const evalScore = meets ? item.ref : 0;
         s1TotalEval += evalScore;
         setCell(row, 7, evalScore, XLSX_STYLE_INDEX.DATA_PERCENT);
-        setCell(row, 8, meets ? "CUMPLE" : "NO CUMPLE", meets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+        setCell(row, 8, label, styleId);
         if (sc?.comment) setCell(row, 9, sc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
       });
 
@@ -309,13 +330,13 @@ export function buildOperatorFullEvaluationSheet(
           if (isRec) s2TotalEval = item.ref;
         } else {
           const sc = scoreMap.get(item.code);
-          const meets = sc ? sc.score : true;
+          const { label, styleId, meets } = cumpleCell(sc);
           const evalScore = meets ? item.ref : 0;
           if (!callAudit.isReclamoNovedad) {
             s2TotalEval += evalScore;
           }
           setCell(row, 12, evalScore, XLSX_STYLE_INDEX.DATA_PERCENT);
-          setCell(row, 13, meets ? "CUMPLE" : "NO CUMPLE", meets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+          setCell(row, 13, label, styleId);
           if (sc?.comment) setCell(row, 14, sc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
         }
       });
@@ -361,11 +382,11 @@ export function buildOperatorFullEvaluationSheet(
         setCell(row, 20, item.name, XLSX_STYLE_INDEX.DATA_TEXT);
         setCell(row, 21, item.ref, XLSX_STYLE_INDEX.DATA_PERCENT);
         const sc = scoreMap.get(item.code);
-        const meets = sc ? sc.score : true;
+        const { label, styleId, meets } = cumpleCell(sc);
         const evalScore = meets ? item.ref : 0;
         s1TotalEval += evalScore;
         setCell(row, 22, evalScore, XLSX_STYLE_INDEX.DATA_PERCENT);
-        setCell(row, 23, meets ? "CUMPLE" : "NO CUMPLE", meets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+        setCell(row, 23, label, styleId);
         if (sc?.comment) setCell(row, 24, sc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
       });
 
@@ -408,13 +429,13 @@ export function buildOperatorFullEvaluationSheet(
           if (isRec) s2TotalEval = 1;
         } else {
           const sc = scoreMap.get(item.code);
-          const meets = sc ? sc.score : true;
+          const { label, styleId, meets } = cumpleCell(sc);
           const evalScore = meets ? item.ref : 0;
           if (!emailAudit.isReclamoNovedad) {
             s2TotalEval += evalScore;
           }
           setCell(row, 27, evalScore, XLSX_STYLE_INDEX.DATA_PERCENT);
-          setCell(row, 28, meets ? "CUMPLE" : "NO CUMPLE", meets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+          setCell(row, 28, label, styleId);
           if (sc?.comment) setCell(row, 29, sc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
         }
       });
@@ -466,11 +487,11 @@ export function buildOperatorFullEvaluationSheet(
         setCell(row, 35, item.name, XLSX_STYLE_INDEX.DATA_TEXT);
         setCell(row, 36, item.ref, XLSX_STYLE_INDEX.DATA_PERCENT);
         const sc = scoreMap.get(item.code);
-        const meets = sc ? sc.score : true;
+        const { label, styleId, meets } = cumpleCell(sc);
         const evalScore = meets ? item.ref : 0;
         s1TotalEval += evalScore;
         setCell(row, 37, evalScore, XLSX_STYLE_INDEX.DATA_PERCENT);
-        setCell(row, 38, meets ? "CUMPLE" : "NO CUMPLE", meets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+        setCell(row, 38, label, styleId);
         if (sc?.comment) setCell(row, 39, sc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
       });
 
@@ -488,11 +509,11 @@ export function buildOperatorFullEvaluationSheet(
         setCell(row, 40, item.name, XLSX_STYLE_INDEX.DATA_TEXT);
         setCell(row, 41, item.ref, XLSX_STYLE_INDEX.DATA_PERCENT);
         const sc = scoreMap.get(item.code);
-        const meets = sc ? sc.score : true;
+        const { label, styleId, meets } = cumpleCell(sc);
         const evalScore = meets ? item.ref : 0;
         s2TotalEval += evalScore;
         setCell(row, 42, evalScore, XLSX_STYLE_INDEX.DATA_PERCENT);
-        setCell(row, 43, meets ? "CUMPLE" : "NO CUMPLE", meets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+        setCell(row, 43, label, styleId);
         if (sc?.comment) setCell(row, 44, sc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
       });
 
