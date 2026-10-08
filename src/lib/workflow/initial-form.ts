@@ -64,8 +64,12 @@ const IP_RANGE_LABEL_PATTERN = /^rango ip(v4)?$/;
 const CC_CODE_PATTERN = /\s*CC_\d+\s*$/i;
 /** CPA argentino: letra de provincia + 4 dígitos + 3 letras (p.ej. "(B1806CTD)"). */
 const CPA_PATTERN = /\((B\d{4}[A-Z]{3})\)/i;
-/** Código de sucursal: paréntesis con "B" + solo dígitos (p.ej. "(B1618)"). */
-const BRANCH_CODE_PATTERN = /\((B\d+)\)/i;
+/**
+ * Código de sucursal: paréntesis con letra A–Z (excepto I y O, que son otros
+ * tipos de solicitud) + solo dígitos (p.ej. "(B1618)", "(C4932)"). El anclaje
+ * del ")" excluye el CPA, que lleva letras tras los dígitos (p.ej. "(B1806CTD)").
+ */
+const BRANCH_CODE_PATTERN = /\(([A-HJ-NP-Z]\d+)\)/i;
 
 /**
  * Parsea el valor del campo "Sucursal":

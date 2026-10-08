@@ -1,4 +1,5 @@
 import {
+  parseAutomationBranchTitle,
   parseEstimatedEndFromTitle,
   stripAutomationEmbeddedRefs,
 } from "../src/lib/workflow/branch-title";
@@ -69,6 +70,49 @@ check(
   stripAutomationEmbeddedRefs(
     "AUTSUC #79867 - 1-Equipamiento (Prep y Despacho)",
   ) === "AUTSUC - 1-Equipamiento (Prep y Despacho)",
+);
+
+check(
+  "código C (Colegio de Abogados) se parsea y formatea",
+  JSON.stringify(
+    parseAutomationBranchTitle(
+      "AUTSUC COLEGIO DE ABOGADOS (C4932) 2026-10-21",
+    ),
+  ) ===
+    JSON.stringify({
+      branchCode: "C4932",
+      branchName: "Colegio de Abogados",
+      displayName: "Automatización Sucursal C4932 Colegio de Abogados",
+    }),
+);
+check(
+  "código B sigue parseando (regresión)",
+  parseAutomationBranchTitle("AUTSUC VILLA TESEI (B0035) 2026-09-25")
+    .displayName === "Automatización Sucursal B0035 Villa Tesei",
+);
+check(
+  "otros prefijos válidos (Z) se parsean",
+  parseAutomationBranchTitle("AUTSUC Planta (Z9999)").branchCode === "Z9999",
+);
+check(
+  "prefijo I no es código de sucursal",
+  parseAutomationBranchTitle("AUTSUC Otro (I1234)").branchCode === null,
+);
+check(
+  "prefijo O no es código de sucursal",
+  parseAutomationBranchTitle("AUTSUC Otro (O1234)").branchCode === null,
+);
+check(
+  "CPA no se confunde con código de sucursal",
+  parseAutomationBranchTitle(
+    "Automatización de sucursal B0174 Fariña Antonio 188 (B1806CTD)",
+  ).branchCode === "B0174",
+);
+check(
+  "strip del prefijo AUTSUC con código C",
+  stripAutomationEmbeddedRefs(
+    "AUTSUC COLEGIO (C4932)  1-Equipamiento #88671 2026-10-21",
+  ) === "1-Equipamiento",
 );
 
 if (failures.length > 0) {
