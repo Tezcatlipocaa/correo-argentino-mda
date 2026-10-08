@@ -7,6 +7,7 @@ import { getModulePermissions, hasPermission } from "@lib/rbac";
 import { ALLOWED_HELPDESK_NAMES, MDA_TI_HELPDESK, isSectionVisibleSync } from "@lib/helpdeskAccess";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
 
 const headerGridClass = "grid-cols-[1fr_110px_110px_120px] gap-4";
 const rowGridClass =
@@ -141,13 +142,76 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
     </div>
   </div>
 
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center gap-2">
+      <h2 class="text-base-content text-base font-semibold">
+        Mesas registradas
+      </h2>
+      <span
+        id="mesas-count-badge"
+        class="badge badge-neutral badge-sm font-mono"
+      >
+        {mesaList.length}
+      </span>
+    </div>
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div
+        id="mesas-filter-group"
+        class="join border-base-300 bg-base-100 rounded-lg border shadow-xs"
+        role="group"
+        aria-label="Filtrar mesas"
+      >
+        <button
+          type="button"
+          data-filter-value="all"
+          class="join-item btn btn-xs sm:btn-sm btn-active btn-neutral"
+        >
+          Todas
+        </button>
+        <button
+          type="button"
+          data-filter-value="assignable"
+          class="join-item btn btn-xs sm:btn-sm"
+        >
+          Asignables
+        </button>
+        <button
+          type="button"
+          data-filter-value="unassignable"
+          class="join-item btn btn-xs sm:btn-sm"
+        >
+          No asignables
+        </button>
+        <button
+          type="button"
+          data-filter-value="inactive"
+          class="join-item btn btn-xs sm:btn-sm"
+        >
+          Inactivas
+        </button>
+      </div>
+
+      <SearchBar
+        id="mesas-search"
+        placeholder="Buscar por nombre o ID..."
+        ariaLabel="Buscar mesas de ayuda por nombre o InvGate ID"
+        clearable={true}
+        class="w-full sm:w-64"
+      />
+    </div>
+  </div>
+
   <DataTable
     id="mesas-table"
     ariaLabel="Listado de mesas de ayuda"
     headerGridClass={headerGridClass}
     rowGridClass={rowGridClass}
-    emptyStateTitle="No hay mesas"
-    emptyStateDescription='Usá "Sincronizar desde InvGate" para traerlas.'
+    emptyStateTitle="Sin mesas que coincidan"
+    emptyStateDescription="No se encontraron mesas para la búsqueda o filtro seleccionado. Probá cambiando los términos."
+    showClearButton={true}
+    clearButtonText="Restablecer filtros"
+    clearButtonId="mesas-search-clear"
   >
     <div slot="header">
       <DataTableHeaderCell sortKey="name">Nombre</DataTableHeaderCell>
@@ -177,6 +241,9 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
         <article
           data-table-row
           data-sort-name={m.name}
+          data-search-text={`${m.name} ${m.invgateId}`.toLowerCase()}
+          data-filter-assignable={toggleChecked ? "true" : "false"}
+          data-filter-active={m.active ? "true" : "false"}
           class:list={[
             rowGridClass,
             "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
@@ -184,14 +251,17 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
           ]}
         >
           <div class="min-w-0">
-            <span class="inline-flex items-center gap-2 font-mono text-sm">
+            <span
+              data-highlight-target
+              class="inline-flex items-center gap-2 font-mono text-sm"
+            >
               {m.name}
               {!m.active && (
                 <span class="badge badge-warning badge-sm">Inactiva en InvGate</span>
               )}
             </span>
           </div>
-          <div class="font-mono text-sm">{m.invgateId}</div>
+          <div data-highlight-target class="font-mono text-sm">{m.invgateId}</div>
           <div>
             <span
               class:list={[
@@ -322,4 +392,116 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
       void toggleAssignable(el as HTMLInputElement);
     });
   }
+</script>
+
+<script>
+  import {
+    matchesSearchQuery,
+    highlightSearchTargets,
+  } from "@lib/clientSearch";
+
+  function initMesasSearch() {
+    const searchInput = document.querySelector<HTMLInputElement>(
+      "#mesas-search",
+    );
+    const filterGroup = document.querySelector<HTMLElement>(
+      "#mesas-filter-group",
+    );
+    const tableRoot = document.getElementById("mesas-table");
+    if (!searchInput || !tableRoot) return false;
+    if (searchInput.dataset.mesasSearchBound === "true") return true;
+
+    let activeFilter = "all";
+
+    function applyFilters() {
+      const query = searchInput?.value.trim() ?? "";
+      const rows = document.querySelectorAll<HTMLElement>(
+        "#mesas-table [data-table-row]",
+      );
+      const countBadge = document.getElementById("mesas-count-badge");
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const searchText = row.dataset.searchText || "";
+        const isAssignable = row.dataset.filterAssignable === "true";
+        const isActive = row.dataset.filterActive === "true";
+
+        let matchesFilter = true;
+        if (activeFilter === "assignable") {
+          matchesFilter = isAssignable;
+        } else if (activeFilter === "unassignable") {
+          matchesFilter = !isAssignable;
+        } else if (activeFilter === "inactive") {
+          matchesFilter = !isActive;
+        }
+
+        const matchesQuery = matchesSearchQuery(query, [searchText]);
+        const isVisible = matchesFilter && matchesQuery;
+
+        row.classList.toggle("hidden", !isVisible);
+        highlightSearchTargets(row, isVisible ? query : "");
+        if (isVisible) visibleCount++;
+      });
+
+      if (countBadge) countBadge.textContent = visibleCount.toString();
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+
+    const clearButton = document.getElementById("mesas-search-clear");
+    clearButton?.addEventListener("click", () => {
+      searchInput.value = "";
+      activeFilter = "all";
+      if (filterGroup) {
+        filterGroup.querySelectorAll<HTMLButtonElement>("button[data-filter-value]").forEach((btn) => {
+          const isAll = btn.dataset.filterValue === "all";
+          btn.classList.toggle("btn-active", isAll);
+          btn.classList.toggle("btn-neutral", isAll);
+        });
+      }
+      applyFilters();
+      searchInput.focus();
+    });
+
+    if (filterGroup) {
+      filterGroup.addEventListener("click", (e) => {
+        const btn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+          "button[data-filter-value]",
+        );
+        if (!btn) return;
+        const targetFilter = btn.dataset.filterValue || "all";
+        if (targetFilter === activeFilter) return;
+
+        activeFilter = targetFilter;
+        filterGroup.querySelectorAll<HTMLButtonElement>("button[data-filter-value]").forEach((b) => {
+          const isActive = b === btn;
+          b.classList.toggle("btn-active", isActive);
+          b.classList.toggle("btn-neutral", isActive);
+        });
+
+        applyFilters();
+      });
+    }
+
+    searchInput.dataset.mesasSearchBound = "true";
+    return true;
+  }
+
+  function setupMesasSearchObserver() {
+    if (initMesasSearch()) return;
+
+    const observer = new MutationObserver((_, obs) => {
+      if (initMesasSearch()) {
+        obs.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupMesasSearchObserver();
+
+  document.addEventListener("astro:page-load", () => {
+    setupMesasSearchObserver();
+  });
 </script>
