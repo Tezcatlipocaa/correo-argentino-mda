@@ -1,0 +1,280 @@
+---
+import { db } from "@db/index";
+import { offices } from "@db/schema";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import { Icon } from "astro-icon/components";
+import { getCleanBase, getBaseNoSlash } from "@lib/baseUrl";
+import { groupOfficesByBuilding } from "@lib/officeBuildingReconcile";
+
+const rows = await db
+  .select({
+    id: offices.id,
+    code: offices.code,
+    name: offices.name,
+    address: offices.address,
+    provinceCode: offices.provinceCode,
+  })
+  .from(offices);
+
+const groups = groupOfficesByBuilding(
+  rows.flatMap((r) =>
+    r.address
+      ? [
+          {
+            id: r.id,
+            code: r.code,
+            name: r.name,
+            address: r.address,
+            provinceCode: r.provinceCode,
+          },
+        ]
+      : [],
+  ),
+);
+
+const totalOffices = groups.reduce((n, g) => n + g.members.length, 0);
+const headerGridClass = "grid-cols-[44px_1.6fr_2.2fr_90px_1.6fr_150px] gap-4";
+const rowGridClass =
+  "grid grid-cols-[44px_1.6fr_2.2fr_90px_1.6fr_150px] items-center gap-4";
+const base = getCleanBase();
+const baseNoSlash = getBaseNoSlash();
+---
+
+<PageContainer width="xxl">
+  <PageHeader
+    title="Edificios de oficinas"
+    description="Oficinas que comparten un mismo edificio pero tienen la dirección escrita de forma distinta. Revisá los grupos, ajustá la dirección canónica si hace falta y unificá los seleccionados."
+  />
+
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
+    <div class="flex items-center gap-3">
+      <span class="badge badge-ghost badge-lg text-base-content font-semibold">
+        {groups.length}
+      </span>
+      <span class="text-base-content/60 text-sm">
+        edificios candidatos · {totalOffices} oficinas
+      </span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        id="edificios-apply"
+        class="btn btn-secondary btn-sm px-3 font-medium"
+        disabled
+        data-apply-url={`${base}api/admin/offices/reconcile-buildings`}
+      >
+        <Icon name="boxicons:edit-alt-filled" size={18} aria-hidden="true" />
+        <span data-apply-label>Unificar seleccionados</span>
+      </button>
+    </div>
+  </div>
+
+  <DataTable
+    ariaLabel="Edificios de oficinas"
+    headerGridClass={headerGridClass}
+    rowGridClass={rowGridClass}
+    emptyStateTitle="No hay edificios candidatos"
+    emptyStateDescription="Ningún grupo de oficinas comparte un edificio con direcciones escritas de forma distinta."
+    whenEmpty
+    defaultSortKey="oficinas"
+    defaultSortDirection="descending"
+  >
+    <div slot="header" class={headerGridClass}>
+      <span></span>
+      <DataTableHeaderCell sortKey="id">Edificio</DataTableHeaderCell>
+      <DataTableHeaderCell>Dirección canónica</DataTableHeaderCell>
+      <DataTableHeaderCell sortKey="oficinas">Oficinas</DataTableHeaderCell>
+      <DataTableHeaderCell>Variantes detectadas</DataTableHeaderCell>
+      <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
+    </div>
+
+    {
+      groups.map((group) => {
+        const variants = [...new Set(group.members.map((m) => m.address))];
+        const visibleVariants = variants.slice(0, 3);
+        const hiddenVariants = variants.length - visibleVariants.length;
+        return (
+          <div
+            class:list={[
+              rowGridClass,
+              "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+            ]}
+            data-table-row
+            data-edificio-row
+            data-group-key={group.key}
+            data-oficinas={group.members.length}
+            data-sort-id={group.key}
+            data-sort-oficinas={group.members.length}
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-secondary"
+              data-edificio-checkbox
+              aria-label={`Seleccionar edificio ${group.key}`}
+            />
+            <div class="min-w-0">
+              <span class="block truncate font-mono text-sm font-semibold">
+                {group.key}
+              </span>
+              <span class="block text-xs text-base-content/60">
+                {group.members[0]?.provinceCode || "—"}
+              </span>
+            </div>
+            <input
+              type="text"
+              class="input input-sm w-full font-mono"
+              data-edificio-canonical
+              value={group.canonical}
+              required
+              aria-label={`Dirección canónica para ${group.key}`}
+            />
+            <span class="badge badge-ghost badge-sm justify-center">
+              {group.members.length}
+            </span>
+            <ul class="min-w-0 space-y-0.5 text-xs">
+              {visibleVariants.map((variant) => (
+                <li class="truncate text-base-content/70">· {variant}</li>
+              ))}
+              {hiddenVariants > 0 && (
+                <li class="truncate text-base-content/70">
+                  +{hiddenVariants} más
+                </li>
+              )}
+            </ul>
+            <div class="text-right">
+              <a
+                href={`${baseNoSlash}/oficinas?search=${encodeURIComponent(group.canonical)}`}
+                class="btn btn-ghost btn-xs"
+              >
+                Ver oficinas
+              </a>
+            </div>
+          </div>
+        );
+      })
+    }
+  </DataTable>
+</PageContainer>
+
+<script>
+  function initEdificiosSelection() {
+    const applyButton =
+      document.querySelector<HTMLButtonElement>("#edificios-apply");
+    if (!applyButton || applyButton.dataset.bound === "true") return false;
+    const button: HTMLButtonElement = applyButton;
+    button.dataset.bound = "true";
+
+    const url = button.dataset.applyUrl ?? "";
+
+    function selectedRows() {
+      return [
+        ...document.querySelectorAll<HTMLElement>("[data-edificio-row]"),
+      ].filter((row) =>
+        row.querySelector<HTMLInputElement>("[data-edificio-checkbox]")?.checked,
+      );
+    }
+
+    function syncApplyState() {
+      const count = selectedRows().length;
+      button.disabled = count === 0;
+      const label = button.querySelector("[data-apply-label]");
+      if (label) {
+        label.textContent = count
+          ? `Unificar ${count} seleccionado${count === 1 ? "" : "s"}`
+          : "Unificar seleccionados";
+      }
+    }
+
+    document.addEventListener("change", (event) => {
+      if (
+        event.target instanceof HTMLInputElement &&
+        event.target.matches("[data-edificio-checkbox]")
+      ) {
+        syncApplyState();
+      }
+    });
+
+    syncApplyState();
+
+    button.addEventListener("click", async () => {
+      const selected = selectedRows();
+      if (selected.length === 0) return;
+
+      const totalOffices = selected.reduce(
+        (n, row) => n + (Number(row.dataset.oficinas ?? "0") || 0),
+        0,
+      );
+
+      const canonicals = selected.map((row) =>
+        (
+          row.querySelector<HTMLInputElement>("[data-edificio-canonical]")
+            ?.value ?? ""
+        ).trim(),
+      );
+
+      if (canonicals.some((canonical) => canonical === "")) {
+        (window as any).showToast?.(
+          "Definí la dirección canónica de los edificios seleccionados",
+          "alert-warning",
+        );
+        return;
+      }
+
+      const payload = {
+        groups: selected.map((row, index) => ({
+          key: row.dataset.groupKey ?? "",
+          canonical: canonicals[index] ?? "",
+        })),
+      };
+
+      const confirmed = window.confirm(
+        `Se van a unificar ${payload.groups.length} edificio${payload.groups.length === 1 ? "" : "s"} y sobrescribir la dirección de ${totalOffices} oficina${totalOffices === 1 ? "" : "s"}. ¿Continuás?`,
+      );
+      if (!confirmed) return;
+
+      button.disabled = true;
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status} al unificar los edificios`);
+        }
+
+        const data = (await response.json()) as { error?: string } | null;
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+
+        window.location.reload();
+      } catch (error) {
+        (window as any).showToast?.(
+          error instanceof Error ? error.message : "Error inesperado",
+          "alert-error",
+        );
+        syncApplyState();
+      }
+    });
+
+    return true;
+  }
+
+  function setupEdificiosSelection() {
+    if (initEdificiosSelection()) return;
+    const observer = new MutationObserver((_, obs) => {
+      if (initEdificiosSelection()) obs.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupEdificiosSelection();
+  document.addEventListener("astro:page-load", () => {
+    setupEdificiosSelection();
+  });
+</script>

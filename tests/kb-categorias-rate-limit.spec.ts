@@ -51,7 +51,7 @@ const postCreate = async (
   return {
     status: response.status(),
     location: locationHeader
-      ? new URL(locationHeader, "http://localhost:4321")
+      ? new URL(locationHeader, test.info().project.use.baseURL ?? "http://localhost:4321")
       : null,
   };
 };

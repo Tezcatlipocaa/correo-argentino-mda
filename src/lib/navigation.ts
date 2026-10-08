@@ -158,6 +158,11 @@ export const navSections: NavSection[] = [
             icon: "boxicons:location-alt-filled",
           },
           {
+            href: "/admin/oficinas/edificios",
+            label: "Edificios (oficinas)",
+            icon: "boxicons:building-house-filled",
+          },
+          {
             href: "/admin/automatizaciones/etapas",
             label: "Etapas Workflow",
             icon: "boxicons:list-ul-filled",

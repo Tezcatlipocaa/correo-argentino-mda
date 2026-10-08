@@ -35,16 +35,28 @@
 - `npm run build` — Astro SSR build (`dist/`)
 - `npm run db:push` — push Drizzle schema to SQLite
 - `npm run db:studio` — Drizzle Studio GUI
+- `npm run buildings:reconcile` — releva/unifica oficinas del mismo edificio (dry-run por defecto; `--apply` + `CONFIRMAR` para escribir). Equivalente web: `/admin/oficinas/edificios` (solo admin).
 - **Never run `npm install`/`npm audit fix` while PM2/Node processes are alive.** On Windows, native `.node` modules in use (e.g. `better-sqlite3.node`) can't be replaced (`EBUSY/EPERM`) → `node_modules` stays inconsistent → the next build ships a broken SSR manifest. `pm2 kill` (or stop the processes) before installing.
 - **After `git pull` that changes `package.json`/`package-lock.json` (e.g. Astro upgrades): always run `npm install` before `npm run build`.** Stale/mismatched `node_modules` builds a broken `dist/server/entry.mjs` where the Astro SSR manifest gets `rootDir: undefined`, crashing at startup with `TypeError: Invalid URL` in `deserializeManifest`. `npm install` + rebuild fixes it; repo code is fine.
 - **Stale/mismatched `node_modules`** builds a broken `dist/server/entry.mjs` where the SSR manifest gets `rootDir: undefined`, crashing at startup with `TypeError: Invalid URL` (`input: 'undefined'`) in `deserializeManifest`. `npm run build` now runs `scripts/verify-build.mjs` after `astro build`, failing the build if `rootDir` is missing. Fix when it trips: stop Node, delete `node_modules`, `npm ci`, rebuild. See `docs/lessons.md` (2026-09-07) and `scripts/auto-deploy.bat`.
 
 ## Testing
 
-- `npx playwright test` — E2E tests (`tests/**/*.spec.ts`). Workers: 1 (serial). Requires dev server at `http://localhost:4321`.
-- Artifact after runs: HTML report + traces (see Testing policy).
-- `npm run test:unit -- tests/unit` — vitest unit tests. Bare `npm run test:unit` also globs Playwright specs and stale `*.mjs` asserts (pre-existing failures) — always scope to `tests/unit`.
-- No CI — tests run manually.
+- `npm run test:domain` — tests de dominio con `node:test` sobre los 7 archivos `*.test.ts` de `src/lib/` (52 tests). **No los cubre vitest**: `vitest.config.ts` incluye únicamente `tests/unit/**`.
+- `npm run test:unit` — vitest sobre `tests/unit/**` (48 archivos, 332 tests). Hay **1 fallo pre-existente** en `tests/unit/navigation/base-conocimiento.test.ts` (no relacionado con edificios); no scopear el glob, ya no hace falta.
+- `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por ese fallo pre-existente; el dominio corre primero para que una regresión real no quede enmascarada.
+- `npm run test:e2e` — Playwright completo (`tests/**/*.spec.ts`). Workers: 1 (serial). Requiere dev server; ver "Puertos de la suite E2E" abajo.
+- `npm run test:e2e:reconcile` — solo el spec de reconciliación de edificios (7 tests).
+- `npx playwright show-report` — reporte HTML + trazas.
+- No hay CI: los tests corren a mano.
+- La sección **Testing policy** (arriba) gobierna cómo se _escriben_ los tests; esta gobierna cómo se _ejecutan_.
+
+### Puertos de la suite E2E
+
+- `playwright.config.ts` resuelve `baseURL` desde `PLAYWRIGHT_BASE_URL`, con default `http://localhost:4321`.
+- **Verificar el puerto antes de arrancar**: `Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4321,4322,4323 }`. En esta máquina varios puertos los ocupa a veces otro proyecto local.
+- Arrancar el dev server en su **propio comando**, con el destino del redirect entre comillas (`%TEMP%` tiene espacios): ver `docs/lessons.md`.
+- **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
 
 ## DB & Drizzle
 
