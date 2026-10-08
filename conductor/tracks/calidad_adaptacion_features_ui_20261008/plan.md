@@ -1,10 +1,10 @@
 # Implementation Plan: Adaptación e Integración de Features de Calidad en Refactor de UI
 
 ## Phase 1: Consolidación Git y Resolución de Conflictos Base
-- [~] Task: Preparar rama de integración e incorporar commits de `origin/calidad` en `refactor/UI`
-    - [ ] Realizar merge controlado de `origin/calidad` en `refactor/UI`
-    - [ ] Resolver conflictos preservando la arquitectura modular de UI (`CalidadContent`, `NewAuditForm`, `OperatorDetailsPanel`) y la lógica de backend/scripts de `calidad`
-    - [ ] Ejecutar comprobación de sintaxis y tipos con TypeScript (`astro check` o `npm run build`)
+- [x] Task: Preparar rama de integración e incorporar commits de `origin/calidad` en `refactor/UI`
+    - [x] Realizar merge controlado de `origin/calidad` en `refactor/UI`
+    - [x] Resolver conflictos preservando la arquitectura modular de UI (`CalidadContent`, `NewAuditForm`, `OperatorDetailsPanel`) y la lógica de backend/scripts de `calidad`
+    - [x] Ejecutar comprobación de sintaxis y tipos con TypeScript (`astro check` o `npm run build`)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Paridad y Adaptación de Features en Formularios (`NewAuditForm` y `AuditModal`)
