@@ -61,6 +61,6 @@
 - [x] **Track: Refactor y Modernización del Modal de Parámetros de Calidad**
   *Link: [./tracks/calidad_parameters_modal_refactor_20261005/index.md](./tracks/calidad_parameters_modal_refactor_20261005/index.md)*
 ---
-- [ ] **Track: Adaptación e Integración de Features de Calidad en Refactor de UI**
+- [~] **Track: Adaptación e Integración de Features de Calidad en Refactor de UI**
   *Link: [./tracks/calidad_adaptacion_features_ui_20261008/index.md](./tracks/calidad_adaptacion_features_ui_20261008/index.md)*
 
