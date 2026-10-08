@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
+import Database from "better-sqlite3";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,6 +18,63 @@ import path from "node:path";
  */
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const TSX_CLI = path.join(REPO_ROOT, "node_modules", "tsx", "dist", "cli.mjs");
+
+/**
+ * Fixture propia para los tests que dependen de conteos.
+ *
+ * `database/mda.db` es una copia de producción que cambia con el uso real: la
+ * unificación de edificios ya se aplicó sobre los 66 grupos y el dry-run pasó
+ * de `66 (229 oficinas)` a `0 (0 oficinas)`, lo que rompió 6 tests que fijaban
+ * ese snapshot. Con datos propios el resultado es determinista y los tests dejan
+ * de fallar por un movimiento legítimo de los datos.
+ *
+ * `src/db/index.ts:5` abre `./database/mda.db` relativo al cwd, así que basta
+ * con pasar un cwd distinto: es el mismo mecanismo que ya usa `runCli`. Se
+ * borran todos los renglones reales y se insertan los de arriba en una
+ * conexión con `foreign_keys` apagado (better-sqlite3 lo prende por defecto, y
+ * las tablas hijas con `office_id` impedirían el borrado); la CLI solo lee
+ * `offices`.
+ */
+const FIXTURE_ROWS: [string, string, string, string, string][] = [
+  ["CF001", "San Juan Central", "SUCURSAL", "C", "AV. SAN JUAN 1349"],
+  ["CF002", "San Juan Anexo", "SUCURSAL", "C", "SAN JUAN 1349"],
+  ["CF003", "San Juan Norte", "SUCURSAL", "C", "AV SAN JUAN 1349"],
+  ["BF001", "Vergara Centro", "SUCURSAL", "B", "AV. GDOR V VERGARA 3443"],
+  [
+    "BF002",
+    "Vergara Sur",
+    "SUCURSAL",
+    "B",
+    "VERGARA GOBERNADOR DOCTOR VALENTIN 3443",
+  ],
+];
+
+const COUNT_ALL = "Grupos candidatos de mismo edificio: 2 (5 oficinas)";
+const COUNT_C = "Grupos candidatos de mismo edificio: 1 (3 oficinas)";
+const KEY_B = "B#3443|GOBERNADOR+VALENTIN+VERGARA";
+
+let fixtureDir = "";
+
+function buildFixture(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reconcile-fixture-"));
+  fs.mkdirSync(path.join(dir, "database"), { recursive: true });
+  fs.copyFileSync(
+    path.join(REPO_ROOT, "database", "mda.db"),
+    path.join(dir, "database", "mda.db"),
+  );
+  const db = new Database(path.join(dir, "database", "mda.db"));
+  // better-sqlite3 activa foreign_keys por defecto, y hay tablas hijas con
+  // `office_id` que impedirían borrar las oficinas reales. La CLI solo lee
+  // `offices`, así que las filas huérfanas no le importan.
+  db.pragma("foreign_keys = OFF");
+  db.exec("DELETE FROM offices");
+  const insert = db.prepare(
+    "INSERT INTO offices (code, name, type, provinceCode, address) VALUES (?, ?, ?, ?, ?)",
+  );
+  for (const row of FIXTURE_ROWS) insert.run(...row);
+  db.close();
+  return dir;
+}
 
 // `npx` es un .cmd: spawnSync no lo abre sin shell, y shell:true interpretaría
 // el `|` de una clave como pipe. El bin de tsx está declarado en su
@@ -40,6 +98,14 @@ function runCli(args: string[], cwd: string = REPO_ROOT) {
     output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
   };
 }
+
+beforeAll(() => {
+  fixtureDir = buildFixture();
+});
+
+afterAll(() => {
+  if (fixtureDir) fs.rmSync(fixtureDir, { recursive: true, force: true });
+});
 
 describe("banderas con valor obligatorio (#161)", () => {
   // Es el escenario reportado: bandera sin valor + `--apply`. Es seguro aunque
@@ -68,30 +134,22 @@ describe("banderas con valor obligatorio (#161)", () => {
   }, 90_000);
 
   it("--province con valor válido no corta y filtra", () => {
-    const { status, output } = runCli(["--province", "C"]);
+    const { status, output } = runCli(["--province", "C"], fixtureDir);
     expect(status).toBe(0);
-    expect(output).toContain(
-      "Grupos candidatos de mismo edificio: 10 (50 oficinas)",
-    );
+    expect(output).toContain(COUNT_C);
   }, 90_000);
 
   it("--province en minúscula se normaliza a mayúsculas", () => {
-    const lower = runCli(["--province", "c"]);
+    const lower = runCli(["--province", "c"], fixtureDir);
     expect(lower.status).toBe(0);
-    expect(lower.output).toContain(
-      "Grupos candidatos de mismo edificio: 10 (50 oficinas)",
-    );
+    expect(lower.output).toContain(COUNT_C);
   }, 90_000);
 
   it("--province all equivale a no filtrar", () => {
-    const none = runCli([]);
-    const all = runCli(["--province", "all"]);
-    expect(none.output).toContain(
-      "Grupos candidatos de mismo edificio: 66 (229 oficinas)",
-    );
-    expect(all.output).toContain(
-      "Grupos candidatos de mismo edificio: 66 (229 oficinas)",
-    );
+    const none = runCli([], fixtureDir);
+    const all = runCli(["--province", "all"], fixtureDir);
+    expect(none.output).toContain(COUNT_ALL);
+    expect(all.output).toContain(COUNT_ALL);
   }, 150_000);
 
   it("--help documenta que las banderas requieren valor", () => {
@@ -102,54 +160,57 @@ describe("banderas con valor obligatorio (#161)", () => {
 });
 
 describe("el dry-run y el export respetan --only (#163)", () => {
-  const KEY = "B#3443|GOBERNADOR+VALENTIN+VERGARA";
-
   it("el dry-run con --only lista solo el grupo acotado", () => {
-    const { status, output } = runCli(["--only", KEY]);
+    const { status, output } = runCli(["--only", KEY_B], fixtureDir);
     expect(status).toBe(0);
     const bloques = output.split("=== Edificio [").length - 1;
     expect(bloques).toBe(1);
-    expect(output).toContain(KEY);
+    expect(output).toContain(KEY_B);
   }, 90_000);
 
   it("--export con --only escribe un CSV acotado", () => {
     const csv = path.join(os.tmpdir(), "reconcile-scope.csv");
     fs.rmSync(csv, { force: true });
     try {
-      const { status } = runCli(["--only", KEY, "--export", csv]);
+      const { status } = runCli(["--only", KEY_B, "--export", csv], fixtureDir);
       expect(status).toBe(0);
 
       const lineas = fs.readFileSync(csv, "utf8").trim().split(/\r?\n/);
-      // Una línea de encabezado más las oficinas del grupo (2 en estos datos).
-      expect(lineas.length).toBeGreaterThan(1);
-      expect(lineas.length).toBeLessThan(20);
-      expect(lineas.slice(1).every((l) => l.startsWith(`${KEY},`))).toBe(true);
+      // Una línea de encabezado más las 2 oficinas del grupo en la fixture.
+      expect(lineas.length).toBe(3);
+      expect(lineas.slice(1).every((l) => l.startsWith(`${KEY_B},`))).toBe(
+        true,
+      );
     } finally {
       fs.rmSync(csv, { force: true });
     }
   }, 90_000);
 
   it("una provincia sin grupos menciona el filtro de provincia, no --only", () => {
-    const { status, output } = runCli(["--apply", "--province", "D"]);
+    const { status, output } = runCli(
+      ["--apply", "--province", "D"],
+      fixtureDir,
+    );
     expect(status).toBe(0);
     expect(output).toContain("--province");
     expect(output).not.toContain("coincide con --only");
   }, 90_000);
 
   it("una clave inexistente menciona --only", () => {
-    const { status, output } = runCli(["--apply", "--only", "Z#1|NADA"]);
+    const { status, output } = runCli(
+      ["--apply", "--only", "Z#1|NADA"],
+      fixtureDir,
+    );
     expect(status).toBe(0);
     expect(output).toContain("--only");
   }, 90_000);
 
   it("sin filtros el dry-run lista todos los grupos", () => {
-    const { status, output } = runCli([]);
+    const { status, output } = runCli([], fixtureDir);
     expect(status).toBe(0);
     const bloques = output.split("=== Edificio [").length - 1;
-    expect(bloques).toBe(66);
-    expect(output).toContain(
-      "Grupos candidatos de mismo edificio: 66 (229 oficinas)",
-    );
+    expect(bloques).toBe(2);
+    expect(output).toContain(COUNT_ALL);
   }, 90_000);
 });
 
