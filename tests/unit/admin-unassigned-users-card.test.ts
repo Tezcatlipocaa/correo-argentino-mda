@@ -14,13 +14,16 @@ const PAGE = path.resolve(
 const source = fs.readFileSync(PAGE, "utf8");
 
 describe("el panel de administracion incluye la pagina de usuarios sin ubicacion (#217)", () => {
-  it("la ruta esta declarada en modulesGroup1", () => {
-    const group1 = source.slice(
-      source.indexOf("const modulesGroup1"),
-      source.indexOf("const modulesGroup2"),
+  it("la ruta esta declarada en modulesGroupInvgate debajo de Agrupación de oficinas", () => {
+    const groupInvgate = source.slice(
+      source.indexOf("const modulesGroupInvgate"),
+      source.indexOf("---", source.indexOf("const modulesGroupInvgate")),
     );
-    expect(group1).toContain('href: "/admin/usuarios-sin-ubicacion"');
-    expect(group1).toContain('icon: "boxicons:user-x-filled"');
+    expect(groupInvgate).toContain('href: "/admin/usuarios-sin-ubicacion"');
+    expect(groupInvgate).toContain('icon: "boxicons:user-x-filled"');
+    expect(
+      groupInvgate.indexOf('title: "Usuarios sin ubicación"'),
+    ).toBeGreaterThan(groupInvgate.indexOf('title: "Agrupación de oficinas"'));
   });
 
   it("el bloqueo deriva de hasPermission en rbac", () => {
@@ -40,11 +43,11 @@ describe("el panel de administracion incluye la pagina de usuarios sin ubicacion
   });
 
   it("el titulo de la tarjeta dice Usuarios sin ubicación", () => {
-    const group1 = source.slice(
-      source.indexOf("const modulesGroup1"),
-      source.indexOf("const modulesGroup2"),
+    const groupInvgate = source.slice(
+      source.indexOf("const modulesGroupInvgate"),
+      source.indexOf("---", source.indexOf("const modulesGroupInvgate")),
     );
-    expect(group1).toContain('title: "Usuarios sin ubicación"');
+    expect(groupInvgate).toContain('title: "Usuarios sin ubicación"');
   });
 
   it("la ruta esta registrada en navigation.ts para el command palette", () => {

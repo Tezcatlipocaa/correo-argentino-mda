@@ -48,14 +48,14 @@ describe("el panel de administracion incluye la pagina de edificios (#164)", () 
   it("queda debajo de Ubicaciones InvGate dentro del grupo", () => {
     const group = moduleGroup("modulesGroupInvgate");
     expect(group.indexOf('title: "Ubicaciones InvGate"')).toBeGreaterThan(-1);
-    expect(group.indexOf('title: "Edificios (oficinas)"')).toBeGreaterThan(
+    expect(group.indexOf('title: "Agrupación de oficinas"')).toBeGreaterThan(
       group.indexOf('title: "Ubicaciones InvGate"'),
     );
   });
 
   it("el icono usa un tono con fondo, distinto del de su vecina", () => {
     const group = moduleGroup("modulesGroupInvgate");
-    const card = group.slice(group.indexOf('title: "Edificios (oficinas)"'));
+    const card = group.slice(group.indexOf('title: "Agrupación de oficinas"'));
     const tone = /iconTone: "([^"]+)"/.exec(card)?.[1] ?? "";
     expect(tone).toMatch(/^bg-\w+\/10 text-\w+$/);
     expect(tone).not.toBe("bg-secondary/10 text-secondary");

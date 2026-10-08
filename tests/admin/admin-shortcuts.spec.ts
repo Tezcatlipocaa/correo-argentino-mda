@@ -66,11 +66,12 @@ test.describe("Atajos del Panel de Administración", () => {
       "Sugerencias y Reportes",
       "Auditoría",
       "Papelera",
-      "Usuarios sin ubicación",
       "Recursos",
       "Aplicativos",
       "Contactos",
       "Ubicaciones InvGate",
+      "Agrupación de oficinas",
+      "Usuarios sin ubicación",
     ];
     for (const title of links) {
       await expect(page.locator(`a[aria-label="Ir a ${title}"]`)).toBeVisible();
