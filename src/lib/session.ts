@@ -1,9 +1,10 @@
-import { createHmac, randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import type { AstroCookies } from "astro";
 
-const SECRET = import.meta.env.SESSION_SECRET;
+const SECRET =
+  import.meta.env?.SESSION_SECRET || process.env.SESSION_SECRET;
 if (!SECRET) {
-  if (import.meta.env.PROD) {
+  if (import.meta.env?.PROD) {
     throw new Error(
       "CRITICAL: SESSION_SECRET is not defined in production environment!",
     );
@@ -30,7 +31,15 @@ export function verifySessionId(signedSessionId: string): string | null {
   const expectedSignature = createHmac("sha256", SECRET_KEY)
     .update(sessionId)
     .digest("base64url");
-  if (signature === expectedSignature) {
+
+  const sigBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+
+  if (sigBuffer.length !== expectedBuffer.length) {
+    return null;
+  }
+
+  if (timingSafeEqual(sigBuffer, expectedBuffer)) {
     return sessionId;
   }
   return null;

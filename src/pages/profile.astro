@@ -14,11 +14,13 @@ import {
 import { normalizeRole } from "@lib/rbac";
 import Modal from "@components/ui/Modal.astro";
 import PasswordField from "@components/ui/forms/PasswordField.astro";
+import FormLegend from "@components/ui/forms/FormLegend.astro";
 import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 import ActionPasswordButton from "@components/ui/ActionPasswordButton.astro";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { getBaseNoSlash } from "@lib/baseUrl";
+import { getCsrfTokenForSession } from "@lib/csrf";
 
 const user = Astro.locals.user;
 if (!user || user.id === 0) {
@@ -62,6 +64,7 @@ const roleLabel = roleLabelMap[role] ?? "Agente";
 const avatarClass = roleAvatarClasses[role] ?? roleAvatarClasses.agent;
 const badgeClass = badgeClasses[role] ?? badgeClasses.agent;
 const apiBase = getBaseNoSlash();
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
 
 const { employee, agent, sessionExpiresAt } = await getProfileDetails({
   userId: user.id,
@@ -213,7 +216,7 @@ const participations = agent
               </p>
               <div class="mt-1">
                 <ActionPasswordButton
-                  ariaLabel="Blanquear contraseña"
+                  ariaLabel="Blanqueo de contraseña"
                   label="Blanqueo de contraseña"
                   aria-haspopup="dialog"
                   onclick="document.getElementById('modal-self-password').showModal()"
@@ -354,8 +357,8 @@ const participations = agent
           Blanquear contraseña
         </h3>
         <p class="text-base-content/60 mb-4 text-xs">
-          Cambiá la contraseña de tu cuenta. La sesión actual se mantendrá
-          activa.
+          Cambiá la contraseña de tu cuenta. Por seguridad, se cerrarán las demás
+          sesiones activas.
         </p>
         <form
           method="POST"
@@ -363,6 +366,21 @@ const participations = agent
           class="space-y-3"
           data-async-form
         >
+          <input type="hidden" name="csrf_token" value={csrfToken} />
+          <fieldset class="fieldset">
+            <FormLegend class="font-bold tracking-wider">
+              Contraseña actual <span class="text-error">*</span>
+            </FormLegend>
+            <input
+              type="password"
+              id="self-current-password"
+              name="currentPassword"
+              required
+              autocomplete="current-password"
+              class="input input-sm w-full"
+              placeholder="Ingresá tu contraseña actual"
+            />
+          </fieldset>
           <PasswordField
             id="self-new-password"
             name="newPassword"
