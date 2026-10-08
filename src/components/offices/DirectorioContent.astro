@@ -17,9 +17,10 @@ import {
   officeTypeLabelByType,
   officeTypeTabActiveClassByType,
   formatTypeLabel,
+  isSucursalAutomatizada,
 } from "@lib/officeHelpers";
 import { db } from "@db/index";
-import { provinces, regions, offices } from "@db/schema";
+import { provinces, regions, offices, officeInvgateLinks } from "@db/schema";
 import { eq, or, sql } from "drizzle-orm";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { isAllowed } from "@lib/rolesMatrix";
@@ -110,10 +111,11 @@ const rawCounts = await db
   .select({
     type: offices.type,
     officeType: offices.officeType,
-    count: sql<number>`count(*)`,
+    name: offices.name,
+    invgateDisplayName: officeInvgateLinks.invgateDisplayName,
   })
   .from(offices)
-  .groupBy(offices.type, offices.officeType);
+  .leftJoin(officeInvgateLinks, eq(offices.id, officeInvgateLinks.officeId));
 
 const processedCounts: { type: string; count: number }[] = [];
 let sucursalAutoCount = 0;
@@ -122,17 +124,17 @@ let sucursalNoAutoCount = 0;
 for (const row of rawCounts) {
   if (!row.type) continue;
   if (row.type === "SUCURSAL") {
-    if (row.officeType === "AUTOMATIZADA") {
-      sucursalAutoCount += row.count;
+    if (isSucursalAutomatizada(row)) {
+      sucursalAutoCount += 1;
     } else {
-      sucursalNoAutoCount += row.count;
+      sucursalNoAutoCount += 1;
     }
   } else {
     const existing = processedCounts.find((p) => p.type === row.type);
     if (existing) {
-      existing.count += row.count;
+      existing.count += 1;
     } else {
-      processedCounts.push({ type: row.type, count: row.count });
+      processedCounts.push({ type: row.type, count: 1 });
     }
   }
 }

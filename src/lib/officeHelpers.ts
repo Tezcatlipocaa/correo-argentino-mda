@@ -105,3 +105,37 @@ export const assetOrderByType: Record<OfficeAssetType, number> = {
   printer: 3,
   backup: 4,
 };
+
+export function hasMosaicIndicator(
+  ...names: (string | null | undefined)[]
+): boolean {
+  return names.some(
+    (name) => typeof name === "string" && name.toLowerCase().includes("mosaic")
+  );
+}
+
+export function isSucursalAutomatizada(office: {
+  type?: string | null;
+  officeType?: string | null;
+  name?: string | null;
+  invgateDisplayName?: string | null;
+}): boolean {
+  if (office.type?.toUpperCase() !== "SUCURSAL") {
+    return false;
+  }
+  return (
+    office.officeType?.toUpperCase() === "AUTOMATIZADA" ||
+    hasMosaicIndicator(office.name, office.invgateDisplayName)
+  );
+}
+
+export function isSucursalNoAutomatizada(office: {
+  type?: string | null;
+  officeType?: string | null;
+  name?: string | null;
+  invgateDisplayName?: string | null;
+}): boolean {
+  return (
+    office.type?.toUpperCase() === "SUCURSAL" && !isSucursalAutomatizada(office)
+  );
+}

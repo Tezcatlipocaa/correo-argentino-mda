@@ -15,6 +15,7 @@ import type {
 } from "@/types/offices";
 import { normalizeSearchValue } from "@lib/clientSearch";
 import { buildSiblingMap } from "@lib/officeSiblings";
+import { isSucursalAutomatizada } from "@lib/officeHelpers";
 import {
   getOfficeAddressKey,
   normalizeOfficeAddress,
@@ -113,13 +114,15 @@ async function loadSiblingMap(): Promise<Map<string, SiblingOffice[]>> {
 
   return buildSiblingMap(
     rows.map((r) => {
-      let mappedType = r.type;
-      if (r.type === "SUCURSAL") {
-        mappedType =
-          r.officeType === "AUTOMATIZADA"
-            ? "SUCURSAL_AUTOMATIZADA"
-            : "SUCURSAL_NO_AUTOMATIZADA";
-      }
+      let mappedType = isSucursalAutomatizada({
+        type: r.type,
+        officeType: r.officeType,
+        name: r.name,
+      })
+        ? "SUCURSAL_AUTOMATIZADA"
+        : r.type === "SUCURSAL"
+          ? "SUCURSAL_NO_AUTOMATIZADA"
+          : r.type;
       return {
         code: r.code,
         name: r.name,
@@ -231,7 +234,11 @@ export async function getOffices(params: GetOfficesParams) {
       whereConditions.push(
         and(
           eq(offices.type, "SUCURSAL"),
-          eq(offices.officeType, "AUTOMATIZADA"),
+          or(
+            eq(offices.officeType, "AUTOMATIZADA"),
+            sql`lower(${offices.name}) LIKE '%mosaic%'`,
+            sql`EXISTS (SELECT 1 FROM ${officeInvgateLinks} l WHERE l.office_id = ${offices.id} AND lower(l.invgate_display_name) LIKE '%mosaic%')`,
+          ),
         ),
       );
     } else if (typeFilter === "SUCURSAL_NO_AUTOMATIZADA") {
@@ -239,9 +246,12 @@ export async function getOffices(params: GetOfficesParams) {
         and(
           eq(offices.type, "SUCURSAL"),
           or(
+            eq(offices.officeType, "NO_AUTOMATIZADA"),
             eq(offices.officeType, "NO AUTOMATIZADA"),
             sql`${offices.officeType} IS NULL`,
           ),
+          sql`lower(${offices.name}) NOT LIKE '%mosaic%'`,
+          sql`NOT EXISTS (SELECT 1 FROM ${officeInvgateLinks} l WHERE l.office_id = ${offices.id} AND lower(l.invgate_display_name) LIKE '%mosaic%')`,
         ),
       );
     } else {
@@ -411,10 +421,14 @@ export async function getOffices(params: GetOfficesParams) {
     (office) => {
       let mappedType = office.type;
       if (office.type === "SUCURSAL") {
-        mappedType =
-          office.officeType === "AUTOMATIZADA"
-            ? "SUCURSAL_AUTOMATIZADA"
-            : "SUCURSAL_NO_AUTOMATIZADA";
+        mappedType = isSucursalAutomatizada({
+          type: office.type,
+          officeType: office.officeType,
+          name: office.name,
+          invgateDisplayName: office.invgateLink?.invgateDisplayName,
+        })
+          ? "SUCURSAL_AUTOMATIZADA"
+          : "SUCURSAL_NO_AUTOMATIZADA";
       }
       return {
         id: `office-${office.code.toLowerCase()}`,
