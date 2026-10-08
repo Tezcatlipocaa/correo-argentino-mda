@@ -5,7 +5,7 @@
     - [x] Realizar merge controlado de `origin/calidad` en `refactor/UI`
     - [x] Resolver conflictos preservando la arquitectura modular de UI (`CalidadContent`, `NewAuditForm`, `OperatorDetailsPanel`) y la lógica de backend/scripts de `calidad`
     - [x] Ejecutar comprobación de sintaxis y tipos con TypeScript (`astro check` o `npm run build`)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: fb4de88]
 
 ## Phase 2: Paridad y Adaptación de Features en Formularios (`NewAuditForm` y `AuditModal`)
 - [ ] Task: Integrar selector Reclamo / Novedad y cálculo dinámico de puntuación en `NewAuditForm.astro`
