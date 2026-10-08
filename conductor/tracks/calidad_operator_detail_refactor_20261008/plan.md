@@ -34,7 +34,7 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Verificación Integral, Pruebas y Cierre
-- [~] Task: Ejecutar suite de pruebas unitarias (`npm run test:unit -- tests/unit`)
-- [ ] Task: Ejecutar y verificar suite de pruebas E2E de Playwright (`tests/calidad-*.spec.ts`)
-- [ ] Task: Ejecutar build SSR de producción para verificar manifest y bundles (`npm run build`)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Ejecutar suite de pruebas unitarias (`npm run test:unit -- tests/unit`)
+- [x] Task: Ejecutar y verificar suite de pruebas E2E de Playwright (`tests/calidad-*.spec.ts`)
+- [x] Task: Ejecutar build SSR de producción para verificar manifest y bundles (`npm run build`)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

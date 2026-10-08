@@ -69,7 +69,7 @@
 - [x] **Track: Adaptación e Integración de Features de Calidad en Refactor de UI**
   *Link: [./tracks/calidad_adaptacion_features_ui_20261008/index.md](./tracks/calidad_adaptacion_features_ui_20261008/index.md)*
 ---
-- [~] **Track: Refactor Integral UI/UX de Ficha de Operador (OperatorDetailsPanel)**
+- [x] **Track: Refactor Integral UI/UX de Ficha de Operador (OperatorDetailsPanel)**
   *Link: [./tracks/calidad_operator_detail_refactor_20261008/index.md](./tracks/calidad_operator_detail_refactor_20261008/index.md)*
 
 
