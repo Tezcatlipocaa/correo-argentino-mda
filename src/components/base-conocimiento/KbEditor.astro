@@ -271,7 +271,9 @@ const cleanBase = getCleanBase();
           input.setAttribute("aria-hidden", "true");
           input.setAttribute("tabindex", "-1");
         });
-        const sanitizedHtml = DOMPurify.sanitize(inputGuard.innerHTML);
+        const sanitizedHtml = DOMPurify.sanitize(inputGuard.innerHTML, {
+          FORBID_TAGS: ["form", "select", "textarea", "button"],
+        });
         const wrapper = document.createElement("div");
         wrapper.innerHTML = sanitizedHtml;
         wrapper.querySelectorAll("img").forEach((image) => {
@@ -493,7 +495,7 @@ const cleanBase = getCleanBase();
   }
 
   .editor-preview h1 {
-    font-size: 2.25rem;
+    font-size: 1.875rem;
     font-weight: 700;
     line-height: 1.25;
   }

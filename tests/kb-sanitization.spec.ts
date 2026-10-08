@@ -144,6 +144,7 @@ test("renderiza checkboxes de tareas y listas anidadas en vista y vista previa",
     '<input type="CHECKBOX" checked>',
     '<input type="checkbox " checked>',
     '<input type="password" value="x">',
+    '<form id="evil-form"><select><option>1</option></select><textarea>text</textarea><button>btn</button></form>',
   ].join("\n");
   const article = await fixture.createArticle({
     mesa,
@@ -165,6 +166,7 @@ test("renderiza checkboxes de tareas y listas anidadas en vista y vista previa",
   await expect(checkboxes.nth(1)).toBeChecked();
   await expect(checkboxes.nth(1)).toBeDisabled();
   await expect(body.locator("input")).toHaveCount(2);
+  await expect(body.locator("form, select, textarea, button")).toHaveCount(0);
   await expect(body.locator("ul li ul li")).toHaveCount(1);
 
   await page.goto(`/base-conocimiento/edit/${article.id}`);
@@ -178,4 +180,5 @@ test("renderiza checkboxes de tareas y listas anidadas en vista y vista previa",
   await expect(previewCheckboxes.nth(1)).toBeChecked();
   await expect(previewCheckboxes.nth(1)).toBeDisabled();
   await expect(preview.locator("input")).toHaveCount(2);
+  await expect(preview.locator("form, select, textarea, button")).toHaveCount(0);
 });
