@@ -149,34 +149,38 @@ const { isAgent = false } = Astro.props;
   </div>
 </div>
 
-{/* Insights y Tendencia */}
-<div class="mt-6 grid gap-6 sm:grid-cols-2">
+{/* Secondary Content: Tendencia Histórica y Resumen de Calidad (2 columnas en desktop, 1 en mobile) */}
+<div class="mt-4 grid gap-3.5 sm:grid-cols-2">
   {/* Tendencia */}
-  <div class="bg-base-100 border-base-200 rounded-2xl border p-6 shadow-md">
-    <h4 class="text-base-content/70 mb-4 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-      <Icon name="boxicons:chart-line" size={18} />
-      Tendencia (Últimos 6 meses)
-    </h4>
+  <div class="bg-base-100 border border-base-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+    <div class="flex items-center justify-between mb-2">
+      <h4 class="text-base-content/70 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+        <Icon name="boxicons:chart-line" size={16} />
+        Tendencia Histórica
+      </h4>
+      <span class="text-3xs font-bold text-base-content/40 uppercase tracking-wider">Últimos 6 meses</span>
+    </div>
     <div
-      class="flex h-20 items-end justify-between gap-2"
+      class="flex-1 flex items-center justify-center min-h-[5.5rem]"
       id="detail-history-chart"
     >
-      {/* dynamic bars */}
+      {/* dynamic bars / chart */}
     </div>
   </div>
 
-  {/* Áreas de Mejora */}
-  <div class="bg-base-100 border-warning/30 rounded-2xl border p-6 shadow-md">
-    <h4 class="text-warning-content/70 mb-4 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-      <Icon
-        name="boxicons:alert-octagon"
-        size={24}
-        class="text-warning"
-      />
-      Áreas de Mejora Detectadas
-    </h4>
+  {/* Resumen de Calidad / Áreas de Mejora Dinámica */}
+  <div id="detail-card-insights" class="bg-base-100 border border-base-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between transition-colors">
+    <div class="flex items-center justify-between mb-2" id="detail-insights-header">
+      <h4 id="detail-insights-title" class="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-base-content/70">
+        <span id="detail-insights-icon-container">
+          <Icon name="boxicons:check-circle" size={16} class="text-success" />
+        </span>
+        <span id="detail-insights-title-text">Resumen de Calidad</span>
+      </h4>
+      <span id="detail-insights-badge" class="badge badge-xs badge-success font-bold">100% Óptimo</span>
+    </div>
     <ul
-      class="text-base-content/80 space-y-2 text-sm font-medium"
+      class="text-base-content/80 space-y-2 text-xs font-medium flex-1 flex flex-col justify-center"
       id="detail-insights"
     >
       {/* dynamic insights */}
@@ -184,35 +188,47 @@ const { isAgent = false } = Astro.props;
   </div>
 </div>
 
-{/* Observaciones del Mes */}
-<div class="bg-base-100 border-base-200 rounded-2xl border p-6 shadow-md mt-6">
-  <div class="mb-4 flex items-center justify-between">
+{/* Observaciones del Mes (Compacto) */}
+<div class="bg-base-100 border border-base-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs mt-3.5">
+  <div class="flex items-center justify-between mb-1.5">
     <h4 class="text-base-content/70 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-      <Icon name="boxicons:note" size={18} />
+      <Icon name="boxicons:note" size={16} />
       Observaciones del Mes
     </h4>
     {!isAgent && (
       <button
         id="btn-edit-month-summary"
-        class="btn btn-sm btn-ghost btn-square"
+        type="button"
+        class="btn btn-xs btn-ghost text-base-content/60 hover:text-secondary gap-1"
         title="Editar observaciones"
       >
-        <Icon name="boxicons:edit-alt" size={18} />
+        <Icon name="boxicons:edit-alt" size={14} />
+        <span class="text-3xs font-bold uppercase tracking-wider">Editar</span>
       </button>
     )}
   </div>
   <p
     id="detail-month-summary"
-    class="text-base-content/80 text-sm font-medium whitespace-pre-line empty:hidden"
+    class="text-base-content/80 text-xs font-medium whitespace-pre-line leading-relaxed empty:hidden"
   >
     {/* dynamic summary */}
   </p>
-  <p
-    id="detail-month-summary-empty"
-    class="text-base-content/40 text-sm font-medium italic"
-  >
-    No hay observaciones para este mes.
-  </p>
+  <div id="detail-month-summary-empty" class="pt-0.5">
+    {!isAgent ? (
+      <button
+        id="btn-add-observation-placeholder"
+        type="button"
+        class="w-full text-left py-2 px-3 rounded-xl border border-dashed border-base-300 hover:border-secondary/50 hover:bg-base-200/50 text-xs text-base-content/50 hover:text-secondary flex items-center gap-2 transition-colors cursor-pointer group"
+      >
+        <Icon name="boxicons:plus-circle" size={16} class="text-base-content/40 group-hover:text-secondary" />
+        <span class="font-medium">Añadir observación del mes...</span>
+      </button>
+    ) : (
+      <p class="text-base-content/40 text-xs font-medium italic">
+        No hay observaciones para este mes.
+      </p>
+    )}
+  </div>
 </div>
 
 {/* Section Titulo y Tabs de Canales */}

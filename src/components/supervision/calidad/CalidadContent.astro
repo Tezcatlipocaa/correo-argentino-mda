@@ -20,7 +20,7 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import { activeAgentCondition } from "@lib/activeUsers";
 import { getResolvedSearchParams } from "@lib/navigation";
-import { formatMonthLabel } from "@lib/monthUtils";
+import { formatMonthLabel, MONTH_LABELS } from "@lib/monthUtils";
 import { getCleanBase } from "@lib/baseUrl";
 import AuditModal from "./AuditModal.astro";
 import OperatorDetailsPanel from "./OperatorDetailsPanel.astro";
@@ -180,13 +180,22 @@ const operatorsQuality = finalAgents.map((agent) => {
     .reverse()
     .map((m) => {
       const monthAudits = agentAudits.filter((a) => a.month === m);
-      return monthAudits.length > 0
-        ? Math.round(
-            monthAudits.reduce((sum, audit) => sum + audit.totalScore, 0) /
-              monthAudits.length,
-          )
-        : 0;
-    });
+      const [mm] = m.split("-");
+      const shortLabel = MONTH_LABELS[mm] ? MONTH_LABELS[mm].substring(0, 3) : mm;
+      return {
+        month: m,
+        label: shortLabel,
+        count: monthAudits.length,
+        score:
+          monthAudits.length > 0
+            ? Math.round(
+                monthAudits.reduce((sum, audit) => sum + audit.totalScore, 0) /
+                  monthAudits.length,
+              )
+            : null,
+      };
+    })
+    .filter((h): h is { month: string; label: string; count: number; score: number } => h.score !== null);
 
   const channelStats = calculateOperatorChannelStats(currentMonthAudits);
 
@@ -599,7 +608,7 @@ const cleanBase = getCleanBase();
         id="summary-content"
         name="summary"
         label="Resumen general"
-        placeholder="Escriba aquí las observaciones del mes..."
+        placeholder="Añadir observación del mes..."
         rows={5}
         textareaClass="textarea-sm font-bold"
       />
@@ -1644,6 +1653,13 @@ const cleanBase = getCleanBase();
       });
     }
 
+    const btnAddObsPlaceholder = document.getElementById("btn-add-observation-placeholder");
+    if (btnAddObsPlaceholder) {
+      btnAddObsPlaceholder.addEventListener("click", () => {
+        btnEditMonthSummary?.click();
+      });
+    }
+
     if (btnCloseSummaryModal) {
       btnCloseSummaryModal.addEventListener("click", () => {
         summaryModal.close();
@@ -1923,40 +1939,57 @@ const cleanBase = getCleanBase();
       }
 
       const historyContainer = document.getElementById("detail-history-chart");
-      if (historyContainer && operator.history) {
-        const points = operator.history;
-        const width = 300;
-        const height = 60;
+      if (historyContainer) {
+        const points = (operator.history || []) as Array<{ month: string; label: string; count: number; score: number }>;
+        if (points.length < 2) {
+          historyContainer.className = "flex flex-col items-center justify-center min-h-[5.5rem] py-2 text-center text-base-content/40";
+          historyContainer.innerHTML = `
+            <svg class="size-5 mb-1 opacity-40 text-base-content shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/>
+              <path d="M11 11h2v6h-2zm0-4h2v2h-2z"/>
+            </svg>
+            <span class="text-xs font-semibold">Sin datos suficientes para mostrar la tendencia</span>
+            <span class="text-3xs text-base-content/40 mt-0.5">Se requieren al menos 2 meses con evaluaciones</span>
+          `;
+        } else {
+          const width = 280;
+          const height = 48;
 
-        const coords = points.map((score: number, i: number) => {
-          const x = (i / (points.length - 1)) * width;
-          const y = height - (score / 100) * height;
-          return { x, y, score };
-        });
+          const coords = points.map((item, i) => {
+            const x = (i / (points.length - 1)) * width;
+            const y = height - (item.score / 100) * height;
+            return { x, y, score: item.score, label: item.label };
+          });
 
-        const pathD = coords
-          .map((c, i) => (i === 0 ? `M ${c.x},${c.y}` : `L ${c.x},${c.y}`))
-          .join(" ");
+          const pathD = coords
+            .map((c, i) => (i === 0 ? `M ${c.x},${c.y}` : `L ${c.x},${c.y}`))
+            .join(" ");
 
-        historyContainer.className = "relative w-full h-16 mt-2 mb-4";
-        historyContainer.innerHTML = `
-           <svg class="w-full h-full overflow-visible" viewBox="-4 -4 ${width + 8} ${height + 8}" preserveAspectRatio="none">
-             <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="3" class="text-secondary drop-shadow-sm" stroke-linecap="round" stroke-linejoin="round" />
-             ${coords
-               .map(
-                 (c, i) => `
-               <circle cx="${c.x}" cy="${c.y}" r="${i === points.length - 1 ? "5" : "4"}" fill="currentColor" class="${i === points.length - 1 ? "text-secondary" : "text-base-100"} stroke-secondary stroke-2 hover:r-6" />
-             `,
-               )
-               .join("")}
-           </svg>
-           <div class="absolute w-full flex justify-between -bottom-5 text-xs font-bold text-base-content/50">
-              ${points.map((p: number) => `<span>${p}%</span>`).join("")}
-           </div>
-         `;
+          historyContainer.className = "relative w-full h-16 mt-1 mb-3";
+          historyContainer.innerHTML = `
+             <svg class="w-full h-full overflow-visible" viewBox="-8 -6 ${width + 16} ${height + 12}" preserveAspectRatio="none">
+               <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="2.5" class="text-secondary drop-shadow-xs" stroke-linecap="round" stroke-linejoin="round" />
+               ${coords
+                 .map(
+                   (c, i) => `
+                 <circle cx="${c.x}" cy="${c.y}" r="${i === points.length - 1 ? "4.5" : "3.5"}" fill="currentColor" class="${i === points.length - 1 ? "text-secondary" : "text-base-100"} stroke-secondary stroke-2" />
+               `,
+                 )
+                 .join("")}
+             </svg>
+             <div class="absolute w-full flex justify-between -bottom-4 text-3xs font-mono font-bold text-base-content/60">
+                ${points.map((p) => `<span class="flex flex-col items-center"><span>${p.label}</span><strong class="text-secondary">${p.score}%</strong></span>`).join("")}
+             </div>
+           `;
+        }
       }
 
       const insightsContainer = document.getElementById("detail-insights");
+      const insightsCard = document.getElementById("detail-card-insights");
+      const insightsTitle = document.getElementById("detail-insights-title-text");
+      const insightsIconContainer = document.getElementById("detail-insights-icon-container");
+      const insightsBadge = document.getElementById("detail-insights-badge");
+
       if (insightsContainer && operator.calls) {
         const failures: Record<string, number> = {};
 
@@ -1973,7 +2006,33 @@ const cleanBase = getCleanBase();
           .sort((a, b) => b[1] - a[1])
           .slice(0, 2);
 
-        if (sortedFailures.length > 0) {
+        if (operator.calls.length === 0) {
+          if (insightsTitle) insightsTitle.textContent = "Resumen de Calidad";
+          if (insightsCard) {
+            insightsCard.classList.remove("border-warning/30");
+            insightsCard.classList.add("border-base-200/80");
+          }
+          if (insightsBadge) {
+            insightsBadge.className = "badge badge-xs badge-neutral font-bold";
+            insightsBadge.textContent = "Sin auditorías";
+          }
+          if (insightsIconContainer) {
+            insightsIconContainer.innerHTML = `<svg class="size-4 text-base-content/50" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M11 11h2v6h-2zm0-4h2v2h-2z"/></svg>`;
+          }
+          insightsContainer.innerHTML = `<li class="text-base-content/50 italic text-xs py-2 text-center">No hay auditorías registradas en este período.</li>`;
+        } else if (sortedFailures.length > 0) {
+          if (insightsTitle) insightsTitle.textContent = "Áreas de Mejora Detectadas";
+          if (insightsCard) {
+            insightsCard.classList.remove("border-base-200/80");
+            insightsCard.classList.add("border-warning/30");
+          }
+          if (insightsBadge) {
+            insightsBadge.className = "badge badge-xs badge-warning font-bold";
+            insightsBadge.textContent = `${sortedFailures.length} área${sortedFailures.length > 1 ? "s" : ""}`;
+          }
+          if (insightsIconContainer) {
+            insightsIconContainer.innerHTML = `<svg class="size-4 text-warning" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 1 21h22L12 2zm0 3.99 7.53 13.01H4.47L12 5.99zM11 10h2v4h-2zm0 6h2v2h-2z"/></svg>`;
+          }
           const params: AuditParameter[] = getAuditParameters();
           const paramNameMap = new Map<string, string>(
             params.map((p) => [p.code, p.name]),
@@ -1982,15 +2041,38 @@ const cleanBase = getCleanBase();
           insightsContainer.innerHTML = sortedFailures
             .map(
               ([key, count]) => `
-             <li class="flex items-center gap-2">
-               ${ICON_ARROW}
-               <span>Falla frecuente en: <strong>${escapeHtml(paramNameMap.get(key) || key)}</strong> <span class="opacity-50">(${count} veces)</span></span>
+             <li class="flex items-center justify-between gap-2 bg-warning/10 border border-warning/20 rounded-xl px-3 py-2 text-xs">
+               <div class="flex items-center gap-2 min-w-0">
+                 ${ICON_ARROW}
+                 <span class="text-base-content/80 font-medium truncate">${escapeHtml(paramNameMap.get(key) || key)}</span>
+               </div>
+               <span class="badge badge-warning badge-sm font-mono font-bold shrink-0">${count} fallo${count > 1 ? "s" : ""}</span>
              </li>
            `,
             )
             .join("");
         } else {
-          insightsContainer.innerHTML = `<li class="text-success flex items-center gap-2">${ICON_STAR} <span class="font-bold">¡Rendimiento impecable!</span> No se detectaron patrones de error frecuentes.</li>`;
+          if (insightsTitle) insightsTitle.textContent = "Resumen de Calidad";
+          if (insightsCard) {
+            insightsCard.classList.remove("border-warning/30");
+            insightsCard.classList.add("border-base-200/80");
+          }
+          if (insightsBadge) {
+            insightsBadge.className = "badge badge-xs badge-success font-bold";
+            insightsBadge.textContent = "100% Óptimo";
+          }
+          if (insightsIconContainer) {
+            insightsIconContainer.innerHTML = `<svg class="size-4 text-success" viewBox="0 0 24 24" fill="currentColor"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9.707-9.707-1.414-1.414z"/></svg>`;
+          }
+          insightsContainer.innerHTML = `
+            <li class="flex items-center gap-2.5 bg-success/10 border border-success/20 rounded-xl p-3 text-xs text-success">
+              ${ICON_STAR}
+              <div>
+                <span class="font-bold text-success block">¡Rendimiento impecable!</span>
+                <span class="text-3xs text-base-content/60 font-normal">No se detectaron fallas en las auditorías evaluadas.</span>
+              </div>
+            </li>
+          `;
         }
       }
 

@@ -11,19 +11,19 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Tendencia Histórica, Tarjeta Dinámica de Calidad y Observaciones
-- [~] Task: Refactorizar visualización de Tendencia Histórica
-    - [ ] Calcular tendencia a partir de todas las auditorías registradas en 6 meses
-    - [ ] Implementar estado vacío descriptivo si no hay datos suficientes en vez de gráfica plana de ceros
-- [ ] Task: Implementar tarjeta dinámica de resumen de calidad / áreas de mejora
-    - [ ] Titular dinámicamente "Resumen de Calidad" con mensaje positivo ("¡Rendimiento impecable!") cuando no haya patrones de error
-    - [ ] Titular "Áreas de Mejora Detectadas" con lista y conteo cuando existan fallas frecuentes
-- [ ] Task: Compactar bloque de Observaciones del Mes
-    - [ ] Reducir altura vertical y ocultar espacios vacíos innecesarios
-    - [ ] Añadir placeholder accionable ("Añadir observación del mes...") y alternancia de edición bajo demanda
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Refactorizar visualización de Tendencia Histórica
+    - [x] Calcular tendencia a partir de todas las auditorías registradas en 6 meses
+    - [x] Implementar estado vacío descriptivo si no hay datos suficientes en vez de gráfica plana de ceros
+- [x] Task: Implementar tarjeta dinámica de resumen de calidad / áreas de mejora
+    - [x] Titular dinámicamente "Resumen de Calidad" con mensaje positivo ("¡Rendimiento impecable!") cuando no haya patrones de error
+    - [x] Titular "Áreas de Mejora Detectadas" con lista y conteo cuando existan fallas frecuentes
+- [x] Task: Compactar bloque de Observaciones del Mes
+    - [x] Reducir altura vertical y ocultar espacios vacíos innecesarios
+    - [x] Añadir placeholder accionable ("Añadir observación del mes...") y alternancia de edición bajo demanda
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Priorización de Evaluaciones (Tabs/Filtros) y Acordeón Único
-- [ ] Task: Reorganizar sección de evaluaciones con tabs/filtros y cuota consistente
+- [~] Task: Reorganizar sección de evaluaciones con tabs/filtros y cuota consistente
     - [ ] Implementar tabs: Todas, Llamadas Wise, Mails Wise, Autogestiones
     - [ ] Formatear estado de progreso consistente (ej. `1 de 12 completadas`)
     - [ ] Mantener "Nueva Auditoría" como única acción primaria visible para supervisores
