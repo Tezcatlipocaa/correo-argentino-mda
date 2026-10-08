@@ -27,7 +27,7 @@ describe("sección Base de conocimiento", () => {
     expect(quickAccess?.items).toContainEqual(
       expect.objectContaining({
         href: "/base-conocimiento",
-        label: "Base de conocimiento",
+        label: "Base de Conocimiento",
       }),
     );
   });

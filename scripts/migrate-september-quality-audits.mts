@@ -141,6 +141,15 @@ async function main() {
   const isApply = args.includes("--apply");
   const shouldExtract = args.includes("--extract");
 
+  // Filtros de scores. Ambos replican lo que ya hace la app al guardar una
+  // auditoría (src/actions/index.ts:335-341) y recalculate-existing-audits.mts.
+  //
+  // Se pueden desactivar por CLI para reproducir el comportamiento anterior:
+  //   --keep-nonapplicable-scores  guarda la sección 2 aunque no aplique
+  //   --keep-inactive-scores       guarda scores contra parámetros active=0
+  const filterNonApplicable = !args.includes("--keep-nonapplicable-scores");
+  const filterInactive = !args.includes("--keep-inactive-scores");
+
   const dbPathIdx = args.indexOf("--db");
   const dbPath = resolve(
     dbPathIdx !== -1 && args[dbPathIdx + 1]
@@ -159,6 +168,7 @@ async function main() {
   console.log("   MIGRACIÓN DE AUDITORÍAS DE CALIDAD - SEPTIEMBRE 2026   ");
   console.log("==========================================================");
   console.log(`Modo:         ${isApply ? "APPLY (Escritura real con backup)" : "DRY-RUN (Simulación sin cambios)"}`);
+  console.log(`Filtros:      sección2-no-aplica=${filterNonApplicable ? "SÍ" : "no"}  parámetros-inactivos=${filterInactive ? "SÍ" : "no"}`);
   console.log(`Base de datos: ${dbPath}`);
   console.log(`Archivo JSON:  ${jsonPath}\n`);
 
@@ -211,12 +221,23 @@ async function main() {
       calculatedS1: number;
       calculatedS2: number;
       calculatedTotal: number;
+      isReclamoNovedad: boolean;
       scoresToInsert: { parameterId: number; score: boolean; comment: string | null }[];
     }
 
     const preparedList: PreparedAudit[] = [];
     const missingAgents = new Set<string>();
     const unknownParamCodes = new Set<string>();
+    // Contadores para el reporte del DRY-RUN
+    let droppedNotApplicable = 0;
+    const reclamoOverrides: { sheet: string; channel: string; ref: string }[] = [];
+    const droppedInactiveParams: {
+      code: string;
+      weight: number | null;
+      sheet: string;
+      channel: string;
+      ref: string;
+    }[] = [];
 
     for (const audit of extractedAudits) {
       const agent = resolveAgent(audit.operatorSheet, dbAgents);
@@ -233,6 +254,52 @@ async function main() {
       const compliantCodes = new Set<string>();
       const scoresToInsert: { parameterId: number; score: boolean; comment: string | null }[] = [];
 
+      // Reclamo/Novedad no es un ítem evaluable: en el Excel la fila
+      // "Reclamo/Novedad" tiene peso 0.55 (calls) / 1.0 (mail), o sea el 100%
+      // del puntaje de la sección 2 completa, y no un ítem más. Por eso el
+      // parámetro está `active=0` en la BD: el cálculo lo maneja el flag
+      // `is_reclamo_novedad` de quality_audits (ver calculateMultiChannelAuditScores).
+      // Guardar un score contra ese parámetro no aporta información y duplica
+      // el 55%/100% que el calculador ya resuelve. Se excluye y se reporta aparte.
+      const RECLAMO_CODES = new Set([
+        "call_ticket_reclamo_novedad",
+        "email_mda_reclamo_novedad",
+      ]);
+      const reclamoScore = audit.scores.find((s) => RECLAMO_CODES.has(s.code));
+      const isReclamoNovedad = reclamoScore?.score ?? false;
+
+      // Flag crudo del Excel ("¿aplica evaluación MDA?" / "¿queda el caso en MDA?").
+      let flagSection2 = true;
+      if (audit.channelType === "wise_call" || audit.channelType === "wise_email") {
+        flagSection2 = audit.appliesMda;
+      } else if (audit.channelType === "invgate_ticket") {
+        flagSection2 = audit.staysInMda;
+      }
+
+      // Un reclamo/novedad tiene sección 2 aprobada al 100% por definición:
+      // no hay gestión de ticket que evaluar. En el portal esto lo hace el
+      // selector segmentado "Claro → Reclamo/Novedad" (src/actions/index.ts:309-314),
+      // que fuerza hasSection2=true e isReclamoNovedad=true.
+      // En el Excel la fila equivalente es la de peso 0.55/1.0.
+      // Por lo tanto el flag del Excel NO aplica en estos casos: si el auditor
+      // dejó el checkbox en "NO" pero marcó Reclamo/Novedad, gana el reclamo.
+      const hasSection2 = flagSection2 || isReclamoNovedad;
+
+      if (isReclamoNovedad && !flagSection2) {
+        reclamoOverrides.push({
+          sheet: audit.operatorSheet,
+          channel: audit.channelType,
+          ref: audit.ticketId || audit.callId,
+        });
+      }
+
+      // Igual que recalculate-existing-audits.mts y que src/actions/index.ts:
+      // si la sección 2 no aplica, sólo se persisten los parámetros de items.
+      const applicableParamDefs = hasSection2
+        ? channelParams
+        : channelParams.filter((p) => p.section === "items");
+      const applicableParamIds = new Set(applicableParamDefs.map((p) => p.id));
+
       for (const sc of audit.scores) {
         const paramDef = paramByCode.get(sc.code);
         if (!paramDef) {
@@ -244,21 +311,31 @@ async function main() {
           compliantCodes.add(sc.code);
         }
 
+        // No persistir contra parámetros inactivos. Se evalúa antes que la
+        // aplicabilidad porque son causas distintas: un parámetro inactivo no
+        // debe contabilizarse como "sección 2 no aplicable".
+        if (filterInactive && paramDef.active !== 1) {
+          droppedInactiveParams.push({
+            code: paramDef.code,
+            weight: paramDef.weight,
+            sheet: audit.operatorSheet,
+            channel: audit.channelType,
+            ref: audit.ticketId || audit.callId,
+          });
+          continue;
+        }
+
+        // No persistir sección 2 cuando no aplica (el flag la invalida).
+        if (filterNonApplicable && !applicableParamIds.has(paramDef.id)) {
+          droppedNotApplicable++;
+          continue;
+        }
+
         scoresToInsert.push({
           parameterId: paramDef.id,
           score: sc.score,
           comment: sc.comment,
         });
-      }
-
-      // Determinar si aplica sección 2
-      let hasSection2 = true;
-      if (audit.channelType === "wise_call") {
-        hasSection2 = audit.appliesMda;
-      } else if (audit.channelType === "wise_email") {
-        hasSection2 = audit.appliesMda;
-      } else if (audit.channelType === "invgate_ticket") {
-        hasSection2 = audit.staysInMda;
       }
 
       const { section1Score, section2Score, totalScore } = calculateMultiChannelAuditScores(
@@ -267,6 +344,7 @@ async function main() {
         compliantCodes,
         hasSection2,
         audit.isCriticalFailure,
+        isReclamoNovedad,
       );
 
       // Usamos el puntaje total oficial del Excel para fidelidad matemática 100% con la supervisión
@@ -284,6 +362,7 @@ async function main() {
         calculatedS1: finalS1,
         calculatedS2: finalS2,
         calculatedTotal: finalTotalScore,
+        isReclamoNovedad,
         scoresToInsert,
       });
     }
@@ -302,6 +381,56 @@ async function main() {
         console.warn(`  - ${c}`);
       }
     }
+
+    // Reporte de los dos filtros aplicados
+    console.log("------------------------------------------------------------------------------------------------------");
+    console.log("FILTROS APLICADOS A LOS SCORES");
+    console.log("------------------------------------------------------------------------------------------------------");
+    console.log(`Scores omitidos por sección 2 no aplicable: ${droppedNotApplicable}`);
+    console.log(
+      `Auditorías Reclamo/Novedad: ${preparedList.filter((i) => i.isReclamoNovedad).length} (sección 2 = 100% automáticamente)`,
+    );
+    if (reclamoOverrides.length > 0) {
+      console.log(
+        `  de ellas, con el flag del Excel en "NO" (gana el reclamo): ${reclamoOverrides.length}`,
+      );
+      for (const r of reclamoOverrides) {
+        console.log(`    ${r.sheet.padEnd(22)} ${r.channel.padEnd(15)} ${r.ref}`);
+      }
+    }
+
+    const inactiveByCode = new Map<
+      string,
+      { count: number; weight: number | null; channels: Set<string>; examples: string[] }
+    >();
+    for (const d of droppedInactiveParams) {
+      let e = inactiveByCode.get(d.code);
+      if (!e) {
+        e = { count: 0, weight: d.weight, channels: new Set(), examples: [] };
+        inactiveByCode.set(d.code, e);
+      }
+      e.count++;
+      e.channels.add(d.channel);
+      if (e.examples.length < 3) e.examples.push(`${d.sheet} ${d.ref}`);
+    }
+
+    console.log(`Scores omitidos por parámetro inactivo: ${droppedInactiveParams.length}`);
+    if (inactiveByCode.size > 0) {
+      console.log("");
+      console.log("  Códigos excluidos (active=0 en audit_parameters):");
+      for (const [code, e] of inactiveByCode) {
+        console.log(
+          `    ${code.padEnd(30)} ${String(e.count).padStart(4)} scores | peso=${e.weight} | canales=${[...e.channels].join(",")}`,
+        );
+        console.log(`      ej: ${e.examples.join(" | ")}`);
+      }
+      console.log("");
+      console.log("  Motivo: en el Excel la fila 'Reclamo/Novedad' NO es un ítem evaluable.");
+      console.log("  Su peso (55 en calls / 100 en mail) equivale al 100% del puntaje de la");
+      console.log("  sección 2, por eso está inactiva y el cálculo lo resuelve el flag");
+      console.log("  is_reclamo_novedad de quality_audits (calculateMultiChannelAuditScores).");
+    }
+    console.log("------------------------------------------------------------------------------------------------------\n");
 
     // 5. Resumen estadístico por operador
     const byOperator = new Map<string, {
@@ -370,8 +499,31 @@ async function main() {
     }
 
     console.log("------------------------------------------------------------------------------------------------------");
+    const totalScoresToInsert = preparedList.reduce(
+      (acc, i) => acc + i.scoresToInsert.length,
+      0,
+    );
+
     console.log(`TOTAL AUDITORÍAS PREPARADAS: ${preparedList.length} (Llamados: ${totalCallsCount}, Mails: ${totalEmailsCount}, Tickets: ${totalTicketsCount})`);
+    console.log(`TOTAL SCORES A INSERTAR: ${totalScoresToInsert}`);
     console.log(`Diferencias mínimas de redondeo detectadas vs Excel: ${roundingDiffs} de ${preparedList.length}`);
+
+    // Comparación contra el estado actual de la BD (sólo lectura, incluso en --apply)
+    const currentAuditCount = db
+      .prepare("SELECT COUNT(*) AS c FROM quality_audits WHERE month = '09-2026'")
+      .get() as { c: number };
+    const currentScoreCount = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM audit_scores
+         WHERE audit_id IN (SELECT id FROM quality_audits WHERE month = '09-2026')`,
+      )
+      .get() as { c: number };
+
+    console.log("------------------------------------------------------------------------------------------------------");
+    console.log("COMPARACIÓN CONTRA LA BD ACTUAL (mes 09-2026)");
+    console.log("------------------------------------------------------------------------------------------------------");
+    console.log(`Auditorías:  actual=${currentAuditCount.c}  a insertar=${preparedList.length}`);
+    console.log(`Scores:      actual=${currentScoreCount.c}  a insertar=${totalScoresToInsert}  (delta ${totalScoresToInsert - currentScoreCount.c >= 0 ? "+" : ""}${totalScoresToInsert - currentScoreCount.c})`);
     console.log("------------------------------------------------------------------------------------------------------\n");
 
     // 6. Aplicar cambios si --apply está activo
@@ -404,6 +556,7 @@ async function main() {
           is_pas,
           applies_mda,
           stays_in_mda,
+          is_reclamo_novedad,
           recording_url
         ) VALUES (
           @agentId,
@@ -424,6 +577,7 @@ async function main() {
           @isPas,
           @appliesMda,
           @staysInMda,
+          @isReclamoNovedad,
           @recordingUrl
         )
       `);
@@ -479,6 +633,7 @@ async function main() {
             isPas: item.extracted.isPas ? 1 : 0,
             appliesMda: item.extracted.appliesMda ? 1 : 0,
             staysInMda: item.extracted.staysInMda ? 1 : 0,
+            isReclamoNovedad: item.isReclamoNovedad ? 1 : 0,
             recordingUrl: null,
           });
 

@@ -48,9 +48,14 @@
 ---
 - [x] **Track: Bugfix: Tiempo de Respuesta en Mails Wise basado en Primera Respuesta del Operador (user_reply)**
   *Link: [./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md)*
----
 - [x] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
   *Link: [./tracks/calidad_wise_autodetect_channel_20261003/index.md](./tracks/calidad_wise_autodetect_channel_20261003/index.md)*
+---
+- [x] **Track: Modal de Calidad — Lógica Reclamo/Novedad, Tildar/Destildar Masivo y Exportación Excel/CSV**
+- [ ] **Track: Unificación de Búsqueda API en Campos de Atención y Enlace Directo InvGate**
+  *Link: [./tracks/calidad_busqueda_unificada_campos_20261007/index.md](./tracks/calidad_busqueda_unificada_campos_20261007/index.md)*
+
+
 
 
 

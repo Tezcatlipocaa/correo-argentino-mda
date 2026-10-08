@@ -1,19 +1,70 @@
-param(
-    [string]$ExcelPath = "C:\Users\daaltamirano1\Downloads\MDA - Gestión de Desempeño - Septiembre 2026 - Copia.xlsx",
+﻿param(
+    [string]$ExcelPath = "",
     [string]$OutputPath = "scripts/data/calidad-septiembre-2026.json"
 )
 
 $ErrorActionPreference = "Stop"
 
-if (-not (Test-Path $ExcelPath)) {
-    $found = (Get-ChildItem -Path (Split-Path $ExcelPath -Parent) -Filter "*MDA*Septiembre*.xlsx" -ErrorAction SilentlyContinue | Select-Object -First 1)
-    if ($found) {
-        $ExcelPath = $found.FullName
-    } else {
-        Write-Error "No se encontró el archivo Excel en: $ExcelPath"
-        exit 1
+# Autodetección del Excel de Septimbre 2026.
+# Antes la ruta estaba hardcodeada a un usuario/equipo inexistente
+# (C:\Users\daaltamirano1\Downloads\...), lo que rompía `--extract`.
+# Ahora se buscan las carpetas habituales del usuario actual; -ExcelPath
+# sigue funcionando como override explícito.
+function Resolve-ExcelPath([string]$Explicit) {
+    if ($Explicit -and (Test-Path $Explicit)) { return (Resolve-Path $Explicit).Path }
+    if ($Explicit) {
+        Write-Warning "No existe el -ExcelPath indicado: $Explicit. Se intentará autodetectar."
     }
+
+    $candidates = @(
+        (Join-Path $env:USERPROFILE "Desktop"),
+        (Join-Path $env:USERPROFILE "OneDrive\Desktop"),
+        (Join-Path $env:USERPROFILE "OneDrive\Escritorio"),
+        (Join-Path $env:USERPROFILE "Downloads"),
+        (Join-Path $env:USERPROFILE "Descargas"),
+        (Join-Path $env:USERPROFILE "Documents"),
+        (Join-Path $env:USERPROFILE "Documentos")
+    ) | Where-Object { $_ -and (Test-Path $_) }
+
+    $patterns = @("*MDA*Septiembre*.xlsx", "*MDA*Gesti*n*Desempe*o*.xlsx", "*MDA*.xlsx")
+
+    foreach ($dir in $candidates) {
+        foreach ($pattern in $patterns) {
+            $hit = Get-ChildItem -Path $dir -Filter $pattern -File -ErrorAction SilentlyContinue |
+                   Sort-Object LastWriteTime -Descending |
+                   Select-Object -First 1
+            if ($hit) { return $hit.FullName }
+        }
+    }
+
+    # Último recurso: barrido por subcarpetas de un nivel.
+    foreach ($dir in $candidates) {
+        $hit = Get-ChildItem -Path $dir -Filter "*Septiembre*.xlsx" -File -Recurse -Depth 2 -ErrorAction SilentlyContinue |
+               Sort-Object LastWriteTime -Descending |
+               Select-Object -First 1
+        if ($hit) { return $hit.FullName }
+    }
+
+    return $null
 }
+
+$resolved = Resolve-ExcelPath $ExcelPath
+if (-not $resolved) {
+    Write-Error @"
+No se encontró el Excel de auditorías de calidad.
+
+Busqué bajo el usuario actual ($env:USERPROFILE) en Desktop, OneDrive\Desktop,
+Downloads, Documents y subcarpetas de un nivel, con los patrones:
+  *MDA*Septiembre*.xlsx
+  *MDA*Gesti*n*Desempe*o*.xlsx
+  *MDA*.xlsx
+
+Pasá la ruta explícita:  -ExcelPath "C:\ruta\del\archivo.xlsx"
+"@
+    exit 1
+}
+$ExcelPath = $resolved
+Write-Host "Excel origen: $ExcelPath"
 
 $outputDir = Split-Path $OutputPath -Parent
 if ($outputDir -and -not (Test-Path $outputDir)) {
@@ -123,9 +174,26 @@ try {
 
         Write-Host "Procesando $sheetName..."
         $arr = $ws.UsedRange.Value2
-        
-        # Fallback dates per sample index
+
+        # Fechas de referencia por índice de muestreo.
+        #
+        # LIMITACIÓN CONOCIDA (verificada contra el Excel el 2026-10-08):
+        # en la sección de LLAMADOS la columna 1 es "Operador" y NO existe una
+        # columna de fecha. La celda A(b+3) sólo contiene la etiqueta literal
+        # "Fecha" en 8 de las 21 hojas de operador, y A(b+4) -que es donde el
+        # layout la espera- está vacía en 71 de 84 llamados.
+        #
+        # Se intentaron como fuente alternativa: columna 2 (Caso Wise: solo ID),
+        # col 17 (Fecha de mails, otra sección) y col 32 (Fecha de AG, otra
+        # sección). Ninguna corresponde al bloque de llamados: los bloques de
+        # mail/AG están en columnas y filas distintas, con sus propios muestreos.
+        #
+        # Por lo tanto no existe fuente real para 71 de 84 fechas de llamado.
+        # Cuando la celda está vacía se usa esta referencia y se registra el
+        # origen en `dateSource` para que el dato no se presente como verificado.
         $fallbackDates = @("2026-09-01", "2026-09-08", "2026-09-15", "2026-09-22")
+        $dateSourceStats = @{ excel = 0; referencia = 0 }
+        $syntheticDates = @()
 
         # 1. CANAL: WISE_CALL (Llamados)
         $callBases = @(0, 16, 32, 48)
@@ -136,12 +204,19 @@ try {
                 $ring = FormatExcelTime $arr[($b + 2), 3]
                 $dur = FormatExcelTime $arr[($b + 2), 4]
                 
-                # Intentar leer fecha en fila 4 o fila 3
+                # Fecha del llamado: única celda candidata real es A(b+4).
+                # A(b+3) es la etiqueta "Fecha", no un valor (ver LIMITACIÓN arriba).
                 $rawDate = CleanStr($arr[($b + 4), 1])
                 if ($rawDate -eq "" -or $rawDate -eq "Fecha") {
-                    $rawDate = CleanStr($arr[($b + 3), 1])
+                    $date = $fallbackDates[$sIdx]
+                    $dateSource = "referencia"
+                    $dateSourceStats.referencia++
+                    $syntheticDates += "$sheetName (muestreo $($sIdx + 1), caso $callId) -> $date"
+                } else {
+                    $date = FormatExcelDate $rawDate $fallbackDates[$sIdx]
+                    $dateSource = "excel"
+                    $dateSourceStats.excel++
                 }
-                $date = FormatExcelDate $rawDate $fallbackDates[$sIdx]
 
                 # Solicitud / Ticket
                 $solicitudOk = ParseBoolVal $arr[($b + 12), 8]
@@ -218,6 +293,7 @@ try {
                     creationTime = $null
                     takeTime = $null
                     date = $date
+                    dateSource = $dateSource
                     month = "09-2026"
                     appliesMda = $appliesMda
                     staysInMda = $true
@@ -237,7 +313,9 @@ try {
         for ($sIdx = 0; $sIdx -lt 4; $sIdx++) {
             $b = $mailBases[$sIdx]
             $rawDate = CleanStr $arr[($b + 2), 17]
+            # Mails sí tienen columna de fecha real (col 17, fila del encabezado).
             $date = FormatExcelDate $rawDate $fallbackDates[$sIdx]
+            $dateSource = "excel"
             $take = FormatExcelTime $arr[($b + 2), 18]
 
             $callId = CleanStr $arr[($b + 4), 16]
@@ -333,6 +411,7 @@ try {
                 creationTime = $null
                 takeTime = $take
                 date = $date
+                dateSource = $dateSource
                 month = "09-2026"
                 appliesMda = $appliesMda
                 staysInMda = $true
@@ -351,7 +430,9 @@ try {
         for ($sIdx = 0; $sIdx -lt 4; $sIdx++) {
             $b = $agBases[$sIdx]
             $rawDate = CleanStr $arr[($b + 2), 32]
+            # Autogestiones sí tienen columna de fecha real (col 32).
             $date = FormatExcelDate $rawDate $fallbackDates[$sIdx]
+            $dateSource = "excel"
             $take = FormatExcelTime $arr[($b + 2), 34]
 
             $rawTicket = CleanStr $arr[($b + 4), 31]
@@ -416,6 +497,7 @@ try {
                 creationTime = $null
                 takeTime = $take
                 date = $date
+                dateSource = $dateSource
                 month = "09-2026"
                 appliesMda = $true
                 staysInMda = $staysInMda
@@ -437,6 +519,27 @@ try {
 }
 
 Write-Host "Total de auditorías extraídas: $($allAudits.Count)"
+
+# --- Reporte explícito de origen de fechas (llamados) --------------------
+# Las fechas de mail (col 17) y autogestión (col 32) vienen del Excel.
+# Las de llamados sólo existen en 13 de 84 casos; el resto usa la referencia
+# semanal. Se reporta para que no se confundan con datos verificados.
+$callDates = $allAudits | Where-Object { $_.channelType -eq "wise_call" }
+$fromExcel = @($callDates | Where-Object { $_.dateSource -eq "excel" }).Count
+$fromRef = @($callDates | Where-Object { $_.dateSource -eq "referencia" }).Count
+Write-Host ""
+Write-Host "ORIGEN DE FECHAS DE LLAMADOS"
+Write-Host "  con fecha real del Excel : $fromExcel de $($callDates.Count)"
+Write-Host "  con fecha de referencia  : $fromRef de $($callDates.Count)"
+if ($fromRef -gt 0) {
+    Write-Host "  LIMITACIÓN: el bloque de llamados no tiene columna de fecha."
+    Write-Host "  La etiqueta 'Fecha' (col 1) y A(b+4) están vacías en la mayoría"
+    Write-Host "  de las hojas. Estas $fromRef fechas NO provienen del Excel."
+    Write-Host "  Detalle:"
+    $allAudits | Where-Object { $_.channelType -eq "wise_call" -and $_.dateSource -eq "referencia" } |
+        ForEach-Object { Write-Host ("    {0,-22} muestreo {1} caso {2,-8} -> {3}" -f $_.operatorSheet, $_.sampleIndex, $_.callId, $_.date) }
+}
+
 $json = $allAudits | ConvertTo-Json -Depth 6
 $fullPath = [System.IO.Path]::GetFullPath($OutputPath)
 [System.IO.File]::WriteAllText($fullPath, $json, [System.Text.Encoding]::UTF8)
