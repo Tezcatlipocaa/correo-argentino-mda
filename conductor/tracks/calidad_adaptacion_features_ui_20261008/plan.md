@@ -24,7 +24,7 @@
     - [x] Conectar acciones de descarga nativa Excel multi-hoja en la barra de herramientas de `CalidadContent.astro`
     - [x] Asegurar que el botón global "Nueva Auditoría" dirija correctamente a `/supervision/calidad-operadores/nueva`
 - [x] Task: Conectar `OperatorDetailsPanel.astro` con `AuditModal` para ver/editar auditorías históricas
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: e1e3da2]
 
 ## Phase 4: Verificación Integral, Pruebas y Cierre
 - [ ] Task: Ejecutar suite de pruebas unitarias relevantes (`npm run test:unit -- tests/unit`)
