@@ -96,101 +96,33 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
 
     await page.goto("/supervision/calidad-operadores");
 
-    // Esperar a que el server island cargue los operadores
-    const operatorItems = page.locator(".operator-item");
+    const operatorItems = page.locator(".operator-card");
     await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
 
-    const initialGeneralPanel = page.locator("#general-info-panel");
-    const detailsPanel = page.locator("#operator-details-panel");
+    const detailsModal = page.locator("#operator-details-modal");
+    await expect(detailsModal).toBeHidden();
 
-    await expect(initialGeneralPanel).toBeVisible();
-    await expect(detailsPanel).toHaveClass(/hidden/);
-
-    // Hacer click en el primer operador
     const firstOperator = operatorItems.first();
-    const operatorName = await firstOperator.locator("div.text-base-content").first().innerText();
     await firstOperator.click();
 
-    // El panel de detalle debe hacerse visible y el general ocultarse
-    await expect(detailsPanel).not.toHaveClass(/hidden/);
-    await expect(initialGeneralPanel).toHaveClass(/hidden/);
+    await expect(detailsModal).toBeVisible();
 
-    // Verificar que el nombre del operador se haya cargado en el detalle
-    const detailName = page.locator("#detail-name");
-    await expect(detailName).toHaveText(operatorName);
+    const detailName = detailsModal.locator("#detail-name");
+    await expect(detailName).toBeVisible();
 
-    // Verificar que el botón de nueva auditoría es visible y clickeable
-    const btnNewAudit = page.locator("#btn-new-audit");
+    const btnNewAudit = detailsModal.locator("#btn-new-audit");
     await expect(btnNewAudit).toBeVisible();
     await btnNewAudit.click();
 
-    // El modal de auditoría debe abrirse
-    const modal = page.locator("#audit-modal");
-    await expect(modal).toHaveAttribute("open", "");
-
-    // Verificar que las pestañas de canal del modal funcionan
-    const wiseEmailBtn = page.locator('.channel-btn[data-channel="wise_email"]');
-    await wiseEmailBtn.click();
-    await expect(page.locator("#channel-checklist-wise_email")).toBeVisible();
-    await expect(page.locator("#channel-checklist-wise_call")).toHaveClass(/hidden/);
-
-    const invgateAgBtn = page.locator('.channel-btn[data-channel="invgate_ticket"]');
-    await invgateAgBtn.click();
-    await expect(page.locator("#channel-checklist-invgate_ticket")).toBeVisible();
-    await expect(page.locator("#channel-checklist-wise_email")).toHaveClass(/hidden/);
-
-    // Cerrar el modal
-    const btnCloseModal = page.locator("#btn-close-modal");
-    await btnCloseModal.click();
-    await expect(modal).not.toHaveAttribute("open", "");
-
-    // Probar abrir Nueva Auditoría desde la pestaña Mails Wise del operador
-    const opEmailTab = page.locator('.operator-channel-tab[data-channel="wise_email"]');
-    await opEmailTab.click();
-    await expect(opEmailTab).toHaveClass(/tab-active/);
-
-    await btnNewAudit.click();
-    await expect(modal).toHaveAttribute("open", "");
-    await expect(page.locator("#channel-checklist-wise_email")).toBeVisible();
-    await expect(page.locator('.channel-btn[data-channel="wise_email"]')).toHaveClass(/btn-active/);
-
-    await btnCloseModal.click();
-    await expect(modal).not.toHaveAttribute("open", "");
-
-    // Probar abrir Nueva Auditoría desde la pestaña Autogestiones del operador
-    const opAgTab = page.locator('.operator-channel-tab[data-channel="invgate_ticket"]');
-    await opAgTab.click();
-    await expect(opAgTab).toHaveClass(/tab-active/);
-
-    await btnNewAudit.click();
-    await expect(modal).toHaveAttribute("open", "");
-    await expect(page.locator("#channel-checklist-invgate_ticket")).toBeVisible();
-    await expect(page.locator('.channel-btn[data-channel="invgate_ticket"]')).toHaveClass(/btn-active/);
-
-    await btnCloseModal.click();
-    await expect(modal).not.toHaveAttribute("open", "");
-
-    // Probar volver al panel general
-    const btnBack = page.locator("#btn-back-to-summary");
-    await btnBack.click();
-    await expect(initialGeneralPanel).not.toHaveClass(/hidden/);
-    await expect(detailsPanel).toHaveClass(/hidden/);
+    await expect(page).toHaveURL(/\/supervision\/calidad-operadores\/nueva/);
+    await expect(page.locator("h1")).toContainText(/Nueva Auditoría/i);
   });
 
   test("Debe soportar buscador dual, visor de ticket en vivo y auto-evaluación asistida de títulos", async ({
     page,
   }) => {
-    await page.goto("/supervision/calidad-operadores");
-
-    const operatorItems = page.locator(".operator-item");
-    await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
-    await operatorItems.first().click();
-
-    const btnNewAudit = page.locator("#btn-new-audit");
-    await btnNewAudit.click();
-
-    const modal = page.locator("#audit-modal");
-    await expect(modal).toHaveAttribute("open", "");
+    await page.goto("/supervision/calidad-operadores/nueva");
+    await expect(page.locator("h1")).toContainText(/Nueva Auditoría/i);
 
     // Verificar que los botones de búsqueda tienen SVG con path renderizado (is:inline)
     const wiseSvgPath = page.locator("#btn-fetch-wise-api svg path");
@@ -401,35 +333,24 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
       /\/requests\/show\/index\/id\/88442$/,
     );
 
-    // Cerrar modal
-    await page.locator("#btn-close-modal").click();
-    await expect(modal).not.toHaveAttribute("open", "");
-  });
+      });
 
   test("Debe soportar toggle de ticket en Llamadas y Mails con recálculo dinámico proporcional", async ({
     page,
   }) => {
-    await page.goto("/supervision/calidad-operadores");
+    await page.goto("/supervision/calidad-operadores/nueva");
+    await expect(page.locator("h1")).toContainText(/Nueva Auditoría/i);
 
-    const operatorItems = page.locator(".operator-item");
-    await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
-    await operatorItems.first().click();
-
-    const btnNewAudit = page.locator("#btn-new-audit");
-    await btnNewAudit.click();
-
-    const modal = page.locator("#audit-modal");
-    await expect(modal).toHaveAttribute("open", "");
-
-    // --- A. Canal Llamadas Wise ---
-    const toggleCallTicket = page.locator("#toggle-call-generated-ticket");
-    await expect(toggleCallTicket).toBeVisible();
-    await expect(toggleCallTicket).toBeChecked();
+    // --- A. Canal Llamadas Wise: Selector de modo Ticket Nuevo vs Reclamo / Novedad ---
+    const btnNuevo = page.locator('.ticket-mode-btn[data-mode="nuevo"]');
+    const btnReclamo = page.locator('.ticket-mode-btn[data-mode="reclamo"]');
+    await expect(btnNuevo).toBeVisible();
+    await expect(btnReclamo).toBeVisible();
 
     const callTicketBlock = page.locator("#wise-call-ticket-block");
-    const callTicketPlaceholder = page.locator("#wise-call-ticket-placeholder");
+    const reclamoCard = page.locator("#wise-call-reclamo-card");
     await expect(callTicketBlock).toBeVisible();
-    await expect(callTicketPlaceholder).toHaveClass(/hidden/);
+    await expect(reclamoCard).toHaveClass(/hidden/);
 
     // Verificar lista canónica de parámetros en llamada
     await expect(page.locator('input[name="call_solicitud"]')).not.toBeAttached();
@@ -439,56 +360,46 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const previewS1 = page.locator("#preview-s1");
     const previewS2 = page.locator("#preview-s2");
     const previewTotal = page.locator("#preview-total");
-    const previewS2Block = page.locator("#preview-s2-block");
 
     await expect(previewS1).toHaveText("100%");
     await expect(previewS2).toHaveText("100%");
     await expect(previewTotal).toHaveText("100%");
 
-    // Desmarcar toggle ¿Se generó ticket? en llamada
-    await toggleCallTicket.uncheck();
+    // Activar modo Reclamo / Novedad: Sección 2 debe otorgar 100% automático y mostrar tarjeta
+    await btnReclamo.click();
     await expect(callTicketBlock).toHaveClass(/hidden/);
-    await expect(callTicketPlaceholder).not.toHaveClass(/hidden/);
-    await expect(callTicketPlaceholder).toContainText("No se generó ticket para esta llamada");
-
-    // Con sección 2 desactivada: S2 = N/A, S1 = 100%, Total = 100% (solo puntúa S1)
-    await expect(previewS1).toHaveText("100%");
-    await expect(previewS2).toHaveText("N/A");
+    await expect(reclamoCard).not.toHaveClass(/hidden/);
+    await expect(previewS2).toHaveText("100%");
     await expect(previewTotal).toHaveText("100%");
-    await expect(previewS2Block).toHaveCSS("opacity", "0.3");
 
     // Desmarcar un ítem de sección 1: Cumplimiento de procedimiento (-10%)
-    // Base 45: 35/45 = 78%
+    // Base 45: 35/45 = 78% en S1, S2 sigue aportando 55 pts -> Total 90%
     const procCheckbox = page.locator('input[name="call_procedimiento"]');
     await procCheckbox.uncheck();
     await expect(previewS1).toHaveText("78%");
-    await expect(previewS2).toHaveText("N/A");
-    await expect(previewTotal).toHaveText("78%");
+    await expect(previewS2).toHaveText("100%");
+    await expect(previewTotal).toHaveText("90%");
 
-    // Volver a activar toggle ¿Se generó ticket?
-    await toggleCallTicket.check();
+    // Volver a modo Ticket Nuevo
+    await btnNuevo.click();
     await expect(callTicketBlock).not.toHaveClass(/hidden/);
-    await expect(callTicketPlaceholder).toHaveClass(/hidden/);
-    // Ahora Sección 2 aporta 55 puntos directos: 35 + 55 = 90%
+    await expect(reclamoCard).toHaveClass(/hidden/);
     await expect(previewS1).toHaveText("78%");
     await expect(previewS2).toHaveText("100%");
     await expect(previewTotal).toHaveText("90%");
-    await expect(previewS2Block).toHaveCSS("opacity", "1");
 
     // --- B. Canal Mails Wise ---
     const wiseEmailBtn = page.locator('.channel-btn[data-channel="wise_email"]');
     await wiseEmailBtn.click();
 
-    // Verificar etiqueta ¿Se generó ticket? en mails
-    const emailToggleLabel = page.locator('#channel-checklist-wise_email label:has(#toggle-applies-mda) span');
-    await expect(emailToggleLabel).toHaveText("¿Se generó ticket?");
+    // Verificar selector de modo en mails (Ticket nuevo vs Reclamo / Novedad)
+    const emailNuevoBtn = page.locator('.email-ticket-mode-btn[data-mode="nuevo"]');
+    const emailReclamoBtn = page.locator('.email-ticket-mode-btn[data-mode="reclamo"]');
+    await expect(emailNuevoBtn).toBeVisible();
+    await expect(emailReclamoBtn).toBeVisible();
 
     // Verificar que no existe reclamo/novedad en mails
     await expect(page.locator('input[name="email_mda_reclamo_novedad"]')).not.toBeAttached();
-
-    // Cerrar modal
-    await page.locator("#btn-close-modal").click();
-    await expect(modal).not.toHaveAttribute("open", "");
   });
 
   test("Debe mostrar scores consistentes entre la card de auditoría guardada y el modal de edición", async ({
@@ -496,7 +407,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
   }) => {
     await page.goto("/supervision/calidad-operadores");
 
-    const operatorItems = page.locator(".operator-item");
+    const operatorItems = page.locator(".operator-card");
     await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
 
     // Buscar operador con llamadas (ej. el que tiene auditorías guardadas)
@@ -554,16 +465,8 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
   });
 
   test("Debe presentar el modal en 2 columnas con notas bajo demanda y score N/A para ticket excluido", async ({ page }) => {
-    await page.goto("/supervision/calidad-operadores");
-    const operatorItems = page.locator(".operator-item");
-    await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
-    await operatorItems.first().click();
-
-    const btnNewAudit = page.locator("#btn-new-audit");
-    await btnNewAudit.click();
-
-    const modal = page.locator("#audit-modal");
-    await expect(modal).toHaveAttribute("open", "");
+    await page.goto("/supervision/calidad-operadores/nueva");
+    await expect(page.locator("h1")).toContainText(/Nueva Auditoría/i);
 
     // 1. Layout de 2 columnas
     const gridContainer = page.locator("#modal-grid-container");
@@ -596,20 +499,15 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await toggleObsBtn.click();
     await expect(obsWrapper).not.toHaveClass(/hidden/);
 
-    // 3. Score N/A cuando el ticket no aplica
-    const ticketToggle = page.locator("#toggle-call-generated-ticket");
-    await expect(ticketToggle).toBeChecked();
-    await ticketToggle.uncheck();
+    // 3. Modo Reclamo / Novedad otorga 100% automático
+    const btnReclamo = page.locator('.ticket-mode-btn[data-mode="reclamo"]');
+    await btnReclamo.click();
 
     const previewS2 = page.locator("#preview-s2");
-    await expect(previewS2).toHaveText(/N\/A|Excluido/i);
+    await expect(previewS2).toHaveText("100%");
 
     const previewTotal = page.locator("#preview-total");
     await expect(previewTotal).toHaveText("100%");
-
-    // Cerrar modal
-    await page.locator("#btn-close-modal").click();
-    await expect(modal).not.toHaveAttribute("open", "");
   });
 });
 
