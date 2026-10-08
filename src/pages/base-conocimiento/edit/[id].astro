@@ -284,22 +284,15 @@ const backHref = resolveUrl("/base-conocimiento");
               class="min-w-0"
             />
 
-            <div class="min-w-0">
-              <SelectField
-                id="kb-category"
-                name="category"
-                label="Categoría"
-                options={categoriaSeleccionada}
-                value={nuevaCategoria || formValues.category}
-                helpText="Opcional"
-              />
-              <a
-                href={`${getCleanBase()}base-conocimiento/categorias`}
-                class="link link-secondary link-hover text-xs"
-              >
-                Administrar categorías
-              </a>
-            </div>
+            <SelectField
+              id="kb-category"
+              name="category"
+              label="Categoría"
+              options={categoriaSeleccionada}
+              value={nuevaCategoria || formValues.category}
+              helpText="Opcional"
+              class="min-w-0"
+            />
 
             <div class="min-w-0" data-kb-mesa-cell>
               <span class="fieldset-legend font-bold tracking-wider">Mesa</span>
@@ -320,6 +313,15 @@ const backHref = resolveUrl("/base-conocimiento");
               helpText="Podés publicar o archivar el artículo; no se puede volver a borrador."
               class="min-w-0"
             />
+          </div>
+
+          <div class="flex justify-end">
+            <a
+              href={`${getCleanBase()}base-conocimiento/categorias`}
+              class="link link-secondary link-hover text-xs"
+            >
+              Administrar categorías
+            </a>
           </div>
 
           <details class="collapse-arrow border-base-300 collapse border">

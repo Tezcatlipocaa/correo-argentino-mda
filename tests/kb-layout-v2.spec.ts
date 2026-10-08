@@ -1,7 +1,12 @@
 import "dotenv/config";
 import { expect, test, type Page } from "@playwright/test";
 import { setSessionCookie, type TestUser } from "./helpers/auth";
-import { KbTestFixture, uniqueToken, type KbTestMesa } from "./helpers/kb";
+import {
+  KbTestFixture,
+  setEasyMdeContent,
+  uniqueToken,
+  type KbTestMesa,
+} from "./helpers/kb";
 
 test.use({ viewport: { width: 1920, height: 1080 } });
 
@@ -87,5 +92,149 @@ test.describe("Base de conocimiento - layout v2", () => {
 
     const container = await measure(contentContainer(page));
     expect(container).toBeGreaterThan(1300);
+  });
+
+  test("los encabezados h1-h6 tienen una escala descendente", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const content = [
+      `# Uno ${suffix}`,
+      `## Dos ${suffix}`,
+      `### Tres ${suffix}`,
+      `#### Cuatro ${suffix}`,
+      `##### Cinco ${suffix}`,
+      `###### Seis ${suffix}`,
+      `Párrafo ${suffix}`,
+    ].join("\n\n");
+    const article = await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Tipografía ${suffix}`,
+      content,
+      status: "published",
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto(`/base-conocimiento/${article.id}`);
+
+    const body = page.locator(".kb-article-body");
+    await expect(body.locator("h6")).toBeVisible();
+
+    const sizes: number[] = [];
+    for (let level = 1; level <= 6; level += 1) {
+      sizes.push(
+        parseFloat(
+          await body
+            .locator(`h${level}`)
+            .evaluate((el) => getComputedStyle(el).fontSize),
+        ),
+      );
+    }
+    expect(sizes).toEqual([36, 28, 22, 18, 16, 14]);
+
+    const paragraphSize = parseFloat(
+      await body
+        .locator("p")
+        .first()
+        .evaluate((el) => getComputedStyle(el).fontSize),
+    );
+    expect(sizes[sizes.length - 1]).toBeLessThanOrEqual(paragraphSize);
+  });
+
+  test("respeta saltos de línea, reduce el ritmo y no duplica el título", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const content = [
+      `Linea uno ${suffix}`,
+      `Linea dos ${suffix}`,
+      "",
+      `## Sección ${suffix}`,
+      "",
+      `Párrafo ${suffix}`,
+    ].join("\n");
+    const article = await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Saltos ${suffix}`,
+      content,
+      status: "published",
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto(`/base-conocimiento/${article.id}`);
+
+    await expect(
+      page.getByRole("heading", { name: article.title }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Artículo", exact: true }),
+    ).toHaveCount(0);
+
+    const body = page.locator(".kb-article-body");
+    await expect(body.locator("br")).toHaveCount(1);
+
+    const paragraphMarginBottom = parseFloat(
+      await body
+        .locator("p")
+        .first()
+        .evaluate((el) => getComputedStyle(el).marginBottom),
+    );
+    expect(paragraphMarginBottom).toBe(14);
+
+    const margins = await body.locator("h2").evaluate((el) => {
+      const styles = getComputedStyle(el);
+      return {
+        top: parseFloat(styles.marginTop),
+        bottom: parseFloat(styles.marginBottom),
+      };
+    });
+    expect(margins.top).toBe(28);
+    expect(margins.bottom).toBe(8);
+  });
+
+  test("la vista previa del editor replica la escala de encabezados", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const content = [
+      `# Uno ${suffix}`,
+      `## Dos ${suffix}`,
+      `### Tres ${suffix}`,
+      `#### Cuatro ${suffix}`,
+      `##### Cinco ${suffix}`,
+      `###### Seis ${suffix}`,
+      `Linea uno ${suffix}\nLinea dos ${suffix}`,
+    ].join("\n\n");
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto(`/base-conocimiento/edit/${articleId}`);
+    await expect(page.locator("#kb-article-form")).toBeVisible();
+    await setEasyMdeContent(page, content);
+
+    await page
+      .locator(".EasyMDEContainer .editor-toolbar button.preview")
+      .click();
+    const preview = page.locator(".EasyMDEContainer .editor-preview-full");
+    await expect(preview).toBeVisible();
+    await expect(preview.locator("h6")).toBeVisible();
+    await expect(preview.locator("br")).toHaveCount(1);
+
+    const sizes: number[] = [];
+    for (let level = 1; level <= 6; level += 1) {
+      sizes.push(
+        parseFloat(
+          await preview
+            .locator(`h${level}`)
+            .first()
+            .evaluate((el) => getComputedStyle(el).fontSize),
+        ),
+      );
+    }
+    expect(sizes).toEqual([36, 28, 22, 18, 16, 14]);
   });
 });

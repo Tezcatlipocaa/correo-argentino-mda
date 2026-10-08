@@ -48,7 +48,6 @@
 ---
 - [x] **Track: Bugfix: Tiempo de Respuesta en Mails Wise basado en Primera Respuesta del Operador (user_reply)**
   *Link: [./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md](./tracks/calidad_mail_tiempo_respuesta_bugfix_20261003/index.md)*
----
 - [x] **Track: Auto-detección y Conmutación de Canal (Llamada vs Mail) en Búsqueda Wise CX**
   *Link: [./tracks/calidad_wise_autodetect_channel_20261003/index.md](./tracks/calidad_wise_autodetect_channel_20261003/index.md)*
 ---
@@ -61,6 +60,13 @@
 - [x] **Track: Refactor y Modernización del Modal de Parámetros de Calidad**
   *Link: [./tracks/calidad_parameters_modal_refactor_20261005/index.md](./tracks/calidad_parameters_modal_refactor_20261005/index.md)*
 ---
+- [x] **Track: Modal de Calidad — Lógica Reclamo/Novedad, Tildar/Destildar Masivo y Exportación Excel/CSV**
+  *Link: [./tracks/calidad_reclamo_checkall_export_20261006/index.md](./tracks/calidad_reclamo_checkall_export_20261006/index.md)*
+---
+- [x] **Track: Unificación de Búsqueda API en Campos de Atención y Enlace Directo InvGate**
+  *Link: [./tracks/calidad_busqueda_unificada_campos_20261007/index.md](./tracks/calidad_busqueda_unificada_campos_20261007/index.md)*
+---
 - [~] **Track: Adaptación e Integración de Features de Calidad en Refactor de UI**
   *Link: [./tracks/calidad_adaptacion_features_ui_20261008/index.md](./tracks/calidad_adaptacion_features_ui_20261008/index.md)*
+
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
 import {
   buildCategoryRedirectTarget,
   isCategoryFormKbPath,
@@ -124,5 +125,50 @@ describe("buildCategoryRedirectTarget", () => {
       fromCategoryForm: true,
     });
     expect(target).toBe(KB_CATEGORIAS_PATH);
+  });
+});
+
+describe("redirectWithToast + buildCategoryRedirectTarget (flujo inline)", () => {
+  it("con base no raíz no duplica el prefijo al redirigir", () => {
+    const target = buildCategoryRedirectTarget({
+      returnTo: "/mda/base-conocimiento/create?mesa=42",
+      base: "/mda/",
+      createdName: "Redes",
+      fromCategoryForm: true,
+    });
+
+    const response = redirectWithToast(
+      target,
+      "Categoría creada.",
+      "success",
+      "/mda",
+    );
+    const location = response.headers.get("Location") ?? "";
+
+    expect(location).toBe(
+      "/mda/base-conocimiento/create?mesa=42&nueva_categoria=Redes&toast_msg=Categor%C3%ADa%20creada.&toast_type=success",
+    );
+    expect(location.match(/\/mda\//g)?.length ?? 0).toBe(1);
+    expect(location).not.toContain("/base-conocimiento/base-conocimiento");
+  });
+
+  it("con base raíz conserva el path sin prefijo", () => {
+    const target = buildCategoryRedirectTarget({
+      returnTo: "/base-conocimiento/edit/7",
+      base: "/",
+      createdName: "",
+      fromCategoryForm: false,
+    });
+
+    const response = redirectWithToast(
+      target,
+      "Categoría eliminada.",
+      "success",
+      "",
+    );
+    const location = response.headers.get("Location") ?? "";
+
+    expect(location.startsWith("/base-conocimiento/edit/7?")).toBe(true);
+    expect(location).not.toContain("//base-conocimiento");
   });
 });

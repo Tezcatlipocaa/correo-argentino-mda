@@ -95,6 +95,8 @@ opencode.jsonc
 .cursor/
 .windsurf/
 .continue/
+.agents/
+conductor/
 audit/
 .tmp-*/
 *.err

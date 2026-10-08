@@ -5,6 +5,8 @@ import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
+import AddEntityButton from "@components/ui/AddEntityButton.astro";
 import { getModulePermissions } from "@lib/rbac";
 import { can } from "@lib/roleConfig";
 import { getBaseNoSlash } from "@lib/baseUrl";
@@ -84,13 +86,10 @@ const getSearchText = (article: KbArticleListItem) =>
     </div>
     {
       canWrite && (
-        <a
+        <AddEntityButton
           href={resolveUrl("/base-conocimiento/create", baseNoSlash)}
-          class="btn btn-primary btn-sm md:btn-md gap-2"
-        >
-          <Icon name="boxicons:plus" size={24} />
-          Nuevo artículo
-        </a>
+          label="Nuevo artículo"
+        />
       )
     }
   </div>
@@ -272,17 +271,17 @@ const getSearchText = (article: KbArticleListItem) =>
                       ariaLabel={`Editar ${article.title}`}
                     />
                   )}
-                  <a
+                  <ActionButton
                     href={resolveUrl(
                       `/base-conocimiento/${article.id}`,
                       baseNoSlash,
                     )}
-                    class="btn btn-xs btn-soft btn-accent gap-2"
-                    aria-label={`Ver ${article.title}`}
-                  >
-                    <Icon name="boxicons:eye-filled" size={24} />
-                    Ver
-                  </a>
+                    size="xs"
+                    color="btn-accent"
+                    icon="boxicons:eye-filled"
+                    label="Ver"
+                    ariaLabel={`Ver ${article.title}`}
+                  />
                 </div>
               </div>
             );

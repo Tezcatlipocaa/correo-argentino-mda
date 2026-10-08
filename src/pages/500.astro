@@ -1,0 +1,50 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { Icon } from "astro-icon/components";
+import { getCleanBase } from "@lib/baseUrl";
+
+interface Props {
+  error: unknown;
+}
+
+const { error } = Astro.props;
+
+if (error) {
+  console.error("[SSR 500 Error]:", error);
+}
+
+const homeUrl = getCleanBase();
+---
+
+<BaseLayout title="Error interno del servidor">
+  <div
+    class="flex min-h-[80vh] flex-col items-center justify-center gap-6 px-4 text-center"
+  >
+    <Icon
+      name="boxicons:alert-circle"
+      size={224}
+      class="text-error/30"
+      aria-hidden="true"
+    />
+    <div>
+      <h1 class="text-base-content text-4xl font-black tracking-tight">
+        Error interno del servidor
+      </h1>
+      <p class="text-base-content/70 mt-2 max-w-xl text-xl">
+        Ocurrió un error inesperado al procesar la solicitud. Por favor, intente nuevamente en unos instantes.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center justify-center gap-4">
+      <button
+        type="button"
+        onclick="window.location.reload()"
+        class="btn btn-outline btn-lg"
+      >
+        Reintentar
+      </button>
+      <a href={homeUrl} class="btn btn-primary btn-lg">
+        Volver al inicio
+      </a>
+    </div>
+  </div>
+</BaseLayout>

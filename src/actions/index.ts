@@ -240,6 +240,15 @@ export const server = {
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
           )
           .default(true),
+        callTicketMode: z.string().optional(),
+        emailTicketMode: z.string().optional(),
+        isReclamoNovedad: z
+          .any()
+          .transform(
+            (v) =>
+              v === "on" || v === true || v === "true" || v === 1 || v === "1" || v === "reclamo",
+          )
+          .default(false),
         appliesMda: z
           .any()
           .transform(
@@ -292,12 +301,32 @@ export const server = {
           .orderBy(auditParameters.order);
       }
 
-      // 2. Determinar si aplica Sección 2
+      // 2. Determinar si aplica Sección 2 y si es Reclamo / Novedad
       let hasSection2 = true;
+      let isReclamoNovedad = input.isReclamoNovedad;
+
       if (input.channelType === "wise_call") {
-        hasSection2 = input.callGeneratedTicket;
+        if (input.callTicketMode === "reclamo") {
+          hasSection2 = true;
+          isReclamoNovedad = true;
+        } else if (input.callTicketMode === "ninguno") {
+          hasSection2 = false;
+          isReclamoNovedad = false;
+        } else if (input.callTicketMode === "nuevo") {
+          hasSection2 = true;
+          isReclamoNovedad = false;
+        } else {
+          hasSection2 = input.callGeneratedTicket;
+        }
       } else if (input.channelType === "wise_email") {
-        hasSection2 = input.appliesMda;
+        hasSection2 = true;
+        if (input.emailTicketMode === "reclamo") {
+          isReclamoNovedad = true;
+        } else if (input.emailTicketMode === "nuevo") {
+          isReclamoNovedad = false;
+        } else {
+          isReclamoNovedad = input.isReclamoNovedad;
+        }
       } else if (input.channelType === "invgate_ticket") {
         hasSection2 = input.staysInMda;
       }
@@ -344,6 +373,7 @@ export const server = {
           checkedCodes,
           hasSection2,
           input.isCriticalFailure,
+          isReclamoNovedad,
         );
 
       const auditData = {
@@ -362,8 +392,14 @@ export const server = {
         creationTime: input.creationTime || null,
         takeTime: input.takeTime || null,
         isPas: input.isPas,
-        appliesMda: input.channelType === "wise_call" ? hasSection2 : input.appliesMda,
+        appliesMda:
+          input.channelType === "wise_call"
+            ? hasSection2
+            : input.channelType === "wise_email"
+              ? true
+              : input.appliesMda,
         staysInMda: input.staysInMda,
+        isReclamoNovedad,
         isCriticalFailure: input.isCriticalFailure,
         recordingUrl: input.recordingUrl || null,
       };

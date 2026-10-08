@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import { resolveUrl } from "@lib/url";
 import { renderMarkdown } from "@lib/markdown";
@@ -88,10 +89,13 @@ const articleHtml = article
           </div>
         </div>
         {canWrite && (
-          <a href={editHref} class="btn btn-secondary shrink-0 gap-2">
-            <Icon name="boxicons:pencil-filled" size={24} />
-            Editar artículo
-          </a>
+          <ActionButton
+            href={editHref}
+            size="md"
+            icon="boxicons:pencil-filled"
+            label="Editar artículo"
+            class="shrink-0"
+          />
         )}
       </div>
 
@@ -126,22 +130,41 @@ const articleHtml = article
     color: var(--color-base-content);
     font-weight: 700;
     line-height: 1.25;
-    margin: 1.5rem 0 0.75rem;
+    margin: 1.75rem 0 0.5rem;
   }
 
   .kb-article-body h1 {
-    font-size: 1.875rem;
+    font-size: 2.25rem;
   }
 
   .kb-article-body h2 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
   }
 
   .kb-article-body h3 {
-    font-size: 1.25rem;
+    font-size: 1.375rem;
   }
 
-  .kb-article-body p,
+  .kb-article-body h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .kb-article-body h5 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .kb-article-body h6 {
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .kb-article-body p {
+    margin: 0 0 0.875rem;
+  }
+
   .kb-article-body ul,
   .kb-article-body ol,
   .kb-article-body blockquote,
@@ -161,6 +184,21 @@ const articleHtml = article
 
   .kb-article-body ol {
     list-style: decimal;
+  }
+
+  .kb-article-body ul:has(> li > input[type="checkbox"]) {
+    list-style: none;
+    padding-left: 0.25rem;
+  }
+
+  .kb-article-body li > input[type="checkbox"] {
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .kb-article-body li > ul,
+  .kb-article-body li > ol {
+    margin: 0.25rem 0;
   }
 
   .kb-article-body a {

@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { setSessionCookie } from "./helpers/auth";
 import { KbTestFixture, uniqueToken, type KbTestMesa } from "./helpers/kb";
 
@@ -138,6 +138,72 @@ test.describe("Base de conocimiento - listado", () => {
     await expect(
       page.locator("#kb-articles-table [data-table-row]:visible"),
     ).toHaveCount(0);
+  });
+
+  test("las acciones de fila de KB renderizan íconos y alturas consistentes", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const title = `Botones fila ${suffix}`;
+    const admin = await fixture.createUser("admin", mesa);
+    await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title,
+      category: `Categoría ${suffix}`,
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+    await page.goto("/base-conocimiento");
+
+    const row = articleRow(page, title);
+    const edit = row.getByRole("link", { name: `Editar ${title}` });
+    const view = row.getByRole("link", { name: `Ver ${title}` });
+    await expect(edit).toBeVisible();
+    await expect(view).toBeVisible();
+
+    // Invariante de consistencia de la familia compartida: ambas acciones de
+    // fila deben compartir el tamaño de ícono. Antes del refactor "Ver" medía
+    // 24px y "Editar" (ActionEditButton xs) 14px.
+    const iconHeight = (locator: Locator) =>
+      locator
+        .locator("svg")
+        .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+    expect(await iconHeight(view)).toBe(await iconHeight(edit));
+
+    const editBox = await edit.boundingBox();
+    const viewBox = await view.boundingBox();
+    expect(Math.round(editBox?.height ?? 0)).toBe(
+      Math.round(viewBox?.height ?? 0),
+    );
+  });
+
+  test("los botones de crear y editar artículo están disponibles y accesibles", async ({
+    context,
+    page,
+  }) => {
+    const suffix = uniqueToken();
+    const title = `Botones header ${suffix}`;
+    const admin = await fixture.createUser("admin", mesa);
+    const article = await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title,
+      category: `Categoría ${suffix}`,
+    });
+
+    await setSessionCookie(context, admin.signedSessionId);
+
+    await page.goto("/base-conocimiento");
+    await expect(
+      page.getByRole("link", { name: "Nuevo artículo" }),
+    ).toBeVisible();
+
+    await page.goto(`/base-conocimiento/${article.id}`);
+    await expect(
+      page.getByRole("link", { name: "Editar artículo" }),
+    ).toBeVisible();
   });
 
   // NOTA: el empty state server-side "No hay artículos" (SearchEmptyState en

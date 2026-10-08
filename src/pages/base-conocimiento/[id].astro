@@ -1,7 +1,6 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import KbViewContent from "@components/base-conocimiento/KbViewContent.astro";
 import { getArticle, type KbArticle, type KbScope } from "@lib/kb";
 import { getModulePermissions } from "@lib/rbac";
@@ -43,10 +42,6 @@ if (!loadError && (!article || (article.status !== "published" && !canWrite))) {
 
 <BaseLayout title="Artículo">
   <PageContainer width="xl">
-    <PageHeader
-      title="Artículo"
-      description="Consulta la documentación de tu mesa de ayuda."
-    />
     <KbViewContent
       article={article}
       canWrite={canWrite}
