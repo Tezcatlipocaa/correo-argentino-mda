@@ -17,7 +17,7 @@
 - [x] Task: Integrar controles de selección masiva (Tildar / Destildar todo)
     - [x] Añadir controles por sección con feedback visual y actualización automática del score
 - [x] Task: Garantizar paridad en `AuditModal.astro` para visualización y edición inline
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [checkpoint: 2f92d06]
 
 ## Phase 3: Integración en Barra Superior, Exportación y Panel de Operador
 - [ ] Task: Integrar exportación Excel (.xlsx) y CSV enriquecido en la barra superior unificada
