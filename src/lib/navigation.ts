@@ -153,6 +153,11 @@ export const navSections: NavSection[] = [
             icon: "boxicons:trash-filled",
           },
           {
+            href: "/admin/usuarios-sin-ubicacion",
+            label: "Usuarios sin ubicación",
+            icon: "boxicons:user-x-filled",
+          },
+          {
             href: "/admin/invgate/ubicaciones",
             label: "Ubicaciones InvGate",
             icon: "boxicons:location-alt-filled",
