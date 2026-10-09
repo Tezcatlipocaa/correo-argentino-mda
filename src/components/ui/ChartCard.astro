@@ -103,61 +103,69 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
     ariaLabel,
     labels,
     series,
-    emptyMessage,
     fetchUrl,
     chartKey,
-    variant,
   }}
 >
   import { Chart } from "chart.js/auto";
   import { readChartTokens } from "@lib/chartTokens";
 
+guard: {
   const card = document.querySelector(`[data-chart-card="${chartId}"]`);
-  if (!card) throw new Error("ChartCard: contenedor no encontrado");
+  if (!card) {
+    console.warn("ChartCard: contenedor no encontrado");
+    break guard;
+  }
 
   const style = getComputedStyle(document.documentElement);
   const readTokens = () =>
     readChartTokens((name) => style.getPropertyValue(name));
+
+  interface ChartWindow extends Window {
+    __chartCards?: Record<string, { setData: typeof setData }>;
+    __pendingChartUpdates?: Record<
+      string,
+      { labels: string[]; series: { label: string; data: number[] }[] }
+    >;
+    __statsData?: {
+      charts?: Record<
+        string,
+        { labels: string[]; series: { label: string; data: number[] }[] }
+      >;
+    };
+  }
+  const win = window as ChartWindow;
+
+  const canvas =
+    card.querySelector<HTMLCanvasElement>("[data-chart-canvas]");
+  const bodyEl = card.querySelector<HTMLElement>("[data-chart-body]");
+  const emptyEl = card.querySelector<HTMLElement>("[data-chart-empty]");
+  const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
+  const toggleBtn = card.querySelector<HTMLButtonElement>("[data-table-toggle]");
 
   let chart: Chart | null = null;
   let currentLabels: string[] = [...labels];
   let currentSeries: { label: string; data: number[] }[] = series.map((s) => ({
     ...s,
   }));
+  let highlightedIndex: number | null = null;
 
   const hasData = () =>
-    currentLabels.length > 0 &&
-    currentSeries.some((s) => s.data.some((v) => Number(v) > 0));
-
-  function ensureCanvas(): HTMLCanvasElement | null {
-    const existing = card.querySelector<HTMLCanvasElement>(
-      "[data-chart-canvas]",
-    );
-    if (existing) return existing;
-    const canvas = document.createElement("canvas");
-    canvas.dataset.chartCanvas = "";
-    canvas.setAttribute("role", "img");
-    canvas.setAttribute("aria-label", ariaLabel);
-    card.querySelector("[data-chart-body]")?.appendChild(canvas);
-    return canvas;
-  }
+    currentLabels.length > 0 && currentSeries.some((s) => s.data.length > 0);
 
   function showEmpty() {
     chart?.destroy();
     chart = null;
-    const emptyEl = card.querySelector<HTMLElement>("[data-chart-empty]");
-    if (emptyEl) emptyEl.classList.remove("hidden");
-    card
-      .querySelector<HTMLCanvasElement>("[data-chart-canvas]")
-      ?.classList.add("hidden");
+    emptyEl?.classList.remove("hidden");
+    canvas?.classList.add("hidden");
   }
 
   function buildChart() {
-    const canvas = ensureCanvas();
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
     chart?.destroy();
     const tokens = readTokens();
+    const paletteLen = tokens.palette.length;
     const isDoughnut = type === "doughnut";
     chart = new Chart(ctx, {
       type,
@@ -170,7 +178,8 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
                 label: s.label,
                 data: s.data,
                 backgroundColor: currentLabels.map(
-                  (_, j) => tokens.palette[j % tokens.palette.length],
+                  (_, j) =>
+                    tokens.palette[(j + i * paletteLen) % tokens.palette.length],
                 ),
                 borderColor: tokens.grid,
                 borderWidth: 1.5,
@@ -210,7 +219,7 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
         },
         plugins: {
           legend: {
-            display: currentSeries.length > 1,
+            display: type === "doughnut" || currentSeries.length > 1,
             position: "bottom",
             labels: {
               color: tokens.text,
@@ -241,18 +250,15 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
             }),
       },
     });
-    card
-      .querySelector<HTMLCanvasElement>("[data-chart-canvas]")
-      ?.classList.remove("hidden");
-    card
-      .querySelector<HTMLElement>("[data-chart-empty]")
-      ?.classList.add("hidden");
+    canvas?.classList.remove("hidden");
+    emptyEl?.classList.add("hidden");
+    applyHighlight();
   }
 
   function renderTable() {
-    const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
     if (!tableWrap) return;
     tableWrap.innerHTML = "";
+    if (!hasData()) return;
     const table = document.createElement("table");
     table.className = "table table-sm";
     const caption = document.createElement("caption");
@@ -292,6 +298,28 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
     tableWrap.appendChild(table);
   }
 
+  function applyHighlight() {
+    if (!chart || highlightedIndex === null) return;
+    const index = highlightedIndex;
+    const tokens = readTokens();
+    const isDoughnut = type === "doughnut";
+    chart.data.datasets.forEach((ds) => {
+      const base = ds.backgroundColor;
+      ds.borderColor = currentLabels.map((_: string, i: number) => {
+        if (i !== index) return tokens.grid;
+        return String(Array.isArray(base) ? base[i] : base ?? tokens.grid);
+      });
+      if (type === "line") {
+        ds.borderWidth = 3;
+      } else {
+        ds.borderWidth = currentLabels.map((_: string, i: number) =>
+          i === index ? 4 : isDoughnut ? 1.5 : 1,
+        );
+      }
+    });
+    chart.update();
+  }
+
   function setData(
     nextLabels: string[],
     nextSeries: { label: string; data: number[] }[],
@@ -304,68 +332,61 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
   }
 
   if (chartName) {
-    ((window as any).__chartCards ??= {})[chartName] = { setData };
-    const queued = ((window as any).__pendingChartUpdates ??= {})[chartName];
+    (win.__chartCards ??= {})[chartName] = { setData };
+    const queued = (win.__pendingChartUpdates ??= {})[chartName];
     if (queued) {
-      delete (window as any).__pendingChartUpdates[chartName];
+      delete win.__pendingChartUpdates[chartName];
       setData(queued.labels, queued.series);
     }
   }
 
-  window.addEventListener("chart-card:update", (event) => {
+  function onChartUpdate(event: Event) {
     const detail = (event as CustomEvent).detail;
-    if (detail?.chartName === chartName) {
-      setData(detail.labels, detail.series);
-    }
-  });
-
-  window.addEventListener("chart-card:highlight", (event) => {
-    const detail = (event as CustomEvent).detail;
-    if (detail?.chartName !== chartName || !chart) return;
-    const ds = chart.data.datasets[0];
-    const index = detail.index as number | null;
-    const bg = ds.backgroundColor;
-    ds.borderColor = currentLabels.map((_: string, i: number) =>
-      i === index
-        ? String(Array.isArray(bg) ? bg[i] : bg ?? "rgba(150,150,150,1)")
-        : "rgba(150, 150, 150, 0.1)",
-    );
-    ds.borderWidth = currentLabels.map((_: string, i: number) =>
-      i === index ? 4 : 1.5,
-    );
-    chart.update();
-  });
-
-  if (fetchUrl && chartKey) {
-    const stats = (window as any).__statsData;
-    const initial = stats?.charts?.[chartKey];
-    if (initial) setData(initial.labels, initial.series);
-    window.addEventListener("stats:filters-changed", (event) => {
-      const query = (event as CustomEvent).detail?.query ?? "";
-      const separator = fetchUrl.includes("?") ? "&" : "?";
-      fetch(`${fetchUrl}${separator}${query}`)
-        .then((response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.json();
-        })
-        .then((body) => {
-          const slice = body.charts[chartKey];
-          setData(slice.labels, slice.series);
-        })
-        .catch((error) =>
-          console.error("[ChartCard] fetch falló:", error),
-        );
-    });
+    if (!chartName || detail?.chartName !== chartName) return;
+    setData(detail.labels, detail.series);
   }
 
-  card
-    .querySelector<HTMLButtonElement>("[data-table-toggle]")
-    ?.addEventListener("click", (event) => {
-      const button = event.currentTarget as HTMLButtonElement;
-      const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
-      const hidden = tableWrap?.classList.toggle("hidden");
-      button.setAttribute("aria-expanded", String(!hidden));
-    });
+  function onChartHighlight(event: Event) {
+    const detail = (event as CustomEvent).detail;
+    if (!chartName || detail?.chartName !== chartName || !chart) return;
+    highlightedIndex = detail.index as number | null;
+    applyHighlight();
+  }
+
+  let fetchSeq = 0;
+
+  function onFiltersChanged(event: Event) {
+    const query = (event as CustomEvent).detail?.query ?? "";
+    const separator = fetchUrl?.includes("?") ? "&" : "?";
+    const seq = ++fetchSeq;
+    fetch(`${fetchUrl}${separator}${query}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((body) => {
+        if (seq !== fetchSeq) return;
+        const slice = body.charts[chartKey];
+        setData(slice.labels, slice.series);
+      })
+      .catch((error) => console.error("[ChartCard] fetch falló:", error));
+  }
+
+  window.addEventListener("chart-card:update", onChartUpdate);
+  window.addEventListener("chart-card:highlight", onChartHighlight);
+
+  if (fetchUrl && chartKey) {
+    const stats = win.__statsData;
+    const initial = stats?.charts?.[chartKey];
+    if (initial) setData(initial.labels, initial.series);
+    window.addEventListener("stats:filters-changed", onFiltersChanged);
+  }
+
+  toggleBtn?.addEventListener("click", (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    const hidden = tableWrap?.classList.toggle("hidden");
+    button.setAttribute("aria-expanded", String(!hidden));
+  });
 
   const observer = new MutationObserver(() => {
     if (chart) buildChart();
@@ -375,12 +396,19 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
     attributeFilter: ["data-theme"],
   });
 
-  document.addEventListener("astro:before-swap", () => {
+  function onBeforeSwap() {
     observer.disconnect();
+    window.removeEventListener("chart-card:update", onChartUpdate);
+    window.removeEventListener("chart-card:highlight", onChartHighlight);
+    window.removeEventListener("stats:filters-changed", onFiltersChanged);
     chart?.destroy();
-    if (chartName) delete (window as any).__chartCards[chartName];
-  });
+    chart = null;
+    if (chartName) delete win.__chartCards?.[chartName];
+  }
+
+  document.addEventListener("astro:before-swap", onBeforeSwap);
 
   renderTable();
   if (hasData()) buildChart();
+}
 </script>
