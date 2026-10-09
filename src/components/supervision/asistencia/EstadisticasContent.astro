@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import { getAttendanceData } from "@lib/attendance";
+import ChartCard from "@components/ui/ChartCard.astro";
 
 const todayStr = new Date().toLocaleDateString("en-CA", {
   timeZone: "America/Argentina/Buenos_Aires",
@@ -99,8 +100,13 @@ const initialData = await getAttendanceData(startDate, endDate);
       >
         Distribución de Incidencias
       </h3>
-      <div class="relative flex h-55 w-full items-center justify-center">
-        <canvas id="doughnut-chart"></canvas>
+      <div class="flex h-55 w-full items-center justify-center">
+        <ChartCard
+          variant="bare"
+          chartName="asistencia-eventualidades"
+          type="doughnut"
+          title="Eventualidades del mes"
+        />
       </div>
     </div>
     <!-- Bar Chart & Details Panel Container -->
@@ -118,8 +124,13 @@ const initialData = await getAttendanceData(startDate, endDate);
           >
             Tendencia Semanal de Puntualidad
           </h3>
-          <div class="relative h-55 w-full">
-            <canvas id="bar-chart"></canvas>
+          <div class="h-55 w-full">
+            <ChartCard
+              variant="bare"
+              chartName="asistencia-puntualidad"
+              type="bar"
+              title="Puntualidad por semana"
+            />
           </div>
         </div>
         <!-- Panel B: Eventuality Details -->
@@ -395,18 +406,39 @@ const initialData = await getAttendanceData(startDate, endDate);
       </div>
     </div>
   </div>
-
-  <!-- Chart.js CDN Link -->
-  <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 </div>
 
 <script>
   import { getCleanBase } from "@lib/baseUrl";
 
   let rawLogs: any[] = [];
-  let doughnutChartInstance: any = null;
-  let barChartInstance: any = null;
   let activeCategory: { label: string; color: string } | null = null;
+
+  let currentDoughnutLabels: string[] = [];
+
+  function dispatchChartUpdate(
+    chartName: string,
+    labels: string[],
+    series: { label: string; data: number[] }[],
+  ) {
+    const registry = (window as any).__chartCards ??= {};
+    if (registry[chartName]) {
+      registry[chartName].setData(labels, series);
+      return;
+    }
+    ((window as any).__pendingChartUpdates ??= {})[chartName] = {
+      labels,
+      series,
+    };
+  }
+
+  window.addEventListener("chart-card:segment-click", (event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail?.chartName !== "asistencia-eventualidades") return;
+    const label = currentDoughnutLabels[detail.index];
+    if (!label) return;
+    showEventualityDetail(label, detail.color, detail.index);
+  });
 
   const FIXED_EVENTUALITY_COLORS: Record<string, string> = {
     // Cumplimientos
@@ -569,58 +601,11 @@ const initialData = await getAttendanceData(startDate, endDate);
     });
     const doughnutValues = doughnutLabels.map((k) => incidenceData[k]);
 
-    const doughnutCtx = (
-      document.getElementById("doughnut-chart") as HTMLCanvasElement
-    ).getContext("2d");
-    if (doughnutChartInstance) doughnutChartInstance.destroy();
+    currentDoughnutLabels = doughnutLabels;
 
-    if (doughnutLabels.length > 0 && doughnutCtx) {
-      doughnutChartInstance = new (window as any).Chart(doughnutCtx, {
-        type: "doughnut",
-        data: {
-          labels: doughnutLabels,
-          datasets: [
-            {
-              data: doughnutValues,
-              backgroundColor: doughnutLabels.map((label) =>
-                getEventualityColor(label),
-              ),
-              borderColor: "rgba(150, 150, 150, 0.1)",
-              borderWidth: 1.5,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          onClick: (event: any, elements: any[], chart: any) => {
-            if (elements.length > 0) {
-              const elementIndex = elements[0].index;
-              const label = chart.data.labels[elementIndex];
-              const color =
-                chart.data.datasets[0].backgroundColor[elementIndex];
-              showEventualityDetail(label, color, elementIndex);
-            }
-          },
-          onHover: (event: any, chartElement: any[]) => {
-            if (event && event.native && event.native.target) {
-              (event.native.target as HTMLElement).style.cursor =
-                chartElement.length ? "pointer" : "default";
-            }
-          },
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: {
-                boxWidth: 13,
-                font: { family: "Geist", size: 12, weight: "bold" },
-                color: "gray",
-              },
-            },
-          },
-        },
-      });
-    }
+    dispatchChartUpdate("asistencia-eventualidades", doughnutLabels, [
+      { label: "Registros", data: doughnutValues },
+    ]);
 
     const weeklySchedules: Record<
       string,
@@ -652,48 +637,9 @@ const initialData = await getAttendanceData(startDate, endDate);
       w.total > 0 ? Math.round((w.punctuals / w.total) * 100) : 0,
     );
 
-    const barCtx = (
-      document.getElementById("bar-chart") as HTMLCanvasElement
-    ).getContext("2d");
-    if (barChartInstance) barChartInstance.destroy();
-
-    if (barCtx) {
-      barChartInstance = new (window as any).Chart(barCtx, {
-        type: "bar",
-        data: {
-          labels: barLabels,
-          datasets: [
-            {
-              label: "% Puntualidad",
-              data: barValues,
-              backgroundColor: "rgba(59, 130, 246, 0.7)",
-              borderColor: "rgba(59, 130, 246, 0.9)",
-              borderWidth: 1,
-              borderRadius: 6,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              grid: { color: "rgba(150, 150, 150, 0.05)" },
-              ticks: { font: { family: "Geist", size: 9 } },
-            },
-            x: {
-              grid: { display: false },
-              ticks: { font: { family: "Geist", size: 9, weight: "bold" } },
-            },
-          },
-          plugins: {
-            legend: { display: false },
-          },
-        },
-      });
-    }
+    dispatchChartUpdate("asistencia-puntualidad", barLabels, [
+      { label: "% Puntualidad", data: barValues },
+    ]);
   }
 
   function rgbaToRgbStr(rgba: string): string {
@@ -794,37 +740,15 @@ const initialData = await getAttendanceData(startDate, endDate);
     index?: number,
   ) {
     let finalColor = color;
-    if (doughnutChartInstance) {
-      if (index === undefined || index === -1) {
-        const foundIdx = doughnutChartInstance.data.labels.indexOf(label);
-        if (foundIdx !== -1) {
-          index = foundIdx;
-        }
-      }
-      if (
-        index !== undefined &&
-        index !== -1 &&
-        doughnutChartInstance.data.datasets[0].backgroundColor[index]
-      ) {
-        finalColor =
-          doughnutChartInstance.data.datasets[0].backgroundColor[index];
-      }
-      const activeBorderColors =
-        doughnutChartInstance.data.datasets[0].data.map((_: any, i: number) =>
-          i === index
-            ? finalColor
-              ? finalColor.replace("0.65", "1")
-              : "rgba(150, 150, 150, 1)"
-            : "rgba(150, 150, 150, 0.1)",
-        );
-      const activeBorderWidths =
-        doughnutChartInstance.data.datasets[0].data.map((_: any, i: number) =>
-          i === index ? 4 : 1.5,
-        );
-      doughnutChartInstance.data.datasets[0].borderColor = activeBorderColors;
-      doughnutChartInstance.data.datasets[0].borderWidth = activeBorderWidths;
-      doughnutChartInstance.update();
+    if (index === undefined || index === -1) {
+      const foundIdx = currentDoughnutLabels.indexOf(label);
+      if (foundIdx !== -1) index = foundIdx;
     }
+    window.dispatchEvent(
+      new CustomEvent("chart-card:highlight", {
+        detail: { chartName: "asistencia-eventualidades", index },
+      }),
+    );
 
     if (!finalColor) {
       finalColor = getEventualityColor(label);
@@ -1392,12 +1316,11 @@ const initialData = await getAttendanceData(startDate, endDate);
     if (wrapper) {
       wrapper.style.transform = "translateX(0)";
     }
-    if (doughnutChartInstance) {
-      doughnutChartInstance.data.datasets[0].borderColor =
-        "rgba(150, 150, 150, 0.1)";
-      doughnutChartInstance.data.datasets[0].borderWidth = 1.5;
-      doughnutChartInstance.update();
-    }
+    window.dispatchEvent(
+      new CustomEvent("chart-card:highlight", {
+        detail: { chartName: "asistencia-eventualidades", index: null },
+      }),
+    );
     const portal = document.getElementById("daisy-tooltip-portal");
     if (portal) {
       portal.style.display = "none";
@@ -1419,16 +1342,7 @@ const initialData = await getAttendanceData(startDate, endDate);
       card.classList.toggle("is-expanded");
     });
 
-  // Wait for Chart.js to load via CDN before running the data processing
-  function safeInit() {
-    if ((window as any).Chart) {
-      loadData();
-    } else {
-      setTimeout(safeInit, 50);
-    }
-  }
-
-  safeInit();
+  loadData();
 
   // Tooltip Portal Logic to fix clipping inside overflow containers
   const portal = document.createElement("div");
