@@ -1,5 +1,6 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
 import { db } from "@db/index";
 import { mesas } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -83,6 +84,30 @@ const mesaOptions = await db
     </div>
   </div>
 
+  <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
+    <ChartCard
+      type="doughnut"
+      title="Activos vs inactivos"
+      fetchUrl={endpoint}
+      chartKey="estado"
+    />
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        title="Usuarios por rol"
+        fetchUrl={endpoint}
+        chartKey="porRol"
+      />
+    </div>
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        title="Usuarios por mesa"
+        fetchUrl={endpoint}
+        chartKey="porMesa"
+      />
+    </div>
+  </div>
 </div>
 
 <script>

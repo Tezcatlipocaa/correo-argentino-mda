@@ -109,7 +109,36 @@ const chartProps = JSON.stringify({
   import { Chart } from "chart.js/auto";
   import { readChartTokens } from "@lib/chartTokens";
 
+interface ChartCardProps {
+  chartId: string;
+  chartName?: string;
+  type: "bar" | "line" | "doughnut";
+  title: string;
+  labels: string[];
+  series: { label: string; data: number[] }[];
+  fetchUrl?: string;
+  chartKey?: string;
+}
+
+interface ChartWindow extends Window {
+  __chartCards?: Record<string, { setData: typeof setData }>;
+  __pendingChartUpdates?: Record<
+    string,
+    { labels: string[]; series: { label: string; data: number[] }[] }
+  >;
+}
+
+const win = window as ChartWindow;
+
 function initChartCard(card: HTMLElement): void {
+  let props: ChartCardProps;
+  try {
+    props = JSON.parse(card.dataset.chartProps ?? "{}") as ChartCardProps;
+  } catch (error) {
+    console.warn("[ChartCard] props inválidas, card ignorada:", error);
+    return;
+  }
+
   card.dataset.chartInitialized = "";
 
   const {
@@ -121,35 +150,11 @@ function initChartCard(card: HTMLElement): void {
     series,
     fetchUrl,
     chartKey,
-  } = JSON.parse(card.dataset.chartProps) as {
-    chartId: string;
-    chartName?: string;
-    type: "bar" | "line" | "doughnut";
-    title: string;
-    labels: string[];
-    series: { label: string; data: number[] }[];
-    fetchUrl?: string;
-    chartKey?: string;
-  };
+  } = props;
 
   const style = getComputedStyle(document.documentElement);
   const readTokens = () =>
     readChartTokens((name) => style.getPropertyValue(name));
-
-  interface ChartWindow extends Window {
-    __chartCards?: Record<string, { setData: typeof setData }>;
-    __pendingChartUpdates?: Record<
-      string,
-      { labels: string[]; series: { label: string; data: number[] }[] }
-    >;
-    __statsData?: {
-      charts?: Record<
-        string,
-        { labels: string[]; series: { label: string; data: number[] }[] }
-      >;
-    };
-  }
-  const win = window as ChartWindow;
 
   const canvas =
     card.querySelector<HTMLCanvasElement>("[data-chart-canvas]");
@@ -390,9 +395,6 @@ function initChartCard(card: HTMLElement): void {
   window.addEventListener("chart-card:highlight", onChartHighlight);
 
   if (fetchUrl && chartKey) {
-    const stats = win.__statsData;
-    const initial = stats?.charts?.[chartKey];
-    if (initial) setData(initial.labels, initial.series);
     window.addEventListener("stats:filters-changed", onFiltersChanged);
   }
 
@@ -411,6 +413,7 @@ function initChartCard(card: HTMLElement): void {
   });
 
   function onBeforeSwap() {
+    document.removeEventListener("astro:before-swap", onBeforeSwap);
     observer.disconnect();
     window.removeEventListener("chart-card:update", onChartUpdate);
     window.removeEventListener("chart-card:highlight", onChartHighlight);
@@ -426,7 +429,34 @@ function initChartCard(card: HTMLElement): void {
   if (hasData()) buildChart();
 }
 
-document
-  .querySelectorAll<HTMLElement>("[data-chart-card]:not([data-chart-initialized])")
-  .forEach(initChartCard);
+const initPendingChartCards = () => {
+  document
+    .querySelectorAll<HTMLElement>("[data-chart-card]:not([data-chart-initialized])")
+    .forEach(initChartCard);
+};
+
+initPendingChartCards();
+
+// Los scripts de un server island viajan en el HTML inyectado y el browser no
+// los ejecuta, así que las cards pueden llegar después de esta corrida.
+// ClientRouter, igual: tras astro:after-swap hay cards nuevas sin init.
+document.addEventListener("astro:after-swap", initPendingChartCards);
+
+const injectedCardsObserver = new MutationObserver((records) => {
+  if (records.some((record) => record.addedNodes.length)) {
+    initPendingChartCards();
+  }
+});
+injectedCardsObserver.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+});
+
+function onModuleBeforeSwap() {
+  injectedCardsObserver.disconnect();
+  document.removeEventListener("astro:after-swap", initPendingChartCards);
+  document.removeEventListener("astro:before-swap", onModuleBeforeSwap);
+}
+
+document.addEventListener("astro:before-swap", onModuleBeforeSwap);
 </script>
