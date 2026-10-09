@@ -183,6 +183,24 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
     await expect(porRolCard.locator("td[data-label='admin']")).toHaveCount(0);
   });
 
+  test("el filtro por rol se inicializa desde la query de la URL", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios/estadisticas?rol=agent");
+    await expect(page.locator("#stats-rol")).toHaveValue("agent");
+
+    const porRolCard = page
+      .locator("[data-chart-card]")
+      .filter({ has: page.getByRole("heading", { name: "Usuarios por rol" }) });
+    await porRolCard.locator("[data-table-toggle]").click();
+    await expect(
+      porRolCard.locator("td[data-label='agent']"),
+    ).toBeVisible();
+    await expect(
+      porRolCard.locator("td[data-label='admin']"),
+    ).toHaveCount(0);
+  });
+
   test("el CTA de la gestión de usuarios lleva a las estadísticas", async ({
     page,
   }) => {

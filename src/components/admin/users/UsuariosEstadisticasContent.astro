@@ -115,21 +115,17 @@ const mesaOptions = await db
 
   const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
 
-  const rolSelect = document.getElementById(
-    "stats-rol",
-  ) as HTMLSelectElement | null;
-  const mesaSelect = document.getElementById(
-    "stats-mesa",
-  ) as HTMLSelectElement | null;
-  const activoSelect = document.getElementById(
-    "stats-activo",
-  ) as HTMLSelectElement | null;
+  const getSelect = (id: string): HTMLSelectElement | null =>
+    document.getElementById(id) as HTMLSelectElement | null;
 
   function buildQuery(): string {
     const params = new URLSearchParams();
-    if (rolSelect?.value) params.set("rol", rolSelect.value);
-    if (mesaSelect?.value) params.set("mesa", mesaSelect.value);
-    if (activoSelect?.value) params.set("activo", activoSelect.value);
+    const rol = getSelect("stats-rol")?.value;
+    const mesa = getSelect("stats-mesa")?.value;
+    const activo = getSelect("stats-activo")?.value;
+    if (rol) params.set("rol", rol);
+    if (mesa) params.set("mesa", mesa);
+    if (activo) params.set("activo", activo);
     return params.toString();
   }
 
@@ -139,46 +135,81 @@ const mesaOptions = await db
     window.history.replaceState(null, "", url);
   }
 
-  function setKpi(key: string, value: number): void {
+  function setKpi(key: string, value: string): void {
     const el = document.querySelector(`[data-kpi="${key}"] .stat-value`);
-    if (el) el.textContent = String(value);
+    if (el) el.textContent = value;
   }
+
+  function clearKpis(): void {
+    setKpi("total", "—");
+    setKpi("activos", "—");
+    setKpi("inactivos", "—");
+    setKpi("asistencia", "—");
+  }
+
+  let fetchSeq = 0;
 
   async function load(): Promise<void> {
     const query = buildQuery();
     syncUrl();
+    const seq = ++fetchSeq;
     try {
       const response = await fetch(`${endpoint}?${query}`, {
         headers: { accept: "application/json" },
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const body = await response.json();
-      setKpi("total", body.kpis.total);
-      setKpi("activos", body.kpis.activos);
-      setKpi("inactivos", body.kpis.inactivos);
-      setKpi("asistencia", body.kpis.enAsistencia);
-      window.dispatchEvent(
-        new CustomEvent("stats:filters-changed", { detail: { query } }),
-      );
+      if (seq !== fetchSeq) return;
+      setKpi("total", String(body.kpis.total));
+      setKpi("activos", String(body.kpis.activos));
+      setKpi("inactivos", String(body.kpis.inactivos));
+      setKpi("asistencia", String(body.kpis.enAsistencia));
     } catch (error) {
+      if (seq !== fetchSeq) return;
       console.error("[estadisticas usuarios] no se pudieron cargar:", error);
+      clearKpis();
+    } finally {
+      if (seq === fetchSeq) {
+        window.dispatchEvent(
+          new CustomEvent("stats:filters-changed", { detail: { query } }),
+        );
+      }
     }
   }
 
-  const initial = new URLSearchParams(window.location.search);
-  if (rolSelect && initial.get("rol")) {
-    rolSelect.value = initial.get("rol") as string;
-  }
-  if (mesaSelect && initial.get("mesa")) {
-    mesaSelect.value = initial.get("mesa") as string;
-  }
-  if (activoSelect && initial.get("activo")) {
-    activoSelect.value = initial.get("activo") as string;
+  let bound = false;
+
+  function init(): void {
+    if (bound) return;
+    const rolSelect = getSelect("stats-rol");
+    const mesaSelect = getSelect("stats-mesa");
+    const activoSelect = getSelect("stats-activo");
+    // El HTML llega por server island: si el fetch gana la carrera al script,
+    // los selects todavía no están y hay que reintentar al inyectarse.
+    if (!rolSelect) return;
+    bound = true;
+
+    const initial = new URLSearchParams(window.location.search);
+    if (initial.get("rol")) rolSelect.value = initial.get("rol") as string;
+    if (initial.get("mesa")) mesaSelect!.value = initial.get("mesa") as string;
+    if (initial.get("activo")) {
+      activoSelect!.value = initial.get("activo") as string;
+    }
+
+    rolSelect.addEventListener("change", load);
+    mesaSelect?.addEventListener("change", load);
+    activoSelect?.addEventListener("change", load);
+
+    load();
   }
 
-  rolSelect?.addEventListener("change", load);
-  mesaSelect?.addEventListener("change", load);
-  activoSelect?.addEventListener("change", load);
+  init();
 
-  load();
+  const injectedObserver = new MutationObserver((records) => {
+    if (records.some((record) => record.addedNodes.length)) init();
+  });
+  injectedObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
 </script>
