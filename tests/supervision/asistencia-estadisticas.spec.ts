@@ -3,12 +3,11 @@ import "dotenv/config";
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../../src/db/index";
-import { sessions, users } from "../../src/db/schema";
+import { sessions, users, mesas } from "../../src/db/schema";
+import { MDA_TI_HELPDESK } from "../../src/lib/helpdeskAccess";
 
 const SECRET_KEY =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
-
-const MDA_TI_HELPDESK_ID = 2509;
 
 function sign(sessionId: string): string {
   const sig = createHmac("sha256", SECRET_KEY)
@@ -25,13 +24,22 @@ test.describe("Estadísticas de asistencia sin CDN (#183)", () => {
   let cookie = "";
 
   test.beforeAll(async () => {
+    // Resolver la mesa por nombre (invgateId varía según el entorno).
+    const [mda] = await db
+      .select({ invgateId: mesas.invgateId })
+      .from(mesas)
+      .where(eq(mesas.name, MDA_TI_HELPDESK));
+    test.skip(
+      !mda,
+      `Mesa "${MDA_TI_HELPDESK}" no existe en este entorno; no se puede sembrar el usuario`,
+    );
     const [row] = await db
       .insert(users)
       .values({
         username,
         password: "x",
         role: "supervisor",
-        helpdeskId: MDA_TI_HELPDESK_ID,
+        helpdeskId: mda.invgateId,
       })
       .returning({ id: users.id });
     userId = row.id;

@@ -318,7 +318,17 @@ function initChartCard(card: HTMLElement): void {
   }
 
   function applyHighlight() {
-    if (!chart || highlightedIndex === null) return;
+    if (!chart) return;
+    if (highlightedIndex === null) {
+      const tokens = readTokens();
+      chart.data.datasets.forEach((ds) => {
+        ds.borderColor = tokens.grid;
+        ds.borderWidth =
+          type === "line" ? 2 : type === "doughnut" ? 1.5 : 1;
+      });
+      chart.update();
+      return;
+    }
     const index = highlightedIndex;
     const tokens = readTokens();
     const isDoughnut = type === "doughnut";
