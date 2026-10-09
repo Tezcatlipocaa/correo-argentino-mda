@@ -32,10 +32,12 @@ const {
     <a
       href={resolveUrl("/")}
       aria-label="Ir al dashboard"
-      class="group border-secondary-content/10 flex min-h-20 w-full items-center gap-2.5 border-b px-3 lg:justify-center lg:px-2"
+      data-tip="Volver a inicio"
+      class="group nav-shine-target hover:bg-white/10 border-secondary-content/10 tooltip tooltip-right tooltip-neutral relative flex min-h-20 w-full items-center gap-2.5 border-b px-3 transition-colors lg:justify-center lg:px-2"
     >
+      <span class="nav-shine" aria-hidden="true" />
       <picture
-        class="bg-primary text-secondary flex aspect-square size-10 items-center justify-center rounded-md p-2 transition-transform duration-200 ease-out group-hover:scale-110"
+        class="text-white relative grid size-7 shrink-0 place-items-center transition-transform duration-200 ease-out group-hover:scale-110"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -43,6 +45,7 @@ const {
           height="100"
           fill="currentColor"
           viewBox="0 0 100 100"
+          class="size-7"
         >
           <g
             id="isotipo-correo-argentino"
@@ -111,7 +114,7 @@ const {
                           isLocked
                             ? "pointer-events-none cursor-not-allowed opacity-40 grayscale select-none"
                             : isActive
-                              ? "bg-primary text-primary-content shadow-sm"
+                              ? "bg-steel-azure-750 text-secondary-content shadow-sm"
                               : "text-secondary-content/70 hover:bg-white/10 hover:text-white",
                         ]}
                       >
@@ -131,7 +134,6 @@ const {
                           name={item.icon}
                           is:inline
                           size={24}
-                         
                           class="shrink-0 opacity-80 transition duration-200 ease-out group-hover:scale-110 group-hover:opacity-100"
                         />
                         <span class="truncate lg:hidden">{item.label}</span>
@@ -165,16 +167,17 @@ const {
 
 <style>
   /*
-   * Brillo al pasar el mouse por un atajo: una capa overlay (no toca el
-   * layout ni los pseudo-elementos del tooltip de daisyUI, que usa
-   * ::before/::after del propio <a>).
+   * Brillo (glint) al pasar el mouse por un atajo o por el logo: una capa
+   * overlay que cubre todo el item/botón (no toca el layout ni los
+   * pseudo-elementos del tooltip de daisyUI, que usa ::before/::after del
+   * propio <a>).
    */
   .nav-shine {
     position: absolute;
     inset: 0;
-    z-index: 0;
+    z-index: 10;
     overflow: hidden;
-    border-radius: inherit;
+    border-radius: 0.5rem;
     pointer-events: none;
   }
 
@@ -189,7 +192,7 @@ const {
       transparent 65%
     );
     transform: translateX(-130%);
-    transition: transform 650ms ease;
+    transition: transform 1000ms ease;
   }
 
   .nav-shine-target:hover .nav-shine::after {
