@@ -1,0 +1,386 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface ChartSeries {
+  label: string;
+  data: number[];
+}
+
+interface Props {
+  type: "bar" | "line" | "doughnut";
+  title: string;
+  subtitle?: string;
+  labels?: string[];
+  series?: ChartSeries[];
+  fetchUrl?: string;
+  chartKey?: string;
+  chartName?: string;
+  variant?: "card" | "bare";
+  emptyMessage?: string;
+  class?: string;
+}
+
+const {
+  type,
+  title,
+  subtitle,
+  labels = [],
+  series = [],
+  fetchUrl,
+  chartKey,
+  chartName,
+  variant = "card",
+  emptyMessage = "Sin datos para los filtros seleccionados",
+  class: className = "",
+} = Astro.props;
+
+const chartId = `chart-${Math.random().toString(36).slice(2, 10)}`;
+const tableId = `${chartId}-table`;
+const ariaLabel = `Gráfico de ${type}: ${title}`;
+---
+
+<div
+  data-chart-card={chartId}
+  data-chart-name={chartName}
+  class:list={[
+    variant === "bare" ? "flex w-full flex-col gap-2" : "card card-border bg-base-100 border-base-200 shadow-sm",
+    className,
+  ]}
+>
+  <div
+    class:list={[
+      variant === "bare" ? "" : "card-body gap-3",
+      "flex flex-col gap-2",
+    ]}
+  >
+    {variant === "card" && (
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div class="min-w-0">
+          <h3 class="font-semibold">{title}</h3>
+          {subtitle && <p class="text-base-content/60 text-sm">{subtitle}</p>}
+        </div>
+      </div>
+    )}
+
+    <div class="relative h-55 w-full" data-chart-body>
+      <canvas
+        data-chart-canvas
+        role="img"
+        aria-label={ariaLabel}
+        class="hidden"
+      />
+      <div
+        class="text-base-content/50 absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-medium"
+        data-chart-empty
+      >
+        {emptyMessage}
+      </div>
+    </div>
+
+    <div class="flex justify-end">
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm"
+        data-table-toggle
+        aria-expanded="false"
+        aria-controls={tableId}
+      >
+        <Icon name="boxicons:table" size={16} is:inline />
+        Ver datos en tabla
+      </button>
+    </div>
+
+    <div id={tableId} class="hidden overflow-x-auto" data-chart-table />
+  </div>
+</div>
+
+<script
+  define:vars={{
+    chartId,
+    chartName,
+    type,
+    title,
+    ariaLabel,
+    labels,
+    series,
+    emptyMessage,
+    fetchUrl,
+    chartKey,
+    variant,
+  }}
+>
+  import { Chart } from "chart.js/auto";
+  import { readChartTokens } from "@lib/chartTokens";
+
+  const card = document.querySelector(`[data-chart-card="${chartId}"]`);
+  if (!card) throw new Error("ChartCard: contenedor no encontrado");
+
+  const style = getComputedStyle(document.documentElement);
+  const readTokens = () =>
+    readChartTokens((name) => style.getPropertyValue(name));
+
+  let chart: Chart | null = null;
+  let currentLabels: string[] = [...labels];
+  let currentSeries: { label: string; data: number[] }[] = series.map((s) => ({
+    ...s,
+  }));
+
+  const hasData = () =>
+    currentLabels.length > 0 &&
+    currentSeries.some((s) => s.data.some((v) => Number(v) > 0));
+
+  function ensureCanvas(): HTMLCanvasElement | null {
+    const existing = card.querySelector<HTMLCanvasElement>(
+      "[data-chart-canvas]",
+    );
+    if (existing) return existing;
+    const canvas = document.createElement("canvas");
+    canvas.dataset.chartCanvas = "";
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", ariaLabel);
+    card.querySelector("[data-chart-body]")?.appendChild(canvas);
+    return canvas;
+  }
+
+  function showEmpty() {
+    chart?.destroy();
+    chart = null;
+    const emptyEl = card.querySelector<HTMLElement>("[data-chart-empty]");
+    if (emptyEl) emptyEl.classList.remove("hidden");
+    card
+      .querySelector<HTMLCanvasElement>("[data-chart-canvas]")
+      ?.classList.add("hidden");
+  }
+
+  function buildChart() {
+    const canvas = ensureCanvas();
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
+    chart?.destroy();
+    const tokens = readTokens();
+    const isDoughnut = type === "doughnut";
+    chart = new Chart(ctx, {
+      type,
+      data: {
+        labels: currentLabels,
+        datasets: currentSeries.map((s, i) => {
+          const color = tokens.palette[i % tokens.palette.length];
+          return isDoughnut
+            ? {
+                label: s.label,
+                data: s.data,
+                backgroundColor: currentLabels.map(
+                  (_, j) => tokens.palette[j % tokens.palette.length],
+                ),
+                borderColor: tokens.grid,
+                borderWidth: 1.5,
+              }
+            : {
+                label: s.label,
+                data: s.data,
+                backgroundColor: color,
+                borderColor: color,
+                borderWidth: 1,
+                borderRadius: type === "bar" ? 6 : 0,
+              };
+        }),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: (_event, elements) => {
+          if (!elements.length) return;
+          const index = elements[0].index;
+          const background = chart?.data.datasets[0]?.backgroundColor;
+          const color = Array.isArray(background)
+            ? background[index]
+            : background;
+          card.dispatchEvent(
+            new CustomEvent("chart-card:segment-click", {
+              bubbles: true,
+              detail: {
+                chartId,
+                chartName,
+                index,
+                label: chart?.data.labels?.[index],
+                color,
+              },
+            }),
+          );
+        },
+        plugins: {
+          legend: {
+            display: currentSeries.length > 1,
+            position: "bottom",
+            labels: {
+              color: tokens.text,
+              font: { family: "Geist", size: 11 },
+            },
+          },
+        },
+        ...(isDoughnut
+          ? {}
+          : {
+              scales: {
+                x: {
+                  ticks: {
+                    color: tokens.text,
+                    font: { family: "Geist", size: 10 },
+                  },
+                  grid: { display: false },
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    color: tokens.text,
+                    font: { family: "Geist", size: 10 },
+                  },
+                  grid: { color: tokens.grid },
+                },
+              },
+            }),
+      },
+    });
+    card
+      .querySelector<HTMLCanvasElement>("[data-chart-canvas]")
+      ?.classList.remove("hidden");
+    card
+      .querySelector<HTMLElement>("[data-chart-empty]")
+      ?.classList.add("hidden");
+  }
+
+  function renderTable() {
+    const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
+    if (!tableWrap) return;
+    tableWrap.innerHTML = "";
+    const table = document.createElement("table");
+    table.className = "table table-sm";
+    const caption = document.createElement("caption");
+    caption.className = "sr-only";
+    caption.textContent = `Datos del gráfico: ${title}`;
+    table.appendChild(caption);
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const corner = document.createElement("th");
+    corner.scope = "col";
+    corner.textContent = "Serie";
+    headRow.appendChild(corner);
+    currentLabels.forEach((label) => {
+      const th = document.createElement("th");
+      th.scope = "col";
+      th.textContent = label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    currentSeries.forEach((s) => {
+      const row = document.createElement("tr");
+      const th = document.createElement("th");
+      th.scope = "row";
+      th.textContent = s.label;
+      row.appendChild(th);
+      currentLabels.forEach((label, i) => {
+        const td = document.createElement("td");
+        td.dataset.label = label;
+        td.textContent = String(s.data[i] ?? 0);
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+  }
+
+  function setData(
+    nextLabels: string[],
+    nextSeries: { label: string; data: number[] }[],
+  ) {
+    currentLabels = [...nextLabels];
+    currentSeries = nextSeries.map((s) => ({ ...s }));
+    renderTable();
+    if (hasData()) buildChart();
+    else showEmpty();
+  }
+
+  if (chartName) {
+    ((window as any).__chartCards ??= {})[chartName] = { setData };
+    const queued = ((window as any).__pendingChartUpdates ??= {})[chartName];
+    if (queued) {
+      delete (window as any).__pendingChartUpdates[chartName];
+      setData(queued.labels, queued.series);
+    }
+  }
+
+  window.addEventListener("chart-card:update", (event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail?.chartName === chartName) {
+      setData(detail.labels, detail.series);
+    }
+  });
+
+  window.addEventListener("chart-card:highlight", (event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail?.chartName !== chartName || !chart) return;
+    const ds = chart.data.datasets[0];
+    const index = detail.index as number | null;
+    const bg = ds.backgroundColor;
+    ds.borderColor = currentLabels.map((_: string, i: number) =>
+      i === index
+        ? String(Array.isArray(bg) ? bg[i] : bg ?? "rgba(150,150,150,1)")
+        : "rgba(150, 150, 150, 0.1)",
+    );
+    ds.borderWidth = currentLabels.map((_: string, i: number) =>
+      i === index ? 4 : 1.5,
+    );
+    chart.update();
+  });
+
+  if (fetchUrl && chartKey) {
+    const stats = (window as any).__statsData;
+    const initial = stats?.charts?.[chartKey];
+    if (initial) setData(initial.labels, initial.series);
+    window.addEventListener("stats:filters-changed", (event) => {
+      const query = (event as CustomEvent).detail?.query ?? "";
+      const separator = fetchUrl.includes("?") ? "&" : "?";
+      fetch(`${fetchUrl}${separator}${query}`)
+        .then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then((body) => {
+          const slice = body.charts[chartKey];
+          setData(slice.labels, slice.series);
+        })
+        .catch((error) =>
+          console.error("[ChartCard] fetch falló:", error),
+        );
+    });
+  }
+
+  card
+    .querySelector<HTMLButtonElement>("[data-table-toggle]")
+    ?.addEventListener("click", (event) => {
+      const button = event.currentTarget as HTMLButtonElement;
+      const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
+      const hidden = tableWrap?.classList.toggle("hidden");
+      button.setAttribute("aria-expanded", String(!hidden));
+    });
+
+  const observer = new MutationObserver(() => {
+    if (chart) buildChart();
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+
+  document.addEventListener("astro:before-swap", () => {
+    observer.disconnect();
+    chart?.destroy();
+    if (chartName) delete (window as any).__chartCards[chartName];
+  });
+
+  renderTable();
+  if (hasData()) buildChart();
+</script>
