@@ -4,7 +4,7 @@ import { db } from "@db/index";
 import { users, agents, mesas } from "@db/schema";
 import { jsonError, jsonResponse, sanitizeError } from "@lib/apiResponse";
 import { requireReadAccess } from "@lib/rbac-middleware";
-import { CANONICAL_ROLES, normalizeRole, type Role } from "@lib/rbac";
+import { CANONICAL_ROLES, isValidRole, normalizeRole } from "@lib/rbac";
 
 interface Serie {
   label: string;
@@ -41,15 +41,22 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
 
   if (rolParam !== null) {
-    const normalized = normalizeRole(rolParam);
-    if (!CANONICAL_ROLES.includes(normalized as Role)) {
+    const canonical = rolParam.toLowerCase().replace(/[-_\s]/g, "_");
+    if (!isValidRole(canonical)) {
       return jsonError("El parámetro 'rol' no es un rol válido", 400, "no-store");
     }
   }
 
   if (mesaParam !== null) {
+    if (!/^\d+$/.test(mesaParam)) {
+      return jsonError(
+        "El parámetro 'mesa' debe ser un entero positivo",
+        400,
+        "no-store",
+      );
+    }
     const mesaId = Number.parseInt(mesaParam, 10);
-    if (!Number.isInteger(mesaId) || mesaId <= 0) {
+    if (mesaId <= 0) {
       return jsonError(
         "El parámetro 'mesa' debe ser un entero positivo",
         400,
@@ -61,9 +68,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
   try {
     const conditions = [];
     if (rolParam !== null) {
-      conditions.push(
-        sql`lower(${users.role}) = ${normalizeRole(rolParam).toLowerCase()}`,
-      );
+      const rol = normalizeRole(rolParam);
+      conditions.push(sql`lower(${users.role}) = ${rol}`);
     }
     if (mesaParam !== null) {
       conditions.push(eq(users.helpdeskId, Number.parseInt(mesaParam, 10)));
@@ -80,10 +86,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         enAsistencia: agents.enAsistencia,
       })
       .from(users)
-      .leftJoin(
-        agents,
-        sql`lower(coalesce(${agents.username}, '')) = ${users.username}`,
-      )
+      .leftJoin(agents, eq(agents.userId, users.id))
       .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
@@ -128,6 +131,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
     return jsonResponse(payload, 200, "no-store");
   } catch (error) {
     console.error("[API usuarios/estadisticas] Error:", error);
-    return jsonError(sanitizeError(error), 500);
+    return jsonError(sanitizeError(error), 500, "no-store");
   }
 };

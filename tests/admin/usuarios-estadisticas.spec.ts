@@ -63,6 +63,10 @@ test.describe("Endpoint de estadísticas de usuarios (#183)", () => {
     expect(body.charts.porRol.series[0].data).toHaveLength(
       body.charts.porRol.labels.length,
     );
+    expect(body.charts.porMesa.labels).toContain("Sin mesa");
+    expect(body.charts.porMesa.series[0].data).toHaveLength(
+      body.charts.porMesa.labels.length,
+    );
     expect(Array.isArray(body.filtros.mesas)).toBe(true);
     expect(body.filtros.roles).toContain("admin");
   });
@@ -70,6 +74,22 @@ test.describe("Endpoint de estadísticas de usuarios (#183)", () => {
   test("rechaza parámetros inválidos con 400", async ({ request }) => {
     const response = await request.get(
       "/api/admin/usuarios/estadisticas?activo=quizas",
+      { headers: { cookie: `session_id=${cookie}` } },
+    );
+    expect(response.status()).toBe(400);
+  });
+
+  test("rechaza rol inválido con 400", async ({ request }) => {
+    const response = await request.get(
+      "/api/admin/usuarios/estadisticas?rol=nope",
+      { headers: { cookie: `session_id=${cookie}` } },
+    );
+    expect(response.status()).toBe(400);
+  });
+
+  test("rechaza mesa no numérica con 400", async ({ request }) => {
+    const response = await request.get(
+      "/api/admin/usuarios/estadisticas?mesa=abc",
       { headers: { cookie: `session_id=${cookie}` } },
     );
     expect(response.status()).toBe(400);
