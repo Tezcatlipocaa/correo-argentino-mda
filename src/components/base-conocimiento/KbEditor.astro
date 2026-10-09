@@ -268,8 +268,12 @@ const cleanBase = getCleanBase();
             return;
           }
           input.setAttribute("disabled", "");
+          input.setAttribute("aria-hidden", "true");
+          input.setAttribute("tabindex", "-1");
         });
-        const sanitizedHtml = DOMPurify.sanitize(inputGuard.innerHTML);
+        const sanitizedHtml = DOMPurify.sanitize(inputGuard.innerHTML, {
+          FORBID_TAGS: ["form", "select", "textarea", "button"],
+        });
         const wrapper = document.createElement("div");
         wrapper.innerHTML = sanitizedHtml;
         wrapper.querySelectorAll("img").forEach((image) => {
@@ -484,50 +488,43 @@ const cleanBase = getCleanBase();
     color: var(--color-base-content);
   }
 
-  .editor-preview,
-  .editor-preview-side {
+  .editor-preview {
     background-color: var(--color-base-100);
     color: var(--color-base-content);
     padding: var(--size-field);
   }
 
-  .editor-preview h1,
-  .editor-preview-side h1 {
-    font-size: 2.25rem;
+  .editor-preview h1 {
+    font-size: 1.875rem;
     font-weight: 700;
     line-height: 1.25;
   }
 
-  .editor-preview h2,
-  .editor-preview-side h2 {
+  .editor-preview h2 {
     font-size: 1.75rem;
     font-weight: 700;
     line-height: 1.25;
   }
 
-  .editor-preview h3,
-  .editor-preview-side h3 {
+  .editor-preview h3 {
     font-size: 1.375rem;
     font-weight: 700;
     line-height: 1.25;
   }
 
-  .editor-preview h4,
-  .editor-preview-side h4 {
+  .editor-preview h4 {
     font-size: 1.125rem;
     font-weight: 600;
     line-height: 1.25;
   }
 
-  .editor-preview h5,
-  .editor-preview-side h5 {
+  .editor-preview h5 {
     font-size: 1rem;
     font-weight: 600;
     line-height: 1.25;
   }
 
-  .editor-preview h6,
-  .editor-preview-side h6 {
+  .editor-preview h6 {
     color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
     font-size: 0.875rem;
     font-weight: 500;
@@ -595,22 +592,18 @@ const cleanBase = getCleanBase();
     margin: 1rem 0;
   }
 
-  .editor-preview ul:has(> li > input[type="checkbox"]),
-  .editor-preview-side ul:has(> li > input[type="checkbox"]) {
+  .editor-preview ul:has(> li > input[type="checkbox"]) {
     list-style: none;
     padding-left: 0.25rem;
   }
 
-  .editor-preview li > input[type="checkbox"],
-  .editor-preview-side li > input[type="checkbox"] {
+  .editor-preview li > input[type="checkbox"] {
     margin-right: 0.5rem;
     vertical-align: middle;
   }
 
   .editor-preview li > ul,
-  .editor-preview li > ol,
-  .editor-preview-side li > ul,
-  .editor-preview-side li > ol {
+  .editor-preview li > ol {
     margin: 0.25rem 0;
   }
 

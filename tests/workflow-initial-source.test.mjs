@@ -1,5 +1,8 @@
 import "dotenv/config";
-import { parseInitialForm } from "../src/lib/workflow/initial-form";
+import {
+  parseInitialForm,
+  parseSucursalValue,
+} from "../src/lib/workflow/initial-form";
 import {
   parseInstalacionesDescription,
   toParsedInitialForm,
@@ -97,6 +100,21 @@ check(
   "description conserva su sucursal",
   normal?.parsed?.sucursal?.name === "Aeropuerto Ezeiza",
 );
+
+// Código de sucursal no-B (colegio): "(C4932)" se reconoce igual que "(B####)".
+const sucursalC = parseSucursalValue(
+  "Metro » BA » La Plata » COLEGIO DE ABOGADOS - AGE GIROS (C4932) " +
+    "Calle 13 1234 (B1900ABC) CC_71025999",
+);
+check(
+  "sucursal con código C: nombre",
+  sucursalC.name === "Colegio de Abogados",
+);
+check(
+  "sucursal con código C: dirección",
+  sucursalC.address === "Calle 13 1234",
+);
+check("sucursal con código C: CPA", sucursalC.cpa === "1900ABC");
 
 // Sin ninguna fuente no rompe.
 check(

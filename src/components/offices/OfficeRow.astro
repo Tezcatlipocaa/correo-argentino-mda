@@ -14,6 +14,7 @@ import {
   officeTypeChipClassByType,
   defaultChipClass,
   assetOrderByType,
+  isSucursalAutomatizada,
 } from "@lib/officeHelpers";
 import { getDetailColumnLayout } from "@lib/officeLayout";
 
@@ -32,7 +33,7 @@ const isStrictAdmin = user?.role === "admin";
 
 const normalizedType =
   office.type === "SUCURSAL"
-    ? office.officeType === "AUTOMATIZADA"
+    ? isSucursalAutomatizada(office)
       ? "SUCURSAL_AUTOMATIZADA"
       : "SUCURSAL_NO_AUTOMATIZADA"
     : office.type;

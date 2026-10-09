@@ -18,7 +18,10 @@ const CSRF_MESSAGE = "Token CSRF inválido o ausente";
 const CSRF_TTL_MS = 60 * 60 * 1000;
 const SECRET_KEY =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
-const BASE_URL = "http://localhost:4321";
+
+function baseUrl(): string {
+  return test.info().project.use.baseURL ?? "http://localhost:4321";
+}
 
 let fixture: KbTestFixture;
 let mesa: KbTestMesa;
@@ -45,7 +48,7 @@ const toResult = async (response: {
   const locationHeader = response.headers().location;
   return {
     status: response.status(),
-    location: locationHeader ? new URL(locationHeader, BASE_URL) : null,
+    location: locationHeader ? new URL(locationHeader, baseUrl()) : null,
     body: await response.text(),
   };
 };

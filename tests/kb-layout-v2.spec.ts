@@ -132,7 +132,7 @@ test.describe("Base de conocimiento - layout v2", () => {
         ),
       );
     }
-    expect(sizes).toEqual([36, 28, 22, 18, 16, 14]);
+    expect(sizes).toEqual([30, 28, 22, 18, 16, 14]);
 
     const paragraphSize = parseFloat(
       await body
@@ -235,6 +235,6 @@ test.describe("Base de conocimiento - layout v2", () => {
         ),
       );
     }
-    expect(sizes).toEqual([36, 28, 22, 18, 16, 14]);
+    expect(sizes).toEqual([30, 28, 22, 18, 16, 14]);
   });
 });

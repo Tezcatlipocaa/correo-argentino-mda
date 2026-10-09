@@ -173,13 +173,13 @@ export const GET: APIRoute = async ({ locals, url }) => {
   // Type filter
   if (type !== "all") {
     if (type === "SUCURSAL_AUTOMATIZADA") {
-      conditions.push("o.type = ? AND o.officeType = ?");
-      queryParams.push("SUCURSAL", "AUTOMATIZADA");
+      conditions.push(
+        "o.type = 'SUCURSAL' AND (o.officeType = 'AUTOMATIZADA' OR lower(o.name) LIKE '%mosaic%' OR EXISTS (SELECT 1 FROM office_invgate_links l WHERE l.office_id = o.id AND lower(l.invgate_display_name) LIKE '%mosaic%'))",
+      );
     } else if (type === "SUCURSAL_NO_AUTOMATIZADA") {
       conditions.push(
-        "o.type = ? AND (o.officeType = ? OR o.officeType IS NULL)",
+        "o.type = 'SUCURSAL' AND (o.officeType IN ('NO_AUTOMATIZADA', 'NO AUTOMATIZADA') OR o.officeType IS NULL) AND lower(o.name) NOT LIKE '%mosaic%' AND NOT EXISTS (SELECT 1 FROM office_invgate_links l WHERE l.office_id = o.id AND lower(l.invgate_display_name) LIKE '%mosaic%')",
       );
-      queryParams.push("SUCURSAL", "NO AUTOMATIZADA");
     } else {
       conditions.push("o.type = ?");
       queryParams.push(type);

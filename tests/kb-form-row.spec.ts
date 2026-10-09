@@ -141,12 +141,21 @@ test.describe("Base de conocimiento - fila de metadatos", () => {
       row(page).getByRole("link", { name: "Administrar categorías" }),
     ).toHaveCount(0);
 
-    const cells = await row(page)
-      .locator("> *")
-      .evaluateAll((elements) =>
-        elements.map((el) => Math.round(el.getBoundingClientRect().height)),
-      );
-    expect(new Set(cells).size).toBe(1);
+    const titleBox = await page.locator("#kb-title").boundingBox();
+    const categoryBox = await page.locator("#kb-category").boundingBox();
+    const mesaBox = await mesaCell(page).boundingBox();
+    const statusBox = await page.locator("#kb-status").boundingBox();
+    const linkBox = await categoryLink(page).boundingBox();
+
+    expect(titleBox).not.toBeNull();
+    expect(categoryBox).not.toBeNull();
+    expect(mesaBox).not.toBeNull();
+    expect(statusBox).not.toBeNull();
+    expect(linkBox).not.toBeNull();
+
+    expect(Math.abs(titleBox!.y - categoryBox!.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(titleBox!.y - statusBox!.y)).toBeLessThanOrEqual(2);
+    expect(linkBox!.y).toBeGreaterThan(titleBox!.y);
   });
 
   test("edición: el link de categorías queda fuera de la fila y los campos alinean", async ({
@@ -162,11 +171,20 @@ test.describe("Base de conocimiento - fila de metadatos", () => {
       row(page).getByRole("link", { name: "Administrar categorías" }),
     ).toHaveCount(0);
 
-    const cells = await row(page)
-      .locator("> *")
-      .evaluateAll((elements) =>
-        elements.map((el) => Math.round(el.getBoundingClientRect().height)),
-      );
-    expect(new Set(cells).size).toBe(1);
+    const titleBox = await page.locator("#kb-title").boundingBox();
+    const categoryBox = await page.locator("#kb-category").boundingBox();
+    const mesaBox = await mesaCell(page).boundingBox();
+    const statusBox = await page.locator("#kb-status").boundingBox();
+    const linkBox = await categoryLink(page).boundingBox();
+
+    expect(titleBox).not.toBeNull();
+    expect(categoryBox).not.toBeNull();
+    expect(mesaBox).not.toBeNull();
+    expect(statusBox).not.toBeNull();
+    expect(linkBox).not.toBeNull();
+
+    expect(Math.abs(titleBox!.y - categoryBox!.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(titleBox!.y - statusBox!.y)).toBeLessThanOrEqual(2);
+    expect(linkBox!.y).toBeGreaterThan(titleBox!.y);
   });
 });

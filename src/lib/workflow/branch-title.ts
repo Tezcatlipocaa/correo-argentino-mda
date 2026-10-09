@@ -62,8 +62,29 @@ export function parseStepLabel(cleanedTitle: string): string {
   return match[1].trim();
 }
 
-/** Prefijo de padre con sucursal: "AUTSUC GLEW (B0101)" / "AUTSUC Luis Guillón (B0106)". */
-const AUTSUC_BRANCH_PREFIX_RE = /^AUTSUC\s+.+?\(B\d+\)\s*/i;
+/**
+ * Código de sucursal: primera letra A–Z EXCEPTO I y O (esas letras corresponden
+ * a otros tipos de solicitud), seguida de dígitos. Ejemplos: B0035 (sucursal),
+ * C4932 (colegio). No matchea el CPA (p.ej. B1806CTD), que lleva letras después
+ * de los dígitos.
+ */
+const BRANCH_CODE_SRC = "[A-HJ-NP-Z]\\d+";
+/** Código entre paréntesis: "(B0035)" / "(C4932)". */
+const BRANCH_CODE_PAREN_RE = new RegExp(`\\((${BRANCH_CODE_SRC})\\)`);
+/** Código sin paréntesis tras "sucursal": "sucursal B0091". */
+const BRANCH_CODE_SUCURSAL_RE = new RegExp(
+  `\\bsucursal\\s+(${BRANCH_CODE_SRC})\\b`,
+  "i",
+);
+/** Prefijo de padre con sucursal: "AUTSUC GLEW (B0101)" / "AUTSUC Colegio (C4932)". */
+const AUTSUC_BRANCH_PREFIX_RE = new RegExp(
+  `^AUTSUC\\s+.+?\\(${BRANCH_CODE_SRC}\\)\\s*`,
+  "i",
+);
+/** "AUTSUC <nombre> (<código>)" → grupo 1 = nombre, grupo 2 = código. */
+const AUTSUC_NAME_RE = new RegExp(
+  `^AUTSUC\\s+(.+?)\\s*\\((${BRANCH_CODE_SRC})\\)`,
+);
 /** Referencia embebida al ticket padre: "#84909" o "#(84909)". */
 const EMBEDDED_PARENT_REF_RE = /#\(?\d+\)?/g;
 /** Fecha en prosa embebida: "7 oct 2026", "25 sep 2026". */
@@ -135,8 +156,8 @@ export function parseAutomationBranchTitle(
   // Producción pre-AUTSUC: código sin paréntesis después de "sucursal"
   // ("Automatización de sucursal B0091").
   const branchCode =
-    /\((B\d+)\)/.exec(cleanedTitle)?.[1] ??
-    /\bsucursal\s+(B\d+)\b/i.exec(cleanedTitle)?.[1] ??
+    BRANCH_CODE_PAREN_RE.exec(cleanedTitle)?.[1] ??
+    BRANCH_CODE_SUCURSAL_RE.exec(cleanedTitle)?.[1] ??
     null;
 
   let branchName: string | null = null;
@@ -155,7 +176,7 @@ export function parseAutomationBranchTitle(
   if (branchName === null) {
     // Workflow AUTSUC: "AUTSUC Luis Guillón (B0106) ..." → nombre previo al
     // paréntesis del código ("AUTSUC " incluido).
-    const autsucMatch = /^AUTSUC\s+(.+?)\s*\((B\d+)\)/.exec(cleanedTitle);
+    const autsucMatch = AUTSUC_NAME_RE.exec(cleanedTitle);
     if (autsucMatch) {
       branchName = toTitleCase(autsucMatch[1]);
     }

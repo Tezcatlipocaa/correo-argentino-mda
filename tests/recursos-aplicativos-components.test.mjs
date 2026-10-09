@@ -88,3 +88,10 @@ assert.match(
   announcementBanner,
   /interface\s+Props\s*\{[\s\S]*?title:\s*string;[\s\S]*?description:\s*string;[\s\S]*?badgeLabel\?:\s*string;[\s\S]*?href:\s*string;[\s\S]*?ctaLabel:\s*string;[\s\S]*?tone\?:\s*BannerTone;[\s\S]*?\}/,
 );
+
+// Los aplicativos en el catalogo se ordenan por sortOrder y title
+assert.match(
+  catalogContent,
+  /\.orderBy\(\s*asc\(applications\.sortOrder\),\s*asc\(applications\.title\),?\s*\)/s,
+);
+

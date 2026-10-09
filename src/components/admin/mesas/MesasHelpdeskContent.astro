@@ -4,9 +4,14 @@ import { mesas, users } from "@db/schema";
 import { sql, isNotNull } from "drizzle-orm";
 import { getCsrfTokenForSession } from "@lib/csrf";
 import { getModulePermissions, hasPermission } from "@lib/rbac";
-import { ALLOWED_HELPDESK_NAMES, MDA_TI_HELPDESK, isSectionVisibleSync } from "@lib/helpdeskAccess";
+import {
+  ALLOWED_HELPDESK_NAMES,
+  MDA_TI_HELPDESK,
+  isSectionVisibleSync,
+} from "@lib/helpdeskAccess";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
 
 const headerGridClass = "grid-cols-[1fr_110px_110px_120px] gap-4";
 const rowGridClass =
@@ -41,7 +46,7 @@ const SECTION_LABELS: Array<{ label: string; href: string }> = [
   { label: "Control de asistencia", href: "/supervision/asistencia" },
   { label: "Terminales (cubics)", href: "/inventario-terminales/cubics" },
   { label: "Títulos", href: "/titulos" },
-  { label: "Panel de administración", href: "/admin" },
+  { label: "Administración", href: "/admin" },
 ];
 
 const user = Astro.locals.user;
@@ -62,21 +67,28 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
   class="space-y-4"
 >
   <div class="flex flex-wrap items-center gap-3">
-    {canWrite && (
-      <button type="button" id="mesas-sync" class="btn btn-primary btn-sm">
-        <span class="sync-label">Sincronizar desde InvGate</span>
-        <span class="loading loading-spinner loading-xs hidden" aria-hidden="true"></span>
-      </button>
-    )}
-    {mesaList.length > 0 && (
-      <span class="text-base-content/60 text-xs">
-        Última sincronización: {lastSyncedAt ?? "—"}
-      </span>
-    )}
+    {
+      canWrite && (
+        <button type="button" id="mesas-sync" class="btn btn-primary btn-sm">
+          <span class="sync-label">Sincronizar desde InvGate</span>
+          <span
+            class="loading loading-spinner loading-xs hidden"
+            aria-hidden="true"
+          />
+        </button>
+      )
+    }
+    {
+      mesaList.length > 0 && (
+        <span class="text-base-content/60 text-xs">
+          Última sincronización: {lastSyncedAt ?? "—"}
+        </span>
+      )
+    }
   </div>
 
   <!-- Resumen read-only: qué secciones puede abrir un usuario de cada mesa. -->
-  <div class="card bg-base-100 border-base-300 border rounded-lg">
+  <div class="card bg-base-100 border-base-300 rounded-lg border">
     <div class="card-body gap-3 p-4">
       <div>
         <h3 class="text-base-content text-sm font-semibold">
@@ -84,60 +96,133 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
         </h3>
         <p class="text-base-content/60 mt-1 text-xs">
           Resumen de solo lectura: qué secciones puede abrir una persona con rol
-          <span class="font-mono">agent</span> que ya pertenece a la mesa. Es
-          independiente del interruptor <span class="font-mono">Asignable</span>
-          de la tabla: ese controla si la mesa se puede elegir al crear o editar
-          un usuario, no qué ve ese usuario. Las reglas viven en el repositorio;
-          cambiarlas requiere deploy.
+          <span class="font-mono">agent</span> que ya pertenece a la mesa. Es independiente
+          del interruptor <span class="font-mono">Asignable</span>
+          de la tabla: ese controla si la mesa se puede elegir al crear o editar un
+          usuario, no qué ve ese usuario. Las reglas viven en el repositorio; cambiarlas
+          requiere deploy.
         </p>
       </div>
 
       <div class="flex flex-wrap items-start gap-3">
-        {ALLOWED_HELPDESK_NAMES.map((mesaName) => (
-          <div class="border-base-300 bg-base-200/40 rounded-lg border p-3 min-w-52">
-            <div class="font-mono mb-2 text-xs font-semibold">{mesaName}</div>
-            <ul class="text-base-content/70 space-y-1 text-xs">
-              {SECTION_LABELS.map((s) => {
-                // Dos capas apiladas: primero la mesa, después el rol. Se
-                // evalúan por separado para mostrar el motivo real del ✗.
-                const byMesa = isSectionVisibleSync(mesaName, "agent", s.href);
-                const byRol = hasPermission(s.href, "agent");
-                const visible = byMesa && byRol;
-                const reason = !byMesa ? "por mesa" : "por rol agent";
-                return (
-                  <li class="flex items-center gap-2">
-                    <span
-                      class:list={["badge badge-xs", visible ? "badge-success" : "badge-error"]}
-                    >
-                      {visible ? "✓" : "✗"}
-                    </span>
-                    {s.label}
-                    {!visible && (
-                      <span class="text-error/70 text-[10px] whitespace-nowrap">
-                        ({reason})
+        {
+          ALLOWED_HELPDESK_NAMES.map((mesaName) => (
+            <div class="border-base-300 bg-base-200/40 min-w-52 rounded-lg border p-3">
+              <div class="mb-2 font-mono text-xs font-semibold">{mesaName}</div>
+              <ul class="text-base-content/70 space-y-1 text-xs">
+                {SECTION_LABELS.map((s) => {
+                  // Dos capas apiladas: primero la mesa, después el rol. Se
+                  // evalúan por separado para mostrar el motivo real del ✗.
+                  const byMesa = isSectionVisibleSync(
+                    mesaName,
+                    "agent",
+                    s.href,
+                  );
+                  const byRol = hasPermission(s.href, "agent");
+                  const visible = byMesa && byRol;
+                  const reason = !byMesa ? "por mesa" : "por rol agent";
+                  return (
+                    <li class="flex items-center gap-2">
+                      <span
+                        class:list={[
+                          "badge badge-xs",
+                          visible ? "badge-success" : "badge-error",
+                        ]}
+                      >
+                        {visible ? "✓" : "✗"}
                       </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+                      {s.label}
+                      {!visible && (
+                        <span class="text-error/70 text-xxs whitespace-nowrap">
+                          ({reason})
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))
+        }
       </div>
 
-      <div class="text-base-content/50 flex flex-wrap items-center gap-3 text-xs">
+      <div
+        class="text-base-content/50 flex flex-wrap items-center gap-3 text-xs"
+      >
         <span class="flex items-center gap-1">
           <span class="badge badge-success badge-xs">✓</span> Visible
         </span>
         <span class="flex items-center gap-1">
-          <span class="badge badge-error badge-xs">✗</span> No visible, tapado
-          por la mesa
+          <span class="badge badge-error badge-xs">✗</span> No visible, tapado por
+          la mesa
         </span>
         <span class="flex items-center gap-1">
-          <span class="badge badge-error badge-xs">✗</span> No visible, tapado
-          por el rol agent
+          <span class="badge badge-error badge-xs">✗</span> No visible, tapado por
+          el rol agent
         </span>
       </div>
+    </div>
+  </div>
+
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div class="flex items-center gap-2">
+      <h2 class="text-base-content text-base font-semibold">
+        Mesas registradas
+      </h2>
+      <span
+        id="mesas-count-badge"
+        class="badge badge-neutral badge-sm font-mono"
+      >
+        {mesaList.length}
+      </span>
+    </div>
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div
+        id="mesas-filter-group"
+        class="join border-base-300 bg-base-100 rounded-lg border shadow-xs"
+        role="group"
+        aria-label="Filtrar mesas"
+      >
+        <button
+          type="button"
+          data-filter-value="all"
+          class="join-item btn btn-xs sm:btn-sm btn-active btn-neutral"
+        >
+          Todas
+        </button>
+        <button
+          type="button"
+          data-filter-value="assignable"
+          class="join-item btn btn-xs sm:btn-sm"
+        >
+          Asignables
+        </button>
+        <button
+          type="button"
+          data-filter-value="unassignable"
+          class="join-item btn btn-xs sm:btn-sm"
+        >
+          No asignables
+        </button>
+        <button
+          type="button"
+          data-filter-value="inactive"
+          class="join-item btn btn-xs sm:btn-sm"
+        >
+          Inactivas
+        </button>
+      </div>
+
+      <SearchBar
+        id="mesas-search"
+        placeholder="Buscar por nombre o ID..."
+        ariaLabel="Buscar mesas de ayuda por nombre o InvGate ID"
+        clearable={true}
+        class="w-full sm:w-64"
+      />
     </div>
   </div>
 
@@ -146,8 +231,11 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
     ariaLabel="Listado de mesas de ayuda"
     headerGridClass={headerGridClass}
     rowGridClass={rowGridClass}
-    emptyStateTitle="No hay mesas"
-    emptyStateDescription='Usá "Sincronizar desde InvGate" para traerlas.'
+    emptyStateTitle="Sin mesas que coincidan"
+    emptyStateDescription="No se encontraron mesas para la búsqueda o filtro seleccionado. Probá cambiando los términos."
+    showClearButton={true}
+    clearButtonText="Restablecer filtros"
+    clearButtonId="mesas-search-clear"
   >
     <div slot="header">
       <DataTableHeaderCell sortKey="name">Nombre</DataTableHeaderCell>
@@ -162,62 +250,76 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
       <DataTableHeaderCell>Asignable</DataTableHeaderCell>
     </div>
 
-    {mesaList.map((m) => {
-      const isPrincipal = m.name === MDA_TI_HELPDESK;
-      const toggleDisabled = !canWrite || !m.active || isPrincipal;
-      const toggleChecked = isPrincipal ? true : m.assignable;
-      const toggleTitle = isPrincipal
-        ? "Mesa principal: siempre asignable"
-        : !m.active
-          ? "Mesa inactiva en InvGate"
-          : !canWrite
-            ? "Sin permiso de escritura"
-            : "Permitir elegir esta mesa al asignar usuarios";
-      return (
-        <article
-          data-table-row
-          data-sort-name={m.name}
-          class:list={[
-            rowGridClass,
-            "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
-            !m.active && "opacity-50",
-          ]}
-        >
-          <div class="min-w-0">
-            <span class="inline-flex items-center gap-2 font-mono text-sm">
-              {m.name}
-              {!m.active && (
-                <span class="badge badge-warning badge-sm">Inactiva en InvGate</span>
-              )}
-            </span>
-          </div>
-          <div class="font-mono text-sm">{m.invgateId}</div>
-          <div>
-            <span
-              class:list={[
-                "badge badge-sm",
-                (mesaUserCount.get(m.id) ?? 0) > 0 ? "badge-success" : "badge-ghost",
-              ]}
-            >
-              {mesaUserCount.get(m.id) ?? 0}
-            </span>
-          </div>
-          <div>
-            <input
-              type="checkbox"
-              class="toggle toggle-sm toggle-secondary"
-              data-assignable-toggle
-              data-invgate-id={m.invgateId}
-              data-mesa-name={m.name}
-              checked={toggleChecked}
-              disabled={toggleDisabled}
-              title={toggleTitle}
-              aria-label={`Asignable: ${m.name}`}
-            />
-          </div>
-        </article>
-      );
-    })}
+    {
+      mesaList.map((m) => {
+        const isPrincipal = m.name === MDA_TI_HELPDESK;
+        const toggleDisabled = !canWrite || !m.active || isPrincipal;
+        const toggleChecked = isPrincipal ? true : m.assignable;
+        const toggleTitle = isPrincipal
+          ? "Mesa principal: siempre asignable"
+          : !m.active
+            ? "Mesa inactiva en InvGate"
+            : !canWrite
+              ? "Sin permiso de escritura"
+              : "Permitir elegir esta mesa al asignar usuarios";
+        return (
+          <article
+            data-table-row
+            data-sort-name={m.name}
+            data-search-text={`${m.name} ${m.invgateId}`.toLowerCase()}
+            data-filter-assignable={toggleChecked ? "true" : "false"}
+            data-filter-active={m.active ? "true" : "false"}
+            class:list={[
+              rowGridClass,
+              "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+              !m.active && "opacity-50",
+            ]}
+          >
+            <div class="min-w-0">
+              <span
+                data-highlight-target
+                class="inline-flex items-center gap-2 font-mono text-sm"
+              >
+                {m.name}
+                {!m.active && (
+                  <span class="badge badge-warning badge-sm">
+                    Inactiva en InvGate
+                  </span>
+                )}
+              </span>
+            </div>
+            <div data-highlight-target class="font-mono text-sm">
+              {m.invgateId}
+            </div>
+            <div>
+              <span
+                class:list={[
+                  "badge badge-sm",
+                  (mesaUserCount.get(m.id) ?? 0) > 0
+                    ? "badge-success"
+                    : "badge-ghost",
+                ]}
+              >
+                {mesaUserCount.get(m.id) ?? 0}
+              </span>
+            </div>
+            <div>
+              <input
+                type="checkbox"
+                class="toggle toggle-sm toggle-secondary"
+                data-assignable-toggle
+                data-invgate-id={m.invgateId}
+                data-mesa-name={m.name}
+                checked={toggleChecked}
+                disabled={toggleDisabled}
+                title={toggleTitle}
+                aria-label={`Asignable: ${m.name}`}
+              />
+            </div>
+          </article>
+        );
+      })
+    }
   </DataTable>
 </div>
 
@@ -238,7 +340,9 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
           body: JSON.stringify({ ...(body as object), csrf_token: csrfToken }),
         });
       } catch {
-        throw new Error("Error de conexión. Verifica tu red e intenta nuevamente.");
+        throw new Error(
+          "Error de conexión. Verifica tu red e intenta nuevamente.",
+        );
       }
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error ?? `Error ${res.status}`);
@@ -247,7 +351,9 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
 
     async function syncMesas(): Promise<void> {
       const out = await postJson("api/admin/permisos/mesas/sync", {});
-      const affected = Array.isArray(out?.affectedUsers) ? out.affectedUsers : [];
+      const affected = Array.isArray(out?.affectedUsers)
+        ? out.affectedUsers
+        : [];
       // El toast se pasa por query params (patron ToastContainer) para que
       // sobreviva al reload que refresca la tabla de mesas: un showToast()
       // seguido de reload jamas llega a verse.
@@ -265,26 +371,41 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
       window.location.replace(url.toString());
     }
 
-    document.getElementById("mesas-sync")?.addEventListener("click", async () => {
-      if (!confirm("¿Sincronizar mesas desde InvGate? Esta operación puede tardar varios segundos.")) {
-        return;
-      }
-      const btn = document.getElementById("mesas-sync") as HTMLButtonElement | null;
-      const label = btn?.querySelector(".sync-label") as HTMLSpanElement | null;
-      const spinner = btn?.querySelector(".loading-spinner") as HTMLSpanElement | null;
-      if (btn) btn.disabled = true;
-      label?.classList.add("hidden");
-      spinner?.classList.remove("hidden");
-      try {
-        await syncMesas();
-      } catch (err) {
-        showToast(err instanceof Error ? err.message : "No se pudo contactar InvGate", "alert-error");
-      } finally {
-        if (btn) btn.disabled = false;
-        label?.classList.remove("hidden");
-        spinner?.classList.add("hidden");
-      }
-    });
+    document
+      .getElementById("mesas-sync")
+      ?.addEventListener("click", async () => {
+        if (
+          !confirm(
+            "¿Sincronizar mesas desde InvGate? Esta operación puede tardar varios segundos.",
+          )
+        ) {
+          return;
+        }
+        const btn = document.getElementById(
+          "mesas-sync",
+        ) as HTMLButtonElement | null;
+        const label = btn?.querySelector(
+          ".sync-label",
+        ) as HTMLSpanElement | null;
+        const spinner = btn?.querySelector(
+          ".loading-spinner",
+        ) as HTMLSpanElement | null;
+        if (btn) btn.disabled = true;
+        label?.classList.add("hidden");
+        spinner?.classList.remove("hidden");
+        try {
+          await syncMesas();
+        } catch (err) {
+          showToast(
+            err instanceof Error ? err.message : "No se pudo contactar InvGate",
+            "alert-error",
+          );
+        } finally {
+          if (btn) btn.disabled = false;
+          label?.classList.remove("hidden");
+          spinner?.classList.add("hidden");
+        }
+      });
 
     // Toggle "Asignable" por mesa: actualiza sin recargar la página.
     async function toggleAssignable(input: HTMLInputElement): Promise<void> {
@@ -322,4 +443,119 @@ const lastSyncedAt = mesaList.reduce<string | null>((acc, m) => {
       void toggleAssignable(el as HTMLInputElement);
     });
   }
+</script>
+
+<script>
+  import {
+    matchesSearchQuery,
+    highlightSearchTargets,
+  } from "@lib/clientSearch";
+
+  function initMesasSearch() {
+    const searchInput =
+      document.querySelector<HTMLInputElement>("#mesas-search");
+    const filterGroup = document.querySelector<HTMLElement>(
+      "#mesas-filter-group",
+    );
+    const tableRoot = document.getElementById("mesas-table");
+    if (!searchInput || !tableRoot) return false;
+    if (searchInput.dataset.mesasSearchBound === "true") return true;
+
+    let activeFilter = "all";
+
+    function applyFilters() {
+      const query = searchInput?.value.trim() ?? "";
+      const rows = document.querySelectorAll<HTMLElement>(
+        "#mesas-table [data-table-row]",
+      );
+      const countBadge = document.getElementById("mesas-count-badge");
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const searchText = row.dataset.searchText || "";
+        const isAssignable = row.dataset.filterAssignable === "true";
+        const isActive = row.dataset.filterActive === "true";
+
+        let matchesFilter = true;
+        if (activeFilter === "assignable") {
+          matchesFilter = isAssignable;
+        } else if (activeFilter === "unassignable") {
+          matchesFilter = !isAssignable;
+        } else if (activeFilter === "inactive") {
+          matchesFilter = !isActive;
+        }
+
+        const matchesQuery = matchesSearchQuery(query, [searchText]);
+        const isVisible = matchesFilter && matchesQuery;
+
+        row.classList.toggle("hidden", !isVisible);
+        highlightSearchTargets(row, isVisible ? query : "");
+        if (isVisible) visibleCount++;
+      });
+
+      if (countBadge) countBadge.textContent = visibleCount.toString();
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+
+    const clearButton = document.getElementById("mesas-search-clear");
+    clearButton?.addEventListener("click", () => {
+      searchInput.value = "";
+      activeFilter = "all";
+      if (filterGroup) {
+        filterGroup
+          .querySelectorAll<HTMLButtonElement>("button[data-filter-value]")
+          .forEach((btn) => {
+            const isAll = btn.dataset.filterValue === "all";
+            btn.classList.toggle("btn-active", isAll);
+            btn.classList.toggle("btn-neutral", isAll);
+          });
+      }
+      applyFilters();
+      searchInput.focus();
+    });
+
+    if (filterGroup) {
+      filterGroup.addEventListener("click", (e) => {
+        const btn = (
+          e.target as HTMLElement | null
+        )?.closest<HTMLButtonElement>("button[data-filter-value]");
+        if (!btn) return;
+        const targetFilter = btn.dataset.filterValue || "all";
+        if (targetFilter === activeFilter) return;
+
+        activeFilter = targetFilter;
+        filterGroup
+          .querySelectorAll<HTMLButtonElement>("button[data-filter-value]")
+          .forEach((b) => {
+            const isActive = b === btn;
+            b.classList.toggle("btn-active", isActive);
+            b.classList.toggle("btn-neutral", isActive);
+          });
+
+        applyFilters();
+      });
+    }
+
+    searchInput.dataset.mesasSearchBound = "true";
+    return true;
+  }
+
+  function setupMesasSearchObserver() {
+    if (initMesasSearch()) return;
+
+    const observer = new MutationObserver((_, obs) => {
+      if (initMesasSearch()) {
+        obs.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupMesasSearchObserver();
+
+  document.addEventListener("astro:page-load", () => {
+    setupMesasSearchObserver();
+  });
 </script>

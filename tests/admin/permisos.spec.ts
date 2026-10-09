@@ -11,8 +11,18 @@ function sign(sessionId: string): string {
   return `${sessionId}.${sig}`;
 }
 
-const HOST = "http://localhost:4321";
-const NEW_URL = `${HOST}/admin/usuarios/mesas-de-ayuda`;
+/**
+ * Base efectiva del proyecto. `test.info()` solo funciona dentro de callbacks
+ * de test: HOST y NEW_URL se declaraban a nivel de modulo, asi que se convierten
+ * en funciones (el puerto puede variar via `PLAYWRIGHT_BASE_URL`).
+ */
+function host(): string {
+  return test.info().project.use.baseURL ?? "http://localhost:4321";
+}
+
+function newUrl(): string {
+  return `${host()}/admin/usuarios/mesas-de-ayuda`;
+}
 const COORD = "TI_GSM_Mesa de Coord";
 const MDA_TI = "TI_GSM_MDA TI";
 
@@ -65,8 +75,8 @@ test.describe("Admin Mesas de ayuda", () => {
 
   test("admin accede a la nueva ruta y ve la tabla de mesas", async ({ page, context }) => {
     await withAdmin(context);
-    await page.goto(NEW_URL);
-    await expect(page).not.toHaveURL(`${HOST}/`);
+    await page.goto(newUrl());
+    await expect(page).not.toHaveURL(`${host()}/`);
     await expect(page.locator("#global-toast-container")).not.toContainText("Acceso no autorizado");
     await expect(page.locator("#permisos-root")).toBeVisible({ timeout: 15000 });
     await expect(page.locator("#mesas-table")).toBeVisible();
@@ -74,14 +84,14 @@ test.describe("Admin Mesas de ayuda", () => {
 
   test("admin con canWrite ve el botón de sincronización", async ({ page, context }) => {
     await withAdmin(context);
-    await page.goto(NEW_URL);
+    await page.goto(newUrl());
     await expect(page.locator("#mesas-sync")).toBeVisible({ timeout: 15000 });
     await expect(page.locator("#permisos-root[data-can-write='1']")).toBeVisible();
   });
 
   test("la tabla no expone columnas 'Última sincronización' ni 'Activa'", async ({ page, context }) => {
     await withAdmin(context);
-    await page.goto(NEW_URL);
+    await page.goto(newUrl());
     await expect(page.locator("#mesas-table")).toBeVisible({ timeout: 15000 });
 
     const headers = (
@@ -99,7 +109,7 @@ test.describe("Admin Mesas de ayuda", () => {
     context,
   }) => {
     await withAdmin(context);
-    await page.goto(NEW_URL);
+    await page.goto(newUrl());
     await expect(page.locator("#mesas-table")).toBeVisible({ timeout: 15000 });
 
     await expect(page.locator("input[data-assignable-toggle]").first()).toBeVisible();
@@ -114,7 +124,7 @@ test.describe("Admin Mesas de ayuda", () => {
   }) => {
     await withAdmin(context);
     const api = context.request;
-    await page.goto(NEW_URL);
+    await page.goto(newUrl());
     await expect(page.locator("#mesas-table")).toBeVisible({ timeout: 15000 });
 
     const root = page.locator("#permisos-root");
@@ -129,7 +139,7 @@ test.describe("Admin Mesas de ayuda", () => {
     expect(coordInvgateId).toBeGreaterThan(0);
 
     const setAssignable = async (assignable: boolean) => {
-      const res = await api.post(`${HOST}/api/admin/permisos/mesas/assignable`, {
+      const res = await api.post(`${host()}/api/admin/permisos/mesas/assignable`, {
         data: { invgateId: coordInvgateId, assignable, csrf_token: csrf },
       });
       expect(res.ok()).toBeTruthy();
@@ -137,22 +147,22 @@ test.describe("Admin Mesas de ayuda", () => {
 
     try {
       await setAssignable(false);
-      await page.goto(`${HOST}/admin/usuarios`);
+      await page.goto(`${host()}/admin/usuarios`);
       await page.locator("#btn-nuevo-usuario").click();
       await expect(page.locator("#modal-create-user")).toBeVisible();
       await expect(
         page.locator(`#admin-helpdesk option`, { hasText: COORD }),
       ).toHaveCount(0);
 
-      await page.goto(NEW_URL);
+      await page.goto(newUrl());
       await expect(page.locator("#mesas-table")).toBeVisible({ timeout: 15000 });
       const csrf2 = await page.locator("#permisos-root").getAttribute("data-csrf-token");
-      const res = await api.post(`${HOST}/api/admin/permisos/mesas/assignable`, {
+      const res = await api.post(`${host()}/api/admin/permisos/mesas/assignable`, {
         data: { invgateId: coordInvgateId, assignable: true, csrf_token: csrf2 },
       });
       expect(res.ok()).toBeTruthy();
 
-      await page.goto(`${HOST}/admin/usuarios`);
+      await page.goto(`${host()}/admin/usuarios`);
       await page.locator("#btn-nuevo-usuario").click();
       await expect(page.locator("#modal-create-user")).toBeVisible();
       await expect(
@@ -160,10 +170,10 @@ test.describe("Admin Mesas de ayuda", () => {
       ).toHaveCount(1);
     } finally {
       // Restaurar el estado curado esperado, pase lo que pase.
-      const csrf3 = await page.goto(NEW_URL).then(() =>
+      const csrf3 = await page.goto(newUrl()).then(() =>
         page.locator("#permisos-root").getAttribute("data-csrf-token"),
       );
-      await api.post(`${HOST}/api/admin/permisos/mesas/assignable`, {
+      await api.post(`${host()}/api/admin/permisos/mesas/assignable`, {
         data: { invgateId: coordInvgateId, assignable: true, csrf_token: csrf3 },
       });
     }
@@ -171,7 +181,7 @@ test.describe("Admin Mesas de ayuda", () => {
 
   test("la ruta vieja /admin/permisos redirige 302 a la nueva", async ({ context }) => {
     await withAdmin(context);
-    const res = await context.request.get(`${HOST}/admin/permisos`, { maxRedirects: 0 });
+    const res = await context.request.get(`${host()}/admin/permisos`, { maxRedirects: 0 });
     expect(res.status()).toBe(302);
     expect(res.headers()["location"] ?? "").toContain("/admin/usuarios/mesas-de-ayuda");
   });
@@ -180,8 +190,8 @@ test.describe("Admin Mesas de ayuda", () => {
     await context.addCookies([
       { name: "session_id", value: agentCookie, domain: "localhost", path: "/" },
     ]);
-    await page.goto(NEW_URL);
-    await expect(page).toHaveURL(`${HOST}/`);
+    await page.goto(newUrl());
+    await expect(page).toHaveURL(`${host()}/`);
     await expect(page.locator("#global-toast-container")).toContainText("Acceso no autorizado");
   });
 });

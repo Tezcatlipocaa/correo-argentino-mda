@@ -1,24 +1,15 @@
+import "./db-preflight";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { db } from "../src/db/index";
 import { offices, auditLogs } from "../src/db/schema";
-import { buildBuildingKey, pickCanonicalAddress } from "../src/lib/officeBuildingKey";
-
-interface OfficeRow {
-  id: number;
-  code: string;
-  name: string;
-  address: string | null;
-  provinceCode: string | null;
-}
-
-interface CandidateGroup {
-  key: string;
-  canonical: string;
-  members: OfficeRow[];
-}
+import {
+  groupOfficesByBuilding,
+  type BuildingCandidateGroup,
+} from "../src/lib/officeBuildingReconcile";
 
 const normalizeSearch = (value: string): string =>
   (value ?? "")
@@ -31,14 +22,14 @@ function printHelp() {
 Reconciliación de oficinas del mismo edificio
 =============================================
 
-Uso: tsx src/scripts/reconcile-buildings.ts [opciones]
+Uso: tsx scripts/reconcile-buildings.ts [opciones]
 
 Opciones:
   --apply            Aplica los cambios (pide CONFIRMAR). Sin esto solo releva.
-  --only <key>       Solo unifica el grupo con esa clave. Repetible.
+  --only <key>       Solo unifica el grupo con esa clave. Repetible. Requiere un valor.
   --interactive      Pregunta sí/no por cada grupo (escribir CONFIRMAR).
-  --province <code>  Filtra por provincia (ej. C, BA).
-  --export <file>   Vuelca el reporte de grupos a CSV.
+  --province <code>  Filtra por provincia (ej. C, BA, o "all" para todas). Requiere un valor.
+  --export <file>    Vuelca el reporte de grupos a CSV. Requiere un valor.
   --help             Muestra esta ayuda.
 
 Ejemplos:
@@ -61,6 +52,23 @@ Notas:
 `);
 }
 
+/**
+ * Lee el valor de una bandera y corta si no existe.
+ *
+ * Sin esta guarda, `--province` al final de los argumentos dejaba
+ * `args.province === undefined`, que `args.province && ...` tomaba como "sin
+ * filtro": combinado con `--apply` reconciliaba todo el país (#161). El corte
+ * ocurre dentro de `parseArgs`.
+ */
+function readFlagValue(flag: string, value: string | undefined): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    console.error(`${flag} requiere un valor.`);
+    process.exit(1);
+  }
+  return normalized;
+}
+
 function parseArgs(argv: string[]) {
   const args = {
     apply: false,
@@ -75,9 +83,17 @@ function parseArgs(argv: string[]) {
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--interactive") args.interactive = true;
-    else if (arg === "--province") args.province = argv[++i];
-    else if (arg === "--export") args.exportCsv = argv[++i];
-    else if (arg === "--only") args.only.push(argv[++i]);
+    else if (arg === "--province") {
+      const value = readFlagValue("--province", argv[++i]);
+      // El chequeo de scope compara contra "all" en minúscula, así que ese
+      // sentinela se normaliza sin mayúsculas; el resto va a mayúsculas para
+      // coincidir con provinceCode.
+      args.province =
+        value.toLowerCase() === "all" ? "all" : value.toUpperCase();
+    } else if (arg === "--export")
+      args.exportCsv = readFlagValue("--export", argv[++i]);
+    else if (arg === "--only")
+      args.only.push(readFlagValue("--only", argv[++i]));
   }
   return args;
 }
@@ -95,14 +111,61 @@ async function promptConfirmation(message: string): Promise<boolean> {
   });
 }
 
-function backupDatabase() {
-  const dbPath = path.join(process.cwd(), "database", "mda.db");
-  const backupDir = path.join(process.cwd(), "database", "backups");
-  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+/**
+ * Snapshot WAL-safe de `database/mda.db` en `database/backups/`.
+ *
+ * Copiar el archivo NO alcanza: con `journal_mode = wal`, lo pendiente en el
+ * sidecar `-wal` no esta en `mda.db`, asi que `copyFileSync` puede producir un
+ * respaldo incompleto (#162). `handle.backup()` usa la API de backup de SQLite
+ * e incluye ese contenido. Mismo criterio que `scripts/backfill-asistencia.mts`
+ * y `scripts/normalize-participaciones.mts`.
+ */
+async function backupDatabase(): Promise<string> {
+  const dbPath = path.resolve(process.cwd(), "database", "mda.db");
+  const backupDir = path.resolve(process.cwd(), "database", "backups");
+
+  // `new Database(dbPath)` CREA el archivo si falta: sin este chequeo, una base
+  // ausente produce un snapshot de 0 bytes que el operador leeria como valido.
+  let dbStat: fs.Stats;
+  try {
+    dbStat = fs.statSync(dbPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(`La base de datos en ${dbPath} no existe`);
+    }
+    throw error;
+  }
+  if (!dbStat.isFile() || dbStat.size === 0) {
+    throw new Error(
+      `La base de datos en ${dbPath} no es un archivo con contenido`,
+    );
+  }
+
+  fs.mkdirSync(backupDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const dest = path.join(backupDir, `mda-reconcile-${stamp}.db`);
-  fs.copyFileSync(dbPath, dest);
+
+  // Handle propio y efimero: `db` (drizzle) no expone el handle crudo.
+  const handle = new Database(dbPath);
+  try {
+    await handle.backup(dest);
+  } catch (error) {
+    // `backup()` rechaza sin deshacer el destino: un snapshot a medias no
+    // puede quedar en database/backups/ fingiendo ser válido.
+    fs.rmSync(dest, { force: true });
+    throw error;
+  } finally {
+    handle.close();
+  }
+
+  const destStat = fs.statSync(dest);
+  if (!destStat.isFile() || destStat.size === 0) {
+    fs.rmSync(dest, { force: true });
+    throw new Error(`El snapshot ${dest} salio vacio y fue eliminado`);
+  }
+
   console.log(`Backup creado: ${dest}`);
+  return dest;
 }
 
 async function main() {
@@ -123,59 +186,52 @@ async function main() {
     })
     .from(offices);
 
-  const valid = (rows as OfficeRow[]).filter((r) => r.address);
-
-  const byKey = new Map<string, OfficeRow[]>();
-  for (const row of valid) {
-    const { key } = buildBuildingKey(row.address, row.provinceCode);
-    if (!key) continue;
-    const arr = byKey.get(key) ?? [];
-    arr.push(row);
-    byKey.set(key, arr);
-  }
-
-  const candidates: CandidateGroup[] = [];
-  for (const [key, members] of byKey.entries()) {
-    if (members.length < 2) continue;
-    if (args.province && !members.some((m) => m.provinceCode === args.province))
-      continue;
-
-    const normalizedVariants = new Set(
-      members.map((m) => buildBuildingKey(m.address, m.provinceCode).key),
-    );
-    const rawVariants = new Set(
-      members.map((m) => (m.address ?? "").trim().toUpperCase()),
-    );
-    if (rawVariants.size < 2) continue;
-
-    const canonical = pickCanonicalAddress(members.map((m) => m.address!));
-    candidates.push({ key, canonical, members });
-  }
-
-  candidates.sort(
-    (a, b) =>
-      b.members.length - a.members.length ||
-      a.key.localeCompare(b.key, "es-AR"),
+  const candidates = groupOfficesByBuilding(
+    rows.flatMap((r) =>
+      r.address
+        ? [
+            {
+              id: r.id,
+              code: r.code,
+              name: r.name,
+              address: r.address,
+              provinceCode: r.provinceCode,
+            },
+          ]
+        : [],
+    ),
   );
 
-  const totalOffices = candidates.reduce((n, g) => n + g.members.length, 0);
+  const scoped =
+    args.province && args.province !== "all"
+      ? candidates.filter((g) =>
+          g.members.every((m) => m.provinceCode === args.province),
+        )
+      : candidates;
+
+  const totalOffices = scoped.reduce((n, g) => n + g.members.length, 0);
   console.log(
-    `\nGrupos candidatos de mismo edificio: ${candidates.length} (${totalOffices} oficinas)\n`,
+    `\nGrupos candidatos de mismo edificio: ${scoped.length} (${totalOffices} oficinas)\n`,
   );
 
   const scope =
     args.only.length > 0
-      ? candidates.filter((c) => args.only.includes(c.key))
-      : candidates;
+      ? scoped.filter((c) => args.only.includes(c.key))
+      : scoped;
 
-  const list = args.apply ? scope : candidates;
+  // El conjunto que se imprime y se exporta es el acotado por `--only`: el
+  // relevamiento amplio ya se declaró en la línea de conteo, y mostrar 66 grupos
+  // para después confirmar 1 hacía que el operador clickeara a ciegas.
+  const list = scope;
+
+  if (args.only.length > 0) {
+    console.log(`Filtro --only: ${list.length} de ${scoped.length} grupo(s).`);
+  }
 
   for (const group of list) {
     console.log(`=== Edificio [${group.key}] → canónica: ${group.canonical}`);
     for (const m of group.members) {
-      console.log(
-        `  ${m.code} · ${m.name} · ${m.address} (${m.provinceCode ?? "?"})`,
-      );
+      console.log(`  ${m.code} · ${m.name} · ${m.address} (${m.provinceCode})`);
     }
     console.log("");
   }
@@ -191,7 +247,7 @@ async function main() {
             m.code,
             `"${m.name}"`,
             `"${m.address}"`,
-            m.provinceCode ?? "",
+            m.provinceCode,
           ].join(","),
         );
       }
@@ -214,14 +270,29 @@ async function main() {
     console.log(
       "  npm run buildings:reconcile -- --export reporte.csv     (ver columna key)",
     );
-    console.log("  npm run buildings:reconcile -- --help               (ayuda completa)");
+    console.log(
+      "  npm run buildings:reconcile -- --help               (ayuda completa)",
+    );
     return;
   }
 
   if (scope.length === 0) {
-    console.log(
-      "Ningún grupo coincide con --only. Verificá la clave exacta (incluye provincia).",
-    );
+    if (args.only.length > 0) {
+      console.log(
+        "Ningún grupo coincide con --only. La clave se imprime como PROVINCIA#NUMERO|tokens (la provincia es el prefijo), o se saca de la columna key del reporte de --export.",
+      );
+    } else if (args.province && args.province !== "all") {
+      // Un código mal escrito y un código válido sin grupos candidatos dan el
+      // mismo cero, así que no se puede aconsejar solo "revisá el código":
+      // p. ej. `--province D` tiene 105 oficinas y ningún grupo candidato.
+      console.log(
+        `Ningún grupo coincide con --province ${args.province}. Puede que el código esté mal o que esa provincia no tenga grupos candidatos; probá --province all para relevar todo.`,
+      );
+    } else {
+      console.log(
+        "No hay grupos candidatos en la base (hacen falta 2 o más oficinas del mismo edificio con la dirección escrita distinto).",
+      );
+    }
     return;
   }
 
@@ -234,7 +305,7 @@ async function main() {
     return;
   }
 
-  const toApply: CandidateGroup[] = [];
+  const toApply: BuildingCandidateGroup[] = [];
   for (const group of scope) {
     if (args.interactive) {
       const ok = await promptConfirmation(
@@ -253,39 +324,36 @@ async function main() {
     return;
   }
 
-  backupDatabase();
+  await backupDatabase();
 
   let updated = 0;
-  for (const group of toApply) {
-    const provinces = new Set(
-      group.members.map((m) => m.provinceCode ?? "").filter(Boolean),
-    );
-    if (provinces.size > 1) {
-      console.error(
-        `Grupo omitido (provincias mixtas): ${group.key} -> ${[
-          ...provinces,
-        ].join(", ")}`,
-      );
-      continue;
+  // Un solo lote atomico: sin esto, un throw a mitad de camino dejaba los
+  // grupos anteriores ya unificados y auditados (#162). El callback va
+  // sincronico: better-sqlite3 rechaza una transaccion cuyo callback devuelva
+  // una promesa, asi que las queries usan `.run()` y no `await`.
+  db.transaction((tx) => {
+    for (const group of toApply) {
+      for (const m of group.members) {
+        const searchableText = normalizeSearch(
+          [m.code, m.name, group.canonical].filter(Boolean).join(" "),
+        );
+        tx.update(offices)
+          .set({ address: group.canonical.toUpperCase(), searchableText })
+          .where(eq(offices.id, m.id))
+          .run();
+        updated++;
+      }
+      tx.insert(auditLogs)
+        .values({
+          username: "system:reconcile-buildings",
+          action: `Reconciliación de edificio: ${group.members.length} oficinas → "${group.canonical}" (${group.members
+            .map((m) => m.code)
+            .join(", ")})`,
+          timestamp: new Date().toISOString(),
+        })
+        .run();
     }
-    for (const m of group.members) {
-      const searchableText = normalizeSearch(
-        [m.code, m.name, group.canonical].filter(Boolean).join(" "),
-      );
-      await db
-        .update(offices)
-        .set({ address: group.canonical.toUpperCase(), searchableText })
-        .where(eq(offices.id, m.id));
-      updated++;
-    }
-    await db.insert(auditLogs).values({
-      username: "system:reconcile-buildings",
-      action: `Reconciliación de edificio: ${group.members.length} oficinas → "${group.canonical}" (${group.members
-        .map((m) => m.code)
-        .join(", ")})`,
-      timestamp: new Date().toISOString(),
-    });
-  }
+  });
 
   console.log(`\nListo. ${updated} oficinas actualizadas.`);
 }

@@ -120,12 +120,12 @@ export const navSections: NavSection[] = [
   },
   {
     id: "admin",
-    label: "Panel de Administración",
+    label: "Administración",
     items: [
       {
         href: "/admin",
-        label: "Panel de Administración",
-        icon: "boxicons:apps-filled",
+        label: "Administración",
+        icon: "boxicons:cog-filled",
         children: [
           {
             href: "/admin/contactos",
@@ -156,6 +156,16 @@ export const navSections: NavSection[] = [
             href: "/admin/invgate/ubicaciones",
             label: "Ubicaciones InvGate",
             icon: "boxicons:location-alt-filled",
+          },
+          {
+            href: "/admin/oficinas/edificios",
+            label: "Agrupación de oficinas",
+            icon: "boxicons:building-house-filled",
+          },
+          {
+            href: "/admin/usuarios-sin-ubicacion",
+            label: "Usuarios sin ubicación",
+            icon: "boxicons:user-x-filled",
           },
           {
             href: "/admin/automatizaciones/etapas",

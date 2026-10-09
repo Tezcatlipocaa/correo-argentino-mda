@@ -45,6 +45,10 @@ try {
     .leftJoin(
       applicationCategories,
       eq(applications.categoryId, applicationCategories.id),
+    )
+    .orderBy(
+      asc(applications.sortOrder),
+      asc(applications.title),
     );
 
   allApps = rawApps as AppRow[];

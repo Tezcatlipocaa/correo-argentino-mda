@@ -4,7 +4,10 @@ import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
-import { officeTypeLabelByType } from "@lib/officeHelpers";
+import {
+  officeTypeLabelByType,
+  isSucursalAutomatizada,
+} from "@lib/officeHelpers";
 import SectionCard from "@components/ui/SectionCard.astro";
 
 export interface OfficeFormData {
@@ -94,9 +97,9 @@ const assetTypeOptions = [
 
 let currentType = office?.type || "TELEGRAFIA";
 if (office?.type === "SUCURSAL") {
-  if (office?.officeType === "AUTOMATIZADA") {
+  if (isSucursalAutomatizada(office)) {
     currentType = "SUCURSAL_AUTOMATIZADA";
-  } else if (office?.officeType === "NO_AUTOMATIZADA") {
+  } else {
     currentType = "SUCURSAL_NO_AUTOMATIZADA";
   }
 }
