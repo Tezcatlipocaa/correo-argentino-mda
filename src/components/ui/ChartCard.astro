@@ -384,21 +384,24 @@ function initChartCard(card: HTMLElement): void {
 
   let fetchSeq = 0;
 
-  function onFiltersChanged(event: Event) {
-    const query = (event as CustomEvent).detail?.query ?? "";
+  function fetchData(query: string) {
     const separator = fetchUrl?.includes("?") ? "&" : "?";
     const seq = ++fetchSeq;
-    fetch(`${fetchUrl}${separator}${query}`)
+    return fetch(`${fetchUrl}${separator}${query}`)
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
       })
       .then((body) => {
         if (seq !== fetchSeq) return;
-        const slice = body.charts[chartKey];
+        const slice = body.charts[chartKey as string];
         setData(slice.labels, slice.series);
       })
       .catch((error) => console.error("[ChartCard] fetch falló:", error));
+  }
+
+  function onFiltersChanged(event: Event) {
+    fetchData((event as CustomEvent).detail?.query ?? "");
   }
 
   window.addEventListener("chart-card:update", onChartUpdate);
@@ -437,6 +440,13 @@ function initChartCard(card: HTMLElement): void {
 
   renderTable();
   if (hasData()) buildChart();
+
+  // Las cards en modo vivo no tienen data inicial: si el evento
+  // stats:filters-changed ya pasó (carrera de hidratación / server islands)
+  // la card quedaría vacía para siempre, así que se trae el estado actual.
+  if (fetchUrl && chartKey) {
+    fetchData(window.location.search.slice(1));
+  }
 }
 
 const initPendingChartCards = () => {
