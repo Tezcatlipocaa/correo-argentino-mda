@@ -100,7 +100,6 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
     chartName,
     type,
     title,
-    ariaLabel,
     labels,
     series,
     fetchUrl,
@@ -138,7 +137,6 @@ guard: {
 
   const canvas =
     card.querySelector<HTMLCanvasElement>("[data-chart-canvas]");
-  const bodyEl = card.querySelector<HTMLElement>("[data-chart-body]");
   const emptyEl = card.querySelector<HTMLElement>("[data-chart-empty]");
   const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
   const toggleBtn = card.querySelector<HTMLButtonElement>("[data-table-toggle]");
