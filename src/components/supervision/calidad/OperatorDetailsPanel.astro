@@ -8,7 +8,20 @@ interface Props {
 const { isAgent = false } = Astro.props;
 ---
 
-<div class:list={[isAgent ? "col-span-full" : "w-full"]}>
+<div class:list={[isAgent ? "col-span-full" : "w-full", "relative"]}>
+  <!-- Barra de Control Sticky Superior: Botón Cerrar accesible durante el scroll -->
+  <div class="sticky top-0 z-30 flex justify-end pb-2 pointer-events-none">
+    <button
+      id="btn-back-to-summary"
+      type="button"
+      class="btn btn-sm btn-circle bg-base-100/90 hover:bg-base-200 border border-base-300 text-base-content/70 hover:text-base-content shadow-sm pointer-events-auto backdrop-blur-xs transition-all"
+      title={isAgent ? "Volver" : "Cerrar ficha"}
+      aria-label={isAgent ? "Volver" : "Cerrar ficha"}
+    >
+      <Icon name={isAgent ? "boxicons:arrow-to-left" : "boxicons:x"} size={20} />
+    </button>
+  </div>
+
   <!-- Encabezado Compacto y Banda de Métricas -->
   <div class="bg-base-100 border-base-200/80 rounded-2xl border p-4 shadow-xs sm:p-5">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -37,7 +50,7 @@ const { isAgent = false } = Astro.props;
           </div>
           <div class="text-base-content/60 mt-0.5 flex items-center gap-2 text-xs font-medium">
             <span class="flex items-center gap-1">
-              <Icon name="boxicons:calendar" size={14} class="text-primary shrink-0" />
+              <Icon name="boxicons:calendar" size={14} class="text-secondary shrink-0" />
               <span id="detail-month" class="font-semibold text-base-content/80">--</span>
             </span>
           </div>
@@ -58,38 +71,36 @@ const { isAgent = false } = Astro.props;
         </div>
 
         <!-- Acciones Secundarias: Dropdown Exportar -->
-        <div class="dropdown dropdown-end">
-          <button
-            tabindex="0"
-            type="button"
-            class="btn btn-sm btn-ghost border border-base-200/80 text-xs font-bold gap-1 text-base-content/70 hover:text-base-content rounded-xl"
+        <details class="dropdown dropdown-end" id="operator-export-dropdown">
+          <summary
+            class="btn btn-sm btn-ghost border border-base-200/80 text-xs font-bold gap-1 text-base-content/70 hover:text-base-content rounded-xl list-none cursor-pointer"
             title="Opciones de exportación"
             aria-label="Opciones de exportación"
           >
             <Icon name="boxicons:archive-arrow-down" size={16} />
             <span class="hidden md:inline">Exportar</span>
             <Icon name="boxicons:chevron-down" size={14} class="opacity-60" />
-          </button>
+          </summary>
           <ul
-            tabindex="0"
             class="dropdown-content menu bg-base-100 rounded-box border-base-200 z-50 w-52 border p-1.5 shadow-lg text-xs font-medium mt-1"
           >
             <li>
               <button
-                id="btn-export-csv"
+                id="btn-export-excel-operator"
                 type="button"
                 class="flex items-center gap-2 py-2 text-base-content/80 hover:text-secondary"
-                title="Exportar Reporte de Operador a CSV"
+                title="Exportar Reporte del Operador a Excel (.xlsx)"
+                onclick="this.closest('details')?.removeAttribute('open')"
               >
-                <Icon name="boxicons:file" size={16} class="text-secondary" />
-                <span>Exportar CSV</span>
+                <Icon name="boxicons:table" size={16} class="text-secondary" />
+                <span>Exportar Excel</span>
               </button>
             </li>
             <li>
               <button
                 type="button"
                 class="flex items-center gap-2 py-2 text-base-content/80 hover:text-secondary"
-                onclick="window.print()"
+                onclick="this.closest('details')?.removeAttribute('open'); window.print()"
                 title="Imprimir o guardar reporte en PDF"
               >
                 <Icon name="boxicons:printer" size={16} class="text-secondary" />
@@ -97,18 +108,7 @@ const { isAgent = false } = Astro.props;
               </button>
             </li>
           </ul>
-        </div>
-
-        <!-- Botón Cerrar Estándar -->
-        <button
-          id="btn-back-to-summary"
-          type="button"
-          class="btn btn-sm btn-ghost btn-circle text-base-content/60 hover:text-base-content hover:bg-base-200"
-          title={isAgent ? "Volver" : "Cerrar ficha"}
-          aria-label={isAgent ? "Volver" : "Cerrar ficha"}
-        >
-          <Icon name={isAgent ? "boxicons:arrow-to-left" : "boxicons:x"} size={20} />
-        </button>
+        </details>
       </div>
     </div>
 
@@ -161,7 +161,7 @@ const { isAgent = false } = Astro.props;
       <span class="text-3xs font-bold text-base-content/40 uppercase tracking-wider">Últimos 6 meses</span>
     </div>
     <div
-      class="flex-1 flex items-center justify-center min-h-[5.5rem]"
+      class="flex-1 flex flex-col items-center justify-center min-h-[5.5rem] py-1"
       id="detail-history-chart"
     >
       {/* dynamic bars / chart */}
@@ -173,11 +173,11 @@ const { isAgent = false } = Astro.props;
     <div class="flex items-center justify-between mb-2" id="detail-insights-header">
       <h4 id="detail-insights-title" class="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-base-content/70">
         <span id="detail-insights-icon-container">
-          <Icon name="boxicons:check-circle" size={16} class="text-success" />
+          <Icon name="boxicons:check-circle" size={16} class="text-secondary" />
         </span>
         <span id="detail-insights-title-text">Resumen de Calidad</span>
       </h4>
-      <span id="detail-insights-badge" class="badge badge-xs badge-success font-bold">100% Óptimo</span>
+      <span id="detail-insights-badge" class="badge badge-xs badge-secondary font-bold">100% Óptimo</span>
     </div>
     <ul
       class="text-base-content/80 space-y-2 text-xs font-medium flex-1 flex flex-col justify-center"
@@ -192,24 +192,14 @@ const { isAgent = false } = Astro.props;
 <div class="bg-base-100 border border-base-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs mt-3.5">
   <div class="flex items-center justify-between mb-1.5">
     <h4 class="text-base-content/70 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-      <Icon name="boxicons:note" size={16} />
+      <Icon name="boxicons:note" size={16} class="text-secondary" />
       Observaciones del Mes
     </h4>
-    {!isAgent && (
-      <button
-        id="btn-edit-month-summary"
-        type="button"
-        class="btn btn-xs btn-ghost text-base-content/60 hover:text-secondary gap-1"
-        title="Editar observaciones"
-      >
-        <Icon name="boxicons:edit-alt" size={14} />
-        <span class="text-3xs font-bold uppercase tracking-wider">Editar</span>
-      </button>
-    )}
   </div>
   <p
     id="detail-month-summary"
-    class="text-base-content/80 text-xs font-medium whitespace-pre-line leading-relaxed empty:hidden"
+    class="text-base-content/80 text-xs font-medium whitespace-pre-line leading-relaxed empty:hidden cursor-pointer hover:bg-base-200/40 p-1.5 rounded-lg transition-colors border border-transparent hover:border-base-300/50"
+    title="Clic para editar observaciones"
   >
     {/* dynamic summary */}
   </p>
@@ -221,7 +211,7 @@ const { isAgent = false } = Astro.props;
         class="w-full text-left py-2 px-3 rounded-xl border border-dashed border-base-300 hover:border-secondary/50 hover:bg-base-200/50 text-xs text-base-content/50 hover:text-secondary flex items-center gap-2 transition-colors cursor-pointer group"
       >
         <Icon name="boxicons:plus-circle" size={16} class="text-base-content/40 group-hover:text-secondary" />
-        <span class="font-medium">Añadir observación del mes...</span>
+        <span id="btn-add-observation-label" class="font-medium">Añadir observación del mes...</span>
       </button>
     ) : (
       <p class="text-base-content/40 text-xs font-medium italic">
@@ -236,32 +226,17 @@ const { isAgent = false } = Astro.props;
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h4 class="text-base-content/90 flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
-        <Icon name="boxicons:chart-bar-columns" size={20} class="text-primary" />
+        <Icon name="boxicons:chart-bar-columns" size={20} class="text-secondary" />
         Evaluaciones de Calidad del Operador
       </h4>
       <p class="text-base-content/50 text-xs">Cuota mensual requerida: 4 Llamadas Wise + 4 Mails Wise + 4 Autogestiones (12 en total)</p>
     </div>
     <div class="flex items-center gap-2">
-      <span
-        id="total-samples-avg-badge"
-        class="badge badge-neutral text-xs font-bold gap-1 shadow-2xs"
-        title="Promedio General del Total de Muestras del Mes"
-      >
-        <Icon name="boxicons:calculator" size={14} />
-        <span class="opacity-70 font-normal">Promedio:</span>
-        <strong id="total-samples-avg-val">--</strong>
-      </span>
-      <span
-        id="quota-progress-badge"
-        class="badge badge-neutral text-xs font-bold shadow-2xs"
-      >
-        0 de 12 completadas
-      </span>
       {!isAgent && (
         <button
           id="btn-new-audit"
           type="button"
-          class="btn btn-sm btn-primary rounded-xl text-xs font-bold uppercase gap-1.5 shadow-2xs"
+          class="btn btn-sm btn-secondary rounded-xl text-xs font-bold uppercase gap-1.5 shadow-2xs"
         >
           <Icon name="boxicons:plus" size={16} />
           Nueva Auditoría

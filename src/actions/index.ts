@@ -213,9 +213,12 @@ export const server = {
         channelType: z
           .enum(["wise_call", "wise_email", "invgate_ticket"])
           .default("wise_call"),
-        callId: z.string().default(""), // ID / Case Number
-        ticketId: z.string().default(""), // Ticket ID
-        duration: z.string().default("00:00"),
+        // Astro parsea los campos vacíos de un FormData como `null`, y `.default()`
+        // solo cubre `undefined`: sin el preprocess, dejar el ticket en blanco
+        // devolvía 400 y bloqueaba el guardado.
+        callId: z.preprocess((v) => (v == null ? "" : String(v)), z.string()).default(""),
+        ticketId: z.preprocess((v) => (v == null ? "" : String(v)), z.string()).default(""),
+        duration: z.preprocess((v) => (v == null ? "" : String(v)), z.string()).default("00:00"),
         date: z.string().min(1, "La fecha es requerida"),
         month: z.string().min(1, "El período es requerido"),
         notes: z

@@ -95,9 +95,12 @@ test("Calidad Multi-Canal E2E Flow", async ({ page }) => {
   await page.locator("#form-date").fill("2026-10-01");
   await page.locator("#form-notes").fill("Auditoría de prueba automatizada E2E");
 
-  // Uncheck one parameter to verify scoring deduction
-  const firstAgCheckbox = page.locator("#channel-checklist-invgate_ticket .audit-checkbox").first();
-  await firstAgCheckbox.uncheck();
+  // Marcar un criterio como No cumple para verificar la deducción.
+  // El checkbox es `sr-only` (espejo para el backend): la acción real es el
+  // control de estado de la fila.
+  const firstAgItem = page.locator("#channel-checklist-invgate_ticket .checklist-item").first();
+  await firstAgItem.locator('.state-btn[data-state="nocumple"]').click();
+  await expect(firstAgItem.locator("input.audit-checkbox")).not.toBeChecked();
 
   // Score should be less than 100%
   const totalPreview = page.locator("#preview-total");

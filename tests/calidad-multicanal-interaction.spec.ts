@@ -185,19 +185,17 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const tvTitlePre = page.locator("#tv-title");
     await expect(tvTitlePre).toHaveText("-");
     await expect(page.locator("#tv-category")).toHaveText("-");
-    await expect(page.locator("#ticket-viewer-badge")).toHaveText("Sin ticket cargado");
+    await expect(page.locator("#ticket-context-badge")).toHaveText("Sin ticket cargado");
 
     // Pero el reproductor de audio independiente sí debe mostrarse
     const audioContainer = page.locator("#tv-audio-container");
     await expect(audioContainer).toBeVisible();
     await expect(page.locator("#tv-audio-download")).toHaveAttribute("href", /api\/calidad\/download-audio.*call-534787\.mp3/);
 
-    // 4. Verificar acordeón del visor de ticket en vivo (InvGate)
-    const tvHeader = page.locator("#ticket-viewer-header");
+    // 4. El visor de ticket arranca colapsado y se despliega al cargar el ticket
     const tvContent = page.locator("#ticket-viewer-content");
     await expect(tvContent).toHaveClass(/hidden/);
-    await tvHeader.click();
-    await expect(tvContent).not.toHaveClass(/hidden/);
+    await expect(page.locator("#ticket-empty-state")).toBeVisible();
 
     // 5. Verificar que Falla Crítica de Proceso no existe en el modal
     await expect(page.locator("#form-is-critical-failure")).not.toBeAttached();
@@ -248,7 +246,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
 
     // 7. Verificar auto-evaluación asistida del parámetro Título y Origen (Ambos válidos)
     const tvTitleBadge = page.locator("#tv-title-match-badge");
-    await expect(tvTitleBadge).toContainText("Título Homologado");
+    await expect(tvTitleBadge).toContainText("Título homologado");
 
     const titleCheckbox = page.locator('input[name="call_ticket_titulo"]');
     await expect(titleCheckbox).toBeChecked();
@@ -269,7 +267,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await btnFetchInvgate.click();
 
     // Verificar que badge dice "No Homologado" sin símbolo ⚠
-    await expect(tvTitleBadge).toHaveText("No Homologado");
+    await expect(tvTitleBadge).toHaveText("Título no homologado");
     await expect(tvTitleBadge).not.toContainText("⚠");
 
     // Verificar que el checkbox de título se desmarca y aparece el badge de "Desactivado por regla"
@@ -282,31 +280,30 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     await expect(sourceRuleBadge).not.toHaveClass(/hidden/);
     await expect(sourceRuleBadge).toHaveText("Origen incorrecto");
 
-    // 9. Verificar que si el usuario activa manualmente el checkbox, el badge de regla se oculta
-    await titleCheckbox.check();
+    // 9. Si el supervisor revierte manualmente el estado, el badge de regla se oculta.
+    // El checkbox es `sr-only`: se acciona por el control de estado de la fila.
+    const titleItem = titleCheckbox.locator("xpath=ancestor::div[contains(@class,'checklist-item')]");
+    await titleItem.locator('.state-btn[data-state="cumple"]').click();
     await expect(titleCheckbox).toBeChecked();
     await expect(titleRuleBadge).toHaveClass(/hidden/);
 
-    await sourceCheckbox.check();
+    const sourceItem = sourceCheckbox.locator("xpath=ancestor::div[contains(@class,'checklist-item')]");
+    await sourceItem.locator('.state-btn[data-state="cumple"]').click();
     await expect(sourceCheckbox).toBeChecked();
     await expect(sourceRuleBadge).toHaveClass(/hidden/);
 
     // 10. Verificar que el número de ticket se asignó en el formulario
     await expect(page.locator("#form-ticket-id")).toHaveValue("88442");
 
-    // 10b. El badge no debe desbordar su caja ni perder el shrink-0 al
-    // cambiar de estado (regresión: el JS pisaba el className completo)
-    const viewerBadge = page.locator("#ticket-viewer-badge");
-    await expect(viewerBadge).toContainText("88442");
-    await expect(viewerBadge).toHaveClass(/shrink-0/);
-    await expect(viewerBadge).toHaveClass(/badge-neutral/);
-    await expect(viewerBadge).not.toHaveClass(/badge-primary/);
+    // 10b. El badge no debe desbordar su caja al cambiar de estado (regresión: el JS
+    // pisaba el className completo y el texto se salía del badge)
+    const viewerBadge = page.locator("#ticket-context-badge");
+    await expect(viewerBadge).toContainText("Ticket cargado");
+    await expect(viewerBadge).not.toHaveClass(/truncate.*hidden/);
     const badgeBox = await viewerBadge.boundingBox();
     if (badgeBox) {
       // El texto debe caber dentro del ancho del badge
-      const textWidth = await viewerBadge.evaluate(
-        (el) => el.scrollWidth,
-      );
+      const textWidth = await viewerBadge.evaluate((el) => el.scrollWidth);
       expect(textWidth).toBeLessThanOrEqual(Math.ceil(badgeBox.width) + 1);
     }
 
@@ -374,8 +371,12 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
 
     // Desmarcar un ítem de sección 1: Cumplimiento de procedimiento (-10%)
     // Base 45: 35/45 = 78% en S1, S2 sigue aportando 55 pts -> Total 90%
-    const procCheckbox = page.locator('input[name="call_procedimiento"]');
-    await procCheckbox.uncheck();
+    const procItem = page
+      .locator("#channel-checklist-wise_call .checklist-item")
+      .filter({ has: page.locator('input[name="call_procedimiento"]') });
+    await procItem.locator('.state-btn[data-state="nocumple"]').click();
+    await expect(procItem.locator(".criteria-status-badge")).toHaveText("No cumple");
+    await expect(procItem.locator('input[name="call_procedimiento"]')).not.toBeChecked();
     await expect(previewS1).toHaveText("78%");
     await expect(previewS2).toHaveText("100%");
     await expect(previewTotal).toHaveText("90%");
@@ -464,14 +465,14 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     }
   });
 
-  test("Debe presentar el modal en 2 columnas con notas bajo demanda y score N/A para ticket excluido", async ({ page }) => {
+  test("Debe presentar la pantalla en 2 columnas con notas bajo demanda y score N/A para ticket excluido", async ({ page }) => {
     await page.goto("/supervision/calidad-operadores/nueva");
     await expect(page.locator("h1")).toContainText(/Nueva Auditoría/i);
 
     // 1. Layout de 2 columnas
-    const gridContainer = page.locator("#modal-grid-container");
-    const colContext = page.locator("#modal-grid-context");
-    const colEvaluation = page.locator("#modal-grid-evaluation");
+    const gridContainer = page.locator("#audit-workspace-grid");
+    const colContext = page.locator("#audit-col-left");
+    const colEvaluation = page.locator("#audit-col-right");
     await expect(gridContainer).toBeVisible();
     await expect(colContext).toBeVisible();
     await expect(colEvaluation).toBeVisible();
@@ -484,20 +485,25 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     // Por defecto debe estar oculto
     await expect(obsWrapper).toHaveClass(/hidden/);
 
-    // Al desmarcar el check, el campo de observación debe revelarse automáticamente
-    const checkbox = firstCheckItem.locator('input[type="checkbox"]');
+    // El checkbox es un espejo oculto para el backend (`sr-only`): la acción real
+    // es el control de estado, y el que revela la nota es su botón Observación.
+    const checkbox = firstCheckItem.locator('input.audit-checkbox');
     await expect(checkbox).toBeChecked();
-    await checkbox.uncheck();
-    await expect(obsWrapper).not.toHaveClass(/hidden/);
+    await firstCheckItem.locator('.state-btn[data-state="nocumple"]').click();
+    await expect(firstCheckItem).toHaveAttribute('data-criterion-state', 'nocumple');
+    await expect(checkbox).not.toBeChecked();
 
-    // Al volver a marcarlo, se oculta o permite abrirse con el botón "+ Observación"
-    await checkbox.check();
+    // Volver a Cumple reactiva el espejo.
+    await firstCheckItem.locator('.state-btn[data-state="cumple"]').click();
+    await expect(checkbox).toBeChecked();
     await expect(obsWrapper).toHaveClass(/hidden/);
 
     const toggleObsBtn = firstCheckItem.locator('[data-action="toggle-obs"]');
     await expect(toggleObsBtn).toBeVisible();
+    await expect(toggleObsBtn).toHaveAttribute('aria-expanded', 'false');
     await toggleObsBtn.click();
     await expect(obsWrapper).not.toHaveClass(/hidden/);
+    await expect(toggleObsBtn).toHaveAttribute('aria-expanded', 'true');
 
     // 3. Modo Reclamo / Novedad otorga 100% automático
     const btnReclamo = page.locator('.ticket-mode-btn[data-mode="reclamo"]');

@@ -152,6 +152,8 @@ export interface ChannelAveragesResult {
   wiseEmailsCount: number;
   invgateTicketAvg: number | null;
   invgateTicketCount: number;
+  invgateAgAvg: number | null;
+  invgateAgCount: number;
   totalCount: number;
   overallAvg: number | null;
 }
@@ -197,6 +199,8 @@ export function calculateChannelAverages(
     wiseEmailsCount: emails.length,
     invgateTicketAvg,
     invgateTicketCount: tickets.length,
+    invgateAgAvg: invgateTicketAvg,
+    invgateAgCount: tickets.length,
     totalCount: audits.length,
     overallAvg,
   };

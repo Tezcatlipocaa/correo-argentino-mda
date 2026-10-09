@@ -1,5 +1,5 @@
 ---
-import FormShell from "@components/ui/FormShell.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
 import NewAuditForm from "@components/supervision/calidad/NewAuditForm.astro";
 import { db } from "@db/index";
 import { agents, users, auditParameters } from "@db/schema";
@@ -55,17 +55,13 @@ const activeParameters = allParameters.filter(
 const approvedTitles = await getApprovedTitlesList();
 ---
 
-<FormShell
-  title="Nueva Auditoría de Calidad"
-  subtitle="Evaluación asistida de calidad para llamadas Wise CX, correos o autogestión InvGate."
-  backHref={`${cleanBase}supervision/calidad-operadores${selectedMonth ? `?month=${selectedMonth}` : ""}`}
-  cancelLabel="Cancelar"
-  saveLabel="Guardar auditoría"
-  saveIcon="boxicons:save-filled"
-  saveColor="btn-primary"
-  formId="audit-form"
-  containerWidth="xxl"
->
+<BaseLayout title="Nueva Auditoría de Calidad">
+  <a
+    href="#audit-form"
+    class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:btn focus:btn-primary focus:btn-sm focus:shadow-md"
+  >
+    Saltar al formulario
+  </a>
   <NewAuditForm
     allAgents={allAgents}
     allParameters={activeParameters}
@@ -73,4 +69,4 @@ const approvedTitles = await getApprovedTitlesList();
     preselectedAgentId={preselectedAgentId}
     approvedTitles={approvedTitles}
   />
-</FormShell>
+</BaseLayout>

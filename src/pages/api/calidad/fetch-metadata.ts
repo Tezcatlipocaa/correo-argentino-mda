@@ -15,6 +15,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
     const sourceParam = url.searchParams.get("source")?.trim();
     const source = sourceParam === "wise" || sourceParam === "invgate" ? sourceParam : undefined;
     const agentIdParam = url.searchParams.get("agentId")?.trim();
+    const rawParam = url.searchParams.get("raw")?.trim();
+    const includeRaw = rawParam === "1" || rawParam === "true";
 
     if (!channel || !CHANNEL_TYPES.includes(channel)) {
       return jsonError("Canal inválido o no especificado", 400);
@@ -68,6 +70,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
       targetOperatorId,
       targetOperatorUsername,
       targetOperatorName,
+      includeRaw,
     });
 
     if (!result.ok) {

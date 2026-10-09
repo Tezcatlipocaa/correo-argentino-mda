@@ -26,6 +26,7 @@ export interface ExtractedQualityMetadata {
   recordingId?: string;
   detectedChannel?: ChannelType;
   rawDetails?: Record<string, any>;
+  raw?: any;
 }
 
 export function discernWiseChannel(sourceChannel?: string | null): ChannelType {
@@ -85,6 +86,7 @@ export interface InvgateResponseTimeOptions {
   targetOperatorId?: number | null;
   targetOperatorUsername?: string | null;
   targetOperatorName?: string | null;
+  includeRaw?: boolean;
 }
 
 export interface InvgateResponseTimeResult {
@@ -665,6 +667,16 @@ export async function fetchInvgateTicketMetadata(
     }
     const incident = res.data;
 
+    // Camino corto del modal de detalle: el visor solo muestra el `incident`
+    // crudo, así que se evitan los ~7 requests de enriquecimiento (users.by,
+    // user?id x3, categories, helpdesksandlevels, helpdesks, attributes.source)
+    // que existen únicamente para armar los campos normalizados.
+    if (options?.includeRaw) {
+      // caseNumber/operator/date quedan vacíos: el cliente de este camino solo
+      // lee `raw`. Los campos normalizados se piden sin `includeRaw`.
+      return { ok: true, data: { caseNumber: cleanId, operator: "", date: "", raw: incident } };
+    }
+
     let targetOpId = options?.targetOperatorId ?? null;
     if (targetOpId === null && options?.targetOperatorUsername) {
       try {
@@ -966,7 +978,9 @@ export async function fetchQualityCaseMetadata(
 
       if (realChannel === "wise_email") {
         let operatorName = "";
-        if (caseData.user_id) {
+        // Con includeRaw el visor solo muestra el payload crudo: el /users/{id}
+        // existe únicamente para completar `operatorName`.
+        if (caseData.user_id && !options?.includeRaw) {
           const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
           if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
             operatorName = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
@@ -975,17 +989,18 @@ export async function fetchQualityCaseMetadata(
 
         // Obtener actividades para detectar la primera respuesta del operador (user_reply)
         let firstReplyAt: string | undefined;
+        let emailActivities: any[] = [];
         try {
           const actRes = await wiseCxGet<any>(
             `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,created_at`,
           );
           if (actRes.ok) {
-            const acts = Array.isArray(actRes.data)
+            emailActivities = Array.isArray(actRes.data)
               ? actRes.data
               : Array.isArray(actRes.data?.data)
                 ? actRes.data.data
                 : [];
-            const replyAct = acts.find((a: any) => a.type === "user_reply" && a.created_at);
+            const replyAct = emailActivities.find((a: any) => a.type === "user_reply" && a.created_at);
             if (replyAct?.created_at) {
               firstReplyAt = replyAct.created_at;
             }
@@ -995,6 +1010,9 @@ export async function fetchQualityCaseMetadata(
         }
 
         const metadata = parseWiseEmailMetadata(caseData, operatorName, firstReplyAt);
+        if (options?.includeRaw) {
+          metadata.raw = { case: caseData, activities: emailActivities };
+        }
         return { ok: true, data: metadata };
       } else {
         // Canal de llamada (wise_call)
@@ -1011,11 +1029,17 @@ export async function fetchQualityCaseMetadata(
 
         const metadata = parseWiseCallMetadata(caseData, activities);
 
-        if (!metadata.operator && caseData.user_id) {
+        // Con includeRaw el visor solo muestra el payload crudo: el /users/{id}
+        // existe únicamente para completar `operator`.
+        if (!metadata.operator && caseData.user_id && !options?.includeRaw) {
           const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
           if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
             metadata.operator = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
           }
+        }
+
+        if (options?.includeRaw) {
+          metadata.raw = { case: caseData, activities };
         }
 
         return { ok: true, data: metadata };
