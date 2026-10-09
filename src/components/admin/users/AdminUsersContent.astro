@@ -111,6 +111,15 @@ const isSupervisorRole = (role: string): boolean =>
     description="Alta de operadores, asignación de roles y revisión de accesos activos en el portal."
   />
 
+  <a
+    href={`${getCleanBase()}admin/usuarios/estadisticas`}
+    class="btn btn-outline btn-primary btn-sm mb-4 w-fit gap-2"
+    data-cta-estadisticas
+  >
+    <Icon name="boxicons:pie-chart-alt-filled" size={24} />
+    Estadísticas
+  </a>
+
   {
     usersConMesaInactiva.length > 0 && (
       <div role="alert" class="alert alert-warning">
