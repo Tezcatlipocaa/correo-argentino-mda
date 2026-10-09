@@ -37,11 +37,22 @@ const {
 const chartId = `chart-${Math.random().toString(36).slice(2, 10)}`;
 const tableId = `${chartId}-table`;
 const ariaLabel = `Gráfico de ${type}: ${title}`;
+const chartProps = JSON.stringify({
+  chartId,
+  chartName,
+  type,
+  title,
+  labels,
+  series,
+  fetchUrl,
+  chartKey,
+});
 ---
 
 <div
   data-chart-card={chartId}
   data-chart-name={chartName}
+  data-chart-props={chartProps}
   class:list={[
     variant === "bare" ? "flex w-full flex-col gap-2" : "card card-border bg-base-100 border-base-200 shadow-sm",
     className,
@@ -94,8 +105,14 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
   </div>
 </div>
 
-<script
-  define:vars={{
+<script>
+  import { Chart } from "chart.js/auto";
+  import { readChartTokens } from "@lib/chartTokens";
+
+function initChartCard(card: HTMLElement): void {
+  card.dataset.chartInitialized = "";
+
+  const {
     chartId,
     chartName,
     type,
@@ -104,17 +121,16 @@ const ariaLabel = `Gráfico de ${type}: ${title}`;
     series,
     fetchUrl,
     chartKey,
-  }}
->
-  import { Chart } from "chart.js/auto";
-  import { readChartTokens } from "@lib/chartTokens";
-
-guard: {
-  const card = document.querySelector(`[data-chart-card="${chartId}"]`);
-  if (!card) {
-    console.warn("ChartCard: contenedor no encontrado");
-    break guard;
-  }
+  } = JSON.parse(card.dataset.chartProps) as {
+    chartId: string;
+    chartName?: string;
+    type: "bar" | "line" | "doughnut";
+    title: string;
+    labels: string[];
+    series: { label: string; data: number[] }[];
+    fetchUrl?: string;
+    chartKey?: string;
+  };
 
   const style = getComputedStyle(document.documentElement);
   const readTokens = () =>
@@ -409,4 +425,8 @@ guard: {
   renderTable();
   if (hasData()) buildChart();
 }
+
+document
+  .querySelectorAll<HTMLElement>("[data-chart-card]:not([data-chart-initialized])")
+  .forEach(initChartCard);
 </script>

@@ -95,3 +95,102 @@ test.describe("Endpoint de estadísticas de usuarios (#183)", () => {
     expect(response.status()).toBe(400);
   });
 });
+
+test.describe("Vista de estadísticas de usuarios (#183)", () => {
+  const stamp = Date.now();
+  const sessionId = `sess_stats_view_${stamp}`;
+  const username = `admin_stats_view_${stamp}`;
+  let adminId = 0;
+  let cookie = "";
+
+  test.beforeAll(async () => {
+    const [row] = await db
+      .insert(users)
+      .values({ username, password: "x", role: "admin" })
+      .returning({ id: users.id });
+    adminId = row.id;
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId: adminId,
+      expiresAt: Date.now() + 86_400_000,
+    });
+    cookie = sign(sessionId);
+  });
+
+  test.afterAll(async () => {
+    await db.delete(sessions).where(eq(sessions.userId, adminId));
+    await db.delete(users).where(eq(users.id, adminId));
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: cookie, domain: "localhost", path: "/" },
+    ]);
+  });
+
+  test("renderiza KPIs, gráficos y no pide Chart.js por CDN", async ({
+    page,
+  }) => {
+    const externalRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("cdn.jsdelivr.net")) {
+        externalRequests.push(request.url());
+      }
+    });
+
+    await page.goto("/admin/usuarios/estadisticas");
+    await expect(
+      page.getByRole("heading", { name: "Estadísticas de usuarios" }),
+    ).toBeVisible();
+
+    await expect(page.locator('[data-chart-card] canvas')).toHaveCount(3);
+    await expect(page.locator('[data-chart-empty]').first()).toBeHidden();
+
+    await expect(
+      page.locator('[data-kpi="total"] .stat-value'),
+    ).not.toHaveText("…");
+    await expect(
+      page.locator('[data-kpi="activos"] .stat-value'),
+    ).not.toHaveText("…");
+
+    const estadoCard = page
+      .locator("[data-chart-card]")
+      .filter({ has: page.getByRole("heading", { name: "Activos vs inactivos" }) });
+    await estadoCard.locator("[data-table-toggle]").click();
+    await expect(
+      estadoCard.locator('td[data-label="Activos"]'),
+    ).not.toHaveText("0");
+
+    expect(externalRequests).toEqual([]);
+  });
+
+  test("el filtro por rol actualiza la URL y los datos del gráfico", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios/estadisticas");
+    const porRolCard = page
+      .locator("[data-chart-card]")
+      .filter({ has: page.getByRole("heading", { name: "Usuarios por rol" }) });
+    await porRolCard.locator("[data-table-toggle]").click();
+    await expect(
+      porRolCard.locator('td[data-label="admin"]'),
+    ).toBeVisible();
+
+    await page.selectOption("#stats-rol", "agent");
+    await expect(page).toHaveURL(/rol=agent/);
+
+    await expect(porRolCard.locator("td[data-label='agent']")).toBeVisible();
+    await expect(porRolCard.locator("td[data-label='admin']")).toHaveCount(0);
+  });
+
+  test("el CTA de la gestión de usuarios lleva a las estadísticas", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios");
+    await page.locator("[data-cta-estadisticas]").click();
+    await expect(page).toHaveURL(/\/admin\/usuarios\/estadisticas$/);
+    await expect(
+      page.getByRole("heading", { name: "Estadísticas de usuarios" }),
+    ).toBeVisible();
+  });
+});

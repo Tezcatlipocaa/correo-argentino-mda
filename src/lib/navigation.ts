@@ -141,6 +141,13 @@ export const navSections: NavSection[] = [
             href: "/admin/usuarios",
             label: "Usuarios",
             icon: "boxicons:group-filled",
+            children: [
+              {
+                href: "/admin/usuarios/estadisticas",
+                label: "Estadísticas",
+                icon: "boxicons:pie-chart-alt-filled",
+              },
+            ],
           },
           {
             href: "/admin/auditoria",

@@ -1,0 +1,159 @@
+---
+import StatsCard from "@components/ui/StatsCard.astro";
+import { db } from "@db/index";
+import { mesas } from "@db/schema";
+import { eq } from "drizzle-orm";
+import { CANONICAL_ROLES } from "@lib/rbac";
+import { getCleanBase } from "@lib/baseUrl";
+
+const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+
+const mesaOptions = await db
+  .select({ id: mesas.invgateId, name: mesas.name })
+  .from(mesas)
+  .where(eq(mesas.active, true))
+  .orderBy(mesas.name);
+---
+
+<div class="flex w-full flex-col gap-6 pb-24">
+  <div
+    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-end"
+  >
+    <label class="form-control w-full md:w-56">
+      <span class="label-text mb-1 text-sm font-bold">Rol</span>
+      <select id="stats-rol" class="select select-bordered select-sm">
+        <option value="">Todos</option>
+        {CANONICAL_ROLES.map((rol) => <option value={rol}>{rol}</option>)}
+      </select>
+    </label>
+    <label class="form-control w-full md:w-64">
+      <span class="label-text mb-1 text-sm font-bold">Mesa</span>
+      <select id="stats-mesa" class="select select-bordered select-sm">
+        <option value="">Todas</option>
+        {mesaOptions.map((m) => (
+          <option value={String(m.id)}>{m.name}</option>
+        ))}
+      </select>
+    </label>
+    <label class="form-control w-full md:w-44">
+      <span class="label-text mb-1 text-sm font-bold">Estado</span>
+      <select id="stats-activo" class="select select-bordered select-sm">
+        <option value="">Todos</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div data-kpi="total">
+      <StatsCard
+        icon="group"
+        label="Usuarios totales"
+        value="…"
+        subtitle="Todos los roles"
+      />
+    </div>
+    <div data-kpi="activos">
+      <StatsCard
+        icon="user-check"
+        label="Activos"
+        value="…"
+        subtitle="Con acceso habilitado"
+        color="success"
+      />
+    </div>
+    <div data-kpi="inactivos">
+      <StatsCard
+        icon="user-x"
+        label="Inactivos"
+        value="…"
+        subtitle="Acceso deshabilitado"
+        color="warning"
+      />
+    </div>
+    <div data-kpi="asistencia">
+      <StatsCard
+        icon="calendar-check"
+        label="En asistencia"
+        value="…"
+        subtitle="Operadores controlados"
+        color="info"
+      />
+    </div>
+  </div>
+
+</div>
+
+<script>
+  import { getCleanBase } from "@lib/baseUrl";
+
+  const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+
+  const rolSelect = document.getElementById(
+    "stats-rol",
+  ) as HTMLSelectElement | null;
+  const mesaSelect = document.getElementById(
+    "stats-mesa",
+  ) as HTMLSelectElement | null;
+  const activoSelect = document.getElementById(
+    "stats-activo",
+  ) as HTMLSelectElement | null;
+
+  function buildQuery(): string {
+    const params = new URLSearchParams();
+    if (rolSelect?.value) params.set("rol", rolSelect.value);
+    if (mesaSelect?.value) params.set("mesa", mesaSelect.value);
+    if (activoSelect?.value) params.set("activo", activoSelect.value);
+    return params.toString();
+  }
+
+  function syncUrl(): void {
+    const query = buildQuery();
+    const url = query ? `?${query}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }
+
+  function setKpi(key: string, value: number): void {
+    const el = document.querySelector(`[data-kpi="${key}"] .stat-value`);
+    if (el) el.textContent = String(value);
+  }
+
+  async function load(): Promise<void> {
+    const query = buildQuery();
+    syncUrl();
+    try {
+      const response = await fetch(`${endpoint}?${query}`, {
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      setKpi("total", body.kpis.total);
+      setKpi("activos", body.kpis.activos);
+      setKpi("inactivos", body.kpis.inactivos);
+      setKpi("asistencia", body.kpis.enAsistencia);
+      window.dispatchEvent(
+        new CustomEvent("stats:filters-changed", { detail: { query } }),
+      );
+    } catch (error) {
+      console.error("[estadisticas usuarios] no se pudieron cargar:", error);
+    }
+  }
+
+  const initial = new URLSearchParams(window.location.search);
+  if (rolSelect && initial.get("rol")) {
+    rolSelect.value = initial.get("rol") as string;
+  }
+  if (mesaSelect && initial.get("mesa")) {
+    mesaSelect.value = initial.get("mesa") as string;
+  }
+  if (activoSelect && initial.get("activo")) {
+    activoSelect.value = initial.get("activo") as string;
+  }
+
+  rolSelect?.addEventListener("change", load);
+  mesaSelect?.addEventListener("change", load);
+  activoSelect?.addEventListener("change", load);
+
+  load();
+</script>

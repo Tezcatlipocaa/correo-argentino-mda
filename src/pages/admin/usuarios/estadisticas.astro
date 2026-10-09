@@ -1,0 +1,59 @@
+---
+import { Icon } from "astro-icon/components";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import UsuariosEstadisticasContent from "@components/admin/users/UsuariosEstadisticasContent.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const cleanBase = getCleanBase();
+const endpoint = `${cleanBase}api/admin/usuarios/estadisticas`;
+---
+
+<BaseLayout>
+  <PageContainer width="xl">
+    <a
+      href={`${cleanBase}admin/usuarios`}
+      class="btn btn-ghost btn-sm mb-2 w-fit pl-2 transition-colors duration-200"
+    >
+      <Icon name="boxicons:chevron-left" size={16} />
+      Volver a Gestión de usuarios
+    </a>
+
+    <PageHeader
+      title="Estadísticas de usuarios"
+      description="Distribución de usuarios por estado, rol y mesa de ayuda."
+    />
+
+    <UsuariosEstadisticasContent server:defer>
+      <ChartCardSkeleton slot="fallback" count={3} />
+    </UsuariosEstadisticasContent>
+
+    <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
+      <ChartCard
+        type="doughnut"
+        title="Activos vs inactivos"
+        fetchUrl={endpoint}
+        chartKey="estado"
+      />
+      <div class="lg:col-span-2">
+        <ChartCard
+          type="bar"
+          title="Usuarios por rol"
+          fetchUrl={endpoint}
+          chartKey="porRol"
+        />
+      </div>
+      <div class="lg:col-span-2">
+        <ChartCard
+          type="bar"
+          title="Usuarios por mesa"
+          fetchUrl={endpoint}
+          chartKey="porMesa"
+        />
+      </div>
+    </div>
+  </PageContainer>
+</BaseLayout>
