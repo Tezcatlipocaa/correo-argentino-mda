@@ -295,11 +295,27 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
       porRolCard.locator('td[data-label="admin"]'),
     ).toBeVisible();
 
-    await page.selectOption("#stats-rol", "agent");
+    await page.locator("#stats-rol").selectOption("agent");
     await expect(page).toHaveURL(/rol=agent/);
 
     await expect(porRolCard.locator("td[data-label='agent']")).toBeVisible();
     await expect(porRolCard.locator("td[data-label='admin']")).toHaveCount(0);
+  });
+
+  test("los filtros usan SelectField con su legend accesible", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios/estadisticas");
+    for (const [id, label] of [
+      ["stats-rol", "Rol"],
+      ["stats-mesa", "Mesa"],
+      ["stats-activo", "Estado"],
+    ] as const) {
+      const field = page
+        .locator("fieldset")
+        .filter({ has: page.locator(`#${id}`) });
+      await expect(field.locator("legend")).toHaveText(label);
+    }
   });
 
   test("el filtro por rol se inicializa desde la query de la URL", async ({

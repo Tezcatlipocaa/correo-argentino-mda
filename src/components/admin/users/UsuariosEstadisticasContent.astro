@@ -1,6 +1,7 @@
----
+﻿---
 import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
 import { db } from "@db/index";
 import { mesas } from "@db/schema";
 import { and, eq, or } from "drizzle-orm";
@@ -20,36 +21,50 @@ const mesaOptions = await db
     ),
   )
   .orderBy(mesas.name);
+
+const rolOptions = [
+  { value: "", label: "Todos" },
+  ...CANONICAL_ROLES.map((rol) => ({ value: rol, label: rol })),
+];
+
+const activoOptions = [
+  { value: "", label: "Todos" },
+  { value: "true", label: "Activos" },
+  { value: "false", label: "Inactivos" },
+];
 ---
 
 <div class="flex w-full flex-col gap-6 pb-24">
   <div
-    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-end"
+    class="bg-base-200/50 flex flex-wrap items-center gap-4 rounded-lg px-3 py-1.5"
   >
-    <label class="form-control w-full md:w-56">
-      <span class="label-text mb-1 text-sm font-bold">Rol</span>
-      <select id="stats-rol" class="select select-bordered select-sm">
-        <option value="">Todos</option>
-        {CANONICAL_ROLES.map((rol) => <option value={rol}>{rol}</option>)}
-      </select>
-    </label>
-    <label class="form-control w-full md:w-64">
-      <span class="label-text mb-1 text-sm font-bold">Mesa</span>
-      <select id="stats-mesa" class="select select-bordered select-sm">
-        <option value="">Todas</option>
-        {mesaOptions.map((m) => (
-          <option value={String(m.id)}>{m.name}</option>
-        ))}
-      </select>
-    </label>
-    <label class="form-control w-full md:w-44">
-      <span class="label-text mb-1 text-sm font-bold">Estado</span>
-      <select id="stats-activo" class="select select-bordered select-sm">
-        <option value="">Todos</option>
-        <option value="true">Activos</option>
-        <option value="false">Inactivos</option>
-      </select>
-    </label>
+    <SelectField
+      id="stats-rol"
+      name="rol"
+      label="Rol"
+      size="sm"
+      options={rolOptions}
+      class="w-40"
+    />
+    <SelectField
+      id="stats-mesa"
+      name="mesa"
+      label="Mesa"
+      size="sm"
+      options={[
+        { value: "", label: "Todas" },
+        ...mesaOptions.map((m) => ({ value: String(m.id), label: m.name })),
+      ]}
+      class="w-56"
+    />
+    <SelectField
+      id="stats-activo"
+      name="activo"
+      label="Estado"
+      size="sm"
+      options={activoOptions}
+      class="w-40"
+    />
   </div>
 
   <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
