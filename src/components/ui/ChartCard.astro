@@ -87,6 +87,7 @@ const chartProps = JSON.stringify({
         {emptyMessage}
       </div>
       <div
+        id={tableId}
         data-chart-table
         class="absolute inset-0 hidden overflow-auto p-1"
       />
@@ -298,6 +299,7 @@ function initChartCard(card: HTMLElement): void {
     });
     canvas?.classList.remove("hidden");
     emptyEl?.classList.add("hidden");
+    renderTableVisibility();
     applyHighlight();
   }
 
