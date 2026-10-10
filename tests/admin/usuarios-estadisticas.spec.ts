@@ -96,6 +96,67 @@ test.describe("Endpoint de estadísticas de usuarios (#183)", () => {
   });
 });
 
+test.describe("Export CSV de estadísticas de usuarios (#183)", () => {
+  const stamp = Date.now();
+  const sessionId = `sess_stats_csv_${stamp}`;
+  const username = `admin_stats_csv_${stamp}`;
+  let adminId = 0;
+  let cookie = "";
+
+  test.beforeAll(async () => {
+    const [row] = await db
+      .insert(users)
+      .values({ username, password: "x", role: "admin" })
+      .returning({ id: users.id });
+    adminId = row.id;
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId: adminId,
+      expiresAt: Date.now() + 86_400_000,
+    });
+    cookie = sign(sessionId);
+  });
+
+  test.afterAll(async () => {
+    await db.delete(sessions).where(eq(sessions.userId, adminId));
+    await db.delete(users).where(eq(users.id, adminId));
+  });
+
+  test("sin sesión responde 401", async ({ request }) => {
+    const response = await request.get("/api/export/usuarios-estadisticas");
+    expect(response.status()).toBe(401);
+  });
+
+  test("con sesión admin devuelve CSV seccionado con los mismos filtros", async ({
+    request,
+  }) => {
+    const response = await request.get(
+      "/api/export/usuarios-estadisticas?activo=true",
+      { headers: { cookie: `session_id=${cookie}` } },
+    );
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("text/csv");
+    expect(response.headers()["content-disposition"]).toContain("attachment");
+    const body = await response.text();
+    // generateCsv antepone BOM (\uFEFF): se compara el contenido sin él.
+    expect(body.replace(/^\uFEFF/, "")).toMatch(
+      /^seccion;dimension;valor\r\n/,
+    );
+    expect(body).toContain("kpis;total;");
+    expect(body).toContain("porRol;admin;");
+    // El filtro activo=true deja los inactivos en cero.
+    expect(body).toContain("estado;Inactivos;0");
+  });
+
+  test("rechaza parámetros inválidos con 400", async ({ request }) => {
+    const response = await request.get(
+      "/api/export/usuarios-estadisticas?activo=quizas",
+      { headers: { cookie: `session_id=${cookie}` } },
+    );
+    expect(response.status()).toBe(400);
+  });
+});
+
 test.describe("Vista de estadísticas de usuarios (#183)", () => {
   const stamp = Date.now();
   const sessionId = `sess_stats_view_${stamp}`;
