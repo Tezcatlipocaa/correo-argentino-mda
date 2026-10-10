@@ -5,9 +5,28 @@ import ChartCard from "@components/ui/ChartCard.astro";
 import { db } from "@db/index";
 import { provinces, regions } from "@db/schema";
 import { getCleanBase } from "@lib/baseUrl";
+import {
+  MARCA_LABELS,
+  MARCA_VALUES,
+  OS_FILTER_BUCKETS,
+  OS_FILTER_VALUES,
+} from "@lib/terminalStats";
 
 const endpoint = `${getCleanBase()}api/terminals/estadisticas`;
 const inventarioHref = `${getCleanBase()}inventario-terminales`;
+
+const marcaOptions = MARCA_VALUES.map((value) => ({
+  value,
+  label: MARCA_LABELS[value],
+}));
+const osLabels: Record<string, string> = {
+  ...OS_FILTER_BUCKETS,
+  "sin-dato": "Sin datos",
+};
+const osOptions = OS_FILTER_VALUES.map((value) => ({
+  value,
+  label: osLabels[value],
+}));
 
 const regionOptions = await db
   .select({ id: regions.id, name: regions.name })
@@ -43,26 +62,18 @@ const provinceOptions = await db
       <span class="label-text mb-1 text-sm font-bold">Marca</span>
       <select id="stats-marca" class="select select-bordered select-sm">
         <option value="">Todas</option>
-        <option value="dell">Dell</option>
-        <option value="hp">HP</option>
-        <option value="lenovo">Lenovo</option>
-        <option value="bangho">Bangho</option>
-        <option value="coradir">Coradir</option>
-        <option value="otras">Otras</option>
+        {marcaOptions.map((m) => (
+          <option value={m.value}>{m.label}</option>
+        ))}
       </select>
     </label>
     <label class="form-control w-full md:w-44">
       <span class="label-text mb-1 text-sm font-bold">Sistema operativo</span>
       <select id="stats-os" class="select select-bordered select-sm">
         <option value="">Todos</option>
-        <option value="win11">Windows 11</option>
-        <option value="win10">Windows 10</option>
-        <option value="win7">Windows 7</option>
-        <option value="winxp">Windows XP</option>
-        <option value="winserver">Windows Server</option>
-        <option value="ubuntu">Ubuntu</option>
-        <option value="debian">Debian</option>
-        <option value="sin-dato">Sin datos</option>
+        {osOptions.map((o) => (
+          <option value={o.value}>{o.label}</option>
+        ))}
       </select>
     </label>
     <a class="btn btn-ghost btn-sm md:ml-auto" href={inventarioHref}>
