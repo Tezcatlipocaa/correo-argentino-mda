@@ -263,9 +263,12 @@ function initChartCard(card: HTMLElement): void {
     const tableWrap = card.querySelector("[data-chart-table]");
     const toggle = card.querySelector("[data-table-toggle]");
     const label = card.querySelector("[data-table-toggle-label]");
-    canvasEl?.classList.toggle("hidden", showingTable);
+    // Sin datos el canvas queda oculto: showEmpty() ya maneja el mensaje, y
+    // re-mostrar el canvas acá dejaba "Sin datos" y un canvas vacío a la vez.
+    const hideCanvas = showingTable || !hasData();
+    canvasEl?.classList.toggle("hidden", hideCanvas);
     if (canvasEl) {
-      canvasEl.style.display = showingTable ? "none" : "";
+      canvasEl.style.display = hideCanvas ? "none" : "";
     }
     tableWrap?.classList.toggle("hidden", !showingTable);
     if (toggle) {
@@ -501,8 +504,15 @@ function initChartCard(card: HTMLElement): void {
   }
 
   let fetchSeq = 0;
+  let lastQuery: string | null = null;
 
   function fetchData(query: string) {
+    // La card trae su propio estado al inicializar y además escucha
+    // stats:filters-changed; en el primer render ambas fuentes piden la misma
+    // query. Evitar el segundo fetch (mitad de requests → no revienta el
+    // rate limit de api-read).
+    if (query === lastQuery) return;
+    lastQuery = query;
     const separator = fetchUrl?.includes("?") ? "&" : "?";
     const seq = ++fetchSeq;
     return fetch(`${fetchUrl}${separator}${query}`)
@@ -515,7 +525,10 @@ function initChartCard(card: HTMLElement): void {
         const slice = body.charts[chartKey as string];
         setData(slice.labels, slice.series);
       })
-      .catch((error) => console.error("[ChartCard] fetch falló:", error));
+      .catch((error) => {
+        if (query === lastQuery) lastQuery = null;
+        console.error("[ChartCard] fetch falló:", error);
+      });
   }
 
   function onFiltersChanged(event: Event) {
