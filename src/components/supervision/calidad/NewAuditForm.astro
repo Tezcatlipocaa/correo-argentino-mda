@@ -590,7 +590,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
               >
                 <button
                   type="button"
-                  class="ticket-mode-btn btn btn-xs btn-active gap-1.5 rounded-md border border-transparent bg-secondary px-2.5 text-xxs font-bold text-secondary-content shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
+                  class="ticket-mode-btn btn btn-xs btn-active gap-1.5 rounded-md border border-transparent bg-secondary px-2.5 text-xxs font-bold text-secondary-content shadow-xs hover:bg-secondary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
                   data-mode="nuevo"
                   title="Evaluar los parámetros del ticket generado"
                 >
@@ -807,7 +807,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
               >
                 <button
                   type="button"
-                  class="email-ticket-mode-btn btn btn-xs btn-active gap-1.5 rounded-md border border-transparent bg-secondary px-2.5 text-xxs font-bold text-secondary-content shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
+                  class="email-ticket-mode-btn btn btn-xs btn-active gap-1.5 rounded-md border border-transparent bg-secondary px-2.5 text-xxs font-bold text-secondary-content shadow-xs hover:bg-secondary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
                   data-mode="nuevo"
                   title="Evaluar los parámetros del registro generado en MDA"
                 >
@@ -822,6 +822,15 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                 >
                   <Icon name="boxicons:badge-check" size={13} aria-hidden="true" />
                   <span>Reclamo / Novedad</span>
+                </button>
+                <button
+                  type="button"
+                  class="email-ticket-mode-btn btn btn-xs gap-1.5 rounded-md border border-transparent px-2.5 text-xxs font-medium text-base-content/70 hover:bg-base-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
+                  data-mode="ninguno"
+                  title="No aplica: no se evalúa la sección de ticket MDA y el puntaje total es el de la sección 1"
+                >
+                  <Icon name="boxicons:minus-square" size={13} aria-hidden="true" />
+                  <span>No aplica</span>
                 </button>
               </div>
             </header>
@@ -1011,20 +1020,37 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                 </p>
               </div>
 
-              <label
-                class="flex shrink-0 cursor-pointer items-center gap-2 pt-0.5"
+              <div
+                id="invgate-ticket-mode-join"
+                role="group"
+                aria-label="Radicación en MDA"
+                class="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-base-200 bg-base-200/50 p-0.5"
               >
-                <span class="text-xs font-semibold text-base-content/70">
-                  ¿Queda en MDA?
-                </span>
-                <input
-                  type="checkbox"
-                  name="staysInMda"
-                  id="toggle-stays-mda"
-                  class="toggle toggle-secondary toggle-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
-                  checked={initialAudit ? (initialAudit.staysInMda ?? true) : true}
-                />
-              </label>
+                <button
+                  type="button"
+                  class="invgate-ticket-mode-btn btn btn-xs btn-active gap-1.5 rounded-md border border-transparent bg-secondary px-2.5 text-xxs font-bold text-secondary-content shadow-xs hover:bg-secondary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
+                  data-mode="si"
+                  title="Evaluar los parámetros de la categoría MDA"
+                >
+                  <Icon name="boxicons:handshake" size={13} aria-hidden="true" />
+                  <span>Queda en MDA</span>
+                </button>
+                <button
+                  type="button"
+                  class="invgate-ticket-mode-btn btn btn-xs gap-1.5 rounded-md border border-transparent px-2.5 text-xxs font-medium text-base-content/70 hover:bg-base-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
+                  data-mode="no"
+                  title="No aplica: no se evalúa la sección 2 y el puntaje total es el de la sección 1"
+                >
+                  <Icon name="boxicons:minus-square" size={13} aria-hidden="true" />
+                  <span>No aplica</span>
+                </button>
+              </div>
+              <input
+                type="hidden"
+                name="staysInMda"
+                id="invgate-stays-mda"
+                value={initialAudit ? String(initialAudit.staysInMda ?? true) : "true"}
+              />
             </header>
 
             <div
@@ -1744,7 +1770,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
 
     const emailTicketModeInput = document.getElementById("email-ticket-mode") as HTMLInputElement | null;
 
-    const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
+    const toggleStaysMda = document.getElementById("invgate-stays-mda") as HTMLInputElement | null;
 
     const btnHeaderHelp = document.getElementById("btn-header-help");
     const helpModal = document.getElementById("audit-help-modal") as HTMLDialogElement | null;
@@ -2490,11 +2516,16 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         b.classList.toggle("shadow-xs", isActive);
         b.classList.toggle("text-base-content/70", !isActive);
         b.classList.toggle("font-medium", !isActive);
+        // El hover neutro pisaba al color activo y lo dejaba en blanco al
+        // pasar el mouse. Mismo criterio que el conmutador de canales: se
+        // saca el hover inactivo y se pone el del color activo.
+        b.classList.toggle("hover:bg-base-100", !isActive);
+        b.classList.toggle("hover:bg-secondary/90", isActive);
         b.setAttribute("aria-pressed", String(isActive));
       });
     }
 
-    function setEmailTicketMode(mode: "nuevo" | "reclamo") {
+    function setEmailTicketMode(mode: "nuevo" | "reclamo" | "ninguno") {
       if (!emailTicketModeInput) return;
       emailTicketModeInput.value = mode;
       if (formIsReclamoInput && (formChannelType?.value || "wise_call") === "wise_email") {
@@ -2508,8 +2539,10 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         wiseEmailReclamoCard?.classList.remove("hidden");
         wiseEmailReclamoCard?.classList.add("flex");
       } else {
-        wiseEmailMdaActions?.classList.remove("hidden");
-        wiseEmailTicketBlock?.classList.remove("hidden");
+        // "ninguno" también oculta los parámetros: sin ticket MDA no hay
+        // nada que evaluar y el total queda en el de la sección 1.
+        wiseEmailMdaActions?.classList.toggle("hidden", mode === "ninguno");
+        wiseEmailTicketBlock?.classList.toggle("hidden", mode === "ninguno");
         wiseEmailReclamoCard?.classList.add("hidden");
         wiseEmailReclamoCard?.classList.remove("flex");
       }
@@ -2520,7 +2553,9 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
 
     emailTicketModeBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        setEmailTicketMode((btn.getAttribute("data-mode") as "nuevo" | "reclamo") || "nuevo");
+        setEmailTicketMode(
+          (btn.getAttribute("data-mode") as "nuevo" | "reclamo" | "ninguno") || "nuevo",
+        );
       });
     });
 
@@ -2529,7 +2564,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
     (window as any).setAuditEmailTicketMode = setEmailTicketMode;
 
     // MODO TICKET LLAMADA: NUEVO VS RECLAMO / NOVEDAD
-    function setCallTicketMode(mode: "nuevo" | "reclamo") {
+    function setCallTicketMode(mode: "nuevo" | "reclamo" | "ninguno") {
       if (!callTicketModeInput) return;
       callTicketModeInput.value = mode;
       if (formIsReclamoInput) formIsReclamoInput.value = mode === "reclamo" ? "true" : "false";
@@ -2541,8 +2576,8 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         wiseCallReclamoCard?.classList.remove("hidden");
         wiseCallReclamoCard?.classList.add("flex");
       } else {
-        wiseCallTicketActions?.classList.remove("hidden");
-        wiseCallTicketBlock?.classList.remove("hidden");
+        wiseCallTicketActions?.classList.toggle("hidden", mode === "ninguno");
+        wiseCallTicketBlock?.classList.toggle("hidden", mode === "ninguno");
         wiseCallReclamoCard?.classList.add("hidden");
         wiseCallReclamoCard?.classList.remove("flex");
       }
@@ -2553,12 +2588,37 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
 
     callTicketModeBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        setCallTicketMode((btn.getAttribute("data-mode") as "nuevo" | "reclamo") || "nuevo");
+        setCallTicketMode(
+          (btn.getAttribute("data-mode") as "nuevo" | "reclamo" | "ninguno") || "nuevo",
+        );
       });
     });
 
     // CalidadContent lo invoca al abrir una auditoría ya guardada.
     (window as any).setAuditTicketMode = setCallTicketMode;
+
+    // MODO AUTOGESTIÓN: QUEDA EN MDA VS NO APLICA.
+    // Mismo patrón que los otros dos selectores: al desactivar se esconden los
+    // parámetros de la sección 2 y el total pasa a ser el de la sección 1.
+    const invgateModeBtns = document.querySelectorAll(".invgate-ticket-mode-btn");
+    const invgateMdaBlock = document.getElementById("invgate-ag-mda-block");
+
+    function setInvgateTicketMode(mode: "si" | "no") {
+      if (!toggleStaysMda) return;
+      toggleStaysMda.value = mode === "si" ? "true" : "false";
+      paintModeButtons(invgateModeBtns, mode);
+      invgateMdaBlock?.classList.toggle("hidden", mode === "no");
+      markAsInProgress();
+      recalculateScores();
+    }
+
+    invgateModeBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setInvgateTicketMode((btn.getAttribute("data-mode") as "si" | "no") || "si");
+      });
+    });
+
+    (window as any).setAuditInvgateMode = setInvgateTicketMode;
 
     // CHECK-ALL / UNCHECK-ALL
     document.querySelectorAll(".toggle-all-section-btn").forEach((btn) => {
@@ -2626,7 +2686,13 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
             ? callTicketModeInput?.value === "reclamo"
             : false;
 
-      if (channel === "invgate_ticket") hasSection2 = toggleStaysMda ? toggleStaysMda.checked : true;
+      if (channel === "invgate_ticket") hasSection2 = toggleStaysMda ? toggleStaysMda.value === "true" : true;
+      // Espejo de la acción: sin ticket MDA la sección 2 se deshabilita y el
+      // total pasa a ser el de la sección 1.
+      if (channel === "wise_email" && emailTicketModeInput?.value === "ninguno")
+        hasSection2 = false;
+      if (channel === "wise_call" && callTicketModeInput?.value === "ninguno")
+        hasSection2 = false;
 
       checkboxes.forEach((cb) => {
         if (cb.dataset.isNa === "true") naCriteria++;
@@ -2780,7 +2846,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         if (emailTicketModeInput) formData.set("emailTicketMode", emailTicketModeInput.value);
         if (formIsReclamoInput) formData.set("isReclamoNovedad", formIsReclamoInput.value);
         if (toggleCallGeneratedTicket) formData.set("callGeneratedTicket", toggleCallGeneratedTicket.checked ? "true" : "false");
-        if (toggleStaysMda) formData.set("staysInMda", toggleStaysMda.checked ? "true" : "false");
+        if (toggleStaysMda) formData.set("staysInMda", toggleStaysMda.value);
 
         const activeChannel = (formData.get("channelType") as string) || "wise_call";
         const callIdVal = (formData.get("callId") as string)?.trim() || "";
@@ -2855,11 +2921,21 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         targetBtn.click();
       }
 
-      // 2. Modo reclamo/novedad en llamada o mail
+      // 2. Modo del ticket en llamada o mail: reclamo, sin ticket, o nuevo.
+      // "No aplica" es un estado distinto de "reclamo": deshabilita la
+      // sección 2 en vez de eximirla, así que el total es el de la sección 1.
+      const resolveTicketMode = (ct: string): "reclamo" | "ninguno" | "nuevo" => {
+        if (initialAuditData.isReclamoNovedad) return "reclamo";
+        if (ct === "wise_call" && initialAuditData.appliesMda === false) return "ninguno";
+        if (ct === "wise_email" && initialAuditData.appliesMda === false) return "ninguno";
+        return "nuevo";
+      };
       if (targetChannel === "wise_call") {
-        setCallTicketMode(initialAuditData.isReclamoNovedad ? "reclamo" : "nuevo");
+        setCallTicketMode(resolveTicketMode(targetChannel));
       } else if (targetChannel === "wise_email") {
-        setEmailTicketMode(initialAuditData.isReclamoNovedad ? "reclamo" : "nuevo");
+        setEmailTicketMode(resolveTicketMode(targetChannel));
+      } else if (targetChannel === "invgate_ticket") {
+        setInvgateTicketMode(initialAuditData.staysInMda === false ? "no" : "si");
       }
 
       // 3. Montar audio si tiene grabación

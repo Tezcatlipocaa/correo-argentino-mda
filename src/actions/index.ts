@@ -315,13 +315,23 @@ export const server = {
           hasSection2 = input.callGeneratedTicket;
         }
       } else if (input.channelType === "wise_email") {
-        hasSection2 = true;
-        if (input.emailTicketMode === "reclamo") {
-          isReclamoNovedad = true;
-        } else if (input.emailTicketMode === "nuevo") {
+        // "ninguno" = el mail no derivó en ticket MDA. Se deshabilita la
+        // sección 2 y el total pasa a ser el de la sección 1 (así lo
+        // definía el "aplica MDA" del Excel). "reclamo" NO es lo mismo:
+        // exime la sección 2 al 100%, lo que pone un piso del 50% al
+        // total aunque la sección 1 sea 0.
+        if (input.emailTicketMode === "ninguno") {
+          hasSection2 = false;
           isReclamoNovedad = false;
         } else {
-          isReclamoNovedad = input.isReclamoNovedad;
+          hasSection2 = true;
+          if (input.emailTicketMode === "reclamo") {
+            isReclamoNovedad = true;
+          } else if (input.emailTicketMode === "nuevo") {
+            isReclamoNovedad = false;
+          } else {
+            isReclamoNovedad = input.isReclamoNovedad;
+          }
         }
       } else if (input.channelType === "invgate_ticket") {
         hasSection2 = input.staysInMda;
@@ -391,7 +401,7 @@ export const server = {
           input.channelType === "wise_call"
             ? hasSection2
             : input.channelType === "wise_email"
-              ? true
+              ? hasSection2
               : input.appliesMda,
         staysInMda: input.staysInMda,
         isReclamoNovedad,

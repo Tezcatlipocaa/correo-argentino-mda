@@ -551,14 +551,6 @@ const cleanBase = getCleanBase();
                               <span class="text-base-content font-bold text-sm tracking-tight truncate group-hover:text-secondary transition-colors">
                                 {op.name}
                               </span>
-                              {op.averageScore >= 90 && (
-                                <Icon
-                                  name="boxicons:check"
-                                  class="text-secondary shrink-0"
-                                  size={18}
-                                  title="Insignia de Excelencia"
-                                />
-                              )}
                             </div>
                             <div class="text-base-content/50 font-mono text-xs lowercase mt-0.5 truncate">
                               @{op.username || op.id}
@@ -1014,8 +1006,7 @@ const cleanBase = getCleanBase();
           ${
             comment
               ? `
-            <div class="mt-1.5 flex items-start gap-1.5 text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
-              <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
+            <div class="mt-1.5 flex items-start text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
               <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
             </div>
           `
@@ -1053,9 +1044,8 @@ const cleanBase = getCleanBase();
             ${
               comment
                 ? `
-              <div class="mt-1.5 flex items-start gap-1.5 text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
-                <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
-                <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
+              <div class="mt-1.5 flex items-start text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
+                <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5"<span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
               </div>
             `
                 : ""
@@ -1093,9 +1083,8 @@ const cleanBase = getCleanBase();
             ${
               comment
                 ? `
-              <div class="mt-1.5 flex items-start gap-1.5 text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
-                <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5">Obs:</span>
-                <span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
+              <div class="mt-1.5 flex items-start text-xs text-base-content/90 bg-base-200/60 rounded-lg px-2.5 py-1.5 border border-base-300/40">
+                <span class="text-secondary text-3xs font-bold uppercase tracking-wider shrink-0 mt-0.5"<span class="break-words font-sans text-xs">${escapeHtml(comment)}</span>
               </div>
             `
                 : ""
@@ -1113,6 +1102,14 @@ const cleanBase = getCleanBase();
         </div>
       `
       : "";
+
+    // El usuario puede escribir el ticket con o sin "#": anteponerlo siempre
+// producía "##1234". Solo se agrega cuando falta.
+const formatTicketRef = (ticketId?: string | null, callId?: string | null) => {
+  const t = (ticketId || "").trim();
+  if (!t || t === "N/A") return callId || "--";
+  return t.startsWith("#") ? t : `#${t}`;
+};
 
     const durationTitle =
       call.channelType === "wise_call"
@@ -1155,7 +1152,7 @@ const cleanBase = getCleanBase();
 
             <!-- 3. Ticket / Nro de Caso -->
             <div class="flex items-center gap-1.5 min-w-0">
-              <span class="font-mono text-xs font-bold text-base-content truncate">${escapeHtml(call.ticketId ? `#${call.ticketId}` : call.callId)}</span>
+              <span class="font-mono text-xs font-bold text-base-content truncate">${escapeHtml(formatTicketRef(call.ticketId, call.callId))}</span>
               ${call.isPas ? '<span class="badge badge-secondary badge-xs font-bold uppercase tracking-wider text-3xs px-1.5 py-0.5 shadow-2xs shrink-0">PAS</span>' : ""}
               ${call.callId && call.ticketId && call.callId !== call.ticketId ? `<span class="text-3xs text-base-content/40 font-mono truncate hidden md:inline">(${escapeHtml(call.callId)})</span>` : ""}
             </div>
@@ -1173,7 +1170,7 @@ const cleanBase = getCleanBase();
 
             ${
               isReclamo
-                ? `<span class="badge badge-xs badge-warning font-bold uppercase tracking-wide shrink-0" title="Reclamo o novedad: sección de ticket eximida">Reclamo</span>`
+                ? `<span class="badge badge-xs badge-neutral font-bold uppercase tracking-wide shrink-0" title="Reclamo o novedad: sección de ticket eximida">Reclamo</span>`
                 : ""
             }
           </div>
@@ -1239,7 +1236,7 @@ const cleanBase = getCleanBase();
                     s2Evaluated
                       ? ""
                       : isReclamo
-                        ? `<span class="badge badge-xs badge-warning font-bold uppercase tracking-wide" title="Reclamo o novedad: eximido de evaluación individual (100% automático)">Reclamo</span>`
+                        ? `<span class="badge badge-xs badge-neutral font-bold uppercase tracking-wide" title="Reclamo o novedad: eximido de evaluación individual (100% automático)">Reclamo</span>`
                         : `<span class="badge badge-xs badge-ghost font-bold uppercase tracking-wide" title="${call.channelType === "wise_call" ? "No se generó ticket, no hay gestión que evaluar" : call.channelType === "wise_email" ? "El mail no derivó en ticket MDA" : "El caso no quedó en MDA"}">No aplica</span>`
                   }
                 </div>
