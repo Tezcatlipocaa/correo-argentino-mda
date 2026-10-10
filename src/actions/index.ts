@@ -11,7 +11,7 @@ import {
   feedback,
 } from "@db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { calculateAuditScores, calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
+import { calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import {
   invalidateAutomationDetail,
@@ -266,13 +266,6 @@ export const server = {
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
           )
           .default(true),
-        isCriticalFailure: z
-          .any()
-          .transform(
-            (v) =>
-              v === "on" || v === true || v === "true" || v === 1 || v === "1",
-          )
-          .default(false),
       })
       .passthrough(),
     handler: async (input, context) => {
@@ -375,7 +368,6 @@ export const server = {
           allParams,
           checkedCodes,
           hasSection2,
-          input.isCriticalFailure,
           isReclamoNovedad,
         );
 
@@ -403,7 +395,6 @@ export const server = {
               : input.appliesMda,
         staysInMda: input.staysInMda,
         isReclamoNovedad,
-        isCriticalFailure: input.isCriticalFailure,
         recordingUrl: input.recordingUrl || null,
       };
 

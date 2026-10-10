@@ -23,12 +23,7 @@ import { getResolvedSearchParams } from "@lib/navigation";
 import { formatMonthLabel, MONTH_LABELS } from "@lib/monthUtils";
 import { getCleanBase } from "@lib/baseUrl";
 import OperatorDetailsPanel from "./OperatorDetailsPanel.astro";
-import {
-  calculateOperatorChannelStats,
-  calculateChannelAverages,
-  formatChannelAverageScore,
-  getChannelAverageBadgeClass,
-} from "@lib/qualityCalculator";
+import { calculateOperatorChannelStats } from "@lib/qualityCalculator";
 import type { ChannelType } from "@/types/quality";
 
 
@@ -227,7 +222,6 @@ const operatorsQuality = finalAgents.map((agent) => {
       date: audit.date,
       month: audit.month,
       notes: audit.notes || "",
-      isCriticalFailure: audit.isCriticalFailure || false,
       ringTime: audit.ringTime,
       creationTime: audit.creationTime,
       takeTime: audit.takeTime,
@@ -257,17 +251,19 @@ const operatorsQuality = finalAgents.map((agent) => {
   const prevMonthAudits = prevMonth
     ? agentAudits.filter((a) => a.month === prevMonth)
     : [];
-  const prevAverageScore =
+  // Misma fórmula que `averageScore` (promedio de los promedios por canal): el
+  // diff comparaba el mes actual por canal contra un promedio plano del mes
+  // anterior, así que la flecha no era interpretable con reparto desigual.
+  const prevFlatAverage =
     prevMonthAudits.length > 0
       ? Math.round(
           prevMonthAudits.reduce((sum, audit) => sum + audit.totalScore, 0) /
             prevMonthAudits.length,
         )
       : 0;
+  const prevAverageScore =
+    calculateOperatorChannelStats(prevMonthAudits).globalAverage || prevFlatAverage;
   const prevCallsCount = prevMonthAudits.length;
-  const prevCriticalCount = prevMonthAudits.filter(
-    (a) => a.isCriticalFailure,
-  ).length;
 
   return {
     id: agent.id.toString(),
@@ -288,7 +284,6 @@ const operatorsQuality = finalAgents.map((agent) => {
     quotaFulfilled: channelStats.quotaFulfilled,
     prevAverageScore,
     prevCallsCount,
-    prevCriticalCount,
   };
 });
 
@@ -299,14 +294,6 @@ const operatorsDataMap = Object.fromEntries(
 const auditedOperators = operatorsQuality.filter((op) => op.calls.length > 0);
 const totalOperators = operatorsQuality.length;
 
-const avgScore =
-  auditedOperators.length > 0
-    ? Math.round(
-        auditedOperators.reduce((acc, op) => acc + op.averageScore, 0) /
-          auditedOperators.length,
-      )
-    : 0;
-
 const excellentOperators = auditedOperators.filter(
   (op) => op.averageScore >= 90,
 ).length;
@@ -314,23 +301,6 @@ const excellentOperators = auditedOperators.filter(
 const needsImprovement = auditedOperators.filter(
   (op) => op.averageScore > 0 && op.averageScore < 80,
 ).length;
-
-const allCalls = operatorsQuality.flatMap((op) => op.calls);
-const totalCalls = allCalls.length;
-
-const avgSection1 =
-  totalCalls > 0
-    ? Math.round(
-        allCalls.reduce((acc, c) => acc + c.section1.score, 0) / totalCalls,
-      )
-    : 0;
-
-const avgSection2 =
-  totalCalls > 0
-    ? Math.round(
-        allCalls.reduce((acc, c) => acc + c.section2.score, 0) / totalCalls,
-      )
-    : 0;
 
 const cleanBase = getCleanBase();
 ---
@@ -918,10 +888,11 @@ const cleanBase = getCleanBase();
 <script>
   import { actions } from "astro:actions";
   import {
-    calculateAuditScores,
     calculateChannelAverages,
     formatChannelAverageScore,
-    getChannelAverageBadgeClass,
+    getChannelAverageTextClass,
+    hasSection2,
+    hasSection2Evaluated,
   } from "@lib/qualityCalculator";
   import { escapeHtml } from "@lib/sanitize";
   import { bindClientTableSort } from "@lib/clientTableSort";
@@ -1009,12 +980,8 @@ const cleanBase = getCleanBase();
       );
     }
 
-    const hasS2 =
-      call.channelType === "wise_call"
-        ? (call.appliesMda ?? true)
-        : call.channelType === "wise_email"
-          ? Boolean(call.appliesMda)
-          : Boolean(call.staysInMda);
+    const hasS2 = hasSection2(call);
+    const s2Evaluated = hasSection2Evaluated(call);
 
     let s1PassedCount = 0;
     const s1TotalCount = s1Params.length;
@@ -1203,6 +1170,12 @@ const cleanBase = getCleanBase();
             <span class="badge badge-xs badge-neutral font-medium text-3xs ml-1 shrink-0">
               ${channelTag}
             </span>
+
+            ${
+              isReclamo
+                ? `<span class="badge badge-xs badge-warning font-bold uppercase tracking-wide shrink-0" title="Reclamo o novedad: sección de ticket eximida">Reclamo</span>`
+                : ""
+            }
           </div>
 
           <!-- Actions: Edit & Expand Chevron -->
@@ -1251,16 +1224,34 @@ const cleanBase = getCleanBase();
             </ul>
           </div>
           
-          <!-- Section 2 -->
-          <div class="p-4 sm:p-5">
+          <!-- Section 2: el número usa hasSection2Evaluated (no hasSection2) porque un
+             reclamo APLICA S2 —y por eso conserva el desglose de parámetros—
+             pero no se evaluó criterio a criterio, así que no tiene puntaje que
+             mostrar. Reclamo y "no aplica" muestran ambos N/A, pero son
+             causas opuestas (decisión del auditor vs ausencia de ticket), así
+             que el badge los distingue. -->
+          <div class="p-4 sm:p-5 ${s2Evaluated ? "" : "opacity-60"}">
             <div class="mb-3 flex items-center justify-between border-b border-base-200/80 pb-2">
               <div>
-                <h5 class="font-bold text-xs uppercase tracking-wider text-base-content/80">${isReclamo ? (call.channelType === "wise_call" ? "Gestión del Ticket (Reclamo / Novedad)" : "Ticket MDA (Reclamo / Novedad)") : (call.channelType === "wise_call" ? (!hasS2 ? "Gestión del Ticket (No Aplica)" : "Gestión del Ticket") : call.channelType === "wise_email" ? (call.appliesMda ? "Ticket MDA" : "Ticket MDA (No Aplica)") : (call.staysInMda ? "Ticket MDA" : "Ticket MDA (No Aplica)"))}</h5>
+                <div class="flex items-center gap-1.5">
+                  <h5 class="font-bold text-xs uppercase tracking-wider text-base-content/80">${isReclamo ? (call.channelType === "wise_call" ? "Gestión del Ticket" : "Ticket MDA") : (call.channelType === "wise_call" ? "Gestión del Ticket" : "Ticket MDA")}</h5>
+                  ${
+                    s2Evaluated
+                      ? ""
+                      : isReclamo
+                        ? `<span class="badge badge-xs badge-warning font-bold uppercase tracking-wide" title="Reclamo o novedad: eximido de evaluación individual (100% automático)">Reclamo</span>`
+                        : `<span class="badge badge-xs badge-ghost font-bold uppercase tracking-wide" title="${call.channelType === "wise_call" ? "No se generó ticket, no hay gestión que evaluar" : call.channelType === "wise_email" ? "El mail no derivó en ticket MDA" : "El caso no quedó en MDA"}">No aplica</span>`
+                  }
+                </div>
                 <span class="text-3xs font-semibold text-base-content/50">${isReclamo ? "Eximido de evaluación individual (100% automático)" : (hasS2 ? `${s2PassedCount} de ${s2TotalCount} criterios cumplidos` : "No aplica evaluación de ticket")}</span>
               </div>
               <div class="flex items-baseline gap-1">
-                <span class="text-xl font-black font-mono ${s2ScoreColor}">${call.section2.score}</span>
-                <span class="text-3xs font-bold text-base-content/40">/${call.section2.maxScore}</span>
+                ${
+                  s2Evaluated
+                    ? `<span class="text-xl font-black font-mono ${s2ScoreColor}">${call.section2.score}</span>
+                <span class="text-3xs font-bold text-base-content/40">/${call.section2.maxScore}</span>`
+                    : `<span class="text-xl font-black font-mono text-base-content/40">N/A</span>`
+                }
               </div>
             </div>
             <ul class="space-y-1 text-xs">
@@ -1374,8 +1365,11 @@ const cleanBase = getCleanBase();
     const dScore = document.getElementById("detail-score");
     const dStatDiff = document.getElementById("detail-stat-diff");
     const dStatAht = document.getElementById("detail-stat-aht");
-    const dStatInteraction = document.getElementById("detail-stat-interaction");
-    const dStatManagement = document.getElementById("detail-stat-management");
+    const dStatChannel = {
+      wise_call: document.getElementById("detail-stat-wise_call"),
+      wise_email: document.getElementById("detail-stat-wise_email"),
+      invgate_ticket: document.getElementById("detail-stat-invgate_ticket"),
+    };
     const dMonthSummary = document.getElementById("detail-month-summary");
     const dMonthSummaryEmpty = document.getElementById(
       "detail-month-summary-empty",
@@ -1702,8 +1696,11 @@ const cleanBase = getCleanBase();
             return 0;
           };
           const formatSecondsToDuration = (totalSecs: number) => {
-            const m = Math.floor(totalSecs / 60);
-            const s = Math.round(totalSecs % 60);
+            // Redondear los segundos por separado podía dar 60 ("01:60"): el
+            // redondeo tiene que cascada al minuto.
+            const total = Math.round(totalSecs);
+            const m = Math.floor(total / 60);
+            const s = total % 60;
             return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
           };
           const totalSecs = callAudits.reduce(
@@ -1719,39 +1716,23 @@ const cleanBase = getCleanBase();
         }
       }
 
-      if (dStatInteraction) {
-        const allAudits = operator.calls || [];
-        if (allAudits.length > 0) {
-          const avg = Math.round(
-            allAudits.reduce(
-              (acc: number, c: any) => acc + (c.section1?.score || 0),
-              0,
-            ) / allAudits.length,
-          );
-          dStatInteraction.textContent = `${avg}%`;
-          dStatInteraction.className = `text-base sm:text-lg font-black font-mono mt-0.5 ${avg >= 90 ? "text-success" : avg >= 80 ? "text-warning" : "text-error"}`;
-        } else {
-          dStatInteraction.textContent = "Sin datos";
-          dStatInteraction.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40";
-        }
-      }
+      const channelAverages = calculateChannelAverages(
+        (operator.calls || []) as any[],
+      );
 
-      if (dStatManagement) {
-        const allAudits = operator.calls || [];
-        if (allAudits.length > 0) {
-          const avg = Math.round(
-            allAudits.reduce(
-              (acc: number, c: any) => acc + (c.section2?.score || 0),
-              0,
-            ) / allAudits.length,
-          );
-          dStatManagement.textContent = `${avg}%`;
-          dStatManagement.className = `text-base sm:text-lg font-black font-mono mt-0.5 ${avg >= 90 ? "text-success" : avg >= 80 ? "text-warning" : "text-error"}`;
-        } else {
-          dStatManagement.textContent = "Sin datos";
-          dStatManagement.className = "text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40";
-        }
-      }
+      type ChannelKey = keyof typeof dStatChannel;
+      const channelStats: Array<[ChannelKey, number | null]> = [
+        ["wise_call", channelAverages.wiseCallsAvg],
+        ["wise_email", channelAverages.wiseEmailsAvg],
+        ["invgate_ticket", channelAverages.invgateAgAvg],
+      ];
+
+      channelStats.forEach(([channel, avg]) => {
+        const el = dStatChannel[channel];
+        if (!el) return;
+        el.textContent = formatChannelAverageScore(avg);
+        el.className = `text-base sm:text-lg font-black font-mono mt-0.5 ${getChannelAverageTextClass(avg)}`;
+      });
 
       activeAgentSummary = operator.monthSummary || "";
       if (dMonthSummary) dMonthSummary.textContent = activeAgentSummary;
@@ -1850,9 +1831,14 @@ const cleanBase = getCleanBase();
           Object.entries(c.section1.details).forEach(([key, val]) => {
             if (!val) failures[key] = (failures[key] || 0) + 1;
           });
-          Object.entries(c.section2.details).forEach(([key, val]) => {
-            if (!val) failures[key] = (failures[key] || 0) + 1;
-          });
+          // Los reclamos se eximen de S2 con 100% automático, pero el action
+          // persiste sus parámetros sin evaluar: contarlos como fallos
+          // reportaba "Áreas de Mejora" en auditorías que la app marca 100%.
+          if (hasSection2Evaluated(c)) {
+            Object.entries(c.section2.details).forEach(([key, val]) => {
+              if (!val) failures[key] = (failures[key] || 0) + 1;
+            });
+          }
         });
 
         const sortedFailures = Object.entries(failures)
@@ -1943,40 +1929,15 @@ const cleanBase = getCleanBase();
           (c: any) => c.channelType === "invgate_ticket",
         );
 
-        const averages = calculateChannelAverages(allAudits);
-
         const bAll = document.getElementById("tab-count-all");
         const bCall = document.getElementById("tab-count-wise_call");
         const bEmail = document.getElementById("tab-count-wise_email");
         const bAg = document.getElementById("tab-count-invgate_ticket");
 
-        const bCallAvg = document.getElementById("tab-avg-wise_call");
-        const bEmailAvg = document.getElementById("tab-avg-wise_email");
-        const bAgAvg = document.getElementById("tab-avg-invgate_ticket");
-
         if (bAll) bAll.textContent = `${allAudits.length}`;
         if (bCall) bCall.textContent = `${wiseCalls.length}/4`;
         if (bEmail) bEmail.textContent = `${wiseEmails.length}/4`;
         if (bAg) bAg.textContent = `${invgateAgs.length}/4`;
-
-        if (bCallAvg) {
-          bCallAvg.textContent = formatChannelAverageScore(
-            averages.wiseCallsAvg,
-          );
-          bCallAvg.className = `badge badge-xs font-bold ml-0.5 ${getChannelAverageBadgeClass(averages.wiseCallsAvg)}`;
-        }
-        if (bEmailAvg) {
-          bEmailAvg.textContent = formatChannelAverageScore(
-            averages.wiseEmailsAvg,
-          );
-          bEmailAvg.className = `badge badge-xs font-bold ml-0.5 ${getChannelAverageBadgeClass(averages.wiseEmailsAvg)}`;
-        }
-        if (bAgAvg) {
-          bAgAvg.textContent = formatChannelAverageScore(
-            averages.invgateAgAvg,
-          );
-          bAgAvg.className = `badge badge-xs font-bold ml-0.5 ${getChannelAverageBadgeClass(averages.invgateAgAvg)}`;
-        }
 
         let filteredCalls: QualityCall[] = [];
         let channelEmptyMsg = "";

@@ -112,8 +112,11 @@ const { isAgent = false } = Astro.props;
       </div>
     </div>
 
-    <!-- Banda de 4 Métricas Compactas -->
-    <div class="mt-4 pt-3.5 border-t border-base-200/70 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+    <!-- Banda de 5 Métricas Compactas: el score por canal reemplaza a S1/S2.
+         Promediar las dos secciones mezclaba tres mediciones distintas
+         (Interacción / Gestión del Correo / Gestión del Caso) en un número
+         que no significaba nada comparable entre operadores. -->
+    <div class="mt-4 pt-3.5 border-t border-base-200/70 grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
       <!-- Métrica 1: Score Anterior -->
       <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
         <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">vs Mes Anterior</span>
@@ -130,20 +133,29 @@ const { isAgent = false } = Astro.props;
         </span>
       </div>
 
-      <!-- Métrica 3: Interacción (S1) -->
+      <!-- Métricas 3-5: Score por canal -->
       <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
-        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Interacción (S1)</span>
-        <span id="detail-stat-interaction" class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content">
-          Sin datos
-        </span>
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Llamadas Wise</span>
+        <span
+          id="detail-stat-wise_call"
+          class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40"
+        >--</span>
       </div>
 
-      <!-- Métrica 4: Gestión (S2) -->
       <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
-        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Gestión (S2)</span>
-        <span id="detail-stat-management" class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content">
-          Sin datos
-        </span>
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Mails Wise</span>
+        <span
+          id="detail-stat-wise_email"
+          class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40"
+        >--</span>
+      </div>
+
+      <div class="bg-base-200/40 border border-base-200/60 rounded-xl p-2.5 flex flex-col justify-between">
+        <span class="text-3xs text-base-content/50 font-bold uppercase tracking-wider">Autogestiones</span>
+        <span
+          id="detail-stat-invgate_ticket"
+          class="text-base sm:text-lg font-black font-mono mt-0.5 text-base-content/40"
+        >--</span>
       </div>
     </div>
   </div>
@@ -264,7 +276,6 @@ const { isAgent = false } = Astro.props;
       <Icon name="boxicons:phone-ring" size={15} />
       <span>Llamadas Wise</span>
       <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_call">0/4</span>
-      <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_call" title="Promedio de Llamadas Wise">--</span>
     </button>
     <button
       type="button"
@@ -274,7 +285,6 @@ const { isAgent = false } = Astro.props;
       <Icon name="boxicons:envelope" size={15} />
       <span>Mails Wise</span>
       <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-wise_email">0/4</span>
-      <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-wise_email" title="Promedio de Mails Wise">--</span>
     </button>
     <button
       type="button"
@@ -284,7 +294,6 @@ const { isAgent = false } = Astro.props;
       <Icon name="boxicons:handshake" size={15} />
       <span>Autogestiones</span>
       <span class="badge badge-xs badge-ghost ml-1 font-mono" id="tab-count-invgate_ticket">0/4</span>
-      <span class="badge badge-xs badge-ghost ml-0.5 font-bold" id="tab-avg-invgate_ticket" title="Promedio de Autogestiones">--</span>
     </button>
   </div>
 </div>

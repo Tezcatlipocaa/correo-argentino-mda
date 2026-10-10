@@ -18,7 +18,6 @@ describe("Quality Calculator - Reclamo / Novedad Logic", () => {
         WISE_CALL_PARAMETERS,
         compliantCodes,
         true, // hasSection2
-        false, // isCriticalFailure
         true, // isReclamoNovedad = true!
       );
 
@@ -42,7 +41,6 @@ describe("Quality Calculator - Reclamo / Novedad Logic", () => {
         WISE_CALL_PARAMETERS,
         compliantCodes,
         true,
-        false,
         true, // isReclamoNovedad = true
       );
 
@@ -66,7 +64,6 @@ describe("Quality Calculator - Reclamo / Novedad Logic", () => {
         WISE_CALL_PARAMETERS,
         compliantCodes,
         true,
-        false,
         false, // isReclamoNovedad = false
       );
 
@@ -88,7 +85,6 @@ describe("Quality Calculator - Reclamo / Novedad Logic", () => {
         WISE_EMAIL_PARAMETERS,
         compliantCodes,
         true, // hasSection2
-        false,
         true, // isReclamoNovedad = true
       );
 
@@ -112,7 +108,6 @@ describe("Quality Calculator - Reclamo / Novedad Logic", () => {
         WISE_EMAIL_PARAMETERS,
         compliantCodes,
         true,
-        false,
         true, // isReclamoNovedad = true
       );
 
@@ -136,7 +131,6 @@ describe("Quality Calculator - Reclamo / Novedad Logic", () => {
         WISE_EMAIL_PARAMETERS,
         compliantCodes,
         true,
-        false,
         false, // isReclamoNovedad = false
       );
 
