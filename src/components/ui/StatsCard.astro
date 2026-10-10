@@ -44,7 +44,10 @@ const {
         <Icon name={`boxicons:${icon}`} size={28} is:inline />
       </span>
     </div>
-    <div class:list={["font-mono text-4xl font-bold", `text-${color}`]}>
+    <div
+      data-kpi-value
+      class:list={["font-mono text-4xl font-bold", `text-${color}`]}
+    >
       {value}
     </div>
     <div class="text-base-content/60 text-sm">{subtitle}</div>

@@ -136,7 +136,7 @@ const mesaOptions = await db
   }
 
   function setKpi(key: string, value: string): void {
-    const el = document.querySelector(`[data-kpi="${key}"] .font-mono`);
+    const el = document.querySelector(`[data-kpi="${key}"] [data-kpi-value]`);
     if (el) el.textContent = value;
   }
 

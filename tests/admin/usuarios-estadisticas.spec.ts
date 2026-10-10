@@ -147,10 +147,10 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
     await expect(page.locator('[data-chart-empty]').first()).toBeHidden();
 
     await expect(
-      page.locator('[data-kpi="total"] .font-mono'),
+      page.locator('[data-kpi="total"] [data-kpi-value]'),
     ).not.toHaveText("…");
     await expect(
-      page.locator('[data-kpi="activos"] .font-mono'),
+      page.locator('[data-kpi="activos"] [data-kpi-value]'),
     ).not.toHaveText("…");
 
     const estadoCard = page
