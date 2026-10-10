@@ -12,7 +12,8 @@ test.beforeEach(async ({ context }) => {
   testSupervisor = await createTestUserAndSession("admin");
   await setSessionCookie(context, testSupervisor.signedSessionId);
 
-  // Create an agent included in quality module
+  // Create an agent included in quality module. `agents` has no `active`/`role`
+  // columns: activity lives in `users.active`, the role in `users.role`.
   const [newAgent] = await db
     .insert(agents)
     .values({
@@ -20,8 +21,6 @@ test.beforeEach(async ({ context }) => {
       username: testSupervisor.username,
       userId: testSupervisor.userId,
       incluidoCalidad: true,
-      active: true,
-      role: "agent",
     })
     .returning({ id: agents.id });
 

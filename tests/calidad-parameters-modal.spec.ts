@@ -17,7 +17,7 @@ test.beforeEach(async () => {
     .set({ helpdeskId: 2509 })
     .where(eq(users.id, testSupervisor.userId));
 
-  // Crear agente supervisor en tabla agents
+  // Crear agente supervisor en tabla agents (sin `active`/`role`: viven en `users`)
   const [supAgent] = await db
     .insert(agents)
     .values({
@@ -25,8 +25,6 @@ test.beforeEach(async () => {
       username: testSupervisor.username,
       userId: testSupervisor.userId,
       incluidoCalidad: true,
-      active: true,
-      role: "supervisor",
     })
     .returning({ id: agents.id });
   supervisorAgentId = supAgent.id;

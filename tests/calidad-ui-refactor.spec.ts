@@ -24,7 +24,8 @@ test.beforeEach(async () => {
     .set({ helpdeskId: 2509 })
     .where(eq(users.id, testAgentUser.userId));
 
-  // Create operator agent for testing
+  // Create operator agent for testing. `agents` has no `active`/`role` columns:
+  // activity lives in `users.active` and the role in `users.role`.
   const [opAgent] = await db
     .insert(agents)
     .values({
@@ -32,8 +33,6 @@ test.beforeEach(async () => {
       username: testAgentUser.username,
       userId: testAgentUser.userId,
       incluidoCalidad: true,
-      active: true,
-      role: "agent",
     })
     .returning({ id: agents.id });
   operatorAgentId = opAgent.id;
@@ -46,8 +45,6 @@ test.beforeEach(async () => {
       username: testSupervisor.username,
       userId: testSupervisor.userId,
       incluidoCalidad: true,
-      active: true,
-      role: "supervisor",
     })
     .returning({ id: agents.id });
   supervisorAgentId = supAgent.id;
