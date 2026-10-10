@@ -86,6 +86,10 @@ const chartProps = JSON.stringify({
       >
         {emptyMessage}
       </div>
+      <div
+        data-chart-table
+        class="absolute inset-0 hidden overflow-auto p-1"
+      />
     </div>
 
     <div class="flex justify-end">
@@ -100,8 +104,6 @@ const chartProps = JSON.stringify({
         Ver datos en tabla
       </button>
     </div>
-
-    <div id={tableId} class="hidden overflow-x-auto" data-chart-table />
   </div>
 </div>
 
@@ -168,6 +170,22 @@ function initChartCard(card: HTMLElement): void {
     ...s,
   }));
   let highlightedIndex: number | null = null;
+  let showingTable = false;
+
+  function renderTableVisibility() {
+    const canvasEl = card.querySelector("[data-chart-canvas]");
+    const tableWrap = card.querySelector("[data-chart-table]");
+    const toggle = card.querySelector("[data-table-toggle]");
+    canvasEl?.classList.toggle("hidden", showingTable);
+    if (canvasEl) {
+      canvasEl.style.display = showingTable ? "none" : "";
+    }
+    tableWrap?.classList.toggle("hidden", !showingTable);
+    if (toggle) {
+      toggle.textContent = showingTable ? "Ver gráfico" : "Ver tabla";
+      toggle.setAttribute("aria-expanded", String(showingTable));
+    }
+  }
 
   const hasData = () =>
     currentLabels.length > 0 && currentSeries.some((s) => s.data.length > 0);
@@ -175,6 +193,8 @@ function initChartCard(card: HTMLElement): void {
   function showEmpty() {
     chart?.destroy();
     chart = null;
+    showingTable = false;
+    renderTableVisibility();
     emptyEl?.classList.remove("hidden");
     canvas?.classList.add("hidden");
   }
@@ -364,6 +384,7 @@ function initChartCard(card: HTMLElement): void {
     renderTable();
     if (hasData()) buildChart();
     else showEmpty();
+    renderTableVisibility();
   }
 
   if (chartName) {
@@ -417,10 +438,9 @@ function initChartCard(card: HTMLElement): void {
     window.addEventListener("stats:filters-changed", onFiltersChanged);
   }
 
-  toggleBtn?.addEventListener("click", (event) => {
-    const button = event.currentTarget as HTMLButtonElement;
-    const hidden = tableWrap?.classList.toggle("hidden");
-    button.setAttribute("aria-expanded", String(!hidden));
+  toggleBtn?.addEventListener("click", () => {
+    showingTable = !showingTable;
+    renderTableVisibility();
   });
 
   const observer = new MutationObserver(() => {

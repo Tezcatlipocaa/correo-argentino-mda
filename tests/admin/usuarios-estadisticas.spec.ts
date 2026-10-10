@@ -161,6 +161,15 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
       estadoCard.locator('td[data-label="Activos"]'),
     ).not.toHaveText("0");
 
+    await expect(estadoCard.locator("canvas")).toBeHidden();
+    await expect(
+      estadoCard.locator('[data-chart-table] td[data-label="Activos"]'),
+    ).toBeVisible();
+
+    await estadoCard.locator("[data-table-toggle]").click();
+    await expect(estadoCard.locator("canvas")).toBeVisible();
+    await expect(estadoCard.locator("[data-chart-table]")).toBeHidden();
+
     expect(externalRequests).toEqual([]);
   });
 
