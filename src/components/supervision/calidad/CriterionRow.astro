@@ -5,14 +5,13 @@ import type { AuditParameter } from "@/types/quality";
 interface Props {
   param: AuditParameter;
   section: "items" | "ticket" | "mda";
-  accent?: "primary" | "secondary";
 }
 
-const { param: p, section, accent = "primary" } = Astro.props;
+const { param: p, section } = Astro.props;
 
 const weight = p.weight ?? 0;
-const focusBorder =
-  accent === "primary" ? "focus:border-primary" : "focus:border-secondary";
+// El borde del textarea es secondary en toda la fila: antes seguía al acento
+// de la sección y mezclaba dos azules distintos para el mismo control.
 ---
 
 {/*
@@ -119,7 +118,7 @@ const focusBorder =
       name={`${p.code}_comment`}
       rows="2"
       placeholder="Escribí la justificación o el coaching de este criterio…"
-      class={`textarea w-full resize-y rounded-xl border-base-200 bg-base-100 text-sm leading-relaxed focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${focusBorder}`}
+      class="textarea w-full resize-y rounded-xl border-base-200 bg-base-100 text-sm leading-relaxed focus:border-secondary focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
     ></textarea>
   </div>
 </div>
