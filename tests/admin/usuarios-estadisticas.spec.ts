@@ -201,10 +201,14 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
     ).toHaveCount(0);
   });
 
-  test("el CTA de la gestión de usuarios lleva a las estadísticas", async ({
+  test("el CTA vive en la fila de botones y lleva a las estadísticas", async ({
     page,
   }) => {
     await page.goto("/admin/usuarios");
+    const fila = page
+      .locator("div.flex.flex-wrap.items-center.gap-3")
+      .filter({ has: page.getByRole("button", { name: /tabla comparativa/ }) });
+    await expect(fila.locator("[data-cta-estadisticas]")).toBeVisible();
     await page.locator("[data-cta-estadisticas]").click();
     await expect(page).toHaveURL(/\/admin\/usuarios\/estadisticas$/);
     await expect(
