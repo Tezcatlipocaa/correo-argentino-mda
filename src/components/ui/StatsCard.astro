@@ -14,8 +14,6 @@ interface Props {
     | "success"
     | "warning"
     | "error";
-  size?: "sm" | "md" | "lg";
-  accentIcon?: string;
   class?: string;
 }
 
@@ -25,26 +23,30 @@ const {
   value,
   subtitle,
   color = "primary",
-  size,
-  accentIcon,
   class: className = "",
 } = Astro.props;
 ---
 
 <div
   class:list={[
-    "card card-border bg-base-100 border-base-200 shadow-sm",
+    "card card-border bg-base-100 border-base-200 shadow-sm p-5",
     className,
   ]}
 >
-  <div class="card-body">
-    <div class="stat">
-      <div class:list={["stat-figure", `text-${color}`]}>
-        <Icon name={`boxicons:${icon}`} size={18} is:inline />
-      </div>
-      <div class="stat-title">{label}</div>
-      <div class:list={["stat-value", `text-${color}`]}>{value}</div>
-      <div class="stat-desc">{subtitle}</div>
+  <div class="flex flex-col gap-3">
+    <div class="flex items-start justify-between gap-2">
+      <span
+        class="text-base-content/60 text-xs font-semibold tracking-wider uppercase"
+      >
+        {label}
+      </span>
+      <span class:list={[`text-${color}`]}>
+        <Icon name={`boxicons:${icon}`} size={28} is:inline />
+      </span>
     </div>
+    <div class:list={["font-mono text-4xl font-bold", `text-${color}`]}>
+      {value}
+    </div>
+    <div class="text-base-content/60 text-sm">{subtitle}</div>
   </div>
 </div>
