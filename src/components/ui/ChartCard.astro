@@ -101,7 +101,7 @@ const chartProps = JSON.stringify({
         aria-controls={tableId}
       >
         <Icon name="boxicons:table" size={16} is:inline />
-        Ver datos en tabla
+        <span data-table-toggle-label>Ver tabla</span>
       </button>
     </div>
   </div>
@@ -176,13 +176,14 @@ function initChartCard(card: HTMLElement): void {
     const canvasEl = card.querySelector("[data-chart-canvas]");
     const tableWrap = card.querySelector("[data-chart-table]");
     const toggle = card.querySelector("[data-table-toggle]");
+    const label = card.querySelector("[data-table-toggle-label]");
     canvasEl?.classList.toggle("hidden", showingTable);
     if (canvasEl) {
       canvasEl.style.display = showingTable ? "none" : "";
     }
     tableWrap?.classList.toggle("hidden", !showingTable);
     if (toggle) {
-      toggle.textContent = showingTable ? "Ver gráfico" : "Ver tabla";
+      if (label) label.textContent = showingTable ? "Ver gráfico" : "Ver tabla";
       toggle.setAttribute("aria-expanded", String(showingTable));
     }
   }
