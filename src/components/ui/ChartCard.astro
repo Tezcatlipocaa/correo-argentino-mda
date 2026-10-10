@@ -184,6 +184,12 @@ function initChartCard(card: HTMLElement): void {
     if (!ctx) return;
     chart?.destroy();
     const tokens = readTokens();
+    Chart.defaults.font.family = "'Geist Variable', system-ui, sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = tokens.text;
+    Chart.defaults.plugins.tooltip.bodyFont = { size: 12 };
+    Chart.defaults.plugins.tooltip.titleFont = { size: 12, weight: "bold" };
+    Chart.defaults.plugins.tooltip.footerFont = { size: 12 };
     const paletteLen = tokens.palette.length;
     const isDoughnut = type === "doughnut";
     chart = new Chart(ctx, {
@@ -242,7 +248,7 @@ function initChartCard(card: HTMLElement): void {
             position: "bottom",
             labels: {
               color: tokens.text,
-              font: { family: "Geist", size: 11 },
+              font: { size: 12 },
             },
           },
         },
@@ -253,7 +259,7 @@ function initChartCard(card: HTMLElement): void {
                 x: {
                   ticks: {
                     color: tokens.text,
-                    font: { family: "Geist", size: 10 },
+                    font: { size: 12 },
                   },
                   grid: { display: false },
                 },
@@ -261,7 +267,7 @@ function initChartCard(card: HTMLElement): void {
                   beginAtZero: true,
                   ticks: {
                     color: tokens.text,
-                    font: { family: "Geist", size: 10 },
+                    font: { size: 12 },
                   },
                   grid: { color: tokens.grid },
                 },
