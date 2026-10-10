@@ -3,16 +3,22 @@ import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import { db } from "@db/index";
 import { mesas } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { CANONICAL_ROLES } from "@lib/rbac";
 import { getCleanBase } from "@lib/baseUrl";
+import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 
 const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
 
 const mesaOptions = await db
   .select({ id: mesas.invgateId, name: mesas.name })
   .from(mesas)
-  .where(eq(mesas.active, true))
+  .where(
+    and(
+      eq(mesas.active, true),
+      or(eq(mesas.assignable, true), eq(mesas.name, MDA_TI_HELPDESK)),
+    ),
+  )
   .orderBy(mesas.name);
 ---
 
@@ -99,7 +105,7 @@ const mesaOptions = await db
         chartKey="porRol"
       />
     </div>
-    <div class="lg:col-span-2">
+    <div class="lg:col-span-3">
       <ChartCard
         type="bar"
         title="Usuarios por mesa"

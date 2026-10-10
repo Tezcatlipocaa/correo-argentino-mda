@@ -1,9 +1,9 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 import { createHmac } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../../src/db/index";
-import { sessions, users } from "../../src/db/schema";
+import { mesas, sessions, users } from "../../src/db/schema";
 
 const SECRET_KEY = process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
 function sign(sessionId: string): string {
@@ -63,7 +63,7 @@ test.describe("Endpoint de estadísticas de usuarios (#183)", () => {
     expect(body.charts.porRol.series[0].data).toHaveLength(
       body.charts.porRol.labels.length,
     );
-    expect(body.charts.porMesa.labels).toContain("Sin mesa");
+    expect(body.charts.porMesa.labels).not.toContain("Sin mesa");
     expect(body.charts.porMesa.series[0].data).toHaveLength(
       body.charts.porMesa.labels.length,
     );
@@ -115,9 +115,54 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
       expiresAt: Date.now() + 86_400_000,
     });
     cookie = sign(sessionId);
+    const [mesaAsignable] = await db
+      .insert(mesas)
+      .values({
+        invgateId: 998001,
+        name: `Mesa E2E Asignable ${stamp}`,
+        active: true,
+        assignable: true,
+        lastSyncedAt: "2026-10-10",
+      })
+      .returning({ id: mesas.invgateId });
+    const [mesaPrueba] = await db
+      .insert(mesas)
+      .values({
+        invgateId: 998002,
+        name: `Mesa E2E Prueba ${stamp}`,
+        active: true,
+        assignable: false,
+        lastSyncedAt: "2026-10-10",
+      })
+      .returning({ id: mesas.invgateId });
+    await db.insert(users).values([
+      {
+        username: `e2e_asignable_${stamp}`,
+        password: "x",
+        role: "agent",
+        helpdeskId: mesaAsignable.id,
+      },
+      {
+        username: `e2e_prueba_${stamp}`,
+        password: "x",
+        role: "agent",
+        helpdeskId: mesaPrueba.id,
+      },
+      { username: `e2e_sinmesa_${stamp}`, password: "x", role: "agent" },
+    ]);
   });
 
   test.afterAll(async () => {
+    await db
+      .delete(users)
+      .where(
+        inArray(users.username, [
+          `e2e_asignable_${stamp}`,
+          `e2e_prueba_${stamp}`,
+          `e2e_sinmesa_${stamp}`,
+        ]),
+      );
+    await db.delete(mesas).where(inArray(mesas.invgateId, [998001, 998002]));
     await db.delete(sessions).where(eq(sessions.userId, adminId));
     await db.delete(users).where(eq(users.id, adminId));
   });
@@ -234,5 +279,39 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
       .getByRole("link", { name: "Volver a Gestión de usuarios" })
       .click();
     await expect(page).toHaveURL(/\/admin\/usuarios$/);
+  });
+
+  test("usuarios por mesa excluye mesas no asignables y ocupa el ancho", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios/estadisticas");
+    const porMesaCard = page
+      .locator("[data-chart-card]")
+      .filter({
+        has: page.getByRole("heading", { name: "Usuarios por mesa" }),
+      });
+    await porMesaCard.locator("[data-table-toggle]").click();
+
+    const asignable = porMesaCard.locator(
+      `[data-chart-table] td[data-label="Mesa E2E Asignable ${stamp}"]`,
+    );
+    await expect(asignable).toHaveCount(1);
+    const prueba = porMesaCard.locator(
+      `[data-chart-table] td[data-label="Mesa E2E Prueba ${stamp}"]`,
+    );
+    await expect(prueba).toHaveCount(0);
+    await expect(
+      porMesaCard.locator('[data-chart-table] td[data-label="Sin mesa"]'),
+    ).toHaveCount(0);
+
+    const ocupaAncho = await porMesaCard.evaluate((el) => {
+      const grid = el.parentElement;
+      if (!grid) return false;
+      return (
+        el.getBoundingClientRect().width >=
+        grid.getBoundingClientRect().width - 1
+      );
+    });
+    expect(ocupaAncho).toBe(true);
   });
 });

@@ -5,6 +5,7 @@ import { users, agents, mesas } from "@db/schema";
 import { jsonError, jsonResponse, sanitizeError } from "@lib/apiResponse";
 import { requireReadAccess } from "@lib/rbac-middleware";
 import { CANONICAL_ROLES, isValidRole, normalizeRole } from "@lib/rbac";
+import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 
 interface Serie {
   label: string;
@@ -83,6 +84,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
         role: users.role,
         active: users.active,
         mesaName: mesas.name,
+        mesaActive: mesas.active,
+        mesaAssignable: mesas.assignable,
         enAsistencia: agents.enAsistencia,
       })
       .from(users)
@@ -94,10 +97,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const activos = rows.filter((r) => r.active).length;
     const enAsistencia = rows.filter((r) => r.enAsistencia).length;
 
-    const countBy = (pick: (row: (typeof rows)[number]) => string): ChartData => {
+    const countBy = (
+      pick: (row: (typeof rows)[number]) => string | null,
+    ): ChartData => {
       const counts = new Map<string, number>();
       for (const row of rows) {
         const key = pick(row);
+        if (key === null) continue;
         counts.set(key, (counts.get(key) ?? 0) + 1);
       }
       return {
@@ -120,7 +126,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
           series: [{ label: "Usuarios", data: [activos, total - activos] }],
         },
         porRol: countBy((row) => normalizeRole(row.role)),
-        porMesa: countBy((row) => row.mesaName ?? "Sin mesa"),
+        porMesa: countBy((row) =>
+          row.mesaActive &&
+          (row.mesaAssignable || row.mesaName === MDA_TI_HELPDESK)
+            ? row.mesaName
+            : null,
+        ),
       },
       filtros: {
         roles: [...CANONICAL_ROLES],
