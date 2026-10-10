@@ -22,7 +22,6 @@ import { activeAgentCondition } from "@lib/activeUsers";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { formatMonthLabel, MONTH_LABELS } from "@lib/monthUtils";
 import { getCleanBase } from "@lib/baseUrl";
-import AuditModal from "./AuditModal.astro";
 import OperatorDetailsPanel from "./OperatorDetailsPanel.astro";
 import {
   calculateOperatorChannelStats,
@@ -411,7 +410,7 @@ const cleanBase = getCleanBase();
 
       <button
         id="btn-export-excel"
-        class="btn btn-sm btn-outline btn-success gap-1.5 text-xs font-bold uppercase"
+        class="btn btn-sm btn-outline btn-secondary gap-1.5 text-xs font-bold uppercase"
         title="Exportar Reporte a Excel (.xlsx)"
       >
         <Icon name="boxicons:file" size={18} />
@@ -580,8 +579,6 @@ const cleanBase = getCleanBase();
     )
   }
 </PageContainer>
-
-<AuditModal allParameters={activeParameters} selectedMonth={selectedMonth} />
 
 <Modal
   id="month-summary-modal"
@@ -1316,40 +1313,6 @@ const cleanBase = getCleanBase();
     const callsContainer = document.getElementById("detail-calls-container");
     const btnBack = document.getElementById("btn-back-to-summary");
 
-    // Modal elements
-    const auditModal = document.getElementById(
-      "audit-modal",
-    ) as HTMLDialogElement;
-    const auditForm = document.getElementById("audit-form") as HTMLFormElement;
-    const modalTitle = document.getElementById("modal-title");
-    const formAuditId = document.getElementById(
-      "form-audit-id",
-    ) as HTMLInputElement;
-    const formAgentId = document.getElementById(
-      "form-agent-id",
-    ) as HTMLInputElement;
-    const formCallId = document.getElementById(
-      "form-call-id",
-    ) as HTMLInputElement;
-    const formTicketId = document.getElementById(
-      "form-ticket-id",
-    ) as HTMLInputElement;
-    const formDuration = document.getElementById(
-      "form-duration",
-    ) as HTMLInputElement;
-    const formDate = document.getElementById("form-date") as HTMLInputElement;
-    const btnDeleteAudit = document.getElementById(
-      "btn-delete-audit",
-    ) as HTMLButtonElement;
-    const btnCloseModal = document.getElementById(
-      "btn-close-modal",
-    ) as HTMLButtonElement;
-
-    // Additional field elements
-    const formNotes = document.getElementById(
-      "form-notes",
-    ) as HTMLTextAreaElement;
-
     // Month Summary Modal elements
     const summaryModal = document.getElementById(
       "month-summary-modal",
@@ -1446,171 +1409,6 @@ const cleanBase = getCleanBase();
     }
 
     // open modal for editing or new audit
-    const openAuditModal = (
-      agentId: string,
-      callData: QualityCall | null = null,
-      defaultChannel: string = "wise_call",
-    ) => {
-      activeAgentId = agentId;
-      if (!auditForm || !auditModal) return;
-      auditForm.reset();
-      clearFormErrors(auditForm);
-      (window as any).resetTicketViewer?.();
-      if (formAgentId) formAgentId.value = agentId;
-
-      const targetChannel = callData ? (callData.channelType || "wise_call") : defaultChannel;
-      const targetBtn = document.querySelector(`.channel-btn[data-channel="${targetChannel}"]`) as HTMLButtonElement | null;
-      if (targetBtn) {
-        targetBtn.click();
-      }
-
-      if (callData) {
-        // Edit mode
-        if (modalTitle) {
-          modalTitle.innerHTML = `<svg class="size-6 text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor; margin-right: 0.5rem;"><path d="m18.988 2.012-3 3L19.988 9.012l3-3zM3.988 17.012v4h4l12.75-12.75-4-4z"></path></svg> Editar Auditoría de Calidad`;
-        }
-        if (formAuditId) formAuditId.value = String(callData.id);
-        if (formCallId) formCallId.value = callData.callId;
-        if (formTicketId) formTicketId.value = callData.ticketId;
-        (window as any).syncInvgateDeepLink?.();
-        if (formDuration) formDuration.value = callData.duration;
-        if (formDate) formDate.value = callData.date.substring(0, 10);
-        if (formNotes) formNotes.value = callData.notes || "";
-
-        const formRing = document.getElementById("form-ring-time") as HTMLInputElement | null;
-        const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
-        const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
-        const formRecordingUrl = document.getElementById("form-recording-url") as HTMLInputElement | null;
-        const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
-        const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
-        const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
-        const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
-
-        if (formRing) formRing.value = callData.ringTime || "";
-        if (formCreation) formCreation.value = callData.creationTime || "";
-        if (formTake) formTake.value = callData.takeTime || "";
-        if (formRecordingUrl) formRecordingUrl.value = callData.recordingUrl || "";
-        if (formIsPas) formIsPas.checked = !!callData.isPas;
-
-        // Populate audio viewer if callData has recordingUrl
-        const tvAudioContainer = document.getElementById("tv-audio-container");
-        const tvAudioPlayer = document.getElementById("tv-audio-player") as HTMLAudioElement | null;
-        const tvAudioDownload = document.getElementById("tv-audio-download") as HTMLAnchorElement | null;
-        if (callData.recordingUrl && tvAudioContainer && tvAudioPlayer && tvAudioDownload) {
-          const caseId = callData.callId || "llamada";
-          const downloadUrl = `${cleanBase}api/calidad/download-audio?url=${encodeURIComponent(callData.recordingUrl)}&filename=grabacion-caso-${encodeURIComponent(caseId)}.mp3&download=1`;
-          tvAudioPlayer.src = callData.recordingUrl;
-          tvAudioPlayer.load();
-          tvAudioDownload.href = downloadUrl;
-          tvAudioContainer.classList.remove("hidden");
-        }
-        if ((callData.channelType || "wise_call") === "wise_call") {
-          const isReclamo = !!callData.isReclamoNovedad;
-          (window as any).setAuditTicketMode?.(isReclamo ? "reclamo" : "nuevo");
-        } else if (callData.channelType === "wise_email") {
-          const isReclamo = !!callData.isReclamoNovedad;
-          (window as any).setAuditEmailTicketMode?.(isReclamo ? "reclamo" : "nuevo");
-        } else if (toggleCallGeneratedTicket) {
-          toggleCallGeneratedTicket.checked = (callData.channelType || "wise_call") === "wise_call"
-            ? (callData.appliesMda ?? true)
-            : (callData.appliesMda !== false);
-          toggleCallGeneratedTicket.dispatchEvent(new Event("change"));
-        }
-        if (toggleAppliesMda) {
-          toggleAppliesMda.value = "true";
-        }
-        if (toggleStaysMda) {
-          toggleStaysMda.checked = callData.staysInMda ?? true;
-          toggleStaysMda.dispatchEvent(new Event("change"));
-        }
-
-        const s1Details = callData.section1?.details || {};
-        const s2Details = callData.section2?.details || {};
-        const comments = callData.comments || {};
-
-        auditForm.querySelectorAll(".audit-checkbox").forEach((cbEl) => {
-          const cb = cbEl as HTMLInputElement;
-          const name = cb.name;
-          if (s1Details.hasOwnProperty(name)) {
-            cb.checked = !!s1Details[name];
-          } else if (s2Details.hasOwnProperty(name)) {
-            cb.checked = !!s2Details[name];
-          }
-        });
-
-        // Precargar comentarios por parámetro
-        auditForm.querySelectorAll<HTMLInputElement>("input[name$='_comment']").forEach((inp) => {
-          const code = inp.name.replace(/_comment$/, "");
-          inp.value = comments[code] || "";
-        });
-
-        if (btnDeleteAudit) btnDeleteAudit.classList.remove("hidden");
-      } else {
-        // New mode
-        if (modalTitle) {
-          modalTitle.innerHTML = `<svg class="size-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill: currentColor; margin-right: 0.5rem;"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"></path></svg> Nueva Auditoría de Calidad`;
-        }
-        if (formAuditId) formAuditId.value = "";
-        if (formCallId) formCallId.value = "";
-        if (formTicketId) formTicketId.value = "";
-        if (formDuration) formDuration.value = "";
-        if (formNotes) formNotes.value = "";
-
-        const formRing = document.getElementById("form-ring-time") as HTMLInputElement | null;
-        const formCreation = document.getElementById("form-creation-time") as HTMLInputElement | null;
-        const formTake = document.getElementById("form-take-time") as HTMLInputElement | null;
-        const formIsPas = document.getElementById("form-is-pas") as HTMLInputElement | null;
-
-        const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
-        const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
-        const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
-
-        if (formRing) formRing.value = "";
-        if (formCreation) formCreation.value = "";
-        if (formTake) formTake.value = "";
-        if (formIsPas) formIsPas.checked = false;
-        (window as any).syncInvgateDeepLink?.();
-        (window as any).setAuditTicketMode?.("nuevo");
-        (window as any).setAuditEmailTicketMode?.("nuevo");
-        if (toggleCallGeneratedTicket) {
-          toggleCallGeneratedTicket.checked = true;
-          toggleCallGeneratedTicket.dispatchEvent(new Event("change"));
-        }
-        if (toggleAppliesMda) {
-          toggleAppliesMda.value = "true";
-        }
-        if (toggleStaysMda) {
-          toggleStaysMda.checked = true;
-          toggleStaysMda.dispatchEvent(new Event("change"));
-        }
-
-        const today = new Date().toISOString().substring(0, 10);
-        if (formDate) formDate.value = today;
-
-        auditForm.querySelectorAll(".audit-checkbox").forEach((cbEl) => {
-          (cbEl as HTMLInputElement).checked = true;
-        });
-
-        // Limpiar comentarios por parámetro
-        auditForm.querySelectorAll<HTMLInputElement>("input[name$='_comment']").forEach((inp) => {
-          inp.value = "";
-        });
-
-        if (btnDeleteAudit) btnDeleteAudit.classList.add("hidden");
-      }
-
-      (window as any).refreshAuditCommentsVisibility?.();
-      (window as any).recalculateAuditScores?.();
-      auditModal.showModal();
-    };
-
-    // Close modal triggers
-    if (btnCloseModal) {
-      btnCloseModal.addEventListener("click", () => {
-        auditModal?.close();
-      });
-    }
-
     // Attach "Nueva Auditoría" button listener
     const btnNewAudit = document.getElementById("btn-new-audit");
     if (btnNewAudit) {
@@ -1625,122 +1423,6 @@ const cleanBase = getCleanBase();
     }
 
     // Submit form using Astro Actions
-    auditForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      clearFormErrors(auditForm);
-
-      const btnSubmit = (document.getElementById("btn-submit-audit") ||
-        auditForm.querySelector('button[type="submit"]')) as HTMLButtonElement | null;
-      const originalText = btnSubmit ? btnSubmit.innerHTML : "";
-      if (btnSubmit) {
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML =
-          '<span class="loading loading-spinner loading-xs"></span> Guardando…';
-      }
-
-      const formData = new FormData(auditForm);
-      const toggleCallGeneratedTicket = document.getElementById("toggle-call-generated-ticket") as HTMLInputElement | null;
-      const callTicketModeInput = document.getElementById("call-ticket-mode") as HTMLInputElement | null;
-      const isReclamoInput = document.getElementById("form-is-reclamo-novedad") as HTMLInputElement | null;
-      const toggleAppliesMda = document.getElementById("toggle-applies-mda") as HTMLInputElement | null;
-      const toggleStaysMda = document.getElementById("toggle-stays-mda") as HTMLInputElement | null;
-      if (toggleCallGeneratedTicket) {
-        formData.set("callGeneratedTicket", toggleCallGeneratedTicket.checked ? "true" : "false");
-      }
-      if (callTicketModeInput) {
-        formData.set("callTicketMode", callTicketModeInput.value);
-      }
-      if (isReclamoInput) {
-        formData.set("isReclamoNovedad", isReclamoInput.value);
-      }
-      if (toggleAppliesMda) {
-        formData.set("appliesMda", "true");
-      }
-      if (toggleStaysMda) {
-        formData.set("staysInMda", toggleStaysMda.checked ? "true" : "false");
-      }
-      const activeChannel = (formData.get("channelType") as string) || "wise_call";
-      const callIdVal = (formData.get("callId") as string)?.trim() || "";
-      const ticketIdVal = (formData.get("ticketId") as string)?.trim() || "";
-
-      // Dynamic validation per channel
-      if (activeChannel === "wise_call" && !callIdVal) {
-        (window as any).showToast?.("El Nro de Caso / ID de Llamada es requerido.", "alert-warning");
-        const callInput = document.getElementById("form-call-id");
-        callInput?.focus();
-        if (btnSubmit) {
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = originalText;
-        }
-        return;
-      }
-      if (activeChannel === "wise_email" && !callIdVal) {
-        (window as any).showToast?.("El Nro de Caso / Mail Wise es requerido.", "alert-warning");
-        const callInput = document.getElementById("form-call-id");
-        callInput?.focus();
-        if (btnSubmit) {
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = originalText;
-        }
-        return;
-      }
-      if (activeChannel === "invgate_ticket") {
-        if (!ticketIdVal && !callIdVal) {
-          (window as any).showToast?.("El Nro de Caso / Ticket AG es requerido.", "alert-warning");
-          const ticketInput = document.getElementById("form-ticket-id");
-          ticketInput?.focus();
-          if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = originalText;
-          }
-          return;
-        }
-        if (!callIdVal) {
-          formData.set("callId", ticketIdVal);
-        }
-      }
-
-      if (!formData.get("duration")) {
-        formData.set("duration", "00:00");
-      }
-
-      // Ensure notes is always present (even if textarea is empty)
-      if (!formData.has("notes")) {
-        formData.set("notes", "");
-      }
-      try {
-        const result = await actions.saveAudit(formData);
-        if (result.error) {
-          console.error("Validation error:", result.error);
-          showFormErrors(auditForm, result.error);
-        } else if (result.data?.success) {
-          const url = new URL(window.location.href);
-          if (activeAgentId) {
-            url.searchParams.set("agentId", activeAgentId);
-          }
-          url.searchParams.set("toast_msg", "Auditoría guardada con éxito.");
-          url.searchParams.set("toast_type", "success");
-          window.location.href = url.toString();
-        } else {
-          (window as any).showToast?.(
-            "Error al guardar la auditoría.",
-            "alert-error",
-          );
-        }
-      } catch (error) {
-        console.error(error);
-        (window as any).showToast?.(
-          "Ocurrió un error inesperado al guardar la auditoría.",
-          "alert-error",
-        );
-      } finally {
-        if (btnSubmit) {
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = originalText;
-        }
-      }
-    });
-
     // Handle Month Summary Modal
     const openMonthSummaryModal = () => {
       if (activeAgentId) {
@@ -1819,49 +1501,6 @@ const cleanBase = getCleanBase();
     });
 
     // Delete audit using Astro Actions
-    btnDeleteAudit.addEventListener("click", async () => {
-      const auditId = formAuditId.value;
-      if (!auditId) return;
-
-      if (confirm("¿Estás seguro de que querés eliminar esta auditoría?")) {
-        const originalText = btnDeleteAudit.innerHTML;
-        btnDeleteAudit.disabled = true;
-        btnDeleteAudit.innerHTML =
-          '<span class="loading loading-spinner loading-xs"></span> Eliminando…';
-
-        try {
-          const deleteForm = new FormData();
-          deleteForm.append("id", auditId);
-
-          const result = await actions.deleteAudit(deleteForm);
-          if (result.data?.success) {
-            const url = new URL(window.location.href);
-            if (activeAgentId) {
-              url.searchParams.set("agentId", activeAgentId);
-            }
-            url.searchParams.set("toast_msg", "Auditoría eliminada con éxito.");
-            url.searchParams.set("toast_type", "success");
-            window.location.href = url.toString();
-          } else {
-            (window as any).showToast?.(
-              "Error al eliminar la auditoría.",
-              "alert-error",
-            );
-            btnDeleteAudit.disabled = false;
-            btnDeleteAudit.innerHTML = originalText;
-          }
-        } catch (error) {
-          console.error(error);
-          (window as any).showToast?.(
-            "Ocurrió un error inesperado al eliminar la auditoría.",
-            "alert-error",
-          );
-          btnDeleteAudit.disabled = false;
-          btnDeleteAudit.innerHTML = originalText;
-        }
-      }
-    });
-
     const clearAgentFromUrl = () => {
       activeAgentId = "";
       const currentUrl = new URL(window.location.href);
@@ -2338,17 +1977,12 @@ const cleanBase = getCleanBase();
                     btn.getAttribute("data-call-id") ||
                     (btn.closest(".call-card-container") as HTMLElement)?.getAttribute("data-call-id");
                   if (callIdStr) {
-                    const callId = parseInt(callIdStr, 10);
-                    const call = (operator.calls || []).find(
-                      (c: any) => c.id === callId,
-                    );
-                    if (call) {
-                      openAuditModal(
-                        operator.id,
-                        call,
-                        call.channelType || (currentActiveChannel === "all" ? "wise_call" : currentActiveChannel),
-                      );
-                    }
+                    const monthVal = monthSelector?.value || "";
+                    const url = new URL(`${window.location.origin}${cleanBase}supervision/calidad-operadores/nueva`);
+                    url.searchParams.set("auditId", callIdStr);
+                    url.searchParams.set("agentId", operator.id);
+                    if (monthVal) url.searchParams.set("month", monthVal);
+                    window.location.href = url.toString();
                   }
                 });
               });

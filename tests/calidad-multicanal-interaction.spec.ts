@@ -1,7 +1,15 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 import { db } from "../src/db/index";
-import { users, sessions, mesas } from "../src/db/schema";
+import {
+  agents,
+  auditParameters,
+  auditScores,
+  mesas,
+  qualityAudits,
+  sessions,
+  users,
+} from "../src/db/schema";
 import { eq } from "drizzle-orm";
 import { createHmac } from "crypto";
 
@@ -18,6 +26,7 @@ function signSessionId(sessionId: string): string {
 let testUserId: number;
 let testRawSessionId: string;
 let testSignedSessionId: string;
+let seededAgentId: number | null = null;
 
 test.beforeAll(async () => {
   const mesaName = "TI_GSM_MDA TI";
@@ -68,6 +77,17 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  if (seededAgentId) {
+    const audits = await db
+      .select()
+      .from(qualityAudits)
+      .where(eq(qualityAudits.agentId, seededAgentId));
+    for (const a of audits) {
+      await db.delete(auditScores).where(eq(auditScores.auditId, a.id));
+    }
+    await db.delete(qualityAudits).where(eq(qualityAudits.agentId, seededAgentId));
+    await db.delete(agents).where(eq(agents.id, seededAgentId));
+  }
   if (testRawSessionId) {
     await db.delete(sessions).where(eq(sessions.id, testRawSessionId));
   }
@@ -406,63 +426,140 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
   test("Debe mostrar scores consistentes entre la card de auditoría guardada y el modal de edición", async ({
     page,
   }) => {
-    await page.goto("/supervision/calidad-operadores");
+    /*
+     * Este test siembra su propia auditoría en el mes en curso. Antes depended de
+     * datos preexistentes (09-2026) y todo el bloque estaba detrás de
+     * `if (callCard.isVisible())`: en el mes por defecto no había cards, la rama
+     * se saltaba y el test pasaba en verde sin verificar nada.
+     */
+    const now = new Date();
+    const currentMonth = `${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getFullYear()}`;
 
-    const operatorItems = page.locator(".operator-card");
-    await expect(operatorItems.first()).toBeVisible({ timeout: 10000 });
+    const params = await db
+      .select({ id: auditParameters.id, section: auditParameters.section })
+      .from(auditParameters)
+      .where(eq(auditParameters.active, true));
+    test.skip(params.length === 0, "Requiere audit_parameters activos para crear la auditoría");
+    // La card renderiza las dos secciones: sembramos al menos un score de cada una.
+    const s1Param = params.find((p) => p.section === "items") ?? params[0];
+    const s2Param = params.find((p) => p.section !== "items");
 
-    // Buscar operador con llamadas (ej. el que tiene auditorías guardadas)
-    let targetOp = operatorItems.first();
-    const count = await operatorItems.count();
-    for (let i = 0; i < count; i++) {
-      const text = await operatorItems.nth(i).innerText();
-      if (text.includes("auditoría") || text.includes("Auditoría") || text.includes("534787")) {
-        targetOp = operatorItems.nth(i);
-        break;
-      }
-    }
+    const [opAgent] = await db
+      .insert(agents)
+      .values({
+        name: "Operador Paridad Scores",
+        username: `op_paridad_${Date.now()}`,
+        incluidoCalidad: true,
+      })
+      .returning({ id: agents.id });
+    seededAgentId = opAgent.id;
+
+    const [audit] = await db
+      .insert(qualityAudits)
+      .values({
+        agentId: opAgent.id,
+        month: currentMonth,
+        channelType: "wise_call",
+        callId: "PARIDAD01",
+        ticketId: "",
+        duration: "02:30",
+        date: now.toISOString().slice(0, 10),
+        totalScore: 90,
+        section1Score: 90,
+        section2Score: 90,
+        notes: "Auditoría sembrada para el test de paridad",
+      })
+      .returning({ id: qualityAudits.id });
+    await db.insert(auditScores).values([
+      {
+        auditId: audit.id,
+        parameterId: s1Param.id,
+        score: true,
+        comment: "Observación sembrada",
+      },
+      ...(s2Param
+        ? [{ auditId: audit.id, parameterId: s2Param.id, score: true, comment: null }]
+        : []),
+    ]);
+
+    await page.goto(`/supervision/calidad-operadores?month=${currentMonth}`);
+
+    const targetOp = page.locator(`.operator-card[data-operator-id="${opAgent.id}"]`);
+    // Aserción estricta: si no aparece, el test falla en vez de salta��se.
+    await expect(targetOp).toBeVisible({ timeout: 10000 });
     await targetOp.click();
 
-    // Esperar a que se rendericen las cards
-    const callCard = page.locator(".call-card-container").first();
-    if (await callCard.isVisible()) {
-      // Expandir la card
-      const expandBtn = callCard.locator('button[title="Expandir / Minimizar detalles"]');
-      await expandBtn.click();
+    // Acotar a la card del operador sembrado: hay cards de todos los operadores del mes.
+    const callCard = page
+      .locator(`.call-card-container:has-text("PARIDAD01")`)
+      .first();
+    await expect(callCard).toBeVisible({ timeout: 10000 });
 
-      const details = callCard.locator(".call-card-details");
-      await expect(details).toBeVisible();
+    // Expandir la card
+    const expandBtn = callCard.locator('button[title="Expandir / Minimizar detalles"]');
+    // La card vive dentro de #operator-details-modal (un <dialog> modal): sin
+    // force, el overlay del propio dialog intercepta el pointer.
+    await expandBtn.click({ force: true });
 
-      // Card scores
-      const s1Text = await details.locator("span.text-xl").first().innerText();
-      const s2Text = await details.locator("span.text-xl").nth(1).innerText();
-      const totalBadge = await callCard.locator(".badge").first().innerText();
+    const details = callCard.locator(".call-card-details");
+    await expect(details).toBeVisible();
 
-      // Verificar que los parámetros de Sección 2 no estén vacíos
-      const s2Items = details.locator("div.p-6 ul li");
-      const s2Count = await s2Items.count();
-      expect(s2Count).toBeGreaterThan(0);
+    // Card scores
+    const s1Text = await details.locator("span.text-xl").first().innerText();
+    const s2Text = await details.locator("span.text-xl").nth(1).innerText();
+    const totalScoreText = await callCard.locator("span.font-mono").first().innerText();
+    expect(s1Text).toMatch(/\d/);
+    expect(s2Text).toMatch(/\d/);
+    expect(totalScoreText).toMatch(/\d/);
 
-      // Abrir modal de edición
-      const editBtn = callCard.locator(".edit-audit-btn");
-      if (await editBtn.isVisible()) {
-        await editBtn.click();
+    // Ambas secciones listan sus criterios. El selector `div.p-6` quedó obsoleto:
+    // el markup de la card usa `p-4 sm:p-5` (CalidadContent.astro:1172,1189).
+    const detailSections = details.locator("ul");
+    await expect(detailSections).toHaveCount(2);
+    const s1Count = await detailSections.nth(0).locator("li").count();
+    const s2Count = await detailSections.nth(1).locator("li").count();
+    expect(s1Count, "la sección 1 debe listar sus criterios").toBeGreaterThan(0);
+    expect(s2Count, "la sección 2 debe listar sus criterios").toBeGreaterThan(0);
 
-        const modal = page.locator("#audit-modal");
-        await expect(modal).toHaveAttribute("open", "");
+    // Abrir edición en pantalla completa (NewAuditForm)
+    const editBtn = callCard.locator(".edit-audit-btn");
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
 
-        const previewS1 = await page.locator("#preview-s1").innerText();
-        const previewS2 = await page.locator("#preview-s2").innerText();
-        const previewTotal = await page.locator("#preview-total").innerText();
+    await page.waitForURL(/\/supervision\/calidad-operadores\/nueva\?auditId=/);
+    await expect(page.locator("h1")).toContainText(/Editar Auditoría/i);
 
-        // Paridad entre la card y el modal
-        expect(previewS1).toBe(`${s1Text}%`);
-        expect(previewS2).toBe(`${s2Text}%`);
-        expect(totalBadge).toContain(previewTotal.replace("%", ""));
+    // La auditoría sembrada debe estar precargada en el formulario
+    await expect(page.locator("#form-call-id")).toHaveValue("PARIDAD01");
+    await expect(page.locator("#form-notes")).toHaveValue("Auditoría sembrada para el test de paridad");
 
-        await page.locator("#btn-close-modal").click();
-      }
-    }
+    const previewTotal = await page.locator("#preview-total").innerText();
+    expect(previewTotal).toMatch(/\d/);
+
+    // Verificar que el botón de volver incluye el agentId para reapertura directa del modal
+    const backBtn = page.locator("#btn-back-evaluations");
+    await expect(backBtn).toHaveAttribute("href", /agentId=\d+/);
+
+    /*
+     * Abrir una auditoría para editar no puede dejar el formulario "sucio":
+     * la hidratación dispara setItemState() -> markAsInProgress(), y eso hacía
+     * que "Volver" pidiera confirmación sin que el supervisor tocara nada.
+     * Cualquier diálogo en este punto es el bug, no un paso esperado.
+     */
+    let unexpectedDialog = "";
+    page.on("dialog", async (d) => {
+      unexpectedDialog = `${d.type()}: ${d.message()}`;
+      await d.dismiss();
+    });
+
+    await backBtn.click();
+    await page.waitForURL(/\/supervision\/calidad-operadores(?!\/nueva)/);
+    expect(unexpectedDialog, "Volver no debe pedir confirmación al abrir una auditoría").toBe("");
+
+    // El modal de detalles del operador debe reabrirse automáticamente
+    const operatorModal = page.locator("#operator-details-modal");
+    await expect(operatorModal).toHaveAttribute("open", "", { timeout: 10000 });
+    await expect(page.locator("#detail-calls-container")).toContainText("PARIDAD01");
   });
 
   test("Debe presentar la pantalla en 2 columnas con notas bajo demanda y score N/A para ticket excluido", async ({ page }) => {

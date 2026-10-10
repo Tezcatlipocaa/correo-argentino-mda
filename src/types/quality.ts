@@ -31,6 +31,7 @@ export interface QualityCall {
   staysInMda?: boolean;
   isReclamoNovedad?: boolean;
   recordingUrl?: string | null;
+  comments?: Record<string, string>;
   section1: {
     score: number;
     maxScore: number;

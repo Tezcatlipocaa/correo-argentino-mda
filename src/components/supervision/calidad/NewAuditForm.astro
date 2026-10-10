@@ -5,7 +5,7 @@ import FormField from "@components/ui/forms/FormField.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
 import MonthSelect from "@components/ui/MonthSelect.astro";
 import CriterionRow from "@components/supervision/calidad/CriterionRow.astro";
-import type { AuditParameter } from "@/types/quality";
+import type { AuditParameter, QualityCall } from "@/types/quality";
 import { getCleanBase } from "@lib/baseUrl";
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
   selectedMonth: string;
   preselectedAgentId?: number;
   approvedTitles: string[];
+  initialAudit?: QualityCall;
 }
 
 const {
@@ -22,6 +23,7 @@ const {
   selectedMonth,
   preselectedAgentId,
   approvedTitles,
+  initialAudit,
 } = Astro.props;
 
 const cleanBase = getCleanBase();
@@ -100,6 +102,9 @@ const monthOptions = (() => {
     };
   });
 })();
+
+const effectiveAgentId = preselectedAgentId ?? (initialAudit as any)?.agentId;
+const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIComponent(selectedMonth)}${effectiveAgentId ? `&agentId=${encodeURIComponent(String(effectiveAgentId))}` : ""}`;
 ---
 
 <div
@@ -108,17 +113,28 @@ const monthOptions = (() => {
   data-approved-titles={JSON.stringify(approvedTitles)}
   data-clean-base={cleanBase}
   data-invgate-web-base={invgateWebBase}
+  data-initial-audit={JSON.stringify(initialAudit || null)}
 >
   <form id="audit-form" method="POST">
-    <input type="hidden" name="id" id="form-audit-id" value="" />
+    <input
+      type="hidden"
+      name="id"
+      id="form-audit-id"
+      value={initialAudit ? String(initialAudit.id) : ""}
+    />
     <input type="hidden" name="month" id="form-month" value={selectedMonth} />
     <input
       type="hidden"
       name="channelType"
       id="form-channel-type"
-      value="wise_call"
+      value={initialAudit?.channelType || "wise_call"}
     />
-    <input type="hidden" name="recordingUrl" id="form-recording-url" value="" />
+    <input
+      type="hidden"
+      name="recordingUrl"
+      id="form-recording-url"
+      value={initialAudit?.recordingUrl || ""}
+    />
 
     <!-- 
       Cabecera superior: única fila compacta con navegación, título, badge y acciones.
@@ -132,7 +148,7 @@ const monthOptions = (() => {
         class="mx-auto flex max-w-[1440px] items-center gap-3"
       >
         <a
-          href={`${cleanBase}supervision/calidad-operadores${selectedMonth ? `?month=${selectedMonth}` : ""}`}
+          href={returnUrl}
           id="btn-back-evaluations"
           class="btn btn-ghost btn-sm btn-square shrink-0 text-base-content/70 hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
           title="Volver a evaluaciones"
@@ -147,17 +163,34 @@ const monthOptions = (() => {
           <h1
             class="text-sm leading-tight font-bold tracking-tight text-balance text-base-content sm:text-lg"
           >
-            Nueva auditoría de calidad
+            {initialAudit ? "Editar auditoría de calidad" : "Nueva auditoría de calidad"}
           </h1>
           <p
             class="hidden truncate text-xs text-base-content/60 md:block"
           >
-            Evaluación asistida con puntaje en vivo sobre los criterios del
-            periodo.
+            {
+              initialAudit
+                ? "Modificación de evaluación y recálculo de puntaje en vivo."
+                : "Evaluación asistida con puntaje en vivo sobre los criterios del periodo."
+            }
           </p>
         </div>
 
         <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          {
+            initialAudit && (
+              <button
+                type="button"
+                id="btn-delete-audit"
+                class="btn btn-sm btn-error btn-outline shrink-0 gap-1.5 rounded-lg px-3 text-xs font-bold hover:scale-98 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/60 sm:text-sm"
+                title="Eliminar auditoría"
+                aria-label="Eliminar auditoría"
+              >
+                <Icon name="boxicons:trash" size={16} aria-hidden="true" />
+                <span>Eliminar</span>
+              </button>
+            )
+          }
           <button
             type="button"
             id="btn-header-help"
@@ -300,6 +333,7 @@ const monthOptions = (() => {
               type="text"
               id="form-call-id"
               name="callId"
+              value={initialAudit?.callId || ""}
               aria-label="Nro de caso o llamada"
               autocomplete="off"
               spellcheck="false"
@@ -327,6 +361,7 @@ const monthOptions = (() => {
               type="text"
               id="form-ticket-id"
               name="ticketId"
+              value={initialAudit?.ticketId || ""}
               aria-label="Nro ticket InvGate"
               autocomplete="off"
               spellcheck="false"
@@ -352,6 +387,7 @@ const monthOptions = (() => {
           <FormField
             id="form-date"
             name="date"
+            value={initialAudit?.date?.substring(0, 10)}
             label="Fecha de atención"
             type="date"
             required
@@ -977,7 +1013,7 @@ const monthOptions = (() => {
                   name="staysInMda"
                   id="toggle-stays-mda"
                   class="toggle toggle-secondary toggle-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
-                  checked
+                  checked={initialAudit ? (initialAudit.staysInMda ?? true) : true}
                 />
               </label>
             </header>
@@ -1288,6 +1324,7 @@ const monthOptions = (() => {
                   <FormField
                     id="form-duration"
                     name="duration"
+                    value={initialAudit?.duration || ""}
                     label="Duración"
                     placeholder="Ej: 02:15…"
                     size="xs"
@@ -1300,6 +1337,7 @@ const monthOptions = (() => {
                   <FormField
                     id="form-ring-time"
                     name="ringTime"
+                    value={initialAudit?.ringTime || ""}
                     label="Ringueo"
                     placeholder="Ej: 00:30…"
                     size="xs"
@@ -1312,6 +1350,7 @@ const monthOptions = (() => {
                   <FormField
                     id="form-creation-time"
                     name="creationTime"
+                    value={initialAudit?.creationTime || ""}
                     label="Creación"
                     placeholder="YYYY-MM-DD HH:MM…"
                     size="xs"
@@ -1324,6 +1363,7 @@ const monthOptions = (() => {
                   <FormField
                     id="form-take-time"
                     name="takeTime"
+                    value={initialAudit?.takeTime || ""}
                     label="Toma / Lectura"
                     placeholder="00:00:00…"
                     size="xs"
@@ -1339,6 +1379,7 @@ const monthOptions = (() => {
                       type="checkbox"
                       name="isPas"
                       id="form-is-pas"
+                      checked={initialAudit?.isPas ?? false}
                       class="checkbox checkbox-primary checkbox-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                     />
                     <span class="text-xs font-bold">Es caso PAS</span>
@@ -1383,7 +1424,7 @@ const monthOptions = (() => {
               rows="3"
               placeholder="Escribí la devolución de coaching o el contexto de la auditoría…"
               class="textarea w-full resize-y rounded-xl border-base-200 bg-base-100 text-sm leading-relaxed focus:outline-none focus-visible:border-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
-            ></textarea>
+            >{initialAudit?.notes || ""}</textarea>
           </div>
         </div>
       </aside>
@@ -1642,11 +1683,26 @@ const monthOptions = (() => {
 
     let isFormDirty = false;
     let isSubmitting = false;
+    // Precargar una auditoría existente dispara setItemState() -> markAsInProgress().
+    // Sin esto, abrir una auditoría para editar marcaba el formulario como sucio y
+    // "Volver" pedía confirmación aunque el supervisor no hubiera tocado nada.
+    let isHydrating = false;
 
     function markAsInProgress() {
+      if (isHydrating) return;
       isFormDirty = true;
     }
-    formAgentSelect?.addEventListener("change", markAsInProgress);
+    formAgentSelect?.addEventListener("change", () => {
+      markAsInProgress();
+      if (btnBack && formAgentSelect.value) {
+        try {
+          const currentHref = btnBack.getAttribute("href") || "";
+          const u = new URL(currentHref, window.location.origin);
+          u.searchParams.set("agentId", formAgentSelect.value);
+          btnBack.setAttribute("href", `${u.pathname}${u.search}`);
+        } catch {}
+      }
+    });
 
     window.addEventListener("beforeunload", (e) => {
       if (isFormDirty && !isSubmitting) {
@@ -2740,6 +2796,11 @@ const monthOptions = (() => {
           if (!callIdVal) formData.set("callId", ticketIdVal);
         }
 
+        const auditIdInputVal = (document.getElementById("form-audit-id") as HTMLInputElement)?.value;
+        if (auditIdInputVal) {
+          formData.set("id", auditIdInputVal);
+        }
+
         if (!formData.get("duration")) formData.set("duration", "00:00");
         if (!formData.has("notes")) formData.set("notes", "");
 
@@ -2764,6 +2825,111 @@ const monthOptions = (() => {
           showSubmitError("Ocurrió un error inesperado al guardar la auditoría.");
         }
       });
+    }
+
+    // HIDRATACIÓN DE AUDITORÍA EXISTENTE (MODO EDICIÓN)
+    let initialAuditData: any = null;
+    try {
+      initialAuditData = container.dataset.initialAudit
+        ? JSON.parse(container.dataset.initialAudit)
+        : null;
+    } catch {
+      initialAuditData = null;
+    }
+
+    if (initialAuditData) {
+      isHydrating = true;
+      try {
+      // 1. Activar canal correspondiente
+      const targetChannel = initialAuditData.channelType || "wise_call";
+      const targetBtn = document.querySelector(`.channel-btn[data-channel="${targetChannel}"]`) as HTMLButtonElement | null;
+      if (targetBtn) {
+        targetBtn.click();
+      }
+
+      // 2. Modo reclamo/novedad en llamada o mail
+      if (targetChannel === "wise_call") {
+        setCallTicketMode(initialAuditData.isReclamoNovedad ? "reclamo" : "nuevo");
+      } else if (targetChannel === "wise_email") {
+        setEmailTicketMode(initialAuditData.isReclamoNovedad ? "reclamo" : "nuevo");
+      }
+
+      // 3. Montar audio si tiene grabación
+      if (initialAuditData.recordingUrl) {
+        setAudioPlayer(initialAuditData.recordingUrl, initialAuditData.callId);
+      }
+
+      // 4. Precargar estado de criterios (cumple vs nocumple) y observaciones
+      const s1Details = initialAuditData.section1?.details || {};
+      const s2Details = initialAuditData.section2?.details || {};
+      const comments = initialAuditData.comments || {};
+
+      document.querySelectorAll(".checklist-item").forEach((item) => {
+        const htmlItem = item as HTMLElement;
+        const cb = htmlItem.querySelector(".audit-checkbox") as HTMLInputElement | null;
+        if (!cb) return;
+        const code = cb.name;
+
+        // Si existe evaluación registrada
+        if (s1Details.hasOwnProperty(code) || s2Details.hasOwnProperty(code)) {
+          const isPassed = s1Details.hasOwnProperty(code) ? !!s1Details[code] : !!s2Details[code];
+          setItemState(htmlItem, isPassed ? "cumple" : "nocumple");
+        }
+
+        // Observación individual de coaching
+        if (comments[code]) {
+          const obsWrapper = htmlItem.querySelector(".criteria-obs-wrapper");
+          const obsBtn = htmlItem.querySelector('[data-action="toggle-obs"]');
+          const obsTextarea = obsWrapper?.querySelector("textarea") as HTMLTextAreaElement | null;
+          if (obsWrapper && obsTextarea) {
+            obsTextarea.value = comments[code];
+            obsWrapper.classList.remove("hidden");
+            obsBtn?.setAttribute("aria-expanded", "true");
+          }
+        }
+      });
+
+      // 5. Botón de eliminación de auditoría
+      const btnDeleteAudit = document.getElementById("btn-delete-audit");
+      if (btnDeleteAudit) {
+        btnDeleteAudit.addEventListener("click", async () => {
+          if (!initialAuditData.id) return;
+          if (confirm("¿Estás seguro de que querés eliminar esta auditoría?")) {
+            const originalHtml = btnDeleteAudit.innerHTML;
+            btnDeleteAudit.setAttribute("disabled", "true");
+            btnDeleteAudit.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Eliminando…';
+
+            try {
+              const deleteForm = new FormData();
+              deleteForm.append("id", String(initialAuditData.id));
+
+              const result = await actions.deleteAudit(deleteForm);
+              if (result.data?.success) {
+                isFormDirty = false;
+                const redirectUrl = new URL(`${window.location.origin}${cleanBase}supervision/calidad-operadores`);
+                if (initialAuditData.month) redirectUrl.searchParams.set("month", initialAuditData.month);
+                if (initialAuditData.agentId) redirectUrl.searchParams.set("agentId", String(initialAuditData.agentId));
+                redirectUrl.searchParams.set("toast_msg", "Auditoría eliminada con éxito.");
+                redirectUrl.searchParams.set("toast_type", "success");
+                window.location.href = redirectUrl.toString();
+              } else {
+                showNotification("Error al eliminar la auditoría.", "error");
+                btnDeleteAudit.removeAttribute("disabled");
+                btnDeleteAudit.innerHTML = originalHtml;
+              }
+            } catch (err) {
+              console.error("Delete audit error:", err);
+              showNotification("Ocurrió un error inesperado al eliminar la auditoría.", "error");
+              btnDeleteAudit.removeAttribute("disabled");
+              btnDeleteAudit.innerHTML = originalHtml;
+            }
+          }
+        });
+      }
+      } finally {
+        isHydrating = false;
+        isFormDirty = false;
+      }
     }
 
     syncSectionTabs();
