@@ -177,7 +177,25 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         </div>
 
         <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            id="btn-header-help"
+            class="btn btn-circle btn-ghost btn-sm text-base-content/60 hover:bg-base-200 hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/50"
+            title="Guía de evaluación"
+            aria-label="Guía de evaluación"
+          >
+            <Icon name="boxicons:help-circle" size={18} aria-hidden="true" />
+          </button>
+          <div class="hidden h-5 w-px shrink-0 bg-base-300 sm:block"></div>
           {
+            /*
+             * Orden deliberado: la ayuda ( neutra) queda a la izquierda y el
+             * bloque de acciones a la derecha: [destructivo] [primaria], que es
+             * la convención del repo (ver `FormShell.astro:52-63`, que usa
+             * `justify-end` con Cancelar `variant="error"` antes de Guardar).
+             * Pegar "Eliminar" entre el ? y "Guardar" lo acercaba a la acción
+             * primaria y lo separaba de su contexto.
+             */
             initialAudit && (
               <button
                 type="button"
@@ -191,15 +209,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
               </button>
             )
           }
-          <button
-            type="button"
-            id="btn-header-help"
-            class="btn btn-circle btn-ghost btn-sm text-base-content/60 hover:bg-base-200 hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/50"
-            title="Guía de evaluación"
-            aria-label="Guía de evaluación"
-          >
-            <Icon name="boxicons:help-circle" size={18} aria-hidden="true" />
-          </button>
           <button
             type="submit"
             id="btn-header-save"
