@@ -215,4 +215,15 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
       page.getByRole("heading", { name: "Estadísticas de usuarios" }),
     ).toBeVisible();
   });
+
+  test("el botón volver del header regresa a la gestión de usuarios", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios/estadisticas");
+    await page
+      .locator("header")
+      .getByRole("link", { name: "Volver a Gestión de usuarios" })
+      .click();
+    await expect(page).toHaveURL(/\/admin\/usuarios$/);
+  });
 });

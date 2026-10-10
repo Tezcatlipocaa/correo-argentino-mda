@@ -3,7 +3,6 @@ import { getCleanBase } from "@lib/baseUrl";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import { Icon } from "astro-icon/components";
 import EstadisticasContent from "@components/supervision/asistencia/EstadisticasContent.astro";
 import EstadisticasSkeleton from "@components/supervision/asistencia/EstadisticasSkeleton.astro";
 
@@ -12,15 +11,9 @@ const cleanBase = getCleanBase();
 
 <BaseLayout>
   <PageContainer width="xl">
-    <a
-      href={`${cleanBase}supervision/asistencia`}
-      class="btn btn-ghost btn-sm mb-2 w-fit pl-2 transition-colors duration-200"
-    >
-      <Icon name="boxicons:chevron-left" size={16} />
-      Volver a Control Diario
-    </a>
-
     <PageHeader
+      backHref={`${cleanBase}supervision/asistencia`}
+      backLabel="Volver a Control Diario"
       title="Estadísticas y Reportes Mensuales"
       description="Analíticas de puntualidad, distribución de eventualidades del equipo y fichas de cumplimiento individual."
     />

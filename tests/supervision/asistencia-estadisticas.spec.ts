@@ -80,4 +80,18 @@ test.describe("Estadísticas de asistencia sin CDN (#183)", () => {
     await expect(page.locator("[data-table-toggle]").first()).toBeVisible();
     expect(externalRequests).toEqual([]);
   });
+
+  test("el botón volver del header regresa a Control Diario", async ({
+    page,
+  }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: cookie, domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/supervision/asistencia/estadisticas");
+    await page
+      .locator("header")
+      .getByRole("link", { name: "Volver a Control Diario" })
+      .click();
+    await expect(page).toHaveURL(/\/supervision\/asistencia$/);
+  });
 });
