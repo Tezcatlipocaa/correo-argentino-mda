@@ -382,144 +382,85 @@ test.describe("Nueva Auditoría de Calidad - Pantalla Completa UI/UX", () => {
     expect(lastAudit.isReclamoNovedad).toBe(true);
   });
 
-  test("Detalle técnico: Modal de inspección on-demand para InvGate y Wise CX con raw=1", async ({ page, context }) => {
+  test("Detalle técnico crudo: los inspectores InvGate y Wise CX permanecen deshabilitados", async ({
+    page,
+    context,
+  }) => {
+    /*
+     * El detalle técnico crudo (fetch-metadata?raw=1) está en pausa por decisión de
+     * producto. Este test fija ese estado: ambos botones arrancan y quedan
+     * deshabilitados, y cargar el caso NO los habilita. Si alguna vez se decide
+     * rehabilitarlos, este test es el que hay que cambiar, junto con los comentarios
+     * en NewAuditForm.astro que explican cómo hacerlo.
+     */
     await setSessionCookie(context, testSupervisor.signedSessionId);
     await page.goto(`/supervision/calidad-operadores/nueva?agentId=${operatorAgentId}`);
 
     const btnInspectInvgate = page.locator("#btn-inspect-invgate-detail");
-    const modal = page.locator("#modal-case-detail");
-    const modalTitle = page.locator("#modal-case-detail-title");
-    const modalJson = page.locator("#modal-case-detail-json");
-    const modalCloseBtn = page.locator("#modal-case-detail-close-btn");
+    const btnInspectWise = page.locator("#btn-inspect-wise-detail");
 
-    // 1. Inicialmente sin ticket, el botón de inspección de InvGate está deshabilitado
-    await expect(btnInspectInvgate).toHaveClass(/pointer-events-none/);
-    await expect(btnInspectInvgate).toHaveClass(/opacity-40/);
+    // 1. Arrancan deshabilitados
+    for (const btn of [btnInspectInvgate, btnInspectWise]) {
+      await expect(btn).toBeDisabled();
+      await expect(btn).toHaveClass(/pointer-events-none/);
+      await expect(btn).toHaveClass(/opacity-40/);
+    }
 
-    // Mock para búsqueda normal de InvGate (sin raw=1)
+    // Mock de metadatos: responde bien para que la carga de datos tenga éxito
     await page.route("**/api/calidad/fetch-metadata*", async (route) => {
       const url = new URL(route.request().url());
-      const isRaw = url.searchParams.get("raw") === "1";
       const source = url.searchParams.get("source") || "";
 
       if (source.startsWith("invgate")) {
-        if (isRaw) {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              ok: true,
-              data: {
-                raw: {
-                  id: 776655,
-                  title: "Consulta sobre clave de red",
-                  comments: [
-                    { id: 101, text: "Primer contacto con el operador", date: "2026-10-09" },
-                  ],
-                  custom_fields: { plataforma: "Windows 11" },
-                },
-              },
-            }),
-          });
-        } else {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              ok: true,
-              data: {
-                caseNumber: "776655",
-                title: "Consulta sobre clave de red",
-                category: "Soporte TI",
-                status: "Cerrado",
-                priority: "Media",
-              },
-            }),
-          });
-        }
-      } else if (source === "wise") {
-        if (isRaw) {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              ok: true,
-              data: {
-                raw: {
-                  case: { id: 998877, channel: "voice", caller_ani: "1155554444" },
-                  activities: [
-                    { id: 501, type: "call", duration_sec: 135, disposition: "Resuelto" },
-                  ],
-                },
-              },
-            }),
-          });
-        } else {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              ok: true,
-              data: {
-                caseNumber: "998877",
-                duration: "02:15",
-                ringTime: "00:05",
-                recordingUrl: "https://wise.example.com/audio/998877.mp3",
-              },
-            }),
-          });
-        }
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            data: {
+              caseNumber: "776655",
+              title: "Consulta sobre clave de red",
+              category: "Soporte TI",
+              status: "Cerrado",
+              priority: "Media",
+            },
+          }),
+        });
       } else {
-        await route.continue();
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            data: {
+              caseNumber: "998877",
+              duration: "02:15",
+              ringTime: "00:05",
+              recordingUrl: "https://wise.example.com/audio/998877.mp3",
+            },
+          }),
+        });
       }
     });
 
-    // 2. Buscar ticket InvGate
+    // 2. Ticket InvGate cargado correctamente: el visor se puebla, el inspector no se habilita
     await page.locator("#form-ticket-id").fill("776655");
     await page.locator("#btn-fetch-invgate-api").click();
-
-    // El ticket se cargó y el botón de inspección se habilita
     await expect(page.locator("#ticket-context-badge")).toHaveText("Ticket cargado");
-    await expect(btnInspectInvgate).not.toHaveClass(/pointer-events-none/);
-    await expect(btnInspectInvgate).not.toHaveClass(/opacity-40/);
+    await expect(page.locator("#tv-title")).not.toHaveText("-");
+    await expect(btnInspectInvgate).toBeDisabled();
 
-    // 3. Abrir modal de inspección técnica de InvGate
-    await btnInspectInvgate.click();
-    await expect(modal).toBeVisible();
-    await expect(modalTitle).toContainText("Ticket InvGate #776655");
-
-    // Verificar que el JSON crudo en el <pre> contiene los datos estructurados
-    await expect(modalJson).toContainText('"id": 776655');
-    await expect(modalJson).toContainText('"Consulta sobre clave de red"');
-    await expect(modalJson).toContainText('"Primer contacto con el operador"');
-    await expect(modalJson).toContainText('"plataforma": "Windows 11"');
-
-    // Cerrar el modal
-    await modalCloseBtn.click();
-    await expect(modal).toBeHidden();
-
-    // 4. Buscar llamada Wise CX
+    // 3. Llamada Wise CX cargada: el audio se monta, el inspector tampoco se habilita
     await page.locator("#form-call-id").fill("998877");
     await page.locator("#btn-fetch-wise-api").click();
+    await expect(page.locator("#tv-audio-container")).toBeVisible();
+    await expect(page.locator("#form-duration")).toHaveValue("02:15");
+    await expect(btnInspectWise).toBeDisabled();
 
-    // El contenedor de audio se hace visible
-    const audioContainer = page.locator("#tv-audio-container");
-    await expect(audioContainer).toBeVisible();
-    const btnInspectWise = page.locator("#btn-inspect-wise-detail");
-    await expect(btnInspectWise).toBeVisible();
-
-    // 5. Abrir modal de inspección técnica de Wise CX
-    await btnInspectWise.click();
-    await expect(modal).toBeVisible();
-    await expect(modalTitle).toContainText("Llamada Wise CX #998877");
-
-    // Verificar que el JSON contiene la respuesta técnica de la llamada
-    await expect(modalJson).toContainText('"id": 998877');
-    await expect(modalJson).toContainText('"caller_ani": "1155554444"');
-    await expect(modalJson).toContainText('"duration_sec": 135');
-
-    // Cerrar el modal
-    await modalCloseBtn.click();
+    // 4. Ninguno de los dos puede abrir el modal de detalle técnico
+    const modal = page.locator("#modal-case-detail");
     await expect(modal).toBeHidden();
+    await expect(btnInspectInvgate).toHaveAttribute("disabled", "");
+    await expect(btnInspectWise).toHaveAttribute("disabled", "");
   });
 });

@@ -62,8 +62,10 @@ test("Calidad Multi-Canal E2E Flow", async ({ page }) => {
   await expect(page.locator('.operator-channel-tab[data-channel="wise_email"]')).toBeVisible();
   await expect(page.locator('.operator-channel-tab[data-channel="invgate_ticket"]')).toBeVisible();
 
-  // Verify quota badge
-  await expect(page.locator("#quota-progress-badge")).toContainText("Completadas");
+  // La cuota se muestra inline dentro de la card ("N de 12 completadas").
+  // El id #quota-progress-badge ya no existe: fue reemplazado por ese markup.
+  const operatorCard = page.locator('.operator-item:has-text("Operador Test Calidad")').first();
+  await expect(operatorCard).toContainText(/de 12 completadas/);
 
   // Open audit modal
   const btnNewAudit = page.locator("#btn-new-audit");
