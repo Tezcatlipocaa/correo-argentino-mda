@@ -275,6 +275,10 @@ export function getModulePermissions(
     // para supervisor+, que es la política de cierre desde el portal.
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
+  } else if (moduleName === "inventario") {
+    // Estadísticas del parque de terminales: lectura para todos los roles
+    // logueados; sin escrituras por ahora.
+    perm.canRead = true;
   }
 
   return perm;
