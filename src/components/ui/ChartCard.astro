@@ -504,15 +504,23 @@ function initChartCard(card: HTMLElement): void {
   }
 
   let fetchSeq = 0;
+  // Dedup por query: `lastQuery` se registra solo cuando el fetch resuelve OK
+  // (una carga exitosa no se repite), y `inFlightQuery` coalesce los triggers
+  // idénticos que llegan mientras hay un request en vuelo (init +
+  // stats:filters-changed en el primer render). Si ese request falla, el trigger
+  // coalescido reintenta en vez de quedar skipeado.
   let lastQuery: string | null = null;
+  let inFlightQuery: string | null = null;
+  let retryPending = false;
 
   function fetchData(query: string) {
-    // La card trae su propio estado al inicializar y además escucha
-    // stats:filters-changed; en el primer render ambas fuentes piden la misma
-    // query. Evitar el segundo fetch (mitad de requests → no revienta el
-    // rate limit de api-read).
     if (query === lastQuery) return;
-    lastQuery = query;
+    if (query === inFlightQuery) {
+      retryPending = true;
+      return;
+    }
+    inFlightQuery = query;
+    retryPending = false;
     const separator = fetchUrl?.includes("?") ? "&" : "?";
     const seq = ++fetchSeq;
     return fetch(`${fetchUrl}${separator}${query}`)
@@ -522,12 +530,19 @@ function initChartCard(card: HTMLElement): void {
       })
       .then((body) => {
         if (seq !== fetchSeq) return;
+        inFlightQuery = null;
+        lastQuery = query;
+        retryPending = false;
         const slice = body.charts[chartKey as string];
         setData(slice.labels, slice.series);
       })
       .catch((error) => {
-        if (query === lastQuery) lastQuery = null;
+        if (seq === fetchSeq) inFlightQuery = null;
         console.error("[ChartCard] fetch falló:", error);
+        if (retryPending) {
+          retryPending = false;
+          fetchData(query);
+        }
       });
   }
 
