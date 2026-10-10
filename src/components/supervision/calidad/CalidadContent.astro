@@ -470,11 +470,71 @@ const cleanBase = getCleanBase();
             </div>
           ) : (
             <>
-              {/* Grilla de Operadores Responsive */}
+              {/* Sorter + Grilla de Operadores. El root envuelve barra y grilla;
+                  la grilla es el "body" que `clientTableSort` reordena. */}
               <div
-                id="operators-grid"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                id="operators-sort-root"
+                data-table-sort-root
+                data-table-sort-default-key="nombre"
+                data-table-sort-default-direction="ascending"
+                class="space-y-3"
               >
+                <div
+                  data-table-header
+                  class="flex flex-wrap items-center justify-end gap-1.5 px-1 text-xs text-base-content/70"
+                >
+                  <span class="text-xxs font-semibold tracking-wider text-base-content/50 uppercase">
+                    Ordenar por:
+                  </span>
+                  {
+                    [
+                      { key: "nombre", label: "Nombre" },
+                      { key: "puntaje", label: "Puntaje" },
+                      { key: "auditorias", label: "Auditorías" },
+                    ].map((sortOption) => {
+                      const isDefault = sortOption.key === "nombre";
+                      return (
+                        <button
+                          type="button"
+                          data-table-sort-key={sortOption.key}
+                          data-table-sort-direction={
+                            isDefault ? "ascending" : "none"
+                          }
+                          aria-sort={isDefault ? "ascending" : "none"}
+                          class="btn btn-xs btn-ghost gap-1 rounded-lg border border-base-200/80 bg-base-100 px-2 font-medium hover:border-secondary/40 hover:bg-base-200/50"
+                        >
+                          <span>{sortOption.label}</span>
+                          <span class="relative inline-flex size-3.5 shrink-0 items-center justify-center">
+                            <Icon
+                              name="boxicons:arrow-down-up-filled"
+                              size={12}
+                              class="absolute opacity-50"
+                              data-table-sort-icon="none"
+                            />
+                            <Icon
+                              name="boxicons:chevron-up"
+                              size={14}
+                              class="absolute hidden opacity-0"
+                              data-table-sort-icon="ascending"
+                            />
+                            <Icon
+                              name="boxicons:chevron-down"
+                              size={14}
+                              class="absolute hidden opacity-0"
+                              data-table-sort-icon="descending"
+                            />
+                          </span>
+                        </button>
+                      );
+                    })
+                  }
+                </div>
+
+                <div
+                  id="operators-grid"
+                  data-table-sort-body
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                >
                 {operatorsQuality.map((op) => {
                   const initials = op.name
                     .split(" ")
@@ -499,6 +559,10 @@ const cleanBase = getCleanBase();
                       data-id={op.id.toLowerCase()}
                       data-username={(op.username || "").toLowerCase()}
                       data-operator-id={op.id}
+                      data-table-row
+                      data-sort-nombre={op.name.toLowerCase()}
+                      data-sort-puntaje={op.averageScore}
+                      data-sort-auditorias={op.calls.length}
                       data-operator={JSON.stringify({
                         id: op.id,
                         name: op.name,
@@ -558,6 +622,7 @@ const cleanBase = getCleanBase();
                     title="Sin resultados"
                     description="No hay operadores que coincidan con la búsqueda. Probá con otro nombre o legajo."
                   />
+                </div>
                 </div>
               </div>
 
@@ -859,6 +924,7 @@ const cleanBase = getCleanBase();
     getChannelAverageBadgeClass,
   } from "@lib/qualityCalculator";
   import { escapeHtml } from "@lib/sanitize";
+  import { bindClientTableSort } from "@lib/clientTableSort";
 
   import { formatMonthLabel } from "@lib/monthUtils";
   import { getCleanBase } from "@lib/baseUrl";
@@ -1220,6 +1286,10 @@ const cleanBase = getCleanBase();
     if (!rootContainer) return false;
     if (rootContainer.dataset.masterDetailBound === "true") return true;
     rootContainer.dataset.masterDetailBound = "true";
+
+    // El sorter es idempotente por `data-table-sort-bound`, así que repetir el
+    // bind cuando la island vuelve a streamear no duplica listeners.
+    bindClientTableSort();
 
     let currentActiveChannel = "wise_call";
 
