@@ -1124,6 +1124,13 @@ const monthOptions = (() => {
                   Audio
                 </span>
                 <div class="flex items-center gap-1.5">
+                  {/*
+                    Deshabilitado a propósito: el detalle técnico crudo de Wise CX
+                    (fetch-metadata?raw=1) queda en pausa hasta que se defina su uso.
+                    Para habilitarlo: quitar `disabled` y las clases
+                    `pointer-events-none opacity-40` acá, y sacar el `disabled = true`
+                    que `populateTicketViewer` le aplica.
+                  */}
                   <button
                     type="button"
                     id="btn-inspect-wise-detail"
@@ -1188,6 +1195,14 @@ const monthOptions = (() => {
                   </span>
                 </div>
                 <div class="flex shrink-0 items-center gap-0.5">
+                  {/*
+                    Deshabilitado a propósito: el detalle técnico crudo de InvGate
+                    (fetch-metadata?raw=1) queda en pausa hasta que se defina su uso.
+                    Para habilitarlo: quitar `disabled` y las clases
+                    `pointer-events-none opacity-40` acá, y en `populateTicketViewer`
+                    cambiar el `disabled = true` por `disabled = false` + quitar esas
+                    clases (mismo tratamiento que `#btn-inspect-wise-detail`).
+                  */}
                   <button
                     type="button"
                     id="btn-inspect-invgate-detail"
@@ -2043,6 +2058,8 @@ const monthOptions = (() => {
       }
       if (ticketEmptyState) ticketEmptyState.classList.add("hidden");
       if (ticketViewerContent) ticketViewerContent.classList.remove("hidden");
+      // El inspector crudo de InvGate sigue deshabilitado a propósito, aunque el
+      // ticket se haya cargado: es el punto a revertir cuando se lo habilite.
       if (btnInspectInvgate) {
         btnInspectInvgate.disabled = true;
         btnInspectInvgate.classList.add("opacity-40", "pointer-events-none");
@@ -2232,6 +2249,8 @@ const monthOptions = (() => {
     });
 
     // Modal de Detalle Técnico (on-demand vía raw=1)
+    // Hoy ningún botón lo dispara: `#btn-inspect-wise-detail` y
+    // `#btn-inspect-invgate-detail` arrancan y quedan deshabilitados a propósito.
     async function openTechnicalDetail(source: "wise" | "invgate") {
       if (!modalCaseDetail) return;
 
