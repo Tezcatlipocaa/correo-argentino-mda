@@ -194,6 +194,32 @@ test.describe("Vista de estadísticas de terminales", () => {
     expect(externalRequests).toEqual([]);
   });
 
+  test("hace un solo fetch por gráfico vivo (no duplica por hidratación)", async ({
+    page,
+  }) => {
+    const endpointRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/api/terminals/estadisticas")) {
+        endpointRequests.push(request.url());
+      }
+    });
+
+    await page.goto("/inventario-terminales/estadisticas");
+    await expect(page.locator("[data-chart-card] canvas")).toHaveCount(5);
+    await expect(page.locator("[data-chart-empty]:visible")).toHaveCount(0);
+    await expect(
+      page.locator('[data-kpi="total"] [data-kpi-value]'),
+    ).not.toHaveText("…");
+
+    // Dejar asentar cualquier fetch tardío antes de contar.
+    await page.waitForTimeout(1000);
+
+    // 1 fetch de KPIs (content) + 1 por cada uno de los 5 ChartCard vivos.
+    // Si la deduplicación se rompe, cada gráfico dispara init + stats:filters-changed
+    // con la misma query y el total sube a 11 (y voltea el rate limit apiRead de 60/min).
+    expect(endpointRequests).toHaveLength(6);
+  });
+
   test("el toggle Ver tabla muestra los datos y oculta el canvas", async ({
     page,
   }) => {
