@@ -923,7 +923,7 @@ export interface ModelBrandEntry {
   brand: string;
 }
 
-function inferBrandFromManufacturer(
+export function inferBrandFromManufacturer(
   manufacturer: string | null,
 ): string | null {
   if (!manufacturer) return null;
