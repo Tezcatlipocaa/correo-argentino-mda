@@ -1,0 +1,25 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import EstadisticasTerminalesContent from "@components/inventario/EstadisticasTerminalesContent.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const cleanBase = getCleanBase();
+---
+
+<BaseLayout>
+  <PageContainer width="xl">
+    <PageHeader
+      backHref={`${cleanBase}inventario-terminales`}
+      backLabel="Volver al inventario"
+      title="Estadísticas de terminales"
+      description="Distribución del parque de terminales por ubicación, sistema operativo y marca."
+    />
+
+    <EstadisticasTerminalesContent server:defer>
+      <ChartCardSkeleton slot="fallback" count={5} />
+    </EstadisticasTerminalesContent>
+  </PageContainer>
+</BaseLayout>
