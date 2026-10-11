@@ -17,6 +17,10 @@ Bitácora del desarrollo por commit. Para el detalle funcional ver
 | `684cf17` | test             | Cobertura unitaria y E2E                                       |
 | `8c0cdcf` | docs             | Guía técnica, diseño y lecciones                               |
 | `fd9dd5f` | feat             | Paginación, frescura de estados y detalle minimalista          |
+| `585e632b` | fix(automatizaciones)  | Cierre local, guard de título, cache en vuelo, reapertura y ordinales |
+| `a9deb9c3` | feat(automatizaciones) | Métricas del workflow (KPIs, SLA, snapshot, export)           |
+| `cdaba6f8` | feat(automatizaciones) | Filtros, vista tabla, drawer y export del listado             |
+| `343875f4` | refactor(automatizaciones) | Acento secondary/primary y limpieza                       |
 
 ## Qué quedó implementado
 
