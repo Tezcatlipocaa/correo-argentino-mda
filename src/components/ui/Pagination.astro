@@ -4,9 +4,14 @@ interface Props {
   currentPage: number;
   /** Sobrescribe la construcción del href (p. ej. preservar filtros propios). */
   hrefFor?: (page: number) => string;
+  /**
+   * Pinta la página activa con el acento del módulo (`.acc`: secondary/primary)
+   * en lugar de `btn-primary`. Requiere un ancestro con la clase `.acc`.
+   */
+  accent?: boolean;
 }
 
-const { totalPages, currentPage, hrefFor } = Astro.props;
+const { totalPages, currentPage, hrefFor, accent = false } = Astro.props;
 
 const getPageUrl = (page: number) => {
   if (hrefFor) {
@@ -72,7 +77,8 @@ if (totalPages <= totalPageNumbers) {
           href={getPageUrl(Number(p))}
           class:list={[
             "join-item btn btn-sm",
-            currentPage === p && "btn-primary text-primary-content",
+            currentPage === p &&
+              (accent ? "acc-btn" : "btn-primary text-primary-content"),
           ]}
         >
           {p}
