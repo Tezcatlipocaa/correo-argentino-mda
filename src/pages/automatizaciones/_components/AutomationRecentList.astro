@@ -21,7 +21,7 @@ const shortTitle = (displayName: string): string =>
     items.length === 0 ? (
       <AutomationEmptyState message={emptyMessage} />
     ) : (
-    <ul class="bg-base-100 border-base-300 divide-base-300 flex flex-col rounded-xl border shadow-sm divide-y lg:h-full lg:overflow-y-auto">
+    <ul class="bg-base-100 border-base-300 divide-base-300 flex flex-col rounded-xl border  divide-y lg:h-full lg:overflow-y-auto">
       {items.map((item) => (
         <li class="flex flex-col lg:flex-1">
           <AutomationLink
@@ -43,7 +43,8 @@ const shortTitle = (displayName: string): string =>
               <span class="shrink-0" aria-hidden="true">-</span>
               <AutomationLifecycleLabel
                 statusId={item.statusId}
-                active={item.isActive}
+                active={item.isActive && !item.localClosure}
+                hasClosure={item.localClosure != null}
                 class="shrink-0"
               />
             </div>

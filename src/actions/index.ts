@@ -24,10 +24,12 @@ import {
   canManualClose,
   getCloseThreshold,
   getClosure,
+  markAutomationReopened,
   recordClosure,
   removeClosure,
 } from "@lib/workflow/closures";
 import { saveManualData } from "@lib/workflow/manual-data";
+import { incrementAutomationReopenCount } from "@lib/workflow/parent-history";
 
 export const server = {
   saveParameters: defineAction({
@@ -769,6 +771,8 @@ export const server = {
       }
 
       removeClosure(input.automationId);
+      markAutomationReopened(input.automationId);
+      incrementAutomationReopenCount(input.automationId);
       invalidateAutomationDetail(input.automationId);
       invalidateDiscoveryCache();
 

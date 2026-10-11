@@ -1,12 +1,15 @@
 import "dotenv/config";
 import {
   canManualClose,
+  clearAutomationReopenMarker,
   getCloseThreshold,
   getClosure,
   listClosures,
+  markAutomationReopened,
   recordClosure,
   removeClosure,
   shouldAutoClose,
+  wasAutomationReopened,
 } from "../src/lib/workflow/closures";
 import { getModulePermissions } from "../src/lib/rbac";
 
@@ -112,6 +115,14 @@ check("upsert actualiza a auto", getClosure(id)?.kind === "auto");
 
 removeClosure(id);
 check("reabrir borra el cierre", getClosure(id) === null);
+
+const markerId = 999999998;
+clearAutomationReopenMarker(markerId);
+check("sin marcador de reapertura", wasAutomationReopened(markerId) === false);
+markAutomationReopened(markerId);
+check("marcador de reapertura activo", wasAutomationReopened(markerId) === true);
+clearAutomationReopenMarker(markerId);
+check("marcador de reapertura limpiado", wasAutomationReopened(markerId) === false);
 
 check(
   "rbac: agent no puede escribir automatizaciones",
