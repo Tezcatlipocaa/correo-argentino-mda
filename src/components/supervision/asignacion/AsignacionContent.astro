@@ -258,7 +258,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
         type="button"
         id="tab-btn-asignacion"
         data-tab-target="panel-asignacion"
-        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'asignacion' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
+        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'asignacion' ? 'tab-active bg-secondary text-secondary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <Icon name="boxicons:user-check" size={18} />
         Asignación de Autogestión
@@ -267,7 +267,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
         type="button"
         id="tab-btn-automatizacion"
         data-tab-target="panel-automatizacion"
-        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'automatizacion' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
+        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'automatizacion' ? 'tab-active bg-secondary text-secondary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <Icon name="boxicons:cog" size={18} />
         Automatización
@@ -276,7 +276,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
         type="button"
         id="tab-btn-monitoreo"
         data-tab-target="panel-monitoreo"
-        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'monitoreo' ? 'tab-active bg-primary text-primary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
+        class={`tab font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${initialTab === 'monitoreo' ? 'tab-active bg-secondary text-secondary-content shadow-sm' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <Icon name="boxicons:group" size={18} />
         Monitoreo de Operadores
@@ -291,7 +291,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Header Superior de Acción -->
       <div id="action-bar-header" class="border-b border-base-300 bg-base-200/30 p-3.5 sm:p-4 flex flex-col md:flex-row items-center justify-between gap-3 transition-all duration-300">
         <div class="flex items-center gap-3 min-w-0">
-          <div class={`p-2.5 rounded-xl shrink-0 transition-colors ${!isReadOnly ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content/40"}`}>
+          <div class={`p-2.5 rounded-xl shrink-0 transition-colors ${!isReadOnly ? "bg-secondary/10 text-secondary" : "bg-base-200 text-base-content/40"}`}>
             <Icon name={!isReadOnly ? "boxicons:user-check" : "boxicons:lock"} size={22} />
           </div>
           <div class="min-w-0 flex flex-col gap-0.5">
@@ -482,7 +482,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           <div class="flex-1 flex flex-col overflow-hidden">
             <div class="p-3.5 sm:p-4 bg-base-200/40 border-b border-base-300 flex items-center justify-between gap-2.5 shrink-0">
               <div class="flex items-center gap-2 min-w-0">
-                <Icon name="boxicons:sparkles" size={20} class="text-primary shrink-0" />
+                <Icon name="boxicons:sparkles" size={20} class="text-secondary shrink-0" />
                 <h3 class="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-base-content/80 truncate">
                   Próximos en Cola
                 </h3>
@@ -754,7 +754,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
     <!-- Control Bar: Toggle -->
     <div class="flex items-center justify-start gap-4">
       <label class="label cursor-pointer justify-start gap-3 bg-base-200/40 hover:bg-base-200/80 px-4 py-2.5 rounded-xl border border-base-300/45 transition-colors duration-250">
-        <input type="checkbox" id="toggle-disponibles" class="toggle toggle-primary toggle-sm" />
+        <input type="checkbox" id="toggle-disponibles" class="toggle toggle-secondary toggle-sm" />
         <span class="label-text font-bold text-xs uppercase tracking-wider text-base-content/70">
           Solo disponibles
         </span>
@@ -787,7 +787,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           if (isCurrentUser) {
             rowClasses += " bg-accent/10 border-l-4 border-l-accent";
           } else if (isHighlighted) {
-            rowClasses += " bg-primary/10 border-l-4 border-l-primary";
+            rowClasses += " bg-secondary/10 border-l-4 border-l-secondary";
           }
           if (!op.disponible) {
             rowClasses += " opacity-50 grayscale-[30%]";
@@ -949,13 +949,13 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Cabecera del Panel -->
       <div class="p-5 border-b border-base-300 bg-base-200/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+          <div class="p-2.5 rounded-xl bg-secondary/10 text-secondary shrink-0">
             <Icon name="boxicons:cog" size={24} />
           </div>
           <div>
             <div class="flex items-center gap-2">
               <h3 class="font-bold text-base text-base-content">Módulo de Automatizaciones de Autogestión</h3>
-              <span class="badge badge-primary badge-soft font-mono font-bold text-xs">{AUTOGESTION_AUTOMATION_RULES.length} activa{AUTOGESTION_AUTOMATION_RULES.length !== 1 ? "s" : ""}</span>
+              <span class="badge badge-secondary badge-soft font-mono font-bold text-xs">{AUTOGESTION_AUTOMATION_RULES.length} activa{AUTOGESTION_AUTOMATION_RULES.length !== 1 ? "s" : ""}</span>
             </div>
             <p class="text-xs text-base-content/60">
               Reglas y patrones programados para la asignación inteligente y distribución autónoma de tickets en Helpdesk 3950
@@ -993,7 +993,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Listado de Reglas de Automatización Documentadas -->
       <div class="p-5 sm:p-6 flex flex-col gap-6">
         {AUTOGESTION_AUTOMATION_RULES.map((rule) => (
-          <div class="border border-base-300 rounded-2xl bg-base-100 overflow-hidden shadow-2xs hover:border-primary/40 transition-all">
+          <div class="border border-base-300 rounded-2xl bg-base-100 overflow-hidden shadow-2xs hover:border-secondary/40 transition-all">
             <!-- Barra de título de la regla -->
             <div class="p-4 sm:p-5 bg-base-200/25 border-b border-base-300/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-center gap-3">
@@ -1003,7 +1003,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                 <div>
                   <div class="flex items-center gap-2 flex-wrap">
                     <h4 class="font-extrabold text-base text-base-content tracking-tight">{rule.name}</h4>
-                    <span class={`badge ${rule.priority === 1 ? "badge-primary" : "badge-secondary"} badge-soft font-bold text-xs uppercase tracking-wider`}>
+                    <span class={`badge ${rule.priority === 1 ? "badge-secondary" : "badge-neutral"} badge-soft font-bold text-xs uppercase tracking-wider`}>
                       Prioridad {rule.priority ?? 1}
                     </span>
                     <span class="badge badge-success badge-soft font-bold text-xs uppercase tracking-wider">
@@ -1028,7 +1028,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
               <!-- Columna 1: Condiciones de Activación -->
               <div class="flex flex-col gap-3">
                 <div class="flex items-center gap-2 text-xs font-bold text-base-content/60 uppercase tracking-wider pb-1 border-b border-base-200">
-                  <Icon name="boxicons:filter" size={16} class="text-primary" />
+                  <Icon name="boxicons:filter" size={16} class="text-secondary" />
                   <span>Criterios y Condiciones de Activación</span>
                 </div>
                 <div class="flex flex-col gap-2.5">
@@ -1248,7 +1248,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             href="#"
             target="_blank"
             rel="noopener noreferrer"
-            class="btn btn-primary btn-sm font-bold gap-1.5 rounded-lg flex-1 sm:flex-initial"
+            class="btn btn-secondary btn-sm font-bold gap-1.5 rounded-lg flex-1 sm:flex-initial"
           >
             <span>Abrir en InvGate</span>
             <Icon name="boxicons:arrow-out-right-square-half" size={16} class="shrink-0" />
@@ -1378,7 +1378,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Header -->
       <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/40 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+          <div class="p-2.5 rounded-xl bg-secondary/10 text-secondary shrink-0">
             <Icon name="boxicons:history" size={22} />
           </div>
           <div>
@@ -1394,7 +1394,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Body -->
       <div class="p-4 sm:p-5 overflow-y-auto flex-1">
         <div id="historial-loading" class="flex flex-col items-center justify-center py-12 gap-3 text-base-content/50">
-          <span class="loading loading-spinner loading-md text-primary"></span>
+          <span class="loading loading-spinner loading-md text-secondary"></span>
           <span class="text-xs font-semibold">Cargando historial...</span>
         </div>
 
@@ -1550,10 +1550,10 @@ function formatWiseMinutes(min: number | undefined | null): string {
         const targetId = btn.getAttribute("data-tab-target");
 
         tabBtns.forEach((b) => {
-          b.classList.remove("tab-active", "bg-primary", "text-primary-content", "shadow-sm");
+          b.classList.remove("tab-active", "bg-secondary", "text-secondary-content", "shadow-sm");
           b.classList.add("text-base-content/70", "hover:text-base-content");
         });
-        btn.classList.add("tab-active", "bg-primary", "text-primary-content", "shadow-sm");
+        btn.classList.add("tab-active", "bg-secondary", "text-secondary-content", "shadow-sm");
         btn.classList.remove("text-base-content/70", "hover:text-base-content");
 
         const panels = ["panel-asignacion", "panel-monitoreo", "panel-automatizacion"];
@@ -1727,7 +1727,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             : "bg-base-100 border border-base-200/90";
           const avatarClass = isInternal
             ? "bg-warning/15 text-warning"
-            : "bg-primary/10 text-primary";
+            : "bg-secondary/10 text-secondary";
 
           return `
             <div class="p-3.5 sm:p-4 rounded-xl ${cardClass} space-y-2">
@@ -2085,8 +2085,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
         // Clear previous conditional classes to ensure fresh state
         row.classList.remove(
-          "bg-primary/10",
-          "border-l-primary",
+          "bg-secondary/10",
+          "border-l-secondary",
           "bg-secondary/10",
           "border-l-secondary",
           "bg-accent/10",
@@ -2112,7 +2112,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             "border-l-secondary",
           );
         } else if (isHighlighted) {
-          row.classList.add("bg-primary/10", "border-l-4", "border-l-primary");
+          row.classList.add("bg-secondary/10", "border-l-4", "border-l-secondary");
         }
 
         if (!op.disponible) {
@@ -2369,11 +2369,11 @@ function formatWiseMinutes(min: number | undefined | null): string {
             : "btn btn-success btn-soft btn-xs font-bold gap-1 px-3 py-1 h-7 min-h-0 text-xs rounded-lg";
         } else {
           containerClasses = "border border-base-200 bg-base-100 hover:bg-base-200/50 transition-colors";
-          avatarClasses = "bg-primary/10 text-primary font-bold";
+          avatarClasses = "bg-secondary/10 text-secondary font-bold";
           creatorBadge = "";
           btnClass = isReadOnly 
             ? "btn btn-xs btn-disabled opacity-40" 
-            : "btn btn-primary btn-xs font-bold gap-1 px-3 py-1 h-7 min-h-0 text-xs rounded-lg";
+            : "btn btn-secondary btn-xs font-bold gap-1 px-3 py-1 h-7 min-h-0 text-xs rounded-lg";
         }
       } else {
         if (isCreator) {
@@ -3275,11 +3275,11 @@ function formatWiseMinutes(min: number | undefined | null): string {
       if (lockStatus.status === "free") {
         dotColor = "bg-base-content/30";
         statusText = "Sin asignador";
-        buttonsHtml = `<button type="button" id="btn-acquire-lock" class="btn btn-primary btn-xs font-bold uppercase tracking-wider shadow-sm">Tomar control</button>`;
+        buttonsHtml = `<button type="button" id="btn-acquire-lock" class="btn btn-secondary btn-xs font-bold uppercase tracking-wider shadow-sm">Tomar control</button>`;
       } else if (lockStatus.status === "expired") {
         dotColor = "bg-neutral/50";
         statusText = `Expirado: ${escapeHtml(lockHolderName)}`;
-        buttonsHtml = `<button type="button" id="btn-acquire-lock" class="btn btn-primary btn-xs font-bold uppercase tracking-wider shadow-sm">Tomar control</button>`;
+        buttonsHtml = `<button type="button" id="btn-acquire-lock" class="btn btn-secondary btn-xs font-bold uppercase tracking-wider shadow-sm">Tomar control</button>`;
       } else if (lockStatus.status === "occupied") {
         showTimer = true;
         timerMs = lockExpiresAt - Date.now();
@@ -3354,7 +3354,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           modal.showModal();
 
           const TYPE_MAP: Record<string, { label: string; badgeClass: string }> = {
-            cyclic: { label: "Cíclica", badgeClass: "badge-soft badge-primary font-semibold" },
+            cyclic: { label: "Cíclica", badgeClass: "badge-soft badge-secondary font-semibold" },
             manual: { label: "Manual", badgeClass: "badge-soft badge-info font-semibold" },
             revision: { label: "Revisión", badgeClass: "badge-soft badge-warning font-semibold" },
             undo: { label: "Deshecha", badgeClass: "badge-soft badge-warning font-semibold" },
