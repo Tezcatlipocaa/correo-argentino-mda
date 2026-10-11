@@ -341,7 +341,7 @@ const cleanBase = getCleanBase();
           />
         ) : (
           <div class="text-base-content/80 flex items-center gap-2">
-            <Icon name="boxicons:calendar" size={20} class="text-primary" />
+            <Icon name="boxicons:calendar" size={20} class="text-secondary" />
             <span class="font-semibold text-xs uppercase tracking-wider">Período de evaluación:</span>
           </div>
         )
@@ -1111,6 +1111,17 @@ const formatTicketRef = (ticketId?: string | null, callId?: string | null) => {
   return t.startsWith("#") ? t : `#${t}`;
 };
 
+    // El identificador principal es el de la interacción auditada (caso / llamada Wise);
+    // el ticket de InvGate queda como dato secundario. Autogestión y casos sin número
+    // ("N/A") se quedan con el ticket como primario.
+    const caseId = (call.callId || "").trim();
+    const wiseId =
+      caseId && caseId !== "N/A" && call.channelType !== "invgate_ticket" ? caseId : null;
+    const primaryRef = wiseId || formatTicketRef(call.ticketId, call.callId);
+    const secondaryRef =
+      wiseId && call.ticketId && call.ticketId !== "N/A" ? formatTicketRef(call.ticketId, null) : "";
+    const primaryLabel = wiseId ? "Wise" : "InvGate";
+
     const durationTitle =
       call.channelType === "wise_call"
         ? "Duración de llamada"
@@ -1150,11 +1161,12 @@ const formatTicketRef = (ticketId?: string | null, callId?: string | null) => {
 
             <span class="text-base-content/20 text-xs hidden sm:inline">•</span>
 
-            <!-- 3. Ticket / Nro de Caso -->
+            <!-- 3. Caso / Nro de Ticket -->
             <div class="flex items-center gap-1.5 min-w-0">
-              <span class="font-mono text-xs font-bold text-base-content truncate">${escapeHtml(formatTicketRef(call.ticketId, call.callId))}</span>
+              <span class="text-small font-semibold text-base-content/50 shrink-0">${primaryLabel}:</span>
+              <span class="font-mono text-xs font-bold text-base-content truncate">${escapeHtml(primaryRef)}</span>
               ${call.isPas ? '<span class="badge badge-secondary badge-xs font-bold uppercase tracking-wider text-3xs px-1.5 py-0.5 shadow-2xs shrink-0">PAS</span>' : ""}
-              ${call.callId && call.ticketId && call.callId !== call.ticketId ? `<span class="text-3xs text-base-content/40 font-mono truncate hidden md:inline">(${escapeHtml(call.callId)})</span>` : ""}
+              ${secondaryRef ? `<span class="text-small font-semibold text-base-content/50 shrink-0">InvGate:</span><span class="font-mono text-xs font-bold text-base-content truncate">${escapeHtml(secondaryRef)}</span>` : ""}
             </div>
 
             <span class="text-base-content/20 text-xs hidden sm:inline">•</span>
