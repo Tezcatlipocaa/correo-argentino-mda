@@ -378,17 +378,17 @@ const cleanBase = getCleanBase();
         </button>
       </div>
 
-      <button
-        id="btn-export-excel"
-        class="btn btn-sm btn-outline btn-secondary gap-1.5 text-xs font-bold uppercase"
-        title="Exportar Reporte a Excel (.xlsx)"
-      >
-        <Icon name="boxicons:file" size={18} />
-        <span>Exportar Excel</span>
-      </button>
       {
         !isAgent && (
           <>
+            <button
+              id="btn-export-excel"
+              class="btn btn-sm btn-outline btn-secondary gap-1.5 text-xs font-bold uppercase"
+              title="Exportar Reporte a Excel (.xlsx)"
+            >
+              <Icon name="boxicons:file" size={18} />
+              <span>Exportar Excel</span>
+            </button>
             <div class="divider divider-horizontal mx-0.5 hidden sm:flex"></div>
             <button
               id="btn-configure-parameters"
