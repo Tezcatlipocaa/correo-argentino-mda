@@ -90,6 +90,7 @@ function applyProgress(slot: HTMLElement, progress: AutomationProgress) {
   if (bar) bar.value = progress.percent;
   hideEl(slot.querySelector("[data-progress-loading]"));
   showEl(slot.querySelector("[data-progress-content]"), "flex");
+  slot.setAttribute("aria-busy", "false");
 }
 
 function applyOutcome(slot: HTMLElement, outcome: ProgressOutcome) {
@@ -101,6 +102,7 @@ function applyOutcome(slot: HTMLElement, outcome: ProgressOutcome) {
   hideEl(slot.querySelector("[data-progress-loading]"));
   showEl(slot.querySelector("[data-progress-error]"), "block");
   slot.dataset.loaded = "error";
+  slot.setAttribute("aria-busy", "false");
 }
 
 async function fetchProgress(id: string): Promise<ProgressOutcome> {
@@ -148,6 +150,7 @@ export async function hydrateAutomationProgress(
   }
 
   slot.dataset.loaded = "loading";
+  slot.setAttribute("aria-busy", "true");
   showEl(slot.querySelector("[data-progress-loading]"), "flex");
 
   const request = fetchProgress(id);

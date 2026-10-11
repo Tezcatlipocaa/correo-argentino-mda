@@ -148,6 +148,7 @@ export const routePermissions: RoutePermission[] = [
   // escritura (cerrar/reabrir/editar datos) se decide por módulo en
   // getModulePermissions (supervisor+), no por esta whitelist.
   { path: "/automatizaciones", roles: ALL_ROLES },
+  { path: "/automatizaciones/metricas", roles: ALL_ROLES },
   { path: "/base-conocimiento", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/admin", roles: ALL_ROLES },
   { path: "/api/aplicativos", roles: ALL_ROLES },

@@ -14,8 +14,9 @@ import type { AutomationDetail } from "@lib/workflow/resolver";
 import { getModulePermissions, isLoggedIn } from "@lib/rbac";
 
 const { id } = Astro.params;
-const automationId = Number.parseInt(id ?? "", 10);
-const isValidId = Number.isInteger(automationId);
+const rawId = id ?? "";
+const automationId = Number.parseInt(rawId, 10);
+const isValidId = /^\d+$/.test(rawId) && automationId > 0;
 
 const user = Astro.locals.user;
 const canQuery = isLoggedIn(user);

@@ -37,7 +37,7 @@ const resolveStatusName = (statusId: number) =>
   >
     <div class="flex min-w-0 flex-1 items-center gap-3">
       <code
-        class="bg-base-200 text-base-content/80 group-open:bg-secondary group-hover:bg-secondary shrink-0 rounded px-1.5 py-0.5 font-mono text-xs transition-colors group-open:text-white group-hover:text-white"
+        class="bg-base-200 text-base-content/80 group-open:acc-surface group-hover:acc-surface shrink-0 rounded px-1.5 py-0.5 font-mono text-xs transition-colors"
         data-highlight-target
       >
         {item.prettyId}
@@ -50,7 +50,11 @@ const resolveStatusName = (statusId: number) =>
       </span>
     </div>
     <div class="flex shrink-0 items-center gap-3">
-      <AutomationLifecycleLabel statusId={item.statusId} active={item.isActive} />
+      <AutomationLifecycleLabel
+        statusId={item.statusId}
+        active={item.isActive && !item.localClosure}
+        hasClosure={item.localClosure != null}
+      />
       {
         collapsible && (
           <Icon
@@ -68,8 +72,11 @@ const resolveStatusName = (statusId: number) =>
       class="hidden flex-col gap-1"
       data-progress-slot
       data-automation-id={item.id}
+      aria-live="polite"
+      aria-busy="false"
     >
       <div class="hidden flex-col gap-1" data-progress-loading>
+        <span class="sr-only">Cargando progreso…</span>
         <div class="skeleton h-3 w-24 rounded"></div>
         <div class="skeleton h-3 w-full rounded"></div>
       </div>
@@ -113,7 +120,7 @@ const resolveStatusName = (statusId: number) =>
 
       <AutomationLink
         automationId={item.id}
-        class="btn btn-secondary btn-sm gap-1 shadow-none"
+        class="btn btn-sm gap-1 acc-btn acc-flat"
       >
         Ver detalle
         <Icon name="boxicons:chevron-right" size={14} aria-hidden="true" />
