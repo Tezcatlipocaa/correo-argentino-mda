@@ -14,7 +14,6 @@ interface Props {
   async?: boolean;
   enctype?: string;
   cancelLabel?: string;
-  cancelIcon?: string;
   saveLabel?: string;
   saveIcon?: string;
   saveColor?: string;
@@ -30,7 +29,6 @@ const {
   async = false,
   enctype,
   cancelLabel = "Cancelar",
-  cancelIcon = "boxicons:arrow-big-left-filled",
   saveLabel = "Guardar cambios",
   saveIcon = "boxicons:save-filled",
   saveColor = "btn-secondary",
@@ -55,7 +53,6 @@ const {
         <ActionCancelButton
           href={backHref}
           label={cancelLabel}
-          icon={cancelIcon}
           variant="error"
         />
         <ActionConfirmButton

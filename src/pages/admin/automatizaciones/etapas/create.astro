@@ -1,0 +1,122 @@
+---
+import { db } from "@db/index";
+import { workflowStages, workflowStageTickets } from "@db/schema";
+import { asc, eq } from "drizzle-orm";
+import { logAdminFromAstro } from "@lib/auditLogger";
+import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import EtapaBaseFields from "@components/admin/automatizaciones/EtapaBaseFields.astro";
+import FormShell from "@components/ui/FormShell.astro";
+import { resolveUrl } from "@lib/url";
+import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { toastResponse } from "@lib/api/toastResponse";
+
+const listPath = resolveUrl("/admin/automatizaciones/etapas");
+const pageTitle = "Nueva etapa";
+const subtitle = "Etapa nueva para agrupar tickets del workflow de automatización.";
+
+const allTickets = await db
+  .select({
+    id: workflowStageTickets.id,
+    matchLabel: workflowStageTickets.matchLabel,
+    displayName: workflowStageTickets.displayName,
+    stageName: workflowStages.name,
+  })
+  .from(workflowStageTickets)
+  .innerJoin(workflowStages, eq(workflowStageTickets.stageId, workflowStages.id))
+  .orderBy(asc(workflowStages.position), asc(workflowStageTickets.position));
+
+let errorMsg = "";
+
+if (Astro.request.method === "POST") {
+  const isAjax = Astro.request.headers.get("accept")?.includes("application/json");
+  try {
+    const fd = await Astro.request.formData();
+    const name = fd.get("name")?.toString().trim() ?? "";
+    const description = fd.get("description")?.toString().trim() || null;
+    const position = Number.parseInt(fd.get("position")?.toString() ?? "", 10);
+    const gateRaw = fd.get("gateItemId")?.toString() ?? "none";
+    const scope =
+      fd.get("scope")?.toString() === "legacy" ? "legacy" : "workflow";
+
+    if (!name) {
+      throw new Error("El nombre de la etapa es obligatorio.");
+    }
+    if (Number.isNaN(position) || position < 0) {
+      errorMsg = "El orden debe ser un número entero mayor o igual a 0.";
+      if (isAjax) return toastResponse({ success: false, error: errorMsg });
+      return redirectWithToast(listPath, errorMsg, "error");
+    }
+
+    let gateItemId: number | null = null;
+    if (gateRaw !== "none") {
+      gateItemId = Number.parseInt(gateRaw, 10);
+      if (Number.isNaN(gateItemId)) {
+        gateItemId = null;
+      } else {
+        const [ticket] = await db
+          .select({ id: workflowStageTickets.id })
+          .from(workflowStageTickets)
+          .where(eq(workflowStageTickets.id, gateItemId))
+          .limit(1);
+        if (!ticket) {
+          gateItemId = null;
+        }
+      }
+    }
+
+    const [created] = await db
+      .insert(workflowStages)
+      .values({ name, description, scope, position, gateItemId })
+      .returning({ id: workflowStages.id, name: workflowStages.name });
+
+    await logAdminFromAstro(
+      Astro.locals,
+      `Creó la etapa "${created.name}" del workflow (orden ${position}, scope ${scope})`,
+    );
+
+    const toastMessage = `Etapa "${created.name}" creada con éxito.`;
+    if (isAjax) {
+      return toastResponse({
+        success: true,
+        message: toastMessage,
+        redirectUrl: listPath,
+      });
+    }
+    return redirectWithToast(listPath, toastMessage);
+  } catch (e) {
+    errorMsg = e instanceof Error ? e.message : "Error al crear la etapa.";
+    if (isAjax) return toastResponse({ success: false, error: errorMsg });
+    return redirectWithToast(listPath, errorMsg, "error");
+  }
+}
+
+const gateOptions = [
+  { value: "none", label: "Sin gate (siempre habilitada)" },
+  ...allTickets.map((ticket) => ({
+    value: String(ticket.id),
+    label: `${ticket.stageName} — ${ticket.displayName?.trim() || ticket.matchLabel}`,
+  })),
+];
+---
+
+<FormShell
+  backHref={listPath}
+  title={pageTitle}
+  subtitle={subtitle}
+  formId="etapa-form"
+  async
+  saveLabel="Crear etapa"
+  cancelLabel="Volver al listado"
+>
+  <script is:inline define:vars={{ errorMsg }}>
+    if (errorMsg) {
+      window.addEventListener("load", () => window.showToast?.(errorMsg, "alert-error"));
+    }
+  </script>
+
+  <SectionCard class="shadow-md">
+    <EtapaBaseFields mode="create" gateOptions={gateOptions} />
+  </SectionCard>
+</FormShell>
+<AsyncFormScript />

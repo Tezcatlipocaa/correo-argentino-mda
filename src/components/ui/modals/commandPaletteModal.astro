@@ -67,7 +67,7 @@ const invgateWebBase = invgateApiBase
                       item.nested && "pl-5",
                     ]}
                   >
-                    <Icon name={item.icon} size={14} class="shrink-0" />
+                    <Icon name={item.icon} size={14} class="shrink-0" is:inline />
                     <span class="min-w-0">
                       {item.parentLabel && (
                         <span class="text-base-content/50 block text-xs">
@@ -84,7 +84,8 @@ const invgateWebBase = invgateApiBase
                       {item.href}
                     </span>
                     {isLocked && (
-                      <Icon name="boxicons:lock" size={12} class="opacity-60" />
+                      <Icon name="boxicons:lock" size={12} class="opacity-60" 
+            is:inline />
                     )}
                   </div>
                 </a>

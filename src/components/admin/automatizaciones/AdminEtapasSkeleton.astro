@@ -1,0 +1,63 @@
+---
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import DataTable from "@components/ui/DataTable.astro";
+
+const headerGridClass = "grid-cols-[70px_90px_1.2fr_1fr_1.4fr_150px] gap-4";
+const rowGridClass =
+  "grid grid-cols-[70px_90px_1.2fr_1fr_1.4fr_150px] items-center gap-4";
+---
+
+<PageContainer width="xxl">
+  <div class="skeleton-debounced">
+    <PageHeader
+      title="Etapas del Workflow"
+      description="Configuración de las etapas que agrupan los tickets de automatización de sucursal."
+    />
+
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
+      <div class="flex items-center gap-3">
+        <div class="skeleton h-8 w-8"></div>
+        <div class="skeleton h-4 w-28"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="skeleton h-10 w-64"></div>
+        <div class="skeleton h-9 w-32"></div>
+      </div>
+    </div>
+
+    <DataTable
+      ariaLabel="Listado de etapas del workflow (cargando)"
+      minWidthClass="min-w-200"
+      headerGridClass={headerGridClass}
+      rowGridClass={rowGridClass}
+    >
+      <div slot="header" class={headerGridClass}>
+        <div class="min-w-0"><div class="skeleton h-4 w-10"></div></div>
+        <div class="min-w-0"><div class="skeleton h-4 w-12"></div></div>
+        <div class="min-w-0"><div class="skeleton h-4 w-14"></div></div>
+        <div class="min-w-0"><div class="skeleton h-4 w-14"></div></div>
+        <div class="min-w-0"><div class="skeleton h-4 w-16"></div></div>
+      </div>
+
+      {
+        Array.from({ length: 5 }).map(() => (
+          <article
+            data-table-row
+            class:list={[
+              rowGridClass,
+              "border-base-300 border-b px-4 py-3 last:border-b-0",
+            ]}
+          >
+            <div class="skeleton h-4 w-8"></div>
+            <div class="skeleton h-4 w-8"></div>
+            <div class="skeleton h-4 w-36"></div>
+            <div class="skeleton h-4 w-20"></div>
+            <div class="skeleton h-4 w-44"></div>
+            <div class="skeleton h-4 w-24"></div>
+          </article>
+        ))
+      }
+    </DataTable>
+  </div>
+</PageContainer>

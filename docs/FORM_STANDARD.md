@@ -45,7 +45,7 @@ Todo formulario de edición/creación de esta rama debe usar el componente
    `innerHTML` (spinners de carga, toggles de clase como `btn-warning`) se
    mantienen como `<button>` crudos — un `ActionConfirmButton` perdería el
    ícono en el primer submit. Ejemplos: `#save-edit-btn` (EditUserModal),
-   `#confirm-agents-ticket-btn` / `#confirm-create-ticket-btn`
-   (AgentsTicketModal).
+   `#confirm-agents-ticket-btn` / `#skip-verify-agents-ticket-btn` /
+   `#confirm-create-ticket-btn` (AgentsTicketModal).
 
 No reinventar header ni barra de acciones en cada página: usar `FormShell`.

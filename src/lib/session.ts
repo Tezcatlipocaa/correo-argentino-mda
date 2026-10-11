@@ -1,9 +1,10 @@
-import { createHmac, randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import type { AstroCookies } from "astro";
 
-const SECRET = import.meta.env.SESSION_SECRET;
+const SECRET =
+  import.meta.env?.SESSION_SECRET || process.env.SESSION_SECRET;
 if (!SECRET) {
-  if (import.meta.env.PROD) {
+  if (import.meta.env?.PROD) {
     throw new Error(
       "CRITICAL: SESSION_SECRET is not defined in production environment!",
     );
@@ -30,7 +31,15 @@ export function verifySessionId(signedSessionId: string): string | null {
   const expectedSignature = createHmac("sha256", SECRET_KEY)
     .update(sessionId)
     .digest("base64url");
-  if (signature === expectedSignature) {
+
+  const sigBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+
+  if (sigBuffer.length !== expectedBuffer.length) {
+    return null;
+  }
+
+  if (timingSafeEqual(sigBuffer, expectedBuffer)) {
     return sessionId;
   }
   return null;
@@ -41,6 +50,12 @@ export function generateSessionId(): string {
   return randomBytes(32).toString("base64url");
 }
 
+export function isSessionCookieSecure(): boolean {
+  const value =
+    process.env.SESSION_COOKIE_SECURE || import.meta.env?.SESSION_COOKIE_SECURE;
+  return value === "true";
+}
+
 export function setSessionCookie(
   cookies: AstroCookies,
   signedSessionId: string,
@@ -49,7 +64,7 @@ export function setSessionCookie(
   cookies.set("session_id", signedSessionId, {
     path: "/",
     httpOnly: true,
-    secure: false,
+    secure: isSessionCookieSecure(),
     sameSite: "lax",
     expires: expiresAt,
   });
@@ -59,7 +74,7 @@ export function deleteSessionCookie(cookies: AstroCookies) {
   cookies.delete("session_id", {
     path: "/",
     httpOnly: true,
-    secure: false,
+    secure: isSessionCookieSecure(),
     sameSite: "lax",
   });
 }

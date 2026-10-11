@@ -120,14 +120,6 @@ export interface OperatorPayload {
   horarioDefault?: string;
 }
 
-export async function createOperator(operator: OperatorPayload): Promise<any> {
-  return fetchJSON<any>("/api/cronograma/operators", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(operator),
-  });
-}
-
 export async function editOperator(
   operator: Required<Pick<OperatorPayload, "originalName" | "name">> &
     OperatorPayload,

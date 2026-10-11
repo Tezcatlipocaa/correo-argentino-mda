@@ -37,6 +37,16 @@ export function normalizeRole(role: string): Role {
   return "agent";
 }
 
+/**
+ * Sesión iniciada: el middleware asigna `id: 0` al usuario anónimo, así que
+ * `id !== 0` es el marcador de sesión activa.
+ */
+export function isLoggedIn(
+  user: { id: number } | null | undefined,
+): boolean {
+  return Boolean(user && user.id !== 0);
+}
+
 export interface RoutePermission {
   path: string;
   roles: Role[];
@@ -52,14 +62,22 @@ const ALL_ROLES: Role[] = [
   "admin",
 ];
 
+// Acceso a Base de conocimiento: SOLO admin por el momento (medida temporal,
+// decidida 2026-09). Para reabrir a la mesa, reemplazar por los roles previos
+// (ver/leer: todos; administrar: ["team_leader","supervisor","admin"]).
+// Ver docs/CONTEXT.md (sección Base de conocimiento).
+export const KB_ACCESS_ROLES: readonly Role[] = Object.freeze(["admin"]);
+
 export const routePermissions: RoutePermission[] = [
   { path: "/admin/usuarios-sin-ubicacion", roles: ["admin"] },
   { path: "/admin/usuarios", roles: ["admin"] },
   { path: "/admin/usuarios/mesas-de-ayuda", roles: ["admin"] },
   { path: "/admin/auditoria", roles: ["admin"] },
+  { path: "/admin/automatizaciones/etapas", roles: ["admin"] },
   { path: "/admin/feedback", roles: ["admin"] },
   { path: "/admin/permisos", roles: ["admin"] },
   { path: "/admin/papelera", roles: ["admin"] },
+  { path: "/admin/oficinas/edificios", roles: ["admin"] },
   {
     path: "/admin/invgate/ubicaciones",
     roles: ["admin", "supervisor", "team_leader"],
@@ -78,6 +96,10 @@ export const routePermissions: RoutePermission[] = [
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
   {
+    path: "/supervision/calidad-operadores/nueva",
+    roles: ["admin", "supervisor", "team_leader", "referent"],
+  },
+  {
     path: "/supervision/calidad-operadores",
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
@@ -94,6 +116,9 @@ export const routePermissions: RoutePermission[] = [
   { path: "/mesas-de-ayuda/asignar", roles: ["admin", "supervisor"] },
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
+  { path: "/base-conocimiento/categorias", roles: [...KB_ACCESS_ROLES] },
+  { path: "/base-conocimiento/create", roles: [...KB_ACCESS_ROLES] },
+  { path: "/base-conocimiento/edit", roles: [...KB_ACCESS_ROLES] },
   {
     path: "/inventario-terminales/cubics/create",
     roles: ["admin", "supervisor"],
@@ -123,16 +148,23 @@ export const routePermissions: RoutePermission[] = [
   { path: "/oficinas", roles: ALL_ROLES },
   { path: "/recursos", roles: ALL_ROLES },
   { path: "/titulos", roles: ALL_ROLES },
-  { path: "/base-conocimiento", roles: ALL_ROLES },
+  // Monitoreo de automatizaciones: lectura para todos los logueados. La
+  // escritura (cerrar/reabrir/editar datos) se decide por módulo en
+  // getModulePermissions (supervisor+), no por esta whitelist.
+  { path: "/automatizaciones", roles: ALL_ROLES },
+  { path: "/base-conocimiento", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/admin", roles: ALL_ROLES },
   { path: "/api/aplicativos", roles: ALL_ROLES },
   { path: "/api/asistencia", roles: ALL_ROLES },
+  { path: "/api/automatizaciones", roles: ALL_ROLES },
   { path: "/api/cronograma", roles: ALL_ROLES },
   { path: "/api/disponibilidad", roles: ALL_ROLES },
   { path: "/api/download", roles: ALL_ROLES },
   { path: "/api/export", roles: ALL_ROLES },
   { path: "/api/icons", roles: ALL_ROLES },
   { path: "/api/invgate", roles: ALL_ROLES },
+  { path: "/api/kb/upload", roles: [...KB_ACCESS_ROLES] },
+  { path: "/api/kb/images", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/offices", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
@@ -224,6 +256,16 @@ export function getModulePermissions(
     // Leen: todos / Escriben: admin, supervisor, team_leader
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.team_leader;
+  } else if (moduleName === "base-conocimiento") {
+    // Temporal (2026-09): read y write comparten KB_ACCESS_ROLES mientras la
+    // sección está restringida. Al revertir a un esquema read≠write, restaurar
+    // la separación previa (read todos; write team_leader+) acá.
+    // admin siempre permitido (no revocable), igual que el short-circuit de
+    // hasPermission: si se sacara de KB_ACCESS_ROLES, no debe quedar locked out.
+    // Ver docs/CONTEXT.md (sección Base de conocimiento).
+    const canAccessKb = role === "admin" || KB_ACCESS_ROLES.includes(role);
+    perm.canRead = canAccessKb;
+    perm.canWrite = canAccessKb;
   } else if (moduleName === "usuarios") {
     // Solo admin lee/escribe (los endpoints de lectura de AD exponen datos sensibles)
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
@@ -231,8 +273,13 @@ export function getModulePermissions(
   } else if (moduleName === "permisos") {
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
+  } else if (moduleName === "automatizaciones") {
+    // Monitoreo de automatizaciones InvGate: lectura para todos los roles
+    // logueados. Escritura (cerrar/reabrir localmente y editar datos manuales)
+    // para supervisor+, que es la política de cierre desde el portal.
+    perm.canRead = true;
+    perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
   }
 
   return perm;
 }
-

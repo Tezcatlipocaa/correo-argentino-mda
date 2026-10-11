@@ -21,7 +21,13 @@ export const GET: APIRoute = async ({ url }) => {
     const locations = Array.isArray(result.data) ? result.data : [];
     const normalizedQuery = normalizeSearchValue(q);
 
+    const parentIds = new Set<number>();
+    for (const loc of locations) {
+      if (loc.parent_id !== null) parentIds.add(loc.parent_id);
+    }
+
     const filtered = locations
+      .filter((loc) => !parentIds.has(loc.id))
       .filter((loc) => normalizeSearchValue(loc.name).includes(normalizedQuery))
       .slice(0, 10)
       .map((loc) => ({

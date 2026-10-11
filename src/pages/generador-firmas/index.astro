@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import SignatureGenerator from "./_components/SignatureGenerator.astro";
+import SignatureGenerator from "@components/generador-firmas/SignatureGenerator.astro";
 ---
 
 <BaseLayout>
@@ -10,6 +10,6 @@ import SignatureGenerator from "./_components/SignatureGenerator.astro";
       description="Completa tus datos laborales para generar y copiar tu firma institucional oficial."
     />
 
-    <SignatureGenerator origin={Astro.url.origin} />
+    <SignatureGenerator />
   </div>
 </BaseLayout>

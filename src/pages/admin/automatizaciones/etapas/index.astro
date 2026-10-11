@@ -1,0 +1,11 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AdminEtapasContent from "@components/admin/automatizaciones/AdminEtapasContent.astro";
+import AdminEtapasSkeleton from "@components/admin/automatizaciones/AdminEtapasSkeleton.astro";
+---
+
+<BaseLayout>
+  <AdminEtapasContent server:defer>
+    <AdminEtapasSkeleton slot="fallback" />
+  </AdminEtapasContent>
+</BaseLayout>

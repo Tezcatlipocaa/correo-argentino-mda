@@ -103,7 +103,7 @@ const resolvedHref =
         ]}
         aria-hidden="true"
       >
-        <Icon name={icon} size={24} />
+        <Icon name={icon} size={24} is:inline />
       </span>
 
       <div class="min-w-0 space-y-1">
@@ -135,7 +135,7 @@ const resolvedHref =
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
     >
-      <Icon name={ctaIcon} size={16} aria-hidden="true" />
+      <Icon name={ctaIcon} size={16} aria-hidden="true" is:inline />
       <span>{ctaLabel}</span>
     </a>
   </div>

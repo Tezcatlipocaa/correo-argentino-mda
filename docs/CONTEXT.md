@@ -84,6 +84,7 @@ Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
 - **Rutas protegidas (rol):** `src/lib/rbac.ts` — `routePermissions` (whitelist default-deny, incluye `/_actions`) y `hasPermission(href, role)`
 - **Visibilidad por mesa (fuente unica):** `isSectionVisibleSync(helpdeskName, role, href)` en `src/lib/helpdeskAccess.ts` — sincronica, sin capa DB de permisos (el sistema DB routeAccess/moduleAccess fue eliminado). Usada por middleware, sidebar y dashboard. Admin short-circuit a allow.
 - **Politica admin:** `/admin/usuarios`, `/admin/usuarios/mesas-de-ayuda`, `/admin/feedback`, `/admin/auditoria` admin-only por whitelist hardcoded. `/admin/permisos` ya no tiene pagina: es un redirect 302 a `/admin/usuarios/mesas-de-ayuda` (sigue en la whitelist admin-only para que el middleware permita resolver el redirect).
+- **`/admin/oficinas/edificios`:** admin-only (whitelist en `src/lib/rbac.ts`). La pagina agrupa oficinas cuyo `address` difiere en escritura pero cae en el mismo grupo de `buildBuildingKey` (`src/lib/officeBuildingKey.ts`; agrupacion en `src/lib/officeBuildingReconcile.ts`, la misma que consume el CLI `buildings:reconcile` de `scripts/reconcile-buildings.ts`). Aplicar un grupo escribe **una sola direccion canonica en todos sus miembros**, y eso es justamente lo que hace que el agrupado derivado "mismo edificio" (`siblingKey` en `src/lib/officeSiblings.ts`, que compara el `address` normalizado) los agrupe automaticamente. No hay tabla `buildings` ni cambio de schema: el vinculo sigue siendo derivado en lectura, solo se normaliza el dato que lo alimenta.
 - **Mesa obligatoria:** al crear usuario se exige mesa activa; nombre canonico desde `mesas.name`. Mesa inactiva/borrada/desconocida → fail-closed (`resolveSessionMesa`): usuario queda "sin mesa" (solo paginas comunes) hasta reasignacion.
 - **Banner de `/admin/usuarios`:** solo se muestra para usuarios con **mesa inactiva** (`mesas.active = false`), fail-closed, con cap de 20 + contador de restantes. Los usuarios sin mesa (`helpdeskId` NULL) o con mesa huerfana NO se listan (siguen fail-closed y visibles en la tabla con su badge).
 - **Participaciones:** gating por mesa **canonica**: el selector de participaciones (y el alta/update-user) resuelve la mesa via `LEFT JOIN users→mesas` (`mesas.name`) con fallback al denormalizado `users.helpdeskName` solo si el join no resuelve (usuario huerfano); luego `mesaHasParticipaciones`. Solo mesas en `PARTICIPATION_HELPDESK_NAMES` (hoy MDA TI). El supervisor no figura: `enCronograma` forzado a `false` server-side (`normalizeRole`).
@@ -92,7 +93,13 @@ Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
   - **Orden de migración en prod (obligatorio antes de que align/`db:push` dropee `agent_name`):** (1) backup, (2) `npx tsx scripts/link-orphan-schedules.mts` dry-run, (3) `--apply` (vincula huérfanos), (4) `npx tsx scripts/align-db-to-schema.mts`, (5) restart PM2. Si se dropea la columna antes de aplicar la reconciliación, los huérfanos quedan invisibles para los lectores id-only. Nunca correr `--apply` sin dry-run revisado.
 - **`/admin/usuarios/mesas-de-ayuda`:** gestion de mesas — sync InvGate (CSRF + rate-limit, devuelve `affectedUsers` con banner de reasignacion en `/admin/usuarios`), toggle `Asignable` por mesa (endpoint `POST /api/admin/permisos/mesas/assignable`, auditado) y resumen read-only de visibilidad. El resumen evalua **ambas capas** (`isSectionVisibleSync` ∧ `hasPermission`) para un rol `agent`, asi que refleja el acceso real (p.ej. `/admin` sale ✗ para agentes MDA TI). El endpoint rechaza 400 si se intenta deshabilitar MDA TI.
 - **`mesas.assignable`:** curacion manual (separada de `active`, que es el ciclo de vida del sync de InvGate). Solo mesas `active=1 AND (assignable=1 OR name='TI_GSM_MDA TI')` aparecen en el select de mesa al alta/editar usuario; el server re-valida lo mismo. **MDA TI esta exenta**: siempre asignable y no deshabilitable. Tras la migracion queda todo en `false`; `scripts/seed-assignable-mesas.mts` (dry-run por defecto, `--apply` con backup WAL-safe, idempotente) marca `true` las mesas historicamente permitidas (`ALLOWED_HELPDESK_NAMES`).
-- **Base de conocimiento:** `/base-conocimiento` ALL_ROLES; el contenido futuro se filtrara por `helpdeskId`. Actualmente **oculta de la UI** (sin sección en el sidebar ni en el resumen de `/admin/usuarios/mesas-de-ayuda`), pero la ruta sigue activa por URL directa. Se volverá a mostrar cuando se agreguen artículos.
+- **Base de conocimiento:** `/base-conocimiento` estaba visible en **Accesos rápidos** para `ALL_ROLES`, con lectura por mesa (`mesas.invgateId`) desde la tabla local SQLite `kb_articles` y escritura `team_leader`+ (modelo **histórico**; desde 2026-09 el acceso está restringido a `admin`, ver sub-bullet). `admin` ve artículos de todas las mesas. Flujo editorial `draft` → `published` → `archived`; Markdown se sanitiza al renderizar y las imágenes se almacenan en disco bajo el directorio raíz de almacenamiento externo (`EXTERNAL_STORAGE_DIR`), en `kb-images/<helpdeskId>/`. Las categorías viven en `kb_categories` por mesa (defaults `Accesos`, `Guías`, `Preguntas frecuentes`, `Procedimientos`, `Soluciones`) y se administran en `/base-conocimiento/categorias` (`team_leader`+; histórico, hoy solo admin); el campo categoría de alta/edición es un `<select>` del catálogo de la mesa con alta inline (sin texto libre). Los formularios de alta/edición solo ofrecen mesas habilitadas por admin (`mesas.assignable`, con excepción de la mesa MDA TI).
+  - **Acceso restringido a `admin` (temporal, 2026-09)** — toda la sección `/base-conocimiento/*` y los endpoints `/api/kb/upload` + `/api/kb/images` quedaron solo para admin vía `KB_ACCESS_ROLES` en `src/lib/rbac.ts` (fuente única: también `getModulePermissions("base-conocimiento")` y las filas de `rolesMatrix.ts`); sidebar/command-palette/quick-access e index se ocultan solos porque derivan de `hasPermission`; para revertir, editar `KB_ACCESS_ROLES` (rutas + módulo read/write + filas de `rolesMatrix.ts` se mueven juntas) **y**, si se quiere restaurar el modelo asimétrico previo (read todos / write team_leader+), reestablecer el split read/write en `getModulePermissions("base-conocimiento")`.
+  - **Postura CSRF de la KB:** los cinco handlers de escritura de `/base-conocimiento/**` (alta de artículo, edición de artículo, alta/renombre/baja de categoría) exigen un token CSRF. El esquema es el del repo, no uno nuevo: `src/lib/csrf.ts` firma `${sessionId}.${timestamp}.${HMAC-SHA256}` con TTL de 1 h y lo liga al `sessionId`; cada página lo emite con `getCsrfTokenForSession(Astro.locals.sessionId)` en un hidden `csrf_token` y lo valida con `validateCsrfToken(...)` **antes de cualquier mutación**. La denegación en `/base-conocimiento/categorias` es `redirectWithToast(path, "Token CSRF inválido o ausente", "error")` (302), el mismo texto que usan los endpoints de API; en `create.astro` y `edit/[id].astro` el POST denegado re-renderiza el formulario (200) con el borrador intacto y un token nuevo, más un mensaje genérico en español, sin guardar nada. Ojo con los formularios hidden `#kb-new-category-form` de `create.astro` y `edit/[id].astro`: postean a `/base-conocimiento/categorias`, así que también llevan el token. `src/lib/csrf.ts` no se modifica; lo que cambia es el canal (form en vez de header/body JSON). `/api/kb/upload.ts` sigue sin token (fuera de alcance: es un POST `multipart/form-data`, pero la cookie `session_id` es `sameSite: "lax"`, así que un POST desde otro sitio no la envía y el handler queda sin sesión).
+  - **Siembra de categorías por mesa:** `kbCategories.listCategories` y `createCategory` siembran los 5 defaults (`Accesos`, `Guías`, `Preguntas frecuentes`, `Procedimientos`, `Soluciones`) **solo cuando el catálogo de la mesa está vacío**. De ahí salen tres reglas congeladas por `tests/kb-categorias-seeding.spec.ts`: (1) una mesa sin catálogo muestra los 5 defaults en la primera visita; (2) una mesa nunca puede quedar con exactamente 1 categoría (el `createCategory` sobre catálogo vacío siembra antes de insertar); (3) borrar los 5 defaults los hace reaparecer en la siguiente lectura del catálogo.
+  - **Gate de mesa asimétrico (intencional):** el formulario de alta y el ABM exigen `mesas.active AND (mesas.assignable OR mesas.name = 'TI_GSM_MDA TI')` (`src/pages/base-conocimiento/create.astro`, `src/pages/base-conocimiento/categorias.astro`), pero `src/pages/api/kb/upload.ts` solo exige `mesas.active`. El formulario de edición (`src/pages/base-conocimiento/edit/[id].astro`) **no** aplica ese gate: deriva la mesa del artículo existente, así que un artículo de una mesa que luego se deshabilita sigue siendo editable y se le pueden subir imágenes. No unificar los tres criterios sin decidir qué pasa con el contenido existente. Congelado por `tests/kb-mesas-habilitadas.spec.ts`.
+  - **Guard de página en el ABM de categorías:** `src/pages/base-conocimiento/categorias.astro` mantiene un `if (!perms.canWrite)` aunque el middleware ya deniega por rol antes de renderizar. Es defensa en profundidad a propósito: la whitelist de rutas (`src/lib/rbac.ts`) y el contrato de módulo (`getModulePermissions("base-conocimiento")`) viven en archivos distintos y pueden divergir; `create.astro` y `edit/[id].astro` tienen el mismo guard. Si se quisiera borrar, primero tiene que existir un E2E que congele la denegación vía middleware (`tests/kb-categories.spec.ts`).
+  - **Auditoría de la KB sin estados fabricados:** el alta estructurada de un artículo registra una sola fila (`Creó el artículo`, `beforeState: null`, `afterState` con `title`, `helpdeskId`, `category`, `status`). Si el alta se hace directamente en `published`/`archived`, **no** se agrega una segunda fila de transición `Publicó`/`Archivó`: el artículo nunca existió como `draft`, así que un `beforeState: { status: "draft" }` sería un estado inventado. Es un desvío deliberado del Step 6 de `docs/superpowers/plans/2026-09-28-kb-v2-hardening.md` (que sí pedía esa fila). Las transiciones reales de estado se auditan en la edición (`src/pages/base-conocimiento/edit/[id].astro`), donde sí hay un estado previo. Congelado por `tests/kb-auditoria.spec.ts` (`el alta de un artículo publicado no fabrica una transición de estado`).
 - **Tabla descriptiva por rol:** `src/lib/rolesMatrix.ts` — `isAllowed(feature, role)` alimenta la tabla comparativa de `/admin/usuarios` y el gating de UI. **NO es la fuente de verdad**: la matriz real vive en `rbac.ts` (`getModulePermissions` + `routePermissions`) y `helpdeskAccess.ts` (por mesa). Solo modela la capa de rol. `tests/unit/roles-matrix-consistency.test.ts` cubre el anti-drift.
 - **API routes:** `requireWriteAccess(locals, module)` / `requireReadAccess(locals, module)` desde `src/lib/rbac-middleware.ts`.
 - **Guards puntuales (mas alla del module-level):** `GET /api/usuarios/ad-groups-licenses` es admin-only; `PATCH /api/usuarios/[dni]` solo exige admin cuando el body trae `sucursal` (interno/telefono: cualquier usuario autenticado); el reorder de aplicativos/recursos/contactos (y sus categorias) exige `team_leader+` (`can(role, "team_leader")` dentro de `handleReorder`, porque `/api/admin` esta en la whitelist ALL_ROLES); `/api/profile/*` esta en la whitelist ALL_ROLES y cada endpoint se auto-guarda (401 sin sesion, p.ej. `change-password`).
@@ -107,6 +114,8 @@ Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
 - Purga: proceso PM2 `purge-deleted-records` (04:00 diaria, retención 90d, `scripts/purge-deleted.ts`). Los registros restaurados quedan como histórico permanente.
 - Entidades nuevas con delete: si usan `createDeleteHandler` el snapshot padre es automático (`genericSnapshot: true` default); para snapshot con hijos usar `deleteWithSnapshot` + `genericSnapshot: false` + entrada en `RESTORE_REGISTRY` si deben ser restaurables.
 - Spec: `docs/superpowers/specs/2026-08-28-papelera-deleted-records-design.md`.
+- **Mesas y base de conocimiento no están en la papelera:** `mesas`, `kb_articles` y `kb_categories` no tienen entrada en `RESTORE_REGISTRY`. `kb_articles.helpdesk_id` y `kb_categories.helpdesk_id` referencian `mesas.invgate_id` con `onDelete: "cascade"`, así que **borrar una mesa destruye en cascada todos sus artículos y categorías, sin snapshot y sin restauración**. La gestión de mesas nunca borra: solo alterna `mesas.active` y `mesas.assignable`. `tests/unit/security/mesa-hard-delete.test.ts` falla si aparece un `delete(mesas)` en `src/` o `scripts/`.
+- **Los usuarios nunca se borran, solo se desactivan:** no existe ningún `delete(users)` en `src/` ni en `scripts/`, y `/admin/usuarios` solo expone crear, `update-user`, `deactivate-user`, `reactivate-user` y `reset-password`. No es una preferencia: `kb_articles.author_user_id` es `NOT NULL` con FK a `users.id` en `ON DELETE NO ACTION`, y `kb_articles.published_by_user_id` y `kb_categories.created_by_user_id` tampoco tienen cascada, así que un borrado duro de un usuario que escribió artículos falla con `FOREIGN KEY constraint failed` y no hay acción que lo resuelva limpio. El ciclo de vida soportado es `deactivate-user` (`users.active = false`), reversible con `reactivate-user` y sin perder atribución. `tests/unit/security/user-hard-delete.test.ts` falla si aparece un borrado duro de `users` en `src/` o `scripts/` (los fixtures sí borran, y quedan fuera del escaneo a propósito).
 
 ---
 
@@ -290,6 +299,7 @@ BaseLayout (flex flex-col min-h-screen)
 | 8   | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
+| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Lectura (listado y detalle) para todos los usuarios con sesion iniciada. Cierre/reapertura local (portal, no InvGate) y edicion de datos manuales para `supervisor`+ desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes |
 
 ### Supervision (sub-rutas)
 
@@ -312,6 +322,7 @@ BaseLayout (flex flex-col min-h-screen)
 | `/admin/auditoria`           | Logs de auditoria                      |
 | `/admin/aplicativos`         | CRUD de aplicativos del catalogo       |
 | `/admin/invgate/ubicaciones` | Mapeo de ubicaciones InvGate           |
+| `/admin/oficinas/edificios`  | Solo admin: unifica en bloque oficinas del mismo edificio cuyo `address` difiere en escritura; agrupacion en `src/lib/officeBuildingReconcile.ts`, compartida con el CLI `buildings:reconcile` |
 | `/admin/usuarios/mesas-de-ayuda` | Mesas: sync InvGate + toggle asignable + resumen read-only de visibilidad |
 | `/admin/permisos`            | Redirect 302 a `/admin/usuarios/mesas-de-ayuda` |
 | `/admin/feedback`            | Formulario de feedback                 |
@@ -323,7 +334,19 @@ BaseLayout (flex flex-col min-h-screen)
 | `/login`   | Inicio de sesion  |
 | `/logout`  | Cierre de sesion  |
 | `/profile` | Perfil de usuario |
-| `/base-conocimiento` | Base de conocimiento por mesa (ALL_ROLES). Oculta de la UI por ahora; ruta activa por URL directa |
+| `/base-conocimiento` | Listado de artículos por mesa (ALL_ROLES) |
+| `/base-conocimiento/[id]` | Vista de un artículo (ALL_ROLES) |
+| `/base-conocimiento/create` | Creación de artículos (team_leader+) |
+| `/base-conocimiento/edit/[id]` | Edición de artículos (team_leader+) |
+| `/base-conocimiento/categorias` | ABM de categorías por mesa (admin/supervisor/team_leader) |
+
+### Documentacion del modulo `/automatizaciones`
+
+- `docs/automatizaciones/instructivo-operativo.md` — instructivo de operación (RACI, Tablero Status Proyecto, fichas por sector, checklist de cierre).
+- `docs/automatizaciones/guia-flujo.md` — guía funcional del flujo (etapas, subprocesos, puntos de control Go/No Go).
+- `docs/automatizaciones/nota-tecnica-api.md` — mapeo técnico con InvGate (categoría/workflow, endpoints, initial fields, variables del tablero, formatos de título).
+- `docs/automatizaciones/modelo-datos.md` — persistencia del módulo (tablas, caches/TTLs, ciclo de vida y operación de la DB).
+- `docs/automatizaciones/resumen-implementacion.md` — bitácora de implementación por commit (alcance, arquitectura, deploy).
 
 ---
 
@@ -362,14 +385,16 @@ BaseLayout (flex flex-col min-h-screen)
 | Astro SSR             | 4321   | Servidor principal (node dist/server/entry.mjs)       |
 | mda-ping-cubics       | —      | ICMP ping segmentado a cubics (batch 5→3, 3min gap)   |
 | sync-legacy-inventory | —      | Sincroniza inventario de terminales desde PHP externo |
-| sync-users            | —      | Sincronizacion de empleados via MidPoint (cron 02:00) |
-| sync-office-links     | —      | Sincronizacion de enlaces de oficinas (cron 03:00)    |
+| sync-users            | —      | Sincroniza empleados via MidPoint (02:00)             |
+| sync-office-links     | —      | Sincroniza links de oficinas (03:00)                  |
+| purge-deleted-records | —      | Purga snapshots vencidos de la papelera (90 días, 04:00) |
+| reconcile-automation-parents | — | Reconcilia tracking de padres de /automatizaciones por categoría, todas las mesas (04:00) |
 
 ### Scripts clave (`scripts/`)
 
 | Script                     | Descripcion                                               |
 | -------------------------- | --------------------------------------------------------- |
-| `auto-deploy.bat`          | git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia → build (verify) → pm2 start |
+| `auto-deploy.bat`          | git pull → pm2 kill → npm install → align-db-to-schema → backfill-asistencia → build (verify) → pm2 start → warm-automations |
 | `backup-db.bat`            | Copia `database/mda.db` con timestamp                     |
 | `align-db-to-schema.mts`   | Alinea la DB host con `src/db/schema.ts` (backup + paridad + integridad) |
 | `backfill-asistencia.mts`  | One-time idempotente: inicializa `agents.en_asistencia` (dry-run por defecto; `--apply` con backup) |
@@ -378,6 +403,8 @@ BaseLayout (flex flex-col min-h-screen)
 | `sync-legacy-inventory.ts` | Worker PM2 de sincronizacion de inventario                |
 | `sync-users.ts`            | Sincronizacion de empleados via MidPoint                  |
 | `toggle-mode.ts`           | Script de alternancia de tema light/dark                  |
+| `warm-automations.ts`      | Pre-warm del cache de /automatizaciones (scan InvGate + snapshot persistido + reconciliacion de padres) |
+| `reconcile-automation-parents.ts` | Recupera padres de /automatizaciones reasignados a otras mesas (barrido por estado + categoría) |
 
 ### Base de datos
 
@@ -386,8 +413,8 @@ BaseLayout (flex flex-col min-h-screen)
 - Schema: `src/db/schema.ts` — tablas, relaciones, tipos
 - Config: `drizzle.config.ts` (sqlite dialect, schema `./src/db/schema.ts`, out `./drizzle`)
 - Conexion: `src/db/index.ts` via `better-sqlite3`
-- Despues de cambios de schema, ejecutar `npm run db:push`
-- Deploy en prod: correr `scripts/align-db-to-schema.mts` (hace backup) y luego `scripts/backfill-asistencia.mts --apply` antes del restart de PM2 (el `auto-deploy.bat` ya los encadena); `drizzle-kit push` debe quedar limpio ("No changes detected")
+- Despues de cambios de schema/FK, ejecutar `npx tsx scripts/align-db-to-schema.mts` antes del restart de PM2 (nunca `npm run db:push`: `drizzle-kit push` falla sin TTY)
+- Deploy en prod: correr `scripts/align-db-to-schema.mts` (hace backup) antes del restart de PM2; `drizzle-kit push` debe quedar limpio ("No changes detected")
 - Las tablas de permisos DB (routes, modules, route_access, module_access, permission_audit_batches) fueron eliminadas de schema y DB
 - Para explorar datos: `npm run db:studio`
 

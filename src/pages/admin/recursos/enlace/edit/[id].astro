@@ -6,7 +6,8 @@ import { resourceCategories, resourceLinks } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { processIconUpload } from "@lib/iconUpload";
-import { encrypt } from "@lib/encryption";
+import { iconExists } from "@lib/storage";
+import { encrypt, decrypt } from "@lib/encryption";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
@@ -55,6 +56,14 @@ if (existingLink) {
 }
 
 let formSnapshot = null;
+
+// Valor descifrado solo para mostrar en el formulario. La persistencia usa
+// siempre `link.credentialPassword` (cifrado) como fallback.
+let credentialPasswordValue = "";
+
+if (existingLink.credentialPassword) {
+  credentialPasswordValue = decrypt(existingLink.credentialPassword);
+}
 
 if (Astro.request.method === "POST") {
   const isAjax = Astro.request.headers
@@ -149,6 +158,8 @@ if (Astro.request.method === "POST") {
       link.deprecated = formSnapshot.get("deprecated") === "on";
       link.credentialUsername =
         formSnapshot.get("credentialUsername")?.toString() || "";
+      credentialPasswordValue =
+        formSnapshot.get("credentialPassword")?.toString() || "";
     }
   }
 }
@@ -242,6 +253,8 @@ if (Astro.request.method === "POST") {
           type="password"
           name="credentialPassword"
           label="Contraseña (Credenciales)"
+          value={credentialPasswordValue}
+          reveal
           placeholder="••••••••"
           helpText="(Opcional, dejar vacío para no modificar)"
         />
@@ -301,7 +314,7 @@ if (Astro.request.method === "POST") {
         helpText="(Opcional, .png, .jpg, .svg, .ico)"
       >
         {
-          link.iconPath && (
+          iconExists(link.iconPath) && (
             <div
               slot="preview"
               class="rounded-box border-base-300 bg-base-200 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border p-1"
@@ -310,6 +323,8 @@ if (Astro.request.method === "POST") {
                 src={resolveUrl(`api/icons/${link.iconPath}`)}
                 alt="Preview del ícono"
                 class="h-full w-full object-contain"
+                loading="lazy"
+                decoding="async"
               />
             </div>
           )

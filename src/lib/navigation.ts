@@ -88,7 +88,17 @@ export const navSections: NavSection[] = [
       {
         href: "/mesas-de-ayuda",
         label: "Mesas de Ayuda",
-        icon: "boxicons:headphone-mic",
+        icon: "boxicons:headphone-mic-filled",
+      },
+      {
+        href: "/base-conocimiento",
+        label: "Base de Conocimiento",
+        icon: "boxicons:book-bookmark-filled",
+      },
+      {
+        href: "/automatizaciones",
+        label: "Automatizaciones",
+        icon: "boxicons:rocket-filled",
       },
     ],
   },
@@ -110,12 +120,12 @@ export const navSections: NavSection[] = [
   },
   {
     id: "admin",
-    label: "Panel de Administración",
+    label: "Administración",
     items: [
       {
         href: "/admin",
-        label: "Panel de Administración",
-        icon: "boxicons:apps-filled",
+        label: "Administración",
+        icon: "boxicons:cog-filled",
         children: [
           {
             href: "/admin/contactos",
@@ -135,17 +145,32 @@ export const navSections: NavSection[] = [
           {
             href: "/admin/auditoria",
             label: "Auditoría",
-            icon: "boxicons:history",
+            icon: "boxicons:history-filled",
           },
           {
             href: "/admin/papelera",
             label: "Papelera",
-            icon: "boxicons:trash",
+            icon: "boxicons:trash-filled",
           },
           {
             href: "/admin/invgate/ubicaciones",
             label: "Ubicaciones InvGate",
             icon: "boxicons:location-alt-filled",
+          },
+          {
+            href: "/admin/oficinas/edificios",
+            label: "Agrupación de oficinas",
+            icon: "boxicons:building-house-filled",
+          },
+          {
+            href: "/admin/usuarios-sin-ubicacion",
+            label: "Usuarios sin ubicación",
+            icon: "boxicons:user-x-filled",
+          },
+          {
+            href: "/admin/automatizaciones/etapas",
+            label: "Etapas Workflow",
+            icon: "boxicons:list-ul-filled",
           },
           {
             href: "/admin/feedback",

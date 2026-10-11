@@ -34,6 +34,23 @@ export const AGENTS_TICKET_ASSIGN_GROUP_ID = USE_QA_INVGATE
   ? QA_AGENTS_ASSIGN_GROUP_ID
   : PROD_AGENTS_ASSIGN_GROUP_ID;
 
+// --- Nodos de helpdesk donde buscar tickets de desconexión de agentes ---
+// Los tickets que crea este portal se reasignan a AGENTS_TICKET_ASSIGN_GROUP_ID
+// (2510) y los que carga OPT a mano caen en el nodo 5995 (hijo de
+// TELEGRAFIA_HELPDESK_ID). 5994 se incluye para cubrir tickets que queden
+// asignados al nodo padre.
+// Solo cuentan los estados abiertos (1-4): InvGate no expone status 5 (Cerrado)
+// en `incidents.by.helpdesk`, y un ticket ya cerrado no bloquea la creación.
+const QA_AGENTS_TICKET_SEARCH_HELPDESK_IDS = [QA_AGENTS_ASSIGN_GROUP_ID];
+const PROD_AGENTS_TICKET_SEARCH_HELPDESK_IDS = [
+  PROD_AGENTS_ASSIGN_GROUP_ID,
+  5995,
+  TELEGRAFIA_HELPDESK_ID,
+];
+export const AGENTS_TICKET_SEARCH_HELPDESK_IDS = USE_QA_INVGATE
+  ? QA_AGENTS_TICKET_SEARCH_HELPDESK_IDS
+  : PROD_AGENTS_TICKET_SEARCH_HELPDESK_IDS;
+
 // --- Categorías conocidas del problema "desconexión de agentes" ---
 // 257 = STS- Problema con agentes (categoría que usa este portal)
 // 2625 = Alarma (Operación Telegráfica) — misma problemática registrada en prod
@@ -67,12 +84,19 @@ export function buildTicketDescription(
   officeName: string,
   officeCode: string,
   observaciones?: string,
+  verificacionOmitida?: boolean,
 ): string {
   const observacionesSection = observaciones?.trim()
     ? `<tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;background-color:#f1f5f9;border:1px solid #e2e8f0;">Observaciones</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(observaciones.trim())}</td></tr>`
     : "";
 
-  return `Se comunican desde OPT y reportan problemas con los agentes.<br><table style="width:100%;max-width:600px;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#334155;"><tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;width:180px;background-color:#f1f5f9;border:1px solid #e2e8f0;">OFICINA AFECTADA</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(officeName)}</td></tr><tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;background-color:#f1f5f9;border:1px solid #e2e8f0;">NIS</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(officeCode)}</td></tr>${observacionesSection}</table>`;
+  // El agente pidio explicitamente saltar la verificacion de duplicados: queda
+  // asentado en el ticket para que mesa de ayuda sepa que no se consulto InvGate.
+  const verificacionSection = verificacionOmitida
+    ? `<tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;background-color:#f1f5f9;border:1px solid #e2e8f0;">Verificación</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">No se verificaron tickets abiertos previos (creado a pedido del agente)</td></tr>`
+    : "";
+
+  return `Se comunican desde OPT y reportan problemas con los agentes.<br><table style="width:100%;max-width:600px;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:#334155;"><tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;width:180px;background-color:#f1f5f9;border:1px solid #e2e8f0;">OFICINA AFECTADA</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(officeName)}</td></tr><tr><td style="padding:6px 12px;font-weight:bold;text-transform:uppercase;background-color:#f1f5f9;border:1px solid #e2e8f0;">NIS</td><td style="padding:6px 12px;background-color:#ffffff;border:1px solid #e2e8f0;">${escapeHtml(officeCode)}</td></tr>${observacionesSection}${verificacionSection}</table>`;
 }
 
 export function getInvgateLocationId(officeCode: string): number | null {

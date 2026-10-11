@@ -33,7 +33,7 @@ export function showToast(
   const resolvedType = validTypes.includes(type) ? type : "alert-info";
 
   const toastDiv = document.createElement("div");
-  toastDiv.className = `alert ${CLASS_MAP[resolvedType]} shadow-xl rounded-2xl border border-base-content/5 flex items-center gap-3 text-sm font-semibold slide-in-right`;
+  toastDiv.className = `alert ${CLASS_MAP[resolvedType]} shadow-overlay rounded-2xl border border-base-content/5 flex items-center gap-3 text-sm font-semibold slide-in-right`;
 
   if (options?.onClick) {
     toastDiv.addEventListener("click", options.onClick);

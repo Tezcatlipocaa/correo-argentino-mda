@@ -1,4 +1,4 @@
-const RAW_BASE = import.meta.env.BASE_URL || "/";
+const RAW_BASE = (import.meta.env?.BASE_URL as string | undefined) || "/";
 
 export function getCleanBase(): string {
   return RAW_BASE.endsWith("/") ? RAW_BASE : RAW_BASE + "/";

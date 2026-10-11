@@ -95,7 +95,7 @@ function ensureModal(): HTMLDialogElement {
     dialog.id = "overtime-preview-modal";
     dialog.className = "modal modal-bottom sm:modal-middle z-[200]";
     dialog.innerHTML = `
-      <div class="modal-box max-w-4xl rounded-2xl border border-base-300 shadow-2xl p-0 bg-base-100 overflow-hidden">
+      <div class="modal-box max-w-4xl rounded-2xl border border-base-300 shadow-modal p-0 bg-base-100 overflow-hidden">
         <div id="overtime-preview-content" class="p-6"></div>
       </div>
       <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -264,7 +264,7 @@ export function renderPreview(data: PreviewResponse): void {
             ${escapeHtml(monthName)} ${year}
             <svg class="w-3.5 h-3.5 text-base-content/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          <ul tabindex="0" id="preview-month-menu" class="dropdown-content menu menu-xs flex-nowrap bg-base-100 rounded-xl border border-base-300 shadow-xl z-1 w-48 max-h-64 overflow-y-auto mt-1 p-1">
+          <ul tabindex="0" id="preview-month-menu" class="dropdown-content menu menu-xs flex-nowrap bg-base-100 rounded-xl border border-base-300 shadow-overlay z-1 w-48 max-h-64 overflow-y-auto mt-1 p-1">
             ${generateMonthItems(year, monthNum)}
           </ul>
         </div>

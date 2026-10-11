@@ -1,0 +1,142 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AutomatizacionesContent from "./_components/AutomatizacionesContent.astro";
+---
+
+<BaseLayout>
+  <AutomatizacionesContent />
+</BaseLayout>
+
+<script>
+  import {
+    hydrateAutomationProgress,
+    hydrateOpenProgressCards,
+    OPEN_CARD_SELECTOR,
+    PROGRESS_SLOT_SELECTOR,
+  } from "@lib/automationProgressClient";
+
+  document.addEventListener(
+    "toggle",
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLDetailsElement)) {
+        return;
+      }
+
+      // Card destacada: no se puede minimizar (cubre click y teclado).
+      if (target.hasAttribute("data-collapse-locked") && !target.open) {
+        target.open = true;
+        return;
+      }
+
+      if (!target.matches("details.group") || !target.open) {
+        return;
+      }
+      const slot = target.querySelector<HTMLElement>(PROGRESS_SLOT_SELECTOR);
+      if (slot) void hydrateAutomationProgress(slot);
+    },
+    true,
+  );
+
+  hydrateOpenProgressCards(document);
+
+  // Búsqueda "live": debounce + fetch del listado y swap del contenedor de
+  // resultados, sin recargar la página ni perder el foco del input. El form
+  // queda como fallback no-JS (Enter).
+  const SEARCH_INPUT_ID = "automatizaciones-search";
+  const RESULTS_SELECTOR = "[data-automation-results]";
+  let searchTimer: number | undefined;
+  let searchController: AbortController | undefined;
+
+  function openFirstResultCard(): void {
+    const first = document.querySelector<HTMLDetailsElement>(
+      `${RESULTS_SELECTOR} details.group`,
+    );
+    if (first && !first.open) first.open = true;
+  }
+
+  async function runLiveSearch(rawValue: string): Promise<void> {
+    const url = new URL(window.location.href);
+    const query = rawValue.trim();
+    if (query) url.searchParams.set("q", query);
+    else url.searchParams.delete("q");
+    url.searchParams.delete("page");
+
+    searchController?.abort();
+    searchController = new AbortController();
+    try {
+      const res = await fetch(url, {
+        headers: { "x-requested-with": "fetch" },
+        signal: searchController.signal,
+      });
+      if (!res.ok) return;
+      const html = await res.text();
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      const next = parsed.querySelector(RESULTS_SELECTOR);
+      const current = document.querySelector(RESULTS_SELECTOR);
+      if (next && current) current.innerHTML = next.innerHTML;
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${url.pathname}${url.search}`,
+      );
+      if (query) openFirstResultCard();
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("[automatizaciones] búsqueda falló:", error);
+      }
+    }
+  }
+
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.id !== SEARCH_INPUT_ID) return;
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(
+      () => void runLiveSearch(target.value),
+      300,
+    );
+  });
+
+  // Si el server sirvió un snapshot vencido, esperar el scan en background y
+  // recargar para reflejar los estados actualizados de InvGate.
+  async function revalidateIfStale(): Promise<void> {
+    const stale = document.querySelector<HTMLElement>("[data-automation-stale]");
+    if (!stale) return;
+    const href = stale.dataset.automationRevalidateHref;
+    if (!href) return;
+    try {
+      const res = await fetch(href, {
+        headers: { "x-requested-with": "fetch" },
+      });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch {
+      /* sin red: se reintenta en la próxima carga */
+    }
+  }
+
+  window.setTimeout(() => void revalidateIfStale(), 4000);
+
+  document.addEventListener("astro:after-swap", () => {
+    hydrateOpenProgressCards(document);
+    window.setTimeout(() => void revalidateIfStale(), 4000);
+  });
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof HTMLElement)) continue;
+        if (node.matches(OPEN_CARD_SELECTOR)) {
+          const slot = node.querySelector<HTMLElement>(PROGRESS_SLOT_SELECTOR);
+          if (slot) void hydrateAutomationProgress(slot);
+        } else {
+          hydrateOpenProgressCards(node);
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+</script>

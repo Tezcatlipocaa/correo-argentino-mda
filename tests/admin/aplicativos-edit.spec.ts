@@ -9,7 +9,27 @@ import {
 } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 
-import { createHmac } from "crypto";
+import { createHmac, createDecipheriv, createHash } from "crypto";
+
+function decryptMetadata(encryptedText: string): string {
+  const key = createHash("sha256")
+    .update(process.env.ENCRYPTION_KEY as string)
+    .digest();
+  const [ivHex, tagHex, encryptedHex] = encryptedText.split(":");
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    key,
+    Buffer.from(ivHex, "hex"),
+  );
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  let decrypted = decipher.update(
+    Buffer.from(encryptedHex, "hex"),
+    undefined,
+    "utf8",
+  );
+  decrypted += decipher.final("utf8");
+  return decrypted;
+}
 
 const SECRET_KEY =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
@@ -157,5 +177,32 @@ test.describe("Vistas de edición de aplicativos", () => {
     expect(updatedApp.title).toBe("App Prueba E2E Modificada");
     expect(updatedApp.version).toBe("1.1.0");
     expect(updatedApp.description).toBe("Nueva descripción modificada");
+  });
+
+  test("Debería persistir las credenciales (metadata) editadas", async ({
+    page,
+  }) => {
+    await page.goto(`/admin/aplicativos/edit/${testAppId}`);
+
+    await page.click("#btn-add-meta");
+    const rows = page.locator(".app-meta-row");
+    await expect(rows).toHaveCount(1);
+    await rows.nth(0).locator("input").nth(0).fill("Buscador");
+    await rows.nth(0).locator("input").nth(1).fill("super-secreta-123");
+
+    await page.click('button[type="submit"]');
+    await page.waitForURL("**/admin/aplicativos");
+
+    const [updatedApp] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, testAppId));
+    expect(updatedApp.metadata).toBeTruthy();
+    const parsed = JSON.parse(
+      decryptMetadata(updatedApp.metadata as string),
+    );
+    expect(parsed).toEqual([
+      { label: "Buscador", value: "super-secreta-123" },
+    ]);
   });
 });

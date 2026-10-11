@@ -5,7 +5,7 @@ const SUBDIR_APPS = "apps";
 const SUBDIR_ICONS = "icons";
 const SUBDIR_PDFS = "pdfs";
 
-function getStorageRoot(): string {
+export function getStorageRoot(): string {
   const envDir =
     import.meta.env?.EXTERNAL_STORAGE_DIR || process.env.EXTERNAL_STORAGE_DIR;
   return path.resolve(envDir || "./data/storage");
@@ -21,6 +21,24 @@ export function getIconsDir(): string {
 
 export function getPdfsDir(): string {
   return path.join(getStorageRoot(), SUBDIR_PDFS);
+}
+
+export function iconExists(iconPath: string | null | undefined): boolean {
+  if (!iconPath || iconPath.trim() === "") {
+    return false;
+  }
+
+  try {
+    const sanitized = path.basename(iconPath);
+
+    if (sanitized !== iconPath || sanitized.includes("..")) {
+      return false;
+    }
+
+    return fs.existsSync(path.join(getIconsDir(), sanitized));
+  } catch {
+    return false;
+  }
 }
 
 export function ensureDir(dir: string): void {

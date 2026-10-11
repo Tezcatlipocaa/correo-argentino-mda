@@ -1,0 +1,18 @@
+---
+interface Props {
+  message: string;
+  class?: string;
+}
+
+const { message, class: className = "", ...rest } = Astro.props;
+---
+
+<p
+  class:list={[
+    "border-base-300 text-base-content/60 rounded-lg border border-dashed px-4 py-6 text-center text-sm",
+    className,
+  ]}
+  {...rest}
+>
+  {message}
+</p>

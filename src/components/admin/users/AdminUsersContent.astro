@@ -2,6 +2,7 @@
 import { db } from "@db/index";
 import { users, agents, mesas } from "@db/schema";
 import { sql, eq, and, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
@@ -31,6 +32,8 @@ import SearchBar from "@components/ui/SearchBar.astro";
 
 const currentUserId = Astro.locals.user?.id ?? 0;
 
+const disabledByUser = alias(users, "disabled_by_user");
+
 const allUsers = await db
   .select({
     id: users.id,
@@ -38,6 +41,9 @@ const allUsers = await db
     role: users.role,
     helpdeskName: users.helpdeskName,
     helpdeskId: users.helpdeskId,
+    active: users.active,
+    disabledAt: users.disabledAt,
+    disabledBy: users.disabledBy,
     // Nombre canonico via join: users.helpdeskName puede quedar stale cuando
     // mesaSync renombra una mesa. Se usa para el gating de participaciones;
     // el badge/banner siguen mostrando el denormalizado (informativo).
@@ -54,7 +60,11 @@ const allUsers = await db
     agents,
     sql`lower(coalesce(${agents.username}, '')) = ${users.username}`,
   )
-  .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId));
+  .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
+  .leftJoin(disabledByUser, eq(users.disabledBy, disabledByUser.id));
+
+const activeUsers = allUsers.filter((u) => u.active);
+const inactiveUsers = allUsers.filter((u) => !u.active);
 
 const usersConMesaInactiva = await db
   .select({ username: users.username, mesaName: mesas.name })
@@ -82,9 +92,9 @@ const helpdeskOptions = await db
   )
   .orderBy(mesas.name);
 
-const headerGridClass = "grid-cols-[1fr_180px_104px_170px_180px_88px] gap-4";
+const headerGridClass = "grid-cols-[1fr_180px_104px_170px_180px_176px] gap-4";
 const rowGridClass =
-  "grid grid-cols-[1fr_180px_104px_170px_180px_88px] items-center gap-4";
+  "grid grid-cols-[1fr_180px_104px_170px_180px_176px] items-center gap-4";
 
 // Normaliza variantes legacy ("Supervisor ", "Team Leader") en la UI; el
 // enforcement real vive server-side (normalizeRole en usuarios.astro).
@@ -160,12 +170,12 @@ const isSupervisorRole = (role: string): boolean =>
             id="tabla-usuarios"
             class="text-base-content text-lg font-semibold"
           >
-            Usuarios registrados
+            Usuarios activos
           </h2>
           {
-            allUsers.length > 0 && (
+            activeUsers.length > 0 && (
               <span class="badge badge-neutral badge-sm font-mono">
-                {allUsers.length}
+                {activeUsers.length}
               </span>
             )
           }
@@ -180,7 +190,7 @@ const isSupervisorRole = (role: string): boolean =>
         <DataTable
           id="usuarios-table"
           ariaLabel="Listado de usuarios registrados"
-          minWidthClass="min-w-250"
+          minWidthClass="min-w-275"
           headerGridClass={headerGridClass}
           rowGridClass={rowGridClass}
           emptyStateTitle="Sin usuarios que coincidan"
@@ -210,27 +220,30 @@ const isSupervisorRole = (role: string): boolean =>
           </div>
 
           {
-            allUsers.length === 0 ? (
+            activeUsers.length === 0 ? (
               <div class="text-base-content/50 flex flex-col items-center gap-3 py-16">
                 <div class="bg-base-200 rounded-full p-4">
                   <Icon
                     name="boxicons:group-filled"
                     size={32}
                     class="opacity-30"
-                    aria-hidden="true"
-                  />
+                    aria-hidden="true" is:inline />
                 </div>
                 <div class="space-y-1 text-center">
                   <p class="text-sm font-semibold">
-                    No hay usuarios registrados
+                    {inactiveUsers.length > 0
+                      ? "No hay usuarios activos"
+                      : "No hay usuarios registrados"}
                   </p>
                   <p class="text-xs">
-                    Creá el primer usuario desde el formulario.
+                    {inactiveUsers.length > 0
+                      ? "Los únicos usuarios están inactivos. Reactivalos desde la lista de abajo o creá uno nuevo."
+                      : "Creá el primer usuario desde el formulario."}
                   </p>
                 </div>
               </div>
             ) : (
-              allUsers.map((u) => (
+              activeUsers.map((u) => (
                 <article
                   data-table-row
                   data-sort-username={u.username}
@@ -346,7 +359,8 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="cronograma"
                             data-tip="Figura en cronograma"
                           >
-                            <Icon name="boxicons:calendar-filled" size={14} />
+                            <Icon name="boxicons:calendar-filled" size={14} 
+            is:inline />
                             <span class="sr-only">Cronograma</span>
                           </span>
                         )}
@@ -366,7 +380,8 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="cubics"
                             data-tip="Asignable a cubics"
                           >
-                            <Icon name="boxicons:desktop-filled" size={14} />
+                            <Icon name="boxicons:desktop-filled" size={14} 
+            is:inline />
                             <span class="sr-only">Cubics</span>
                           </span>
                         )}
@@ -379,7 +394,8 @@ const isSupervisorRole = (role: string): boolean =>
                             <Icon
                               name="boxicons:bar-chart-big-filled"
                               size={14}
-                            />
+                            
+            is:inline />
                             <span class="sr-only">Calidad</span>
                           </span>
                         )}
@@ -389,7 +405,8 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="ags"
                             data-tip="Asignable AGS"
                           >
-                            <Icon name="boxicons:git-branch-filled" size={14} />
+                            <Icon name="boxicons:git-branch-filled" size={14} 
+            is:inline />
                             <span class="sr-only">AGS</span>
                           </span>
                         )}
@@ -447,6 +464,24 @@ const isSupervisorRole = (role: string): boolean =>
                       }
                       onclick={`document.getElementById('modal-reset-${u.id}').showModal()`}
                       ariaLabel={`Blanquear contraseña de ${u.username}`}
+                    />
+
+                    <ActionButton
+                      id={`deactivate-user-${u.id}`}
+                      icon="boxicons:user-minus-filled"
+                      size="default"
+                      color="btn-error"
+                      class={
+                        u.id === currentUserId ? "btn-disabled" : undefined
+                      }
+                      disabled={u.id === currentUserId}
+                      title={
+                        u.id === currentUserId
+                          ? "No podés desactivar tu propia cuenta"
+                          : "Desactivar este usuario"
+                      }
+                      ariaLabel={`Desactivar usuario ${u.username}`}
+                      onclick={`document.getElementById('modal-deactivate-${u.id}').showModal()`}
                     />
                   </div>
 
@@ -612,7 +647,6 @@ const isSupervisorRole = (role: string): boolean =>
                           <ActionCancelButton
                             type="button"
                             label="Cancelar"
-                            icon="boxicons:x-filled"
                             variant="error"
                             onclick="this.closest('dialog').close()"
                           />
@@ -660,7 +694,6 @@ const isSupervisorRole = (role: string): boolean =>
                           <ActionCancelButton
                             type="button"
                             label="Cancelar"
-                            icon="boxicons:x-filled"
                             variant="error"
                             onclick="this.closest('dialog').close()"
                           />
@@ -674,6 +707,40 @@ const isSupervisorRole = (role: string): boolean =>
                       </form>
                     </Fragment>
                   </Modal>
+
+                  <Modal id={`modal-deactivate-${u.id}`}>
+                    <Fragment slot="content">
+                      <h3 class="text-base-content mb-1 text-base font-semibold">
+                        Desactivar usuario
+                      </h3>
+                      <p class="text-base-content/70 mb-4 text-sm">
+                        ¿Confirmás la baja de{" "}
+                        <span class="font-mono font-semibold">
+                          {u.username}
+                        </span>{" "}
+                        ({u.agentName || "sin nombre"}, rol {u.role})? No podrá
+                        iniciar sesión. Podés reactivarlo luego desde la pestaña
+                        Inactivos.
+                      </p>
+                      <form
+                        method="POST"
+                        class="flex justify-end gap-2"
+                        data-async-form
+                      >
+                        <input
+                          type="hidden"
+                          name="action"
+                          value="deactivate-user"
+                        />
+                        <input type="hidden" name="userId" value={u.id} />
+                        <ActionCancelButton onclick="this.closest('dialog').close()" />
+                        <ActionConfirmButton
+                          label="Desactivar"
+                          color="btn-error"
+                        />
+                      </form>
+                    </Fragment>
+                  </Modal>
                 </article>
               ))
             )
@@ -681,6 +748,55 @@ const isSupervisorRole = (role: string): boolean =>
         </DataTable>
       </div>
     </section>
+
+    {
+      inactiveUsers.length > 0 && (
+        <section aria-labelledby="tabla-inactivos" class="mt-10">
+          <div class="flex items-center gap-4">
+            <h2
+              id="tabla-inactivos"
+              class="text-base-content text-lg font-semibold"
+            >
+              Usuarios inactivos
+            </h2>
+            <span class="badge badge-neutral badge-sm font-mono">
+              {inactiveUsers.length}
+            </span>
+          </div>
+          <div class="mt-4 flex flex-col">
+            {inactiveUsers.map((u) => (
+              <div
+                class="border-base-300 flex items-center justify-between gap-4 border-b px-5 py-4 opacity-60 last:border-b-0"
+                data-inactive-user-row
+              >
+                <div class="flex min-w-0 items-center gap-4">
+                  <span class="text-base-content truncate font-mono text-sm font-medium">
+                    {u.username}
+                  </span>
+                  <span class="text-base-content/70 truncate text-sm">
+                    {u.agentName || "—"}
+                  </span>
+                  <span class="text-base-content/50 text-xs">
+                    {u.disabledAt
+                      ? `Desactivado el ${u.disabledAt.toLocaleDateString("es-AR")}`
+                      : "Desactivado"}
+                  </span>
+                </div>
+                <form method="POST" data-async-form>
+                  <input type="hidden" name="action" value="reactivate-user" />
+                  <input type="hidden" name="userId" value={u.id} />
+                  <ActionConfirmButton
+                    label="Reactivar"
+                    color="btn-success"
+                    icon="boxicons:user-plus-filled"
+                  />
+                </form>
+              </div>
+            ))}
+          </div>
+        </section>
+      )
+    }
   </div>
 </PageContainer>
 
@@ -728,8 +844,7 @@ const isSupervisorRole = (role: string): boolean =>
                   <Icon
                     name={row.icon}
                     size={16}
-                    class="text-base-content/65 shrink-0"
-                  />
+                    class="text-base-content/65 shrink-0" is:inline />
                   <span>{row.feature}</span>
                 </td>
                 <td class="bg-base-200/5 text-center">
@@ -743,8 +858,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-warning/5 text-center">
@@ -758,8 +872,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-accent/5 text-center">
@@ -773,8 +886,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-info/5 text-center">
@@ -788,8 +900,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
                 <td class="bg-error/5 text-center">
@@ -803,8 +914,7 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24}
-                    />
+                      size={24} is:inline />
                   )}
                 </td>
               </tr>

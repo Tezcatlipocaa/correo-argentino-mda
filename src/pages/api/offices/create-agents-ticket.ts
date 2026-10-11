@@ -32,6 +32,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const observaciones =
       typeof body?.observaciones === "string" ? body.observaciones : undefined;
     const sourceId = body?.sourceId;
+    // El modal ofrece "Crear sin verificar": el agente da por hecho que no hay
+    // ningun ticket activo. Queda asentado en la auditoria y en el ticket.
+    const verificacionOmitida = body?.duplicateCheckSkipped === true;
 
     if (typeof officeCode !== "string" || typeof officeName !== "string") {
       return jsonError(
@@ -155,6 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       officeName.trim(),
       officeCode.trim(),
       observaciones,
+      verificacionOmitida,
     );
 
     const payload = {
@@ -190,9 +194,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const username = locals.user?.username || "Sistema";
     const envLabel = USE_QA_INVGATE ? "[QA] " : "";
+    const skipNote = verificacionOmitida
+      ? " (creado SIN verificar tickets abiertos previos)"
+      : "";
     await logAdminAction(
       username,
-      `${envLabel}Creó ticket de InvGate por agentes caídos en ${officeName.trim()} (${officeCode.trim()})`,
+      `${envLabel}Creó ticket de InvGate por agentes caídos en ${officeName.trim()} (${officeCode.trim()})${skipNote}`,
     );
 
     const id = res.data?.request_id || res.data?.id;

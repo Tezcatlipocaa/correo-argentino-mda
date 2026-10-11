@@ -437,10 +437,8 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 - `ActionConfirmButton` — confirmar/aceptar
 - `ActionDeleteButton` — eliminar
 - `ActionEditButton` — editar
-- `ActionInfoButton` — informacion
 - `ActionNetUserButton` — consultar usuario de red
 - `ActionPasswordButton` — cambio de contrasena
-- `ActionRoleButton` — cambio de rol
 - `AddCategoryButton` — agregar categoria
 - `AddEntityButton` — agregar entidad generico
 
@@ -464,9 +462,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 - `QuickAccessCard` — tarjeta de acceso rapido en dashboard
 - `SectionCard` — tarjeta de seccion agrupada
 - `AnnouncementBanner` — banner de anuncios
-- `ColorSwatch` — muestra de color
 - `ToastContainer` — contenedor de notificaciones toast animadas
-- `GithubLink` — enlace a repositorio
 
 ### Skeletons (`@components/ui/skeletons/`)
 
@@ -476,7 +472,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 
 ### Domain components
 
-- Componentes especificos de cada modulo en `_components/` dentro de la carpeta de cada pagina.
+- Componentes especificos de cada modulo organizados por dominio en `src/components/<modulo>/`.
 
 ## Paginas implementadas (rutas actuales)
 
@@ -494,6 +490,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | `/inventario-terminales` | Consulta y estado del parque de terminales              |
+| `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate) |
 
 ### Supervision
 

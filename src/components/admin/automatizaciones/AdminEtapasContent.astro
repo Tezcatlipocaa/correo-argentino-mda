@@ -1,0 +1,246 @@
+---
+import { db } from "@db/index";
+import { workflowStages, workflowStageTickets } from "@db/schema";
+import { asc } from "drizzle-orm";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SearchBar from "@components/ui/SearchBar.astro";
+import { Icon } from "astro-icon/components";
+import ActionEditButton from "@components/ui/ActionEditButton.astro";
+import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
+import { resolveUrl } from "@lib/url";
+
+const stages = await db
+  .select()
+  .from(workflowStages)
+  .orderBy(asc(workflowStages.position), asc(workflowStages.id));
+
+const tickets = await db
+  .select()
+  .from(workflowStageTickets)
+  .orderBy(
+    asc(workflowStageTickets.stageId),
+    asc(workflowStageTickets.position),
+    asc(workflowStageTickets.id),
+  );
+
+const ticketCountByStage = new Map<number, number>();
+const ticketLabelById = new Map<number, string>();
+for (const ticket of tickets) {
+  const label = ticket.displayName?.trim() || ticket.matchLabel;
+  ticketLabelById.set(ticket.id, label);
+  ticketCountByStage.set(
+    ticket.stageId,
+    (ticketCountByStage.get(ticket.stageId) ?? 0) + 1,
+  );
+}
+
+const headerGridClass = "grid-cols-[70px_90px_1.2fr_1fr_1.4fr_150px] gap-4";
+const rowGridClass =
+  "grid grid-cols-[70px_90px_1.2fr_1fr_1.4fr_150px] items-center gap-4";
+
+const basePath = resolveUrl("/admin/automatizaciones/etapas");
+---
+
+<PageContainer width="xxl">
+  <PageHeader
+    title="Etapas del Workflow"
+    description="Configuración de las etapas que agrupan los tickets de automatización de sucursal."
+  />
+
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
+    <div class="flex items-center gap-3">
+      <span
+        id="etapas-count-badge"
+        class="badge badge-ghost badge-lg text-base-content font-semibold"
+      >
+        {stages.length}
+      </span>
+      <span class="text-base-content/60 text-sm">etapas configuradas</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <SearchBar
+        id="admin-etapas-search"
+        placeholder="Buscar etapa..."
+        ariaLabel="Buscar etapa"
+        class="w-full sm:w-64"
+      />
+      <a
+        href={`${basePath}/create`}
+        class="btn btn-secondary btn-sm px-3 font-medium"
+      >
+        <Icon name="boxicons:plus" size={18} aria-hidden="true" />
+        Nueva etapa
+      </a>
+    </div>
+  </div>
+
+  <DataTable
+    ariaLabel="Listado de etapas del workflow"
+    minWidthClass="min-w-200"
+    headerGridClass={headerGridClass}
+    rowGridClass={rowGridClass}
+    emptyStateTitle="Sin etapas configuradas"
+    emptyStateDescription="Creá la primera etapa para empezar a agrupar el workflow por etapas."
+    showClearButton={true}
+    clearButtonHref={basePath}
+  >
+    <div slot="header" class={headerGridClass}>
+      <div class="min-w-0">
+        <DataTableHeaderCell sortKey="id">ID</DataTableHeaderCell>
+      </div>
+      <div class="min-w-0">
+        <DataTableHeaderCell sortKey="position">Orden</DataTableHeaderCell>
+      </div>
+      <div class="min-w-0">
+        <DataTableHeaderCell sortKey="name">Etapa</DataTableHeaderCell>
+      </div>
+      <div class="min-w-0">
+        <DataTableHeaderCell sortKey="tickets">Tickets</DataTableHeaderCell>
+      </div>
+      <div class="min-w-0">
+        <DataTableHeaderCell align="left">Acciones</DataTableHeaderCell>
+      </div>
+    </div>
+
+    {
+      stages.map((stage) => {
+        const ticketCount = ticketCountByStage.get(stage.id) ?? 0;
+        const gateLabel = stage.gateItemId
+          ? (ticketLabelById.get(stage.gateItemId) ?? null)
+          : null;
+        return (
+          <article
+            data-table-row
+            data-sort-id={stage.id}
+            data-sort-position={stage.position}
+            data-sort-name={stage.name.toLowerCase()}
+            data-sort-tickets={ticketCount}
+            data-search-text={`${stage.id} ${stage.position} ${stage.name} ${stage.scope} ${stage.description ?? ""}`}
+            class:list={[
+              rowGridClass,
+              "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+            ]}
+          >
+            <span class="text-base-content/60 data-highlight-target font-mono text-sm">
+              {stage.id}
+            </span>
+            <span class="text-base-content/70 font-mono text-sm">
+              {stage.position}
+            </span>
+            <span class="text-base-content data-highlight-target text-sm font-medium">
+              {stage.name}
+              <span
+                class:list={[
+                  "badge badge-xs ml-1 align-middle",
+                  stage.scope === "legacy"
+                    ? "badge-neutral badge-outline"
+                    : "badge-secondary badge-outline",
+                ]}
+              >
+                {stage.scope === "legacy" ? "legacy" : "workflow"}
+              </span>
+              {gateLabel && (
+                <span class="text-base-content/50 block text-xs italic">
+                  Gate: {gateLabel}
+                </span>
+              )}
+            </span>
+            <span class="text-base-content/70 text-sm">
+              {ticketCount} {ticketCount === 1 ? "ticket" : "tickets"}
+            </span>
+            <span class="text-base-content/60 text-sm">
+              {stage.description || "—"}
+            </span>
+            <div class="flex items-center justify-start gap-1">
+              <form
+                method="POST"
+                action={`${basePath}/edit/${stage.id}/mover?dir=up`}
+                class="inline"
+              >
+                <button
+                  type="submit"
+                  class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content"
+                  aria-label={`Subir etapa ${stage.name}`}
+                >
+                  <Icon name="boxicons:chevron-up" size={18} aria-hidden="true" />
+                </button>
+              </form>
+              <form
+                method="POST"
+                action={`${basePath}/edit/${stage.id}/mover?dir=down`}
+                class="inline"
+              >
+                <button
+                  type="submit"
+                  class="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content"
+                  aria-label={`Bajar etapa ${stage.name}`}
+                >
+                  <Icon
+                    name="boxicons:chevron-down"
+                    size={18}
+                    aria-hidden="true"
+                  />
+                </button>
+              </form>
+              <ActionEditButton
+                href={`${basePath}/edit/${stage.id}`}
+                ariaLabel={`Editar etapa ${stage.name}`}
+              />
+              <form
+                method="POST"
+                action={`${basePath}/edit/${stage.id}/eliminar`}
+                class="inline"
+                onsubmit={`return confirm("¿Eliminar la etapa '${stage.name}' y sus tickets?")`}
+              >
+                <ActionDeleteButton ariaLabel={`Eliminar etapa ${stage.name}`} />
+              </form>
+            </div>
+          </article>
+        );
+      })
+    }
+  </DataTable>
+</PageContainer>
+
+<script>
+  import { matchesSearchQuery, highlightSearchTargets } from "@lib/clientSearch";
+
+  function initSearch() {
+    const searchInput =
+      document.querySelector<HTMLInputElement>("#admin-etapas-search");
+    if (!searchInput) return false;
+    const rows = document.querySelectorAll<HTMLElement>("[data-table-row]");
+    const countBadge = document.querySelector<HTMLElement>("#etapas-count-badge");
+
+    function applyFilters() {
+      const query = searchInput?.value.trim();
+      let visibleCount = 0;
+      rows.forEach((row) => {
+        const searchText = row.dataset.searchText || "";
+        const isVisible = matchesSearchQuery(query, [searchText]);
+        row.classList.toggle("hidden", !isVisible);
+        highlightSearchTargets(row, isVisible ? query : "");
+        if (isVisible) visibleCount++;
+      });
+      if (countBadge) countBadge.textContent = visibleCount.toString();
+    }
+    searchInput.addEventListener("input", applyFilters);
+    return true;
+  }
+
+  function setupSearchObserver() {
+    if (initSearch()) return;
+    const observer = new MutationObserver((_, obs) => {
+      if (initSearch()) obs.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  setupSearchObserver();
+  document.addEventListener("astro:page-load", () => {
+    setupSearchObserver();
+  });
+</script>

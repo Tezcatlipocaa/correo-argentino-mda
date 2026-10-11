@@ -6,8 +6,10 @@ import {
   agents,
   cubicAssignments,
   operatorAttendance,
+  users,
 } from "@db/schema";
 import { eq, asc, and } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import { Icon } from "astro-icon/components";
@@ -167,7 +169,8 @@ const allAgents = await db
       eq(operatorAttendance.date, todayStr),
     ),
   )
-  .where(eq(agents.asignableCubic, true))
+  .leftJoin(users, eq(users.id, agents.userId))
+  .where(and(eq(agents.asignableCubic, true), activeAgentCondition()))
   .orderBy(asc(agents.name));
 
 const agentShiftMap = new Map<number, "Diurno" | "Nocturno">();
@@ -210,7 +213,8 @@ for (const agent of allAgents) {
       <span
         class="bg-secondary/10 text-secondary inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
       >
-        <Icon name="boxicons:desktop-filled" size={15} />
+        <Icon name="boxicons:desktop-filled" size={15} 
+            is:inline />
       </span>
       Datos técnicos del equipo
     </h2>
@@ -248,7 +252,7 @@ for (const agent of allAgents) {
         <span
           class="bg-warning/10 text-warning inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
         >
-          <Icon name="boxicons:group-filled" size={15} />
+          <Icon name="boxicons:group-filled" size={15} is:inline />
         </span>
         Operadores asignados
       </h2>

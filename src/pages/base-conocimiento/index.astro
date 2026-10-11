@@ -2,8 +2,8 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import BaseConocimientoContent from "@components/base-conocimiento/BaseConocimientoContent.astro";
-import BaseConocimientoSkeleton from "@components/base-conocimiento/BaseConocimientoSkeleton.astro";
+import KbListContent from "@components/base-conocimiento/KbListContent.astro";
+import KbListSkeleton from "@components/base-conocimiento/KbListSkeleton.astro";
 ---
 
 <BaseLayout title="Base de conocimiento">
@@ -12,8 +12,8 @@ import BaseConocimientoSkeleton from "@components/base-conocimiento/BaseConocimi
       title="Base de conocimiento"
       description="Guías, procedimientos y documentación de tu mesa de ayuda."
     />
-    <BaseConocimientoContent server:defer>
-      <BaseConocimientoSkeleton slot="fallback" />
-    </BaseConocimientoContent>
+    <KbListContent server:defer>
+      <KbListSkeleton slot="fallback" />
+    </KbListContent>
   </PageContainer>
 </BaseLayout>

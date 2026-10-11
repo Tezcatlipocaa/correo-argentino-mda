@@ -132,7 +132,7 @@ export function renderWeeklyDaysList() {
             <span class="text-xs font-bold text-base-content/70 min-w-16">${day}</span>
             <input 
               type="text" 
-              class="weekly-schedule-input input input-xs input-bordered w-32 font-mono font-bold text-small bg-base-100 focus:outline-none focus:border-secondary" 
+              class="weekly-schedule-input input input-xs w-32 font-mono font-bold text-small bg-base-100 focus:outline-none focus:border-secondary" 
               data-day="${day}" 
               value="${currentTime}" 
               placeholder="08:00 - 17:00" 
@@ -149,7 +149,7 @@ export function renderWeeklyDaysList() {
             <span class="text-micro font-black uppercase text-base-content/30">Inicio</span>
             <input 
               type="text" 
-              class="weekly-break-inicio-input input input-xs input-bordered w-16 font-mono text-xxs font-bold text-center bg-base-100 focus:outline-none focus:border-secondary" 
+              class="weekly-break-inicio-input input input-xs w-16 font-mono text-xxs font-bold text-center bg-base-100 focus:outline-none focus:border-secondary" 
               data-day="${day}" 
               value="${currentBreakInicio}" 
               placeholder="HH:MM" 
@@ -160,7 +160,7 @@ export function renderWeeklyDaysList() {
             <span class="text-micro font-black uppercase text-base-content/30">Fin</span>
             <input 
               type="text" 
-              class="weekly-break-fin-input input input-xs input-bordered w-16 font-mono text-xxs font-bold text-center bg-base-100 focus:outline-none focus:border-secondary" 
+              class="weekly-break-fin-input input input-xs w-16 font-mono text-xxs font-bold text-center bg-base-100 focus:outline-none focus:border-secondary" 
               data-day="${day}" 
               value="${currentBreakFin}" 
               placeholder="HH:MM" 

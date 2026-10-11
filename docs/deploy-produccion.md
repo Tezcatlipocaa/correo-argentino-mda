@@ -2,6 +2,33 @@
 
 Poner el Portal MDA en producción sobre Windows Server con XAMPP (Apache) + PM2.
 
+> ## ⚠️ IMPORTANTE — PowerShell como Administrador
+>
+> **Todos** los comandos de este documento (deploy, build, `pm2 start/stop/kill`,
+> `npm install`, borrado de `dist/`) deben ejecutarse en una **PowerShell elevada
+> como Administrador**: clic derecho sobre Windows PowerShell → *Ejecutar como
+> administrador*, o *Ejecutar como administrador* en el menú contextual del
+> `.bat`. Verificar antes de empezar:
+>
+> ```powershell
+> ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+> # tiene que devolver True
+> ```
+>
+> Si devuelve `False`, **detenerse**. Con una consola sin elevación:
+>
+> - `pm2 stop all` / `pm2 kill` falla con `connect EPERM \\.\pipe\rpc.sock`
+>   (el named pipe del daemon no concede `connect` a un token sin admin), y el
+>   fallo **no se puede resolver** con `del "%USERPROFILE%\.pm2\rpc.sock"`.
+> - `npm install` deja `node_modules` inconsistente si algún proceso Node sigue
+>   vivo: los `.node` nativos (ej. `better-sqlite3.node`) están cargados en
+>   memoria y no se pueden reemplazar (`EBUSY/EPERM`).
+> - `taskkill /F /IM node.exe` puede no alcanzar los procesos de otro usuario.
+>
+> Además, el daemon de PM2 debe haber sido arrancado **por el mismo usuario y con
+> la misma elevación** que la consola que después lo opera. Si se mezclan, PM2
+> queda inutilizable y hay que matar el daemon desde una consola elevada.
+
 ---
 
 ## Requisitos en el servidor
@@ -39,7 +66,7 @@ npm install
 copy .env.example .env
 ```
 
-Completá las 6 variables en `.env`. En producción prestá atención a:
+Completá las variables en `.env`. En producción prestá atención a:
 
 | Variable               | Valor de ejemplo en producción                                             |
 | ---------------------- | -------------------------------------------------------------------------- |
@@ -48,7 +75,11 @@ Completá las 6 variables en `.env`. En producción prestá atención a:
 | `INVGATE_API_KEY`      | La API key real de InvGate                                                 |
 | `INVGATE_BASE_URL`     | `https://correoargentino.sd.cloud.invgate.net/api/v1/`                     |
 | `INVGATE_API_USERNAME` | `portalmda`                                                                |
+| `WISE_CX_BASE_URL`     | `https://api.wcx.cloud`                                                    |
+| `WISE_CX_API_KEY`      | La API key real de Wise CX                                                 |
+| `WISE_CX_API_USER`     | Usuario asociado a la API key en Wise CX                                   |
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
+| `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
@@ -132,17 +163,97 @@ El VirtualHost ya existe en `C:\xampp\apache\conf\extra\httpd-vhosts.conf`. En u
 </VirtualHost>
 ```
 
-> **Nota:** El `ServerName` real de tu servidor es `portal-mda.correo.local`. Asegurate de que `astro.config.mjs` tenga `site: "http://portal-mda.correo.local"` si usás URLs absolutas.
+> **Nota:** El hostname canónico es `mda.correo.local` (debe coincidir con el SAN del certificado; `astro.config.mjs` usa `site: "https://mda.correo.local"`). `portal-mda.correo.local` se mantiene como alias del vhost.
 
-Tu servidor ya tiene SSL cargado via:
+### 5.3. Configurar HTTPS (certificado interno AD CS)
+
+En `httpd.conf`, verificar/descomentar:
 
 ```apache
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+LoadModule headers_module modules/mod_headers.so
 Include conf/extra/httpd-ssl.conf
 ```
 
-Si querés HTTPS, agregá el mismo bloque en `*:443` dentro de `httpd-ssl.conf` con las directivas SSLCertificateFile y SSLCertificateKeyFile.
+En B1842zacw1718 el certificado y la key ya están en disco:
 
-### 5.3. Verificar el archivo hosts (para pruebas locales)
+| Archivo | Ruta | Notas |
+| ------- | ---- | ----- |
+| Certificado | `C:/xampp/apache/conf/ssl/Portal_MDA.cer` | PEM, hoja sola, CN `mda.correo.local`; SAN `mda.correo.local`, `b1842zacw1718.correo.local`, `10.254.59.95`; vence 20-sep-2028 |
+| Private key | `C:/xampp/apache/conf/ssl.key/Portal_MDA_key.pem` | RSA sin cifrar (PKCS#1) |
+
+La CA emisora (`correo-B1842ZACS0136-CA-1`) es raíz autofirmada y ya está en el store de Raíces de confianza de las máquinas del dominio (GPO). Por eso **no hace falta `SSLCertificateChainFile`**: Apache sirve solo la hoja.
+
+Editar `C:\xampp\apache\conf\extra\httpd-ssl.conf`, dentro de `<VirtualHost _default_:443>` (el archivo ya trae `Listen 443`):
+
+```apache
+<VirtualHost _default_:443>
+    DocumentRoot "C:/xampp/htdocs"
+    ServerName mda.correo.local:443
+    ServerAlias portal-mda.correo.local b1842zacw1718.correo.local
+
+    SSLEngine on
+    SSLCertificateFile    "C:/xampp/apache/conf/ssl/Portal_MDA.cer"
+    SSLCertificateKeyFile "C:/xampp/apache/conf/ssl.key/Portal_MDA_key.pem"
+
+    ProxyPreserveHost On
+
+    # Mismas exclusiones que el vhost :80 (phpMyAdmin y endpoint PHP legacy)
+    ProxyPass /phpmyadmin !
+    ProxyPass /api_mda_find_extension !
+
+    ProxyPass / http://localhost:4321/
+    ProxyPassReverse / http://localhost:4321/
+
+    ErrorLog "logs/correo-argentino-mda-ssl-error.log"
+    CustomLog "logs/correo-argentino-mda-ssl-access.log" common
+</VirtualHost>
+```
+
+> Reemplazar las directivas del bloque default (`DocumentRoot`, `ServerName www.example.com:443`, `SSLCertificateFile conf/ssl.crt/server.crt`, `SSLCertificateKeyFile conf/ssl.key/server.key`). No agregar un vhost nuevo: el default snakeoil quedaría como catch-all.
+
+En `C:\xampp\apache\conf\extra\httpd-vhosts.conf`, reemplazar el vhost `*:80` existente por un redirect permanente:
+
+```apache
+<VirtualHost *:80>
+    ServerName portal-mda.correo.local
+    ServerAlias mda.correo.local localhost 127.0.0.1
+    Redirect permanent / https://mda.correo.local/
+</VirtualHost>
+```
+
+Con el redirect, `http://mda.correo.local/api_mda_find_extension` y `/phpmyadmin` pasan a HTTPS (las exclusiones viven en el vhost `:443`). Los consumidores GET siguen funcionando por el 301.
+
+Requisitos previos: `mda.correo.local` debe resolver (DNS interno o `hosts`) y el firewall del server debe permitir TCP 443 entrante. Verificar:
+
+```powershell
+Resolve-DnsName mda.correo.local
+Get-NetFirewallRule -Enabled True -Direction Inbound -Action Allow |
+  Get-NetFirewallPortFilter | Where-Object LocalPort -eq 443
+```
+
+Validar sintaxis y reiniciar:
+
+```powershell
+C:\xampp\apache\bin\httpd.exe -t
+C:\xampp\apache\bin\httpd.exe -k restart
+```
+
+Verificación rápida desde el server:
+
+```powershell
+C:\xampp\apache\bin\openssl.exe s_client -connect mda.correo.local:443 -servername mda.correo.local
+curl.exe -sI http://mda.correo.local  | Select-String "HTTP/"
+curl.exe -sI https://mda.correo.local | Select-String "HTTP/"
+curl.exe -sI http://mda.correo.local/login
+curl.exe -sI https://mda.correo.local/login
+```
+
+El primero debe devolver 301. Los clientes fuera del dominio verán aviso de certificado: la raíz interna no está en sus stores (esperado para `.correo.local`).
+
+> La app ya está adaptada: cookie de sesión `secure` vía `SESSION_COOKIE_SECURE` (`src/lib/session.ts` y `ecosystem.config.cjs`), `site` HTTPS en `astro.config.mjs` y URL de la extensión en `src/components/buscador-usuarios/ChromeExtensionBanner.astro`.
+### 5.4. Verificar el archivo hosts (para pruebas locales)
 
 Si accedés por nombre de dominio local:
 
@@ -150,7 +261,7 @@ Si accedés por nombre de dominio local:
 127.0.0.1  mda.correo.local
 ```
 
-### 5.4. Reiniciar Apache
+### 5.5. Reiniciar Apache
 
 ```powershell
 C:\xampp\apache\bin\httpd.exe -k restart
@@ -160,7 +271,7 @@ C:\xampp\apache\bin\httpd.exe -k restart
 
 ## Paso 6: Verificar que funciona
 
-1. Abrí `http://portal-mda.correo.local` (o `http://localhost`) en el navegador
+1. Abrí `https://mda.correo.local` en el navegador
 2. Deberías ver la pantalla de login del Portal MDA
 3. Verificá que los logs de Apache no muestren errores de proxy:
    ```
@@ -349,6 +460,118 @@ npm run db:push
 ```
 
 Si necesitás los datos de producción, copiá `database/mda.db` desde el servidor anterior.
+
+### `Refused to apply style ... MIME type ('text/html')` — assets con hash viejo
+
+Síntoma en el navegador (consola):
+
+```
+Refused to apply style from 'https://mda.correo.local/_astro/BaseLayout.ZAHcvL_6.css'
+because its MIME type ('text/html') is not a supported stylesheet MIME type.
+```
+
+Ocurre con `.css`, pero también con cualquier `/_astro/*.js`, `*.woff2`, `*.svg`.
+
+**Causa:** doble. (1) `dist/client` y `dist/server` desalineados: el HTML que
+genera el proceso de Node referencia hashes de un build que **ya no existe** en
+`dist/client/_astro` (el navegador pide `BaseLayout.ZAHcvL_6.css` y en disco sólo
+está `BaseLayout.4TrmIHSh.css`). Ocurre cuando se corre `npm run build` con PM2
+vivo, o con dos builds simultáneos. (2) `server.mjs` no tiene guarda para
+`/_astro/*`: si `express.static("dist/client")` no encuentra el archivo, el
+request cae al handler SSR de Astro, que responde la página 404 en HTML con
+`Content-Type: text/html`. Un `.css` devuelto como HTML es exactamente este error.
+
+**Diagnóstico** (PowerShell **como Administrador**, con PM2 detenido):
+
+```powershell
+pm2 kill
+taskkill /F /IM node.exe
+
+# ¿Coincide lo que pide el server con lo que hay en disco?
+$refs = Select-String -Path dist\server\entry.mjs -Pattern '_astro/[A-Za-z0-9_.-]+' -AllMatches |
+        ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
+$missing = $refs | Where-Object { -not (Test-Path (Join-Path 'dist\client' $_)) }
+"referencias: $($refs.Count)  faltantes: $($missing.Count)"
+$missing
+```
+
+`faltantes: 0` en un healthy deploy. Si hay refs faltantes, el `dist` está incompleto.
+
+**Solución** — rebuild limpio, PM2 **siempre** detenido antes:
+
+```powershell
+pm2 kill
+taskkill /F /IM node.exe
+Remove-Item -Recurse -Force dist
+npm run build
+node scripts/verify-build.mjs
+pm2 start ecosystem.config.cjs
+```
+
+Luego una verificación de integridad (el chequeo que hoy falta en
+`verify-build.mjs`, que solo valida `rootDir`):
+
+```powershell
+$refs = Select-String -Path dist\server\entry.mjs -Pattern '_astro/[A-Za-z0-9_.-]+' -AllMatches |
+        ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
+$missing = $refs | Where-Object { -not (Test-Path (Join-Path 'dist\client' $_)) }
+if ($missing) { "DIST INCOMPLETO:"; $missing; exit 1 } else { "OK: $($refs.Count) assets presentes" }
+```
+
+**Nunca** validar assets contra `astro preview`: en `mode: "middleware"` no
+sirve `dist/client` y devuelve `200 text/html` para todo `/_astro/*`.
+Validar contra `dist/client/_astro` o contra el server real de PM2.
+
+### `pm2 stop all` falla con `connect EPERM \\.\pipe\rpc.sock`
+
+```
+[PM2] Spawning PM2 daemon with pm2_home=C:\Users\Otomasi\.pm2
+Error: connect EPERM \\.\pipe\rpc.sock
+    at PipeConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+  errno: -4048, code: 'EPERM', syscall: 'connect', address: '\\\\.\\pipe\\rpc.sock'
+```
+
+El patrón es revelador: PM2 **no encuentra** el daemon, intenta spawnear uno
+nuevo, y el daemon nuevo tampoco puede abrir el named pipe.
+
+**Causa:** la consola actual no tiene elevación de Administrador (o corre como
+otro usuario) mientras que el daemon existente corre elevado. La ACL del named
+pipe `\\.\pipe\rpc.sock` no concede `connect` a un token sin admin. Causa
+secundaria: daemon muerto con el archivo `rpc.sock` huérfano en
+`%USERPROFILE%\.pm2`.
+
+**Solución — primero y sin excepción, PowerShell como Administrador:**
+
+```powershell
+# 1. Verificar elevación. False => parar acá y reabrir la consola como admin.
+([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+# 2. Ver quién tiene el daemon
+tasklist /FI "IMAGENAME eq node.exe" /V
+dir "$env:USERPROFILE\.pm2"
+
+# 3. Matar todo (incluido el daemon huérfano) y borrar el pipe
+pm2 kill
+taskkill /F /IM node.exe
+Remove-Item -Force "$env:USERPROFILE\.pm2\rpc.sock" -ErrorAction SilentlyContinue
+
+# 4. Reconstruir y arrancar desde la MISMA consola elevada
+npm run build
+pm2 start ecosystem.config.cjs
+pm2 save
+```
+
+Reglas que evitan que vuelva:
+
+- **Todo** deploy manual o programado corre en consola elevada.
+- El daemon de PM2 se arranca **una sola vez**, desde la consola elevada del
+  usuario real del servicio. Nunca mezclado: daemon de SYSTEM o de otro usuario
+  con consola sin admin.
+- La tarea programada de Windows debe correr con la opción *Ejecutar con
+  privilegios más altos* habilitada, y "Iniciar en" apuntando a la **carpeta**
+  (no al `.bat`, que daba `ERROR_DIRECTORY` 0x10B).
+- Con PM2 caído, **Apache devuelve 503**. Es el síntoma esperado, no un problema
+  de proxy: revolvé primero PM2.
 
 ---
 

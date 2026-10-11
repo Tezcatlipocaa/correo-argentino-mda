@@ -1,0 +1,72 @@
+---
+import { getCleanBase } from "@lib/baseUrl";
+import { Icon } from "astro-icon/components";
+import { resolveUrl } from "@lib/url";
+
+interface Props {
+  title: string;
+  description: string;
+  filePath?: string | null;
+}
+
+const { title, description, filePath } = Astro.props;
+
+const cleanBase = getCleanBase();
+const isWebUrl = (value: string): boolean => /^https?:\/\//i.test(value);
+
+const bundleUrl = resolveUrl(filePath?.trim() ?? "");
+const hasBundleUrl = bundleUrl.length > 0;
+---
+
+<article class="border-primary/30 bg-primary/10 rounded-lg border p-4 sm:p-5">
+  <div
+    class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+  >
+    <div class="flex min-w-0 items-start gap-3">
+      <span
+        class="bg-primary text-primary-content mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-lg"
+        aria-hidden="true"
+      >
+        <Icon name="boxicons:package-filled" size={24} />
+      </span>
+
+      <div class="min-w-0 space-y-1">
+        <h2 class="text-base-content text-base font-semibold sm:text-lg">
+          {title}
+        </h2>
+        <p class="text-base-content/70 text-sm">
+          {description}
+        </p>
+      </div>
+    </div>
+
+    {
+      hasBundleUrl ? (
+        <a
+          href={bundleUrl}
+          class="btn btn-primary btn-sm sm:btn-md shrink-0 gap-2"
+          target={isWebUrl(bundleUrl) ? "_blank" : undefined}
+          rel={isWebUrl(bundleUrl) ? "noopener noreferrer" : undefined}
+          download={!isWebUrl(bundleUrl) ? "" : undefined}
+        >
+          <Icon
+            name="boxicons:arrow-to-bottom-stroke"
+            size={18}
+            aria-hidden="true"
+          />
+          <span>Descargar .zip</span>
+        </a>
+      ) : (
+        <button
+          type="button"
+          class="btn btn-primary btn-disabled btn-sm sm:btn-md shrink-0 gap-2"
+          disabled
+        >
+          <Icon name="boxicons:calendar-filled" size={18} aria-hidden="true" 
+            is:inline />
+          <span>Disponible pronto</span>
+        </button>
+      )
+    }
+  </div>
+</article>

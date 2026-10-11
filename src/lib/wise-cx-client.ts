@@ -1,11 +1,14 @@
 import type { InvgateResult } from "@/types/invgate";
 
 function getEnv(key: string): string {
+  const runtime = process.env[key];
+  if (runtime && typeof runtime === "string") return runtime;
+
   if (typeof import.meta !== "undefined" && import.meta.env) {
     const val = (import.meta.env as any)[key];
     if (val && typeof val === "string") return val;
   }
-  return process.env[key] || "";
+  return "";
 }
 
 interface TokenCache {

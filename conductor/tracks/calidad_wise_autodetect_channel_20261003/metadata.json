@@ -1,0 +1,8 @@
+{
+  "track_id": "calidad_wise_autodetect_channel_20261003",
+  "type": "feature",
+  "status": "complete",
+  "created_at": "2026-10-03T18:14:30Z",
+  "updated_at": "2026-10-03T18:29:15Z",
+  "description": "Auto-detección y conmutación de canal (Llamada vs Mail) en búsqueda Wise CX según source_channel de la API"
+}

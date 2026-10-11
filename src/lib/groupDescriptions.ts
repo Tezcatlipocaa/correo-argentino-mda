@@ -282,15 +282,15 @@ export function formatSingleLicenseTooltipHtml(lic: GroupLicenseInfo): string {
       <span class="text-xs font-semibold">Licencia Microsoft</span>
     </div>
     <div class="space-y-1">
-      <div class="text-xxs font-bold uppercase tracking-wider opacity-60">Descripción</div>
+      <div class="text-xxs font-bold uppercase tracking-wider opacity-80">Descripción</div>
       <p class="text-xs leading-relaxed opacity-90">${escapeHtml(lic.description)}</p>
     </div>
     <div class="space-y-1 border-t border-neutral-content/15 pt-2 mt-2">
-      <div class="text-xxs font-bold uppercase tracking-wider ${color.text} flex items-center gap-1">
+      <div class="text-xxs font-bold uppercase tracking-wider text-neutral-content flex items-center gap-1">
         <svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
         Recomendación MDA
       </div>
-      <div class="rounded-md ${color.bg} border ${color.border} px-2 py-1 text-xs ${color.text} font-medium leading-relaxed">
+      <div class="rounded-md ${color.bg} border ${color.border} px-2 py-1 text-xs text-neutral-content font-medium leading-relaxed">
         ${escapeHtml(lic.recommendation)}
       </div>
     </div>
@@ -310,7 +310,7 @@ export function formatLicenseTooltipHtml(info: ResolvedUserLicense): string {
         <p class="text-xs opacity-80 leading-relaxed">
           El usuario no cuenta con grupos de licencia de Office asignados en Active Directory.
         </p>
-        <div class="rounded-md bg-neutral-content/5 p-1.5 text-xxs opacity-70 border border-neutral-content/10">
+        <div class="rounded-md bg-neutral-content/5 p-1.5 text-xxs opacity-80 border border-neutral-content/10">
           Si requiere suite de escritorio o correo, tramitar la solicitud correspondiente.
         </div>
       </div>
@@ -325,7 +325,7 @@ export function formatLicenseTooltipHtml(info: ResolvedUserLicense): string {
     otherLicenses.length > 0
       ? `
       <div class="space-y-1 border-t border-neutral-content/15 pt-2 mt-2">
-        <div class="text-xxs font-bold uppercase tracking-wider opacity-60">Otras licencias asignadas</div>
+        <div class="text-xxs font-bold uppercase tracking-wider opacity-80">Otras licencias asignadas</div>
         <div class="flex flex-wrap gap-1">
           ${otherLicenses
             .map(
@@ -346,16 +346,16 @@ export function formatLicenseTooltipHtml(info: ResolvedUserLicense): string {
       </div>
 
       <div class="space-y-1">
-        <div class="text-xxs font-bold uppercase tracking-wider opacity-60">Descripción</div>
+        <div class="text-xxs font-bold uppercase tracking-wider opacity-80">Descripción</div>
         <p class="text-xs leading-relaxed opacity-90">${escapeHtml(primary.description)}</p>
       </div>
 
       <div class="space-y-1 border-t border-neutral-content/15 pt-2">
-        <div class="text-xxs font-bold uppercase tracking-wider ${color.text} flex items-center gap-1">
+        <div class="text-xxs font-bold uppercase tracking-wider text-neutral-content flex items-center gap-1">
           <svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           Recomendación MDA
         </div>
-        <div class="rounded-md ${color.bg} border ${color.border} px-2 py-1 text-xs ${color.text} font-medium leading-relaxed">
+        <div class="rounded-md ${color.bg} border ${color.border} px-2 py-1 text-xs text-neutral-content font-medium leading-relaxed">
           ${escapeHtml(primary.recommendation)}
         </div>
       </div>

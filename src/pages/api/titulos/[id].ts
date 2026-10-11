@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { titles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getModulePermissions } from "@/lib/rbac";
+import { formatTitleName } from "@/lib/titleFormat";
 import { insertDeletedRecord } from "@lib/deletedRecords";
 import { logAdminFromAstro } from "@lib/auditLogger";
 
@@ -21,10 +22,14 @@ export const PUT: APIRoute = async ({ request, params, locals }) => {
     );
   }
 
+  const body = await request.json();
   await db
     .update(titles)
     .set({
-      ...(await request.json()),
+      ...body,
+      ...(typeof body.name === "string"
+        ? { name: formatTitleName(body.name) }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(titles.id, Number(params.id)));

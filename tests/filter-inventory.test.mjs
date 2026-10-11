@@ -1,10 +1,14 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import {
+  newAuthenticatedPage,
+  destroyAdminSession,
+} from "./helpers/session.mjs";
 
 async function runTest() {
   console.log("Iniciando navegador Chromium...");
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const { page, context, session } = await newAuthenticatedPage(browser);
 
   // Registrar llamadas a la API
   const apiCalls = [];
@@ -15,7 +19,7 @@ async function runTest() {
   });
 
   console.log("Navegando a la página de inventario...");
-  await page.goto("http://localhost:4321/inventario-equipos");
+  await page.goto("http://localhost:4321/inventario-terminales");
   await page.waitForLoadState("networkidle");
 
   // Verificar que la tabla cargó registros
@@ -132,6 +136,8 @@ async function runTest() {
   console.log(
     "Todas las verificaciones de filtros y ordenamiento han pasado correctamente.",
   );
+  await context.close();
+  destroyAdminSession(session.sessionId);
   await browser.close();
 }
 

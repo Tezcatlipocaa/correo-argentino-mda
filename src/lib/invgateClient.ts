@@ -1,12 +1,18 @@
 import type { InvgateResult } from "@/types/invgate";
+import { recordInvGateCall } from "@lib/invgate/metrics";
 
 function getEnv(key: string): string {
+  // Runtime-first: `process.env` (cargado por `server.mjs` vía dotenv) gana
+  // sobre `import.meta.env`, que en el bundle SSR puede tener valores de build
+  // viejos o vacíos para lecturas dinámicas.
+  const runtime = process.env[key];
+  if (runtime && typeof runtime === "string") return runtime;
+
   if (typeof import.meta !== "undefined" && import.meta.env) {
-    //return (import.meta.env as any)[key] || "";
     const val = (import.meta.env as any)[key];
     if (val && typeof val === "string") return val;
   }
-  return process.env[key] || "";
+  return "";
 }
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -40,6 +46,8 @@ async function invgateRequest<T>(
 
   const url = `${baseUrl}${endpoint}`;
   let lastStatus = 0;
+
+  recordInvGateCall(endpoint);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);

@@ -61,7 +61,7 @@ const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
       aria-label={ariaLabel}
       {...attrs}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} />}
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} is:inline />}
       {shortLabel ? (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
@@ -82,7 +82,7 @@ const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
       aria-label={ariaLabel}
       {...attrs}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} />}
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} is:inline />}
       {shortLabel ? (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>

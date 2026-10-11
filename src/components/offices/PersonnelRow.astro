@@ -37,7 +37,8 @@ const cleanBase = getCleanBase();
     {
       (p.interno ?? p.telefono) ? (
         <div class="text-base-content/70 flex items-center gap-1 text-xs">
-          <Icon name="boxicons:phone-filled" size={14} aria-hidden="true" />
+          <Icon name="boxicons:phone-filled" size={14} aria-hidden="true" 
+            is:inline />
           <span class="font-mono">{p.interno ?? p.telefono}</span>
         </div>
       ) : null
@@ -51,7 +52,8 @@ const cleanBase = getCleanBase();
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Icon name="boxicons:search" size={14} aria-hidden="true" />
+          <Icon name="boxicons:search" size={14} aria-hidden="true" 
+            is:inline />
         </a>
       ) : null
     }

@@ -222,7 +222,12 @@ const bindTableEmptyState = (root: HTMLElement): void => {
 
   const updateEmptyState = () => {
     const rows = getRows(body);
-    if (rows.length === 0) return;
+    // Las tablas cuyas filas no usan `data-table-row` siempre reportan 0 filas;
+    // para ellas el empty state lo maneja el código de la página. Quien sí
+    // renderiza `[data-table-row]` puede pedir que 0 filas muestre el estado
+    // (incluso en el primer render, antes de que exista cualquier fila).
+    const allowNoRows = root.dataset.tableWhenEmpty === "true";
+    if (rows.length === 0 && !allowNoRows) return;
 
     const visibleRows = rows.filter((row) => !row.classList.contains("hidden"));
     const hasResults = visibleRows.length > 0;
@@ -240,6 +245,10 @@ const bindTableEmptyState = (root: HTMLElement): void => {
   observer.observe(body, {
     attributes: true,
     attributeFilter: ["class"],
+    // También filas insertadas/reemplazadas (p. ej. `container.innerHTML = html`
+    // en búsquedas sin recargar): sin esto el estado no se actualizaba y quedaba
+    // una cabecera sola.
+    childList: true,
     subtree: true,
   });
 

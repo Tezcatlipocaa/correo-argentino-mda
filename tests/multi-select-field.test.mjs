@@ -12,7 +12,7 @@ const src = await read(path);
 
 assert.match(src, /fieldset/, "should use daisyUI fieldset");
 assert.match(src, /FormLegend/, "should reuse FormLegend");
-assert.match(src, /input input-bordered/, "should use daisyUI input-bordered");
+assert.match(src, /class="input input-sm/, "should use the daisyUI input class");
 assert.match(src, /badge badge-neutral/, "should use daisyUI badge for chips");
 assert.match(src, /menu/, "should use daisyUI menu for the option list");
 assert.match(src, /type="hidden"/, "should emit hidden inputs for formData");

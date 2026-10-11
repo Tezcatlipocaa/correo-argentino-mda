@@ -64,7 +64,7 @@ const mainModules = [
     label: "Calidad",
     sublabel: "Auditoría de llamadas",
     icon: "boxicons:bar-chart-big-filled",
-    tone: "bg-primary/10 text-primary",
+    tone: "bg-warning/10 text-warning",
   },
   {
     href: "/supervision/asignacion-autogestiones",
@@ -84,6 +84,10 @@ const visibleMainModules =
       )
     : [];
 
+// Los módulos adicionales (los que sólo ven algunos roles, además de los 8
+// atajos que tiene todo usuario) se renderizan con la variante compacta de
+// QuickAccessCard, para que no compitan visualmente con los atajos por defecto.
+
 type BoxiconName = `boxicons:${string}`;
 
 interface QuickAccessItem {
@@ -100,15 +104,15 @@ const quickAccessItems: QuickAccessItem[] = [
     title: "Títulos",
     description: "Copia títulos normalizados listos para la gestión diaria.",
     icon: "boxicons:list-ul-filled",
-    iconTone: "bg-primary/10 text-primary",
+    iconTone: "bg-warning/10 text-warning",
   },
   {
     href: "/mesas-de-ayuda",
     title: "Mesas de Ayuda",
     description:
       "Revisa derivaciones por tema para resolver casos con rapidez.",
-    icon: "boxicons:headphone-mic",
-    iconTone: "bg-warning/10 text-warning",
+    icon: "boxicons:headphone-mic-filled",
+    iconTone: "bg-accent/10 text-accent",
   },
   {
     href: "/buscador-usuarios",
@@ -187,7 +191,7 @@ const visibleQuickAccessItems =
         {
           user?.id !== 0 ? (
             <>
-              ¡Hola, <span class="text-secondary">{displayName}</span>!
+              ¡Hola, <span class="text-secondary dark:text-primary">{displayName}</span>!
             </>
           ) : (
             "¡Hola!"
@@ -208,7 +212,9 @@ const visibleQuickAccessItems =
       <!-- Módulos Principales -->
       {
         visibleMainModules.length > 0 && (
-          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div
+            class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
+          >
             {visibleMainModules.map((mod) => (
               <QuickAccessCard
                 href={mod.href}
@@ -216,7 +222,7 @@ const visibleQuickAccessItems =
                 description={mod.sublabel}
                 icon={mod.icon}
                 iconTone={mod.tone}
-                layout="horizontal"
+                layout="compact"
               />
             ))}
           </div>

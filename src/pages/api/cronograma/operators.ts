@@ -68,12 +68,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     } else {
-      // --- CREACIÓN DE OPERADOR DEPRECADA ---
+      // --- FALTA IDENTIFICADOR DE OPERADOR ---
       return new Response(
         JSON.stringify({
-          error: "La creación de operadores se realiza desde la gestión de usuarios (/admin/usuarios).",
+          error: "El nombre original del operador es requerido para actualizar.",
         }),
-        { status: 410, headers: { "Content-Type": "application/json" } },
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
   } catch (error: any) {

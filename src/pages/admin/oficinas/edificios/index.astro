@@ -1,0 +1,11 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AdminEdificiosContent from "@components/admin/offices/AdminEdificiosContent.astro";
+import AdminEdificiosSkeleton from "@components/admin/offices/AdminEdificiosSkeleton.astro";
+---
+
+<BaseLayout>
+  <AdminEdificiosContent server:defer>
+    <AdminEdificiosSkeleton slot="fallback" />
+  </AdminEdificiosContent>
+</BaseLayout>

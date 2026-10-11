@@ -9,10 +9,17 @@ import { isSectionVisibleSync, resolveSessionMesa } from "./lib/helpdeskAccess";
 import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
+import { KB_CATEGORIAS_PATH } from "@lib/kbRedirects";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
-import { isFingerprintValid, computeFingerprint } from "./lib/sessionFingerprint";
+import {
+  isFingerprintValid,
+  computeFingerprint,
+} from "./lib/sessionFingerprint";
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+const KB_WRITE_THROTTLE_MESSAGE =
+  "Demasiadas operaciones. Probá en unos minutos.";
 
 function isWriteMethod(method: string): boolean {
   return !READ_METHODS.has(method);
@@ -71,6 +78,21 @@ function applyRateLimit(
       }
     }
 
+    // Favoritos de títulos: perfil propio y amplio (toggles por-usuario).
+    if (isWrite && relativePath === "/api/titulos/favoritos") {
+      const result = checkRateLimit(
+        `fav-write:${identifier}:${relativePath}`,
+        RATE_LIMITS.favoriteWrite,
+      );
+      if (!result.ok) {
+        return tooManyRequests(
+          "Demasiadas acciones. Probá en unos segundos.",
+          result.retryAfter,
+        );
+      }
+      return null;
+    }
+
     const key = `${isWrite ? "api-write" : "api-read"}:${identifier}:${relativePath}`;
     const profile = isWrite ? RATE_LIMITS.apiWrite : RATE_LIMITS.apiRead;
     const result = checkRateLimit(key, profile);
@@ -78,6 +100,33 @@ function applyRateLimit(
       return tooManyRequests(
         "Demasiadas solicitudes. Probá más tarde.",
         result.retryAfter,
+      );
+    }
+  }
+
+  if (relativePath === KB_CATEGORIAS_PATH && method === "POST") {
+    const identifier =
+      locals.user.id > 0
+        ? `u:${locals.user.id}`
+        : `ip:${clientAddress ?? "unknown"}`;
+    const result = checkRateLimit(
+      `kb-write:${identifier}:${relativePath}`,
+      RATE_LIMITS.kbCategoryWrite,
+    );
+    if (!result.ok) {
+      const message = encodeURIComponent(KB_WRITE_THROTTLE_MESSAGE);
+      // Un POST anonimo cae igual en /login por RBAC: mandarlo ahi y no al
+      // ABM (que no puede ver) evita dejar el corte a la vista de un
+      // visitante que no tiene sesion.
+      if (locals.user.id === 0) {
+        return redirect(
+          resolveUrl(`/login?toast_msg=${message}&toast_type=error`),
+        );
+      }
+      return redirect(
+        resolveUrl(
+          `${KB_CATEGORIAS_PATH}?toast_msg=${message}&toast_type=error`,
+        ),
       );
     }
   }
@@ -102,6 +151,7 @@ function setSecurityHeaders(response: Response): Response {
       "img-src 'self' data: blob: https://wms.ign.gob.ar",
       "font-src 'self'",
       "connect-src 'self' data: https://docs.google.com https://cdn.jsdelivr.net https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
+      "media-src 'self' data: blob: https:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -117,13 +167,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const cleanBase = getCleanBase();
 
   const getRelativePath = (pathname: string) => {
+    let relative: string;
     if (pathname.startsWith(cleanBase)) {
-      return "/" + pathname.slice(cleanBase.length);
+      relative = "/" + pathname.slice(cleanBase.length);
+    } else if (pathname === cleanBase.slice(0, -1)) {
+      relative = "/";
+    } else {
+      relative = pathname;
     }
-    if (pathname === cleanBase.slice(0, -1)) {
-      return "/";
-    }
-    return pathname;
+    // Astro routea con trailingSlash: "ignore": /x y /x/ ejecutan el mismo
+    // handler, pero url.pathname conserva el slash final. Normalizar una sola
+    // vez aca evita que un slash final esquive cualquier guard que compare
+    // por igualdad exacta (rate limit de /login y del ABM de categorias).
+    return relative.length > 1 ? relative.replace(/\/+$/, "") : relative;
   };
 
   const relativePath = getRelativePath(path);
@@ -177,6 +233,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
             role: users.role,
             helpdeskId: users.helpdeskId,
             helpdeskName: users.helpdeskName,
+            active: users.active,
             mesaActive: mesas.active,
             mesaName: mesas.name,
           })
@@ -184,7 +241,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
           .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
           .where(eq(users.id, session.userId));
 
-        if (dbUser) {
+        if (dbUser && !dbUser.active) {
+          // Cuenta desactivada por un admin: se invalida la sesión y se expulsa.
+          deleteSessionCookie(cookies);
+          await db.delete(sessions).where(eq(sessions.id, sessionId));
+          sessionId = null;
+          if (relativePath !== "/login") {
+            return redirect(
+              resolveUrl(
+                `/login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
+              ),
+            );
+          }
+        } else if (dbUser) {
           // Fail-closed: mesa desactivada, borrada o desconocida = usuario
           // tratado como "sin mesa" (solo paginas comunes visibles) hasta que
           // un admin le reasigne una mesa activa. resolveSessionMesa aplica
@@ -260,12 +329,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // Redirigir si no está autenticado e intenta acceder a supervisión o admin (insensible a mayúsculas/minúsculas)
+  // Redirigir si no está autenticado e intenta acceder a supervisión, admin o automatizaciones (insensible a mayúsculas/minúsculas)
   if (
     lowerPath === "/supervision" ||
     lowerPath.startsWith("/supervision/") ||
     lowerPath === "/admin" ||
-    lowerPath.startsWith("/admin/")
+    lowerPath.startsWith("/admin/") ||
+    lowerPath === "/automatizaciones" ||
+    lowerPath.startsWith("/automatizaciones/")
   ) {
     if (currentUser.id === 0) {
       return redirect(resolveUrl("/login"));
@@ -291,7 +362,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return redirect(resolveUrl("/login"));
   }
 
-  const sectionVisible = isSectionVisibleSync(currentUser.helpdeskName, role, checkPath);
+  const sectionVisible = isSectionVisibleSync(
+    currentUser.helpdeskName,
+    role,
+    checkPath,
+  );
   if (!sectionVisible) {
     if (relativePath.startsWith("/api/")) {
       return jsonError("Acceso no autorizado", 401);

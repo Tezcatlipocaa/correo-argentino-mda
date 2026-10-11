@@ -12,7 +12,7 @@ const src = await read(path);
 
 assert.match(src, /fieldset/, "should use daisyUI fieldset");
 assert.match(src, /FormLegend/, "should reuse FormLegend");
-assert.match(src, /input input-bordered/, "should use daisyUI input-bordered");
+assert.match(src, /class="input input-sm/, "should use the daisyUI input class");
 assert.match(
   src,
   /badge badge-secondary badge-soft/,

@@ -42,7 +42,7 @@ test.describe("Alta de usuario requiere mesa de ayuda", () => {
     await page.context().addCookies([
       { name: "session_id", value: adminCookie, domain: "localhost", path: "/" },
     ]);
-    await page.goto("http://localhost:4321/admin/usuarios");
+    await page.goto("/admin/usuarios");
     await page.click("#btn-nuevo-usuario");
     await expect(page.locator("#modal-create-user")).toBeVisible();
 

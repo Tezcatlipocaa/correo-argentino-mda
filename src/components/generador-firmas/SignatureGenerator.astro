@@ -1,0 +1,628 @@
+---
+import { Icon } from "astro-icon/components";
+import FormField from "@components/ui/forms/FormField.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const logoPath = `${getCleanBase()}firma.png`;
+---
+
+<div class="space-y-8">
+  <div
+    class="grid grid-cols-1 items-start gap-8 md:grid-cols-2"
+    id="signature-generator-container"
+    data-logo-default={logoPath}
+  >
+    <SectionCard class="overflow-hidden shadow-md">
+      <div class="mb-2 flex items-center gap-2">
+        <div class="bg-primary/10 text-primary rounded-lg p-2">
+          <Icon name="boxicons:contact-book-filled" size={20} />
+        </div>
+        <h2 class="text-xl font-bold">Datos del operador</h2>
+      </div>
+
+      <form id="signature-form" class="mb-4 space-y-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            id="input-name"
+            name="name"
+            label="Nombre y Apellido"
+            placeholder="Ej. Juan Pérez"
+            maxlength="40"
+            required
+          />
+          <FormField
+            id="input-role"
+            name="role"
+            label="Puesto / Cargo"
+            placeholder="Ej. Operador N1"
+            maxlength="50"
+            required
+          />
+        </div>
+
+        <FormField
+          id="input-department"
+          name="department"
+          label="Departamento / Gerencia"
+          placeholder="Ej. Mesa de Ayuda Corporativa"
+          maxlength="50"
+          required
+        />
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            id="input-address1"
+            name="address1"
+            label="Dirección (Línea 1)"
+            placeholder="Ej. Av. Paseo Colón 740"
+            maxlength="60"
+            required
+          />
+          <FormField
+            id="input-address2"
+            name="address2"
+            label="Dirección (Línea 2)"
+            placeholder="Ej. C1063ACU, CABA"
+            maxlength="60"
+            helpText="(Opcional)"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <FormField
+            id="input-phone"
+            name="phone"
+            label="Teléfono Fijo"
+            placeholder="Ej. 011 4891 9191"
+            maxlength="25"
+            helpText="(Opcional)"
+          />
+          <FormField
+            id="input-internal"
+            name="internal"
+            label="Interno"
+            placeholder="Ej. 1234"
+            maxlength="10"
+            helpText="(Opcional)"
+          />
+          <FormField
+            id="input-mobile"
+            name="mobile"
+            label="Celular"
+            placeholder="Ej. 11 15 1234 5678"
+            maxlength="25"
+            helpText="(Opcional)"
+          />
+        </div>
+
+        <div class="mt-4 w-max">
+          <label class="label cursor-pointer gap-3">
+            <input
+              type="checkbox"
+              id="input-include-image"
+              class="checkbox checkbox-primary"
+              checked
+            />
+            <span class="label-text font-medium"
+              >Incluir logo institucional y línea separadora</span
+            >
+          </label>
+        </div>
+      </form>
+
+      <div role="alert" class="alert alert-info text-xs">
+        <Icon name="boxicons:info-circle" size={20} />
+        <div>
+          <span class="block text-sm font-bold">Configuración de la firma</span>
+          <span>
+            Completa todos los campos obligatorios (marcados con <span
+              class="text-error">*</span
+            >) para habilitar los botones de copia y descarga. Al pegar la firma
+            en Outlook, el logo se descarga automáticamente desde el portal: no
+            hace falta insertarlo a mano.
+          </span>
+        </div>
+      </div>
+    </SectionCard>
+
+    <section class="flex flex-col gap-4">
+      <div class="tabs tabs-box bg-base-200 self-start rounded-xl p-1">
+        <button id="tab-visual" class="tab tab-active"> Vista Visual </button>
+        <button id="tab-code" class="tab"> Código Fuente </button>
+      </div>
+
+      <div class="card bg-base-100 border-base-300 min-h-75 border shadow-md">
+        <div class="card-body p-0">
+          <div id="section-visual" class="flex h-full flex-col p-4 sm:p-6">
+            <div
+              id="preview-container"
+              class="border-base-300 flex min-h-40 w-full flex-1 items-center justify-center overflow-x-auto rounded-lg border border-dashed bg-white p-2 sm:p-4"
+            >
+            </div>
+            <div
+              class="mt-6 flex w-full flex-col justify-end gap-2 sm:flex-row"
+            >
+              <button
+                id="btn-download-png"
+                disabled
+                class="btn btn-neutral btn-outline w-full sm:w-auto"
+              >
+                <span
+                  id="download-spinner"
+                  class="loading loading-spinner loading-sm hidden"></span>
+                <Icon
+                  id="download-icon"
+                  name="boxicons:arrow-in-down-square-half-filled"
+                  size={20}
+                />
+                Descargar PNG
+              </button>
+              <button
+                id="btn-copy-visual"
+                disabled
+                class="btn btn-primary transition-all duration-300"
+              >
+                <span id="copy-visual-content" class="flex items-center gap-2">
+                  <Icon name="boxicons:copy" size={20} />
+                  Copiar firma visual
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div id="section-code" class="hidden h-full flex-col p-6">
+            <div
+              class="bg-neutral text-neutral-content max-h-100 flex-1 overflow-auto rounded-lg p-4 font-mono text-xs"
+            >
+              <pre id="code-output"></pre>
+            </div>
+            <div class="card-actions mt-6 justify-end">
+              <button
+                id="btn-copy-code"
+                disabled
+                class="btn btn-secondary transition-all duration-300"
+              >
+                <span id="copy-code-content" class="flex items-center gap-2">
+                  <Icon name="boxicons:code-alt-filled" size={20} />
+                  Copiar código
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Guía de Configuración en Outlook -->
+  <SectionCard class="shadow-md">
+    <div class="mb-4 flex items-center gap-2">
+      <div class="bg-secondary/10 text-secondary rounded-lg p-2">
+        <Icon name="boxicons:info-circle" size={20} />
+      </div>
+      <h2 class="text-xl font-bold">Guía para colocar esta firma en Outlook</h2>
+    </div>
+
+    <p class="text-base-content/70 mb-4 text-xs">
+      Completa tus datos, copiá la firma y pegala en Outlook. El logo se
+      descarga automáticamente desde el portal al guardar la firma. Seguí estos
+      pasos:
+    </p>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <!-- Paso 1 -->
+      <div class="card bg-base-200/50 border-base-300 border shadow-none">
+        <div class="card-body space-y-2 p-4">
+          <div class="flex items-center gap-2">
+            <span class="badge badge-secondary font-bold">1</span>
+            <h3 class="text-sm font-bold">Copiar la firma</h3>
+          </div>
+          <p class="text-base-content/85 text-xs">
+            Completa tus datos y presiona <strong>"Copiar firma visual"</strong
+            >. El contenido queda en el portapapeles con el formato listo para
+            pegar en Outlook.
+          </p>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="card bg-base-200/50 border-base-300 border shadow-none">
+        <div class="card-body space-y-2 p-4">
+          <div class="flex items-center gap-2">
+            <span class="badge badge-secondary font-bold">2</span>
+            <h3 class="text-sm font-bold">Pegar y guardar en Outlook</h3>
+          </div>
+          <ul
+            class="text-xs text-base-content/75 list-inside list-disc space-y-1"
+          >
+            <li>
+              <strong>Outlook de escritorio:</strong> Archivo → Opciones → Correo
+              → Firmas → Nuevo → <code>Ctrl + V</code> → Aceptar.
+            </li>
+            <li>
+              <strong>Outlook Web:</strong> Configuración → Correo → Redactar y
+              responder → Firma de correo electrónico → pegar → Guardar.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div class="card bg-base-200/50 border-base-300 border shadow-none">
+        <div class="card-body space-y-2 p-4">
+          <div class="flex items-center gap-2">
+            <span class="badge badge-secondary font-bold">3</span>
+            <h3 class="text-sm font-bold">Verificar</h3>
+          </div>
+          <p class="text-base-content/85 text-xs">
+            Enviá un correo de prueba a una casilla externa: el logo debería
+            verse igual que en la vista previa (Outlook descarga el logo del
+            portal al guardar la firma; confirmá que cargue en el destinatario).
+          </p>
+          <p class="text-base-content/75 text-xs">
+            Si no se ve: en Outlook Web permití descargar imágenes, o usá
+            <strong>"Descargar PNG"</strong> y el logo de respaldo de abajo para
+            insertarlo manualmente.
+          </p>
+          <a
+            href={logoPath}
+            download="firma-correo-argentino.png"
+            class="btn btn-sm btn-neutral btn-outline mt-2 w-full"
+          >
+            <Icon name="boxicons:arrow-in-down-square-half-filled" size={16} />
+            Descargar Logo (PNG)
+          </a>
+        </div>
+      </div>
+    </div>
+  </SectionCard>
+</div>
+
+<script>
+  const container = document.getElementById("signature-generator-container");
+  const logoDefault = container?.dataset.logoDefault || "";
+
+  const inputName = document.getElementById(
+    "input-name",
+  ) as HTMLInputElement | null;
+  const inputRole = document.getElementById(
+    "input-role",
+  ) as HTMLInputElement | null;
+  const inputDepartment = document.getElementById(
+    "input-department",
+  ) as HTMLInputElement | null;
+  const inputAddress1 = document.getElementById(
+    "input-address1",
+  ) as HTMLInputElement | null;
+  const inputAddress2 = document.getElementById(
+    "input-address2",
+  ) as HTMLInputElement | null;
+  const inputPhone = document.getElementById(
+    "input-phone",
+  ) as HTMLInputElement | null;
+  const inputInternal = document.getElementById(
+    "input-internal",
+  ) as HTMLInputElement | null;
+  const inputMobile = document.getElementById(
+    "input-mobile",
+  ) as HTMLInputElement | null;
+  const inputIncludeImage = document.getElementById(
+    "input-include-image",
+  ) as HTMLInputElement | null;
+
+  const previewContainer = document.getElementById("preview-container");
+  const codeOutput = document.getElementById("code-output");
+
+  const btnDownloadPng = document.getElementById(
+    "btn-download-png",
+  ) as HTMLButtonElement | null;
+  const btnCopyVisual = document.getElementById(
+    "btn-copy-visual",
+  ) as HTMLButtonElement | null;
+  const btnCopyCode = document.getElementById(
+    "btn-copy-code",
+  ) as HTMLButtonElement | null;
+
+  const tabVisual = document.getElementById("tab-visual");
+  const tabCode = document.getElementById("tab-code");
+  const sectionVisual = document.getElementById("section-visual");
+  const sectionCode = document.getElementById("section-code");
+
+  const downloadSpinner = document.getElementById("download-spinner");
+  const downloadIcon = document.getElementById("download-icon");
+
+  let formData = {
+    name: "",
+    role: "",
+    department: "",
+    address1: "",
+    address2: "",
+    phone: "",
+    internal: "",
+    mobile: "",
+    includeImage: true,
+  };
+
+  function updateFormData() {
+    if (
+      !inputName ||
+      !inputRole ||
+      !inputDepartment ||
+      !inputAddress1 ||
+      !inputAddress2 ||
+      !inputPhone ||
+      !inputInternal ||
+      !inputMobile ||
+      !inputIncludeImage
+    )
+      return;
+
+    formData = {
+      name: inputName.value,
+      role: inputRole.value,
+      department: inputDepartment.value,
+      address1: inputAddress1.value,
+      address2: inputAddress2.value,
+      phone: inputPhone.value,
+      internal: inputInternal.value,
+      mobile: inputMobile.value,
+      includeImage: inputIncludeImage.checked,
+    };
+    renderSignature();
+    validateForm();
+  }
+
+  function validateForm() {
+    if (!btnDownloadPng || !btnCopyVisual || !btnCopyCode) return;
+
+    const isValid =
+      formData.name.trim() !== "" &&
+      formData.role.trim() !== "" &&
+      formData.department.trim() !== "" &&
+      formData.address1.trim() !== "";
+
+    btnDownloadPng.disabled = !isValid;
+    btnCopyVisual.disabled = !isValid;
+    btnCopyCode.disabled = !isValid;
+  }
+
+  function renderSignature() {
+    if (!previewContainer || !codeOutput) return;
+
+    const fullLogoUrl = new URL(logoDefault, window.location.origin).href;
+
+    const contactInfo = [
+      formData.phone ? `Tel: ${formData.phone}` : "",
+      formData.internal ? `Int: ${formData.internal}` : "",
+      formData.mobile ? `Cel: ${formData.mobile}` : "",
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    const imageHtml = formData.includeImage
+      ? `
+    <td width="160" style="width: 160px; padding-right: 15px; vertical-align: middle; font-family: Arial, Helvetica, sans-serif;">
+      <img src="${fullLogoUrl}" alt="Correo Argentino" width="160" height="89" style="display: block; border: 0; width: 160px; height: 89px; max-width: 160px;" />
+    </td>
+    <td width="2" style="background-color: #ffc72c; width: 2px; font-size: 1px; line-height: 1px; padding: 0; margin: 0;">&nbsp;</td>
+    <td width="15" style="width: 15px; font-size: 1px; line-height: 1px; padding: 0; margin: 0;">&nbsp;</td>`
+      : "";
+
+    const signatureHtml = `
+<table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, Helvetica, sans-serif; color: #0c0c0c; margin: 0; border-collapse: collapse;">
+  <tr>${imageHtml}
+    <td style="vertical-align: middle; font-family: Arial, Helvetica, sans-serif;">
+      <table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, Helvetica, sans-serif; color: #0c0c0c; border-collapse: collapse;">
+        <tr>
+          <td style="font-size: 16px; font-weight: bold; color: #254888; padding-bottom: 2px; font-family: Arial, Helvetica, sans-serif; line-height: 1.2;">
+            ${formData.name || "Nombre y Apellido"}
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size: 13px; font-weight: bold; color: #0c0c0c; padding-bottom: 4px; font-family: Arial, Helvetica, sans-serif; line-height: 1.2;">
+            ${formData.role || "Puesto / Cargo"}
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size: 12px; color: #54585a; text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px; font-family: Arial, Helvetica, sans-serif; line-height: 1.2;">
+            ${formData.department || "Departamento / Gerencia"}
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size: 11px; color: #54585a; font-family: Arial, Helvetica, sans-serif; line-height: 1.4;">
+            ${formData.address1 || "Dirección Línea 1"}${formData.address2 ? `<br />${formData.address2}` : ""}${contactInfo ? `<br />${contactInfo}` : ""}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`.trim();
+
+    previewContainer.innerHTML = signatureHtml;
+    codeOutput.textContent = signatureHtml;
+  }
+
+  inputName?.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement;
+    target.value = target.value.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase());
+    updateFormData();
+  });
+
+  inputAddress2?.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement;
+    target.value = target.value.toUpperCase();
+    updateFormData();
+  });
+
+  [
+    inputRole,
+    inputDepartment,
+    inputAddress1,
+    inputPhone,
+    inputInternal,
+    inputMobile,
+  ].forEach((el) => {
+    el?.addEventListener("input", updateFormData);
+  });
+
+  inputIncludeImage?.addEventListener("change", updateFormData);
+
+  tabVisual?.addEventListener("click", () => {
+    tabVisual.classList.add("tab-active");
+    tabCode?.classList.remove("tab-active");
+    sectionVisual?.classList.remove("hidden");
+    sectionVisual?.classList.add("flex");
+    sectionCode?.classList.add("hidden");
+    sectionCode?.classList.remove("flex");
+  });
+
+  tabCode?.addEventListener("click", () => {
+    tabCode.classList.add("tab-active");
+    tabVisual?.classList.remove("tab-active");
+    sectionCode?.classList.remove("hidden");
+    sectionCode?.classList.add("flex");
+    sectionVisual?.classList.add("hidden");
+    sectionVisual?.classList.remove("flex");
+  });
+
+  btnCopyVisual?.addEventListener("click", async () => {
+    if (!previewContainer) return;
+
+    const table = previewContainer.querySelector("table");
+    const html = table ? table.outerHTML : previewContainer.innerHTML;
+    const text = table ? table.innerText : previewContainer.innerText;
+
+    let copySuccess = false;
+
+    // Try modern Clipboard API first for rich formatting pasting
+    if (navigator.clipboard && navigator.clipboard.write) {
+      try {
+        const blobHtml = new Blob([html], { type: "text/html" });
+        const blobText = new Blob([text], { type: "text/plain" });
+        const item = new ClipboardItem({
+          "text/html": blobHtml,
+          "text/plain": blobText,
+        });
+        await navigator.clipboard.write([item]);
+        copySuccess = true;
+      } catch (err) {
+        console.warn("Clipboard API rich-text copy failed, falling back:", err);
+      }
+    }
+
+    // Fallback to Selection + execCommand
+    if (!copySuccess) {
+      try {
+        const selection = window.getSelection();
+        if (!selection) throw new Error("No Selection API");
+
+        selection.removeAllRanges();
+        const range = document.createRange();
+
+        if (table) {
+          range.selectNode(table);
+        } else {
+          range.selectNodeContents(previewContainer);
+        }
+
+        selection.addRange(range);
+        copySuccess = document.execCommand("copy");
+        selection.removeAllRanges();
+      } catch (err) {
+        console.error("execCommand fallback copy failed:", err);
+      }
+    }
+
+    if (copySuccess) {
+      if ((window as any).showToast) {
+        (window as any).showToast(
+          "Firma visual copiada al portapapeles.",
+          "alert-success",
+        );
+      }
+      const contentEl = document.getElementById("copy-visual-content");
+      if (contentEl) {
+        const originalContent = contentEl.innerHTML;
+        contentEl.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9.707-9.707-1.414-1.414z"></path></svg>
+          ¡Copiado!
+        `;
+        btnCopyVisual.classList.add("btn-success");
+        setTimeout(() => {
+          contentEl.innerHTML = originalContent;
+          btnCopyVisual.classList.remove("btn-success");
+        }, 2000);
+      }
+    } else {
+      alert(
+        "No se pudo copiar la firma automáticamente. Por favor, selecciona el contenido visual manualmente y presiona Ctrl+C.",
+      );
+    }
+  });
+
+  btnCopyCode?.addEventListener("click", async () => {
+    if (!codeOutput) return;
+
+    try {
+      await navigator.clipboard.writeText(codeOutput.textContent || "");
+      if ((window as any).showToast) {
+        (window as any).showToast(
+          "Código fuente copiado al portapapeles.",
+          "alert-success",
+        );
+      }
+      const contentEl = document.getElementById("copy-code-content");
+      if (contentEl) {
+        const originalContent = contentEl.innerHTML;
+        contentEl.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9.707-9.707-1.414-1.414z"></path></svg>
+          ¡Copiado!
+        `;
+        btnCopyCode.classList.add("btn-success");
+        setTimeout(() => {
+          contentEl.innerHTML = originalContent;
+          btnCopyCode.classList.remove("btn-success");
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Error al copiar código:", err);
+    }
+  });
+
+  btnDownloadPng?.addEventListener("click", async () => {
+    if (!previewContainer) return;
+
+    const table = previewContainer.querySelector("table");
+    if (!table || !downloadSpinner || !downloadIcon) return;
+
+    try {
+      downloadSpinner.classList.remove("hidden");
+      downloadIcon.classList.add("hidden");
+      btnDownloadPng.disabled = true;
+
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(table, {
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+        style: {
+          margin: "0",
+          borderRadius: "0",
+          border: "none",
+        },
+      });
+      const link = document.createElement("a");
+      link.download = `firma-correo-argentino.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Error al generar imagen:", err);
+    } finally {
+      downloadSpinner.classList.add("hidden");
+      downloadIcon.classList.remove("hidden");
+      btnDownloadPng.disabled = false;
+    }
+  });
+
+  renderSignature();
+</script>

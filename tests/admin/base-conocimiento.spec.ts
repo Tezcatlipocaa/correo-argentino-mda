@@ -1,58 +1,58 @@
-// tests/admin/base-conocimiento.spec.ts
 import "dotenv/config";
-import { test, expect } from "@playwright/test";
-import { db } from "../../src/db/index";
-import { users, sessions } from "../../src/db/schema";
-import { eq } from "drizzle-orm";
-import { createHmac } from "crypto";
+import { expect, test, type Page } from "@playwright/test";
+import { setSessionCookie, type TestUser } from "../helpers/auth";
+import { KbTestFixture, uniqueToken } from "../helpers/kb";
 
-const SECRET_KEY =
-  process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
-function sign(sessionId: string): string {
-  const sig = createHmac("sha256", SECRET_KEY)
-    .update(sessionId)
-    .digest("base64url");
-  return `${sessionId}.${sig}`;
-}
+let fixture: KbTestFixture;
+let adminUser: TestUser;
+let agentUser: TestUser;
+let articleTitle: string;
+
+const articleRow = (page: Page, title: string) =>
+  page
+    .locator("#kb-articles-table [data-table-row]")
+    .filter({ has: page.getByRole("link", { name: title, exact: true }) });
+
+test.beforeEach(async () => {
+  fixture = new KbTestFixture();
+  const mesa = await fixture.createMesa();
+  adminUser = await fixture.createUser("admin", mesa);
+  agentUser = await fixture.createUser("agent", mesa);
+  articleTitle = `Navegación KB ${uniqueToken()}`;
+  await fixture.createArticle({
+    mesa,
+    authorUserId: adminUser.userId,
+    title: articleTitle,
+    content: "Artículo para verificar la isla diferida.",
+  });
+});
+
+test.afterEach(async () => {
+  await fixture.cleanup();
+});
 
 test.describe("Sección Base de conocimiento", () => {
-  let adminSession: string;
-  let adminCookie: string;
-  let adminId: number;
+  test("admin ve la lista diferida", async ({ context, page }) => {
+    await setSessionCookie(context, adminUser.signedSessionId);
+    await page.goto("/base-conocimiento");
 
-  test.beforeAll(async () => {
-    const ts = Date.now();
-    adminSession = `sess_bk_${ts}`;
-    const [u] = await db
-      .insert(users)
-      .values({ username: `admin_bk_${ts}`, password: "x", role: "admin" })
-      .returning({ id: users.id });
-    adminId = u.id;
-    await db
-      .insert(sessions)
-      .values({ id: adminSession, userId: adminId, expiresAt: Date.now() + 86400000 });
-    adminCookie = sign(adminSession);
+    const root = page.locator("#base-conocimiento-root");
+    await expect(root).toBeVisible();
+    await expect(articleRow(page, articleTitle)).toBeVisible();
   });
 
-  test.afterAll(async () => {
-    await db.delete(sessions).where(eq(sessions.id, adminSession));
-    await db.delete(users).where(eq(users.id, adminId));
-  });
+  test("un agente NO ve el enlace y es redirigido", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, agentUser.signedSessionId);
 
-  test("oculta del nav pero la página responde por URL directa", async ({ page }) => {
-    await page.context().addCookies([
-      { name: "session_id", value: adminCookie, domain: "localhost", path: "/" },
-    ]);
-    await page.goto("http://localhost:4321/base-conocimiento");
-
-    await expect(page).toHaveTitle(/Base de conocimiento/);
-    // Oculta de la navegación (sidebar) — se mostrará cuando haya artículos
-    await expect(
-      page.locator("nav a[href='/base-conocimiento'], aside a[href='/base-conocimiento']"),
-    ).toHaveCount(0);
-    // La ruta sigue viva por URL directa: empty-state con mesa del usuario
-    await expect(page.locator("#base-conocimiento-root")).toContainText(
-      "Contenido para Sin mesa de ayuda",
+    await page.goto("/base-conocimiento");
+    expect(new URL(page.url()).pathname).toBe("/");
+    await expect(page.locator("#global-toast-container")).toContainText(
+      "Acceso no autorizado",
     );
+
+    await expect(page.locator("#base-conocimiento-root")).toHaveCount(0);
   });
 });

@@ -1,0 +1,82 @@
+---
+import FormField from "@components/ui/forms/FormField.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import FormTextarea from "@components/ui/forms/FormTextarea.astro";
+
+interface Props {
+  /** "create" agrega placeholder/ayuda de alta; "edit" muestra los valores actuales. */
+  mode?: "create" | "edit";
+  name?: string;
+  position?: number;
+  description?: string | null;
+  scope?: string | null;
+  gateItemId?: number | null;
+  gateOptions: { value: string; label: string }[];
+}
+
+const {
+  mode = "edit",
+  name = "",
+  position = 0,
+  description = null,
+  scope = "workflow",
+  gateItemId = null,
+  gateOptions,
+} = Astro.props;
+---
+
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+  <FormField
+    id="input-name"
+    name="name"
+    label="Nombre de la etapa"
+    required
+    placeholder={mode === "create" ? "Ej: Etapa 1 - Lanzamiento" : undefined}
+    value={name || undefined}
+  />
+  <FormField
+    id="input-position"
+    name="position"
+    label="Orden de la etapa"
+    type="number"
+    min="0"
+    required
+    value={String(position)}
+    helpText={mode === "create"
+      ? "Define el orden en la vista (menor arriba)."
+      : undefined}
+    inputClass="font-mono"
+  />
+  <div class="md:col-span-2">
+    <FormTextarea
+      id="input-description"
+      name="description"
+      label="Descripción (opcional)"
+      rows={2}
+      value={description ?? ""}
+    />
+  </div>
+  <div class="md:col-span-2">
+    <SelectField
+      id="select-scope"
+      name="scope"
+      label="Tipo de automatización"
+      options={[
+        { value: "workflow", label: "Workflow (AUTSUC)" },
+        { value: "legacy", label: "Legacy (casos manuales previos)" },
+      ]}
+      value={scope === "legacy" ? "legacy" : "workflow"}
+      helpText="Define qué layout de etapas se muestra en cada tipo de automatización."
+    />
+  </div>
+  <div class="md:col-span-2">
+    <SelectField
+      id="select-gate"
+      name="gateItemId"
+      label="Ticket habilitador (gate)"
+      options={gateOptions}
+      value={gateItemId ? String(gateItemId) : "none"}
+      helpText="Opcional: la etapa queda 'En espera' hasta que ese ticket se complete."
+    />
+  </div>
+</div>

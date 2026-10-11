@@ -10,6 +10,10 @@
 // autogestiones, asistencia) tambien depende de la mesa del usuario
 // (`isSectionVisibleSync`). Esta tabla modela solo la capa de rol; el gating
 // por mesa no se representa aca (es por mesa, no por rol).
+import { KB_ACCESS_ROLES, type Role } from "./rbac";
+
+const kbRole = (role: Role): boolean => KB_ACCESS_ROLES.includes(role);
+
 export type RoleMatrixFeature = {
   feature: string;
   icon: string;
@@ -23,7 +27,7 @@ export type RoleMatrixFeature = {
 export const rolesMatrix: RoleMatrixFeature[] = [
   {
     feature: "Ver Oficinas",
-    icon: "boxicons:building-house",
+    icon: "boxicons:building-house-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -41,7 +45,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Ver Títulos",
-    icon: "boxicons:note",
+    icon: "boxicons:note-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -49,8 +53,35 @@ export const rolesMatrix: RoleMatrixFeature[] = [
     admin: true,
   },
   {
+    feature: "Ver Automatizaciones",
+    icon: "boxicons:rocket-filled",
+    agent: true,
+    referent: true,
+    team_leader: true,
+    supervisor: true,
+    admin: true,
+  },
+  {
+    feature: "Ver Base de Conocimiento",
+    icon: "boxicons:book-bookmark-filled",
+    agent: kbRole("agent"),
+    referent: kbRole("referent"),
+    team_leader: kbRole("team_leader"),
+    supervisor: kbRole("supervisor"),
+    admin: kbRole("admin"),
+  },
+  {
+    feature: "Administrar Base de Conocimiento",
+    icon: "boxicons:book-bookmark-filled",
+    agent: kbRole("agent"),
+    referent: kbRole("referent"),
+    team_leader: kbRole("team_leader"),
+    supervisor: kbRole("supervisor"),
+    admin: kbRole("admin"),
+  },
+  {
     feature: "Ver Mesas de Ayuda",
-    icon: "boxicons:headphone",
+    icon: "boxicons:headphone-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -68,7 +99,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Generar Firmas",
-    icon: "boxicons:edit-alt",
+    icon: "boxicons:edit-alt-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -77,7 +108,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Ver Cronogramas",
-    icon: "boxicons:calendar",
+    icon: "boxicons:calendar-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -86,7 +117,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Métricas Propias",
-    icon: "boxicons:user-id-card",
+    icon: "boxicons:user-id-card-filled",
     agent: true,
     referent: true,
     team_leader: true,
@@ -95,7 +126,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Gestión de Calidad",
-    icon: "boxicons:star",
+    icon: "boxicons:star-filled",
     agent: false,
     referent: true,
     team_leader: true,
@@ -104,7 +135,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Autogestiones",
-    icon: "boxicons:user-check",
+    icon: "boxicons:user-check-filled",
     agent: false,
     referent: true,
     team_leader: true,
@@ -113,7 +144,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Editar Cronogramas",
-    icon: "boxicons:calendar",
+    icon: "boxicons:calendar-filled",
     agent: false,
     referent: false,
     team_leader: true,
@@ -122,7 +153,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Asistencia",
-    icon: "boxicons:clock",
+    icon: "boxicons:clock-filled",
     agent: false,
     referent: false,
     team_leader: true,
@@ -131,7 +162,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Administrar Títulos",
-    icon: "boxicons:note",
+    icon: "boxicons:note-filled",
     agent: false,
     referent: false,
     team_leader: true,
@@ -139,8 +170,17 @@ export const rolesMatrix: RoleMatrixFeature[] = [
     admin: true,
   },
   {
+    feature: "Cerrar Automatizaciones",
+    icon: "boxicons:rocket-filled",
+    agent: false,
+    referent: false,
+    team_leader: false,
+    supervisor: true,
+    admin: true,
+  },
+  {
     feature: "Administrar Contenido",
-    icon: "boxicons:task",
+    icon: "boxicons:task-filled",
     agent: false,
     referent: false,
     team_leader: false,
@@ -149,7 +189,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Administrar Usuarios",
-    icon: "boxicons:group",
+    icon: "boxicons:group-filled",
     agent: false,
     referent: false,
     team_leader: false,
@@ -158,7 +198,7 @@ export const rolesMatrix: RoleMatrixFeature[] = [
   },
   {
     feature: "Logs de Auditoría",
-    icon: "boxicons:history",
+    icon: "boxicons:history-filled",
     agent: false,
     referent: false,
     team_leader: false,

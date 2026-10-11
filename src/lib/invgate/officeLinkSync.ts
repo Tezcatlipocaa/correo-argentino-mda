@@ -8,6 +8,7 @@ import {
 } from "./locationMatcher";
 import type { InvgateLocation } from "../../types/invgate";
 import { eq } from "drizzle-orm";
+import { hasMosaicIndicator } from "@lib/officeHelpers";
 
 export interface SyncOfficeLinksResult {
   ok: boolean;
@@ -91,14 +92,25 @@ export async function syncOfficeInvgateLinks(): Promise<SyncOfficeLinksResult> {
       code: offices.code,
       name: offices.name,
       address: offices.address,
+      type: offices.type,
+      officeType: offices.officeType,
     })
     .from(offices);
   const officeCodeMap = new Map<string, { name: string; address: string }>();
   const officeToId = new Map<string, number>();
+  const officeInfoMap = new Map<
+    string,
+    { id: number; type: string; officeType: string | null }
+  >();
   for (const o of allOfficesRows) {
     if (o.code) {
       officeCodeMap.set(o.code, { name: o.name, address: o.address ?? "" });
       officeToId.set(o.code, o.id);
+      officeInfoMap.set(o.code, {
+        id: o.id,
+        type: o.type,
+        officeType: o.officeType,
+      });
     }
   }
 
@@ -120,6 +132,24 @@ export async function syncOfficeInvgateLinks(): Promise<SyncOfficeLinksResult> {
 
     const invgateLoc = match.invgateLocation;
     const rawLoc = rawLocById.get(invgateLoc.id);
+
+    const officeInfo = officeInfoMap.get(match.officeCode!);
+    if (
+      officeInfo &&
+      officeInfo.type === "SUCURSAL" &&
+      officeInfo.officeType !== "AUTOMATIZADA" &&
+      hasMosaicIndicator(invgateLoc.displayName, rawLoc?.name)
+    ) {
+      await db
+        .update(offices)
+        .set({ officeType: "AUTOMATIZADA" })
+        .where(eq(offices.id, officeDbId));
+      officeInfo.officeType = "AUTOMATIZADA";
+      console.log(
+        `[SyncOfficeLinks] Actualizada sucursal ${match.officeCode} a AUTOMATIZADA por coincidencia Mosaic (${invgateLoc.displayName})`,
+      );
+    }
+
     const parentId = rawLoc?.parent_id ?? null;
     const dupCount = invgateLoc.nis ? duplicateNis.get(invgateLoc.nis) || 0 : 0;
     if (dupCount > 0) duplicatesWritten++;

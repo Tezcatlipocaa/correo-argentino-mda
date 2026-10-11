@@ -1,0 +1,8 @@
+{
+  "track_id": "calidad_discrepancia_scores_card_20261001",
+  "type": "bug",
+  "status": "completed",
+  "created_at": "2026-10-01T23:08:00-03:00",
+  "updated_at": "2026-10-01T23:22:00-03:00",
+  "description": "Corrección de discrepancia de scores y parámetros entre modal y card de auditoría"
+}

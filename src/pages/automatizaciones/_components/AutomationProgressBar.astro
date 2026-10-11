@@ -1,0 +1,16 @@
+---
+interface Props {
+  percent: number;
+  class?: string;
+}
+
+const { percent, class: className = "", ...rest } = Astro.props;
+const clamped = Math.min(100, Math.max(0, percent));
+---
+
+<progress
+  class:list={["progress progress-secondary w-full", className]}
+  value={clamped}
+  max={100}
+  {...rest}
+></progress>

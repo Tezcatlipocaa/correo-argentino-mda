@@ -1,11 +1,15 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import {
+  newAuthenticatedPage,
+  destroyAdminSession,
+} from "./helpers/session.mjs";
 
 async function runTest() {
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const { page, context, session } = await newAuthenticatedPage(browser);
 
-  await page.goto("http://localhost:4321/directorio-oficinas");
+  await page.goto("http://localhost:4321/oficinas");
   await page.waitForSelector("[data-master-detail-sort-item]");
 
   const initialRows = await page
@@ -69,6 +73,11 @@ async function runTest() {
     console.log(`Tab filtered rows count: ${tabRows.length}`);
   }
 
+  // Tras la navegación por pestaña la página se recarga: esperar a que la tabla
+  // se re-inicialice (los listeners de filtros se re-adjuntan al hidratar).
+  await page.waitForLoadState("networkidle");
+  await page.waitForSelector("[data-master-detail-sort-item]");
+
   const searchInput = page.locator("#office-search");
   await searchInput.fill("xyz-non-existent-office-name-123");
   await page.waitForTimeout(1000);
@@ -78,6 +87,8 @@ async function runTest() {
   assert.ok(isVisible);
   console.log("Empty state is visible on no results");
 
+  await context.close();
+  destroyAdminSession(session.sessionId);
   await browser.close();
 }
 

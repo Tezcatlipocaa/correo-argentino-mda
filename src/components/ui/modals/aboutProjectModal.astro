@@ -47,7 +47,8 @@ const year = new Date().getFullYear();
             name="boxicons:building-house-filled"
             class="text-secondary-content"
             size={30}
-          />
+          
+            is:inline />
         </div>
 
         <h2
@@ -71,9 +72,9 @@ const year = new Date().getFullYear();
           <Icon name="boxicons:code-alt-filled" size={24} />
         </div>
         <div>
-          <h4 class="text-base-content text-sm font-semibold">
+          <h3 class="text-base-content text-sm font-semibold">
             Desarrollo y arquitectura
-          </h4>
+          </h3>
           <p class="text-base-content/70 mt-1 text-sm">
             Plataforma construida para optimizar la gestión de tickets,
             visualización de infraestructura y monitoreo técnico.
@@ -85,12 +86,12 @@ const year = new Date().getFullYear();
         <div
           class="bg-secondary/10 text-secondary mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
         >
-          <Icon name="boxicons:group-filled" size={24} />
+          <Icon name="boxicons:group-filled" size={24} is:inline />
         </div>
         <div class="w-full">
-          <h4 class="text-base-content mb-3 text-sm font-semibold">
+          <h3 class="text-base-content mb-3 text-sm font-semibold">
             Responsables del proyecto
-          </h4>
+          </h3>
           <ul class="grid grid-cols-3 gap-2">
             {
               owners.map((owner) => (
@@ -100,7 +101,8 @@ const year = new Date().getFullYear();
                       name="boxicons:user-filled"
                       size={14}
                       aria-hidden="true"
-                    />
+                    
+            is:inline />
                   </div>
                   <span class="text-base-content/90 text-xs font-bold">
                     {owner}

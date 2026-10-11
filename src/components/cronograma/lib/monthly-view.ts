@@ -750,7 +750,7 @@ export function renderDaily(): void {
               </div>
             </div>
           </td>
-          <td class="sticky left-64 bg-base-100 z-40 w-44 min-w-44 px-4 py-4 border-r border-base-300/40 group-hover:bg-base-200 transition-colors shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]">
+          <td class="sticky left-64 bg-base-100 z-40 w-44 min-w-44 px-4 py-4 border-r border-base-300/40 group-hover:bg-base-200 transition-colors shadow-table-edge">
             <div class="flex items-center gap-3">
                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-base border border-base-300/30 ${styles.bgClass}">
                   ${styles.icon}
@@ -1199,7 +1199,7 @@ export function renderMonthly(): void {
     : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>`;
 
   const thShadowClass = state.isTotalsCollapsed
-    ? "shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]"
+    ? "shadow-table-edge"
     : "";
 
   let theadHtml = `<tr>
@@ -1209,7 +1209,7 @@ export function renderMonthly(): void {
         <button
           type="button"
           id="toggle-totals-btn"
-          class="btn btn-xs btn-ghost p-0.5 rounded hover:bg-base-200 text-base-content/50 hover:text-base-content transition-colors"
+          class="btn btn-xs btn-ghost p-0.5 rounded min-h-8 min-w-8 hover:bg-base-200 text-base-content/50 hover:text-base-content transition-colors"
           title="${state.isTotalsCollapsed ? "Mostrar columnas de totales" : "Ocultar columnas de totales"}"
           aria-label="${state.isTotalsCollapsed ? "Mostrar columnas de totales" : "Ocultar columnas de totales"}"
         >
@@ -1223,7 +1223,7 @@ export function renderMonthly(): void {
     theadHtml += `
       <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center" style="left: var(--op-w, 200px)" title="Presencial">P</th>
       <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center" style="left: calc(var(--op-w, 200px) + 40px)" title="Home Office">HO</th>
-      <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]" style="left: calc(var(--op-w, 200px) + 80px)" title="Licencia/Vacaciones">L</th>
+      <th class="sticky top-0 bg-base-100 z-50 w-[40px] min-w-[40px] border-r border-b border-base-200 px-1 py-4 font-black text-tiny uppercase tracking-widest text-base-content/80 text-center shadow-table-edge" style="left: calc(var(--op-w, 200px) + 80px)" title="Licencia/Vacaciones">L</th>
     `;
   }
 
@@ -1378,7 +1378,7 @@ export function renderMonthly(): void {
       const showPWeekViolation = !isReadOnly && pWeekViolation;
 
       const opShadowClass = state.isTotalsCollapsed
-        ? "shadow-[4px_0_10px_-5px_rgba(0,0,0,0.05)]"
+        ? "shadow-table-edge"
         : "";
 
       const opUsername = (op.username || "").trim().toLowerCase();
@@ -1522,7 +1522,7 @@ export function renderMonthly(): void {
         else if (status === OperatorStatus.Licencia) initials = "L";
         else if (status === OperatorStatus.Vacaciones) initials = "V";
 
-        let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30 shadow-[0_0_10px_rgba(37,72,136,0.1)]" : "border-base-300/30"} ${styles.bgClass} shadow-sm ${isLicenseOverlap ? "border-error/40" : ""}`;
+        let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30" : "border-base-300/30"} ${styles.bgClass} ${isLicenseOverlap ? "border-error/40" : ""}`;
 
         let tooltipAttrs = "";
         const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
@@ -1625,7 +1625,7 @@ export function renderMonthly(): void {
     : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>`;
 
   const shadowClass = state.isTotalsCollapsed
-    ? "shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]"
+    ? "shadow-table-edge"
     : "";
 
   let tfootHtml = `<tr>
@@ -1639,7 +1639,7 @@ export function renderMonthly(): void {
         <button
           type="button"
           id="toggle-coverage-btn"
-          class="btn btn-xs btn-ghost p-0.5 rounded hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+          class="btn btn-xs btn-ghost p-0.5 rounded min-h-8 min-w-8 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
           title="${state.isCoverageMinimized ? "Maximizar resumen de cobertura" : "Minimizar resumen de cobertura"}"
           aria-label="${state.isCoverageMinimized ? "Maximizar resumen de cobertura" : "Minimizar resumen de cobertura"}"
         >
@@ -1655,7 +1655,7 @@ export function renderMonthly(): void {
     tfootHtml += `
       <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/40" style="left: var(--op-w, 200px)" title="Total Operadores">${teamSize}</td>
       <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20" style="left: calc(var(--op-w, 200px) + 40px)">-</td>
-      <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20 shadow-[4px_0_10px_-5px_rgba(0,0,0,0.1)]" style="left: calc(var(--op-w, 200px) + 80px)">-</td>
+      <td class="sticky bg-base-200 z-50 w-[40px] min-w-[40px] text-center ${pyClass} text-xxs font-black border-r border-base-300 text-base-content/20 shadow-table-edge" style="left: calc(var(--op-w, 200px) + 80px)">-</td>
     `;
   }
 
@@ -1676,7 +1676,7 @@ export function renderMonthly(): void {
              state.isCoverageMinimized
                ? ""
                : `
-           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgb(0_0_0_/_0.1)]">
                <div class="bg-purple-500 w-full transition-[height] duration-500" style="height: ${pppPercent}%" title="P. Parque Patricios: ${c.ppp}"></div>
                <div class="bg-amber-500 w-full transition-[height] duration-500" style="height: ${pmgPercent}%" title="P. Monte Grande: ${c.pmg}"></div>
                <div class="bg-secondary w-full transition-[height] duration-500" style="height: ${hoPercent}%" title="HO: ${c.ho}"></div>

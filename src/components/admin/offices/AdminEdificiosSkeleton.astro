@@ -1,0 +1,66 @@
+---
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+
+const headerGridClass = "grid-cols-[44px_1.6fr_2.2fr_90px_1.6fr_150px] gap-4";
+const rowGridClass =
+  "grid grid-cols-[44px_1.6fr_2.2fr_90px_1.6fr_150px] items-center gap-4";
+---
+
+<PageContainer width="xxl">
+  <div class="skeleton-debounced">
+    <PageHeader
+      title="Edificios de oficinas"
+      description="Oficinas que comparten un mismo edificio pero tienen la dirección escrita de forma distinta. Revisá los grupos, ajustá la dirección canónica si hace falta y unificá los seleccionados."
+    />
+
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
+      <div class="flex items-center gap-3">
+        <div class="skeleton h-6 w-8"></div>
+        <div class="skeleton h-4 w-48"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="skeleton h-8 w-44"></div>
+      </div>
+    </div>
+
+    <DataTable
+      ariaLabel="Edificios de oficinas"
+      headerGridClass={headerGridClass}
+      rowGridClass={rowGridClass}
+      emptyStateTitle="No hay edificios candidatos"
+      emptyStateDescription="Ningún grupo de oficinas comparte un edificio con direcciones escritas de forma distinta."
+      whenEmpty
+    >
+      <div slot="header" class={headerGridClass}>
+        <span></span>
+        <DataTableHeaderCell sortKey="id">Edificio</DataTableHeaderCell>
+        <DataTableHeaderCell>Dirección canónica</DataTableHeaderCell>
+        <DataTableHeaderCell sortKey="oficinas">Oficinas</DataTableHeaderCell>
+        <DataTableHeaderCell>Variantes detectadas</DataTableHeaderCell>
+        <span></span>
+      </div>
+
+      {
+        Array.from({ length: 4 }).map(() => (
+          <div
+            class:list={[
+              rowGridClass,
+              "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+            ]}
+            data-table-row
+          >
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+          </div>
+        ))
+      }
+    </DataTable>
+  </div>
+</PageContainer>

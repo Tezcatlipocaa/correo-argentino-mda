@@ -1,0 +1,90 @@
+---
+import { Icon } from "astro-icon/components";
+import { resolveUrl } from "@lib/url";
+
+interface Props {
+  title: string;
+  icon: string;
+  iconTone: string;
+  href?: string;
+  active?: boolean;
+  locked?: boolean;
+  badgeCount?: number;
+}
+
+const {
+  title,
+  icon,
+  iconTone,
+  href,
+  active = true,
+  locked = false,
+  badgeCount = 0,
+} = Astro.props;
+
+const isAccessible = active && Boolean(href) && !locked;
+---
+
+{
+  isAccessible && href ? (
+    <a
+      href={resolveUrl(href)}
+      class="hover:bg-base-200 group focus-visible:ring-primary flex items-center gap-4 px-6 py-4 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset"
+      aria-label={`Ir a ${title}`}
+    >
+      <div
+        class:list={[
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105",
+          iconTone,
+        ]}
+        aria-hidden="true"
+      >
+        <Icon name={icon} size={22} is:inline />
+      </div>
+      <span class="text-base-content flex flex-1 flex-wrap items-center gap-2 text-base font-semibold md:text-lg">
+        {title}
+        {badgeCount > 0 && (
+          <span class="badge badge-error badge-sm font-semibold">
+            {badgeCount} solicitudes sin asignar
+          </span>
+        )}
+      </span>
+      <Icon
+        name="boxicons:arrow-right-stroke-circle-filled"
+        size={22}
+        class="text-base-content/30 group-hover:text-base-content/60 transition-colors duration-150"
+        aria-hidden="true"
+      />
+    </a>
+  ) : (
+    <div
+      aria-disabled="true"
+      title={locked ? "Acceso restringido por rol" : "Próximamente"}
+      class="flex cursor-not-allowed items-center gap-4 px-6 py-4 opacity-40 select-none"
+    >
+      <div
+        class:list={[
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+          iconTone,
+        ]}
+        aria-hidden="true"
+      >
+        <Icon name={icon} size={22} is:inline />
+      </div>
+      <span class="text-base-content flex-1 text-base font-semibold md:text-lg">
+        {title}
+      </span>
+      {locked ? (
+        <Icon
+          name="boxicons:lock-filled"
+          size={22}
+          class="text-base-content/60"
+          aria-hidden="true"
+          is:inline
+        />
+      ) : (
+        <span class="badge badge-ghost badge-sm font-medium">Pronto</span>
+      )}
+    </div>
+  )
+}

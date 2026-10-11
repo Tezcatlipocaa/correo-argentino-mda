@@ -1,0 +1,27 @@
+---
+import type { AutomationSummary } from "@lib/workflow/discovery";
+import AutomationCardList from "./AutomationCardList.astro";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+
+interface Props {
+  items: readonly AutomationSummary[];
+  statusNames: Readonly<Record<number, string>>;
+  emptyMessage: string;
+  /** Card abierta al cargar (p. ej. la primera coincidencia de una búsqueda). */
+  defaultOpenId?: number | null;
+}
+
+const { items, statusNames, emptyMessage, defaultOpenId = null } = Astro.props;
+---
+
+{
+  items.length === 0 ? (
+    <AutomationEmptyState message={emptyMessage} />
+  ) : (
+    <AutomationCardList
+      items={items}
+      statusNames={statusNames}
+      defaultOpenId={defaultOpenId}
+    />
+  )
+}

@@ -10,7 +10,7 @@ import react from "@astrojs/react";
 import node from "@astrojs/node";
 
 export default defineConfig({
-  site: "http://mda.correo.local",
+  site: "https://mda.correo.local",
   base: "/",
   compressHTML: true,
 
@@ -42,15 +42,23 @@ export default defineConfig({
         },
       },
     },
+    ssr: {
+      external: ["@resvg/resvg-js"],
+    },
     build: {
       rolldownOptions: {
-        external: ["ldapjs"],
+        external: ["ldapjs", "@resvg/resvg-js"],
       },
     },
   },
 
   output: "server",
   integrations: [icon(), react()],
+
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: "hover",
+  },
 
   adapter: node({
     mode: "middleware",

@@ -1,0 +1,22 @@
+---
+import { Icon } from "astro-icon/components";
+import { resolveUrl } from "@lib/url";
+
+interface Props {
+  class?: string;
+}
+
+const { class: className = "" } = Astro.props;
+---
+
+<a
+  href={resolveUrl("/automatizaciones")}
+  data-astro-prefetch="hover"
+  class:list={[
+    "text-base-content/60 hover:text-base-content inline-flex items-center gap-1.5 text-sm transition-colors",
+    className,
+  ]}
+>
+  <Icon name="boxicons:arrow-left-filled" size={14} aria-hidden="true" />
+  Volver a automatizaciones
+</a>

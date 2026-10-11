@@ -50,7 +50,7 @@ const currentOption = options.find((o) => o.value === current) || options[0];
             data-sort-option
             class:list={[{ "menu-active": current === opt.value }]}
           >
-            <Icon name={opt.icon} size={14} />
+            <Icon name={opt.icon} size={14} is:inline />
             {opt.label}
           </button>
         </li>

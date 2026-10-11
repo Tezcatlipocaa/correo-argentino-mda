@@ -1,6 +1,7 @@
 import { db } from "@db/index";
-import { agents, schedules, assignmentLock, assignmentHistory } from "@db/schema";
+import { agents, users, schedules, assignmentLock, assignmentHistory } from "@db/schema";
 import { eq, and, desc, gte, lte } from "drizzle-orm";
+import { activeAgentCondition } from "@lib/activeUsers";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
 import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment, invalidateUnassignedTicketsCache } from "@/lib/invgate/agsTickets";
 import {
@@ -257,7 +258,8 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       asignableAgs: agents.asignableAgs,
     })
     .from(agents)
-    .where(eq(agents.enCronograma, true));
+    .leftJoin(users, eq(users.id, agents.userId))
+    .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
 
   // Filtrar solo operadores que pertenecen a la Mesa 3950 de InvGate
   const dbAgents = dbAgentsAll.filter((agent) => {

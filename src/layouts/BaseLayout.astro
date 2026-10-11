@@ -14,6 +14,7 @@ import {
 import { normalizeRole, hasPermission } from "@lib/rbac";
 import { isSectionVisibleSync } from "@lib/helpdeskAccess";
 import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
+import { ClientRouter } from "astro:transitions";
 
 // Components
 import { Navbar, DrawerContent } from "./_components";
@@ -67,6 +68,15 @@ const getRelativePath = (path: string) => {
 };
 
 const relativeCurrentPath = getRelativePath(currentPath);
+
+/**
+ * View transitions scoped al módulo de automatizaciones: el ClientRouter
+ * solo se inyecta en sus rutas, así que el resto del portal navega de forma
+ * tradicional sin riesgo para las páginas con scripts pesados.
+ */
+const isAutomationModule = /^\/automatizaciones(\/|$)/.test(
+  relativeCurrentPath,
+);
 
 const isActiveRoute = (href: string) =>
   href === "/"
@@ -133,14 +143,13 @@ const globalFontFaceCss = `
 <html lang="es">
   <head>
     <meta charset="utf-8" />
+    {isAutomationModule && <ClientRouter />}
 
     <script is:inline>
-      (() => {
+      const applyTheme = () => {
         const savedTheme = localStorage.getItem("theme");
         const theme =
-          savedTheme === "light" || savedTheme === "dark"
-            ? savedTheme
-            : "light";
+          savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
         document.documentElement.setAttribute("data-theme", theme);
 
         const root = document.documentElement;
@@ -152,7 +161,29 @@ const globalFontFaceCss = `
         if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
           root.setAttribute("data-view-columns", cols);
         }
-      })();
+
+        const toggle = document.getElementById("theme-toggle");
+        if (toggle instanceof HTMLInputElement) {
+          toggle.checked = theme === "dark";
+        }
+      };
+      applyTheme();
+      // En view transitions el swap no re-ejecuta este script y el html nuevo
+      // llega sin data-theme (daisyUI --prefersdark secuestraria el tema):
+      // se re-aplica el tema guardado inmediatamente despues de cada swap.
+      document.addEventListener("astro:after-swap", applyTheme);
+      // Persistencia + aplicacion del tema: delegacion en document (sobrevive
+      // a los swaps, a diferencia de los listeners por-elemento de theme-change).
+      document.addEventListener("change", (event) => {
+        if (
+          event.target instanceof HTMLInputElement &&
+          event.target.classList.contains("theme-controller")
+        ) {
+          const theme = event.target.checked ? "dark" : "light";
+          localStorage.setItem("theme", theme);
+          document.documentElement.setAttribute("data-theme", theme);
+        }
+      });
     </script>
     <style is:global set:html={globalFontFaceCss}></style>
     <link
@@ -190,6 +221,14 @@ const globalFontFaceCss = `
         class="drawer-toggle"
         aria-label="toggle sidebar"
       />
+      <!-- Drawer content -->
+      <DrawerContent
+        visibleNavSections={visibleNavSections}
+        isActiveRoute={isActiveRoute}
+        isRouteLocked={isRouteLocked}
+        unassignedFeedbackCount={unassignedFeedbackCount}
+      />
+
       <div
         class="drawer-content flex h-screen max-w-full flex-col overflow-hidden"
       >
@@ -203,14 +242,6 @@ const globalFontFaceCss = `
           <slot />
         </main>
       </div>
-
-      <!-- Drawer content -->
-      <DrawerContent
-        visibleNavSections={visibleNavSections}
-        isActiveRoute={isActiveRoute}
-        isRouteLocked={isRouteLocked}
-        unassignedFeedbackCount={unassignedFeedbackCount}
-      />
     </div>
   </body>
 

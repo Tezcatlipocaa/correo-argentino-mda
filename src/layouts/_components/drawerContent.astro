@@ -22,7 +22,7 @@ const {
 } = Astro.props as Props;
 ---
 
-<aside class="drawer-side z-60 lg:z-60 lg:overflow-visible">
+<aside class="drawer-side z-[160] lg:z-[160] lg:overflow-visible">
   <label for="main-drawer" aria-label="close sidebar" class="drawer-overlay"
   ></label>
   <div
@@ -32,10 +32,12 @@ const {
     <a
       href={resolveUrl("/")}
       aria-label="Ir al dashboard"
-      class="group border-secondary-content/10 flex min-h-20 w-full items-center gap-2.5 border-b px-3 lg:justify-center lg:px-2"
+      data-tip="Volver a inicio"
+      class="group nav-shine-target hover:bg-white/10 border-secondary-content/10 tooltip tooltip-right tooltip-neutral relative flex min-h-20 w-full items-center gap-2.5 border-b px-3 transition-colors lg:justify-center lg:px-2"
     >
+      <span class="nav-shine" aria-hidden="true" />
       <picture
-        class="bg-primary text-secondary flex aspect-square size-10 items-center justify-center rounded-md p-2 transition-transform duration-200 ease-out group-hover:scale-110"
+        class="text-white relative grid size-7 shrink-0 place-items-center transition-transform duration-200 ease-out group-hover:scale-110"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -43,6 +45,7 @@ const {
           height="100"
           fill="currentColor"
           viewBox="0 0 100 100"
+          class="size-7"
         >
           <g
             id="isotipo-correo-argentino"
@@ -103,17 +106,21 @@ const {
                         }
                         tabindex={isLocked ? -1 : undefined}
                         class:list={[
-                          "group flex items-center gap-2.5 rounded-lg p-2.5 text-xs font-medium transition",
+                          "group relative flex items-center gap-2.5 rounded-lg p-2.5 text-xs font-medium transition",
                           "lg:justify-center lg:px-2.5",
                           "tooltip tooltip-right tooltip-neutral",
                           showBadge ? "indicator w-full" : "",
+                          !isLocked && !isActive ? "nav-shine-target" : "",
                           isLocked
                             ? "pointer-events-none cursor-not-allowed opacity-40 grayscale select-none"
                             : isActive
-                              ? "bg-primary text-primary-content shadow-sm"
+                              ? "bg-steel-azure-750 text-secondary-content shadow-sm"
                               : "text-secondary-content/70 hover:bg-white/10 hover:text-white",
                         ]}
                       >
+                        {!isLocked && !isActive && (
+                          <span class="nav-shine" aria-hidden="true" />
+                        )}
                         {showBadge && (
                           <span
                             class="indicator-item badge badge-error badge-xs text-tiny absolute -top-1.25 -right-1.25 z-10 flex size-4 items-center justify-center p-0 font-mono font-bold"
@@ -125,6 +132,7 @@ const {
                         )}
                         <Icon
                           name={item.icon}
+                          is:inline
                           size={24}
                           class="shrink-0 opacity-80 transition duration-200 ease-out group-hover:scale-110 group-hover:opacity-100"
                         />
@@ -135,7 +143,8 @@ const {
                             size={14}
                             class="ml-auto shrink-0 opacity-60 lg:hidden"
                             aria-hidden="true"
-                          />
+                          
+            is:inline />
                         )}
                       </a>
                     </li>
@@ -155,3 +164,47 @@ const {
     </section>
   </div>
 </aside>
+
+<style>
+  /*
+   * Brillo (glint) al pasar el mouse por un atajo o por el logo: una capa
+   * overlay que cubre todo el item/botón (no toca el layout ni los
+   * pseudo-elementos del tooltip de daisyUI, que usa ::before/::after del
+   * propio <a>).
+   */
+  .nav-shine {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    pointer-events: none;
+  }
+
+  .nav-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      color-mix(in oklab, var(--color-secondary-content) 26%, transparent) 50%,
+      transparent 65%
+    );
+    transform: translateX(-130%);
+    transition: transform 1000ms ease;
+  }
+
+  .nav-shine-target:hover .nav-shine::after {
+    transform: translateX(130%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-shine-target:hover .nav-shine::after,
+    .nav-shine::after {
+      transition: none;
+      transform: none;
+      opacity: 0;
+    }
+  }
+</style>

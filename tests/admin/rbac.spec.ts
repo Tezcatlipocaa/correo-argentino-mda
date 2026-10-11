@@ -5,6 +5,17 @@ import { users, sessions, mesas } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 import { createHmac } from "crypto";
 
+/**
+ * Base efectiva del proyecto. Los asserts de URL deben compararse contra esto
+ * y no contra un puerto fijo: `playwright.config.ts:12` permite correr la suite
+ * con `PLAYWRIGHT_BASE_URL` en otro puerto cuando 4321 esta ocupado por otro
+ * proyecto local.
+ */
+function basePath(pathname = "/"): string {
+  const base = test.info().project.use.baseURL ?? "http://localhost:4321";
+  return `${base.replace(/\/$/, "")}${pathname}`;
+}
+
 const SECRET_KEY =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
 
@@ -109,7 +120,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
     page,
   }) => {
     await page.goto("/supervision/asignacion-autogestiones");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -119,7 +130,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
     page,
   }) => {
     await page.goto("/supervision/calidad-operadores");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -129,7 +140,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
     page,
   }) => {
     await page.goto("/supervision/cronograma");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -139,7 +150,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
     page,
   }) => {
     await page.goto("/supervision/asistencia");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -147,7 +158,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
 
   test("Agente no deberia poder acceder a /admin", async ({ page }) => {
     await page.goto("/admin");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -157,7 +168,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
     page,
   }) => {
     await page.goto("/mesas-de-ayuda/edit/99999");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -167,7 +178,7 @@ test.describe("Controles de Acceso (RBAC) - Agente", () => {
     page,
   }) => {
     await page.goto("/oficinas/create");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -190,7 +201,7 @@ test.describe("Controles de Acceso (RBAC) - Referente", () => {
     page,
   }) => {
     await page.goto("/supervision/asignacion-autogestiones");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -200,7 +211,7 @@ test.describe("Controles de Acceso (RBAC) - Referente", () => {
     page,
   }) => {
     await page.goto("/supervision/cronograma");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -210,7 +221,7 @@ test.describe("Controles de Acceso (RBAC) - Referente", () => {
     page,
   }) => {
     await page.goto("/supervision/asistencia");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -233,7 +244,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/admin/usuarios");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -243,7 +254,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/admin/Usuarios");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -253,7 +264,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/admin/auditoria");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -263,7 +274,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/supervision/cronograma");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -273,7 +284,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/supervision/asistencia");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -283,7 +294,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/mesas-de-ayuda");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -293,7 +304,7 @@ test.describe("Controles de Acceso (RBAC) - Supervisor", () => {
     page,
   }) => {
     await page.goto("/oficinas/create");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -316,7 +327,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/admin/usuarios");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -326,7 +337,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/admin/auditoria");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -336,7 +347,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/supervision/cronograma");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -346,7 +357,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/supervision/asistencia");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -356,7 +367,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/supervision/asignacion-autogestiones");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -366,7 +377,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/mesas-de-ayuda/edit/99999");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -376,7 +387,7 @@ test.describe("Controles de Acceso (RBAC) - Team Leader", () => {
     page,
   }) => {
     await page.goto("/oficinas/create");
-    await expect(page).toHaveURL("http://localhost:4321/");
+    await expect(page).toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).toContainText(
       "Acceso no autorizado",
     );
@@ -399,7 +410,7 @@ test.describe("Controles de Acceso (RBAC) - Administrador", () => {
     page,
   }) => {
     await page.goto("/admin/auditoria");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -409,7 +420,7 @@ test.describe("Controles de Acceso (RBAC) - Administrador", () => {
     page,
   }) => {
     await page.goto("/supervision/asistencia");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -419,7 +430,7 @@ test.describe("Controles de Acceso (RBAC) - Administrador", () => {
     page,
   }) => {
     await page.goto("/mesas-de-ayuda");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
@@ -429,7 +440,7 @@ test.describe("Controles de Acceso (RBAC) - Administrador", () => {
     page,
   }) => {
     await page.goto("/oficinas/create");
-    await expect(page).not.toHaveURL("http://localhost:4321/");
+    await expect(page).not.toHaveURL(basePath());
     await expect(page.locator("#global-toast-container")).not.toContainText(
       "Acceso no autorizado",
     );
