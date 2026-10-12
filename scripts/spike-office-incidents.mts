@@ -1,5 +1,5 @@
 // scripts/spike-office-incidents.mts
-// One-off: lista, por nodo de helpdesk activo (mesas), cuántos tickets abiertos
+// One-off: lista, por nodo de helpdesk activo (mesas), cuántos tickets del nodo
 // trae incidents.by.helpdesk y cuántos tienen location_id (oficina) asignado.
 // Uso: npx tsx scripts/spike-office-incidents.mts
 import "dotenv/config";
@@ -30,7 +30,13 @@ async function countWithLocation(ids: number[]): Promise<number> {
       `incidents?${query}`,
       DETAIL_TIMEOUT_MS,
     );
-    if (!res.ok || !res.data) throw new Error(res.message ?? "detalle falló");
+    if (!res.ok || !res.data) {
+      throw new Error(
+        "message" in res && res.message
+          ? res.message
+          : "No se pudieron obtener los detalles de los tickets.",
+      );
+    }
     for (const inc of Object.values(res.data)) {
       if (inc.location_id != null) withLocation++;
     }
@@ -56,8 +62,14 @@ for (const node of rows) {
       `incidents.by.helpdesk?helpdesk_id=${node.id}&limit=500`,
       NODE_TIMEOUT_MS,
     );
-    const ids =
-      res.ok && Array.isArray(res.data?.requestIds) ? res.data.requestIds : [];
+    if (!res.ok || !Array.isArray(res.data?.requestIds)) {
+      throw new Error(
+        "message" in res && res.message
+          ? res.message
+          : `Respuesta inválida de InvGate al consultar el nodo ${node.id}.`,
+      );
+    }
+    const ids = res.data.requestIds;
     const withLocation = ids.length > 0 ? await countWithLocation(ids) : 0;
     report.push({ id: node.id, name: node.name, total: ids.length, withLocation });
   } catch (error) {

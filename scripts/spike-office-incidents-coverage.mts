@@ -1,5 +1,5 @@
 // scripts/spike-office-incidents-coverage.mts
-// One-off: mide costo (latencia) y cobertura (mesas con tickets abiertos, cuántos
+// One-off: mide costo (latencia) y cobertura (mesas con tickets del nodo, cuántos
 // con location_id) de un barrido secuencial sobre TODOS los nodos activos.
 // Uso: npx tsx scripts/spike-office-incidents-coverage.mts
 import "dotenv/config";
@@ -34,7 +34,13 @@ async function countWithLocation(ids: number[]): Promise<number> {
       `incidents?${query}`,
       DETAIL_TIMEOUT_MS,
     );
-    if (!res.ok || !res.data) throw new Error(res.message ?? "detalle falló");
+    if (!res.ok || !res.data) {
+      throw new Error(
+        "message" in res && res.message
+          ? res.message
+          : "No se pudieron obtener los detalles de los tickets.",
+      );
+    }
     for (const inc of Object.values(res.data)) {
       if (inc.location_id != null) withLocation++;
     }
@@ -71,8 +77,14 @@ for (const node of rows) {
       `incidents.by.helpdesk?helpdesk_id=${node.id}&limit=500`,
       NODE_TIMEOUT_MS,
     );
-    const ids =
-      res.ok && Array.isArray(res.data?.requestIds) ? res.data.requestIds : [];
+    if (!res.ok || !Array.isArray(res.data?.requestIds)) {
+      throw new Error(
+        "message" in res && res.message
+          ? res.message
+          : `Respuesta inválida de InvGate al consultar el nodo ${node.id}.`,
+      );
+    }
+    const ids = res.data.requestIds;
     const latencyMs = Date.now() - t0;
     latencies.push(latencyMs);
     for (const id of ids) {
@@ -107,7 +119,7 @@ const avgLat = latencies.length
 
 console.log("\n=== BARRIDO COMPLETO ===");
 console.log(`nodos con >0 tickets: ${withTickets.length} de ${rows.length}`);
-console.log(`total abiertos (dedup por id): ${totalTickets}`);
+console.log(`total tickets del nodo (dedup por id): ${totalTickets}`);
 console.log(`desde los 9 nodos medidos: ${fromMeasured}`);
 console.log(`desde el resto: ${fromRest}`);
 console.log(
@@ -130,12 +142,18 @@ for (const node of topUnmeasured) {
       `incidents.by.helpdesk?helpdesk_id=${node.id}&limit=500`,
       NODE_TIMEOUT_MS,
     );
-    const ids =
-      res.ok && Array.isArray(res.data?.requestIds) ? res.data.requestIds : [];
+    if (!res.ok || !Array.isArray(res.data?.requestIds)) {
+      throw new Error(
+        "message" in res && res.message
+          ? res.message
+          : `Respuesta inválida de InvGate al consultar el nodo ${node.id}.`,
+      );
+    }
+    const ids = res.data.requestIds;
     const withLocation = ids.length > 0 ? await countWithLocation(ids) : 0;
     detailById.set(node.id, withLocation);
     console.log(
-      `  ${node.id} ${node.name}: ${ids.length} abiertos, ${withLocation} con location (${Date.now() - t0}ms)`,
+      `  ${node.id} ${node.name}: ${ids.length} tickets del nodo, ${withLocation} con location (${Date.now() - t0}ms)`,
     );
   } catch (error) {
     detailById.set(node.id, -1);
