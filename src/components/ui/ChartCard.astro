@@ -17,6 +17,7 @@ interface Props {
   chartName?: string;
   variant?: "card" | "bare";
   emptyMessage?: string;
+  exportable?: boolean;
   class?: string;
 }
 
@@ -31,6 +32,7 @@ const {
   chartName,
   variant = "card",
   emptyMessage = "Sin datos para los filtros seleccionados",
+  exportable = false,
   class: className = "",
 } = Astro.props;
 
@@ -46,6 +48,7 @@ const chartProps = JSON.stringify({
   series,
   fetchUrl,
   chartKey,
+  exportable,
 });
 ---
 
@@ -93,7 +96,19 @@ const chartProps = JSON.stringify({
       />
     </div>
 
-    <div class="flex justify-end">
+    <div class="flex items-center justify-end gap-1">
+      {exportable && (
+        <div class="items-center gap-1" data-export-buttons style="display: none">
+          <button type="button" class="btn btn-ghost btn-sm" data-export-png>
+            <Icon name="boxicons:image" size={16} is:inline />
+            <span>PNG</span>
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" data-export-csv>
+            <Icon name="boxicons:file" size={16} is:inline />
+            <span>CSV</span>
+          </button>
+        </div>
+      )}
       <button
         type="button"
         class="btn btn-ghost btn-sm"
@@ -121,6 +136,7 @@ interface ChartCardProps {
   series: { label: string; data: number[] }[];
   fetchUrl?: string;
   chartKey?: string;
+  exportable?: boolean;
 }
 
 interface ChartWindow extends Window {
@@ -132,6 +148,73 @@ interface ChartWindow extends Window {
 }
 
 const win = window as ChartWindow;
+
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function dateStamp(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}${mm}${dd}`;
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportPng(canvas: HTMLCanvasElement, title: string): void {
+  const source = document.createElement("canvas");
+  source.width = canvas.width;
+  source.height = canvas.height;
+  const ctx = source.getContext("2d");
+  if (!ctx) return;
+  // El canvas de Chart.js es transparente: recomponer sobre base-100.
+  const style = getComputedStyle(document.documentElement);
+  ctx.fillStyle = style.getPropertyValue("--color-base-100").trim() || "#ffffff";
+  ctx.fillRect(0, 0, source.width, source.height);
+  ctx.drawImage(canvas, 0, 0);
+  source.toBlob((blob) => {
+    if (blob) triggerDownload(blob, `${slugify(title)}-${dateStamp()}.png`);
+  }, "image/png");
+}
+
+function csvEscape(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function exportCsv(
+  currentLabels: string[],
+  currentSeries: { label: string; data: number[] }[],
+  title: string,
+): void {
+  const lines = [["Serie", ...currentLabels].map(csvEscape).join(";")];
+  for (const s of currentSeries) {
+    lines.push(
+      [s.label, ...currentLabels.map((_, i) => String(s.data[i] ?? 0))]
+        .map(csvEscape)
+        .join(";"),
+    );
+  }
+  // BOM + ';' para que Excel es-AR lo abra en columnas.
+  const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], {
+    type: "text/csv;charset=utf-8",
+  });
+  triggerDownload(blob, `${slugify(title)}-${dateStamp()}.csv`);
+}
 
 function initChartCard(card: HTMLElement): void {
   let props: ChartCardProps;
@@ -153,6 +236,7 @@ function initChartCard(card: HTMLElement): void {
     series,
     fetchUrl,
     chartKey,
+    exportable = false,
   } = props;
 
   const style = getComputedStyle(document.documentElement);
@@ -164,6 +248,7 @@ function initChartCard(card: HTMLElement): void {
   const emptyEl = card.querySelector<HTMLElement>("[data-chart-empty]");
   const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
   const toggleBtn = card.querySelector<HTMLButtonElement>("[data-table-toggle]");
+  const exportWrap = card.querySelector<HTMLElement>("[data-export-buttons]");
 
   let chart: Chart | null = null;
   let currentLabels: string[] = [...labels];
@@ -178,14 +263,20 @@ function initChartCard(card: HTMLElement): void {
     const tableWrap = card.querySelector("[data-chart-table]");
     const toggle = card.querySelector("[data-table-toggle]");
     const label = card.querySelector("[data-table-toggle-label]");
-    canvasEl?.classList.toggle("hidden", showingTable);
+    // Sin datos el canvas queda oculto: showEmpty() ya maneja el mensaje, y
+    // re-mostrar el canvas acá dejaba "Sin datos" y un canvas vacío a la vez.
+    const hideCanvas = showingTable || !hasData();
+    canvasEl?.classList.toggle("hidden", hideCanvas);
     if (canvasEl) {
-      canvasEl.style.display = showingTable ? "none" : "";
+      canvasEl.style.display = hideCanvas ? "none" : "";
     }
     tableWrap?.classList.toggle("hidden", !showingTable);
     if (toggle) {
       if (label) label.textContent = showingTable ? "Ver gráfico" : "Ver tabla";
       toggle.setAttribute("aria-expanded", String(showingTable));
+    }
+    if (exportWrap) {
+      exportWrap.style.display = hasData() ? "flex" : "none";
     }
   }
 
@@ -413,8 +504,25 @@ function initChartCard(card: HTMLElement): void {
   }
 
   let fetchSeq = 0;
+  // Dedup por query: `lastQuery` se registra solo cuando el fetch resuelve OK
+  // (una carga exitosa no se repite), y `inFlightQuery` coalesce los triggers
+  // idénticos que llegan mientras hay un request en vuelo (init +
+  // stats:filters-changed en el primer render). Si ese request falla, el trigger
+  // coalescido reintenta en vez de quedar skipeado.
+  let lastQuery: string | null = null;
+  let inFlightQuery: string | null = null;
+  let retryPending = false;
 
   function fetchData(query: string) {
+    // Solo skipear cuando nada está en vuelo; si no, una respuesta ya
+    // superada podría ganar cuando el usuario vuelve a una query ya cargada.
+    if (query === lastQuery && inFlightQuery === null) return;
+    if (query === inFlightQuery) {
+      retryPending = true;
+      return;
+    }
+    inFlightQuery = query;
+    retryPending = false;
     const separator = fetchUrl?.includes("?") ? "&" : "?";
     const seq = ++fetchSeq;
     return fetch(`${fetchUrl}${separator}${query}`)
@@ -424,10 +532,20 @@ function initChartCard(card: HTMLElement): void {
       })
       .then((body) => {
         if (seq !== fetchSeq) return;
+        inFlightQuery = null;
+        lastQuery = query;
+        retryPending = false;
         const slice = body.charts[chartKey as string];
         setData(slice.labels, slice.series);
       })
-      .catch((error) => console.error("[ChartCard] fetch falló:", error));
+      .catch((error) => {
+        if (seq === fetchSeq) inFlightQuery = null;
+        console.error("[ChartCard] fetch falló:", error);
+        if (retryPending) {
+          retryPending = false;
+          fetchData(query);
+        }
+      });
   }
 
   function onFiltersChanged(event: Event) {
@@ -445,6 +563,19 @@ function initChartCard(card: HTMLElement): void {
     showingTable = !showingTable;
     renderTableVisibility();
   });
+
+  if (exportable) {
+    card
+      .querySelector("[data-export-png]")
+      ?.addEventListener("click", () => {
+        if (canvas) exportPng(canvas, title);
+      });
+    card
+      .querySelector("[data-export-csv]")
+      ?.addEventListener("click", () => {
+        exportCsv(currentLabels, currentSeries, title);
+      });
+  }
 
   const observer = new MutationObserver(() => {
     if (chart) buildChart();

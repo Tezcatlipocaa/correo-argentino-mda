@@ -21,11 +21,12 @@
     "db:apply-titles-enrichment": "tsx scripts/apply-titles-enrichment.mts",
     "db:seed-etapas": "tsx scripts/seed-workflow-stages.ts",
     "warm:automations": "tsx scripts/warm-automations.ts",
+    "snapshot:automation-metrics": "tsx scripts/snapshot-automation-metrics.ts",
     "reconcile:automation-parents": "tsx scripts/reconcile-automation-parents.ts",
     "buildings:reconcile": "tsx scripts/reconcile-buildings.ts",
     "test:unit": "vitest run",
     "test": "npm run test:domain && npm run test:unit",
-    "test:domain": "tsx --test src/lib/officeAddress.test.ts src/lib/officeAddressSuggestions.test.ts src/lib/officeBuildingKey.test.ts src/lib/officeBuildingReconcile.test.ts src/lib/officeLayout.test.ts src/lib/officeSiblings.test.ts src/lib/supportGuides.test.ts",
+    "test:domain": "tsx --test src/lib/officeAddress.test.ts src/lib/officeAddressSuggestions.test.ts src/lib/officeBuildingKey.test.ts src/lib/officeBuildingReconcile.test.ts src/lib/officeLayout.test.ts src/lib/officeSiblings.test.ts src/lib/officeStats.test.ts src/lib/supportGuides.test.ts src/lib/terminalStats.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:reconcile": "playwright test tests/admin/reconcile-buildings.spec.ts"
   },

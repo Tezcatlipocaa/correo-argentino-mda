@@ -3,11 +3,16 @@ import { inArray } from "drizzle-orm";
 import { db } from "../src/db";
 import { automationParents } from "../src/db/schema";
 import {
+  getAutomationParentsDataAsOf,
+  listAutomationParentsForExport,
   listAutomationParentsPage,
+  listAutomationRegions,
   listRecentAutomationParents,
+  parseAutomationParentsQuery,
   upsertAutomationParentStatus,
   upsertAutomationParents,
 } from "../src/lib/workflow/parent-history";
+import { nowSeconds } from "../src/lib/workflow/time";
 
 /**
  * Verificación unitaria de la paginación/búsqueda del historial de padres.
@@ -141,6 +146,129 @@ try {
   check("búsqueda por código con prefijo", accentByCode.total === 1);
 } finally {
   cleanup();
+}
+
+// Filtros de región/antigüedad, orden, export y metadata.
+{
+  const now = nowSeconds();
+  const DAY = 86_400;
+  const fIds = [999999911, 999999912, 999999913];
+  const cleanupFilters = () => {
+    try {
+      db.delete(automationParents)
+        .where(inArray(automationParents.automationId, fIds))
+        .run();
+    } catch {
+      /* noop */
+    }
+  };
+
+  cleanupFilters();
+  try {
+    upsertAutomationParents([
+      {
+        id: fIds[0],
+        prettyId: "#f1",
+        branchCode: "ZZTESTF1",
+        branchName: "Filtros Uno",
+        displayName: "Automatización Filtros 1",
+        statusId: 2,
+        isActive: true,
+        createdAt: now - 2 * DAY,
+        updatedAt: now - 2 * DAY,
+        closedAt: null,
+        region: "Metro",
+      },
+      {
+        id: fIds[1],
+        prettyId: "#f2",
+        branchCode: "ZZTESTF2",
+        branchName: "Filtros Dos",
+        displayName: "Automatización Filtros 2",
+        statusId: 2,
+        isActive: true,
+        createdAt: now - 20 * DAY,
+        updatedAt: now - DAY,
+        closedAt: null,
+        region: "Sur",
+      },
+      {
+        id: fIds[2],
+        prettyId: "#f3",
+        branchCode: "ZZTESTF3",
+        branchName: "Filtros Tres",
+        displayName: "Automatización Filtros 3",
+        statusId: 6,
+        isActive: false,
+        createdAt: now - 40 * DAY,
+        updatedAt: now - 40 * DAY,
+        closedAt: now - 38 * DAY,
+        region: "Sur",
+      },
+    ]);
+
+    const metro = listAutomationParentsPage({ q: "ZZTESTF", region: "Metro" });
+    check(
+      "filtro por región",
+      metro.total === 1 && metro.items[0].id === fIds[0],
+    );
+
+    const recent = listAutomationParentsPage({
+      q: "ZZTESTF",
+      status: "active",
+      age: "0-7",
+    });
+    check("filtro antigüedad 0-7 (activos)", recent.total === 1);
+
+    const old30 = listAutomationParentsPage({ q: "ZZTESTF", age: "30+" });
+    check("filtro antigüedad 30+", old30.total === 1 && old30.items[0].id === fIds[2]);
+
+    const oldest = listAutomationParentsPage({
+      q: "ZZTESTF",
+      order: "oldest",
+    });
+    check("orden oldest", oldest.items[0].id === fIds[2]);
+
+    const exported = listAutomationParentsForExport({ q: "ZZTESTF" });
+    check("export sin paginar", exported.length === 3);
+
+    const dataAsOf = getAutomationParentsDataAsOf();
+    check(
+      "dataAsOf refleja el último scan",
+      typeof dataAsOf === "number" && dataAsOf >= now - 5,
+    );
+
+    const regions = listAutomationRegions();
+    check(
+      "regiones incluye Metro y Sur",
+      regions.includes("Metro") && regions.includes("Sur"),
+    );
+
+    const parsed = parseAutomationParentsQuery(
+      new URLSearchParams("status=active&region=Sur&age=8-15&order=oldest&q=x"),
+    );
+    check(
+      "parseAutomationParentsQuery normaliza los params",
+      parsed.status === "active" &&
+        parsed.region === "Sur" &&
+        parsed.age === "8-15" &&
+        parsed.order === "oldest" &&
+        parsed.q === "x",
+    );
+
+    const parsedDates = parseAutomationParentsQuery(
+      new URLSearchParams("from=2026-09-01&to=2026-09-30"),
+    );
+    check(
+      "parseAutomationParentsQuery parsea el rango de fechas",
+      typeof parsedDates.from === "number" &&
+        typeof parsedDates.to === "number" &&
+        parsedDates.to > parsedDates.from &&
+        (parsedDates.to - parsedDates.from) % 86_400 === 0,
+    );
+  } finally {
+    cleanupFilters();
+  }
 }
 
 if (failures.length > 0) {

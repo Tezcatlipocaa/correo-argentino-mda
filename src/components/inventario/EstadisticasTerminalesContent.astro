@@ -1,0 +1,282 @@
+---
+import { Icon } from "astro-icon/components";
+import StatsCard from "@components/ui/StatsCard.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import { db } from "@db/index";
+import { provinces, regions } from "@db/schema";
+import { getCleanBase } from "@lib/baseUrl";
+import {
+  MARCA_LABELS,
+  MARCA_VALUES,
+  OS_FILTER_BUCKETS,
+  OS_FILTER_VALUES,
+} from "@lib/terminalStats";
+
+const endpoint = `${getCleanBase()}api/terminals/estadisticas`;
+const inventarioHref = `${getCleanBase()}inventario-terminales`;
+
+const marcaOptions = MARCA_VALUES.map((value) => ({
+  value,
+  label: MARCA_LABELS[value],
+}));
+const osLabels: Record<string, string> = {
+  ...OS_FILTER_BUCKETS,
+  "sin-dato": "Sin datos",
+};
+const osOptions = OS_FILTER_VALUES.map((value) => ({
+  value,
+  label: osLabels[value],
+}));
+
+const regionOptions = await db
+  .select({ id: regions.id, name: regions.name })
+  .from(regions)
+  .orderBy(regions.name);
+const provinceOptions = await db
+  .select({ code: provinces.code, name: provinces.name })
+  .from(provinces)
+  .orderBy(provinces.name);
+---
+
+<div class="flex w-full flex-col gap-6 pb-24">
+  <div
+    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:flex-wrap md:items-end"
+  >
+    <label class="form-control w-full md:w-48">
+      <span class="label-text mb-1 text-sm font-bold">Región</span>
+      <select id="stats-region" class="select select-bordered select-sm">
+        <option value="">Todas</option>
+        {regionOptions.map((r) => <option value={r.id}>{r.name}</option>)}
+      </select>
+    </label>
+    <label class="form-control w-full md:w-56">
+      <span class="label-text mb-1 text-sm font-bold">Provincia</span>
+      <select id="stats-provincia" class="select select-bordered select-sm">
+        <option value="">Todas</option>
+        {provinceOptions.map((p) => (
+          <option value={p.code}>{p.name}</option>
+        ))}
+      </select>
+    </label>
+    <label class="form-control w-full md:w-40">
+      <span class="label-text mb-1 text-sm font-bold">Marca</span>
+      <select id="stats-marca" class="select select-bordered select-sm">
+        <option value="">Todas</option>
+        {marcaOptions.map((m) => (
+          <option value={m.value}>{m.label}</option>
+        ))}
+      </select>
+    </label>
+    <label class="form-control w-full md:w-44">
+      <span class="label-text mb-1 text-sm font-bold">Sistema operativo</span>
+      <select id="stats-os" class="select select-bordered select-sm">
+        <option value="">Todos</option>
+        {osOptions.map((o) => (
+          <option value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+    <a class="btn btn-ghost btn-sm md:ml-auto" href={inventarioHref}>
+      <Icon name="boxicons:desktop-filled" size={16} is:inline />
+      Ver inventario completo
+    </a>
+  </div>
+
+  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div data-kpi="total">
+      <StatsCard
+        icon="desktop"
+        label="Total terminales"
+        value="…"
+        subtitle="Parque PC completo"
+      />
+    </div>
+    <div data-kpi="sucursales">
+      <StatsCard
+        icon="building-house"
+        label="Sucursales con equipos"
+        value="…"
+        subtitle="Oficinas con al menos un equipo"
+        color="info"
+      />
+    </div>
+    <div data-kpi="pctWin11">
+      <StatsCard
+        icon="windows"
+        label="% Windows 11"
+        value="…"
+        subtitle="Del parque filtrado"
+        color="success"
+      />
+    </div>
+    <div data-kpi="pctWin10">
+      <StatsCard
+        icon="windows"
+        label="% Windows 10"
+        value="…"
+        subtitle="Parque a migrar (EOL)"
+        color="warning"
+      />
+    </div>
+  </div>
+
+  <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        title="Equipos por provincia"
+        fetchUrl={endpoint}
+        chartKey="porProvincia"
+        exportable
+      />
+    </div>
+    <ChartCard
+      type="doughnut"
+      title="Equipos por región"
+      fetchUrl={endpoint}
+      chartKey="porRegion"
+      exportable
+    />
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        title="Equipos por sistema operativo"
+        fetchUrl={endpoint}
+        chartKey="porSo"
+        exportable
+      />
+    </div>
+    <ChartCard
+      type="doughnut"
+      title="Equipos por marca"
+      fetchUrl={endpoint}
+      chartKey="porMarca"
+      exportable
+    />
+    <div class="lg:col-span-3">
+      <ChartCard
+        type="bar"
+        title="Top 10 sucursales"
+        fetchUrl={endpoint}
+        chartKey="topSucursales"
+        exportable
+      />
+    </div>
+  </div>
+</div>
+
+<script>
+  import { getCleanBase } from "@lib/baseUrl";
+
+  const endpoint = `${getCleanBase()}api/terminals/estadisticas`;
+
+  const getSelect = (id: string): HTMLSelectElement | null =>
+    document.getElementById(id) as HTMLSelectElement | null;
+
+  function buildQuery(): string {
+    const params = new URLSearchParams();
+    const region = getSelect("stats-region")?.value;
+    const provincia = getSelect("stats-provincia")?.value;
+    const marca = getSelect("stats-marca")?.value;
+    const os = getSelect("stats-os")?.value;
+    if (region) params.set("region", region);
+    if (provincia) params.set("provincia", provincia);
+    if (marca) params.set("marca", marca);
+    if (os) params.set("os", os);
+    return params.toString();
+  }
+
+  function syncUrl(): void {
+    const query = buildQuery();
+    const url = query ? `?${query}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }
+
+  function setKpi(key: string, value: string): void {
+    const el = document.querySelector(`[data-kpi="${key}"] [data-kpi-value]`);
+    if (el) el.textContent = value;
+  }
+
+  function clearKpis(): void {
+    setKpi("total", "—");
+    setKpi("sucursales", "—");
+    setKpi("pctWin11", "—");
+    setKpi("pctWin10", "—");
+  }
+
+  let fetchSeq = 0;
+
+  async function load(): Promise<void> {
+    const query = buildQuery();
+    syncUrl();
+    const seq = ++fetchSeq;
+    try {
+      const response = await fetch(`${endpoint}?${query}`, {
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      if (seq !== fetchSeq) return;
+      setKpi("total", Number(body.kpis.total).toLocaleString("es-AR"));
+      setKpi(
+        "sucursales",
+        Number(body.kpis.sucursales).toLocaleString("es-AR"),
+      );
+      setKpi("pctWin11", `${body.kpis.pctWin11}%`);
+      setKpi("pctWin10", `${body.kpis.pctWin10}%`);
+    } catch (error) {
+      if (seq !== fetchSeq) return;
+      console.error("[estadisticas terminales] no se pudieron cargar:", error);
+      clearKpis();
+    } finally {
+      if (seq === fetchSeq) {
+        window.dispatchEvent(
+          new CustomEvent("stats:filters-changed", { detail: { query } }),
+        );
+      }
+    }
+  }
+
+  let bound = false;
+
+  function init(): void {
+    if (bound) return;
+    const regionSelect = getSelect("stats-region");
+    // El HTML llega por server island: si el fetch gana la carrera al script,
+    // los selects todavía no están y hay que reintentar al inyectarse.
+    if (!regionSelect) return;
+    bound = true;
+
+    const initial = new URLSearchParams(window.location.search);
+    if (initial.get("region")) regionSelect.value = initial.get("region") as string;
+    const provinciaSelect = getSelect("stats-provincia");
+    if (initial.get("provincia") && provinciaSelect) {
+      provinciaSelect.value = initial.get("provincia") as string;
+    }
+    const marcaSelect = getSelect("stats-marca");
+    if (initial.get("marca") && marcaSelect) {
+      marcaSelect.value = initial.get("marca") as string;
+    }
+    const osSelect = getSelect("stats-os");
+    if (initial.get("os") && osSelect) {
+      osSelect.value = initial.get("os") as string;
+    }
+
+    regionSelect.addEventListener("change", load);
+    provinciaSelect?.addEventListener("change", load);
+    marcaSelect?.addEventListener("change", load);
+    osSelect?.addEventListener("change", load);
+
+    load();
+  }
+
+  init();
+
+  const injectedObserver = new MutationObserver((records) => {
+    if (records.some((record) => record.addedNodes.length)) init();
+  });
+  injectedObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+</script>

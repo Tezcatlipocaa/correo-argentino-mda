@@ -18,8 +18,13 @@ import { normalizeSearchValue } from "@lib/clientSearch";
 import { getTerminalSnapshot } from "@lib/terminalCache";
 import type { TerminalMinimalRow } from "@lib/terminalSnapshot";
 
-import { type OsFamily, toOsFamily } from "@lib/terminalHelpers";
+import {
+  type OsFamily,
+  toOsFamily,
+  inferBrandFromManufacturer,
+} from "@lib/terminalHelpers";
 export type { OsFamily };
+export { inferBrandFromManufacturer };
 
 import {
   groupTTDevices,
@@ -30,6 +35,8 @@ import {
 } from "@lib/ttGroups";
 
 export type { TTPairState };
+
+import type { TerminalStatsRow } from "@lib/terminalStats";
 
 import { selectActiveMember } from "@lib/duplicateGroups";
 
@@ -923,19 +930,6 @@ export interface ModelBrandEntry {
   brand: string;
 }
 
-function inferBrandFromManufacturer(
-  manufacturer: string | null,
-): string | null {
-  if (!manufacturer) return null;
-  const lower = manufacturer.toLowerCase();
-  if (lower.includes("dell")) return "dell";
-  if (lower.includes("lenovo")) return "lenovo";
-  if (lower.includes("hp") || lower.includes("hewlett")) return "hp";
-  if (lower.includes("bangho")) return "bangho";
-  if (lower.includes("coradir")) return "coradir";
-  return null;
-}
-
 export async function getTerminalModelsByBrand(): Promise<ModelBrandEntry[]> {
   const rows = await db
     .select({ model: terminals.model, manufacturer: terminals.manufacturer })
@@ -969,4 +963,27 @@ export async function getTerminalModelsByBrand(): Promise<ModelBrandEntry[]> {
 export async function getDistinctTerminalModels(): Promise<string[]> {
   const entries = await getTerminalModelsByBrand();
   return entries.map((e) => e.model);
+}
+
+export async function getTerminalStatsRows(): Promise<TerminalStatsRow[]> {
+  // ponytail: agregación JS sobre ~8k filas por request (mismo criterio ya
+  // aceptado en getTTGroups: "miles, no millones"). Si el parque crece a
+  // decenas de miles, mover el bucketing a SQL GROUP BY manteniendo el
+  // contrato de computeTerminalStats.
+  return db
+    .select({
+      manufacturer: terminals.manufacturer,
+      operatingSystem: terminals.operatingSystem,
+      nis: terminals.nis,
+      officeName: offices.name,
+      provinceCode: offices.provinceCode,
+      provinceName: provinces.name,
+      regionId: regions.id,
+      regionName: regions.name,
+    })
+    .from(terminals)
+    .leftJoin(offices, eq(terminals.nis, offices.code))
+    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
+    .leftJoin(regions, eq(provinces.regionId, regions.id))
+    .all();
 }

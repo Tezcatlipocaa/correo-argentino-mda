@@ -250,6 +250,15 @@ BaseLayout (flex flex-col min-h-screen)
 - Reordenamiento masivo: usar `handleReorder(request, locals, table, auditMsg)` desde `@lib/reorderHandler` (ya hace transaccion + auditoria).
 - Escrituras batch: envolver en `db.transaction(tx => { ... })` de Drizzle. Validar siempre el body antes de tocar la DB.
 
+### 14. Graficas — siempre `ChartCard`
+
+Todas las graficas del portal usan `src/components/ui/ChartCard.astro` (con `chart.js/auto` bundleado por Vite). Esta prohibido cargar Chart.js por CDN (`cdn.jsdelivr.net`) o instanciar `new Chart(...)` en cualquier otro archivo.
+
+- **Datos:** la card se alimenta de una API propia con la forma `{ charts: { <chartKey>: { labels: string[], series: { label: string, data: number[] }[] } } }` (`fetchUrl` + `chartKey`), o de `labels`/`series` inline para datos estaticos. La tabla accesible y el re-init tras server islands los resuelve el propio componente.
+- **Datos en vivo:** `server:defer` + `<ChartCardSkeleton slot="fallback" count={N} />`; el filtro publica `stats:filters-changed` (`CustomEvent` con `detail: { query }`) para que las cards refresquen.
+- **Guard test:** `tests/unit/ui/no-ad-hoc-chartjs.test.ts` falla si aparece un CDN de chart.js o `new Chart(` fuera de `ChartCard.astro`; ese archivo es el unico uso permitido.
+- **Interno:** el anillo de progreso del preview de horas extras del cronograma es CSS (`conic-gradient`), no Chart.js.
+
 ---
 
 ## Sistema de diseno y UX aprobado
@@ -296,7 +305,8 @@ BaseLayout (flex flex-col min-h-screen)
 | 8   | `/recursos/aplicativos`  | Catalogo de aplicativos con descargas                   |
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
-| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Lectura (listado y detalle) para todos los usuarios con sesion iniciada. Cierre/reapertura local (portal, no InvGate) y edicion de datos manuales para `supervisor`+ desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes |
+| 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Lectura (listado y detalle) para todos los usuarios con sesion iniciada. Cierre/reapertura local (portal, no InvGate) y edicion de datos manuales para `supervisor`+ desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes. Listado con busqueda y filtros (estado/region/antiguedad), orden (nuevas/antiguas/actualizadas), vista tarjetas/tabla y export CSV (`/api/automatizaciones/export.csv`) |
+| 11b | `/automatizaciones/metricas` | KPIs del flujo (total, WIP, finalizadas, lead time, % cierre por portal), throughput mensual, backlog por antiguedad, ranking de sucursales y desglose de cierres. Se calculan sobre el historial local (`automation_parents` + `automation_closures`), sin consultar InvGate. Lectura para todos los logueados |
 
 ### Supervision (sub-rutas)
 
@@ -386,6 +396,7 @@ BaseLayout (flex flex-col min-h-screen)
 | sync-office-links     | —      | Sincroniza links de oficinas (03:00)                  |
 | purge-deleted-records | —      | Purga snapshots vencidos de la papelera (90 días, 04:00) |
 | reconcile-automation-parents | — | Reconcilia tracking de padres de /automatizaciones por categoría, todas las mesas (04:00) |
+| snapshot-automation-metrics | — | Snapshot mensual de KPIs de /automatizaciones (04:05) |
 
 ### Scripts clave (`scripts/`)
 
@@ -402,6 +413,7 @@ BaseLayout (flex flex-col min-h-screen)
 | `toggle-mode.ts`           | Script de alternancia de tema light/dark                  |
 | `warm-automations.ts`      | Pre-warm del cache de /automatizaciones (scan InvGate + snapshot persistido + reconciliacion de padres) |
 | `reconcile-automation-parents.ts` | Recupera padres de /automatizaciones reasignados a otras mesas (barrido por estado + categoría) |
+| `snapshot-automation-metrics.ts` | Snapshot mensual de KPIs de /automatizaciones (dry-run por defecto; `--apply` escribe) |
 
 ### Base de datos
 

@@ -71,3 +71,16 @@ export const getTerminalTypeLabel = (osName: string): string => {
   if (normalized.includes("linux")) return "Linux";
   return osName || "Terminal";
 };
+
+export function inferBrandFromManufacturer(
+  manufacturer: string | null,
+): string | null {
+  if (!manufacturer) return null;
+  const lower = manufacturer.toLowerCase();
+  if (lower.includes("dell")) return "dell";
+  if (lower.includes("lenovo")) return "lenovo";
+  if (lower.includes("hp") || lower.includes("hewlett")) return "hp";
+  if (lower.includes("bangho")) return "bangho";
+  if (lower.includes("coradir")) return "coradir";
+  return null;
+}

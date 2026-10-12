@@ -787,3 +787,43 @@ Cada entrada sigue este formato:
 **Solucion:** (1) `server.mjs` importa `dotenv/config` como primera línea, para poblar `process.env` en runtime; (2) todos los helpers de env con lectura dinámica pasan a **runtime-first** (`process.env[key] || import.meta.env?.[key]`), el patrón ya usado por `SESSION_COOKIE_SECURE` (`src/lib/session.ts`): `src/lib/invgate/automation/env.ts`, `invgateClient.ts`, `invgate-qa-client.ts`, `wise-cx-client.ts` y `invgate/metrics.ts`. Verificado con `npx tsx` (con dotenv: `deriveInvGateUiUrl(12345)` devuelve la URL completa) y arrancando `node server.mjs` en un puerto propio (200).
 **Regla:** Ningún helper de env de servidor debe leer `import.meta.env` dinámicamente como fuente primaria: o se lee una clave estática, o se usa runtime-first con `dotenv` cargado en `server.mjs`. `astro dev` no reproduce este bug; hay que validar en el build de producción. Toda rama que agregue un helper de env debe cargar `.env` en runtime, no depender de la inyección de build de Vite.
 **Archivos afectados:** server.mjs, src/lib/invgate/automation/env.ts, src/lib/invgateClient.ts, src/lib/invgate-qa-client.ts, src/lib/wise-cx-client.ts, src/lib/invgate/metrics.ts
+
+---
+
+### 2026-10-09 - Delta de métricas: comparar cohortes con la MISMA definición, no creation vs close-date
+
+**Problema:** Los badges de tendencia (↑↓) de `/automatizaciones/metricas` comparaban poblaciones distintas: el KPI actual ("Finalizadas", "Tiempo de ciclo", "Cumplimiento") se calculaba sobre la **cohorte por `created_at`**, pero el período anterior (`computePeriod`) filtraba por **fecha de cierre**. El delta podía dar resultados sin sentido (subir/bajar con datos que no son equivalentes).
+**Causa:** Dos implementaciones de "período" con criterios distintos conviviendo. `computeAutomationMetrics` filtra `cohort = createdAt ∈ ventana` y deriva `finalized/leadTime/sla` de esa cohorte; `computePeriod` filtraba `!active && closedAt ∈ ventana`. Solo `created` era consistente.
+**Solucion:** `computePeriod` arma la cohorte por `createdAt` y calcula `created/finalized/medianLeadDays/onTimeRate` sobre esa cohorte (misma semántica que el período actual). Se extrajeron helpers (`isOnTime`, `collectLeadDays`, `buildSla`) para no duplicar la lógica en tres lugares.
+**Regla:** Cuando una métrica tiene "actual" y "anterior", ambas deben usar **la misma definición de período**. Si se elige cohorte por creación, el anterior también; mezclar ejes (creación vs cierre) produce deltas inválidos. Extraer el cálculo compartido a un helper para que no vuelvan a divergir.
+**Archivos afectados:** src/lib/workflow/metrics.ts, tests/workflow-metrics.test.mjs
+
+---
+
+### 2026-10-09 - Tailwind `shadow-none` NO quita la sombra de un `.btn` de daisyUI (usar `--btn-shadow`/`--btn-inset`)
+
+**Problema:** Los botones del toggle de vista y "Ver detalle" seguían mostrando sombra pese a tener `shadow-none`. El botón de `AccionConfirmButton`/`btn` de daisyUI calcula `box-shadow: var(--btn-inset) inset, var(--btn-shadow)`, y esa declaración vive en una capa (`@layer daisyui...`) que gana sobre la utilidad `shadow-none` de Tailwind.
+**Causa:** Orden de capas: la utilidad `shadow-none` de Tailwind no pisa la `box-shadow` de daisyUI, que usa variables propias (`--btn-shadow`, `--btn-inset`) en vez del `box-shadow` "de usuario".
+**Solucion:** Neutralizar las variables en una utilidad propia: `@utility acc-flat { --btn-shadow: 0 0 0 0 rgb(0 0 0 / 0); --btn-inset: 0 0 0 0 rgb(0 0 0 / 0); }` y aplicarla al botón.
+**Regla:** Para quitar la sombra/borde interno de un `.btn` de daisyUI, no usar `shadow-none`: setear `--btn-shadow` y `--btn-inset` a cero. Vale para cualquier override de un estilo de daisyUI que use variables `--btn-*`.
+**Archivos afectados:** src/styles/global.css, src/pages/automatizaciones/_components/AutomationCard.astro, src/pages/automatizaciones/_components/AutomatizacionesContent.astro
+
+---
+
+### 2026-10-09 - Tailwind v4: clases propias con variantes (`group-open:`, `hover:`) requieren `@utility`
+
+**Problema:** Al querer aplicar el acento del módulo con variantes (`group-open:acc-surface`, `hover:acc-text`), una clase definida como CSS plano (`.acc-surface { … }`) **no** genera la variante: Tailwind solo prefija utilidades registradas.
+**Causa:** Tailwind v4 genera variantes únicamente para `@utility`, no para selectores CSS arbitrarios.
+**Solucion:** Definir las clases de acento con `@utility` (`@utility acc-surface { … }`) en `global.css`; así `group-open:acc-surface`, `hover:acc-text`, etc. se generan. Las variables de tema (`--acc-bg`/`--acc-fg`) se definen en una clase normal (`.acc` + `[data-theme="dark"] .acc`).
+**Regla:** Si una clase propia necesita usarse con variantes de Tailwind (`hover:`, `group-open:`, `dark:`, responsive), declararla con `@utility`, no como selector plano.
+**Archivos afectados:** src/styles/global.css
+
+---
+
+### 2026-10-12 — Un nombre de icono inexistente en `astro-icon` rompe el render, no el build
+
+**Problema:** El island de estadísticas de oficinas y su página de detalle fallaban en runtime con `500` en la API y un body truncado `"An error occurred."` (HTTP 200) en el render, mientras `npx tsc --noEmit` y `npm run build` pasaban limpios y `[verify-build]` daba OK. El error no aparecía en la consola del shell donde corría `npm run dev`.
+**Causa:** Dos KPI usaban nombres que no existen en `@iconify-json/boxicons`: `user-account` (Personal) y `error-circle` (Incidentes). `astro-icon` resuelve el icono **en el momento del render** contra el set instalado, así que el fallo es de runtime: ni el type-check ni el build lo ven porque el nombre viaja como string. En `astro dev` el error se pierde de la consola del proceso (el build de dev corre como daemon) y el síntoma en el navegador es una pagina rota con status 200, no un error explícito.
+**Solución:** Reemplazar por nombres válidos verificados contra `node_modules/@iconify-json/boxicons/icons.json` (`user-account` → `user-circle`, `error-circle` → `bug-alt`). El diagnóstico salió de leer los logs del daemon con `npx astro dev logs` (JSON por línea), que sí muestra el stack del render. Quedó cubierto por `tests/oficinas-estadisticas.spec.ts` (11/11).
+**Regla:** Todo `name` pasado a `<Icon>` tiene que existir en el set instalado; `tsc` y `astro build` **no** lo validan, solo el render. Antes de dar por buena una pantalla con iconos nuevos, verificar cada nombre contra `@iconify-json/boxicons/icons.json` y cubrirla con un E2E que cargue la pagina (un test que solo mira `status` pasa igual: el render roto sale `200`). En `astro dev`, los errores de render **no** se ven en la consola del shell: se leen con `npx astro dev logs`.
+**Archivos afectados:** src/components/offices/stats/OficinasEstadisticasContent.astro, src/components/offices/stats/OficinaDetalleContent.astro, tests/oficinas-estadisticas.spec.ts

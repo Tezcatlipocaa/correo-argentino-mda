@@ -1,0 +1,528 @@
+---
+import { Icon } from "astro-icon/components";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import AutomationBackLink from "./AutomationBackLink.astro";
+import AutomationLink from "./AutomationLink.astro";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+import StatsCard from "@components/ui/StatsCard.astro";
+import MetricInfo from "@components/ui/MetricInfo.astro";
+import MetricsGlossary from "./MetricsGlossary.astro";
+import MetricsGroupList from "./MetricsGroupList.astro";
+import {
+  getAutomationMetrics,
+  METRIC_DEFINITIONS,
+} from "@lib/workflow/metrics";
+import {
+  formatDays as daysText,
+  formatPct as pctText,
+} from "@lib/workflow/metricsFormat";
+import { parseWindowParam, windowLabel } from "@lib/workflow/metricsExport";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import { getCleanBase } from "@lib/baseUrl";
+import { resolveUrl } from "@lib/url";
+import { isLoggedIn } from "@lib/rbac";
+
+const user = Astro.locals.user;
+const canQuery = isLoggedIn(user);
+
+const windowDays = parseWindowParam(Astro.url.searchParams.get("window"));
+const metrics = canQuery ? getAutomationMetrics({ windowDays }) : null;
+
+const def = Object.fromEntries(METRIC_DEFINITIONS.map((d) => [d.key, d]));
+
+const MONTHS_SHORT = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
+
+function monthLabel(key: string): string {
+  const [year, month] = key.split("-");
+  const index = Number(month) - 1;
+  return `${MONTHS_SHORT[index] ?? month} ${year}`;
+}
+
+const path = Astro.url.pathname;
+
+/** Href de la propia página de métricas con otra ventana. */
+function windowHref(value: string): string {
+  const params = new URLSearchParams();
+  if (value !== "all") params.set("window", value);
+  const search = params.toString();
+  return `${path}${search ? `?${search}` : ""}`;
+}
+
+/** Href al listado de automatizaciones con filtros (deep-link). */
+function listHref(
+  overrides: { status?: string; q?: string; region?: string; age?: string } = {},
+): string {
+  const params = new URLSearchParams();
+  if (overrides.status && overrides.status !== "all") {
+    params.set("status", overrides.status);
+  }
+  if (overrides.q) params.set("q", overrides.q);
+  if (overrides.region) params.set("region", overrides.region);
+  if (overrides.age) params.set("age", overrides.age);
+  const search = params.toString();
+  return resolveUrl(`/automatizaciones${search ? `?${search}` : ""}`);
+}
+
+const cleanBase = getCleanBase();
+const exportQuery = windowDays ? `?window=${windowDays}` : "";
+const csvHref = `${cleanBase}api/automatizaciones/metrics/export.csv${exportQuery}`;
+const pngHref = `${cleanBase}api/automatizaciones/metrics/export.png${exportQuery}`;
+
+const windowTabs = [
+  { value: "30", label: "30 días" },
+  { value: "90", label: "90 días" },
+  { value: "365", label: "1 año" },
+  { value: "all", label: "Todo" },
+] as const;
+const activeWindow = windowDays === null ? "all" : String(windowDays);
+
+const throughputMax = metrics
+  ? Math.max(
+      1,
+      ...metrics.throughput.flatMap((month) => [month.created, month.finalized]),
+    )
+  : 1;
+
+const backlogMax = metrics
+  ? Math.max(1, ...metrics.backlog.map((bucket) => bucket.count))
+  : 1;
+
+---
+
+<PageContainer width="xl" class="acc">
+  <AutomationBackLink />
+
+  <PageHeader
+    title="Métricas de automatizaciones"
+    description="Indicadores del flujo de automatización de sucursales, calculados sobre el historial local del portal."
+  />
+
+  {
+    !canQuery || !metrics ? (
+      <div role="alert" class="alert alert-warning">
+        <span>
+          Sesión no iniciada. Iniciá sesión para consultar las métricas.
+        </span>
+      </div>
+    ) : metrics.totals.total === 0 ? (
+      <AutomationEmptyState
+        class="py-10"
+        message="Todavía no hay historial de automatizaciones para calcular métricas. A medida que el portal registre casos vas a ver los indicadores acá."
+      />
+    ) : (
+      <>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div
+            class="join"
+            role="group"
+            aria-label="Ventana temporal de las métricas"
+          >
+            {windowTabs.map((tab) => (
+              <a
+                href={windowHref(tab.value)}
+                aria-current={tab.value === activeWindow ? "true" : false}
+                class:list={[
+                  "join-item border-base-300 bg-base-200 text-base-content/70 border px-3 py-1.5 text-sm font-medium transition-colors",
+                  "hover:bg-base-300",
+                  tab.value === activeWindow && "acc-surface hover:opacity-90",
+                ]}
+              >
+                {tab.label}
+              </a>
+            ))}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <a
+              href={csvHref}
+              class="btn btn-ghost btn-sm gap-1"
+              download
+            >
+              <Icon
+                name="boxicons:file-detail-filled"
+                size={16}
+                aria-hidden="true"
+              />
+              CSV
+            </a>
+            <a
+              href={pngHref}
+              class="btn btn-ghost btn-sm gap-1"
+              download
+            >
+              <Icon
+                name="boxicons:image-alt-filled"
+                size={16}
+                aria-hidden="true"
+              />
+              PNG
+            </a>
+          </div>
+        </div>
+
+        <p class="text-base-content/60 -mt-2 text-xs">
+          {windowLabel(metrics.window.days)}
+          {metrics.dataAsOf
+            ? ` · datos al ${formatEpochDateTime(metrics.dataAsOf)}`
+            : ""}
+        </p>
+
+        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            icon="bar-chart-big-filled"
+            label="Total histórico"
+            value={metrics.totals.total}
+            subtitle="casos en la ventana"
+            color="auto"
+            hint={def.total.description}
+            delta={{ value: metrics.delta.createdPct }}
+          />
+          <StatsCard
+            icon="calendar-filled"
+            label="En curso (WIP)"
+            value={metrics.totals.active}
+            subtitle="activos sin cierre local"
+            color="info"
+            hint={def.active.description}
+          />
+          <StatsCard
+            icon="check-filled"
+            label="Finalizadas"
+            value={metrics.totals.finalized}
+            subtitle={`${metrics.totals.finalizedByPortal} por portal · ${metrics.totals.finalizedInInvGate} en InvGate`}
+            color="success"
+            hint={def.finalized.description}
+            delta={{ value: metrics.delta.finalizedPct }}
+          />
+          <StatsCard
+            icon="clock-filled"
+            label="Tiempo de ciclo (mediana)"
+            value={daysText(metrics.leadTime.medianDays)}
+            subtitle={`sobre ${metrics.leadTime.sample} finalizadas`}
+            color="primary"
+            hint={def.leadTime.description}
+            formula={def.leadTime.formula}
+            delta={{
+              value: metrics.delta.medianLeadDaysPct,
+              goodWhenUp: false,
+            }}
+          />
+          <StatsCard
+            icon="clock-filled"
+            label="Tiempo de ciclo (p90)"
+            value={daysText(metrics.leadTime.p90Days)}
+            subtitle={`promedio ${daysText(metrics.leadTime.averageDays)}`}
+            color="warning"
+            hint={def.leadTime.description}
+          />
+          <StatsCard
+            icon="check-filled"
+            label="Cumplimiento fecha estimada"
+            value={pctText(metrics.sla.onTimeRate)}
+            subtitle={`${metrics.sla.sample} con fecha · desvío ${daysText(metrics.sla.avgDeviationDays)}`}
+            color="accent"
+            hint={def.sla.description}
+            formula={def.sla.formula}
+            delta={{
+              value: metrics.delta.onTimeRatePoints,
+              suffix: " pp",
+            }}
+          />
+          <StatsCard
+            icon="calendar-filled"
+            label="Cierre por el portal"
+            value={pctText(metrics.portalShare)}
+            subtitle="del total finalizado"
+            color="auto"
+            hint={def.portalShare.description}
+          />
+          <StatsCard
+            icon="alert-circle"
+            label="Activo más antiguo"
+            value={daysText(metrics.oldestActive?.days ?? null)}
+            subtitle={metrics.oldestActive?.displayName ?? "sin casos en curso"}
+            color="error"
+            hint={def.oldestActive.description}
+          />
+        </section>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <SectionCard
+            title="Backlog por antigüedad"
+            description="Casos en curso según hace cuánto se iniciaron."
+            icon="boxicons:clock-filled"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Casos en curso según antigüedad
+              <MetricInfo
+                label={def.backlog.label}
+                description={def.backlog.description}
+              />
+            </div>
+            <ul class="flex flex-col gap-3">
+              {metrics.backlog.map((bucket) => (
+                <li class="flex flex-col gap-1">
+                  <div class="flex items-baseline justify-between gap-2 text-sm">
+                    <a
+                      href={listHref({ status: "active", age: bucket.age })}
+                      class="text-base-content/80 hover:text-secondary"
+                    >
+                      {bucket.label}
+                    </a>
+                    <span class="text-base-content font-semibold tabular-nums">
+                      {bucket.count}
+                    </span>
+                  </div>
+                  <div class="bg-base-200 h-2.5 overflow-hidden rounded-sm">
+                    <div
+                      class:list={[
+                        "h-full rounded-sm",
+                        bucket.label === "Más de 30 días"
+                          ? "bg-error"
+                          : "acc-surface",
+                      ]}
+                      style={`width:${Math.round((bucket.count / backlogMax) * 100)}%`}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+
+          <SectionCard
+            title="Progreso del WIP"
+            description="Avance y casos estancados/críticos."
+            icon="boxicons:git-branch-filled"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Avance y casos estancados
+              <MetricInfo
+                label={def.progress.label}
+                description={def.progress.description}
+              />
+            </div>
+            {metrics.progress.withData === 0 ? (
+              <p class="text-base-content/50 text-sm italic">
+                Todavía no hay progreso persistido (se completa al abrir casos).
+              </p>
+            ) : (
+              <div class="flex flex-col gap-3">
+                <div class="flex items-baseline justify-between gap-2 text-sm">
+                  <span class="text-base-content/80">Avance promedio</span>
+                  <span class="text-base-content font-semibold tabular-nums">
+                    {pctText(metrics.progress.average)}
+                  </span>
+                </div>
+                <div class="bg-base-200 h-2.5 overflow-hidden rounded-sm">
+                  <div
+                    class="acc-surface h-full rounded-sm"
+                    style={`width:${Math.min(100, metrics.progress.average ?? 0)}%`}
+                  />
+                </div>
+                <p class="text-base-content/60 text-xs">
+                  {metrics.progress.withData} casos con progreso conocido.
+                </p>
+              </div>
+            )}
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <a
+                href={listHref({ status: "active" })}
+                class="flex flex-col rounded-lg bg-warning/10 p-3 transition-colors hover:bg-warning/20"
+              >
+                <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                  Estancados
+                </span>
+                <span class="text-base-content text-xl font-bold tabular-nums">
+                  {metrics.progress.stalled}
+                </span>
+                <span class="text-base-content/50 text-xs">
+                  +{metrics.progress.stalledThresholdDays} días sin novedad
+                </span>
+              </a>
+              <a
+                href={listHref({ status: "active", age: "30+" })}
+                class="flex flex-col rounded-lg bg-error/10 p-3 transition-colors hover:bg-error/20"
+              >
+                <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                  Críticos
+                </span>
+                <span class="text-base-content text-xl font-bold tabular-nums">
+                  {metrics.progress.critical}
+                </span>
+                <span class="text-base-content/50 text-xs">
+                  +{metrics.progress.ageThresholdDays} días de antigüedad
+                </span>
+              </a>
+            </div>
+          </SectionCard>
+        </div>
+
+        <SectionCard
+          title="Casos por mes"
+          description="Casos creados y finalizados en los últimos 12 meses."
+          icon="boxicons:calendar-filled"
+        >
+          <div class="text-base-content/60 mb-4 flex flex-wrap items-center gap-4 text-xs">
+            <span class="flex items-center gap-1.5">
+              <span class="acc-surface inline-block size-2.5 rounded-sm" />
+              Creadas
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="bg-success inline-block size-2.5 rounded-sm" />
+              Finalizadas
+            </span>
+            <MetricInfo
+              label={def.throughput.label}
+              description={def.throughput.description}
+            />
+          </div>
+          <ul class="flex flex-col gap-3">
+            {metrics.throughput.map((month) => (
+              <li class="grid grid-cols-[4.5rem_1fr] items-center gap-3">
+                <span class="text-base-content/70 font-mono text-xs">
+                  {monthLabel(month.month)}
+                </span>
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex items-center gap-2">
+                    <div class="bg-base-200 h-2.5 flex-1 overflow-hidden rounded-sm">
+                      <div
+                        class="acc-surface h-full rounded-sm"
+                        style={`width:${Math.round((month.created / throughputMax) * 100)}%`}
+                      />
+                    </div>
+                    <span class="text-base-content/70 w-6 text-right text-xs tabular-nums">
+                      {month.created}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="bg-base-200 h-2.5 flex-1 overflow-hidden rounded-sm">
+                      <div
+                        class="bg-success h-full rounded-sm"
+                        style={`width:${Math.round((month.finalized / throughputMax) * 100)}%`}
+                      />
+                    </div>
+                    <span class="text-base-content/70 w-6 text-right text-xs tabular-nums">
+                      {month.finalized}
+                    </span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <MetricsGroupList
+            title="Por región"
+            description="Volumen, WIP y tiempo de ciclo por región."
+            icon="boxicons:map-filled"
+            groups={metrics.byRegion}
+            emptyMessage="Sin regiones resueltas."
+            hint={def.region}
+            hrefFor={(group) => listHref({ region: group.key })}
+          />
+          <MetricsGroupList
+            title="Por mesa"
+            description="Volumen, WIP y tiempo de ciclo por mesa asignada."
+            icon="boxicons:grid-filled"
+            groups={metrics.byMesa}
+            emptyMessage="Sin mesas resueltas."
+            hint={def.mesa}
+          />
+        </div>
+
+        <SectionCard
+          title="Sucursales con casos más antiguos"
+          description="Casos en curso ordenados por antigüedad."
+          icon="boxicons:clock-filled"
+        >
+          {metrics.topBranchesByActive.length === 0 ? (
+            <p class="text-base-content/50 text-sm italic">
+              No hay casos en curso.
+            </p>
+          ) : (
+            <ul class="flex flex-col divide-y divide-base-300">
+              {metrics.topBranchesByActive.map((branch) => (
+                <li class="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                  <a
+                    href={listHref({ status: "active", q: branch.key })}
+                    class="text-base-content/80 hover:acc-text min-w-0 truncate text-sm"
+                  >
+                    {branch.label}
+                  </a>
+                  <span class="text-base-content/50 shrink-0 text-xs tabular-nums">
+                    {daysText(branch.oldestActiveDays)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Calidad del dato"
+          description="Cobertura de los metadatos."
+          icon="boxicons:list-ul-filled"
+        >
+          <div slot="description" class="flex items-center gap-1">
+            Cobertura de los metadatos
+            <MetricInfo
+              label={def.dataQuality.label}
+              description={def.dataQuality.description}
+            />
+          </div>
+          <dl class="flex flex-col divide-y divide-base-300 text-sm">
+            <div class="flex items-center justify-between gap-3 py-2 first:pt-0">
+              <dt class="text-base-content/70">Sin código de sucursal</dt>
+              <dd class="font-mono tabular-nums">
+                {metrics.dataQuality.missingBranchCode}
+              </dd>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2">
+              <dt class="text-base-content/70">Sin fecha estimada</dt>
+              <dd class="font-mono tabular-nums">
+                {metrics.dataQuality.missingEstimatedEnd}
+              </dd>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2 last:pb-0">
+              <dt class="text-base-content/70">Sin región</dt>
+              <dd class="font-mono tabular-nums">
+                {metrics.dataQuality.missingRegion}
+              </dd>
+            </div>
+          </dl>
+        </SectionCard>
+
+        {metrics.oldestActive && (
+          <p class="text-base-content/60 flex flex-wrap items-center gap-1 text-sm">
+            El caso en curso más antiguo es
+            <AutomationLink
+              automationId={metrics.oldestActive.automationId}
+              class="link acc-text font-medium"
+            >
+              {metrics.oldestActive.displayName}
+            </AutomationLink>
+            ({daysText(metrics.oldestActive.days)}).
+          </p>
+        )}
+
+        <MetricsGlossary />
+      </>
+    )
+  }
+</PageContainer>

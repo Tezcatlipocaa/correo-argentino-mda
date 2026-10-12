@@ -66,10 +66,15 @@ import {
   recordClosure,
   removeClosure,
   shouldAutoClose,
+  clearAutomationReopenMarker,
+  wasAutomationReopened,
 } from "./closures";
 import type { AutomationClosure } from "./closures";
 import { invalidateDiscoveryCache } from "./discovery";
-import { upsertAutomationParentStatus } from "./parent-history";
+import {
+  updateAutomationParentProgress,
+  upsertAutomationParentStatus,
+} from "./parent-history";
 import {
   readPersistedCache,
   writePersistedCache,
@@ -246,6 +251,14 @@ interface CachedDetailEntry {
 const detailCache = new Map<number, CachedDetailEntry>();
 const inflightDetail = new Map<number, Promise<AutomationDetailResult>>();
 
+/**
+ * Generación global del cache de detalle. Se incrementa al invalidar; cada
+ * pipeline captura la generación al arrancar y sólo publica su resultado si
+ * sigue vigente. Evita que un cierre/reapertura sea pisado por un resolve que
+ * arrancó antes de la mutación.
+ */
+let detailCacheGeneration = 0;
+
 function runDetailPipeline(
   automationId: number,
 ): Promise<AutomationDetailResult> {
@@ -254,10 +267,13 @@ function runDetailPipeline(
     return existing;
   }
 
-  const promise = (async () => {
+  const generation = detailCacheGeneration;
+
+  let promise!: Promise<AutomationDetailResult>;
+  promise = (async () => {
     try {
       const result = await resolveAutomationDetailUncached(automationId);
-      if (result.ok) {
+      if (result.ok && generation === detailCacheGeneration) {
         detailCache.set(automationId, {
           result,
           expiresAt: Date.now() + DETAIL_CACHE_TTL_MS,
@@ -286,7 +302,10 @@ function runDetailPipeline(
       }
       return result;
     } finally {
-      inflightDetail.delete(automationId);
+      // No pisar una pipeline nueva que pudo arrancar tras una invalidación.
+      if (inflightDetail.get(automationId) === promise) {
+        inflightDetail.delete(automationId);
+      }
     }
   })();
 
@@ -341,6 +360,7 @@ export async function resolveAutomationDetail(
  * no sirva un `closure` viejo.
  */
 export function invalidateAutomationDetail(automationId: number): void {
+  detailCacheGeneration += 1;
   detailCache.delete(automationId);
   inflightDetail.delete(automationId);
   deletePersistedCache(getDetailCacheKey(automationId));
@@ -428,6 +448,7 @@ export async function resolveAutomationProgress(
     progress,
     progressTtlMs(),
   );
+  updateAutomationParentProgress(automationId, progress);
 
   // Al 100% se dispara la pipeline de detalle en background para evaluar el
   // auto-cierre oportunista, sin encarecer esta respuesta liviana.
@@ -886,7 +907,7 @@ async function resolveAutomationDetailUncached(
     solutionAuthorByRef.set(node.refId, solution?.authorId ?? null);
   }
 
-  const cleanedTitle = cleanInvGateTitle(parentIncident.title);
+  const cleanedTitle = cleanInvGateTitle(parentIncident.title ?? "");
 
   /**
    * Fuentes del formulario inicial:
@@ -1031,6 +1052,7 @@ async function resolveAutomationDetailUncached(
   }
 
   const progress = computeWorkflowProgress(nodes.map((node) => node.lifecycle));
+  updateAutomationParentProgress(automationId, progress);
 
   /**
    * Cierre automático oportunista: cuando el detalle se calcula (apertura del
@@ -1039,20 +1061,26 @@ async function resolveAutomationDetailUncached(
    */
   let closure = getClosure(automationId);
 
+  const progressRegressed =
+    progress.percent < 100 || (stages?.missingBlockingCount ?? 0) > 0;
+
   // Auto-cierres que dejaron de aplicar (el progreso retrocedió o apareció una
   // etapa bloqueante faltante) se limpian para no dejar el caso finalizado.
-  if (
-    closure &&
-    closure.kind === "auto" &&
-    (progress.percent < 100 || (stages?.missingBlockingCount ?? 0) > 0)
-  ) {
+  if (closure && closure.kind === "auto" && progressRegressed) {
     removeClosure(automationId);
     invalidateDiscoveryCache();
     closure = null;
   }
 
+  // Si el flujo retrocedió, la reapertura manual deja de suprimir el
+  // auto-cierre: al completarse de nuevo puede volver a cerrarse solo.
+  if (progressRegressed) {
+    clearAutomationReopenMarker(automationId);
+  }
+
   if (
     !closure &&
+    !wasAutomationReopened(automationId) &&
     shouldAutoClose({
       statusId: parentIncident.status_id,
       percent: progress.percent,

@@ -1,0 +1,208 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import OficinaDetalleContent from "@components/offices/stats/OficinaDetalleContent.astro";
+import { db } from "@db/index";
+import {
+  automationParents,
+  employeeOffices,
+  officeAssets,
+  officeInvgateLinks,
+  offices,
+  provinces,
+  terminals,
+} from "@db/schema";
+import { eq, sql } from "drizzle-orm";
+import { getCleanBase } from "@lib/baseUrl";
+import { getOpenOfficeIncidentsByLocation } from "@lib/invgate/officeIncidents";
+import {
+  buildModernizacionTimeline,
+  clusterMassEvents,
+  toEpochMs,
+  type MassEvent,
+} from "@lib/officeStats";
+
+const cleanBase = getCleanBase();
+const code = Astro.params.code ?? "";
+const WINDOW_DAYS = 30;
+
+const [office] = await db
+  .select({
+    id: offices.id,
+    code: offices.code,
+    name: offices.name,
+    type: offices.type,
+    active: offices.active,
+    locality: offices.locality,
+    provinceName: provinces.name,
+    enRed: offices.enRed,
+    paqarAdmision: offices.paqarAdmision,
+    paqarEntrega: offices.paqarEntrega,
+    invgateLocationId: officeInvgateLinks.invgateLocationId,
+    usuarios: officeInvgateLinks.invgateUserTotal,
+  })
+  .from(offices)
+  .leftJoin(provinces, eq(provinces.code, offices.provinceCode))
+  .leftJoin(officeInvgateLinks, eq(officeInvgateLinks.officeId, offices.id))
+  .where(eq(offices.code, code));
+
+if (!office) {
+  Astro.response.status = 404;
+}
+
+let terminales = 0;
+let personal = 0;
+let assets = 0;
+let parentRows: { provinceName: string; createdAt: number; closedAt: number | null }[] = [];
+
+if (office) {
+  const [termRow] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(terminals)
+    .where(eq(terminals.nis, code));
+  terminales = termRow?.total ?? 0;
+
+  const [personalRow] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(employeeOffices)
+    .where(eq(employeeOffices.sucursal, code));
+  personal = personalRow?.total ?? 0;
+
+  const [assetsRow] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(officeAssets)
+    .where(eq(officeAssets.officeId, office.id));
+  assets = assetsRow?.total ?? 0;
+
+  parentRows = (
+    await db
+      .select({
+        createdAt: automationParents.createdAt,
+        closedAt: automationParents.closedAt,
+      })
+      .from(automationParents)
+      .where(eq(automationParents.branchCode, code))
+  ).flatMap((row) => {
+    const createdAt = toEpochMs(row.createdAt);
+    if (createdAt === null) return [];
+    return [
+      {
+        provinceName: office.provinceName ?? "Sin provincia",
+        createdAt,
+        closedAt: toEpochMs(row.closedAt),
+      },
+    ];
+  });
+}
+
+const nowMs = Date.now();
+const windowStartMs = nowMs - WINDOW_DAYS * 24 * 3600 * 1000;
+
+let invgateOk = true;
+let incidentes: {
+  id: number;
+  titulo: string;
+  categoria: string;
+  estado: string;
+  creado: string;
+}[] = [];
+let eventosOficina: MassEvent[] = [];
+
+if (office && office.invgateLocationId != null) {
+  try {
+    const linkRows = await db
+      .select({
+        code: offices.code,
+        invgateLocationId: officeInvgateLinks.invgateLocationId,
+      })
+      .from(officeInvgateLinks)
+      .innerJoin(offices, eq(offices.id, officeInvgateLinks.officeId));
+    const locationToCode = new Map(
+      linkRows.map((row) => [row.invgateLocationId, row.code]),
+    );
+    const byLocation = await getOpenOfficeIncidentsByLocation();
+    const list = byLocation.get(office.invgateLocationId) ?? [];
+    incidentes = list
+      .map((incident) => ({
+        id: incident.id,
+        titulo: incident.title,
+        categoria:
+          incident.category_id == null ? "Sin categoría" : `Categoría ${incident.category_id}`,
+        estado: `Estado ${incident.status_id}`,
+        creado: new Date(
+          toEpochMs(incident.created_at) ?? incident.created_at * 1000,
+        ).toISOString(),
+      }))
+      .sort((a, b) => b.creado.localeCompare(a.creado));
+    const allIncidents = [...byLocation.values()].flat();
+    eventosOficina = clusterMassEvents(allIncidents, locationToCode, nowMs).filter((event) =>
+      event.officeCodes.includes(office.code),
+    );
+  } catch (error) {
+    invgateOk = false;
+    console.error("[oficinas/estadisticas] InvGate no disponible:", error);
+  }
+} else if (office) {
+  // Oficina sin vínculo a InvGate: no hay datos en vivo, pero no es un error.
+  invgateOk = false;
+}
+
+const timeline = buildModernizacionTimeline(parentRows, windowStartMs, nowMs);
+---
+
+<BaseLayout>
+  <PageContainer width="xl">
+    {
+      office ? (
+        <PageHeader
+          backHref={`${cleanBase}oficinas/estadisticas`}
+          backLabel="Volver a estadísticas"
+          title={office.name}
+          description={`${office.code} · ${office.type} · ${office.provinceName ?? "Sin provincia"}`}
+        />
+      ) : (
+        <PageHeader
+          backHref={`${cleanBase}oficinas/estadisticas`}
+          backLabel="Volver a estadísticas"
+          title="Oficina no encontrada"
+          description="El código no existe en el directorio."
+        />
+      )
+    }
+
+    {
+      office ? (
+        <OficinaDetalleContent
+          oficina={{
+            code: office.code,
+            name: office.name,
+            active: office.active ?? false,
+            locality: office.locality,
+            enRed: office.enRed,
+            paqarAdmision: office.paqarAdmision,
+            paqarEntrega: office.paqarEntrega,
+            usuarios: office.usuarios ?? null,
+            terminales,
+            personal,
+            assets,
+          }}
+          incidentes={incidentes}
+          eventos={eventosOficina}
+          timeline={timeline}
+          invgateOk={invgateOk}
+        />
+      ) : (
+        <div class="border-base-300 bg-base-200/40 mt-6 rounded-2xl border border-dashed p-8 text-center">
+          <p class="text-base-content/60">
+            Volvé al{" "}
+            <a class="link" href={`${cleanBase}oficinas/estadisticas`}>
+              panel de estadísticas
+            </a>{" "}
+            para elegir otra oficina.
+          </p>
+        </div>
+      )
+    }
+  </PageContainer>
+</BaseLayout>

@@ -146,6 +146,69 @@ export function parseEstimatedEndFromTitle(title: string): string | null {
   return null;
 }
 
+/** Meses en español (normalizados sin acentos) → índice 0-11. */
+const MONTH_INDEX: Readonly<Record<string, number>> = {
+  enero: 0,
+  ene: 0,
+  febrero: 1,
+  feb: 1,
+  marzo: 2,
+  mar: 2,
+  abril: 3,
+  abr: 3,
+  mayo: 4,
+  may: 4,
+  junio: 5,
+  jun: 5,
+  julio: 6,
+  jul: 6,
+  agosto: 7,
+  ago: 7,
+  septiembre: 8,
+  setiembre: 8,
+  sep: 8,
+  sept: 8,
+  octubre: 9,
+  oct: 9,
+  noviembre: 10,
+  nov: 10,
+  diciembre: 11,
+  dic: 11,
+};
+
+/**
+ * Fecha estimada de implementación embebida en el título, como epoch en
+ * segundos (UTC). Prioriza el formato ISO de los padres AUTSUC
+ * ("AUTSUC GLEW (B0101) 2026-10-07") y cae a la prosa en español. Devuelve null
+ * si no hay una fecha válida.
+ */
+export function parseEstimatedEndEpoch(title: string): number | null {
+  const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(title);
+  if (iso) {
+    const year = Number(iso[1]);
+    const month = Number(iso[2]);
+    const day = Number(iso[3]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return Math.floor(Date.UTC(year, month - 1, day) / 1000);
+    }
+  }
+
+  const prose = /\b(\d{1,2})\s+([a-zA-Záéíóúñ]{3,})\.?\s+(\d{4})\b/i.exec(
+    title,
+  );
+  if (prose) {
+    const day = Number(prose[1]);
+    const key = normalizeForCompare(prose[2]);
+    const month = MONTH_INDEX[key] ?? MONTH_INDEX[key.slice(0, 3)];
+    const year = Number(prose[3]);
+    if (month !== undefined && day >= 1 && day <= 31) {
+      return Math.floor(Date.UTC(year, month, day) / 1000);
+    }
+  }
+
+  return null;
+}
+
 export function parseAutomationBranchTitle(
   cleanedTitle: string,
 ): AutomationBranchInfo {

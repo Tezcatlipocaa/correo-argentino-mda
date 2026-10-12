@@ -96,6 +96,10 @@ export const routePermissions: RoutePermission[] = [
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
   {
+    path: "/supervision/calidad-operadores/nueva",
+    roles: ["admin", "supervisor", "team_leader", "referent"],
+  },
+  {
     path: "/supervision/calidad-operadores",
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
@@ -112,6 +116,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/mesas-de-ayuda/asignar", roles: ["admin", "supervisor"] },
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
+  { path: "/oficinas/estadisticas", roles: ["admin", "supervisor"] },
   { path: "/base-conocimiento/categorias", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/create", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/edit", roles: [...KB_ACCESS_ROLES] },
@@ -148,6 +153,7 @@ export const routePermissions: RoutePermission[] = [
   // escritura (cerrar/reabrir/editar datos) se decide por módulo en
   // getModulePermissions (supervisor+), no por esta whitelist.
   { path: "/automatizaciones", roles: ALL_ROLES },
+  { path: "/automatizaciones/metricas", roles: ALL_ROLES },
   { path: "/base-conocimiento", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/admin", roles: ALL_ROLES },
   { path: "/api/aplicativos", roles: ALL_ROLES },
@@ -162,6 +168,10 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/kb/upload", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/kb/images", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/offices", roles: ALL_ROLES },
+  // Reportería de oficinas: la whitelist deja pasar la request y el handler
+  // aplica requireReadAccess("oficinas") -> supervisor+ (mismo patrón que
+  // /api/admin/usuarios). Así el agente recibe 403 JSON, no un redirect.
+  { path: "/api/oficinas", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
   { path: "/api/support-guides", roles: ALL_ROLES },
@@ -275,6 +285,15 @@ export function getModulePermissions(
     // para supervisor+, que es la política de cierre desde el portal.
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
+  } else if (moduleName === "inventario") {
+    // Estadísticas del parque de terminales: lectura para todos los roles
+    // logueados; sin escrituras por ahora.
+    perm.canRead = true;
+  } else if (moduleName === "oficinas") {
+    // Reportería de oficinas: lectura supervisor+ (gerencia). La escritura del
+    // CRUD de oficinas se decide por routePermissions, no por este módulo.
+    perm.canRead = rank >= ROLE_HIERARCHY.supervisor;
+    perm.canWrite = false;
   }
 
   return perm;

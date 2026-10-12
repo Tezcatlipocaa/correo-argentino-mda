@@ -14,9 +14,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
     return denied;
   }
 
-  const automationId = Number.parseInt(params.id ?? "", 10);
-  if (!Number.isInteger(automationId)) {
-    return jsonError("El id de la automatización debe ser un entero", 400);
+  const rawId = params.id ?? "";
+  const automationId = Number.parseInt(rawId, 10);
+  if (!/^\d+$/.test(rawId) || automationId <= 0) {
+    return jsonError(
+      "El id de la automatización debe ser un entero positivo",
+      400,
+    );
   }
 
   try {

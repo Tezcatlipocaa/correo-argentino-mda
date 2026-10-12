@@ -121,6 +121,7 @@
   --color-steel-azure-500: #376ac8;
   --color-steel-azure-600: #2c55a0;
   --color-steel-azure-700: #213f78;
+  --color-steel-azure-750: #1c3464;
   --color-steel-azure-800: #162a50;
   --color-steel-azure-900: #0b1528;
   --color-steel-azure-950: #080f1c;
@@ -386,4 +387,52 @@
 .dot-delayed-fade-in {
   opacity: 0;
   animation: dot-delayed-fade-in 200ms 300ms forwards;
+}
+
+/* ---------------------------------------------------------------------------
+   Acento del módulo Automatizaciones.
+   Secondary (azul) en claro; primary (amarillo) en oscuro, porque el azul no
+   contrasta bien sobre el fondo negro. Aplicar `.acc` al contenedor de la
+   sección y las utilidades en los elementos.
+--------------------------------------------------------------------------- */
+.acc {
+  --acc-bg: var(--color-secondary);
+  --acc-fg: var(--color-secondary-content);
+}
+
+[data-theme="dark"] .acc {
+  --acc-bg: var(--color-steel-azure-400);
+  --acc-fg: var(--color-secondary-content);
+}
+
+@utility acc-btn {
+  --btn-color: var(--acc-bg);
+  --btn-fg: var(--acc-fg);
+}
+
+@utility acc-surface {
+  background-color: var(--acc-bg);
+  color: var(--acc-fg);
+  border-color: var(--acc-bg);
+}
+
+@utility acc-text {
+  color: var(--acc-bg);
+}
+
+@utility acc-badge {
+  background-color: var(--acc-bg);
+  color: var(--acc-fg);
+  border-color: var(--acc-bg);
+}
+
+/* DaisyUI pinta el relleno del progress con currentColor. */
+@utility acc-progress {
+  color: var(--acc-bg, var(--color-secondary));
+}
+
+/* Quita la sombra interna de DaisyUI de un .btn (shadow-none no la pisa). */
+@utility acc-flat {
+  --btn-shadow: 0 0 0 0 rgb(0 0 0 / 0);
+  --btn-inset: 0 0 0 0 rgb(0 0 0 / 0);
 }

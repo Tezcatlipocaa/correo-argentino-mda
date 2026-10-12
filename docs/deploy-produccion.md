@@ -66,7 +66,7 @@ npm install
 copy .env.example .env
 ```
 
-Completá las 6 variables en `.env`. En producción prestá atención a:
+Completá las variables en `.env`. En producción prestá atención a:
 
 | Variable               | Valor de ejemplo en producción                                             |
 | ---------------------- | -------------------------------------------------------------------------- |
@@ -75,10 +75,18 @@ Completá las 6 variables en `.env`. En producción prestá atención a:
 | `INVGATE_API_KEY`      | La API key real de InvGate                                                 |
 | `INVGATE_BASE_URL`     | `https://correoargentino.sd.cloud.invgate.net/api/v1/`                     |
 | `INVGATE_API_USERNAME` | `portalmda`                                                                |
+| `WISE_CX_BASE_URL`     | `https://api.wcx.cloud`                                                    |
+| `WISE_CX_API_KEY`      | La API key real de Wise CX                                                 |
+| `WISE_CX_API_USER`     | Usuario asociado a la API key en Wise CX                                   |
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
 | `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
+
+Opcionales del módulo `/automatizaciones` (tienen default; no bloquean el arranque):
+`AUTOMATION_AGE_THRESHOLD_DAYS` (30), `AUTOMATION_STALLED_THRESHOLD_DAYS` (15),
+`AUTOMATION_CLOSE_THRESHOLD` (80), `AUTOMATION_*_TTL_MIN`, `INVGATE_AUTOMATION_VIEW_ID`
+(producción: `64`), `INVGATE_AUTOMATION_CATEGORY_ID`, `INVGATE_AUTOMATION_GROUP_ID`.
 
 ---
 
@@ -99,15 +107,18 @@ pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
-**Resultado:** Los 5 procesos se inician:
+**Resultado:** Se inician los procesos del `ecosystem.config.cjs`:
 
-| Proceso                 | Puerto / Schedule | Rol                                 |
-| ----------------------- | ----------------- | ----------------------------------- |
-| `correo-argentino-mda`  | 4321              | Servidor Astro SSR                  |
-| `mda-ping-cubics`       | persistente       | Ping a terminales                   |
-| `sync-legacy-inventory` | 05:00, 17:00      | Sincroniza inventario PHP           |
-| `sync-users`            | 02:00             | Sincroniza empleados desde MidPoint |
-| `sync-office-links`     | 03:00             | Sincroniza vínculos oficina-InvGate |
+| Proceso                        | Puerto / Schedule | Rol                                 |
+| ------------------------------ | ----------------- | ----------------------------------- |
+| `correo-argentino-mda`         | 4321              | Servidor Astro SSR                  |
+| `mda-ping-cubics`              | persistente       | Ping a terminales                   |
+| `sync-legacy-inventory`        | 05:00, 17:00      | Sincroniza inventario PHP           |
+| `sync-users`                   | 02:00             | Sincroniza empleados desde MidPoint |
+| `sync-office-links`            | 03:00             | Sincroniza vínculos oficina-InvGate |
+| `purge-deleted-records`        | 04:00             | Purga la papelera (90 días)         |
+| `reconcile-automation-parents` | 04:00             | Reconcilia padres de automatizaciones |
+| `snapshot-automation-metrics`  | 04:05             | Snapshot mensual de KPIs de automatizaciones |
 
 Configurá PM2 para que arranque al iniciar Windows:
 
@@ -321,6 +332,38 @@ Register-ScheduledTask -TaskName "Auto deploy correo-argentino-mda" -Action $a -
 Si `-RunLevel` tampoco existe en el módulo, omitirlo (queda Limited — suficiente para npm/pm2 del perfil usuario).
 
 Nota: en logon no interactivo, `npm`/`pm2` deben resolverse desde el PATH del usuario (`C:\Program Files\nodejs` y `%APPDATA%\npm`); si el run no interactivo falla por esto, fijar el PATH al inicio del `.bat`.
+
+---
+
+## Actualización: métricas de automatizaciones (2026-10)
+
+Este cambio agrega columnas a `automation_parents` (`estimated_end_at`,
+`region`, `locality`, `progress_*`, `assigned_group_*`, `reopen_count`) y la tabla
+`automation_metrics_monthly`, más un worker PM2 nuevo. Checklist:
+
+```powershell
+git pull                                   # o el merge de la rama
+pm2 kill                                   # detener antes de tocar dist/.node
+npm install
+npx tsx scripts/align-db-to-schema.mts     # crea columnas + tabla (idempotente, con backup)
+npm run build                              # incluye verify-build
+pm2 start ecosystem.config.cjs             # levanta snapshot-automation-metrics
+pm2 save
+npm run warm:automations                   # precalienta el scan de InvGate
+```
+
+Agregar al `.env` del server (opcional, con default):
+`AUTOMATION_AGE_THRESHOLD_DAYS=30` y `AUTOMATION_STALLED_THRESHOLD_DAYS=15`.
+
+Verificación del snapshot (no escribe):
+
+```powershell
+npx tsx scripts/snapshot-automation-metrics.ts   # dry-run
+```
+
+> `scripts/auto-deploy.bat` ya corre `align-db-to-schema.mts` antes del build, así
+> que el deploy programado cubre la migración. El worker nuevo se levanta solo al
+> `pm2 start ecosystem.config.cjs`.
 
 ---
 

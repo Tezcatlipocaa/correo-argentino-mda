@@ -62,11 +62,25 @@ export const navSections: NavSection[] = [
         href: "/oficinas",
         label: "Oficinas",
         icon: "boxicons:building-house-filled",
+        children: [
+          {
+            href: "/oficinas/estadisticas",
+            label: "Estadísticas",
+            icon: "boxicons:bar-chart-big-filled",
+          },
+        ],
       },
       {
         href: "/inventario-terminales",
         label: "Terminales",
         icon: "boxicons:desktop-filled",
+        children: [
+          {
+            href: "/inventario-terminales/estadisticas",
+            label: "Estadísticas",
+            icon: "boxicons:pie-chart-alt-filled",
+          },
+        ],
       },
       {
         href: "/recursos",

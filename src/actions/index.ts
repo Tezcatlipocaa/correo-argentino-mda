@@ -11,7 +11,7 @@ import {
   feedback,
 } from "@db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { calculateAuditScores, calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
+import { calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import {
   invalidateAutomationDetail,
@@ -24,10 +24,12 @@ import {
   canManualClose,
   getCloseThreshold,
   getClosure,
+  markAutomationReopened,
   recordClosure,
   removeClosure,
 } from "@lib/workflow/closures";
 import { saveManualData } from "@lib/workflow/manual-data";
+import { incrementAutomationReopenCount } from "@lib/workflow/parent-history";
 
 export const server = {
   saveParameters: defineAction({
@@ -213,9 +215,12 @@ export const server = {
         channelType: z
           .enum(["wise_call", "wise_email", "invgate_ticket"])
           .default("wise_call"),
-        callId: z.string().default(""), // ID / Case Number
-        ticketId: z.string().default(""), // Ticket ID
-        duration: z.string().default("00:00"),
+        // Astro parsea los campos vacíos de un FormData como `null`, y `.default()`
+        // solo cubre `undefined`: sin el preprocess, dejar el ticket en blanco
+        // devolvía 400 y bloqueaba el guardado.
+        callId: z.preprocess((v) => (v == null ? "" : String(v)), z.string()).default(""),
+        ticketId: z.preprocess((v) => (v == null ? "" : String(v)), z.string()).default(""),
+        duration: z.preprocess((v) => (v == null ? "" : String(v)), z.string()).default("00:00"),
         date: z.string().min(1, "La fecha es requerida"),
         month: z.string().min(1, "El período es requerido"),
         notes: z
@@ -263,13 +268,6 @@ export const server = {
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
           )
           .default(true),
-        isCriticalFailure: z
-          .any()
-          .transform(
-            (v) =>
-              v === "on" || v === true || v === "true" || v === 1 || v === "1",
-          )
-          .default(false),
       })
       .passthrough(),
     handler: async (input, context) => {
@@ -319,13 +317,23 @@ export const server = {
           hasSection2 = input.callGeneratedTicket;
         }
       } else if (input.channelType === "wise_email") {
-        hasSection2 = true;
-        if (input.emailTicketMode === "reclamo") {
-          isReclamoNovedad = true;
-        } else if (input.emailTicketMode === "nuevo") {
+        // "ninguno" = el mail no derivó en ticket MDA. Se deshabilita la
+        // sección 2 y el total pasa a ser el de la sección 1 (así lo
+        // definía el "aplica MDA" del Excel). "reclamo" NO es lo mismo:
+        // exime la sección 2 al 100%, lo que pone un piso del 50% al
+        // total aunque la sección 1 sea 0.
+        if (input.emailTicketMode === "ninguno") {
+          hasSection2 = false;
           isReclamoNovedad = false;
         } else {
-          isReclamoNovedad = input.isReclamoNovedad;
+          hasSection2 = true;
+          if (input.emailTicketMode === "reclamo") {
+            isReclamoNovedad = true;
+          } else if (input.emailTicketMode === "nuevo") {
+            isReclamoNovedad = false;
+          } else {
+            isReclamoNovedad = input.isReclamoNovedad;
+          }
         }
       } else if (input.channelType === "invgate_ticket") {
         hasSection2 = input.staysInMda;
@@ -372,7 +380,6 @@ export const server = {
           allParams,
           checkedCodes,
           hasSection2,
-          input.isCriticalFailure,
           isReclamoNovedad,
         );
 
@@ -396,11 +403,10 @@ export const server = {
           input.channelType === "wise_call"
             ? hasSection2
             : input.channelType === "wise_email"
-              ? true
+              ? hasSection2
               : input.appliesMda,
         staysInMda: input.staysInMda,
         isReclamoNovedad,
-        isCriticalFailure: input.isCriticalFailure,
         recordingUrl: input.recordingUrl || null,
       };
 
@@ -769,6 +775,8 @@ export const server = {
       }
 
       removeClosure(input.automationId);
+      markAutomationReopened(input.automationId);
+      incrementAutomationReopenCount(input.automationId);
       invalidateAutomationDetail(input.automationId);
       invalidateDiscoveryCache();
 

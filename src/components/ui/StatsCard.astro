@@ -1,5 +1,13 @@
 ---
 import { Icon } from "astro-icon/components";
+import MetricInfo from "./MetricInfo.astro";
+
+interface Delta {
+  value: number | null;
+  suffix?: string;
+  /** true (default): subir es bueno (verde). */
+  goodWhenUp?: boolean;
+}
 
 interface Props {
   icon: string;
@@ -13,7 +21,13 @@ interface Props {
     | "info"
     | "success"
     | "warning"
-    | "error";
+    | "error"
+    /** Acento del módulo (`.acc`): secondary en claro, primary en oscuro. */
+    | "auto";
+  /** Texto de ayuda: muestra un ícono info con tooltip. */
+  hint?: string;
+  formula?: string;
+  delta?: Delta;
   class?: string;
 }
 
@@ -23,8 +37,21 @@ const {
   value,
   subtitle,
   color = "primary",
+  hint,
+  formula,
+  delta,
   class: className = "",
 } = Astro.props;
+
+const colorClass = color === "auto" ? "acc-text" : `text-${color}`;
+
+const deltaValue = delta?.value ?? null;
+const hasDelta = deltaValue !== null;
+const deltaUp = (deltaValue ?? 0) >= 0;
+const deltaGood = hasDelta && deltaUp === (delta?.goodWhenUp ?? true);
+const deltaArrow = deltaUp ? "boxicons:trending-up" : "boxicons:trending-down";
+const deltaSign = (deltaValue ?? 0) > 0 ? "+" : "";
+const deltaSuffix = delta?.suffix ?? "%";
 ---
 
 <div
@@ -33,23 +60,34 @@ const {
     className,
   ]}
 >
-  <div class="flex flex-col gap-3">
-    <div class="flex items-start justify-between gap-2">
-      <span
-        class="text-base-content/60 text-xs font-semibold tracking-wider uppercase"
-      >
-        {label}
-      </span>
-      <span class:list={[`text-${color}`]}>
-        <Icon name={`boxicons:${icon}`} size={28} is:inline />
-      </span>
+  <div class="card-body">
+    <div class="stat">
+      <div class:list={["stat-figure", colorClass]}>
+        <Icon name={`boxicons:${icon}`} size={18} is:inline />
+      </div>
+      <div class="stat-title flex items-center gap-1">
+        <span>{label}</span>
+        {hint && <MetricInfo label={label} description={hint} formula={formula} />}
+      </div>
+      <div class:list={["stat-value flex items-center gap-2", colorClass]}>
+        <span data-kpi-value>{value}</span>
+        {
+          hasDelta && (
+            <span
+              class:list={[
+                "badge badge-sm gap-0.5 font-normal",
+                deltaGood ? "badge-success badge-soft" : "badge-error badge-soft",
+              ]}
+            >
+              <Icon name={deltaArrow} size={12} aria-hidden="true" />
+              {deltaSign}
+              {deltaValue}
+              {deltaSuffix}
+            </span>
+          )
+        }
+      </div>
+      <div class="stat-desc">{subtitle}</div>
     </div>
-    <div
-      data-kpi-value
-      class:list={["font-mono text-4xl font-bold", `text-${color}`]}
-    >
-      {value}
-    </div>
-    <div class="text-base-content/60 text-sm">{subtitle}</div>
   </div>
 </div>

@@ -1,0 +1,25 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import OficinasEstadisticasContent from "@components/offices/stats/OficinasEstadisticasContent.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const cleanBase = getCleanBase();
+---
+
+<BaseLayout>
+  <PageContainer width="xl">
+    <PageHeader
+      backHref={`${cleanBase}oficinas`}
+      backLabel="Volver al directorio"
+      title="Estadísticas de oficinas"
+      description="Usuarios, incidentes, parque y modernización de la red."
+    />
+
+    <OficinasEstadisticasContent server:defer>
+      <ChartCardSkeleton slot="fallback" count={3} />
+    </OficinasEstadisticasContent>
+  </PageContainer>
+</BaseLayout>
