@@ -65,7 +65,9 @@ test.describe("RBAC de /automatizaciones", () => {
     await setSessionCookie(context, agentUser.signedSessionId);
     await page.goto("/automatizaciones");
 
-    const detailLink = page.locator('a[href^="/automatizaciones/"]').first();
+    const detailLink = page
+      .locator('a[href^="/automatizaciones/"]:not([href*="/metricas"])')
+      .first();
     const count = await detailLink.count();
     test.skip(
       count === 0,

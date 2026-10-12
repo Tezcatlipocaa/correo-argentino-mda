@@ -1,0 +1,88 @@
+---
+import { Icon } from "astro-icon/components";
+import type { AutomationSummary } from "@lib/workflow/discovery";
+import { formatEpochDateTime } from "@lib/format/datetime";
+import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
+import AutomationLink from "./AutomationLink.astro";
+import AutomationEmptyState from "./AutomationEmptyState.astro";
+
+interface Props {
+  items: readonly AutomationSummary[];
+  emptyMessage: string;
+}
+
+const { items, emptyMessage } = Astro.props;
+---
+
+{
+  items.length === 0 ? (
+    <AutomationEmptyState message={emptyMessage} />
+  ) : (
+    <div class="border-base-300 bg-base-100 overflow-x-auto rounded-xl border shadow-sm">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th scope="col">Código</th>
+            <th scope="col">Sucursal</th>
+            <th scope="col">Región</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-right">
+              Progreso
+            </th>
+            <th scope="col">Mesa</th>
+            <th scope="col">Iniciada</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr class="hover">
+              <td>
+                <code class="bg-base-200 text-base-content/80 rounded px-1.5 py-0.5 font-mono text-xs">
+                  {item.prettyId}
+                </code>
+              </td>
+              <td class="max-w-[22rem] truncate" title={item.displayName}>
+                {item.displayName}
+              </td>
+              <td class="text-base-content/70">
+                {item.region ?? "—"}
+              </td>
+              <td>
+                <AutomationLifecycleLabel
+                  statusId={item.statusId}
+                  active={item.isActive && !item.localClosure}
+                  hasClosure={item.localClosure != null}
+                />
+              </td>
+              <td class="text-right font-mono tabular-nums">
+                {typeof item.progressPercent === "number"
+                  ? `${item.progressPercent}%`
+                  : "—"}
+              </td>
+              <td class="text-base-content/70 max-w-[12rem] truncate">
+                {item.assignedGroupName ?? "—"}
+              </td>
+              <td class="text-base-content/70 whitespace-nowrap text-xs">
+                {formatEpochDateTime(item.createdAt)}
+              </td>
+              <td class="text-right">
+                <AutomationLink
+                  automationId={item.id}
+                  class="btn btn-ghost btn-xs gap-1"
+                >
+                  Ver
+                  <Icon
+                    name="boxicons:chevron-right"
+                    size={12}
+                    aria-hidden="true"
+                  />
+                </AutomationLink>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}

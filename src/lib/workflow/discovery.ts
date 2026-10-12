@@ -24,9 +24,13 @@ import { isActiveStatus } from "./automation-status";
 import {
   cleanInvGateTitle,
   parseAutomationBranchTitle,
+  parseEstimatedEndEpoch,
   buildAutomationDisplayName,
 } from "./branch-title";
 import { branchNameFromDescription } from "./branch-display";
+import { getBranchLocation } from "./branch-location";
+import type { BranchLocation } from "./branch-location";
+import { resolveSectorNames } from "@lib/invgate/automation/helpdesk-names";
 import { listClosures } from "./closures";
 import type { AutomationClosure } from "./closures";
 import {
@@ -67,6 +71,16 @@ export interface AutomationSummary {
   /** Epoch de la última actualización en InvGate (`last_update`). */
   updatedAt: number;
   closedAt: number | null;
+  /** Fecha estimada de implementación (epoch s), parseada del título. */
+  estimatedEndAt?: number | null;
+  /** Región/localidad de la sucursal (DB de oficinas por `branchCode`). */
+  region?: string | null;
+  locality?: string | null;
+  /** Mesa asignada del padre en InvGate. */
+  assignedGroupId?: number | null;
+  assignedGroupName?: string | null;
+  /** Progreso persistido; sólo lo tienen los casos abiertos/resueltos. */
+  progressPercent?: number | null;
   /** Cierre local en el portal (manual o auto); ausente si no fue cerrado acá. */
   localClosure?: AutomationClosure | null;
 }
@@ -95,6 +109,13 @@ type PersistedDiscovery = DiscoverySnapshot & { cachedAt: number };
 
 let cachedDiscovery: CachedDiscovery | null = null;
 let inflightDiscovery: Promise<AutomationDiscoveryResult> | null = null;
+
+/**
+ * Generación global del snapshot de discovery. Se incrementa al invalidar; un
+ * scan en vuelo captura la generación al arrancar y sólo publica su resultado
+ * si sigue vigente (evita re-publicar un snapshot pre-mutación tras un cierre).
+ */
+let discoveryGeneration = 0;
 
 /**
  * Padres finalizados (detectados al salir del scan) para "Recientes". El
@@ -141,7 +162,58 @@ function toSummary(incident: InvgateAutomationIncident): AutomationSummary {
     createdAt: incident.created_at,
     updatedAt: incident.last_update ?? incident.created_at,
     closedAt: incident.closed_at,
+    estimatedEndAt: parseEstimatedEndEpoch(cleanedTitle),
+    assignedGroupId:
+      typeof incident.assigned_group_id === "number"
+        ? incident.assigned_group_id
+        : null,
   };
+}
+
+/**
+ * Completa metadatos que requieren consultas locales/por-lote (región por
+ * código de sucursal y nombre de la mesa asignada). Se corre una vez por scan
+ * sobre los padres, antes de persistir el historial.
+ */
+async function enrichParentMetadata(
+  summaries: AutomationSummary[],
+): Promise<void> {
+  const branchCodes = [
+    ...new Set(
+      summaries
+        .map((item) => item.branchCode)
+        .filter((code): code is string => Boolean(code)),
+    ),
+  ];
+  const locationByCode = new Map<string, BranchLocation>();
+  await Promise.all(
+    branchCodes.map(async (code) => {
+      const location = await getBranchLocation(code);
+      if (location) {
+        locationByCode.set(code, location);
+      }
+    }),
+  );
+
+  const groupIds = [
+    ...new Set(
+      summaries
+        .map((item) => item.assignedGroupId)
+        .filter((id): id is number => typeof id === "number" && id > 0),
+    ),
+  ];
+  const sectorNames = await resolveSectorNames(groupIds);
+
+  for (const summary of summaries) {
+    const location = summary.branchCode
+      ? locationByCode.get(summary.branchCode)
+      : undefined;
+    summary.region = location?.region ?? null;
+    summary.locality = location?.locality ?? null;
+    summary.assignedGroupName = summary.assignedGroupId
+      ? (sectorNames.get(summary.assignedGroupId) ?? null)
+      : null;
+  }
 }
 
 function sortByNewestFirst(a: AutomationSummary, b: AutomationSummary): number {
@@ -281,6 +353,10 @@ async function scanAutomations(): Promise<AutomationDiscoveryResult> {
     invalidateQueueCache();
   }
 
+  // Región/localidad y nombre de mesa (consultas locales) antes de persistir.
+  await enrichParentMetadata(allParents);
+  const summariesById = new Map(allParents.map((item) => [item.id, item]));
+
   /**
    * Tracking: los padres activos se recuerdan (aunque después cambien de
    * mesa); los finalizados o ausentes se podan. Los finalizados alimentan
@@ -307,7 +383,9 @@ async function scanAutomations(): Promise<AutomationDiscoveryResult> {
     for (const id of forgotten) {
       const incident = incidents.find((item) => item.id === id);
       if (incident && !isActiveStatus(incident.status_id)) {
-        finalizedSeen.set(id, toSummary(incident));
+        // Reusar el summary enriquecido de `allParents` para no perder
+        // región/mesa al re-publicarlo en "Recientes".
+        finalizedSeen.set(id, summariesById.get(id) ?? toSummary(incident));
       }
     }
   }
@@ -383,11 +461,14 @@ function runDiscoveryPipeline(): Promise<AutomationDiscoveryResult> {
     return inflightDiscovery;
   }
 
-  const promise = (async () => {
+  const generation = discoveryGeneration;
+
+  let promise!: Promise<AutomationDiscoveryResult>;
+  promise = (async () => {
     try {
       const result = await scanAutomations();
 
-      if (result.ok) {
+      if (result.ok && generation === discoveryGeneration) {
         const now = Date.now();
         const snapshot: DiscoverySnapshot = {
           current: result.current,
@@ -408,7 +489,10 @@ function runDiscoveryPipeline(): Promise<AutomationDiscoveryResult> {
 
       return result;
     } finally {
-      inflightDiscovery = null;
+      // No pisar una corrida nueva que pudo arrancar tras una invalidación.
+      if (inflightDiscovery === promise) {
+        inflightDiscovery = null;
+      }
     }
   })();
 
@@ -493,6 +577,8 @@ export function revalidateAutomations(): Promise<AutomationDiscoveryResult> {
  * local (cierre/reopertura) para forzar la reclasificación en el próximo render.
  */
 export function invalidateDiscoveryCache(): void {
+  discoveryGeneration += 1;
   cachedDiscovery = null;
+  inflightDiscovery = null;
   deletePersistedCache(DISCOVERY_CACHE_KEY);
 }

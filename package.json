@@ -21,6 +21,7 @@
     "db:apply-titles-enrichment": "tsx scripts/apply-titles-enrichment.mts",
     "db:seed-etapas": "tsx scripts/seed-workflow-stages.ts",
     "warm:automations": "tsx scripts/warm-automations.ts",
+    "snapshot:automation-metrics": "tsx scripts/snapshot-automation-metrics.ts",
     "reconcile:automation-parents": "tsx scripts/reconcile-automation-parents.ts",
     "buildings:reconcile": "tsx scripts/reconcile-buildings.ts",
     "test:unit": "vitest run",

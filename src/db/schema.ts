@@ -1255,13 +1255,48 @@ export const automationParents = sqliteTable(
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
     closedAt: integer("closed_at"),
+    /** Fecha estimada de implementación (epoch s), parseada del título. */
+    estimatedEndAt: integer("estimated_end_at"),
+    /** Región/localidad de la sucursal (DB de oficinas por `branchCode`). */
+    region: text("region"),
+    locality: text("locality"),
+    /** Progreso persistido (oportunista: detalle/progreso liviano). */
+    progressPercent: integer("progress_percent"),
+    progressCompleted: integer("progress_completed"),
+    progressTotal: integer("progress_total"),
+    /** Mesa asignada del padre en InvGate (id y nombre del helpdesk/nivel). */
+    assignedGroupId: integer("assigned_group_id"),
+    assignedGroupName: text("assigned_group_name"),
+    /** Cantidad de reaperturas locales (calidad de cierre). */
+    reopenCount: integer("reopen_count").notNull().default(0),
     firstSeenAt: integer("first_seen_at").notNull(),
     lastSeenAt: integer("last_seen_at").notNull(),
   },
   (table) => ({
     createdAtIdx: index("automation_parents_created_at_idx").on(table.createdAt),
     updatedAtIdx: index("automation_parents_updated_at_idx").on(table.updatedAt),
+    regionIdx: index("automation_parents_region_idx").on(table.region),
   }),
+);
+
+/**
+ * Snapshot mensual de KPIs de automatizaciones. Se persiste desde un script
+ * programado para conservar series históricas estables aunque cambie la lógica
+ * de cálculo. `month` = "YYYY-MM".
+ */
+export const automationMetricsMonthly = sqliteTable(
+  "automation_metrics_monthly",
+  {
+    month: text("month").primaryKey(),
+    created: integer("created").notNull().default(0),
+    finalized: integer("finalized").notNull().default(0),
+    finalizedByPortal: integer("finalized_by_portal").notNull().default(0),
+    activeAtMonthEnd: integer("active_at_month_end").notNull().default(0),
+    medianLeadDays: real("median_lead_days"),
+    p90LeadDays: real("p90_lead_days"),
+    onTimeRate: real("on_time_rate"),
+    snapshotAt: integer("snapshot_at").notNull(),
+  },
 );
 
 // 19. ADMIN MESAS Y PAPELERA

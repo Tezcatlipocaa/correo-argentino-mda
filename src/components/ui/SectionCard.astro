@@ -45,9 +45,15 @@ const {
             </h2>
           )}
         </div>
-        {description && (
-          <p class="text-base-content/60 mt-1 text-sm">{description}</p>
-        )}
+        {
+          Astro.slots.has("description") ? (
+            <div class="text-base-content/60 mt-1 text-sm">
+              <slot name="description" />
+            </div>
+          ) : description ? (
+            <p class="text-base-content/60 mt-1 text-sm">{description}</p>
+          ) : null
+        }
       </div>
     )
   }

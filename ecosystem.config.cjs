@@ -66,5 +66,15 @@ module.exports = {
       error_file: "./logs/reconcile-automation-parents-error.log",
       out_file: "./logs/reconcile-automation-parents-out.log",
     },
+    {
+      name: "snapshot-automation-metrics",
+      script: "node",
+      args: "--import tsx scripts/snapshot-automation-metrics.ts --apply",
+      cron_restart: "5 4 * * *",
+      autorestart: false,
+      watch: false,
+      error_file: "./logs/snapshot-automation-metrics-error.log",
+      out_file: "./logs/snapshot-automation-metrics-out.log",
+    },
   ],
 };
