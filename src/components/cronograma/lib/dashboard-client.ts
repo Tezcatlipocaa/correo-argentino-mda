@@ -319,6 +319,31 @@ export async function reloadDataForActiveMonth(
   }
 }
 
+/**
+ * Aplica la regla única de mes inicial al date input: fija el valor al día
+ * válido del mes resuelto (hoy si pertenece y tiene dato, si no el último día
+ * de ese mes con dato, si no el día 1) y el min/max al rango de ese mes.
+ */
+function applyInitialMonthToDateInput(
+  dateInput: HTMLInputElement | null,
+): void {
+  const todayStr = formatYMD(new Date());
+  const initialMonth = resolveInitialMonth(
+    state.uniqueMonths,
+    todayStr.slice(0, 7),
+  );
+  if (!dateInput) return;
+  const datesInMonth = state.uniqueDates.filter((d) =>
+    d.startsWith(initialMonth),
+  );
+  dateInput.value = datesInMonth.includes(todayStr)
+    ? todayStr
+    : datesInMonth[datesInMonth.length - 1] || `${initialMonth}-01`;
+  const [year, month] = initialMonth.split("-").map(Number);
+  dateInput.min = `${initialMonth}-01`;
+  dateInput.max = `${initialMonth}-${String(getDaysInMonth(year, month - 1)).padStart(2, "0")}`;
+}
+
 async function init(): Promise<void> {
   try {
     const dateInput = document.getElementById(
@@ -346,25 +371,8 @@ async function init(): Promise<void> {
 
     await loadRotationConfig(activeMonth);
 
-    const initialMonth = resolveInitialMonth(
-      state.uniqueMonths,
-      todayStr.slice(0, 7),
-    );
-    const datesInMonth = state.uniqueDates.filter((d) =>
-      d.startsWith(initialMonth),
-    );
-    const initialDate = datesInMonth.includes(todayStr)
-      ? todayStr
-      : datesInMonth[datesInMonth.length - 1] || `${initialMonth}-01`;
-
-    if (dateInput) {
-      dateInput.value = initialDate;
-      updateDateInputDisplay();
-      const [imYear, imMonth] = initialMonth.split("-").map(Number);
-      const lastDay = getDaysInMonth(imYear, imMonth - 1);
-      dateInput.min = `${initialMonth}-01`;
-      dateInput.max = `${initialMonth}-${String(lastDay).padStart(2, "0")}`;
-    }
+    applyInitialMonthToDateInput(dateInput);
+    updateDateInputDisplay();
 
     renderDaily();
     renderMonthly();
@@ -1941,17 +1949,7 @@ function setupEventListeners(): void {
         state.cronoData = payload.operators;
         state.availableMonths = payload.availableMonths || [];
 
-        if (state.uniqueDates.length > 0) {
-          const targetDate = state.uniqueDates[state.uniqueDates.length - 1];
-          dateInput.value = targetDate;
-          dateInput.min = state.uniqueDates[0];
-          dateInput.max = targetDate;
-        } else {
-          const todayStr = formatYMD(new Date());
-          dateInput.value = todayStr;
-          dateInput.removeAttribute("min");
-          dateInput.removeAttribute("max");
-        }
+        applyInitialMonthToDateInput(dateInput);
 
         const activeYM = dateInput.value.slice(0, 7);
         await loadRotationConfig(activeYM);
