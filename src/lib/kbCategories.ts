@@ -30,14 +30,13 @@ function normalizeCategoryName(raw: string): string {
 }
 
 /**
- * Clave de comparación de categorías: NFC + espacios colapsados + trim +
- * minúsculas. SQLite no puede replicar NFC ni el `lower()` de acentos, así que
- * toda comparación entre el catálogo y `kb_articles.category` pasa por acá en
- * JS. Es la parte "visible" de `normalizeCategoryName` más el case-insensitive
- * que ya usaba el dedup en SQL.
+ * Clave de comparación de categorías: `normalizeCategoryName` (NFC + espacios
+ * colapsados + trim) más minúsculas. SQLite no puede replicar NFC ni el
+ * `lower()` de acentos, así que toda comparación entre el catálogo y
+ * `kb_articles.category` pasa por acá en JS.
  */
 export function categoryKey(raw: string): string {
-  return raw.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+  return normalizeCategoryName(raw).toLowerCase();
 }
 
 function isValidHelpdeskId(helpdeskId: number): boolean {
@@ -189,23 +188,33 @@ export function renameCategory(input: {
       .where(eq(kbCategories.id, input.id))
       .run();
     const previousKey = categoryKey(current.name);
-    const articleIds = tx
-      .select({ id: kbArticles.id, category: kbArticles.category })
-      .from(kbArticles)
-      .where(eq(kbArticles.helpdeskId, input.helpdeskId))
-      .all()
-      .filter(
-        (row) =>
-          row.category != null && categoryKey(row.category) === previousKey,
-      )
-      .map((row) => row.id);
+    const variants = [
+      ...new Set(
+        tx
+          .select({ category: kbArticles.category })
+          .from(kbArticles)
+          .where(eq(kbArticles.helpdeskId, input.helpdeskId))
+          .all()
+          .filter(
+            (row) =>
+              row.category != null &&
+              categoryKey(row.category) === previousKey,
+          )
+          .map((row) => row.category as string),
+      ),
+    ];
 
     const cascaded =
-      articleIds.length > 0
+      variants.length > 0
         ? tx
             .update(kbArticles)
             .set({ category: name })
-            .where(inArray(kbArticles.id, articleIds))
+            .where(
+              and(
+                eq(kbArticles.helpdeskId, input.helpdeskId),
+                inArray(kbArticles.category, variants),
+              ),
+            )
             .run()
         : { changes: 0 };
 
@@ -250,6 +259,10 @@ export function countArticlesWithCategory(
   name: string,
   executor: KbCategoriesExecutor = db,
 ): number {
+  // Compara en JS (SQLite no puede replicar NFC ni el lower() de acentos), así
+  // que materializa las filas de la mesa en lugar de un count(*) indexado. A la
+  // escala de la KB es despreciable; si kb_articles crece, denormalizar una
+  // columna `category_key` y comparar en SQL.
   const target = categoryKey(name);
   const rows = executor
     .select({ category: kbArticles.category })
