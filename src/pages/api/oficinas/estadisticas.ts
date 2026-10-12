@@ -96,7 +96,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       .select({
         code: offices.code,
         name: offices.name,
-        officeType: offices.officeType,
+        type: offices.type,
         active: offices.active,
         provinceName: provinces.name,
         regionName: regions.name,
@@ -188,7 +188,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     if (regionFilter) ranking = ranking.filter((r) => r.region === regionFilter);
     if (tipoFilter) {
       const codes = new Set(
-        officeRows.filter((r) => r.officeType === tipoFilter).map((r) => r.code),
+        officeRows.filter((r) => r.type === tipoFilter).map((r) => r.code),
       );
       ranking = ranking.filter((r) => codes.has(r.code));
     }
@@ -201,8 +201,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const direction = dir === "asc" ? 1 : -1;
     ranking.sort((a, b) => {
       if (orderBy === "nombre") return direction * a.name.localeCompare(b.name, "es");
-      const av = a[orderBy] ?? -1;
-      const bv = b[orderBy] ?? -1;
+      const av = a[orderBy];
+      const bv = b[orderBy];
+      if (av === null && bv === null) return a.name.localeCompare(b.name, "es");
+      if (av === null) return 1;
+      if (bv === null) return -1;
       return direction * (av - bv) || a.name.localeCompare(b.name, "es");
     });
 
@@ -216,7 +219,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       ...new Set(officeRows.map((r) => r.regionName).filter(Boolean)),
     ] as string[];
     const types = [
-      ...new Set(officeRows.map((r) => r.officeType).filter(Boolean)),
+      ...new Set(officeRows.map((r) => r.type).filter(Boolean)),
     ] as string[];
 
     const payload = {
