@@ -20,6 +20,8 @@ import type {
 } from "@/types/invgate";
 import { HIDDEN_HELPDESK_IDS } from "@lib/soportesConfig";
 import { can } from "@lib/roleConfig";
+import { hasPermission } from "@lib/rbac";
+import { getCleanBase } from "@lib/baseUrl";
 
 const user = Astro.locals.user;
 const isAdminUser = user
@@ -27,6 +29,11 @@ const isAdminUser = user
   : false;
 const canExport = user ? can(user.role, "team_leader") : false;
 const isAdminOnly = user ? can(user.role, "admin") : false;
+// Misma fuente que el middleware y el sidebar: el CTA aparece solo donde la
+// ruta está permitida.
+const canViewReportesMesas = user
+  ? hasPermission("/reportes/mesas", user.role)
+  : false;
 
 const hdResult =
   await invgateGet<InvgateHelpdeskAndLevel[]>("helpdesksandlevels");
@@ -216,6 +223,23 @@ const totalMembers = visibleHelpdesks.reduce(
             shortLabel="CSV"
             iconSize={16}
           />
+        )
+      }
+      {
+        canViewReportesMesas && (
+          <a
+            href={`${getCleanBase()}reportes/mesas`}
+            class="btn btn-soft btn-sm md:btn-md shrink-0 gap-2"
+            title="Métricas y reportes de mesas de ayuda"
+            data-cta-reportes-mesas
+          >
+            <Icon
+              name="boxicons:bar-chart-big-filled"
+              size={16}
+              aria-hidden="true"
+            />
+            <span class="hidden lg:inline">Métricas</span>
+          </a>
         )
       }
       {

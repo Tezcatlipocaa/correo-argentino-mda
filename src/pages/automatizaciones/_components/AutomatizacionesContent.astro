@@ -35,10 +35,15 @@ import { buildStatusNameLookup } from "@lib/workflow/automation-status";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import { getCleanBase } from "@lib/baseUrl";
 import { resolveUrl } from "@lib/url";
-import { isLoggedIn } from "@lib/rbac";
+import { isLoggedIn, hasPermission } from "@lib/rbac";
 
 const user = Astro.locals.user;
 const canQuery = isLoggedIn(user);
+// Misma fuente que el middleware y el sidebar: el CTA aparece solo donde la
+// ruta está permitida.
+const canViewReportesWorkflows = user
+  ? hasPermission("/reportes/workflows", user.role)
+  : false;
 
 const searchParams = Astro.url.searchParams;
 const parsedQuery = parseAutomationParentsQuery(searchParams);
@@ -355,6 +360,23 @@ const activeFilterCount =
                   />
                   Métricas
                 </a>
+
+                {canViewReportesWorkflows && (
+                  <a
+                    href={resolveUrl("/reportes/workflows")}
+                    data-astro-prefetch="hover"
+                    class="btn btn-ghost btn-sm gap-1"
+                    title="Reportes de workflows de proceso"
+                    data-cta-reportes-workflows
+                  >
+                    <Icon
+                      name="boxicons:git-repo-forked-filled"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    Reportes
+                  </a>
+                )}
 
                 <a
                   href={buildExportHref()}

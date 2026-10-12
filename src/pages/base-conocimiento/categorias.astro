@@ -2,7 +2,7 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@db/index";
 import { mesas } from "@db/schema";
-import { getModulePermissions } from "@lib/rbac";
+import { getModulePermissions, hasPermission } from "@lib/rbac";
 import { can } from "@lib/roleConfig";
 import { logAdminActionStructured } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
@@ -31,6 +31,7 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
 import ActionButton from "@components/ui/ActionButton.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import { Icon } from "astro-icon/components";
 
 const user = Astro.locals.user;
 const perms = getModulePermissions("base-conocimiento", user.role);
@@ -232,6 +233,12 @@ const editParam = Number(Astro.url.searchParams.get("edit") ?? 0);
 const editingId =
   Number.isInteger(editParam) && editParam > 0 ? editParam : null;
 const categoriasHref = resolveUrl(KB_CATEGORIAS_PATH);
+// Misma fuente que el middleware y el sidebar: el CTA aparece solo donde la
+// ruta está permitida.
+const canViewReportesCategorias = hasPermission(
+  "/reportes/categorias",
+  user.role,
+);
 ---
 
 <BaseLayout title="Categorías">
@@ -240,6 +247,22 @@ const categoriasHref = resolveUrl(KB_CATEGORIAS_PATH);
       title="Categorías"
       description="Administrá las categorías disponibles para los artículos de tu mesa."
     />
+
+    {
+      canViewReportesCategorias && (
+        <div class="mb-4 flex justify-end">
+          <a
+            href={resolveUrl("/reportes/categorias")}
+            class="btn btn-soft btn-sm md:btn-md gap-2"
+            title="Métricas y reportes del árbol de categorías"
+            data-cta-reportes-categorias
+          >
+            <Icon name="boxicons:bar-chart-big-filled" size={18} />
+            Métricas del árbol
+          </a>
+        </div>
+      )
+    }
 
     {
       errorMsg && (
