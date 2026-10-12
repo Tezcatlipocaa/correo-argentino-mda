@@ -367,3 +367,34 @@ test.describe("Detalle por oficina", () => {
     await expect(page.getByRole("heading", { name: "Oficina no encontrada" })).toBeVisible();
   });
 });
+
+test.describe("Acceso a estadísticas desde el directorio", () => {
+  test("un supervisor ve el CTA y navega a la sección", async ({ page }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: sign(supervisorSessionId), domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/oficinas");
+    // El directorio llega por server island: primero el form de filtros, para
+    // que un count 0 no sea un falso verde en el caso del agente.
+    await expect(page.locator("#office-filters-form")).toBeVisible({ timeout: 20000 });
+
+    const cta = page.locator("[data-cta-estadisticas-oficinas]");
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", /\/oficinas\/estadisticas$/);
+
+    await cta.click();
+    await expect(page).toHaveURL(/\/oficinas\/estadisticas$/);
+    await expect(
+      page.getByRole("heading", { name: "Estadísticas de oficinas" }),
+    ).toBeVisible();
+  });
+
+  test("un agente no ve el CTA", async ({ page }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: sign(agentSessionId), domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/oficinas");
+    await expect(page.locator("#office-filters-form")).toBeVisible({ timeout: 20000 });
+    await expect(page.locator("[data-cta-estadisticas-oficinas]")).toHaveCount(0);
+  });
+});
