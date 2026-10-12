@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@db/index";
 import { kbArticles, kbCategories } from "@db/schema";
 
@@ -27,6 +27,17 @@ export type KbCategoryDeleteResult =
 
 function normalizeCategoryName(raw: string): string {
   return raw.normalize("NFC").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Clave de comparación de categorías: NFC + espacios colapsados + trim +
+ * minúsculas. SQLite no puede replicar NFC ni el `lower()` de acentos, así que
+ * toda comparación entre el catálogo y `kb_articles.category` pasa por acá en
+ * JS. Es la parte "visible" de `normalizeCategoryName` más el case-insensitive
+ * que ya usaba el dedup en SQL.
+ */
+export function categoryKey(raw: string): string {
+  return raw.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function isValidHelpdeskId(helpdeskId: number): boolean {
@@ -177,16 +188,26 @@ export function renameCategory(input: {
       .set({ name })
       .where(eq(kbCategories.id, input.id))
       .run();
-    const cascaded = tx
-      .update(kbArticles)
-      .set({ category: name })
-      .where(
-        and(
-          eq(kbArticles.helpdeskId, input.helpdeskId),
-          eq(kbArticles.category, current.name),
-        ),
+    const previousKey = categoryKey(current.name);
+    const articleIds = tx
+      .select({ id: kbArticles.id, category: kbArticles.category })
+      .from(kbArticles)
+      .where(eq(kbArticles.helpdeskId, input.helpdeskId))
+      .all()
+      .filter(
+        (row) =>
+          row.category != null && categoryKey(row.category) === previousKey,
       )
-      .run();
+      .map((row) => row.id);
+
+    const cascaded =
+      articleIds.length > 0
+        ? tx
+            .update(kbArticles)
+            .set({ category: name })
+            .where(inArray(kbArticles.id, articleIds))
+            .run()
+        : { changes: 0 };
 
     return {
       ok: true as const,
@@ -211,9 +232,13 @@ export function listCategoryCounts(helpdeskId: number): Map<string, number> {
     .groupBy(kbArticles.category)
     .all();
 
+  // La clave del Map es `categoryKey`: variantes de espacio/mayúsculas suman
+  // en la misma entrada. El consumidor debe buscar por `categoryKey(nombre)`.
   for (const row of rows) {
-    if (row.name === null || row.name === undefined) continue;
-    counts.set(row.name, Number(row.total));
+    if (row.name == null) continue;
+    const key = categoryKey(row.name);
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + Number(row.total));
   }
   return counts;
 }
@@ -225,14 +250,19 @@ export function countArticlesWithCategory(
   name: string,
   executor: KbCategoriesExecutor = db,
 ): number {
-  const [row] = executor
-    .select({ total: sql<number>`count(*)` })
+  const target = categoryKey(name);
+  const rows = executor
+    .select({ category: kbArticles.category })
     .from(kbArticles)
-    .where(
-      and(eq(kbArticles.helpdeskId, helpdeskId), eq(kbArticles.category, name)),
-    )
+    .where(eq(kbArticles.helpdeskId, helpdeskId))
     .all();
-  return Number(row?.total ?? 0);
+  return rows.reduce(
+    (total, row) =>
+      row.category != null && categoryKey(row.category) === target
+        ? total + 1
+        : total,
+    0,
+  );
 }
 
 export function deleteCategory(input: {

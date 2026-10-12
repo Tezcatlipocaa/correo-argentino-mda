@@ -750,4 +750,33 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     await expect(bloque).toContainText(legado);
     await expect(bloque).toContainText("1 artículo(s)");
   });
+
+  test("el conteo del ABM suma variantes de espacio y mayúsculas", async ({
+    context,
+    page,
+  }) => {
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
+
+    const categoria = `Conteo ${uniqueToken()}`;
+    await ensureCategoryFixture(mesa.invgateId, categoria);
+    await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Conteo A ${uniqueToken()}`,
+      category: categoria,
+      status: "draft",
+    });
+    await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Conteo B ${uniqueToken()}`,
+      category: `${categoria.toLowerCase()} `,
+      status: "draft",
+    });
+
+    await page.goto("/base-conocimiento/categorias");
+    const fila = page.locator("li").filter({ hasText: categoria });
+    await expect(fila).toContainText("2 artículo(s)");
+  });
 });
