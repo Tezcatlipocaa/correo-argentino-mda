@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 import { createHmac } from "crypto";
+import { readFileSync } from "node:fs";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../../src/db/index";
 import { mesas, sessions, users } from "../../src/db/schema";
@@ -394,5 +395,38 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
       );
     });
     expect(ocupaAncho).toBe(true);
+  });
+
+  test("el botón de export refleja los filtros activos", async ({ page }) => {
+    await page.goto("/admin/usuarios/estadisticas");
+    const exportBtn = page.locator("#stats-export");
+    await expect(exportBtn).toBeVisible();
+    await expect(exportBtn).toHaveAttribute(
+      "href",
+      /api\/export\/usuarios-estadisticas$/,
+    );
+
+    await page.locator("#stats-rol").selectOption("agent");
+    await expect(exportBtn).toHaveAttribute("href", /rol=agent/);
+  });
+
+  test("el export descarga un CSV con el dataset filtrado", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios/estadisticas?activo=true");
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.locator("#stats-export").click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(
+      /^usuarios-estadisticas_\d{4}-\d{2}-\d{2}\.csv$/,
+    );
+    const path = await download.path();
+    const content = await readFileSync(path, "utf8");
+    expect(content.replace(/^\uFEFF/, "")).toContain(
+      "seccion;dimension;valor",
+    );
+    expect(content).toContain("kpis;total;");
+    expect(content).toContain("estado;Inactivos;0");
   });
 });

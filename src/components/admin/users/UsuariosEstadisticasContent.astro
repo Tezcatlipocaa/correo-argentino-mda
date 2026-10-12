@@ -2,6 +2,7 @@
 import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
+import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
 import { db } from "@db/index";
 import { mesas } from "@db/schema";
 import { and, eq, or } from "drizzle-orm";
@@ -10,6 +11,7 @@ import { getCleanBase } from "@lib/baseUrl";
 import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 
 const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+const exportEndpoint = `${getCleanBase()}api/export/usuarios-estadisticas`;
 
 const mesaOptions = await db
   .select({ id: mesas.invgateId, name: mesas.name })
@@ -64,6 +66,11 @@ const activoOptions = [
       size="sm"
       options={activoOptions}
       class="w-40"
+    />
+    <ExportCsvButton
+      id="stats-export"
+      href={exportEndpoint}
+      ariaLabel="Exportar estadísticas a CSV"
     />
   </div>
 
@@ -134,7 +141,8 @@ const activoOptions = [
 <script>
   import { getCleanBase } from "@lib/baseUrl";
 
-  const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+const exportEndpoint = `${getCleanBase()}api/export/usuarios-estadisticas`;
 
   const getSelect = (id: string): HTMLSelectElement | null =>
     document.getElementById(id) as HTMLSelectElement | null;
@@ -154,6 +162,15 @@ const activoOptions = [
     const query = buildQuery();
     const url = query ? `?${query}` : window.location.pathname;
     window.history.replaceState(null, "", url);
+  }
+
+  function syncExportHref(): void {
+    const exportBtn = document.getElementById("stats-export");
+    if (!(exportBtn instanceof HTMLAnchorElement)) return;
+    const query = buildQuery();
+    exportBtn.href = query
+      ? `${exportEndpoint}?${query}`
+      : exportEndpoint;
   }
 
   function setKpi(key: string, value: string): void {
@@ -195,6 +212,7 @@ const activoOptions = [
           new CustomEvent("stats:filters-changed", { detail: { query } }),
         );
       }
+      syncExportHref();
     }
   }
 
@@ -222,6 +240,7 @@ const activoOptions = [
     activoSelect?.addEventListener("change", load);
 
     load();
+    syncExportHref();
   }
 
   init();
