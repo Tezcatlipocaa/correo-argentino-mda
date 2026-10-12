@@ -214,6 +214,42 @@ test.describe("Base de conocimiento - ABM de categorías", () => {
     expect(updated.category).toBe(renombrada);
   });
 
+  test("renombra una categoría cascadeando variantes de espacio y mayúsculas", async ({
+    context,
+    page,
+  }) => {
+    const admin = await fixture.createUser("admin", mesa);
+    await setSessionCookie(context, admin.signedSessionId);
+
+    const token = uniqueToken();
+    const nombre = `Cascade ${token}`;
+    await ensureCategoryFixture(mesa.invgateId, nombre);
+
+    const article = await fixture.createArticle({
+      mesa,
+      authorUserId: admin.userId,
+      title: `Artículo variante ${token}`,
+      category: `cascade ${token} `,
+      status: "draft",
+    });
+
+    await page.goto("/base-conocimiento/categorias");
+    const renombrada = `Renombrada ${token}`;
+    const row = page.locator("li").filter({ hasText: nombre });
+    await row.locator('input[name="name"]').fill(renombrada);
+    await row.locator('input[name="name"]').press("Enter");
+
+    await expect(page.locator("#global-toast-container")).toContainText(
+      "Categoría actualizada.",
+    );
+
+    const [updated] = await db
+      .select({ category: kbArticles.category })
+      .from(kbArticles)
+      .where(eq(kbArticles.id, article.id));
+    expect(updated.category).toBe(renombrada);
+  });
+
   test("bloquea la baja de una categoría en uso", async ({ context, page }) => {
     const admin = await fixture.createUser("admin", mesa);
     await setSessionCookie(context, admin.signedSessionId);
