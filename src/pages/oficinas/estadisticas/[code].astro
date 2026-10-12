@@ -11,7 +11,6 @@ import {
   officeInvgateLinks,
   offices,
   provinces,
-  regions,
   terminals,
 } from "@db/schema";
 import { eq, sql } from "drizzle-orm";
@@ -37,7 +36,6 @@ const [office] = await db
     active: offices.active,
     locality: offices.locality,
     provinceName: provinces.name,
-    regionName: regions.name,
     enRed: offices.enRed,
     paqarAdmision: offices.paqarAdmision,
     paqarEntrega: offices.paqarEntrega,
@@ -46,7 +44,6 @@ const [office] = await db
   })
   .from(offices)
   .leftJoin(provinces, eq(provinces.code, offices.provinceCode))
-  .leftJoin(regions, eq(regions.id, offices.regionId))
   .leftJoin(officeInvgateLinks, eq(officeInvgateLinks.officeId, offices.id))
   .where(eq(offices.code, code));
 
@@ -114,6 +111,16 @@ let eventosOficina: MassEvent[] = [];
 
 if (office && office.invgateLocationId != null) {
   try {
+    const linkRows = await db
+      .select({
+        code: offices.code,
+        invgateLocationId: officeInvgateLinks.invgateLocationId,
+      })
+      .from(officeInvgateLinks)
+      .innerJoin(offices, eq(offices.id, officeInvgateLinks.officeId));
+    const locationToCode = new Map(
+      linkRows.map((row) => [row.invgateLocationId, row.code]),
+    );
     const byLocation = await getOpenOfficeIncidentsByLocation();
     const list = byLocation.get(office.invgateLocationId) ?? [];
     incidentes = list
@@ -123,10 +130,11 @@ if (office && office.invgateLocationId != null) {
         categoria:
           incident.category_id == null ? "Sin categoría" : `Categoría ${incident.category_id}`,
         estado: `Estado ${incident.status_id}`,
-        creado: new Date(incident.created_at * 1000).toISOString(),
+        creado: new Date(
+          toEpochMs(incident.created_at) ?? incident.created_at * 1000,
+        ).toISOString(),
       }))
       .sort((a, b) => b.creado.localeCompare(a.creado));
-    const locationToCode = new Map([[office.invgateLocationId, office.code]]);
     const allIncidents = [...byLocation.values()].flat();
     eventosOficina = clusterMassEvents(allIncidents, locationToCode, nowMs).filter((event) =>
       event.officeCodes.includes(office.code),
@@ -169,7 +177,6 @@ const timeline = buildModernizacionTimeline(parentRows, windowStartMs, nowMs);
           oficina={{
             code: office.code,
             name: office.name,
-            type: office.type,
             active: office.active ?? false,
             locality: office.locality,
             enRed: office.enRed,
