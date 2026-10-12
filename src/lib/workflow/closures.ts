@@ -2,6 +2,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { automationClosures } from "@/db/schema";
 import { getServerEnv } from "@lib/invgate/automation/env";
+import {
+  readPersistedCache,
+  writePersistedCache,
+  deletePersistedCache,
+} from "@lib/invgate/cache";
 import { isActiveStatus } from "./automation-status";
 import { nowSeconds } from "./time";
 
@@ -118,6 +123,31 @@ export function removeClosure(automationId: number): void {
   db.delete(automationClosures)
     .where(eq(automationClosures.automationId, automationId))
     .run();
+}
+
+/**
+ * Marcador de reapertura manual. Al reabrir, el caso puede seguir al 100% en
+ * InvGate (el operador lo reabrió justamente porque no estaba cerrado de
+ * verdad), así que el auto-cierre oportunista debe quedar suprimido hasta que
+ * el flujo vuelva a progresar. Se persiste en `invgate_cache` (sin schema) con
+ * TTL largo y se borra cuando el progreso retrocede por debajo del 100%.
+ */
+const REOPEN_MARKER_TTL_MS = 365 * 24 * 60 * 60_000;
+
+function reopenMarkerKey(automationId: number): string {
+  return `automation.reopened.${automationId}`;
+}
+
+export function markAutomationReopened(automationId: number): void {
+  writePersistedCache(reopenMarkerKey(automationId), true, REOPEN_MARKER_TTL_MS);
+}
+
+export function clearAutomationReopenMarker(automationId: number): void {
+  deletePersistedCache(reopenMarkerKey(automationId));
+}
+
+export function wasAutomationReopened(automationId: number): boolean {
+  return readPersistedCache<boolean>(reopenMarkerKey(automationId)) === true;
 }
 
 export interface AutoCloseContext {

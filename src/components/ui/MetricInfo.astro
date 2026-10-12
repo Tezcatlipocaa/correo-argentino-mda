@@ -1,0 +1,31 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  label: string;
+  description: string;
+  formula?: string;
+  class?: string;
+}
+
+const { label, description, formula, class: className = "" } = Astro.props;
+const tip = formula ? `${description} · ${formula}` : description;
+---
+
+<span
+  class:list={[
+    "tooltip tooltip-top tooltip-neutral z-30 cursor-help align-middle",
+    className,
+  ]}
+  data-tip={tip}
+  role="img"
+  tabindex="0"
+  aria-label={`${label}: ${description}`}
+>
+  <Icon
+    name="boxicons:info-circle"
+    size={14}
+    class="text-base-content/60 hover:text-base-content"
+    aria-hidden="true"
+  />
+</span>

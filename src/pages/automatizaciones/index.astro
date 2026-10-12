@@ -80,6 +80,13 @@ import AutomatizacionesContent from "./_components/AutomatizacionesContent.astro
         "",
         `${url.pathname}${url.search}`,
       );
+      const live = document.getElementById("automatizaciones-live");
+      if (live && next) {
+        const count = next.querySelectorAll(
+          "details.group, table tbody tr",
+        ).length;
+        live.textContent = `Resultados actualizados: ${count}`;
+      }
       if (query) openFirstResultCard();
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -97,6 +104,30 @@ import AutomatizacionesContent from "./_components/AutomatizacionesContent.astro
       () => void runLiveSearch(target.value),
       300,
     );
+  });
+
+  // Drawer de filtros: abrir/cerrar. Los filtros se aplican con el botón
+  // "Aplicar filtros" (submit del form del listado).
+  function setFiltersOpen(open: boolean): void {
+    const dialog = document.getElementById("automation-filters-drawer");
+    if (!(dialog instanceof HTMLDialogElement)) return;
+    if (open) {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.close();
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest("[data-open-filters]")) {
+      setFiltersOpen(true);
+      return;
+    }
+    if (target.closest("[data-close-filters]")) {
+      setFiltersOpen(false);
+    }
   });
 
   // Si el server sirvió un snapshot vencido, esperar el scan en background y
