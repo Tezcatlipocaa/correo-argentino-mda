@@ -298,9 +298,15 @@ const cleanBase = getCleanBase();
         },
       });
     } catch (error) {
-      // Si EasyMDE no inicializa, la textarea queda visible y editable; el
-      // usuario no se queda sin editor (bug #136).
+      // EasyMDE (vía `CodeMirror.fromTextArea`) oculta el textarea de origen
+      // antes de construir el editor y lo restaura recién en `toTextArea()`:
+      // si el constructor tira, hay que devolverlo a la vista a mano o el
+      // campo queda invisible e inusable (bug #136).
       console.error("[KbEditor] No se pudo inicializar el editor:", error);
+      textarea.style.display = "";
+      textarea.classList.remove("sr-only");
+      textarea.removeAttribute("aria-hidden");
+      textarea.removeAttribute("tabindex");
       errorElement.textContent =
         "No se pudo cargar el editor visual. Podés seguir editando el contenido en el área de texto.";
       errorElement.classList.remove("hidden");
@@ -321,7 +327,6 @@ const cleanBase = getCleanBase();
       errorElement.classList.add("hidden");
     };
     const syncSubmit = (event: Event) => {
-      if (!mde) return;
       const value = mde.value();
       textarea.value = value;
       if (textarea.required && !value.trim()) {
@@ -338,7 +343,6 @@ const cleanBase = getCleanBase();
       document.addEventListener("submit", syncSubmit, true);
     }
     textarea.addEventListener("invalid", (event) => {
-      if (!mde) return;
       const value = mde.value();
       if (textarea.required && !value.trim()) {
         event.preventDefault();
