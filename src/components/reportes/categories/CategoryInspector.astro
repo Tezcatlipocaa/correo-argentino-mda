@@ -1,0 +1,174 @@
+---
+import { Icon } from "astro-icon/components";
+---
+
+<aside
+  id="category-inspector-drawer"
+  class="fixed top-0 right-0 z-50 h-full w-96 translate-x-full border-l border-base-300 bg-base-100 p-6 shadow-2xl transition-transform duration-300 flex flex-col justify-between"
+  aria-label="Inspector de categoría"
+>
+  <div class="space-y-6 overflow-y-auto">
+    <div class="flex items-center justify-between pb-4 border-b border-base-200">
+      <div class="flex items-center gap-2">
+        <Icon name="boxicons:info-circle-filled" size={24} class="text-primary" />
+        <h2 class="text-lg font-bold text-base-content">Detalle de Categoría</h2>
+      </div>
+      <button
+        id="inspect-close"
+        type="button"
+        class="btn btn-ghost btn-circle btn-sm"
+        aria-label="Cerrar inspector"
+      >
+        <Icon name="boxicons:x" size={20} />
+      </button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-base-content/60">Nombre</span>
+        <p id="inspect-name" class="text-base font-medium text-base-content mt-0.5">-</p>
+      </div>
+
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-base-content/60">Ruta Jerárquica</span>
+        <p id="inspect-path" class="text-xs font-mono bg-base-200 p-2.5 rounded-box text-base-content/80 break-words mt-1">-</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-base-200/50 rounded-box border border-base-200">
+          <span class="text-xs text-base-content/60">Total Tickets</span>
+          <p id="inspect-tickets" class="text-lg font-bold text-base-content mt-1">0</p>
+        </div>
+        <div class="p-3 bg-base-200/50 rounded-box border border-base-200">
+          <span class="text-xs text-base-content/60">Profundidad</span>
+          <p id="inspect-depth" class="text-lg font-bold text-base-content mt-1">Nivel -</p>
+        </div>
+      </div>
+
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-base-content/60">Estado y Anomalías</span>
+        <div id="inspect-badges" class="flex flex-wrap gap-1.5 mt-1.5">
+          <span class="badge badge-sm badge-neutral">Ninguno</span>
+        </div>
+      </div>
+
+      <div class="p-4 bg-primary/5 rounded-box border border-primary/20 space-y-1.5">
+        <div class="flex items-center gap-1.5 text-primary text-xs font-bold uppercase tracking-wider">
+          <Icon name="boxicons:light-bulb-filled" size={16} />
+          <span>Acción Recomendada</span>
+        </div>
+        <p id="inspect-action" class="text-xs text-base-content/80 leading-relaxed">
+          Seleccione un nodo del árbol para analizar su plan de remediación sugerido.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="pt-4 border-t border-base-200 flex justify-end">
+    <button
+      id="inspect-close-btn"
+      type="button"
+      class="btn btn-sm btn-ghost"
+    >
+      Cerrar
+    </button>
+  </div>
+</aside>
+
+<script>
+  interface InspectedNode {
+    id: number;
+    name: string;
+    path: string;
+    totalTickets: number;
+    depth: number;
+    status: string;
+    anomalies: string[];
+    isLeaf: boolean;
+  }
+
+  const drawer = document.getElementById("category-inspector-drawer");
+  const closeBtn = document.getElementById("inspect-close");
+  const closeBtnBottom = document.getElementById("inspect-close-btn");
+  const nameEl = document.getElementById("inspect-name");
+  const pathEl = document.getElementById("inspect-path");
+  const ticketsEl = document.getElementById("inspect-tickets");
+  const depthEl = document.getElementById("inspect-depth");
+  const badgesEl = document.getElementById("inspect-badges");
+  const actionEl = document.getElementById("inspect-action");
+
+  function closeDrawer() {
+    drawer?.classList.add("translate-x-full");
+  }
+
+  function openDrawer(node: InspectedNode) {
+    if (!drawer) return;
+
+    if (nameEl) nameEl.textContent = node.name;
+    if (pathEl) pathEl.textContent = node.path;
+    if (ticketsEl) ticketsEl.textContent = node.totalTickets.toLocaleString("es-AR");
+    if (depthEl) depthEl.textContent = `Nivel ${node.depth}`;
+
+    if (badgesEl) {
+      badgesEl.innerHTML = "";
+
+      const statusBadge = document.createElement("span");
+      statusBadge.className = "badge badge-sm";
+      if (node.status === "hot") {
+        statusBadge.classList.add("badge-error");
+        statusBadge.textContent = "Volumen Alto";
+      } else if (node.status === "dead") {
+        statusBadge.classList.add("badge-neutral");
+        statusBadge.textContent = "Sin Uso (0)";
+      } else if (node.status === "zero") {
+        statusBadge.classList.add("badge-warning");
+        statusBadge.textContent = "Rama Vacía";
+      } else {
+        statusBadge.classList.add("badge-info");
+        statusBadge.textContent = "Normal";
+      }
+      badgesEl.appendChild(statusBadge);
+
+      if (node.anomalies && node.anomalies.length > 0) {
+        node.anomalies.forEach((anomaly) => {
+          const aBadge = document.createElement("span");
+          aBadge.className = "badge badge-sm badge-warning badge-outline";
+          if (anomaly === "single_child") {
+            aBadge.textContent = "Hijo Único";
+          } else if (anomaly === "wildcard_name") {
+            aBadge.textContent = "Nombre Genérico";
+          } else {
+            aBadge.textContent = anomaly;
+          }
+          badgesEl.appendChild(aBadge);
+        });
+      }
+    }
+
+    if (actionEl) {
+      if (node.status === "dead" || node.status === "zero") {
+        actionEl.textContent = "Desactivar o podar de la taxonomía activa para reducir fricción de carga en el árbol.";
+      } else if (node.anomalies?.includes("wildcard_name")) {
+        actionEl.textContent = "Eliminar categoría genérica ('Consulta'/'Otros') y reemplazarla por subtemas tipificados.";
+      } else if (node.anomalies?.includes("single_child")) {
+        actionEl.textContent = "Colapsar nivel redundante: el nodo tiene un único hijo descendiente directo.";
+      } else if (node.status === "hot") {
+        actionEl.textContent = "Alta concentración de volumen: evaluar creación de atajo inmediato o acceso rápido.";
+      } else {
+        actionEl.textContent = "Conservar en estructura estándar de navegación.";
+      }
+    }
+
+    drawer.classList.remove("translate-x-full");
+  }
+
+  closeBtn?.addEventListener("click", closeDrawer);
+  closeBtnBottom?.addEventListener("click", closeDrawer);
+
+  window.addEventListener("category:inspect", (e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    if (detail?.node) {
+      openDrawer(detail.node);
+    }
+  });
+</script>

@@ -1,0 +1,117 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import HelpdeskBentoGrid from "@components/reportes/mesas/HelpdeskBentoGrid.astro";
+import HelpdeskTable from "@components/reportes/mesas/HelpdeskTable.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import { getHelpdesksReport } from "@lib/helpdesks/service";
+import { Icon } from "astro-icon/components";
+
+const report = await getHelpdesksReport();
+---
+
+<BaseLayout title="Mesas de Ayuda | Reportes">
+  <PageContainer>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-base-200">
+      <PageHeader
+        title="Métricas de Mesas de Ayuda y Flujo Operativo"
+        description="Tablero consolidado de colas operativas, volumen mensual, cumplimiento de SLA y satisfacción de usuarios."
+      />
+      <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
+        <a
+          href="/reportes/categorias"
+          class="btn btn-outline btn-sm gap-2"
+          title="Ver árbol de categorías"
+        >
+          <Icon name="boxicons:network-chart" size={18} />
+          <span>Árbol de Categorías</span>
+        </a>
+        <button
+          id="btn-refresh-helpdesks"
+          type="button"
+          class="btn btn-outline btn-sm gap-2"
+          title="Refrescar métricas de mesas de ayuda"
+        >
+          <Icon name="boxicons:refresh-cw" size={18} />
+          <span>Actualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <section aria-label="Métricas de resumen de mesas de ayuda" class="mt-6">
+      <HelpdeskBentoGrid data={report} server:defer>
+        <div slot="fallback" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <ChartCardSkeleton count={4} />
+        </div>
+      </HelpdeskBentoGrid>
+    </section>
+
+    <section aria-label="Detalle por mesa de ayuda" class="mt-10 space-y-4">
+      <div>
+        <h2 class="text-xl font-bold tracking-tight text-base-content">
+          Desempeño Individual por Mesa de Ayuda
+        </h2>
+        <p class="text-xs text-base-content/60 mt-0.5">
+          Detalle de operadores, volumen mensual, tiempos de respuesta y niveles de servicio por cola de atención.
+        </p>
+      </div>
+      <HelpdeskTable items={report.items} />
+    </section>
+  </PageContainer>
+</BaseLayout>
+
+<script>
+  import { showToast } from "@lib/toastClient";
+
+  const refreshBtn = document.getElementById("btn-refresh-helpdesks");
+
+  refreshBtn?.addEventListener("click", async () => {
+    refreshBtn.classList.add("loading");
+    try {
+      const res = await fetch("/api/reportes/mesas/refresh", {
+        method: "POST",
+      });
+      if (res.ok) {
+        showToast("Métricas de mesas actualizadas con éxito", "alert-success");
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      } else {
+        showToast("Error al refrescar mesas de ayuda", "alert-error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Error de conexión al refrescar mesas de ayuda", "alert-error");
+    } finally {
+      refreshBtn.classList.remove("loading");
+    }
+  });
+
+  window.addEventListener("chart-card:segment-click", (e: Event) => {
+    const customEvent = e as CustomEvent<{ label?: string }>;
+    const label = customEvent.detail?.label;
+    if (!label) return;
+
+    const table = document.getElementById("table-helpdesks");
+    if (!table) return;
+
+    const row =
+      table.querySelector<HTMLTableRowElement>(`tr[data-helpdesk-name="${label}"]`) ||
+      table.querySelector<HTMLTableRowElement>(`tr[data-helpdesk-display-name="${label}"]`) ||
+      Array.from(table.querySelectorAll<HTMLTableRowElement>("tbody tr")).find((r) => {
+        const name = r.dataset.helpdeskName?.trim().toLowerCase();
+        const disp = r.dataset.helpdeskDisplayName?.trim().toLowerCase();
+        const target = label.trim().toLowerCase();
+        return name === target || disp === target;
+      });
+
+    if (row) {
+      row.classList.add("bg-primary/20");
+      setTimeout(() => {
+        row.classList.remove("bg-primary/20");
+      }, 2500);
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+</script>

@@ -1,0 +1,318 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import CategoryBentoGrid from "@components/reportes/categories/CategoryBentoGrid.astro";
+import CategoryTreeCanvas from "@components/reportes/categories/CategoryTreeCanvas";
+import CategoryActionPlans from "@components/reportes/categories/CategoryActionPlans.astro";
+import CategoryInspector from "@components/reportes/categories/CategoryInspector.astro";
+import CategoryExecutiveReport from "@components/reportes/categories/CategoryExecutiveReport.astro";
+import CategoryTreeExplorer from "@components/reportes/categories/CategoryTreeExplorer.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import { getCategoryCatalogReport } from "@lib/categories/service";
+import { Icon } from "astro-icon/components";
+
+const report = await getCategoryCatalogReport(1);
+const { tree, metrics } = report;
+---
+
+<BaseLayout title="Árbol de Categorías | Reportes">
+  <PageContainer>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-base-200">
+      <PageHeader
+        title="Auditoría y Métricas del Árbol de Categorías"
+        description="Diagnóstico integral de la taxonomía del catálogo, análisis de dispersión y plan de simplificación estructural."
+      />
+      <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
+        <button
+          id="btn-nav-executive"
+          type="button"
+          class="btn btn-primary btn-sm gap-2"
+          title="Ver Informe Ejecutivo para Dirección"
+          data-switch-tab="report"
+        >
+          <Icon name="boxicons:file" size={18} />
+          <span>Informe para Dirección</span>
+        </button>
+        <button
+          id="btn-refresh-categories"
+          type="button"
+          class="btn btn-outline btn-sm gap-2"
+          title="Refrescar catálogo y recalcular métricas"
+        >
+          <Icon name="boxicons:refresh-cw" size={18} />
+          <span>Actualizar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navegación de Pestañas DaisyUI -->
+    <div class="mt-6">
+      <div role="tablist" class="tabs tabs-box bg-base-200/60 p-1 rounded-xl w-fit">
+        <button
+          id="tab-report"
+          role="tab"
+          type="button"
+          class="tab tab-active font-semibold gap-2 transition-all"
+          data-tab="report"
+          aria-selected="true"
+          aria-controls="panel-report"
+        >
+          <Icon name="boxicons:file" size={16} />
+          <span>Informe de Dirección</span>
+        </button>
+        <button
+          id="tab-explorer"
+          role="tab"
+          type="button"
+          class="tab font-semibold gap-2 transition-all"
+          data-tab="explorer"
+          aria-selected="false"
+          aria-controls="panel-explorer"
+        >
+          <Icon name="boxicons:git-repo-forked" size={16} />
+          <span>Explorador de Árbol</span>
+        </button>
+        <button
+          id="tab-metrics"
+          role="tab"
+          type="button"
+          class="tab font-semibold gap-2 transition-all"
+          data-tab="metrics"
+          aria-selected="false"
+          aria-controls="panel-metrics"
+        >
+          <Icon name="boxicons:bar-chart" size={16} />
+          <span>Métricas y Concentración</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel 1: Informe de Dirección -->
+    <div
+      id="panel-report"
+      role="tabpanel"
+      data-tab-panel="report"
+      aria-labelledby="tab-report"
+      class="mt-6 space-y-10"
+    >
+      <section id="informe-ejecutivo" aria-label="Informe Ejecutivo para Dirección">
+        <CategoryExecutiveReport />
+      </section>
+
+      <section aria-label="Planes de Acción" class="pt-6 border-t border-base-200">
+        <CategoryActionPlans />
+      </section>
+    </div>
+
+    <!-- Panel 2: Explorador de Árbol -->
+    <div
+      id="panel-explorer"
+      role="tabpanel"
+      data-tab-panel="explorer"
+      aria-labelledby="tab-explorer"
+      class="mt-6 space-y-10 hidden"
+    >
+      <section aria-label="Explorador del Árbol de Categorías" class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold tracking-tight text-base-content">
+              Explorador Jerárquico Interactivo
+            </h2>
+            <p class="text-xs text-base-content/60 mt-0.5">
+              Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+              <label for="branch-selector" class="text-xs font-medium text-base-content/70">
+                Rama:
+              </label>
+              <select
+                id="branch-selector"
+                class="select select-bordered select-sm text-xs"
+              >
+                <option value="all">Todas las ramas</option>
+                {
+                  tree.children.map((child) => (
+                    <option value={child.id}>{child.name}</option>
+                  ))
+                }
+              </select>
+            </div>
+
+            <div class="join">
+              <button
+                id="btn-view-actual"
+                type="button"
+                class="btn btn-sm join-item btn-active"
+              >
+                Actual
+              </button>
+              <button
+                id="btn-view-propuesta"
+                type="button"
+                class="btn btn-sm join-item"
+              >
+                Propuesta C
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative w-full">
+          <CategoryTreeCanvas client:visible rootNode={tree} />
+        </div>
+      </section>
+
+      <section aria-label="Explorador de Taxonomía y Propuestas" class="space-y-4">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-base-content">
+            Explorador de Taxonomía y Propuestas Estructurales
+          </h2>
+          <p class="text-xs text-base-content/60 mt-0.5">
+            Vista tabular interactiva con buscador rápido, selector de modelos y modo pantalla completa.
+          </p>
+        </div>
+
+        <CategoryTreeExplorer />
+      </section>
+    </div>
+
+    <!-- Panel 3: Métricas y Concentración -->
+    <div
+      id="panel-metrics"
+      role="tabpanel"
+      data-tab-panel="metrics"
+      aria-labelledby="tab-metrics"
+      class="mt-6 space-y-6 hidden"
+    >
+      <section aria-label="Métricas de resumen">
+        <CategoryBentoGrid metrics={metrics} server:defer>
+          <div slot="fallback" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartCardSkeleton count={4} />
+          </div>
+        </CategoryBentoGrid>
+      </section>
+    </div>
+
+    <CategoryInspector />
+  </PageContainer>
+</BaseLayout>
+
+<script>
+  import { showToast } from "@lib/toastClient";
+
+  const refreshBtn = document.getElementById("btn-refresh-categories");
+  const branchSelect = document.getElementById("branch-selector") as HTMLSelectElement | null;
+  const viewActualBtn = document.getElementById("btn-view-actual");
+  const viewPropuestaBtn = document.getElementById("btn-view-propuesta");
+
+  // Tab switching logic
+  const tabs = document.querySelectorAll<HTMLButtonElement>('[role="tab"][data-tab]');
+  const panels = document.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tab-panel]');
+
+  function switchTab(tabKey: string, updateHash = true) {
+    let target = tabKey;
+    if (target === "informe-ejecutivo") target = "report";
+    if (!["report", "explorer", "metrics"].includes(target)) {
+      target = "report";
+    }
+
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.tab === target;
+      tab.classList.toggle("tab-active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.tabPanel === target;
+      if (isActive) {
+        panel.classList.remove("hidden");
+      } else {
+        panel.classList.add("hidden");
+      }
+    });
+
+    if (updateHash) {
+      try {
+        history.replaceState(null, "", `#${target}`);
+      } catch (_) {}
+    }
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const tabKey = tab.dataset.tab;
+      if (tabKey) switchTab(tabKey);
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-switch-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tabKey = btn.dataset.switchTab;
+      if (tabKey) {
+        switchTab(tabKey);
+        const panel = document.querySelector(`[data-tab-panel="${tabKey}"]`);
+        panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+
+  // Handle URL hash on load
+  const rawHash = window.location.hash.replace("#", "");
+  if (rawHash) {
+    switchTab(rawHash, false);
+  }
+
+  window.addEventListener("hashchange", () => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash) switchTab(hash, false);
+  });
+
+  refreshBtn?.addEventListener("click", async () => {
+    refreshBtn.classList.add("loading");
+    try {
+      const res = await fetch("/api/reportes/categorias/refresh", {
+        method: "POST",
+      });
+      if (res.ok) {
+        showToast("Métricas y árbol actualizados con éxito", "alert-success");
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      } else {
+        showToast("Error al refrescar categorías", "alert-error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Error de conexión al refrescar categorías", "alert-error");
+    } finally {
+      refreshBtn.classList.remove("loading");
+    }
+  });
+
+  viewActualBtn?.addEventListener("click", () => {
+    viewActualBtn.classList.add("btn-active");
+    viewPropuestaBtn?.classList.remove("btn-active");
+    showToast("Visualizando taxonomía Actual", "alert-info");
+  });
+
+  viewPropuestaBtn?.addEventListener("click", () => {
+    viewPropuestaBtn.classList.add("btn-active");
+    viewActualBtn?.classList.remove("btn-active");
+    showToast("Visualizando Propuesta C (Optimización)", "alert-info");
+  });
+
+  branchSelect?.addEventListener("change", (e) => {
+    const target = e.target as HTMLSelectElement;
+    const value = target.value;
+    if (value === "all") {
+      showToast("Mostrando árbol completo", "alert-info");
+    } else {
+      const selectedOption = target.options[target.selectedIndex];
+      showToast(`Filtrado por rama: ${selectedOption.text}`, "alert-info");
+    }
+  });
+</script>

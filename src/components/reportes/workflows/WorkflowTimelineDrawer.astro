@@ -1,0 +1,97 @@
+---
+import { Icon } from "astro-icon/components";
+---
+
+<div
+  id="drawer-backdrop"
+  class="fixed inset-0 z-[190] bg-neutral/40 backdrop-blur-xs transition-opacity duration-300 hidden opacity-0"
+  aria-hidden="true"
+></div>
+
+<aside
+  id="workflow-timeline-drawer"
+  class="fixed top-0 right-0 z-[200] h-full w-full max-w-lg translate-x-full border-l border-base-200 bg-base-100 p-6 shadow-2xl transition-transform duration-300 flex flex-col justify-between"
+  aria-label="Detalle del proceso y timeline"
+>
+  <div class="space-y-6 overflow-y-auto pr-1">
+    <div class="flex items-start justify-between gap-4 pb-4 border-b border-base-200">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span
+            id="drawer-pretty-id"
+            class="font-mono text-sm font-bold text-primary px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20"
+          >
+            -
+          </span>
+          <span id="drawer-status-badge" class="badge badge-sm font-semibold">
+            -
+          </span>
+        </div>
+        <h2 id="drawer-title" class="text-lg font-bold text-base-content leading-snug">
+          -
+        </h2>
+      </div>
+      <button
+        id="drawer-close"
+        type="button"
+        class="btn btn-ghost btn-circle btn-sm shrink-0"
+        aria-label="Cerrar panel"
+      >
+        <Icon name="boxicons:x" size={20} />
+      </button>
+    </div>
+
+    <div class="space-y-2 p-4 bg-base-200/50 rounded-box border border-base-200">
+      <div class="flex items-center justify-between text-xs font-semibold">
+        <span class="text-base-content/70">Progreso del Flujo</span>
+        <span id="drawer-progress-text" class="text-primary font-mono">0%</span>
+      </div>
+      <progress
+        id="drawer-progress-bar"
+        class="progress progress-primary w-full"
+        value="0"
+        max="100"
+      ></progress>
+      <div class="flex items-center justify-between text-xs text-base-content/60 pt-1">
+        <span id="drawer-assigned-group">-</span>
+        <span id="drawer-sla-status" class="font-semibold">-</span>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <Icon name="boxicons:checklist" size={18} class="text-primary" />
+        <h3 class="text-sm font-bold uppercase tracking-wider text-base-content/80">
+          Etapas del Flujo
+        </h3>
+      </div>
+      <ul id="drawer-steps-list" class="steps steps-vertical w-full text-left">
+      </ul>
+    </div>
+
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <Icon name="boxicons:user-check" size={18} class="text-secondary" />
+        <h3 class="text-sm font-bold uppercase tracking-wider text-base-content/80">
+          Compuertas de Aprobación
+        </h3>
+      </div>
+      <ul
+        id="drawer-approvals-timeline"
+        class="timeline timeline-vertical timeline-compact w-full"
+      >
+      </ul>
+    </div>
+
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <Icon name="boxicons:git-pull-request" size={18} class="text-info" />
+        <h3 class="text-sm font-bold uppercase tracking-wider text-base-content/80">
+          Subtickets Operativos Asociados
+        </h3>
+      </div>
+      <div id="drawer-child-tickets" class="space-y-2">
+      </div>
+    </div>
+  </div>
+</aside>
