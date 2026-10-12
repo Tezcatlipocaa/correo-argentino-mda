@@ -101,6 +101,9 @@ test.describe("Export CSV de estadísticas de usuarios (#183)", () => {
   const stamp = Date.now();
   const sessionId = `sess_stats_csv_${stamp}`;
   const username = `admin_stats_csv_${stamp}`;
+  const mesaFormulaId = 900002 + (stamp % 100000);
+  const mesaFormulaNombre = `=cmd|'/c calc'!A1 ${stamp}`;
+  const usuarioFormula = `e2e_formula_csv_${stamp}`;
   let adminId = 0;
   let cookie = "";
 
@@ -116,11 +119,26 @@ test.describe("Export CSV de estadísticas de usuarios (#183)", () => {
       expiresAt: Date.now() + 86_400_000,
     });
     cookie = sign(sessionId);
+    await db.insert(mesas).values({
+      invgateId: mesaFormulaId,
+      name: mesaFormulaNombre,
+      active: true,
+      assignable: true,
+      lastSyncedAt: "2026-10-10",
+    });
+    await db.insert(users).values({
+      username: usuarioFormula,
+      password: "x",
+      role: "agent",
+      helpdeskId: mesaFormulaId,
+    });
   });
 
   test.afterAll(async () => {
     await db.delete(sessions).where(eq(sessions.userId, adminId));
     await db.delete(users).where(eq(users.id, adminId));
+    await db.delete(users).where(eq(users.username, usuarioFormula));
+    await db.delete(mesas).where(eq(mesas.invgateId, mesaFormulaId));
   });
 
   test("sin sesión responde 401", async ({ request }) => {
@@ -155,6 +173,19 @@ test.describe("Export CSV de estadísticas de usuarios (#183)", () => {
       { headers: { cookie: `session_id=${cookie}` } },
     );
     expect(response.status()).toBe(400);
+  });
+
+  test("neutraliza inyección de fórmulas en los labels del CSV", async ({
+    request,
+  }) => {
+    const response = await request.get("/api/export/usuarios-estadisticas", {
+      headers: { cookie: `session_id=${cookie}` },
+    });
+    expect(response.status()).toBe(200);
+    const body = await response.text();
+    // El label llega como label de sección (porMesa) y debe salir prefijado
+    // con comilla simple para que la planilla no lo evalúe como fórmula.
+    expect(body).toContain(`porMesa;'${mesaFormulaNombre};1`);
   });
 });
 

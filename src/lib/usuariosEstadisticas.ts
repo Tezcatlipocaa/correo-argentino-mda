@@ -3,6 +3,7 @@ import { db } from "@db/index";
 import { users, agents, mesas } from "@db/schema";
 import { CANONICAL_ROLES, isValidRole, normalizeRole } from "@lib/rbac";
 import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
+import { sanitizeError } from "@lib/apiResponse";
 
 export interface Serie {
   label: string;
@@ -34,13 +35,17 @@ export interface UsuariosEstadisticas {
 
 export type LoadResult =
   | { ok: true; data: UsuariosEstadisticas }
-  | { ok: false; error: string };
+  | { ok: false; error: string; internal: boolean };
 
 function parseBool(value: string | null): boolean | undefined {
   if (value === null) return undefined;
   if (value === "true") return true;
   if (value === "false") return false;
   throw new Error("booleano inválido");
+}
+
+function validationError(error: string): LoadResult {
+  return { ok: false, error, internal: false };
 }
 
 export async function loadUsuariosEstadisticas(
@@ -52,32 +57,29 @@ export async function loadUsuariosEstadisticas(
   try {
     activo = parseBool(activoParam);
   } catch {
-    return {
-      ok: false,
-      error: "El parámetro 'activo' debe ser 'true' o 'false'",
-    };
+    return validationError(
+      "El parámetro 'activo' debe ser 'true' o 'false'",
+    );
   }
 
   if (rolParam !== null) {
     const canonical = rolParam.toLowerCase().replace(/[-_\s]/g, "_");
     if (!isValidRole(canonical)) {
-      return { ok: false, error: "El parámetro 'rol' no es un rol válido" };
+      return validationError("El parámetro 'rol' no es un rol válido");
     }
   }
 
   if (mesaParam !== null) {
     if (!/^\d+$/.test(mesaParam)) {
-      return {
-        ok: false,
-        error: "El parámetro 'mesa' debe ser un entero positivo",
-      };
+      return validationError(
+        "El parámetro 'mesa' debe ser un entero positivo",
+      );
     }
     const mesaId = Number.parseInt(mesaParam, 10);
     if (mesaId <= 0) {
-      return {
-        ok: false,
-        error: "El parámetro 'mesa' debe ser un entero positivo",
-      };
+      return validationError(
+        "El parámetro 'mesa' debe ser un entero positivo",
+      );
     }
   }
 
@@ -158,6 +160,10 @@ export async function loadUsuariosEstadisticas(
     };
   } catch (error) {
     console.error("[usuariosEstadisticas] Error:", error);
-    return { ok: false, error: "Error interno al calcular estadísticas" };
+    return {
+      ok: false,
+      error: sanitizeError(error, "Error interno al calcular estadísticas"),
+      internal: true,
+    };
   }
 }

@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
   );
 
   if (!result.ok) {
-    return jsonError(result.error, 400, "no-store");
+    return jsonError(result.error, result.internal ? 500 : 400, "no-store");
   }
 
   return jsonResponse(result.data, 200, "no-store");

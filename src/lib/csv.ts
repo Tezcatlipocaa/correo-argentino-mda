@@ -1,9 +1,14 @@
+// Planillas (Excel/Sheets/LibreOffice) interpretan estos como fórmula:
+// inyección CSV (DDE, =cmd|'/c ...'). Neutralizar con comilla simple inicial.
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
 const sanitizeCell = (cell: any): string => {
   if (cell === null || cell === undefined) return "";
   if (typeof cell === "boolean") return cell ? "Sí" : "No";
   const strCell = String(cell);
-  if (/["\n\r;]/.test(strCell)) return `"${strCell.replace(/"/g, '""')}"`;
-  return strCell;
+  const escaped = FORMULA_PREFIX.test(strCell) ? `'${strCell}` : strCell;
+  if (/["\n\r;]/.test(escaped)) return `"${escaped.replace(/"/g, '""')}"`;
+  return escaped;
 };
 
 export function generateCsv(headers: string[], rows: any[][]): string {
