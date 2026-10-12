@@ -53,16 +53,14 @@
 
 ### Puertos de la suite E2E
 
-- `playwright.config.ts` resuelve `baseURL` desde `PLAYWRIGHT_BASE_URL`, con default `http://localhost:4321`.
-- **Verificar el puerto antes de arrancar**: `Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4321,4322,4323 }`. En esta máquina varios puertos los ocupa a veces otro proyecto local.
-- **Si puerto ocupado, matar rápido (nunca WMI/CIM)**: `Get-NetTCPConnection -LocalPort <PORT> -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`.
-- **Después de levantar server, poll hasta listo (sin Start-Sleep)**: `while (-not (Test-NetConnection localhost -Port <PORT> -WarningAction SilentlyContinue).TcpTestSucceeded) { Start-Sleep -Milliseconds 500 }`.
-- **Nunca**: `Start-Process -WindowStyle Hidden` con node/astro/npm; `Get-CimInstance Win32_Process`; `Start-Sleep -Seconds N` como check de readiness.
-- **Nunca** `Select-Object -Last N` o `-First N` en comandos largos — buffers toda salida, agente ciego hasta completion. Dejar output fluir.
-- **Nunca** loops `while` sin deadline — agregar `$deadline = (Get-Date).AddSeconds(30)` y `if ((Get-Date) -ge $deadline) { throw "timeout" }`.
-- **Nunca** `2>&1` en comandos nativos PowerShell — envuelve stderr en ErrorRecord, ralentiza pipeline. Dejar stderr fluir o `2>$null`.
-- **Siempre** pasar `--timeout=30000` a `npx playwright test` — previene cuelgues indefinidos por elementos faltantes.
-- Arrancar el dev server en su **propio comando**, con el destino del redirect entre comillas (`%TEMP%` tiene espacios): ver `docs/lessons.md`.
+- `playwright.config.ts` resuelve `baseURL` **y** `webServer.url` desde `PLAYWRIGHT_BASE_URL` (default `http://localhost:4321`); el puerto se deriva de esa URL.
+- **Playwright arranca el dev server solo** (`webServer` en `playwright.config.ts`): `command: npm run dev -- --port <port>`, `url: baseURL`, `reuseExistingServer: !process.env.CI`, `env: { ASTRO_DEV_BACKGROUND: "0" }`, `timeout: 120000`. Correr solo `npx playwright test ... --timeout=30000` — Playwright levanta, espera readiness real y mata el server al final.
+- **`ASTRO_DEV_BACKGROUND: "0"` es obligatorio en `webServer`**: Astro 7 auto-backgroundea el dev server cuando detecta agente → el proceso padre sale inmediato y Playwright falla con `Process from config.webServer exited early`.
+- **Nunca manejar el server a mano**: nada de `Get-CimInstance Win32_Process`, `Start-Process -WindowStyle Hidden`, `Start-Sleep -Seconds N`, kill por `Get-NetTCPConnection | Stop-Process`, `while` sin deadline, `Select-Object -Last/-First N`, ni `2>&1`. Son las causas de los cuelgues; Playwright ya cubre el ciclo de vida del server.
+- **Proyectos/worktrees en simultáneo**: cada workspace DEBE usar un puerto único vía `PLAYWRIGHT_BASE_URL` (ej. 4321/4322/4323). Peligro: si dos comparten el default 4321 y `reuseExistingServer: true`, Playwright **reusa el server del otro proyecto** (la URL responde) y corre los tests contra la app equivocada → falsos positivos. Pinear puerto distinto por workspace es la única mitigación confiable.
+- **Si el puerto lo tomó otro proceso**: con `reuseExistingServer: true` Playwright lo reusa (mal, ver arriba); con `false` Astro puede elegir el siguiente puerto libre y Playwright espera `webServer.url` fijo → falla con timeout (claro, no falso positivo). Preferible fallar claro que testear la app equivocada.
+- **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
+- Arrancar el dev server a mano (solo para debug) en su **propio comando terminal visible**; ver `docs/lessons.md`.
 - **Agente puede levantar dev server** para tests: `Start-Process -FilePath "npm" -ArgumentList "run","dev","--port","<PORT>"` — sin `-WindowStyle Hidden`. Poll readiness con deadline 30s. Si no arranca → throw + reportar.
 - **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
 
