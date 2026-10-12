@@ -12,11 +12,11 @@ const rowGridClass =
 <PageContainer width="xxl">
   <div class="skeleton-debounced">
     <PageHeader
-      title="Edificios de oficinas"
+      title="Agrupación de oficinas"
       description="Oficinas que comparten un mismo edificio pero tienen la dirección escrita de forma distinta. Revisá los grupos, ajustá la dirección canónica si hace falta y unificá los seleccionados."
     />
 
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <div class="skeleton h-6 w-8"></div>
         <div class="skeleton h-4 w-48"></div>
@@ -27,21 +27,21 @@ const rowGridClass =
     </div>
 
     <DataTable
-      ariaLabel="Edificios de oficinas"
+      ariaLabel="Agrupación de oficinas"
       headerGridClass={headerGridClass}
       rowGridClass={rowGridClass}
       emptyStateTitle="No hay edificios candidatos"
       emptyStateDescription="Ningún grupo de oficinas comparte un edificio con direcciones escritas de forma distinta."
       whenEmpty
     >
-      <div slot="header" class={headerGridClass}>
+      <Fragment slot="header">
         <span></span>
         <DataTableHeaderCell sortKey="id">Edificio</DataTableHeaderCell>
         <DataTableHeaderCell>Dirección canónica</DataTableHeaderCell>
         <DataTableHeaderCell sortKey="oficinas">Oficinas</DataTableHeaderCell>
         <DataTableHeaderCell>Variantes detectadas</DataTableHeaderCell>
-        <span></span>
-      </div>
+        <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
+      </Fragment>
 
       {
         Array.from({ length: 4 }).map(() => (
@@ -52,12 +52,12 @@ const rowGridClass =
             ]}
             data-table-row
           >
-            <div class="skeleton h-4 w-full rounded"></div>
-            <div class="skeleton h-4 w-full rounded"></div>
-            <div class="skeleton h-4 w-full rounded"></div>
-            <div class="skeleton h-4 w-full rounded"></div>
-            <div class="skeleton h-4 w-full rounded"></div>
-            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-full rounded" />
+            <div class="skeleton h-4 w-full rounded" />
+            <div class="skeleton h-4 w-full rounded" />
+            <div class="skeleton h-4 w-full rounded" />
+            <div class="skeleton h-4 w-full rounded" />
+            <div class="skeleton h-4 w-full rounded" />
           </div>
         ))
       }

@@ -140,6 +140,14 @@ const isSupervisorRole = (role: string): boolean =>
         <Icon name="boxicons:universal-access-filled" size={18} />
         Ver tabla comparativa de permisos por rol
       </button>
+      <a
+        href={`${getCleanBase()}admin/usuarios/estadisticas`}
+        class="btn btn-soft btn-sm md:btn-md gap-2"
+        data-cta-estadisticas
+      >
+        <Icon name="boxicons:pie-chart-alt-filled" size={18} />
+        Estadísticas
+      </a>
     </div>
     <div class="flex flex-wrap items-center gap-3">
       <a

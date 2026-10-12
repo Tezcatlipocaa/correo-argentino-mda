@@ -67,6 +67,13 @@ export const navSections: NavSection[] = [
         href: "/inventario-terminales",
         label: "Terminales",
         icon: "boxicons:desktop-filled",
+        children: [
+          {
+            href: "/inventario-terminales/estadisticas",
+            label: "Estadísticas",
+            icon: "boxicons:pie-chart-alt-filled",
+          },
+        ],
       },
       {
         href: "/recursos",
@@ -141,6 +148,13 @@ export const navSections: NavSection[] = [
             href: "/admin/usuarios",
             label: "Usuarios",
             icon: "boxicons:group-filled",
+            children: [
+              {
+                href: "/admin/usuarios/estadisticas",
+                label: "Estadísticas",
+                icon: "boxicons:pie-chart-alt-filled",
+              },
+            ],
           },
           {
             href: "/admin/auditoria",

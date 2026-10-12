@@ -56,7 +56,7 @@ const deltaSuffix = delta?.suffix ?? "%";
 
 <div
   class:list={[
-    "card card-border bg-base-100 border-base-200 shadow-sm",
+    "card card-border bg-base-100 border-base-200 shadow-sm p-5",
     className,
   ]}
 >
@@ -70,7 +70,7 @@ const deltaSuffix = delta?.suffix ?? "%";
         {hint && <MetricInfo label={label} description={hint} formula={formula} />}
       </div>
       <div class:list={["stat-value flex items-center gap-2", colorClass]}>
-        <span>{value}</span>
+        <span data-kpi-value>{value}</span>
         {
           hasDelta && (
             <span

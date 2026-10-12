@@ -1,4 +1,5 @@
 ---
+import { Icon } from "astro-icon/components";
 import { getSectionTitle, getResolvedPathname } from "@lib/navigation";
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   titleClass?: string;
   titleStyle?: string;
   descriptionClass?: string;
+  backHref?: string;
+  backLabel?: string;
 }
 
 const {
@@ -19,6 +22,8 @@ const {
   titleClass,
   titleStyle,
   descriptionClass,
+  backHref,
+  backLabel,
 } = Astro.props;
 
 const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
@@ -28,15 +33,26 @@ const HeadingTag = headingLevel;
 ---
 
 <header class:list={["space-y-2", className]}>
-  <HeadingTag
-    class:list={[
-      "text-base-content text-3xl font-bold tracking-tight",
-      titleClass,
-    ]}
-    style={titleStyle}
-  >
-    {inferredTitle}
-  </HeadingTag>
+  <div class="flex items-center gap-2">
+    {backHref && (
+      <a
+        href={backHref}
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label={backLabel ?? "Volver"}
+      >
+        <Icon name="boxicons:chevron-left" size={24} />
+      </a>
+    )}
+    <HeadingTag
+      class:list={[
+        "text-base-content text-3xl font-bold tracking-tight",
+        titleClass,
+      ]}
+      style={titleStyle}
+    >
+      {inferredTitle}
+    </HeadingTag>
+  </div>
 
   {
     Astro.slots.has("description") ? (

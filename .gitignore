@@ -33,6 +33,7 @@ desktop.ini
 # local tooling artifacts
 .playwright-mcp/
 tmp/
+.worktrees/
 
 # Base de datos
 /database/
