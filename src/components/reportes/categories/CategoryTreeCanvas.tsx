@@ -325,14 +325,14 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
                   {node.name}
                 </span>
                 <span
-                  className={`badge badge-xs text-[10px] shrink-0 ${getBadgeStyle(node.status)}`}
+                  className={`badge badge-xs text-xs shrink-0 ${getBadgeStyle(node.status)}`}
                 >
                   {node.totalTickets}
                 </span>
               </div>
 
               <div className="flex items-center justify-between mt-1 pt-1 border-t border-base-200">
-                <span className="text-[10px] text-base-content/60 capitalize truncate">
+                <span className="text-xs text-base-content/60 capitalize truncate">
                   {getStatusLabel(node.status)}
                 </span>
 
@@ -340,7 +340,7 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
                   <button
                     type="button"
                     onClick={(e) => toggleCollapse(node.id, e)}
-                    className="btn btn-circle btn-xs bg-base-200 hover:bg-base-300 border-none text-[10px] h-5 w-5 min-h-0"
+                    className="btn btn-circle btn-xs bg-base-200 hover:bg-base-300 border-none text-xs h-5 w-5 min-h-0"
                     title={isCollapsed ? "Expandir rama" : "Colapsar rama"}
                   >
                     {isCollapsed ? `+${childrenCount}` : "-"}

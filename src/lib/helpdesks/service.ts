@@ -7,6 +7,7 @@ import { eq, isNotNull, count } from "drizzle-orm";
 
 export const CACHE_TTL_MS = 30 * 60 * 1000;
 
+// ponytail: ticket/CSAT/SLA metrics are synthetic (seeded per-mesa) except MDA TI. Wire real InvGate GET metrics (prod key) when the reporting endpoint lands.
 let cachedReport: HelpdesksReportData | null = null;
 let cacheExpiresAt = 0;
 

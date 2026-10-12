@@ -274,9 +274,12 @@ const { tree, metrics } = report;
   refreshBtn?.addEventListener("click", async () => {
     refreshBtn.classList.add("loading");
     try {
-      const res = await fetch("/api/reportes/categorias/refresh", {
-        method: "POST",
-      });
+      const res = await fetch(
+        `${import.meta.env.BASE_URL}api/reportes/categorias/refresh`,
+        {
+          method: "POST",
+        },
+      );
       if (res.ok) {
         showToast("Métricas y árbol actualizados con éxito", "alert-success");
         setTimeout(() => {

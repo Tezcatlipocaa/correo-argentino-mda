@@ -35,8 +35,9 @@ const depthLabels = depthEntries.length > 0
   : ["Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5", "Nivel 6-7"];
 const depthValues = depthEntries.length > 0
   ? depthEntries.map(([, v]) => v)
-  : [5400, 4200, 1800, 600, 76];
+  : [5400, 4200, 1800, 600, 76]; // ponytail: fallback fixture (no live InvGate); wire real depth data when the metrics engine emits it
 
+// ponytail: hardcoded comparison fixture, not computed from InvGate. Replace with real model runs when available.
 const modelComparisonLabels = ["Actual", "Propuesta A", "Propuesta B", "Propuesta C"];
 const modelNodesSeries = [719, 455, 394, 404];
 const modelMaxClicksSeries = [7, 3, 2, 3];
