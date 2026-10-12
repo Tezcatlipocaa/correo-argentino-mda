@@ -55,7 +55,15 @@
 
 - `playwright.config.ts` resuelve `baseURL` desde `PLAYWRIGHT_BASE_URL`, con default `http://localhost:4321`.
 - **Verificar el puerto antes de arrancar**: `Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4321,4322,4323 }`. En esta máquina varios puertos los ocupa a veces otro proyecto local.
+- **Si puerto ocupado, matar rápido (nunca WMI/CIM)**: `Get-NetTCPConnection -LocalPort <PORT> -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`.
+- **Después de levantar server, poll hasta listo (sin Start-Sleep)**: `while (-not (Test-NetConnection localhost -Port <PORT> -WarningAction SilentlyContinue).TcpTestSucceeded) { Start-Sleep -Milliseconds 500 }`.
+- **Nunca**: `Start-Process -WindowStyle Hidden` con node/astro/npm; `Get-CimInstance Win32_Process`; `Start-Sleep -Seconds N` como check de readiness.
+- **Nunca** `Select-Object -Last N` o `-First N` en comandos largos — buffers toda salida, agente ciego hasta completion. Dejar output fluir.
+- **Nunca** loops `while` sin deadline — agregar `$deadline = (Get-Date).AddSeconds(30)` y `if ((Get-Date) -ge $deadline) { throw "timeout" }`.
+- **Nunca** `2>&1` en comandos nativos PowerShell — envuelve stderr en ErrorRecord, ralentiza pipeline. Dejar stderr fluir o `2>$null`.
+- **Siempre** pasar `--timeout=30000` a `npx playwright test` — previene cuelgues indefinidos por elementos faltantes.
 - Arrancar el dev server en su **propio comando**, con el destino del redirect entre comillas (`%TEMP%` tiene espacios): ver `docs/lessons.md`.
+- **Agente puede levantar dev server** para tests: `Start-Process -FilePath "npm" -ArgumentList "run","dev","--port","<PORT>"` — sin `-WindowStyle Hidden`. Poll readiness con deadline 30s. Si no arranca → throw + reportar.
 - **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
 
 ## DB & Drizzle
