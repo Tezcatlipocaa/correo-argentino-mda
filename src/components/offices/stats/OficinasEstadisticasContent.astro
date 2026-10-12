@@ -161,9 +161,9 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
       <div class="border-base-200 flex items-center justify-between gap-2 border-t px-4 py-3">
         <span class="text-base-content/60 text-sm" data-ranking-total></span>
         <div class="join">
-          <button type="button" class="btn join-item btn-sm" data-page-prev>◀</button>
+          <button type="button" class="btn join-item btn-sm" data-page-prev aria-label="Página anterior">◀</button>
           <span class="btn join-item btn-sm pointer-events-none no-animation" data-page-label>1</span>
-          <button type="button" class="btn join-item btn-sm" data-page-next>▶</button>
+          <button type="button" class="btn join-item btn-sm" data-page-next aria-label="Página siguiente">▶</button>
         </div>
       </div>
     </div>
@@ -323,7 +323,6 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
     for (const row of body.ranking.rows) {
       const tr = document.createElement("tr");
       tr.className = "hover cursor-pointer";
-      tr.dataset.officeRow = row.code;
       const nameCell = document.createElement("td");
       const link = document.createElement("a");
       link.className = "link link-hover font-semibold";
@@ -353,6 +352,24 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
       });
       tbody.appendChild(tr);
     }
+  }
+
+  function renderRankingFailure(): void {
+    const tbody = document.querySelector<HTMLElement>("[data-ranking-body]");
+    const empty = document.querySelector<HTMLElement>("[data-ranking-empty]");
+    const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
+    const label = document.querySelector<HTMLElement>("[data-page-label]");
+    const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
+    const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
+    if (tbody) tbody.innerHTML = "";
+    if (empty) {
+      empty.classList.remove("hidden");
+      empty.textContent = "No se pudieron cargar las oficinas.";
+    }
+    if (totalEl) totalEl.textContent = "";
+    if (label) label.textContent = "1";
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
   }
 
   function updateSortLabels(): void {
@@ -404,6 +421,7 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
       for (const key of ["oficinas", "usuarios", "terminales", "incidentes", "eventos"]) {
         setKpi(key, "—");
       }
+      renderRankingFailure();
     } finally {
       if (seq === fetchSeq) {
         window.dispatchEvent(
@@ -464,6 +482,7 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
       }
     });
 
+    updateSortLabels();
     load();
   }
 
