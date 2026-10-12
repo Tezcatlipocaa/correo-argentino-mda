@@ -12,6 +12,12 @@ vi.mock("@lib/disponibilidad", () => ({
   getDisponibilidadHoy: vi.fn(),
 }));
 
+vi.mock("@/lib/autogestion/ruleState", () => ({
+  getAutogestionRuleStates: vi.fn().mockResolvedValue(new Map()),
+  // Sin filas persistidas, manda el default del catálogo documental: activas.
+  resolveRuleEnabled: vi.fn(() => true),
+}));
+
 vi.mock("@db/index", () => ({
   db: {
     update: vi.fn().mockReturnValue({
@@ -28,10 +34,17 @@ vi.mock("@db/index", () => ({
 import { runAutoAssignCycle, isAutoAssignCycleRunning } from "@/lib/autogestion/autoAssignRunner";
 import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, addTicketComment } from "@/lib/invgate/agsTickets";
 import { getDisponibilidadHoy } from "@lib/disponibilidad";
+import {
+  getAutogestionRuleStates,
+  resolveRuleEnabled,
+} from "@/lib/autogestion/ruleState";
 
 describe("Auto Assign Runner - Ciclo recurrente de asignación", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: sin filas persistidas, todas las reglas siguen activas.
+    (getAutogestionRuleStates as any).mockResolvedValue(new Map());
+    (resolveRuleEnabled as any).mockImplementation(() => true);
   });
 
   it("debe procesar tickets coincidentes y reportar estadísticas de asignación", async () => {
@@ -133,6 +146,23 @@ describe("Auto Assign Runner - Ciclo recurrente de asignación", () => {
     expect(cyclicAssigned).toBeDefined();
     expect(cyclicAssigned?.assignedTo).toBe("Operador Dos");
     expect(cyclicAssigned?.ruleId).toBe("asignacion_ciclica_general");
+  });
+
+  it("no consulta InvGate cuando todas las automatizaciones están deshabilitadas", async () => {
+    (getAutogestionRuleStates as any).mockResolvedValueOnce(
+      new Map([
+        ["solicitud_rechazada", false],
+        ["asignacion_ciclica_general", false],
+      ])
+    );
+    (resolveRuleEnabled as any).mockImplementation(() => false);
+
+    const result = await runAutoAssignCycle();
+
+    expect(getUnassignedTicketsByHelpdesk).not.toHaveBeenCalled();
+    expect(getDisponibilidadHoy).not.toHaveBeenCalled();
+    expect(result.evaluatedCount).toBe(0);
+    expect(result.assignedCount).toBe(0);
   });
 
   it("debe manejar errores de InvGate sin lanzar excepciones no controladas", async () => {

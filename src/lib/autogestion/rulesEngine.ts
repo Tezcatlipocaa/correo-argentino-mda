@@ -18,8 +18,20 @@ import { evaluateGeneralCyclicRule } from "./rules/generalCyclicRule";
 export { evaluateRejectedRequestRule, evaluateGeneralCyclicRule };
 
 /**
+ * IDs canónicos de las automatizaciones de AGS. El engine las cablea por
+ * precedencia (P1 antes que P2) y el toggle de la UI las usa para apagar reglas.
+ */
+export const RULE_IDS = {
+  rejected: "solicitud_rechazada",
+  cyclic: "asignacion_ciclica_general",
+} as const;
+
+/**
  * Catálogo documental de automatizaciones programadas para la asignación de autogestiones.
  * Utilizado para informar a los supervisores en la interfaz de usuario con orden de prioridad.
+ *
+ * OJO: `status` es el estado por DEFAULT, no el estado real. El estado real vive
+ * en la tabla `autogestion_rule_state` (ver `ruleState.ts`).
  */
 export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
   {
@@ -110,38 +122,46 @@ export function evaluateAllAutogestionRules(
     creator_username?: string;
     creator_name?: string;
   }>,
-  allOperators: AgentDisponibilidad[]
+  allOperators: AgentDisponibilidad[],
+  disabledRules: Set<string> = new Set()
 ): RuleEvaluationResult[] {
   const actionableResults: RuleEvaluationResult[] = [];
   const assignedAgentIdsInCycle = new Set<number>();
   const unhandledTickets: typeof tickets = [];
 
   // Paso 1: Precedencia estricta - Evaluar regla 1 (Solicitudes rechazadas en revisión)
+  // Si está deshabilitada NO se descarta el ticket: cae en unhandledTickets y lo
+  // evalúa P2, que internamente ignora la categoría rechazada (isRejectedCategory).
+  const p1Disabled = disabledRules.has(RULE_IDS.rejected);
   for (const ticket of tickets) {
-    const eligibleForP1 = allOperators.filter((op) => !assignedAgentIdsInCycle.has(op.agentId));
-    const rejectedEval = evaluateRejectedRequestRule(ticket, eligibleForP1);
-    if (rejectedEval.canAssign && rejectedEval.targetOperator) {
-      rejectedEval.skipQueueUpdate = true;
-      actionableResults.push(rejectedEval);
-      assignedAgentIdsInCycle.add(rejectedEval.targetOperator.agentId);
-    } else {
-      unhandledTickets.push(ticket);
+    if (!p1Disabled) {
+      const eligibleForP1 = allOperators.filter((op) => !assignedAgentIdsInCycle.has(op.agentId));
+      const rejectedEval = evaluateRejectedRequestRule(ticket, eligibleForP1);
+      if (rejectedEval.canAssign && rejectedEval.targetOperator) {
+        rejectedEval.skipQueueUpdate = true;
+        actionableResults.push(rejectedEval);
+        assignedAgentIdsInCycle.add(rejectedEval.targetOperator.agentId);
+        continue; // Asignado por P1, no pasa a P2
+      }
     }
+    unhandledTickets.push(ticket);
   }
 
   // Paso 2: Evaluar regla 2 (Asignación cíclica general en cascada sobre los tickets restantes)
-  for (const ticket of unhandledTickets) {
-    const availableOperatorsForCyclic = allOperators.filter(
-      (op) => !assignedAgentIdsInCycle.has(op.agentId)
-    );
-    if (availableOperatorsForCyclic.length === 0) {
-      break;
-    }
+  if (!disabledRules.has(RULE_IDS.cyclic)) {
+    for (const ticket of unhandledTickets) {
+      const availableOperatorsForCyclic = allOperators.filter(
+        (op) => !assignedAgentIdsInCycle.has(op.agentId)
+      );
+      if (availableOperatorsForCyclic.length === 0) {
+        break;
+      }
 
-    const cyclicEval = evaluateGeneralCyclicRule(ticket, availableOperatorsForCyclic);
-    if (cyclicEval.canAssign && cyclicEval.targetOperator) {
-      actionableResults.push(cyclicEval);
-      assignedAgentIdsInCycle.add(cyclicEval.targetOperator.agentId);
+      const cyclicEval = evaluateGeneralCyclicRule(ticket, availableOperatorsForCyclic);
+      if (cyclicEval.canAssign && cyclicEval.targetOperator) {
+        actionableResults.push(cyclicEval);
+        assignedAgentIdsInCycle.add(cyclicEval.targetOperator.agentId);
+      }
     }
   }
 

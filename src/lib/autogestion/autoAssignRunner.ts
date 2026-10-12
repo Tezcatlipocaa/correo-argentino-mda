@@ -1,6 +1,7 @@
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
 import { getDisponibilidadHoy } from "@lib/disponibilidad";
-import { evaluateAllAutogestionRules, executeAutoAssignment } from "./rulesEngine";
+import { evaluateAllAutogestionRules, executeAutoAssignment, AUTOGESTION_AUTOMATION_RULES } from "./rulesEngine";
+import { getAutogestionRuleStates, resolveRuleEnabled } from "./ruleState";
 
 export interface AutoAssignCycleResult {
   evaluatedCount: number;
@@ -53,6 +54,18 @@ export async function runAutoAssignCycle(
   };
 
   try {
+    // 0. Reglas deshabilitadas por un supervisor: si están todas apagadas, no se
+    // consulta InvGate (el ciclo no tiene nada que hacer).
+    const ruleStates = await getAutogestionRuleStates();
+    const disabledRules = new Set<string>(
+      AUTOGESTION_AUTOMATION_RULES.filter((r) => !resolveRuleEnabled(r.id, ruleStates)).map(
+        (r) => r.id
+      )
+    );
+    if (disabledRules.size >= AUTOGESTION_AUTOMATION_RULES.length) {
+      return result;
+    }
+
     // 1. Obtener tickets sin asignar de la mesa de autogestión (3950)
     const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
     if (!unassignedRes.ok) {
@@ -74,7 +87,7 @@ export async function runAutoAssignCycle(
     const assignableOperators = allOperators.filter((op) => op.asignableAgs !== false);
 
     // 3. Evaluar reglas de automatización
-    const actionable = evaluateAllAutogestionRules(tickets, assignableOperators);
+    const actionable = evaluateAllAutogestionRules(tickets, assignableOperators, disabledRules);
 
     if (actionable.length === 0) {
       return result;

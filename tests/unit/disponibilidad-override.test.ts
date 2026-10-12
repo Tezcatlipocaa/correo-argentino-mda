@@ -89,10 +89,13 @@ describe("Disponibilidad Override - Testing Autogestiones", () => {
       },
     ];
 
-    // Mock db.select chained queries
+    // Mock db.select chained queries (los agentes se consultan con leftJoin(users)
+    // por el filtro de usuarios activos)
     (db.select as any).mockReturnValueOnce({
       from: vi.fn().mockReturnValueOnce({
-        where: vi.fn().mockResolvedValueOnce(mockAgents),
+        leftJoin: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce(mockAgents),
+        }),
       }),
     });
     // Mock schedules select

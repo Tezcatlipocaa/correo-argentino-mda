@@ -16,6 +16,9 @@ import {
 } from "@lib/disponibilidad";
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
 import { AUTOGESTION_AUTOMATION_RULES } from "@/lib/autogestion/rulesEngine";
+import { getAutogestionRuleStates, resolveRuleEnabled } from "@/lib/autogestion/ruleState";
+import { getCsrfTokenForSession } from "@lib/csrf";
+import { can } from "@lib/roleConfig";
 
 import { normalizeRole } from "@lib/rbac";
 import { matchesCurrentUser } from "@lib/currentUserMatch";
@@ -35,6 +38,11 @@ const tabParam = Astro.url.searchParams.get("tab");
 const initialTab = tabParam === "monitoreo" ? "monitoreo" : tabParam === "automatizacion" ? "automatizacion" : "asignacion";
 
 const lockStatus = await getLockStatus();
+const ruleStates = await getAutogestionRuleStates();
+const activeRulesCount = AUTOGESTION_AUTOMATION_RULES.filter((r) =>
+  resolveRuleEnabled(r.id, ruleStates)
+).length;
+const canToggleRules = can(role, "referent");
 let hasLock = false;
 let lockHolderName: string | null = null;
 let lockReleaseRequested = false;
@@ -349,14 +357,14 @@ function formatWiseMinutes(min: number | undefined | null): string {
         <div class="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-base-300 bg-base-100 h-full overflow-hidden">
           <div class="p-3.5 sm:p-4 border-b border-base-300 bg-base-200/40 flex items-center justify-between gap-3 shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
-              <Icon name="boxicons:inbox" size={22} class="text-warning shrink-0" />
+              <Icon name="boxicons:inbox" size={22} class="text-secondary shrink-0" />
               <h3 class="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-base-content/80 truncate">
                 Sin Asignar (Mesa 3950)
               </h3>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span
-                class={`badge badge-md border ${unassignedCount > 0 ? "bg-warning/20 text-warning border-warning/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`}
+                class={`badge badge-md border ${unassignedCount > 0 ? "bg-secondary/20 text-secondary border-secondary/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`}
                 id="stat-unassigned-count"
               >
                 {unassignedCount}
@@ -506,7 +514,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                             {op.nombre}
                           </span>
                           {idx === 0 && (
-                            <span class="badge badge-sm border bg-warning/20 text-warning border-warning/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
+                            <span class="badge badge-sm border bg-secondary/20 text-secondary border-secondary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
                           )}
                           {(() => {
                             const isDescon = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
@@ -943,7 +951,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
   </div>
 
   <!-- Pestaña 3: Automatización -->
-  <div id="panel-automatizacion" class={initialTab === "automatizacion" ? "flex flex-col gap-6" : "flex flex-col gap-6 hidden"}>
+  <div id="panel-automatizacion" data-csrf-token={getCsrfTokenForSession(Astro.locals.sessionId)} class={initialTab === "automatizacion" ? "flex flex-col gap-6" : "flex flex-col gap-6 hidden"}>
     <!-- Tarjeta Principal del Módulo de Automatización -->
     <div class="card bg-base-100 border border-base-300 rounded-2xl shadow-xs overflow-hidden">
       <!-- Cabecera del Panel -->
@@ -955,7 +963,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           <div>
             <div class="flex items-center gap-2">
               <h3 class="font-bold text-base text-base-content">Módulo de Automatizaciones de Autogestión</h3>
-              <span class="badge badge-secondary badge-soft font-mono font-bold text-xs">{AUTOGESTION_AUTOMATION_RULES.length} activa{AUTOGESTION_AUTOMATION_RULES.length !== 1 ? "s" : ""}</span>
+              <span id="automation-active-count" class="badge badge-secondary badge-soft font-mono font-bold text-xs">{activeRulesCount} activa{activeRulesCount !== 1 ? "s" : ""}</span>
             </div>
             <p class="text-xs text-base-content/60">
               Reglas y patrones programados para la asignación inteligente y distribución autónoma de tickets en Helpdesk 3950
@@ -992,23 +1000,49 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
       <!-- Listado de Reglas de Automatización Documentadas -->
       <div class="p-5 sm:p-6 flex flex-col gap-6">
-        {AUTOGESTION_AUTOMATION_RULES.map((rule) => (
-          <div class="border border-base-300 rounded-2xl bg-base-100 overflow-hidden shadow-2xs hover:border-secondary/40 transition-all">
+        {AUTOGESTION_AUTOMATION_RULES.map((rule) => {
+          const isRuleActive = resolveRuleEnabled(rule.id, ruleStates);
+          return (
+          <div
+            data-rule-card={rule.id}
+            data-off={isRuleActive ? undefined : "true"}
+            class="group border border-base-300 rounded-2xl overflow-hidden shadow-2xs transition-all bg-base-100 hover:border-secondary/40 group-data-[off=true]:bg-base-100/60 group-data-[off=true]:hover:border-base-300"
+          >
             <!-- Barra de título de la regla -->
             <div class="p-4 sm:p-5 bg-base-200/25 border-b border-base-300/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-center gap-3">
-                <div class="p-2 rounded-xl bg-secondary/10 text-secondary shrink-0">
+                <div class="p-2 rounded-xl shrink-0 transition-colors bg-secondary/10 text-secondary group-data-[off=true]:bg-base-200 group-data-[off=true]:text-base-content/40">
                   <Icon name={rule.id === "solicitud_rechazada" ? "boxicons:git-repo-forked" : "boxicons:refresh-cw"} size={22} />
                 </div>
                 <div>
                   <div class="flex items-center gap-2 flex-wrap">
-                    <h4 class="font-extrabold text-base text-base-content tracking-tight">{rule.name}</h4>
+                    <h4 class="font-extrabold text-base tracking-tight transition-colors text-base-content group-data-[off=true]:text-base-content/50">
+                      {rule.name}
+                    </h4>
                     <span class={`badge ${rule.priority === 1 ? "badge-secondary" : "badge-neutral"} badge-soft font-bold text-xs uppercase tracking-wider`}>
                       Prioridad {rule.priority ?? 1}
                     </span>
-                    <span class="badge badge-success badge-soft font-bold text-xs uppercase tracking-wider">
-                      {rule.status === "active" ? "Activa" : "Inactiva"}
+                    <span
+                      data-rule-badge={rule.id}
+                      class={`badge ${isRuleActive ? "badge-success" : "badge-neutral"} badge-soft font-bold text-xs uppercase tracking-wider`}
+                    >
+                      {isRuleActive ? "Activa" : "Inactiva"}
                     </span>
+                    {
+                      canToggleRules && (
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            class="toggle toggle-secondary toggle-sm"
+                            data-rule-toggle={rule.id}
+                            data-rule-enabled={isRuleActive ? "true" : "false"}
+                            checked={isRuleActive}
+                            title={isRuleActive ? "Deshabilitar la automatización" : "Habilitar la automatización"}
+                            aria-label={`Habilitar o deshabilitar la automatización ${rule.name}`}
+                          />
+                        </label>
+                      )
+                    }
                     <span class="badge badge-neutral badge-soft font-mono text-xs">ID: {rule.id}</span>
                   </div>
                   <p class="text-xs text-base-content/70 mt-1 max-w-2xl leading-relaxed">
@@ -1028,14 +1062,15 @@ function formatWiseMinutes(min: number | undefined | null): string {
               <!-- Columna 1: Condiciones de Activación -->
               <div class="flex flex-col gap-3">
                 <div class="flex items-center gap-2 text-xs font-bold text-base-content/60 uppercase tracking-wider pb-1 border-b border-base-200">
-                  <Icon name="boxicons:filter" size={16} class="text-secondary" />
+                  <Icon name="boxicons:filter" size={16} class="text-secondary group-data-[off=true]:text-base-content/40" />
                   <span>Criterios y Condiciones de Activación</span>
                 </div>
                 <div class="flex flex-col gap-2.5">
                   {rule.conditions.map((cond) => (
                     <div class="flex items-start gap-2.5 p-3 rounded-xl bg-base-200/40 border border-base-300/50">
-                      <div class="p-1 rounded-md bg-success/15 text-success shrink-0 mt-0.5">
-                        <Icon name="boxicons:check" size={14} />
+                      <div class="p-1 rounded-md shrink-0 mt-0.5 transition-colors bg-success/15 text-success group-data-[off=true]:bg-base-300/50 group-data-[off=true]:text-base-content/40">
+                        <Icon name="boxicons:check" size={14} class="group-data-[off=true]:hidden" />
+                        <Icon name="boxicons:minus" size={14} class="hidden group-data-[off=true]:block" />
                       </div>
                       <div class="flex flex-col gap-0.5">
                         <span class="text-xs font-bold text-base-content">{cond.label}</span>
@@ -1049,13 +1084,13 @@ function formatWiseMinutes(min: number | undefined | null): string {
               <!-- Columna 2: Efecto Operativo y Comportamiento -->
               <div class="flex flex-col gap-3">
                 <div class="flex items-center gap-2 text-xs font-bold text-base-content/60 uppercase tracking-wider pb-1 border-b border-base-200">
-                  <Icon name="boxicons:checks" size={16} class="text-secondary" />
+                  <Icon name="boxicons:checks" size={16} class="text-secondary group-data-[off=true]:text-base-content/40" />
                   <span>Efecto y Comportamiento Operativo</span>
                 </div>
 
                 <div class="flex flex-col gap-3">
                   <div class="p-3.5 rounded-xl bg-secondary/5 border border-secondary/20 flex flex-col gap-1.5">
-                    <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
+                    <span class="text-xs font-bold flex items-center gap-1.5 text-secondary group-data-[off=true]:text-base-content/40">
                       <Icon name={rule.id === "solicitud_rechazada" ? "boxicons:user-check" : "boxicons:group"} size={16} />
                       {rule.id === "solicitud_rechazada" ? "Asignación Directa al Creador" : "Asignación al Próximo en Cola Cíclica"}
                     </span>
@@ -1085,7 +1120,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
                     <div class="p-3 rounded-xl bg-base-200/30 border border-base-300/50 flex flex-col gap-1">
                       <span class="font-bold text-base-content/70 uppercase tracking-wider text-[11px] flex items-center gap-1">
-                        <Icon name="boxicons:history" size={14} class="text-warning" />
+                        <Icon name="boxicons:history" size={14} class="text-secondary" />
                         Trazabilidad
                       </span>
                       <span class="font-semibold text-base-content/80 font-mono">
@@ -1102,7 +1137,8 @@ function formatWiseMinutes(min: number | undefined | null): string {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   </div>
@@ -1287,7 +1323,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       <!-- Barra de Configuración de Asignación / Revisión -->
       <div class="px-4 py-2.5 bg-base-200/50 border-b border-base-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div class="flex items-center gap-2 min-w-0">
-          <div id="modal-assign-to-revision-alert" class="hidden flex items-center gap-1.5 text-xs font-bold text-warning bg-warning/15 px-2.5 py-1 rounded-lg border border-warning/30 shrink-0">
+          <div id="modal-assign-to-revision-alert" class="hidden flex items-center gap-1.5 text-xs font-bold text-secondary bg-secondary/15 px-2.5 py-1 rounded-lg border border-secondary/30 shrink-0">
             <Icon name="boxicons:alert-octagon" size={16} class="shrink-0" />
             <span>Solicitud en revisión / rechazo</span>
           </div>
@@ -1296,7 +1332,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           </span>
         </div>
         <label class="label cursor-pointer justify-start sm:justify-end gap-2.5 py-0 select-none shrink-0" title="Si se activa, el operador conserva su posición actual en la cola de asignación">
-          <input type="checkbox" id="modal-assign-to-skip-queue" class="toggle toggle-warning toggle-sm" />
+          <input type="checkbox" id="modal-assign-to-skip-queue" class="toggle toggle-secondary toggle-sm" />
           <span class="label-text text-xs font-bold text-base-content/85">
             Conservar posición en la cola
           </span>
@@ -1438,7 +1474,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
     <div class="modal-box w-11/12 max-w-xl bg-base-100 p-0 border border-base-300 shadow-2xl rounded-2xl overflow-hidden flex flex-col">
       <div class="p-4 sm:p-5 border-b border-base-300 bg-base-200/40 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="p-2.5 rounded-xl bg-warning/10 text-warning shrink-0">
+          <div class="p-2.5 rounded-xl bg-secondary/10 text-secondary shrink-0">
             <Icon name="boxicons:calendar" size={22} />
           </div>
           <div class="min-w-0">
@@ -1470,7 +1506,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             <label class="label-text font-bold text-xs uppercase tracking-wider text-base-content/85">
               Fecha y Hora de Reanudación
             </label>
-            <span id="posponer-sugerencia-badge" class="hidden badge badge-soft badge-warning badge-sm font-bold text-xs px-2.5 py-0.5 gap-1.5 shrink-0">
+            <span id="posponer-sugerencia-badge" class="hidden badge badge-soft badge-secondary badge-sm font-bold text-xs px-2.5 py-0.5 gap-1.5 shrink-0">
               <Icon name="boxicons:sparkles" size={13} class="shrink-0" />
               <span id="posponer-sugerencia-text">Sugerido</span>
             </span>
@@ -1478,7 +1514,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           <input
             id="posponer-input-datetime"
             type="datetime-local"
-            class="input input-bordered input-sm sm:input-md w-full font-mono text-xs sm:text-sm rounded-xl focus:outline-none focus:border-warning"
+            class="input input-bordered input-sm sm:input-md w-full font-mono text-xs sm:text-sm rounded-xl focus:outline-none focus:border-secondary"
             required
           />
           <p class="text-xs text-base-content/55">El ticket quedará pausado en InvGate hasta la fecha seleccionada.</p>
@@ -1493,7 +1529,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             id="posponer-input-motivo"
             type="text"
             placeholder="Ej. Coordinado con el cliente para el día..."
-            class="input input-bordered input-sm sm:input-md w-full text-xs sm:text-sm rounded-xl focus:outline-none focus:border-warning"
+            class="input input-bordered input-sm sm:input-md w-full text-xs sm:text-sm rounded-xl focus:outline-none focus:border-secondary"
           />
           <p class="text-xs text-base-content/55">Se publicará como comentario interno en el ticket de InvGate visible para el operador.</p>
         </div>
@@ -1506,7 +1542,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
         <button
           id="btn-confirm-posponer"
           type="button"
-          class="btn btn-warning btn-sm font-bold uppercase tracking-wider px-5 rounded-lg gap-1.5"
+          class="btn btn-secondary btn-sm font-bold uppercase tracking-wider px-5 rounded-lg gap-1.5"
         >
           <Icon name="boxicons:calendar-check" size={16} />
           <span>Confirmar y Posponer</span>
@@ -1538,6 +1574,74 @@ function formatWiseMinutes(min: number | undefined | null): string {
   let disponibilidadAbortController: AbortController | null = null;
 
   const init = () => {
+    // Toggle de habilitación de automatizaciones (delegación: los controles son
+    // server-rendered y el panel vive siempre en el DOM).
+    const rulesPanel = document.getElementById("panel-automatizacion");
+    rulesPanel?.addEventListener("change", async (ev) => {
+      const input = (ev.target as HTMLElement | null)?.closest?.(
+        "[data-rule-toggle]",
+      ) as HTMLInputElement | null;
+      if (!input) return;
+      const ruleId = input.getAttribute("data-rule-toggle");
+      if (!ruleId) return;
+      const csrfToken = rulesPanel.getAttribute("data-csrf-token") || "";
+      const next = input.checked;
+      const badge = document.querySelector(
+        `[data-rule-badge="${ruleId}"]`,
+      ) as HTMLElement | null;
+      const card = document.querySelector(
+        `[data-rule-card="${ruleId}"]`,
+      ) as HTMLElement | null;
+
+      input.disabled = true;
+      try {
+        const res = await fetch(
+          `/api/autogestion/rules/${encodeURIComponent(ruleId)}/toggle`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken,
+            },
+            body: JSON.stringify({ enabled: next }),
+          },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "No se pudo actualizar la regla");
+
+        input.setAttribute("data-rule-enabled", String(next));
+        input.title = next
+          ? "Deshabilitar la automatización"
+          : "Habilitar la automatización";
+        if (badge) {
+          badge.textContent = next ? "Activa" : "Inactiva";
+          badge.classList.toggle("badge-success", next);
+          badge.classList.toggle("badge-neutral", !next);
+        }
+        if (card) {
+          // Una sola bandera: todo el apagado visual sale de group-data-[off=true].
+          if (next) card.removeAttribute("data-off");
+          else card.setAttribute("data-off", "true");
+        }
+        const counter = document.getElementById("automation-active-count");
+        if (counter) {
+          const active = document.querySelectorAll(
+            "[data-rule-badge].badge-success",
+          ).length;
+          counter.textContent = `${active} activa${active !== 1 ? "s" : ""}`;
+        }
+        showToast(
+          next ? "Automatización habilitada." : "Automatización deshabilitada.",
+          "alert-success",
+        );
+      } catch (err: any) {
+        input.checked = !next; // revierte el switch
+        showToast(err?.message || "Error al actualizar la automatización.", "alert-error");
+      } finally {
+        input.disabled = false;
+      }
+    });
+
     const toggle = document.getElementById(
       "toggle-disponibles",
     ) as HTMLInputElement | null;
@@ -1637,7 +1741,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       const newCount = Math.max(0, (isNaN(currentCount) ? 0 : currentCount) - 1);
       if (countEl) {
         countEl.textContent = String(newCount);
-        countEl.className = `badge badge-md border ${newCount > 0 ? "bg-warning/20 text-warning border-warning/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
+        countEl.className = `badge badge-md border ${newCount > 0 ? "bg-secondary/20 text-secondary border-secondary/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
       }
       updateActionBarSubtitle();
       const listEl = document.getElementById("unassigned-tickets-list");
@@ -2036,7 +2140,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                       <span class="truncate font-extrabold text-sm text-base-content">
                         ${escapeHtml(op.nombre)}
                       </span>
-                      ${isFirst ? '<span class="badge badge-sm border bg-warning/20 text-warning border-warning/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>' : ''}
+                      ${isFirst ? '<span class="badge badge-sm border bg-secondary/20 text-secondary border-secondary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>' : ''}
                       ${statusBadge}
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
@@ -2418,7 +2522,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           <div class="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
-              class="btn btn-ghost btn-xs text-base-content/70 hover:text-warning hover:bg-warning/10 font-bold gap-1 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg ${isReadOnly ? 'btn-disabled opacity-40 cursor-not-allowed' : ''}"
+              class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg ${isReadOnly ? 'btn-disabled opacity-40 cursor-not-allowed' : ''}"
               data-op-postpone-btn="${op.agentId}"
               data-ticket-id="${ticketId}"
               title="${isReadOnly ? 'Toma el control para posponer autogestiones' : `Posponer autogestión y asignar a ${escapeHtml(op.nombre)} (Esperando fecha)`}"
@@ -3013,7 +3117,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
         if (countEl) {
           countEl.textContent = String(count);
-          countEl.className = `badge badge-md border ${count > 0 ? "bg-warning/20 text-warning border-warning/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
+          countEl.className = `badge badge-md border ${count > 0 ? "bg-secondary/20 text-secondary border-secondary/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
         }
         if (listEl) {
           const prevScroll = listEl.scrollTop;
@@ -3299,7 +3403,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
           dotColor = "bg-warning";
           statusText = `Ocupado: ${escapeHtml(lockHolderName)}`;
           buttonsHtml = `
-            <button type="button" id="btn-request-release" class="btn btn-ghost btn-xs font-bold uppercase tracking-wider text-warning" ${lockReleaseRequested ? 'disabled' : ''}>
+            <button type="button" id="btn-request-release" class="btn btn-ghost btn-xs font-bold uppercase tracking-wider text-secondary" ${lockReleaseRequested ? 'disabled' : ''}>
               ${lockReleaseRequested ? 'Solicitado' : 'Pedir liberación'}
             </button>
           `;
@@ -3404,7 +3508,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                     if (!ticketNumber) return;
 
                     btn.disabled = true;
-                    btn.innerHTML = `<span class="loading loading-spinner loading-xs text-warning"></span><span>Deshaciendo...</span>`;
+                    btn.innerHTML = `<span class="loading loading-spinner loading-xs text-secondary"></span><span>Deshaciendo...</span>`;
 
                     try {
                       const res = await fetch("/api/disponibilidad/deshacer-ticket", {
@@ -3420,13 +3524,13 @@ function formatWiseMinutes(min: number | undefined | null): string {
                       } else {
                         showAlert("error", data.error || "Error al desasignar ticket.");
                         btn.disabled = false;
-                        btn.innerHTML = `<svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
+                        btn.innerHTML = `<svg class="size-3 text-secondary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
                       }
                     } catch (err: any) {
                       console.error("Error undoing ticket:", err);
                       showAlert("error", `Error: ${err.message || err}`);
                       btn.disabled = false;
-                      btn.innerHTML = `<svg class="size-3 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
+                      btn.innerHTML = `<svg class="size-3 text-secondary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span>Deshacer</span>`;
                     }
                   });
                 }

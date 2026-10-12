@@ -1317,3 +1317,13 @@ export const assignmentHistory = sqliteTable(
   }),
 );
 
+// Estado real de habilitación de las automatizaciones de AGS. El `status` del
+// catálogo documental (AUTOGESTION_AUTOMATION_RULES) es solo el default: esta
+// tabla es la fuente de verdad cuando existe fila.
+export const autogestionRuleState = sqliteTable("autogestion_rule_state", {
+  ruleId: text("rule_id").primaryKey(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  updatedAt: integer("updated_at").notNull(),
+  updatedBy: text("updated_by"),
+});
+
