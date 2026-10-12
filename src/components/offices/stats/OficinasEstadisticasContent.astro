@@ -1,0 +1,495 @@
+---
+import StatsCard from "@components/ui/StatsCard.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
+---
+
+<div class="flex w-full flex-col gap-6 pb-24">
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="badge badge-outline font-semibold">Últimos 30 días</span>
+    <span data-invgate-badge class="badge badge-warning badge-outline hidden">
+      Sin datos en vivo de InvGate
+    </span>
+  </div>
+
+  <div
+    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-end"
+  >
+    <label class="form-control w-full md:w-52">
+      <span class="label-text mb-1 text-sm font-bold">Provincia</span>
+      <select id="stats-provincia" class="select select-bordered select-sm">
+        <option value="">Todas</option>
+      </select>
+    </label>
+    <label class="form-control w-full md:w-48">
+      <span class="label-text mb-1 text-sm font-bold">Región</span>
+      <select id="stats-region" class="select select-bordered select-sm">
+        <option value="">Todas</option>
+      </select>
+    </label>
+    <label class="form-control w-full md:w-52">
+      <span class="label-text mb-1 text-sm font-bold">Tipo de oficina</span>
+      <select id="stats-tipo" class="select select-bordered select-sm">
+        <option value="">Todos</option>
+      </select>
+    </label>
+    <label class="form-control w-full flex-1">
+      <span class="label-text mb-1 text-sm font-bold">Buscar</span>
+      <input
+        id="stats-q"
+        type="search"
+        placeholder="Nombre o NIS…"
+        class="input input-bordered input-sm"
+      />
+    </label>
+  </div>
+
+  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div data-kpi="oficinas">
+      <StatsCard
+        icon="building-house"
+        label="Oficinas activas"
+        value="…"
+        subtitle="Activas / totales"
+      />
+    </div>
+    <div data-kpi="usuarios">
+      <StatsCard icon="group" label="Usuarios" value="…" subtitle="InvGate" color="info" />
+    </div>
+    <div data-kpi="terminales">
+      <StatsCard
+        icon="desktop"
+        label="Terminales"
+        value="…"
+        subtitle="Parque de oficinas activas"
+        color="secondary"
+      />
+    </div>
+    <div data-kpi="incidentes">
+      <StatsCard
+        icon="bug-alt"
+        label="Incidentes abiertos"
+        value="…"
+        subtitle="En vivo, por oficina"
+        color="warning"
+      />
+    </div>
+    <div data-kpi="eventos">
+      <StatsCard
+        icon="bell"
+        label="Eventos masivos"
+        value="…"
+        subtitle="Activos hoy"
+        color="error"
+      />
+    </div>
+  </div>
+
+  <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
+    <ChartCard
+      type="bar"
+      title="Oficinas activas por provincia"
+      subtitle="Red actual"
+      fetchUrl={endpoint}
+      chartKey="porProvincia"
+    />
+    <ChartCard
+      type="bar"
+      title="Modernización por provincia"
+      subtitle="Cerrados últimos 30 días vs. en curso"
+      fetchUrl={endpoint}
+      chartKey="modernizacion"
+    />
+  </div>
+
+  <section data-mass-events-card class="border-warning/60 bg-warning/5 hidden rounded-2xl border p-4">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <h2 class="font-semibold">
+        Eventos masivos <span class="text-warning">(hoy)</span>
+      </h2>
+      <span class="text-base-content/60 text-sm" data-mass-events-hint></span>
+    </div>
+    <div class="flex flex-col gap-2" data-mass-events-list></div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="font-semibold">Ranking de oficinas</h2>
+    <div class="bg-base-100 border-base-300 overflow-x-auto rounded-2xl border">
+      <table class="table table-sm">
+        <caption class="sr-only">Ranking de oficinas por métricas</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              <button type="button" class="btn btn-ghost btn-xs" data-sort="nombre" data-sort-label>
+                Oficina (NIS)
+              </button>
+            </th>
+            <th scope="col">Provincia</th>
+            <th scope="col">
+              <button type="button" class="btn btn-ghost btn-xs" data-sort="usuarios" data-sort-label>
+                Usuarios
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="btn btn-ghost btn-xs" data-sort="incidentes" data-sort-label>
+                Incidentes
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="btn btn-ghost btn-xs" data-sort="eventos" data-sort-label>
+                Eventos
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="btn btn-ghost btn-xs" data-sort="terminales" data-sort-label>
+                Terminales
+              </button>
+            </th>
+            <th scope="col">Estado</th>
+          </tr>
+        </thead>
+        <tbody data-ranking-body></tbody>
+      </table>
+      <div
+        class="text-base-content/60 border-base-200 hidden border-t px-4 py-3 text-sm"
+        data-ranking-empty
+      >
+        Sin oficinas para los filtros seleccionados.
+      </div>
+      <div class="border-base-200 flex items-center justify-between gap-2 border-t px-4 py-3">
+        <span class="text-base-content/60 text-sm" data-ranking-total></span>
+        <div class="join">
+          <button type="button" class="btn join-item btn-sm" data-page-prev aria-label="Página anterior">◀</button>
+          <span class="btn join-item btn-sm pointer-events-none no-animation" data-page-label>1</span>
+          <button type="button" class="btn join-item btn-sm" data-page-next aria-label="Página siguiente">▶</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  import { getCleanBase } from "@lib/baseUrl";
+
+  interface MassEventJson {
+    categoriaId: number | null;
+    titulo: string;
+    oficinas: number;
+    tickets: number;
+    desde: number;
+    officeCodes: string[];
+    provincias: string[];
+  }
+  interface RankingRowJson {
+    code: string;
+    name: string;
+    provincia: string | null;
+    region: string | null;
+    usuarios: number | null;
+    incidentes: number | null;
+    eventos: number | null;
+    terminales: number;
+    activa: boolean;
+  }
+  interface PanelBody {
+    kpis: {
+      oficinasActivas: number;
+      oficinasTotal: number;
+      usuarios: number | null;
+      terminales: number;
+      incidentesAbiertos: number | null;
+      eventosMasivosActivos: number | null;
+    };
+    eventosMasivos: MassEventJson[];
+    ranking: { rows: RankingRowJson[]; total: number; page: number; pageSize: number };
+    filtros: { provincias: string[]; regiones: string[]; tipos: string[] };
+    meta: { invgateOk: boolean; snapshotAt: string; massEventMinOffices: number };
+  }
+
+  const SORT_LABELS: Record<string, string> = {
+    nombre: "Oficina (NIS)",
+    usuarios: "Usuarios",
+    incidentes: "Incidentes",
+    eventos: "Eventos",
+    terminales: "Terminales",
+  };
+
+  const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
+  const base = getCleanBase();
+
+  const select = (id: string) => document.getElementById(id) as HTMLSelectElement | null;
+  const input = (id: string) => document.getElementById(id) as HTMLInputElement | null;
+
+  let sortBy = "nombre";
+  let sortDir: "asc" | "desc" = "asc";
+  let currentPage = 1;
+  let totalPages = 1;
+
+  function buildQuery(): string {
+    const params = new URLSearchParams();
+    const provincia = select("stats-provincia")?.value;
+    const region = select("stats-region")?.value;
+    const tipo = select("stats-tipo")?.value;
+    const q = input("stats-q")?.value.trim();
+    if (provincia) params.set("provincia", provincia);
+    if (region) params.set("region", region);
+    if (tipo) params.set("tipo", tipo);
+    if (q) params.set("q", q);
+    params.set("orderBy", sortBy);
+    params.set("dir", sortDir);
+    params.set("page", String(currentPage));
+    return params.toString();
+  }
+
+  function setKpi(key: string, text: string): void {
+    const el = document.querySelector(`[data-kpi="${key}"] [data-kpi-value]`);
+    if (el) el.textContent = text;
+  }
+
+  function renderFiltros(filtros: PanelBody["filtros"]): void {
+    const fill = (id: string, values: string[]) => {
+      const el = select(id);
+      if (!el || el.dataset.filled) return;
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        el.appendChild(option);
+      }
+      el.dataset.filled = "1";
+    };
+    fill("stats-provincia", filtros.provincias);
+    fill("stats-region", filtros.regiones);
+    fill("stats-tipo", filtros.tipos);
+  }
+
+  function renderMassEvents(events: MassEventJson[], minOffices: number): void {
+    const card = document.querySelector<HTMLElement>("[data-mass-events-card]");
+    const list = document.querySelector<HTMLElement>("[data-mass-events-list]");
+    const hint = document.querySelector<HTMLElement>("[data-mass-events-hint]");
+    if (!card || !list) return;
+    list.innerHTML = "";
+    if (events.length === 0) {
+      card.classList.add("hidden");
+      return;
+    }
+    if (hint) hint.textContent = `Detectados por categoría + día + ${minOffices} oficinas o más`;
+    for (const event of events) {
+      const row = document.createElement("div");
+      row.className =
+        "border-warning/40 bg-base-100 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2";
+      const badge = document.createElement("span");
+      badge.className = "badge badge-warning font-bold";
+      badge.textContent = `${event.oficinas} oficinas`;
+      const info = document.createElement("div");
+      info.className = "min-w-0 flex-1";
+      const title = document.createElement("div");
+      title.className = "truncate font-semibold";
+      title.textContent = event.titulo;
+      const detail = document.createElement("div");
+      detail.className = "text-base-content/60 text-sm";
+      const since = new Date(event.desde).toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      detail.textContent = `desde ${since} · ${event.provincias.join(" + ")} · ${event.tickets} tickets`;
+      info.appendChild(title);
+      info.appendChild(detail);
+      row.appendChild(badge);
+      row.appendChild(info);
+      list.appendChild(row);
+    }
+    card.classList.remove("hidden");
+  }
+
+  function renderRanking(body: PanelBody): void {
+    const tbody = document.querySelector<HTMLElement>("[data-ranking-body]");
+    const empty = document.querySelector<HTMLElement>("[data-ranking-empty]");
+    const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
+    const label = document.querySelector<HTMLElement>("[data-page-label]");
+    const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
+    const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    totalPages = Math.max(1, Math.ceil(body.ranking.total / body.ranking.pageSize));
+    empty?.classList.toggle("hidden", body.ranking.rows.length > 0);
+    if (totalEl) totalEl.textContent = `${body.ranking.total} oficinas`;
+    if (label) label.textContent = `${body.ranking.page} / ${totalPages}`;
+    if (prev) prev.disabled = body.ranking.page <= 1;
+    if (next) next.disabled = body.ranking.page >= totalPages;
+
+    for (const row of body.ranking.rows) {
+      const tr = document.createElement("tr");
+      tr.className = "hover cursor-pointer";
+      const nameCell = document.createElement("td");
+      const link = document.createElement("a");
+      link.className = "link link-hover font-semibold";
+      link.href = `${base}oficinas/estadisticas/${encodeURIComponent(row.code)}`;
+      link.textContent = `${row.name} (${row.code})`;
+      nameCell.appendChild(link);
+      tr.appendChild(nameCell);
+      const cells = [
+        row.provincia ?? "—",
+        row.usuarios === null ? "—" : String(row.usuarios),
+        row.incidentes === null ? "—" : String(row.incidentes),
+        row.eventos === null ? "—" : String(row.eventos),
+        String(row.terminales),
+      ];
+      for (const value of cells) {
+        const td = document.createElement("td");
+        td.textContent = value;
+        tr.appendChild(td);
+      }
+      const estado = document.createElement("td");
+      estado.className = row.activa ? "text-success" : "text-error";
+      estado.textContent = row.activa ? "Activa" : "Cerrada";
+      tr.appendChild(estado);
+      tr.addEventListener("click", (event) => {
+        if ((event.target as HTMLElement).closest("a")) return;
+        window.location.href = link.href;
+      });
+      tbody.appendChild(tr);
+    }
+  }
+
+  function renderRankingFailure(): void {
+    const tbody = document.querySelector<HTMLElement>("[data-ranking-body]");
+    const empty = document.querySelector<HTMLElement>("[data-ranking-empty]");
+    const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
+    const label = document.querySelector<HTMLElement>("[data-page-label]");
+    const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
+    const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
+    if (tbody) tbody.innerHTML = "";
+    if (empty) {
+      empty.classList.remove("hidden");
+      empty.textContent = "No se pudieron cargar las oficinas.";
+    }
+    if (totalEl) totalEl.textContent = "";
+    if (label) label.textContent = "1";
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+  }
+
+  function updateSortLabels(): void {
+    document.querySelectorAll<HTMLElement>("[data-sort-label]").forEach((el) => {
+      const key = el.dataset.sort ?? "";
+      const arrow = key === sortBy ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+      el.textContent = `${SORT_LABELS[key] ?? key}${arrow}`;
+    });
+  }
+
+  let fetchSeq = 0;
+
+  async function load(): Promise<void> {
+    const query = buildQuery();
+    const seq = ++fetchSeq;
+    try {
+      const response = await fetch(`${endpoint}?${query}`, {
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = (await response.json()) as PanelBody;
+      if (seq !== fetchSeq) return;
+
+      renderFiltros(body.filtros);
+      setKpi("oficinas", `${body.kpis.oficinasActivas} / ${body.kpis.oficinasTotal}`);
+      setKpi("usuarios", body.kpis.usuarios === null ? "—" : String(body.kpis.usuarios));
+      setKpi("terminales", String(body.kpis.terminales));
+      setKpi(
+        "incidentes",
+        body.kpis.incidentesAbiertos === null ? "—" : String(body.kpis.incidentesAbiertos),
+      );
+      setKpi(
+        "eventos",
+        body.kpis.eventosMasivosActivos === null
+          ? "—"
+          : String(body.kpis.eventosMasivosActivos),
+      );
+
+      const badge = document.querySelector<HTMLElement>("[data-invgate-badge]");
+      badge?.classList.toggle("hidden", body.meta.invgateOk);
+      renderMassEvents(
+        body.meta.invgateOk ? body.eventosMasivos : [],
+        body.meta.massEventMinOffices,
+      );
+      renderRanking(body);
+    } catch (error) {
+      if (seq !== fetchSeq) return;
+      console.error("[estadisticas oficinas] no se pudieron cargar:", error);
+      for (const key of ["oficinas", "usuarios", "terminales", "incidentes", "eventos"]) {
+        setKpi(key, "—");
+      }
+      renderRankingFailure();
+    } finally {
+      if (seq === fetchSeq) {
+        window.dispatchEvent(
+          new CustomEvent("stats:filters-changed", { detail: { query } }),
+        );
+      }
+    }
+  }
+
+  let bound = false;
+
+  function init(): void {
+    if (bound) return;
+    if (!select("stats-provincia")) return;
+    bound = true;
+
+    const initial = new URLSearchParams(window.location.search);
+    const q = input("stats-q");
+    if (q && initial.get("q")) q.value = initial.get("q") as string;
+
+    const refetch = () => {
+      currentPage = 1;
+      load();
+    };
+    select("stats-provincia")?.addEventListener("change", refetch);
+    select("stats-region")?.addEventListener("change", refetch);
+    select("stats-tipo")?.addEventListener("change", refetch);
+    let debounce: number | undefined;
+    q?.addEventListener("input", () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(refetch, 300);
+    });
+
+    document.querySelectorAll<HTMLElement>("[data-sort-label]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const key = el.dataset.sort ?? "nombre";
+        if (sortBy === key) {
+          sortDir = sortDir === "asc" ? "desc" : "asc";
+        } else {
+          sortBy = key;
+          sortDir = key === "nombre" ? "asc" : "desc";
+        }
+        updateSortLabels();
+        currentPage = 1;
+        load();
+      });
+    });
+    document.querySelector("[data-page-prev]")?.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        load();
+      }
+    });
+    document.querySelector("[data-page-next]")?.addEventListener("click", () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        load();
+      }
+    });
+
+    updateSortLabels();
+    load();
+  }
+
+  init();
+
+  const injectedObserver = new MutationObserver((records) => {
+    if (records.some((record) => record.addedNodes.length)) init();
+  });
+  injectedObserver.observe(document.documentElement, { childList: true, subtree: true });
+</script>

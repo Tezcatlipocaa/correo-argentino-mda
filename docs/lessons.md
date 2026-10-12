@@ -817,3 +817,13 @@ Cada entrada sigue este formato:
 **Solucion:** Definir las clases de acento con `@utility` (`@utility acc-surface { … }`) en `global.css`; así `group-open:acc-surface`, `hover:acc-text`, etc. se generan. Las variables de tema (`--acc-bg`/`--acc-fg`) se definen en una clase normal (`.acc` + `[data-theme="dark"] .acc`).
 **Regla:** Si una clase propia necesita usarse con variantes de Tailwind (`hover:`, `group-open:`, `dark:`, responsive), declararla con `@utility`, no como selector plano.
 **Archivos afectados:** src/styles/global.css
+
+---
+
+### 2026-10-12 — Un nombre de icono inexistente en `astro-icon` rompe el render, no el build
+
+**Problema:** El island de estadísticas de oficinas y su página de detalle fallaban en runtime con `500` en la API y un body truncado `"An error occurred."` (HTTP 200) en el render, mientras `npx tsc --noEmit` y `npm run build` pasaban limpios y `[verify-build]` daba OK. El error no aparecía en la consola del shell donde corría `npm run dev`.
+**Causa:** Dos KPI usaban nombres que no existen en `@iconify-json/boxicons`: `user-account` (Personal) y `error-circle` (Incidentes). `astro-icon` resuelve el icono **en el momento del render** contra el set instalado, así que el fallo es de runtime: ni el type-check ni el build lo ven porque el nombre viaja como string. En `astro dev` el error se pierde de la consola del proceso (el build de dev corre como daemon) y el síntoma en el navegador es una pagina rota con status 200, no un error explícito.
+**Solución:** Reemplazar por nombres válidos verificados contra `node_modules/@iconify-json/boxicons/icons.json` (`user-account` → `user-circle`, `error-circle` → `bug-alt`). El diagnóstico salió de leer los logs del daemon con `npx astro dev logs` (JSON por línea), que sí muestra el stack del render. Quedó cubierto por `tests/oficinas-estadisticas.spec.ts` (11/11).
+**Regla:** Todo `name` pasado a `<Icon>` tiene que existir en el set instalado; `tsc` y `astro build` **no** lo validan, solo el render. Antes de dar por buena una pantalla con iconos nuevos, verificar cada nombre contra `@iconify-json/boxicons/icons.json` y cubrirla con un E2E que cargue la pagina (un test que solo mira `status` pasa igual: el render roto sale `200`). En `astro dev`, los errores de render **no** se ven en la consola del shell: se leen con `npx astro dev logs`.
+**Archivos afectados:** src/components/offices/stats/OficinasEstadisticasContent.astro, src/components/offices/stats/OficinaDetalleContent.astro, tests/oficinas-estadisticas.spec.ts

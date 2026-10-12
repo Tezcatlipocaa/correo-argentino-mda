@@ -116,6 +116,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/mesas-de-ayuda/asignar", roles: ["admin", "supervisor"] },
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
+  { path: "/oficinas/estadisticas", roles: ["admin", "supervisor"] },
   { path: "/base-conocimiento/categorias", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/create", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/edit", roles: [...KB_ACCESS_ROLES] },
@@ -167,6 +168,10 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/kb/upload", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/kb/images", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/offices", roles: ALL_ROLES },
+  // Reportería de oficinas: la whitelist deja pasar la request y el handler
+  // aplica requireReadAccess("oficinas") -> supervisor+ (mismo patrón que
+  // /api/admin/usuarios). Así el agente recibe 403 JSON, no un redirect.
+  { path: "/api/oficinas", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
   { path: "/api/support-guides", roles: ALL_ROLES },
@@ -284,6 +289,11 @@ export function getModulePermissions(
     // Estadísticas del parque de terminales: lectura para todos los roles
     // logueados; sin escrituras por ahora.
     perm.canRead = true;
+  } else if (moduleName === "oficinas") {
+    // Reportería de oficinas: lectura supervisor+ (gerencia). La escritura del
+    // CRUD de oficinas se decide por routePermissions, no por este módulo.
+    perm.canRead = rank >= ROLE_HIERARCHY.supervisor;
+    perm.canWrite = false;
   }
 
   return perm;

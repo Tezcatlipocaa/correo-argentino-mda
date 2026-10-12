@@ -100,6 +100,8 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
   const stamp = Date.now();
   const sessionId = `sess_stats_view_${stamp}`;
   const username = `admin_stats_view_${stamp}`;
+  const mesaAsignableId = 900000 + (stamp % 100000);
+  const mesaPruebaId = 900001 + (stamp % 100000);
   let adminId = 0;
   let cookie = "";
 
@@ -118,7 +120,7 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
     const [mesaAsignable] = await db
       .insert(mesas)
       .values({
-        invgateId: 998001,
+        invgateId: mesaAsignableId,
         name: `Mesa E2E Asignable ${stamp}`,
         active: true,
         assignable: true,
@@ -128,7 +130,7 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
     const [mesaPrueba] = await db
       .insert(mesas)
       .values({
-        invgateId: 998002,
+        invgateId: mesaPruebaId,
         name: `Mesa E2E Prueba ${stamp}`,
         active: true,
         assignable: false,
@@ -162,7 +164,9 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
           `e2e_sinmesa_${stamp}`,
         ]),
       );
-    await db.delete(mesas).where(inArray(mesas.invgateId, [998001, 998002]));
+    await db
+      .delete(mesas)
+      .where(inArray(mesas.invgateId, [mesaAsignableId, mesaPruebaId]));
     await db.delete(sessions).where(eq(sessions.userId, adminId));
     await db.delete(users).where(eq(users.id, adminId));
   });
