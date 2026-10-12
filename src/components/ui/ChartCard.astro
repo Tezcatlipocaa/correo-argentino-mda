@@ -514,7 +514,9 @@ function initChartCard(card: HTMLElement): void {
   let retryPending = false;
 
   function fetchData(query: string) {
-    if (query === lastQuery) return;
+    // Solo skipear cuando nada está en vuelo; si no, una respuesta ya
+    // superada podría ganar cuando el usuario vuelve a una query ya cargada.
+    if (query === lastQuery && inFlightQuery === null) return;
     if (query === inFlightQuery) {
       retryPending = true;
       return;

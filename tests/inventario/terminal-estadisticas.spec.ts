@@ -314,6 +314,62 @@ test.describe("Vista de estadísticas de terminales", () => {
     expect(png.suggestedFilename()).toMatch(/^equipos-por-region-\d{8}\.png$/);
   });
 
+  test("revertir un filtro mientras el fetch sigue en vuelo no desincroniza el gráfico", async ({
+    page,
+  }) => {
+    // Solo se retrasan los fetch de las ChartCard (sin accept JSON), no los de
+    // KPIs, para que el request de la query B siga en vuelo cuando se revierte a A.
+    await page.route("**/api/terminals/estadisticas**", async (route) => {
+      const accept = route.request().headers()["accept"] ?? "";
+      if (!accept.includes("application/json")) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      await route.continue();
+    });
+
+    await page.goto("/inventario-terminales/estadisticas");
+    const card = page
+      .locator("[data-chart-card]")
+      .filter({ has: page.getByRole("heading", { name: "Equipos por marca" }) });
+    // El gráfico y su tabla comparten los labels; la tabla tiene una celda por
+    // label, así que contar celdas mide cuántas marcas se están mostrando.
+    const brandCells = () => card.locator("[data-chart-table] td[data-label]");
+    // Solo los fetch de las ChartCard (accept */*) van al gráfico; los de KPIs
+    // (accept application/json) se distinguen para no confundir el estado.
+    const isChartReq = (accept: string | undefined) =>
+      !(accept ?? "").includes("application/json");
+
+    // Estado A (sin filtro): varias marcas presentes.
+    await expect(card.locator("canvas")).toBeVisible();
+    await expect(brandCells().first()).toBeAttached();
+    const allBrands = await brandCells().count();
+    expect(allBrands).toBeGreaterThan(1);
+
+    // A -> B (dell): el fetch de B queda en vuelo (retrasado por el route).
+    await page.selectOption("#stats-marca", "dell");
+    await page.waitForRequest(
+      (req) =>
+        req.url().includes("/api/terminals/estadisticas") &&
+        req.url().includes("marca=dell") &&
+        isChartReq(req.headers()["accept"]),
+    );
+    const bResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/terminals/estadisticas") &&
+        res.url().includes("marca=dell") &&
+        isChartReq(res.request().headers()["accept"]),
+    );
+
+    // B -> A antes de que B resuelva: la respuesta tardía de B no debe ganar.
+    await page.selectOption("#stats-marca", "");
+
+    // Esperar a que B haya resuelto del todo y recién ahí exigir el estado A.
+    await bResponse;
+    await expect
+      .poll(() => brandCells().count(), { timeout: 8000 })
+      .toBe(allBrands);
+  });
+
   test("el botón volver del header regresa al inventario", async ({ page }) => {
     await page.goto("/inventario-terminales/estadisticas");
     await page
