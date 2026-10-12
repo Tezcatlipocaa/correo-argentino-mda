@@ -131,6 +131,32 @@ function applyRateLimit(
     }
   }
 
+  const isKbArticleForm =
+    method === "POST" &&
+    (relativePath === "/base-conocimiento/create" ||
+      relativePath.startsWith("/base-conocimiento/edit/"));
+  if (isKbArticleForm) {
+    const identifier =
+      locals.user.id > 0
+        ? `u:${locals.user.id}`
+        : `ip:${clientAddress ?? "unknown"}`;
+    const result = checkRateLimit(
+      `kb-article-write:${identifier}:${relativePath}`,
+      RATE_LIMITS.kbArticleWrite,
+    );
+    if (!result.ok) {
+      const message = encodeURIComponent(KB_WRITE_THROTTLE_MESSAGE);
+      if (locals.user.id === 0) {
+        return redirect(
+          resolveUrl(`/login?toast_msg=${message}&toast_type=error`),
+        );
+      }
+      return redirect(
+        resolveUrl(`${relativePath}?toast_msg=${message}&toast_type=error`),
+      );
+    }
+  }
+
   return null;
 }
 
