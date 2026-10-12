@@ -2,81 +2,112 @@
 import { Icon } from "astro-icon/components";
 import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
 import { db } from "@db/index";
 import { provinces, regions } from "@db/schema";
 import { getCleanBase } from "@lib/baseUrl";
+import { getTerminalStatsRows } from "@lib/terminalQueries";
 import {
+  computeTerminalStats,
   MARCA_LABELS,
   MARCA_VALUES,
   OS_FILTER_BUCKETS,
   OS_FILTER_VALUES,
 } from "@lib/terminalStats";
 
-const endpoint = `${getCleanBase()}api/terminals/estadisticas`;
 const inventarioHref = `${getCleanBase()}inventario-terminales`;
 
-const marcaOptions = MARCA_VALUES.map((value) => ({
-  value,
-  label: MARCA_LABELS[value],
-}));
+// Snapshot inicial renderizado en el server: los KPIs y los gráficos muestran
+// datos desde el primer paint (y sobreviven si el fetch del cliente falla o el
+// rate-limit devuelve 429). Los filtros de la URL los aplica el cliente.
+const initial = computeTerminalStats(await getTerminalStatsRows(), {});
+
+const regionOptions = [
+  { value: "", label: "Todas" },
+  ...(
+    await db
+      .select({ id: regions.id, name: regions.name })
+      .from(regions)
+      .orderBy(regions.name)
+  ).map((r) => ({ value: r.id, label: r.name })),
+];
+const provinceOptions = [
+  { value: "", label: "Todas" },
+  ...(
+    await db
+      .select({ code: provinces.code, name: provinces.name })
+      .from(provinces)
+      .orderBy(provinces.name)
+  ).map((p) => ({ value: p.code, label: p.name })),
+];
+const marcaOptions = [
+  { value: "", label: "Todas" },
+  ...MARCA_VALUES.map((value) => ({ value, label: MARCA_LABELS[value] })),
+];
 const osLabels: Record<string, string> = {
   ...OS_FILTER_BUCKETS,
   "sin-dato": "Sin datos",
 };
-const osOptions = OS_FILTER_VALUES.map((value) => ({
-  value,
-  label: osLabels[value],
-}));
+const osOptions = [
+  { value: "", label: "Todos" },
+  ...OS_FILTER_VALUES.map((value) => ({ value, label: osLabels[value] })),
+];
 
-const regionOptions = await db
-  .select({ id: regions.id, name: regions.name })
-  .from(regions)
-  .orderBy(regions.name);
-const provinceOptions = await db
-  .select({ code: provinces.code, name: provinces.name })
-  .from(provinces)
-  .orderBy(provinces.name);
+const formatCount = (value: number) => Number(value).toLocaleString("es-AR");
+
+// Gráficos en modo registry: la página hace UN fetch por interacción y empuja
+// la data de cada chart (mismo contrato que el resto de las vistas de stats).
+const CHARTS: {
+  key: keyof typeof initial.charts;
+  type: "bar" | "doughnut";
+  title: string;
+  span: string;
+}[] = [
+  { key: "porProvincia", type: "bar", title: "Equipos por provincia", span: "lg:col-span-2" },
+  { key: "porRegion", type: "doughnut", title: "Equipos por región", span: "" },
+  { key: "porSo", type: "bar", title: "Equipos por sistema operativo", span: "lg:col-span-2" },
+  { key: "porMarca", type: "doughnut", title: "Equipos por marca", span: "" },
+  { key: "topSucursales", type: "bar", title: "Top 10 sucursales", span: "lg:col-span-3" },
+];
 ---
 
 <div class="flex w-full flex-col gap-6 pb-24">
   <div
     class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:flex-wrap md:items-end"
   >
-    <label class="form-control w-full md:w-48">
-      <span class="label-text mb-1 text-sm font-bold">Región</span>
-      <select id="stats-region" class="select select-bordered select-sm">
-        <option value="">Todas</option>
-        {regionOptions.map((r) => <option value={r.id}>{r.name}</option>)}
-      </select>
-    </label>
-    <label class="form-control w-full md:w-56">
-      <span class="label-text mb-1 text-sm font-bold">Provincia</span>
-      <select id="stats-provincia" class="select select-bordered select-sm">
-        <option value="">Todas</option>
-        {provinceOptions.map((p) => (
-          <option value={p.code}>{p.name}</option>
-        ))}
-      </select>
-    </label>
-    <label class="form-control w-full md:w-40">
-      <span class="label-text mb-1 text-sm font-bold">Marca</span>
-      <select id="stats-marca" class="select select-bordered select-sm">
-        <option value="">Todas</option>
-        {marcaOptions.map((m) => (
-          <option value={m.value}>{m.label}</option>
-        ))}
-      </select>
-    </label>
-    <label class="form-control w-full md:w-44">
-      <span class="label-text mb-1 text-sm font-bold">Sistema operativo</span>
-      <select id="stats-os" class="select select-bordered select-sm">
-        <option value="">Todos</option>
-        {osOptions.map((o) => (
-          <option value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </label>
-    <a class="btn btn-ghost btn-sm md:ml-auto" href={inventarioHref}>
+    <SelectField
+      id="stats-region"
+      name="region"
+      label="Región"
+      size="sm"
+      options={regionOptions}
+      class="w-full md:w-48"
+    />
+    <SelectField
+      id="stats-provincia"
+      name="provincia"
+      label="Provincia"
+      size="sm"
+      options={provinceOptions}
+      class="w-full md:w-56"
+    />
+    <SelectField
+      id="stats-marca"
+      name="marca"
+      label="Marca"
+      size="sm"
+      options={marcaOptions}
+      class="w-full md:w-40"
+    />
+    <SelectField
+      id="stats-os"
+      name="os"
+      label="Sistema operativo"
+      size="sm"
+      options={osOptions}
+      class="w-full md:w-44"
+    />
+    <a class="btn btn-secondary btn-sm md:ml-auto" href={inventarioHref}>
       <Icon name="boxicons:desktop-filled" size={16} is:inline />
       Ver inventario completo
     </a>
@@ -87,88 +118,73 @@ const provinceOptions = await db
       <StatsCard
         icon="desktop"
         label="Total terminales"
-        value="…"
+        value={formatCount(initial.kpis.total)}
         subtitle="Parque PC completo"
+        hint="Todos los terminales del parque PC, sin importar el estado de conexión."
       />
     </div>
     <div data-kpi="sucursales">
       <StatsCard
         icon="building-house"
         label="Sucursales con equipos"
-        value="…"
+        value={formatCount(initial.kpis.sucursales)}
         subtitle="Oficinas con al menos un equipo"
         color="info"
+        hint="Oficinas (NIS) con al menos un terminal asignado en el parque filtrado."
       />
     </div>
     <div data-kpi="pctWin11">
       <StatsCard
         icon="windows"
         label="% Windows 11"
-        value="…"
+        value={`${initial.kpis.pctWin11}%`}
         subtitle="Del parque filtrado"
         color="success"
+        hint="Porcentaje de equipos con Windows 11 sobre el parque filtrado."
       />
     </div>
     <div data-kpi="pctWin10">
       <StatsCard
         icon="windows"
         label="% Windows 10"
-        value="…"
+        value={`${initial.kpis.pctWin10}%`}
         subtitle="Parque a migrar (EOL)"
         color="warning"
+        hint="Porcentaje de equipos con Windows 10 (fin de soporte) sobre el parque filtrado."
       />
     </div>
   </div>
 
   <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
-    <div class="lg:col-span-2">
-      <ChartCard
-        type="bar"
-        title="Equipos por provincia"
-        fetchUrl={endpoint}
-        chartKey="porProvincia"
-        exportable
-      />
-    </div>
-    <ChartCard
-      type="doughnut"
-      title="Equipos por región"
-      fetchUrl={endpoint}
-      chartKey="porRegion"
-      exportable
-    />
-    <div class="lg:col-span-2">
-      <ChartCard
-        type="bar"
-        title="Equipos por sistema operativo"
-        fetchUrl={endpoint}
-        chartKey="porSo"
-        exportable
-      />
-    </div>
-    <ChartCard
-      type="doughnut"
-      title="Equipos por marca"
-      fetchUrl={endpoint}
-      chartKey="porMarca"
-      exportable
-    />
-    <div class="lg:col-span-3">
-      <ChartCard
-        type="bar"
-        title="Top 10 sucursales"
-        fetchUrl={endpoint}
-        chartKey="topSucursales"
-        exportable
-      />
-    </div>
+    {
+      CHARTS.map((chart) => (
+        <div class={chart.span}>
+          <ChartCard
+            type={chart.type}
+            title={chart.title}
+            chartName={chart.key}
+            labels={initial.charts[chart.key].labels}
+            series={initial.charts[chart.key].series}
+            exportable
+          />
+        </div>
+      ))
+    }
   </div>
 </div>
 
 <script>
   import { getCleanBase } from "@lib/baseUrl";
+  import { showToast } from "@lib/toastClient";
 
   const endpoint = `${getCleanBase()}api/terminals/estadisticas`;
+  const CHART_KEYS = [
+    "porProvincia",
+    "porRegion",
+    "porSo",
+    "porMarca",
+    "topSucursales",
+  ] as const;
 
   const getSelect = (id: string): HTMLSelectElement | null =>
     document.getElementById(id) as HTMLSelectElement | null;
@@ -197,11 +213,27 @@ const provinceOptions = await db
     if (el) el.textContent = value;
   }
 
-  function clearKpis(): void {
-    setKpi("total", "—");
-    setKpi("sucursales", "—");
-    setKpi("pctWin11", "—");
-    setKpi("pctWin10", "—");
+  type ChartPayload = {
+    labels: string[];
+    series: { label: string; data: number[] }[];
+  };
+
+  type ChartWindow = Window & {
+    __chartCards?: Record<string, { setData: (l: string[], s: any[]) => void }>;
+    __pendingChartUpdates?: Record<string, ChartPayload>;
+  };
+
+  // Modo registry de ChartCard: si la card todavía no se inicializó (server
+  // island), se deja la data encolada y la toma al registrarse.
+  function pushCharts(charts: Record<string, ChartPayload>): void {
+    const win = window as ChartWindow;
+    for (const key of CHART_KEYS) {
+      const chart = charts?.[key];
+      if (!chart) continue;
+      const card = win.__chartCards?.[key];
+      if (card) card.setData(chart.labels, chart.series);
+      else (win.__pendingChartUpdates ??= {})[key] = chart;
+    }
   }
 
   let fetchSeq = 0;
@@ -224,16 +256,16 @@ const provinceOptions = await db
       );
       setKpi("pctWin11", `${body.kpis.pctWin11}%`);
       setKpi("pctWin10", `${body.kpis.pctWin10}%`);
+      pushCharts(body.charts);
     } catch (error) {
       if (seq !== fetchSeq) return;
+      // Se conserva el snapshot del server: un 429 o un error de red no debe
+      // dejar la vista en blanco (solo avisar).
       console.error("[estadisticas terminales] no se pudieron cargar:", error);
-      clearKpis();
-    } finally {
-      if (seq === fetchSeq) {
-        window.dispatchEvent(
-          new CustomEvent("stats:filters-changed", { detail: { query } }),
-        );
-      }
+      showToast(
+        "No se pudieron actualizar las estadísticas. Se muestran los últimos datos disponibles.",
+        "alert-warning",
+      );
     }
   }
 

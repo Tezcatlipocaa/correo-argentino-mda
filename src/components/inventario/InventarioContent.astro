@@ -29,6 +29,7 @@ import { and, eq } from "drizzle-orm";
 import { getShiftType } from "@lib/cubics";
 import OperatorAvatar from "@components/cubics/OperatorAvatar.astro";
 import { isAllowed } from "@lib/rolesMatrix";
+import { hasPermission } from "@lib/rbac";
 import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { getResolvedSearchParams } from "@lib/navigation";
@@ -44,6 +45,10 @@ const isAllowedAdmin = user
 
 const canExport = user
   ? ["team_leader", "supervisor", "admin"].includes(user.role)
+  : false;
+
+const canSeeStats = user
+  ? hasPermission("/inventario-terminales/estadisticas", user.role)
   : false;
 
 const terminalHeaderGridClass = "grid-cols-12 gap-4";
@@ -713,6 +718,19 @@ const inventoryTabs = [
                 href={import.meta.env.BASE_URL + "api/export/terminals"}
                 ariaLabel="Exportar terminales a CSV"
               />
+            )
+          }
+          {
+            canSeeStats && (
+              <a
+                href={`${getCleanBase()}inventario-terminales/estadisticas`}
+                class="btn btn-secondary shrink-0 gap-2 font-semibold shadow-sm"
+                aria-label="Ver estadísticas del parque de terminales"
+              >
+                <Icon name="boxicons:pie-chart-alt-filled" size={16} />
+                <span class="hidden sm:inline">Ver estadísticas</span>
+                <span class="sm:hidden">Estadísticas</span>
+              </a>
             )
           }
         </div>
