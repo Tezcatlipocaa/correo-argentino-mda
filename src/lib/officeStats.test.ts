@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { InvgateIncident } from "@/types/invgate";
 import {
   MASS_EVENT_MIN_OFFICES,
+  buildCountChart,
   buildModernizacionPorProvincia,
   buildModernizacionTimeline,
   clusterMassEvents,
@@ -138,6 +139,76 @@ test("buildModernizacionTimeline apila cerrados y en curso por dia", () => {
   assert.equal(chart.labels.length, 3);
   assert.equal(chart.series[0].data.reduce((a, b) => a + b, 0), 1);
   assert.equal(chart.series[1].data.reduce((a, b) => a + b, 0), 1);
+  assert.deepEqual(chart.series[0].data, [1, 0, 0]); // cerrado el primer día
+  assert.deepEqual(chart.series[1].data, [0, 0, 1]); // en curso el último día
+});
+
+test("buildModernizacionTimeline clampea cierres futuros y altas viejas a los bordes", () => {
+  const nowMs = Date.parse("2026-10-12T15:00:00Z");
+  const windowStartMs = nowMs - 2 * 24 * 3600 * 1000;
+  const rows = [
+    { provinceName: "BA", createdAt: windowStartMs + 3600000, closedAt: nowMs + 5 * 24 * 3600 * 1000 }, // cierre futuro
+    { provinceName: "BA", createdAt: nowMs - 10 * 24 * 3600 * 1000, closedAt: null }, // alta pre-ventana
+  ];
+  const chart = buildModernizacionTimeline(rows, windowStartMs, nowMs);
+  assert.equal(chart.labels.length, 3);
+  assert.deepEqual(chart.series[0].data, [0, 0, 1]); // cierre futuro -> último bucket
+  assert.deepEqual(chart.series[1].data, [1, 0, 0]); // alta vieja -> primer bucket
+});
+
+test("buildCountChart cuenta por etiqueta, saltea nulos y preserva orden de inserción", () => {
+  const chart = buildCountChart(["A", null, "B", "A", undefined], "Incidentes");
+  assert.deepEqual(chart.labels, ["A", "B"]);
+  assert.equal(chart.series.length, 1);
+  assert.equal(chart.series[0].label, "Incidentes");
+  assert.deepEqual(chart.series[0].data, [2, 1]);
+});
+
+test("clusterMassEvents ordena por oficinas desc, luego tickets desc, y admite categoria null", () => {
+  const nowMs = AR_NOON;
+  const todaySec = Math.floor(AR_NOON / 1000) - 3600;
+  const olderSec = todaySec - 1800;
+  const locationToCode = new Map<number, string>(
+    Array.from({ length: 8 }, (_, i) => [i + 1, `B000${i + 1}`] as [number, string]),
+  );
+  const incidents = [
+    // Grupo A: 6 oficinas, 7 tickets (incluye el más viejo)
+    incident(1, 100, 1, olderSec),
+    incident(2, 100, 2, todaySec),
+    incident(3, 100, 3, todaySec),
+    incident(4, 100, 4, todaySec),
+    incident(5, 100, 5, todaySec),
+    incident(6, 100, 6, todaySec),
+    incident(7, 100, 1, todaySec),
+    // Grupo B: 5 oficinas, 6 tickets (una oficina repetida)
+    incident(8, 200, 3, todaySec),
+    incident(9, 200, 4, todaySec),
+    incident(10, 200, 5, todaySec),
+    incident(11, 200, 6, todaySec),
+    incident(12, 200, 7, todaySec),
+    incident(13, 200, 3, todaySec),
+    // Grupo null: 5 oficinas, 5 tickets
+    incident(14, null, 2, todaySec),
+    incident(15, null, 3, todaySec),
+    incident(16, null, 4, todaySec),
+    incident(17, null, 5, todaySec),
+    incident(18, null, 6, todaySec),
+  ];
+  const events = clusterMassEvents(incidents, locationToCode, nowMs);
+  assert.deepEqual(
+    events.map((e) => [e.categoriaId, e.oficinas, e.tickets]),
+    [
+      [100, 6, 7], // más oficinas primero
+      [200, 5, 6], // empate en oficinas: desempata por tickets (6 > 5)
+      [null, 5, 5], // categoría nula soportada
+    ],
+  );
+  const groupA = events.find((e) => e.categoriaId === 100)!;
+  assert.equal(groupA.titulo, "Ticket 1"); // título del ticket más viejo, no del orden de entrada
+  assert.equal(groupA.desde, olderSec * 1000);
+  assert.deepEqual(groupA.officeCodes, ["B0001", "B0002", "B0003", "B0004", "B0005", "B0006"]);
+  const nullGroup = events.find((e) => e.categoriaId === null)!;
+  assert.equal(nullGroup.oficinas, 5);
 });
 
 test("toEpochMs normaliza segundos y milisegundos", () => {

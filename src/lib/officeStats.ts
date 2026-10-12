@@ -29,7 +29,7 @@ const AR_DATE_FMT = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-export function isSameDayAr(ms: number, nowMs: number): boolean {
+function isSameDayAr(ms: number, nowMs: number): boolean {
   return AR_DATE_FMT.format(new Date(ms)) === AR_DATE_FMT.format(new Date(nowMs));
 }
 
@@ -63,7 +63,8 @@ export function clusterMassEvents(
     if (incident.location_id == null) continue;
     const code = locationToCode.get(incident.location_id);
     if (!code) continue;
-    if (!isSameDayAr(incident.created_at * 1000, nowMs)) continue;
+    const createdMs = toEpochMs(incident.created_at);
+    if (createdMs == null || !isSameDayAr(createdMs, nowMs)) continue;
     const key = incident.category_id ?? -1;
     const group = groups.get(key) ?? { incidents: [], codes: new Set<string>() };
     group.incidents.push(incident);
@@ -74,12 +75,13 @@ export function clusterMassEvents(
   const events: MassEvent[] = [];
   for (const [key, group] of groups) {
     if (group.codes.size < minOffices) continue;
+    const oldest = group.incidents.reduce((a, b) => (b.created_at < a.created_at ? b : a));
     events.push({
       categoriaId: key === -1 ? null : key,
-      titulo: group.incidents[0].title,
+      titulo: oldest.title,
       oficinas: group.codes.size,
       tickets: group.incidents.length,
-      desde: Math.min(...group.incidents.map((i) => i.created_at * 1000)),
+      desde: toEpochMs(oldest.created_at) ?? 0,
       officeCodes: [...group.codes].sort(),
     });
   }
@@ -177,30 +179,24 @@ export function buildModernizacionTimeline(
     Math.round((nowMs - windowStartMs) / (24 * 3600 * 1000)),
   );
   const labels: string[] = [];
-  const keys: string[] = [];
   for (let offset = spanDays; offset >= 0; offset--) {
-    const dayMs = nowMs - offset * 24 * 3600 * 1000;
-    const key = arDateKey(dayMs);
-    keys.push(key);
+    const key = arDateKey(nowMs - offset * 24 * 3600 * 1000);
     labels.push(`${key.slice(8, 10)}/${key.slice(5, 7)}`);
   }
   const cerrados = new Array<number>(labels.length).fill(0);
   const enCurso = new Array<number>(labels.length).fill(0);
+  // Bucket por día con clamp (no según match exacto de clave): un cierre en el
+  // futuro o un alta anterior a la ventana cae en el borde, nunca se descarta.
+  // ponytail: el arrastre pre-ventana se acumula en el día 0 a propósito.
+  const dayIndexOf = (ms: number) => {
+    const diff = Math.round((nowMs - ms) / (24 * 3600 * 1000));
+    return Math.min(spanDays, Math.max(0, spanDays - diff));
+  };
   for (const row of rows) {
-    if (row.createdAt < windowStartMs && row.closedAt == null) {
-      // en curso arrastrado: contarlo en el primer día de la ventana
-      enCurso[0]++;
-      continue;
-    }
-    const closedKey =
-      row.closedAt != null && row.closedAt >= windowStartMs ? arDateKey(row.closedAt) : null;
-    const createdKey = row.createdAt >= windowStartMs ? arDateKey(row.createdAt) : null;
-    if (closedKey) {
-      const idx = keys.indexOf(closedKey);
-      if (idx >= 0) cerrados[idx]++;
-    } else if (row.closedAt == null && createdKey) {
-      const idx = keys.indexOf(createdKey);
-      if (idx >= 0) enCurso[idx]++;
+    if (row.closedAt != null) {
+      cerrados[dayIndexOf(row.closedAt)]++;
+    } else {
+      enCurso[dayIndexOf(row.createdAt)]++;
     }
   }
   return {
