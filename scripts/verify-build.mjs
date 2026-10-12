@@ -93,6 +93,12 @@ const astroAssets = [
     declaredAssets.filter((pathname) => pathname.startsWith("/_astro/")),
   ),
 ];
+if (astroAssets.length === 0) {
+  console.error(
+    "[verify-build] ERROR: no se encontro la lista de assets del manifest; el chequeo de _astro/* no puede validar nada.",
+  );
+  process.exit(1);
+}
 const missingAssets = astroAssets.filter(
   (pathname) => !existsSync(join("dist/client", pathname.slice(1))),
 );
