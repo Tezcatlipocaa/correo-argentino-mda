@@ -1,0 +1,538 @@
+---
+import { MDA_TI_REPORT_DATA, type MdaReportData } from "@lib/categories/fixtures/mda-ti-report-data";
+
+interface Props {
+  data?: MdaReportData;
+}
+
+const { data = MDA_TI_REPORT_DATA } = Astro.props;
+const { hero, section1, section2, section3, section4, section5, section6, section7 } = data;
+---
+
+<article class="space-y-12 text-base-content">
+  <header class="rounded-2xl overflow-hidden bg-neutral text-neutral-content p-6 sm:p-10 shadow-lg border border-neutral-content/10">
+    <div class="max-w-5xl space-y-6">
+      <div class="space-y-2">
+        <p class="text-xs sm:text-sm font-bold uppercase tracking-widest text-error">
+          {hero.eyebrow}
+        </p>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-neutral-content leading-tight">
+          {hero.title}
+        </h1>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-neutral-content/20">
+        {hero.kpis.map((kpi) => (
+          <div class="p-4 rounded-xl bg-neutral-content/5 border border-neutral-content/10 space-y-1">
+            <span class="block text-3xl sm:text-4xl font-extrabold font-mono tracking-tight text-error stat-value">
+              {kpi.value}
+            </span>
+            <span class="block text-xs sm:text-sm text-neutral-content/80 leading-snug">
+              {kpi.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p class="text-sm sm:text-base text-neutral-content/90 max-w-4xl leading-relaxed">
+        {hero.subtitle}
+      </p>
+
+      <div class="pt-4 border-t border-neutral-content/15 text-xs text-neutral-content/70 max-w-4xl leading-relaxed">
+        <strong class="text-neutral-content font-semibold">Método:</strong> {hero.methodology}
+      </div>
+    </div>
+  </header>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-1-heading">
+    <div class="space-y-2">
+      <h2 id="sec-1-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">1.</span>
+        <span>Radiografía: dónde duele hoy</span>
+      </h2>
+      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
+        {section1.description}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">719</span>
+        <span class="block text-xs text-base-content/70">nodos en la rama</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">377</span>
+        <span class="block text-xs text-base-content/70">nunca recibieron ticket (52%)</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">4,71</span>
+        <span class="block text-xs text-base-content/70">selecciones promedio para ubicar categoría</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">552</span>
+        <span class="block text-xs text-base-content/70">tickets (4,6%) exigen 6 o más clics</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-warning">25</span>
+        <span class="block text-xs text-base-content/70">nodos comodín ("Consulta", "Fallas")</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">227</span>
+        <span class="block text-xs text-base-content/70">ramas con subárbol entero en 0</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono">62,4%</span>
+        <span class="block text-xs text-base-content/70">de tickets entran por teléfono</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono">16</span>
+        <span class="block text-xs text-base-content/70">hojas concentran el 50% del volumen</span>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table data-testid="table-weak-points" class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Diagnóstico de puntos débiles y desperdicio estructural del árbol de categorías actual</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4">Punto flojo</th>
+            <th scope="col" class="py-3 px-4 text-right">Magnitud</th>
+            <th scope="col" class="py-3 px-4">Cómo se mide</th>
+            <th scope="col" class="py-3 px-4">Por qué afecta al usuario</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section1.weakPoints.map((item) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="font-bold text-base-content py-3 px-4 text-left font-normal">{item.point}</th>
+              <td class="text-right font-mono font-semibold py-3 px-4 text-error whitespace-nowrap">
+                {item.magnitude}
+              </td>
+              <td class="text-base-content/80 py-3 px-4">{item.measurement}</td>
+              <td class="text-base-content/90 py-3 px-4">{item.userImpact}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-2-heading">
+    <div class="space-y-2">
+      <h2 id="sec-2-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">2.</span>
+        <span>La demanda está concentrada: pocas categorías hacen todo el trabajo</span>
+      </h2>
+      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
+        {section2.description}
+      </p>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table data-testid="table-pareto" class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Concentración de demanda por tramos del catálogo</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4">Tramo</th>
+            <th scope="col" class="py-3 px-4 text-right">Hojas</th>
+            <th scope="col" class="py-3 px-4 text-right">% Catálogo</th>
+            <th scope="col" class="py-3 px-4 text-right">Tickets</th>
+            <th scope="col" class="py-3 px-4 text-right">% Volumen</th>
+            <th scope="col" class="py-3 px-4 min-w-[180px]">Cobertura</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section2.pareto.map((row) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="font-semibold py-3 px-4 text-left font-normal">{row.range}</th>
+              <td class="text-right font-mono py-3 px-4">{row.leaves}</td>
+              <td class="text-right font-mono text-base-content/70 py-3 px-4">{row.catalogPercent}</td>
+              <td class="text-right font-mono font-bold py-3 px-4">{row.tickets.toLocaleString("es-AR")}</td>
+              <td class="text-right font-mono font-semibold py-3 px-4">{row.volumePercent}</td>
+              <td class="py-3 px-4">
+                <div class="w-full bg-base-200 rounded-md h-6 overflow-hidden flex items-center relative">
+                  <div
+                    class="h-full bg-primary/70 transition-all"
+                    style={`width: ${parseFloat(row.volumePercent.replace(",", ".")) * 1.2}%`}
+                  ></div>
+                  <span class="absolute left-2 text-xs font-mono font-bold text-base-content">
+                    {row.coverage}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3 shadow-sm">
+        <h3 class="font-bold text-sm uppercase tracking-wide text-base-content/80">
+          Distribución de hojas por uso
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="table table-xs md:table-sm w-full">
+            <caption class="sr-only">Distribución de hojas por volumen de tickets</caption>
+            <thead class="bg-base-200/50">
+              <tr>
+                <th scope="col">Rango de uso</th>
+                <th scope="col" class="text-right">Hojas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {section2.usageDistribution.map((item) => (
+                <tr class="hover:bg-base-200/30">
+                  <th scope="row" class="py-2 text-left font-normal">{item.bracket}</th>
+                  <td class="text-right font-mono font-bold py-2">{item.leaves}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3 shadow-sm">
+        <h3 class="font-bold text-sm uppercase tracking-wide text-base-content/80">
+          Volumen mensual de la rama
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="table table-xs md:table-sm w-full">
+            <caption class="sr-only">Volumen mensual histórico de la rama Mesa de Ayuda TI</caption>
+            <thead class="bg-base-200/50">
+              <tr>
+                <th scope="col">Mes</th>
+                <th scope="col" class="text-right">Tickets</th>
+              </tr>
+            </thead>
+            <tbody>
+              {section2.monthlyVolume.map((item) => (
+                <tr class="hover:bg-base-200/30">
+                  <th scope="row" class="py-2 text-left font-normal">{item.month}</th>
+                  <td class="text-right font-mono font-bold py-2">{item.tickets.toLocaleString("es-AR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl bg-success/10 border-l-4 border-success p-4 text-sm text-base-content space-y-1">
+      <strong class="text-success font-bold block">Lectura para la decisión:</strong>
+      <p class="text-base-content/80">
+        De 490 hojas, solo 340 recibieron tickets y 50 acumulan casi el 80% del volumen. Los 377 nodos vacíos se pueden retirar sin costo operativo ni tickets que reasignar.
+      </p>
+    </div>
+  </section>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-3-heading">
+    <div class="space-y-2">
+      <h2 id="sec-3-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">3.</span>
+        <span>Casi la mitad del volumen se cierra en el acto</span>
+      </h2>
+      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
+        {section3.description}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="p-4 rounded-xl bg-success/10 border border-success/30 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-success">46,2%</span>
+        <span class="block text-xs text-base-content/70">se cierra en 15 minutos o menos</span>
+      </div>
+      <div class="p-4 rounded-xl bg-success/10 border border-success/30 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-success">37,3%</span>
+        <span class="block text-xs text-base-content/70">se cierra en 1 minuto o menos</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono">89,8%</span>
+        <span class="block text-xs text-base-content/70">con fecha de resolución</span>
+      </div>
+      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
+        <span class="block text-2xl sm:text-3xl font-bold font-mono text-warning">10,2%</span>
+        <span class="block text-xs text-base-content/70">sin fecha de resolución (1.212)</span>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table data-testid="table-closure-times" class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Distribución del volumen de tickets según el tiempo transcurrido entre creación y cierre</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4">Tiempo entre creación y cierre</th>
+            <th scope="col" class="py-3 px-4 text-right">Tickets</th>
+            <th scope="col" class="py-3 px-4 text-right">% Rama</th>
+            <th scope="col" class="py-3 px-4 text-right">Acumulado</th>
+            <th scope="col" class="py-3 px-4 min-w-[180px]">Cobertura</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section3.closureTimes.map((row) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="font-semibold py-3 px-4 text-left font-normal">{row.timeframe}</th>
+              <td class="text-right font-mono font-bold py-3 px-4">{row.tickets.toLocaleString("es-AR")}</td>
+              <td class="text-right font-mono py-3 px-4">{row.volumePercent}</td>
+              <td class="text-right font-mono font-semibold py-3 px-4">{row.cumulativePercent}</td>
+              <td class="py-3 px-4">
+                <div class="w-full bg-base-200 rounded-md h-6 overflow-hidden flex items-center relative">
+                  <div
+                    class="h-full bg-primary/70 transition-all"
+                    style={`width: ${parseFloat(row.volumePercent.replace(",", ".")) * 2}%`}
+                  ></div>
+                  <span class="absolute left-2 text-xs font-mono font-bold text-base-content">
+                    {row.coverage}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="space-y-3 pt-2">
+      <h3 class="font-bold text-base text-base-content">
+        Hojas de cierre inmediato (atajos del operador)
+      </h3>
+      <p class="text-xs sm:text-sm text-base-content/70">
+        10 hojas que concentran más de 2.200 tickets resueltos en menos de 15 minutos. Elegir la hoja <em>es</em> la resolución.
+      </p>
+      <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+        <table class="table table-sm w-full">
+          <caption class="sr-only">Hojas con mayor volumen resueltas en 15 minutos o menos (atajos del operador)</caption>
+          <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+            <tr>
+              <th scope="col" class="py-3 px-4">Hoja (nombre actual)</th>
+              <th scope="col" class="py-3 px-4 text-right">Tickets</th>
+              <th scope="col" class="py-3 px-4 text-right">Selecciones hoy</th>
+              <th scope="col" class="py-3 px-4 text-right">Cierra en ≤15 min</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-base-200 text-sm">
+            {section3.immediateLeaves.map((leaf) => (
+              <tr class="hover:bg-base-200/40">
+                <th scope="row" class="font-medium py-2.5 px-4 text-left font-normal">{leaf.leaf}</th>
+                <td class="text-right font-mono font-bold py-2.5 px-4">{leaf.tickets.toLocaleString("es-AR")}</td>
+                <td class="text-right font-mono py-2.5 px-4 text-error font-bold">{leaf.selections}</td>
+                <td class="text-right font-mono font-bold text-success py-2.5 px-4">{leaf.closesUnder15MinPercent}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="space-y-3 pt-2">
+      <h3 class="font-bold text-base text-base-content">
+        Trabajo de ciclo largo (requiere gestión física o tercerizada)
+      </h3>
+      <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+        <table class="table table-sm w-full">
+          <caption class="sr-only">Hojas que corresponden a trabajo de ciclo largo con resolución de varios días</caption>
+          <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+            <tr>
+              <th scope="col" class="py-3 px-4">Hoja con trabajo real</th>
+              <th scope="col" class="py-3 px-4 text-right">Tickets</th>
+              <th scope="col" class="py-3 px-4 text-right">Cierra en ≤15 min</th>
+              <th scope="col" class="py-3 px-4 text-right">Mediana de resolución</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-base-200 text-sm">
+            {section3.longCycleLeaves.map((leaf) => (
+              <tr class="hover:bg-base-200/40">
+                <th scope="row" class="font-medium py-2.5 px-4 text-left font-normal">{leaf.leaf}</th>
+                <td class="text-right font-mono font-bold py-2.5 px-4">
+                  {leaf.tickets ? leaf.tickets.toLocaleString("es-AR") : "—"}
+                </td>
+                <td class="text-right font-mono py-2.5 px-4">{leaf.closesUnder15MinPercent}</td>
+                <td class="text-right font-mono font-semibold py-2.5 px-4 text-warning">{leaf.resolutionMedian}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-xl bg-success/10 border-l-4 border-success p-4 text-sm text-base-content space-y-1">
+      <strong class="text-success font-bold block">Consecuencia para el diseño:</strong>
+      <p class="text-base-content/80">
+        Hay que optimizar para enrutar rápido el 46% que se resuelve en el acto, no el 2,6% que necesita trabajo real. Las hojas de cierre inmediato hoy están a 3, 4 y hasta 5 selecciones. En la Propuesta C todas quedan a exactamente 3 selecciones.
+      </p>
+    </div>
+  </section>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-4-heading">
+    <div class="space-y-2">
+      <h2 id="sec-4-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">4.</span>
+        <span>Tres formas de reordenar, medidas contra el árbol actual</span>
+      </h2>
+      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
+        {section4.description}
+      </p>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table data-testid="table-comparison-matrix" class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Matriz comparativa de métricas entre la taxonomía actual y las propuestas A, B y C</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4">Indicador</th>
+            <th scope="col" class="py-3 px-4 text-right">Hoy</th>
+            <th scope="col" class="py-3 px-4 text-right">Propuesta A · Intención</th>
+            <th scope="col" class="py-3 px-4 text-right">Propuesta B · Sistema</th>
+            <th scope="col" class="py-3 px-4 text-right bg-primary/10 text-primary">Propuesta C · Híbrida</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section4.indicators.map((ind) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="font-medium py-3 px-4 text-left font-normal">{ind.indicator}</th>
+              <td class="text-right font-mono font-semibold py-3 px-4 text-error">{ind.today}</td>
+              <td class="text-right font-mono py-3 px-4">{ind.propuestaA}</td>
+              <td class="text-right font-mono py-3 px-4">{ind.propuestaB}</td>
+              <td class="text-right font-mono font-bold py-3 px-4 bg-primary/5 text-primary">
+                {ind.propuestaC}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="rounded-xl bg-warning/10 border-l-4 border-warning p-4 text-sm text-base-content space-y-1">
+        <strong class="text-warning font-bold block">El límite de la Propuesta A:</strong>
+        <p class="text-base-content/80">
+          36 sistemas sirven a más de una intención ("Impresora láser" recibe consultas, fallas y cambios). InvGate admite un solo padre, por lo que A obliga a duplicar esos nodos con sufijo y queda en 453 nodos.
+        </p>
+      </div>
+
+      <div class="rounded-xl bg-success/10 border-l-4 border-success p-4 text-sm text-base-content space-y-1">
+        <strong class="text-success font-bold block">Por qué gana la Propuesta C:</strong>
+        <p class="text-base-content/80">
+          Mantiene el eje de sistemas y agrupa en 10 familias que bajan la primera pantalla de 52 a 10 opciones reconocibles. Sin duplicaciones ni conflicto estructural.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-5-heading">
+    <div class="space-y-2">
+      <h2 id="sec-5-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">5.</span>
+        <span>Qué hace falta para aplicarlo, y qué no</span>
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Acciones requeridas, alcance y tickets a mover para implementar la propuesta</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4">Acción</th>
+            <th scope="col" class="py-3 px-4 text-right">Alcance</th>
+            <th scope="col" class="py-3 px-4 text-right">Tickets a mover</th>
+            <th scope="col" class="py-3 px-4">Observación</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section5.actions.map((act) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="font-bold py-3 px-4 text-left font-normal">{act.action}</th>
+              <td class="text-right font-mono py-3 px-4">{act.scope}</td>
+              <td class="text-right font-mono font-bold py-3 px-4 text-success">{act.ticketsToMove}</td>
+              <td class="text-base-content/80 py-3 px-4">{act.observation}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rounded-xl bg-info/10 border-l-4 border-info p-4 text-sm text-base-content space-y-1">
+      <strong class="text-info font-bold block">Resumen operativo:</strong>
+      <p class="text-base-content/80">
+        La etapa sin riesgo cubre el 96,3% del volumen sin mover un solo ticket histórico. Solo cambia la jerarquía de navegación y se retiran ramas sin uso.
+      </p>
+    </div>
+  </section>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-6-heading">
+    <div class="space-y-2">
+      <h2 id="sec-6-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">6.</span>
+        <span>Dónde el rediseño NO ayuda: advertencia metodológica</span>
+      </h2>
+      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
+        {section6.description}
+      </p>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Advertencias metodológicas y contraste empírico de hipótesis intuitivas sobre tiempos de resolución</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4">Hipótesis intuitiva</th>
+            <th scope="col" class="py-3 px-4 text-right">Tiempo de resolución</th>
+            <th scope="col" class="py-3 px-4">Qué dicen realmente los datos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section6.hypotheses.map((hyp) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="font-bold py-3 px-4 text-left font-normal">{hyp.hypothesis}</th>
+              <td class="text-right font-mono py-3 px-4 text-base-content/70">{hyp.resolutionTime}</td>
+              <td class="text-base-content/90 py-3 px-4 leading-relaxed">{hyp.reality}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rounded-xl bg-neutral/5 border border-base-300 p-4 text-sm text-base-content space-y-1">
+      <strong class="font-bold block text-base-content">Conclusión honesta:</strong>
+      <p class="text-base-content/80 leading-relaxed">
+        El rediseño optimiza la navegación y la claridad cognitiva para usuarios y operadores; no reduce los tiempos de resolución técnica en campo. Facilita ubicar la categoría correcta sin fricción.
+      </p>
+    </div>
+  </section>
+
+  <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-7-heading">
+    <div class="space-y-2">
+      <h2 id="sec-7-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
+        <span class="text-error font-mono text-2xl sm:text-3xl">7.</span>
+        <span>Resumen para la decisión</span>
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <table data-testid="table-decision-balance" class="table table-sm md:table-md w-full">
+        <caption class="sr-only">Resumen comparativo para la decisión: situación actual frente a la Propuesta C</caption>
+        <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
+          <tr>
+            <th scope="col" class="py-3 px-4 w-1/2">Situación hoy</th>
+            <th scope="col" class="py-3 px-4 w-1/2 bg-primary/10 text-primary">Con la Propuesta C</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-base-200 text-sm">
+          {section7.balance.map((item) => (
+            <tr class="hover:bg-base-200/40">
+              <th scope="row" class="py-3 px-4 text-error font-medium text-left font-normal">{item.today}</th>
+              <td class="py-3 px-4 bg-primary/5 text-primary font-bold">{item.withPropuestaC}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rounded-xl bg-primary/10 border-l-4 border-primary p-5 text-sm text-base-content space-y-2 shadow-sm">
+      <strong class="text-primary font-bold text-base block">Decisión que se pide:</strong>
+      <p class="text-base-content/90 leading-relaxed">
+        Aprobar la Propuesta C como estructura taxonómica objetivo y autorizar la implementación de la etapa sin riesgo (reparentado y retiro de nodos vacíos, 0 tickets movidos).
+      </p>
+    </div>
+  </section>
+</article>

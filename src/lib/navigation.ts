@@ -50,6 +50,27 @@ export const navSections: NavSection[] = [
     ],
   },
   {
+    id: "reportes",
+    label: "Reportes",
+    items: [
+      {
+        href: "/reportes/categorias",
+        label: "Árbol de Categorías",
+        icon: "boxicons:network-chart-filled",
+      },
+      {
+        href: "/reportes/mesas",
+        label: "Flujo de Mesas",
+        icon: "boxicons:dashboard-filled",
+      },
+      {
+        href: "/reportes/workflows",
+        label: "Workflows de Proceso",
+        icon: "boxicons:git-repo-forked-filled",
+      },
+    ],
+  },
+  {
     id: "accesos-rapidos",
     label: "Accesos rápidos",
     items: [

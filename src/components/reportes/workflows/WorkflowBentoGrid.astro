@@ -1,0 +1,113 @@
+---
+import StatsCard from "@components/ui/StatsCard.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import type { WorkflowReportData, WorkflowStatus } from "@/types/workflows";
+
+interface Props {
+  data: WorkflowReportData;
+}
+
+const { data } = Astro.props;
+const { overview } = data;
+
+const STATUS_LABELS: Record<WorkflowStatus, string> = {
+  in_progress: "En Progreso",
+  waiting_approval: "Pendiente Aprobación",
+  approved: "Aprobado",
+  rejected: "Rechazado",
+  completed: "Completado",
+  cancelled: "Cancelado",
+};
+
+const statusEntries = (
+  Object.entries(overview.statusDistribution) as [WorkflowStatus, number][]
+).filter(([_, count]) => count > 0);
+
+const resolvedStatusEntries =
+  statusEntries.length > 0
+    ? statusEntries
+    : (Object.entries(overview.statusDistribution) as [WorkflowStatus, number][]);
+
+const statusLabels = resolvedStatusEntries.map(
+  ([status]) => STATUS_LABELS[status] ?? status,
+);
+const statusData = resolvedStatusEntries.map(([_, count]) => count);
+
+const groupLabels = Object.keys(overview.groupDistribution);
+const groupData = Object.values(overview.groupDistribution);
+---
+
+<div class="space-y-6" aria-label="Métricas y estadísticas de workflows">
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <StatsCard
+      icon="git-repo-forked"
+      label="Total Procesos"
+      value={overview.totalInstances}
+      subtitle="Instancias monitoreadas"
+      color="primary"
+    />
+    <StatsCard
+      icon="clock"
+      label="Activos"
+      value={overview.activeInstances}
+      subtitle="En curso"
+      color="warning"
+    />
+    <StatsCard
+      icon="check-circle"
+      label="Finalizados"
+      value={overview.completedInstances}
+      subtitle="Completados"
+      color="success"
+    />
+    <StatsCard
+      icon="user-check"
+      label="Aprobaciones"
+      value={overview.pendingApprovalsCount}
+      subtitle="Pendientes CAB/Seg"
+      color="secondary"
+    />
+    <StatsCard
+      icon="timer"
+      label="Lead Time Prom."
+      value={`${overview.avgLeadTimeHours}h`}
+      subtitle="Inicio a fin"
+      color="info"
+    />
+    <StatsCard
+      icon="shield-quarter"
+      label="Cumplimiento SLA"
+      value={`${overview.slaCompliancePercent}%`}
+      subtitle="Meta: ≥85%"
+      color="success"
+    />
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <ChartCard
+      type="doughnut"
+      title="Distribución por Estado"
+      subtitle="Instancias según estado de avance"
+      labels={statusLabels}
+      series={[
+        {
+          label: "Instancias",
+          data: statusData,
+        },
+      ]}
+    />
+    <ChartCard
+      type="bar"
+      title="Distribución de Carga por Grupo"
+      subtitle="Carga operativa asignada por equipo ejecutor"
+      labels={groupLabels}
+      series={[
+        {
+          label: "Instancias",
+          data: groupData,
+        },
+      ]}
+      class="lg:col-span-2"
+    />
+  </div>
+</div>

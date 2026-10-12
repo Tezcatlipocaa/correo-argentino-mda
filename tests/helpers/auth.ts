@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { createHmac, randomUUID } from "crypto";
 import { test } from "@playwright/test";
 import { db } from "../../src/db/index";
@@ -80,7 +81,15 @@ function resolveCookieDomain(): string {
   } catch {
     // test.info() unavailable outside a test runtime
   }
-  return "127.0.0.1";
+  const envUrl = process.env.PLAYWRIGHT_BASE_URL;
+  if (envUrl) {
+    try {
+      return new URL(envUrl).hostname;
+    } catch {
+      // ignore
+    }
+  }
+  return "localhost";
 }
 
 export async function setSessionCookie(
@@ -88,11 +97,12 @@ export async function setSessionCookie(
   signedSessionId: string,
   domain?: string,
 ): Promise<void> {
+  const targetDomain = domain ?? resolveCookieDomain();
   await context.addCookies([
     {
       name: "session_id",
       value: signedSessionId,
-      domain: domain ?? resolveCookieDomain(),
+      domain: targetDomain,
       path: "/",
     },
   ]);

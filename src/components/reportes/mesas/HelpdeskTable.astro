@@ -1,0 +1,94 @@
+---
+import type { HelpdeskMetricsItem } from "@/types/helpdesks";
+
+interface Props {
+  items: HelpdeskMetricsItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="overflow-x-auto rounded-box border border-base-200 bg-base-100 shadow-sm">
+  <table id="table-helpdesks" class="table table-sm table-zebra w-full">
+    <thead>
+      <tr class="text-base-content/70">
+        <th>Mesa de Ayuda</th>
+        <th class="text-center">Operadores</th>
+        <th class="text-right">Ingresos</th>
+        <th class="text-right">Resueltos</th>
+        <th class="text-center">Ratio E/S</th>
+        <th class="text-center">Activos</th>
+        <th class="text-center">1ª Respuesta</th>
+        <th class="text-center">MTTR</th>
+        <th class="text-center">SLA</th>
+        <th class="text-center">CSAT</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        items.map((item) => {
+          const ratioBadgeClass =
+            item.inOutRatio >= 0.95
+              ? "badge-success"
+              : item.inOutRatio >= 0.9
+                ? "badge-info"
+                : "badge-warning";
+
+          const slaBadgeClass =
+            item.serviceTimes.slaResolutionCompliancePercent >= 90
+              ? "badge-success"
+              : "badge-error";
+
+          return (
+            <tr
+              class="hover:bg-base-200/50 transition-colors duration-200"
+              data-helpdesk-name={item.name}
+              data-helpdesk-display-name={item.displayName}
+            >
+              <td>
+                <div class="font-semibold text-base-content">
+                  {item.displayName}
+                </div>
+                {item.name !== item.displayName && (
+                  <div class="text-xs text-base-content/60">{item.name}</div>
+                )}
+              </td>
+              <td class="text-center">{item.totalMembers}</td>
+              <td class="text-right font-mono">
+                {item.incomingTicketsMonth.toLocaleString("es-AR")}
+              </td>
+              <td class="text-right font-mono">
+                {item.resolvedTicketsMonth.toLocaleString("es-AR")}
+              </td>
+              <td class="text-center">
+                <span class:list={["badge badge-sm font-semibold", ratioBadgeClass]}>
+                  {item.inOutRatio.toFixed(2)}
+                </span>
+              </td>
+              <td class="text-center">
+                <span class="font-semibold">{item.backlog.active}</span>
+                <span class="text-xs text-base-content/60">
+                  {" "}({item.backlog.waiting} esp.)
+                </span>
+              </td>
+              <td class="text-center font-mono">
+                {item.serviceTimes.firstReplyAvgMinutes} min
+              </td>
+              <td class="text-center font-mono">
+                {item.serviceTimes.mttrAvgHours} h
+              </td>
+              <td class="text-center">
+                <span class:list={["badge badge-sm font-semibold", slaBadgeClass]}>
+                  {item.serviceTimes.slaResolutionCompliancePercent}%
+                </span>
+              </td>
+              <td class="text-center font-semibold">
+                {item.csat.averageRating}
+              </td>
+            </tr>
+          );
+        })
+      }
+    </tbody>
+  </table>
+</div>

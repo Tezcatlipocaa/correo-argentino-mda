@@ -132,6 +132,10 @@ export const routePermissions: RoutePermission[] = [
   // bajo /api/terminals queda en la whitelist y devuelve 403 JSON vía
   // requireReadAccess("inventario"), mismo patrón que /api/oficinas).
   { path: "/inventario-terminales/estadisticas", roles: ["admin"] },
+  {
+    path: "/reportes",
+    roles: ["admin"],
+  },
 
   // Default-deny whitelist: every route group that exists under src/pages
   // today is listed explicitly below with the access it had under the old
@@ -177,6 +181,7 @@ export const routePermissions: RoutePermission[] = [
   // /api/admin/usuarios). Así el agente recibe 403 JSON, no un redirect.
   { path: "/api/oficinas", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
+  { path: "/api/reportes", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
   { path: "/api/support-guides", roles: ALL_ROLES },
   { path: "/api/terminals", roles: ALL_ROLES },
@@ -297,6 +302,9 @@ export function getModulePermissions(
     // CRUD de oficinas se decide por routePermissions, no por este módulo.
     perm.canRead = rank >= ROLE_HIERARCHY.supervisor;
     perm.canWrite = false;
+  } else if (moduleName === "reportes") {
+    perm.canRead = rank >= ROLE_HIERARCHY.admin;
+    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   }
 
   return perm;
