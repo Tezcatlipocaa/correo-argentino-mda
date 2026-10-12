@@ -1,8 +1,4 @@
-import { db } from "@db/index";
-import { terminals, offices, provinces, regions } from "@db/schema";
-import { eq } from "drizzle-orm";
-import { getTerminalTypeLabel } from "@lib/terminalHelpers";
-import { inferBrandFromManufacturer } from "@lib/terminalQueries";
+import { getTerminalTypeLabel, inferBrandFromManufacturer } from "@lib/terminalHelpers";
 
 export const MARCA_VALUES = [
   "dell",
@@ -207,27 +203,4 @@ export function computeTerminalStats(
       ),
     },
   };
-}
-
-export async function getTerminalStatsRows(): Promise<TerminalStatsRow[]> {
-  // ponytail: agregación JS sobre ~8k filas por request (mismo criterio ya
-  // aceptado en getTTGroups: "miles, no millones"). Si el parque crece a
-  // decenas de miles, mover el bucketing a SQL GROUP BY manteniendo el
-  // contrato de computeTerminalStats.
-  return db
-    .select({
-      manufacturer: terminals.manufacturer,
-      operatingSystem: terminals.operatingSystem,
-      nis: terminals.nis,
-      officeName: offices.name,
-      provinceCode: offices.provinceCode,
-      provinceName: provinces.name,
-      regionId: regions.id,
-      regionName: regions.name,
-    })
-    .from(terminals)
-    .leftJoin(offices, eq(terminals.nis, offices.code))
-    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
-    .leftJoin(regions, eq(provinces.regionId, regions.id))
-    .all();
 }

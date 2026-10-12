@@ -5,13 +5,13 @@ import { jsonError, jsonResponse, sanitizeError } from "@lib/apiResponse";
 import { requireReadAccess } from "@lib/rbac-middleware";
 import {
   computeTerminalStats,
-  getTerminalStatsRows,
   MARCA_VALUES,
   OS_FILTER_VALUES,
   type MarcaFilter,
   type OsFilter,
   type TerminalStatsFilters,
 } from "@lib/terminalStats";
+import { getTerminalStatsRows } from "@lib/terminalQueries";
 
 export const GET: APIRoute = async ({ url, locals }) => {
   const denied = await requireReadAccess(locals, "inventario");
