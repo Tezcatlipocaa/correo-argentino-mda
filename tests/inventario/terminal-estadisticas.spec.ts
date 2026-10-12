@@ -147,7 +147,7 @@ test.describe("Vista de estadísticas de terminales", () => {
   test.beforeAll(async () => {
     const [row] = await db
       .insert(users)
-      .values({ username, password: "x", role: "agent" })
+      .values({ username, password: "x", role: "admin" })
       .returning({ id: users.id });
     userId = row.id;
     await db.insert(sessions).values({
@@ -194,7 +194,7 @@ test.describe("Vista de estadísticas de terminales", () => {
     expect(externalRequests).toEqual([]);
   });
 
-  test("hace un solo fetch por gráfico vivo (no duplica por hidratación)", async ({
+  test("hace un solo fetch por interacción (gráficos en modo registry)", async ({
     page,
   }) => {
     const endpointRequests: string[] = [];
@@ -207,17 +207,46 @@ test.describe("Vista de estadísticas de terminales", () => {
     await page.goto("/inventario-terminales/estadisticas");
     await expect(page.locator("[data-chart-card] canvas")).toHaveCount(5);
     await expect(page.locator("[data-chart-empty]:visible")).toHaveCount(0);
-    await expect(
-      page.locator('[data-kpi="total"] [data-kpi-value]'),
-    ).not.toHaveText("…");
 
     // Dejar asentar cualquier fetch tardío antes de contar.
     await page.waitForTimeout(1000);
 
-    // 1 fetch de KPIs (content) + 1 por cada uno de los 5 ChartCard vivos.
-    // Si la deduplicación se rompe, cada gráfico dispara init + stats:filters-changed
-    // con la misma query y el total sube a 11 (y voltea el rate limit apiRead de 60/min).
-    expect(endpointRequests).toHaveLength(6);
+    // Un único fetch: KPIs + los 5 gráficos salen del mismo payload (registry).
+    // Si la página volviera al modo vivo por-gráfico serían 6 y, con varios
+    // cambios de filtro seguidos, se voltea el rate limit apiRead de 60/min.
+    expect(endpointRequests).toHaveLength(1);
+
+    await page.selectOption("#stats-marca", "dell");
+    await expect(
+      page.locator('[data-kpi="total"] [data-kpi-value]'),
+    ).not.toHaveText("—");
+    await page.waitForTimeout(800);
+    expect(endpointRequests).toHaveLength(2);
+  });
+
+  test("un cambio de filtro no deja la vista vacía (sin 429)", async ({
+    page,
+  }) => {
+    const statuses: number[] = [];
+    page.on("response", (response) => {
+      if (response.url().includes("/api/terminals/estadisticas")) {
+        statuses.push(response.status());
+      }
+    });
+
+    await page.goto("/inventario-terminales/estadisticas");
+    const total = page.locator('[data-kpi="total"] [data-kpi-value]');
+    await expect(total).not.toHaveText("…");
+
+    for (let i = 0; i < 12; i++) {
+      await page.selectOption("#stats-marca", i % 2 === 0 ? "dell" : "");
+      await page.waitForTimeout(400);
+    }
+    await page.waitForTimeout(800);
+
+    expect(statuses.filter((s) => s === 429)).toHaveLength(0);
+    await expect(total).not.toHaveText("—");
+    await expect(page.locator("[data-chart-empty]:visible")).toHaveCount(0);
   });
 
   test("el toggle Ver tabla muestra los datos y oculta el canvas", async ({
@@ -314,15 +343,15 @@ test.describe("Vista de estadísticas de terminales", () => {
     expect(png.suggestedFilename()).toMatch(/^equipos-por-region-\d{8}\.png$/);
   });
 
-  test("revertir un filtro mientras el fetch sigue en vuelo no desincroniza el gráfico", async ({
+  test("revertir un filtro mientras el fetch sigue en vuelo no deja datos viejos", async ({
     page,
   }) => {
-    // Solo se retrasan los fetch de las ChartCard (sin accept JSON), no los de
-    // KPIs, para que el request de la query B siga en vuelo cuando se revierte a A.
+    // Solo se retrasa la query B (marca=dell): A resuelve normal y B queda en
+    // vuelo cuando el usuario vuelve a A, así la respuesta tardía de B no debe
+    // ganarle al estado actual (guard de secuencia del content).
     await page.route("**/api/terminals/estadisticas**", async (route) => {
-      const accept = route.request().headers()["accept"] ?? "";
-      if (!accept.includes("application/json")) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (route.request().url().includes("marca=dell")) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
       await route.continue();
     });
@@ -334,10 +363,6 @@ test.describe("Vista de estadísticas de terminales", () => {
     // El gráfico y su tabla comparten los labels; la tabla tiene una celda por
     // label, así que contar celdas mide cuántas marcas se están mostrando.
     const brandCells = () => card.locator("[data-chart-table] td[data-label]");
-    // Solo los fetch de las ChartCard (accept */*) van al gráfico; los de KPIs
-    // (accept application/json) se distinguen para no confundir el estado.
-    const isChartReq = (accept: string | undefined) =>
-      !(accept ?? "").includes("application/json");
 
     // Estado A (sin filtro): varias marcas presentes.
     await expect(card.locator("canvas")).toBeVisible();
@@ -347,27 +372,18 @@ test.describe("Vista de estadísticas de terminales", () => {
 
     // A -> B (dell): el fetch de B queda en vuelo (retrasado por el route).
     await page.selectOption("#stats-marca", "dell");
-    await page.waitForRequest(
-      (req) =>
-        req.url().includes("/api/terminals/estadisticas") &&
-        req.url().includes("marca=dell") &&
-        isChartReq(req.headers()["accept"]),
-    );
     const bResponse = page.waitForResponse(
       (res) =>
         res.url().includes("/api/terminals/estadisticas") &&
-        res.url().includes("marca=dell") &&
-        isChartReq(res.request().headers()["accept"]),
+        res.url().includes("marca=dell"),
     );
 
     // B -> A antes de que B resuelva: la respuesta tardía de B no debe ganar.
     await page.selectOption("#stats-marca", "");
 
-    // Esperar a que B haya resuelto del todo y recién ahí exigir el estado A.
-    await bResponse;
-    await expect
-      .poll(() => brandCells().count(), { timeout: 8000 })
-      .toBe(allBrands);
+    const b = await bResponse;
+    expect(b.status()).toBe(200);
+    await expect.poll(() => brandCells().count(), { timeout: 8000 }).toBe(allBrands);
   });
 
   test("el botón volver del header regresa al inventario", async ({ page }) => {
@@ -377,5 +393,70 @@ test.describe("Vista de estadísticas de terminales", () => {
       .getByRole("link", { name: "Volver al inventario" })
       .click();
     await expect(page).toHaveURL(/\/inventario-terminales$/);
+  });
+
+  test("el inventario ofrece el acceso a las estadísticas (admin)", async ({
+    page,
+  }) => {
+    await page.goto("/inventario-terminales");
+    await expect(
+      page.getByRole("link", { name: "Ver estadísticas" }),
+    ).toBeVisible();
+  });
+});
+
+test.describe("Acceso restringido a admin", () => {
+  const stamp = Date.now();
+  const sessionId = `sess_term_stats_restricted_${stamp}`;
+  const username = `term_stats_restricted_${stamp}`;
+  let userId = 0;
+  let cookie = "";
+
+  test.beforeAll(async () => {
+    const [row] = await db
+      .insert(users)
+      .values({ username, password: "x", role: "agent" })
+      .returning({ id: users.id });
+    userId = row.id;
+    await db.insert(sessions).values({
+      id: sessionId,
+      userId,
+      expiresAt: Date.now() + 86_400_000,
+    });
+    cookie = sign(sessionId);
+  });
+
+  test.afterAll(async () => {
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await db.delete(users).where(eq(users.id, userId));
+  });
+
+  test("el endpoint responde 403 a un no-admin", async ({ request }) => {
+    const response = await request.get("/api/terminals/estadisticas", {
+      headers: { cookie: `session_id=${cookie}` },
+    });
+    expect(response.status()).toBe(403);
+  });
+
+  test("la página de estadísticas no es accesible para un no-admin", async ({
+    page,
+  }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: cookie, domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/inventario-terminales/estadisticas");
+    await expect(
+      page.getByRole("heading", { name: "Estadísticas de terminales" }),
+    ).toHaveCount(0);
+  });
+
+  test("el inventario no ofrece el acceso a un no-admin", async ({ page }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: cookie, domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/inventario-terminales");
+    await expect(
+      page.getByRole("link", { name: "Ver estadísticas" }),
+    ).toHaveCount(0);
   });
 });

@@ -349,6 +349,12 @@ skeleton `ChartCardSkeleton`. No se instancia `Chart` fuera de ese componente.
 - `chartName` activa el modo registry: expone `window.__chartCards[chartName].setData(...)` y
   escucha `chart-card:update` / `chart-card:highlight`. Un click en un segmento emite
   `chart-card:segment-click` con `{ index, label, color }` (burbujea, lo consume la pagina).
+- Paginas con varios graficos: usar el modo registry (`chartName`) y **un unico fetch** de la
+  pagina que empuja cada chart (`window.__chartCards[key].setData(labels, series)`; si la card
+  todavia no se inicializo, encolar en `window.__pendingChartUpdates[key]`). El modo vivo
+  (`fetchUrl` + `chartKey`) hace un request **por grafico** en cada interaccion: con 5 charts
+  son 6 por cambio de filtro y el rate limit `apiRead` (60 req/min por usuario y path) empieza
+  a devolver 429.
 - `variant="card"` (default) envuelve en tarjeta; `variant="bare"` para composicion custom.
 - KPIs numericos: `StatsCard` con `color` de los tokens semanticos (`primary`, `success`,
   `warning`, `info`, `secondary`, `accent`, `error`). El valor va en `font-mono` grande.

@@ -128,6 +128,10 @@ export const routePermissions: RoutePermission[] = [
     path: "/inventario-terminales/cubics/edit",
     roles: ["admin", "supervisor"],
   },
+  // Estadísticas del parque de terminales: por ahora solo admin (el endpoint
+  // bajo /api/terminals queda en la whitelist y devuelve 403 JSON vía
+  // requireReadAccess("inventario"), mismo patrón que /api/oficinas).
+  { path: "/inventario-terminales/estadisticas", roles: ["admin"] },
 
   // Default-deny whitelist: every route group that exists under src/pages
   // today is listed explicitly below with the access it had under the old
@@ -286,9 +290,8 @@ export function getModulePermissions(
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
   } else if (moduleName === "inventario") {
-    // Estadísticas del parque de terminales: lectura para todos los roles
-    // logueados; sin escrituras por ahora.
-    perm.canRead = true;
+    // Estadísticas del parque de terminales: por ahora solo admin (lectura).
+    perm.canRead = rank >= ROLE_HIERARCHY.admin;
   } else if (moduleName === "oficinas") {
     // Reportería de oficinas: lectura supervisor+ (gerencia). La escritura del
     // CRUD de oficinas se decide por routePermissions, no por este módulo.
