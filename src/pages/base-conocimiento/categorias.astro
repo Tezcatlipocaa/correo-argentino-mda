@@ -17,6 +17,7 @@ import {
   normalizeKbReturnPath,
 } from "@lib/kbRedirects";
 import {
+  categoryKey,
   createCategory,
   deleteCategory,
   listCategories,
@@ -274,7 +275,7 @@ const sinCatalogar = sessionHelpdeskId
                 <div>
                   <p class="font-semibold">{categoria.name}</p>
                   <p class="text-base-content/60 text-xs">
-                    {conteos.get(categoria.name) ?? 0} artículo(s)
+                    {conteos.get(categoryKey(categoria.name)) ?? 0} artículo(s)
                   </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
