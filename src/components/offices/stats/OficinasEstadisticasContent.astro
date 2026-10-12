@@ -3,6 +3,8 @@ import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import FormField from "@components/ui/forms/FormField.astro";
 import { getCleanBase } from "@lib/baseUrl";
 
 const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
@@ -22,33 +24,43 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
   <div
     class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-end"
   >
-    <label class="form-control w-full md:w-52">
-      <span class="label-text mb-1 text-sm font-bold">Provincia</span>
-      <select id="stats-provincia" class="select select-bordered select-sm">
-        <option value="">Todas</option>
-      </select>
-    </label>
-    <label class="form-control w-full md:w-48">
-      <span class="label-text mb-1 text-sm font-bold">Región</span>
-      <select id="stats-region" class="select select-bordered select-sm">
-        <option value="">Todas</option>
-      </select>
-    </label>
-    <label class="form-control w-full md:w-52">
-      <span class="label-text mb-1 text-sm font-bold">Tipo de oficina</span>
-      <select id="stats-tipo" class="select select-bordered select-sm">
-        <option value="">Todos</option>
-      </select>
-    </label>
-    <label class="form-control w-full flex-1">
-      <span class="label-text mb-1 text-sm font-bold">Buscar</span>
-      <input
-        id="stats-q"
-        type="search"
-        placeholder="Nombre o NIS…"
-        class="input input-bordered input-sm"
-      />
-    </label>
+    <SelectField
+      id="stats-provincia"
+      name="stats-provincia"
+      label="Provincia"
+      size="sm"
+      class="w-full md:w-52"
+    >
+      <option value="">Todas</option>
+    </SelectField>
+    <SelectField
+      id="stats-region"
+      name="stats-region"
+      label="Región"
+      size="sm"
+      class="w-full md:w-48"
+    >
+      <option value="">Todas</option>
+    </SelectField>
+    <SelectField
+      id="stats-tipo"
+      name="stats-tipo"
+      label="Tipo de oficina"
+      size="sm"
+      class="w-full md:w-52"
+    >
+      <option value="">Todos</option>
+    </SelectField>
+    <FormField
+      id="stats-q"
+      name="stats-q"
+      label="Buscar"
+      type="search"
+      placeholder="Nombre o NIS…"
+      size="sm"
+      icon="boxicons:search"
+      class="w-full flex-1"
+    />
   </div>
 
   <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
