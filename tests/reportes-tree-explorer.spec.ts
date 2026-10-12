@@ -18,7 +18,9 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
   test("muestra contenedor del explorador, buscador, controles y botones de vista", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId, "localhost");
     await setSessionCookie(context, adminUser.signedSessionId, "127.0.0.1");
-    await page.goto("/reportes/categorias");
+    await page.goto("/reportes/categorias#explorer");
+    await page.locator('button[data-tab="explorer"]').click();
+    await expect(page.locator("#panel-explorer")).toBeVisible();
 
     await expect(page.locator("#tree-explorer-container")).toBeVisible();
     await expect(page.locator("#tree-search-input")).toBeVisible();
@@ -34,7 +36,9 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
   test("permite alternar vistas de árbol", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId, "localhost");
     await setSessionCookie(context, adminUser.signedSessionId, "127.0.0.1");
-    await page.goto("/reportes/categorias");
+    await page.goto("/reportes/categorias#explorer");
+    await page.locator('button[data-tab="explorer"]').click();
+    await expect(page.locator("#panel-explorer")).toBeVisible();
 
     const btnC = page.locator("#vC");
     const btnCur = page.locator("#vCur");
@@ -58,7 +62,9 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
   test("permite expandir y colapsar nodos", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId, "localhost");
     await setSessionCookie(context, adminUser.signedSessionId, "127.0.0.1");
-    await page.goto("/reportes/categorias");
+    await page.goto("/reportes/categorias#explorer");
+    await page.locator('button[data-tab="explorer"]').click();
+    await expect(page.locator("#panel-explorer")).toBeVisible();
 
     const expandBtn = page.locator("#btn-expand-all");
     const collapseBtn = page.locator("#btn-collapse-all");
@@ -73,7 +79,9 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
   test("permite buscar y resaltar categorías coincidentes (ej: Mosaic)", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId, "localhost");
     await setSessionCookie(context, adminUser.signedSessionId, "127.0.0.1");
-    await page.goto("/reportes/categorias");
+    await page.goto("/reportes/categorias#explorer");
+    await page.locator('button[data-tab="explorer"]').click();
+    await expect(page.locator("#panel-explorer")).toBeVisible();
 
     const searchInput = page.locator("#tree-search-input");
     await searchInput.fill("Mosaic");
@@ -90,7 +98,9 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
   test("permite alternar modo pantalla completa y salir con Escape", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId, "localhost");
     await setSessionCookie(context, adminUser.signedSessionId, "127.0.0.1");
-    await page.goto("/reportes/categorias");
+    await page.goto("/reportes/categorias#explorer");
+    await page.locator('button[data-tab="explorer"]').click();
+    await expect(page.locator("#panel-explorer")).toBeVisible();
 
     const container = page.locator("#tree-explorer-container");
     const fullscreenBtn = page.locator("#btn-toggle-fullscreen");
