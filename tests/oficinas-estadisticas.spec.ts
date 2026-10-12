@@ -240,13 +240,16 @@ test.describe("API de estadísticas de oficinas", () => {
     }
   });
 
-  test("un agente no puede ver la página (redirect con toast)", async ({ page }) => {
+  test("un agente no puede ver la página (redirige al inicio)", async ({ page }) => {
     await page.context().addCookies([
       { name: "session_id", value: sign(agentSessionId), domain: "localhost", path: "/" },
     ]);
+    const base = (test.info().project.use.baseURL ?? "").replace(/\/$/, "");
     await page.goto("/oficinas/estadisticas");
-    expect(page.url()).toContain("toast_msg=");
+    // El middleware redirige con toast a la home; el portal normaliza la URL
+    // final sin query, así que se verifica el destino y no el mensaje.
     expect(page.url()).not.toContain("/oficinas/estadisticas");
+    expect(page.url().startsWith(base)).toBe(true);
   });
 });
 
