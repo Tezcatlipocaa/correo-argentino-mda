@@ -24,6 +24,8 @@ import { eq, or, sql } from "drizzle-orm";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { isAllowed } from "@lib/rolesMatrix";
 import { can } from "@lib/roleConfig";
+import { hasPermission } from "@lib/rbac";
+import { resolveUrl } from "@lib/url";
 import "leaflet/dist/leaflet.css";
 
 const user = Astro.locals.user;
@@ -32,6 +34,11 @@ const isAllowedAdmin = user
   : false;
 const canViewInvgateStats = user ? can(user.role, "team_leader") : false;
 const canExport = user ? can(user.role, "team_leader") : false;
+// Misma fuente que el middleware y el sidebar: el CTA aparece solo donde la
+// ruta está permitida (supervisor + admin).
+const canViewOfficeStats = user
+  ? hasPermission("/oficinas/estadisticas", user.role)
+  : false;
 
 const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 
@@ -217,6 +224,21 @@ const mainTabs = [
   <PageHeader
     description="Visualización centralizada de la infraestructura, buscador de oficinas y mapa interactivo de cobertura nacional."
   />
+
+  {
+    canViewOfficeStats && (
+      <div class="mb-4 flex justify-end">
+        <a
+          href={resolveUrl("/oficinas/estadisticas")}
+          class="btn btn-soft btn-sm md:btn-md gap-2"
+          data-cta-estadisticas-oficinas
+        >
+          <Icon name="boxicons:bar-chart-big-filled" size={18} />
+          Estadísticas
+        </a>
+      </div>
+    )
+  }
 
   <ViewSwitcher
     tabs={mainTabs}
