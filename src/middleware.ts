@@ -9,7 +9,7 @@ import { isSectionVisibleSync, resolveSessionMesa } from "./lib/helpdeskAccess";
 import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
-import { KB_CATEGORIAS_PATH } from "@lib/kbRedirects";
+import { KB_CATEGORIAS_PATH, isCategoryFormKbPath } from "@lib/kbRedirects";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import {
   isFingerprintValid,
@@ -131,17 +131,13 @@ function applyRateLimit(
     }
   }
 
-  const isKbArticleForm =
-    method === "POST" &&
-    (relativePath === "/base-conocimiento/create" ||
-      relativePath.startsWith("/base-conocimiento/edit/"));
-  if (isKbArticleForm) {
+  if (method === "POST" && isCategoryFormKbPath(relativePath)) {
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
         : `ip:${clientAddress ?? "unknown"}`;
     const result = checkRateLimit(
-      `kb-article-write:${identifier}:${relativePath}`,
+      `kb-article-write:${identifier}`,
       RATE_LIMITS.kbArticleWrite,
     );
     if (!result.ok) {
