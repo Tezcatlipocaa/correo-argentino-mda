@@ -18,6 +18,7 @@ import {
   debounce,
   timeToMinutes,
 } from "./utils";
+import { resolveInitialMonth } from "./initialMonth";
 import {
   updateButtonGroupState,
   STATUS_FILTER_CONFIGS,
@@ -345,20 +346,24 @@ async function init(): Promise<void> {
 
     await loadRotationConfig(activeMonth);
 
-    const hasDataForToday =
-      activeMonth === todayStr.slice(0, 7) &&
-      state.cronoData.some((op) => op.asistencia[todayStr]);
-    const initialDate = hasDataForToday
+    const initialMonth = resolveInitialMonth(
+      state.uniqueMonths,
+      todayStr.slice(0, 7),
+    );
+    const datesInMonth = state.uniqueDates.filter((d) =>
+      d.startsWith(initialMonth),
+    );
+    const initialDate = datesInMonth.includes(todayStr)
       ? todayStr
-      : state.uniqueDates[state.uniqueDates.length - 1] || `${activeMonth}-01`;
+      : datesInMonth[datesInMonth.length - 1] || `${initialMonth}-01`;
 
     if (dateInput) {
       dateInput.value = initialDate;
       updateDateInputDisplay();
-      if (state.uniqueDates.length > 0) {
-        dateInput.min = state.uniqueDates[0];
-        dateInput.max = state.uniqueDates[state.uniqueDates.length - 1];
-      }
+      const [imYear, imMonth] = initialMonth.split("-").map(Number);
+      const lastDay = getDaysInMonth(imYear, imMonth - 1);
+      dateInput.min = `${initialMonth}-01`;
+      dateInput.max = `${initialMonth}-${String(lastDay).padStart(2, "0")}`;
     }
 
     renderDaily();
