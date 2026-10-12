@@ -250,6 +250,15 @@ BaseLayout (flex flex-col min-h-screen)
 - Reordenamiento masivo: usar `handleReorder(request, locals, table, auditMsg)` desde `@lib/reorderHandler` (ya hace transaccion + auditoria).
 - Escrituras batch: envolver en `db.transaction(tx => { ... })` de Drizzle. Validar siempre el body antes de tocar la DB.
 
+### 14. Graficas — siempre `ChartCard`
+
+Todas las graficas del portal usan `src/components/ui/ChartCard.astro` (con `chart.js/auto` bundleado por Vite). Esta prohibido cargar Chart.js por CDN (`cdn.jsdelivr.net`) o instanciar `new Chart(...)` en cualquier otro archivo.
+
+- **Datos:** la card se alimenta de una API propia con la forma `{ charts: { <chartKey>: { labels: string[], series: { label: string, data: number[] }[] } } }` (`fetchUrl` + `chartKey`), o de `labels`/`series` inline para datos estaticos. La tabla accesible y el re-init tras server islands los resuelve el propio componente.
+- **Datos en vivo:** `server:defer` + `<ChartCardSkeleton slot="fallback" count={N} />`; el filtro publica `stats:filters-changed` (`CustomEvent` con `detail: { query }`) para que las cards refresquen.
+- **Guard test:** `tests/unit/ui/no-ad-hoc-chartjs.test.ts` falla si aparece un CDN de chart.js o `new Chart(` fuera de `ChartCard.astro`; ese archivo es el unico uso permitido.
+- **Interno:** el anillo de progreso del preview de horas extras del cronograma es CSS (`conic-gradient`), no Chart.js.
+
 ---
 
 ## Sistema de diseno y UX aprobado
