@@ -1,9 +1,14 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { getCleanBase } from "@lib/baseUrl";
 
 const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
+const headerGridClass =
+  "grid-cols-[minmax(200px,1.6fr)_minmax(90px,1fr)_100px_100px_90px_110px_100px] gap-4";
+const rowGridClass = `grid ${headerGridClass} items-center`;
 ---
 
 <div class="flex w-full flex-col gap-6 pb-24">
@@ -104,9 +109,12 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
     />
   </div>
 
-  <section data-mass-events-card class="border-warning/60 bg-warning/5 hidden rounded-2xl border p-4">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h2 class="font-semibold">
+  <section
+    data-mass-events-card
+    class="rounded-box border-base-300 bg-base-100 hidden flex-col gap-3 border p-4 shadow-sm"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="card-title text-base">
         Eventos masivos <span class="text-warning">(hoy)</span>
       </h2>
       <span class="text-base-content/60 text-sm" data-mass-events-hint></span>
@@ -116,55 +124,50 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
 
   <section class="flex flex-col gap-3">
     <h2 class="font-semibold">Ranking de oficinas</h2>
-    <div class="bg-base-100 border-base-300 overflow-x-auto rounded-2xl border">
-      <table class="table table-sm">
-        <caption class="sr-only">Ranking de oficinas por métricas</caption>
-        <thead>
-          <tr>
-            <th scope="col">
-              <button type="button" class="btn btn-ghost btn-xs" data-sort="nombre" data-sort-label>
-                Oficina (NIS)
-              </button>
-            </th>
-            <th scope="col">Provincia</th>
-            <th scope="col">
-              <button type="button" class="btn btn-ghost btn-xs" data-sort="usuarios" data-sort-label>
-                Usuarios
-              </button>
-            </th>
-            <th scope="col">
-              <button type="button" class="btn btn-ghost btn-xs" data-sort="incidentes" data-sort-label>
-                Incidentes
-              </button>
-            </th>
-            <th scope="col">
-              <button type="button" class="btn btn-ghost btn-xs" data-sort="eventos" data-sort-label>
-                Eventos
-              </button>
-            </th>
-            <th scope="col">
-              <button type="button" class="btn btn-ghost btn-xs" data-sort="terminales" data-sort-label>
-                Terminales
-              </button>
-            </th>
-            <th scope="col">Estado</th>
-          </tr>
-        </thead>
-        <tbody data-ranking-body></tbody>
-      </table>
-      <div
-        class="text-base-content/60 border-base-200 hidden border-t px-4 py-3 text-sm"
-        data-ranking-empty
-      >
-        Sin oficinas para los filtros seleccionados.
+    <DataTable
+      id="ranking-table"
+      ariaLabel="Ranking de oficinas por métricas"
+      minWidthClass="min-w-240"
+      headerGridClass={headerGridClass}
+      rowGridClass={rowGridClass}
+      serverSideSort
+      whenEmpty
+      emptyStateTitle="Sin oficinas"
+      emptyStateDescription="No hay oficinas para los filtros seleccionados."
+    >
+      <div slot="header">
+        <DataTableHeaderCell sortKey="nombre">Oficina (NIS)</DataTableHeaderCell>
       </div>
-      <div class="border-base-200 flex items-center justify-between gap-2 border-t px-4 py-3">
-        <span class="text-base-content/60 text-sm" data-ranking-total></span>
-        <div class="join">
-          <button type="button" class="btn join-item btn-sm" data-page-prev aria-label="Página anterior">◀</button>
-          <span class="btn join-item btn-sm pointer-events-none no-animation" data-page-label>1</span>
-          <button type="button" class="btn join-item btn-sm" data-page-next aria-label="Página siguiente">▶</button>
-        </div>
+      <div slot="header">
+        <DataTableHeaderCell>Provincia</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="usuarios">Usuarios</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="incidentes">Incidentes</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="eventos">Eventos</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="terminales">Terminales</DataTableHeaderCell>
+      </div>
+      <div slot="header">
+        <DataTableHeaderCell>Estado</DataTableHeaderCell>
+      </div>
+    </DataTable>
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="text-base-content/60 text-sm" data-ranking-total></span>
+      <div class="join">
+        <button type="button" class="btn join-item btn-sm" data-page-prev aria-label="Página anterior">
+          «
+        </button>
+        <span class="btn join-item btn-sm pointer-events-none no-animation" data-page-label>1</span>
+        <button type="button" class="btn join-item btn-sm" data-page-next aria-label="Página siguiente">
+          »
+        </button>
       </div>
     </div>
   </section>
@@ -208,19 +211,14 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
     meta: { invgateOk: boolean; snapshotAt: string; massEventMinOffices: number };
   }
 
-  const SORT_LABELS: Record<string, string> = {
-    nombre: "Oficina (NIS)",
-    usuarios: "Usuarios",
-    incidentes: "Incidentes",
-    eventos: "Eventos",
-    terminales: "Terminales",
-  };
+  const EMPTY_DESCRIPTION = "No hay oficinas para los filtros seleccionados.";
 
   const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
   const base = getCleanBase();
 
   const select = (id: string) => document.getElementById(id) as HTMLSelectElement | null;
   const input = (id: string) => document.getElementById(id) as HTMLInputElement | null;
+  const rankingRoot = () => document.getElementById("ranking-table");
 
   let sortBy = "nombre";
   let sortDir: "asc" | "desc" = "asc";
@@ -273,13 +271,14 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
     list.innerHTML = "";
     if (events.length === 0) {
       card.classList.add("hidden");
+      if (hint) hint.textContent = "";
       return;
     }
     if (hint) hint.textContent = `Detectados por categoría + día + ${minOffices} oficinas o más`;
     for (const event of events) {
       const row = document.createElement("div");
       row.className =
-        "border-warning/40 bg-base-100 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2";
+        "border-base-300 bg-base-200/40 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2";
       const badge = document.createElement("span");
       badge.className = "badge badge-warning font-bold";
       badge.textContent = `${event.oficinas} oficinas`;
@@ -304,48 +303,85 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
     card.classList.remove("hidden");
   }
 
+  function emptyStateDescription(): HTMLElement | null {
+    return document.getElementById("ranking-table-empty-state-desc");
+  }
+
+  function appendCell(
+    row: HTMLElement,
+    text: string,
+    className: string,
+  ): void {
+    const cell = document.createElement("div");
+    cell.className = className;
+    cell.textContent = text;
+    row.appendChild(cell);
+  }
+
   function renderRanking(body: PanelBody): void {
-    const tbody = document.querySelector<HTMLElement>("[data-ranking-body]");
-    const empty = document.querySelector<HTMLElement>("[data-ranking-empty]");
+    const root = rankingRoot();
+    const tbody = root?.querySelector<HTMLElement>("[data-table-sort-body]");
     const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
     const label = document.querySelector<HTMLElement>("[data-page-label]");
     const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
     const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
-    if (!tbody) return;
+    if (!root || !tbody) return;
+
+    const desc = emptyStateDescription();
+    if (desc) desc.textContent = EMPTY_DESCRIPTION;
+
+    // El grid de fila lo define la DataTable: se reusa para no duplicar clases.
+    const rowGrid = root.dataset.tableRowGridClass ?? "";
     tbody.innerHTML = "";
     totalPages = Math.max(1, Math.ceil(body.ranking.total / body.ranking.pageSize));
-    empty?.classList.toggle("hidden", body.ranking.rows.length > 0);
     if (totalEl) totalEl.textContent = `${body.ranking.total} oficinas`;
     if (label) label.textContent = `${body.ranking.page} / ${totalPages}`;
     if (prev) prev.disabled = body.ranking.page <= 1;
     if (next) next.disabled = body.ranking.page >= totalPages;
 
     for (const row of body.ranking.rows) {
-      const tr = document.createElement("tr");
-      tr.className = "hover cursor-pointer";
-      const nameCell = document.createElement("td");
+      const tr = document.createElement("div");
+      tr.setAttribute("data-table-row", "");
+      tr.setAttribute("data-sort-nombre", row.name.toLowerCase());
+      tr.setAttribute("data-sort-usuarios", String(row.usuarios ?? -1));
+      tr.setAttribute("data-sort-incidentes", String(row.incidentes ?? -1));
+      tr.setAttribute("data-sort-eventos", String(row.eventos ?? -1));
+      tr.setAttribute("data-sort-terminales", String(row.terminales ?? -1));
+      tr.className = `${rowGrid} border-base-300 hover:bg-base-200/50 cursor-pointer border-b px-4 py-3 transition-colors last:border-b-0`;
+
+      const nameCell = document.createElement("div");
+      nameCell.className = "min-w-0";
       const link = document.createElement("a");
-      link.className = "link link-hover font-semibold";
+      link.className =
+        "text-primary block truncate text-sm font-medium hover:underline";
       link.href = `${base}oficinas/estadisticas/${encodeURIComponent(row.code)}`;
       link.textContent = `${row.name} (${row.code})`;
       nameCell.appendChild(link);
       tr.appendChild(nameCell);
-      const cells = [
-        row.provincia ?? "—",
+
+      appendCell(tr, row.provincia ?? "—", "truncate text-sm");
+      appendCell(
+        tr,
         row.usuarios === null ? "—" : String(row.usuarios),
+        "text-right font-mono text-sm",
+      );
+      appendCell(
+        tr,
         row.incidentes === null ? "—" : String(row.incidentes),
+        "text-right font-mono text-sm",
+      );
+      appendCell(
+        tr,
         row.eventos === null ? "—" : String(row.eventos),
-        String(row.terminales),
-      ];
-      for (const value of cells) {
-        const td = document.createElement("td");
-        td.textContent = value;
-        tr.appendChild(td);
-      }
-      const estado = document.createElement("td");
-      estado.className = row.activa ? "text-success" : "text-error";
-      estado.textContent = row.activa ? "Activa" : "Cerrada";
-      tr.appendChild(estado);
+        "text-right font-mono text-sm",
+      );
+      appendCell(tr, String(row.terminales), "text-right font-mono text-sm");
+      appendCell(
+        tr,
+        row.activa ? "Activa" : "Cerrada",
+        row.activa ? "text-sm text-success" : "text-sm text-error",
+      );
+
       tr.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).closest("a")) return;
         window.location.href = link.href;
@@ -355,29 +391,19 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
   }
 
   function renderRankingFailure(): void {
-    const tbody = document.querySelector<HTMLElement>("[data-ranking-body]");
-    const empty = document.querySelector<HTMLElement>("[data-ranking-empty]");
+    const root = rankingRoot();
+    const tbody = root?.querySelector<HTMLElement>("[data-table-sort-body]");
     const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
     const label = document.querySelector<HTMLElement>("[data-page-label]");
     const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
     const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
     if (tbody) tbody.innerHTML = "";
-    if (empty) {
-      empty.classList.remove("hidden");
-      empty.textContent = "No se pudieron cargar las oficinas.";
-    }
+    const desc = emptyStateDescription();
+    if (desc) desc.textContent = "No se pudieron cargar las oficinas.";
     if (totalEl) totalEl.textContent = "";
     if (label) label.textContent = "1";
     if (prev) prev.disabled = true;
     if (next) next.disabled = true;
-  }
-
-  function updateSortLabels(): void {
-    document.querySelectorAll<HTMLElement>("[data-sort-label]").forEach((el) => {
-      const key = el.dataset.sort ?? "";
-      const arrow = key === sortBy ? (sortDir === "asc" ? " ▲" : " ▼") : "";
-      el.textContent = `${SORT_LABELS[key] ?? key}${arrow}`;
-    });
   }
 
   let fetchSeq = 0;
@@ -435,7 +461,8 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
 
   function init(): void {
     if (bound) return;
-    if (!select("stats-provincia")) return;
+    const root = rankingRoot();
+    if (!select("stats-provincia") || !root) return;
     bound = true;
 
     const initial = new URLSearchParams(window.location.search);
@@ -455,20 +482,25 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
       debounce = window.setTimeout(refetch, 300);
     });
 
-    document.querySelectorAll<HTMLElement>("[data-sort-label]").forEach((el) => {
-      el.addEventListener("click", () => {
-        const key = el.dataset.sort ?? "nombre";
-        if (sortBy === key) {
-          sortDir = sortDir === "asc" ? "desc" : "asc";
-        } else {
-          sortBy = key;
-          sortDir = key === "nombre" ? "asc" : "desc";
-        }
-        updateSortLabels();
-        currentPage = 1;
-        load();
-      });
+    // Ordenamiento server-side: la DataTable emite `table-sort-change` y la
+    // pagina lo traduce al orderBy/dir de la API (el ciclo es asc → desc → sin
+    // orden, que vuelve al default por nombre).
+    root.addEventListener("table-sort-change", (event) => {
+      const detail = (event as CustomEvent).detail as {
+        sortKey: string;
+        direction: "none" | "ascending" | "descending";
+      };
+      if (detail.direction === "none") {
+        sortBy = "nombre";
+        sortDir = "asc";
+      } else {
+        sortBy = detail.sortKey;
+        sortDir = detail.direction === "ascending" ? "asc" : "desc";
+      }
+      currentPage = 1;
+      load();
     });
+
     document.querySelector("[data-page-prev]")?.addEventListener("click", () => {
       if (currentPage > 1) {
         currentPage--;
@@ -482,7 +514,6 @@ const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
       }
     });
 
-    updateSortLabels();
     load();
   }
 

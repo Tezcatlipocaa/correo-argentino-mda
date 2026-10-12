@@ -275,13 +275,18 @@ test.describe("Vista del panel con API stubbeada", () => {
     await expect(massCard).toContainText("6 oficinas");
     await expect(massCard).toContainText("STS - Desconexión de agentes");
 
-    const rows = page.locator("[data-ranking-body] tr");
+    const rows = page.locator("#ranking-table [data-table-row]");
     await expect(rows).toHaveCount(2);
     await expect(rows.first()).toContainText(officeCode);
 
-    await page.locator('[data-sort-label][data-sort="usuarios"]').click();
+    // El ranking usa la DataTable del sistema: header institucional + sort keys.
+    const header = page.locator("#ranking-table [data-table-header]");
+    await expect(header).toBeVisible();
+    await expect(header).toHaveClass(/bg-secondary/);
+
+    await page.locator('#ranking-table [data-table-sort-key="usuarios"]').click();
     await expect
-      .poll(() => queries.some((q) => q.includes("orderBy=usuarios") && q.includes("dir=desc")))
+      .poll(() => queries.some((q) => q.includes("orderBy=usuarios") && q.includes("dir=asc")))
       .toBe(true);
 
     await page.locator("[data-page-next]").click();
@@ -292,11 +297,37 @@ test.describe("Vista del panel con API stubbeada", () => {
     await expect.poll(() => queries.some((q) => q.includes("provincia=C"))).toBe(true);
   });
 
+  test("el ranking usa la DataTable del sistema (header institucional y estado vacío)", async ({
+    page,
+  }) => {
+    await page.route("**/api/oficinas/estadisticas*", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          panelFixture({
+            ranking: { rows: [], total: 0, page: 1, pageSize: 25 },
+            eventosMasivos: [],
+          }),
+        ),
+      });
+    });
+    await page.goto("/oficinas/estadisticas");
+
+    // Con 0 filas, la DataTable esconde la tabla y muestra su empty state.
+    await expect(page.locator("#ranking-table-empty-state")).toBeVisible();
+    await expect(page.locator("#ranking-table [data-table-wrapper]")).toBeHidden();
+    await expect(page.locator("#ranking-table-empty-state-desc")).toContainText(
+      "No hay oficinas para los filtros seleccionados",
+    );
+  });
+
   test("la fila del ranking navega al detalle", async ({ page }) => {
     await stubPanel(page);
     await page.goto("/oficinas/estadisticas");
-    await expect(page.locator("[data-ranking-body] tr").first()).toBeVisible();
-    await page.locator("[data-ranking-body] tr").first().click();
+    const firstRow = page.locator("#ranking-table [data-table-row]").first();
+    await expect(firstRow).toBeVisible();
+    await firstRow.click();
     await expect(page).toHaveURL(new RegExp(`/oficinas/estadisticas/${officeCode}$`));
   });
 
@@ -330,7 +361,7 @@ test.describe("Vista del panel con API stubbeada", () => {
     await expect(page.locator('[data-kpi="eventos"] [data-kpi-value]')).toHaveText("—");
     await expect(page.locator('[data-kpi="oficinas"] [data-kpi-value]')).toHaveText("2 / 3");
     await expect(page.locator("[data-mass-events-card]")).toBeHidden();
-    await expect(page.locator("[data-ranking-body] tr")).toHaveCount(2);
+    await expect(page.locator("#ranking-table [data-table-row]")).toHaveCount(2);
   });
 
   test("sin eventos masivos la card ámbar no aparece", async ({ page }) => {

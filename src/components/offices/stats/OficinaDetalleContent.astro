@@ -1,6 +1,8 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import type { ChartData, MassEvent } from "@lib/officeStats";
 
 interface IncidenteJson {
@@ -45,6 +47,10 @@ const incidentesPorCategoria: ChartData = {
   labels: [...categoriaCounts.keys()],
   series: [{ label: "Incidentes", data: [...categoriaCounts.values()] }],
 };
+
+const incidentesGridClass =
+  "grid-cols-[minmax(130px,0.8fr)_minmax(220px,3fr)_minmax(110px,0.8fr)] gap-4";
+const incidentesRowGridClass = `grid ${incidentesGridClass} items-center`;
 ---
 
 <div class="flex w-full flex-col gap-6 pb-24">
@@ -120,15 +126,45 @@ const incidentesPorCategoria: ChartData = {
     <h2 class="font-semibold">Incidentes abiertos</h2>
     {
       invgateOk && incidentes.length > 0 ? (
-        <ul class="flex flex-col gap-2">
+        <DataTable
+          ariaLabel="Incidentes abiertos de la oficina"
+          minWidthClass="min-w-160"
+          headerGridClass={incidentesGridClass}
+          rowGridClass={incidentesRowGridClass}
+        >
+          <div slot="header">
+            <DataTableHeaderCell sortKey="categoria">Categoría</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell sortKey="titulo">Título</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
+          </div>
+
           {incidentes.slice(0, 20).map((incidente) => (
-            <li class="bg-base-100 border-base-300 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2">
-              <span class="badge badge-warning badge-sm">{incidente.categoria}</span>
-              <span class="min-w-0 flex-1 truncate">{incidente.titulo}</span>
-              <span class="text-base-content/60 text-sm">{incidente.estado}</span>
-            </li>
+            <div
+              data-table-row
+              data-sort-categoria={incidente.categoria.toLowerCase()}
+              data-sort-titulo={incidente.titulo.toLowerCase()}
+              data-sort-estado={incidente.estado.toLowerCase()}
+              class:list={[
+                incidentesRowGridClass,
+                "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+              ]}
+            >
+              <div class="min-w-0">
+                <span class="badge badge-secondary badge-sm">
+                  {incidente.categoria}
+                </span>
+              </div>
+              <div class="min-w-0 truncate text-sm" title={incidente.titulo}>
+                {incidente.titulo}
+              </div>
+              <div class="text-base-content/70 text-sm">{incidente.estado}</div>
+            </div>
           ))}
-        </ul>
+        </DataTable>
       ) : (
         <p class="text-base-content/60 text-sm">
           {invgateOk ? "Sin incidentes abiertos para esta oficina." : "Sin datos en vivo de InvGate."}
@@ -142,7 +178,7 @@ const incidentesPorCategoria: ChartData = {
       <section class="flex flex-col gap-3">
         <h2 class="font-semibold">Eventos masivos en curso</h2>
         {eventos.map((evento) => (
-          <div class="border-warning/40 bg-warning/5 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2">
+          <div class="rounded-box border-base-300 bg-base-100 flex flex-wrap items-center gap-3 border px-3 py-2 shadow-sm">
             <span class="badge badge-warning font-bold">{evento.oficinas} oficinas</span>
             <span class="min-w-0 flex-1 truncate font-semibold">{evento.titulo}</span>
             <span class="text-base-content/60 text-sm">{evento.tickets} tickets</span>
