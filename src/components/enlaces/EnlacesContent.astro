@@ -15,7 +15,6 @@ import type {
   CategoryViewModel,
 } from "./types";
 import { decrypt } from "@lib/encryption";
-import { getHideDescriptions } from "@/lib/viewMode";
 
 const isAuthenticated = Astro.locals.user && Astro.locals.user.id !== 0;
 
@@ -152,7 +151,6 @@ const cleanBase = getCleanBase();
       <input
         type="checkbox"
         name="hide-descriptions"
-        checked={getHideDescriptions()}
         class="checkbox checkbox-primary"
         id="hide-descriptions-toggle"
       />
@@ -252,6 +250,8 @@ const cleanBase = getCleanBase();
     setViewMode,
     getViewColumns,
     setViewColumns,
+    getHideDescriptions,
+    setHideDescriptions,
     type ViewMode,
     type ViewColumns,
   } from "@lib/viewMode";
@@ -428,16 +428,26 @@ const cleanBase = getCleanBase();
     "hide-descriptions-toggle",
   ) as HTMLInputElement | null;
   if (hideDescriptionsToggle) {
+    const applyHideDescriptions = (hide: boolean): void => {
+      hideDescriptionsToggle.checked = hide;
+      const grid = document.getElementById(
+        "important-links-grid",
+      ) as HTMLElement | null;
+      grid?.classList.toggle("hide-descriptions", hide);
+    };
+
+    // Estado inicial: el frontmatter del servidor no tiene localStorage, así que
+    // la preferencia se aplica acá al hidratar (checkbox + clase) o se pierde.
+    applyHideDescriptions(getHideDescriptions());
+    // Las cards cambian de altura: releer posiciones tras aplicar el estado inicial.
+    requestAnimationFrame(() => layoutMasonry());
+
     hideDescriptionsToggle.addEventListener("change", () => {
       const hideDescriptions = hideDescriptionsToggle.checked;
-      localStorage.setItem("enlacesHideDescriptions", String(hideDescriptions));
-      const grid = document.getElementById("important-links-grid") as HTMLElement | null;
-      if (grid) {
-        grid.classList.toggle("hide-descriptions", hideDescriptions);
-        // Las cards cambian de altura al instante: releer las posiciones ahora,
-        // sin esperar a que otro evento dispare el observer.
-        requestAnimationFrame(() => layoutMasonry());
-      }
+      setHideDescriptions(hideDescriptions);
+      applyHideDescriptions(hideDescriptions);
+      // Releer posiciones ahora, sin esperar a que otro evento dispare el observer.
+      requestAnimationFrame(() => layoutMasonry());
     });
   }
 </script>
