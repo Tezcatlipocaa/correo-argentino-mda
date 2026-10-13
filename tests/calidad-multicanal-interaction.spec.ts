@@ -236,6 +236,7 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
             priority: "Alta",
             status: "En curso",
             creator: "Juan Pérez",
+            createdBy: "Ramiro Rojas",
             helpdesk: "Mesa de Ayuda TI",
             source: mockSource,
             description: "<p>Falla en equipo aforadora <strong>sucursal</strong>.<br>No imprime comprobante.</p>",
@@ -253,12 +254,19 @@ test.describe("Interacción Calidad Operadores - Selección y Modal", () => {
     const tvTitle = page.locator("#tv-title");
     await expect(tvTitle).toHaveText("Aforadora- Consulta");
     await expect(page.locator("#tv-category")).toHaveText("Hardware");
+    await expect(page.locator("#tv-category")).toBeVisible();
     await expect(page.locator("#tv-priority")).toHaveText("Alta");
     await expect(page.locator("#tv-creator")).toHaveText("Juan Pérez");
+    await expect(page.locator("#tv-creator")).toBeVisible();
+    await expect(page.locator("#tv-created-by")).toHaveText("Ramiro Rojas");
+    await expect(page.locator("#tv-created-by")).toBeVisible();
     await expect(page.locator("#tv-helpdesk")).toHaveText("Mesa de Ayuda TI");
+    await expect(page.locator("#tv-helpdesk")).toBeVisible();
     await expect(page.locator("#tv-source")).toHaveText("Teléfono");
+    await expect(page.locator("#tv-source")).toBeVisible();
 
     const tvDescription = page.locator("#tv-description");
+    await expect(tvDescription).toBeVisible();
     await expect(tvDescription).toContainText("Falla en equipo aforadora sucursal.");
     await expect(tvDescription).not.toContainText("<p>");
     await expect(tvDescription).not.toContainText("<strong>");

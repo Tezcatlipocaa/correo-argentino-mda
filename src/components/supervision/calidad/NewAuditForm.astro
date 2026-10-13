@@ -1318,7 +1318,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                   <div id="tv-title-match-badge" class="mt-1"></div>
                 </div>
                 <dl class="grid grid-cols-2 gap-1.5 text-xs">
-                  <div class="min-w-0 rounded-lg bg-base-100 p-1.5">
+                  <div class="col-span-2 min-w-0 rounded-lg bg-base-100 p-1.5">
                     <dt class="text-base-content/50">Categoría</dt>
                     <dd id="tv-category" class="truncate font-semibold">-</dd>
                   </div>
@@ -1334,15 +1334,40 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                     <dt class="text-base-content/50">Solicitante</dt>
                     <dd id="tv-creator" class="truncate font-semibold">-</dd>
                   </div>
-                  <div class="col-span-2 hidden">
-                    <dd id="tv-created-by">-</dd>
-                    <dd id="tv-helpdesk">-</dd>
-                    <dd id="tv-source">-</dd>
-                    <div id="tv-source-match-badge"></div>
-                    <dd id="tv-response-time">-</dd>
-                    <div id="tv-description">-</div>
+                  <div class="min-w-0 rounded-lg bg-base-100 p-1.5">
+                    <dt class="text-base-content/50">Creado por</dt>
+                    <dd id="tv-created-by" class="truncate font-semibold">-</dd>
+                  </div>
+                  <div class="min-w-0 rounded-lg bg-base-100 p-1.5">
+                    <dt class="text-base-content/50">Mesa de Ayuda</dt>
+                    <dd id="tv-helpdesk" class="truncate font-semibold">-</dd>
+                  </div>
+                  <div class="min-w-0 rounded-lg bg-base-100 p-1.5">
+                    <div class="flex items-center justify-between gap-1">
+                      <dt class="text-base-content/50">Origen</dt>
+                      <div id="tv-source-match-badge" class="shrink-0"></div>
+                    </div>
+                    <dd id="tv-source" class="truncate font-semibold">-</dd>
                   </div>
                 </dl>
+
+                <div class="rounded-lg bg-base-100 p-2">
+                  <span
+                    class="block text-xxs font-semibold text-base-content/50 uppercase"
+                  >
+                    Descripción
+                  </span>
+                  <div
+                    id="tv-description"
+                    class="mt-0.5 max-h-24 overflow-y-auto font-sans text-xs text-base-content/85 whitespace-pre-wrap break-words scrollbar-thin"
+                  >
+                    -
+                  </div>
+                </div>
+
+                <div class="hidden">
+                  <dd id="tv-response-time">-</dd>
+                </div>
               </div>
             </div>
 
@@ -1942,15 +1967,33 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       }
       if (ticketEmptyState) ticketEmptyState.classList.remove("hidden");
       if (ticketViewerContent) ticketViewerContent.classList.add("hidden");
-      if (tvTitle) tvTitle.textContent = "-";
+      if (tvTitle) {
+        tvTitle.textContent = "-";
+        tvTitle.removeAttribute("title");
+      }
       if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
-      if (tvCategory) tvCategory.textContent = "-";
+      if (tvCategory) {
+        tvCategory.textContent = "-";
+        tvCategory.removeAttribute("title");
+      }
       if (tvPriority) tvPriority.textContent = "-";
       if (tvStatus) tvStatus.textContent = "-";
-      if (tvCreator) tvCreator.textContent = "-";
-      if (tvCreatedBy) tvCreatedBy.textContent = "-";
-      if (tvHelpdesk) tvHelpdesk.textContent = "-";
-      if (tvSource) tvSource.textContent = "-";
+      if (tvCreator) {
+        tvCreator.textContent = "-";
+        tvCreator.removeAttribute("title");
+      }
+      if (tvCreatedBy) {
+        tvCreatedBy.textContent = "-";
+        tvCreatedBy.removeAttribute("title");
+      }
+      if (tvHelpdesk) {
+        tvHelpdesk.textContent = "-";
+        tvHelpdesk.removeAttribute("title");
+      }
+      if (tvSource) {
+        tvSource.textContent = "-";
+        tvSource.removeAttribute("title");
+      }
       if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
       if (tvResponseTime) tvResponseTime.textContent = "-";
       if (tvDescription) tvDescription.textContent = "-";
@@ -2110,14 +2153,32 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       const source = data.source || data.rawDetails?.source || "Sin origen";
       const description = data.description || data.rawDetails?.description || "Sin descripción disponible";
 
-      if (tvTitle) tvTitle.textContent = title;
-      if (tvCategory) tvCategory.textContent = category;
+      if (tvTitle) {
+        tvTitle.textContent = title;
+        tvTitle.title = title;
+      }
+      if (tvCategory) {
+        tvCategory.textContent = category;
+        tvCategory.title = category;
+      }
       if (tvPriority) tvPriority.textContent = priority;
       if (tvStatus) tvStatus.textContent = status;
-      if (tvCreator) tvCreator.textContent = creator;
-      if (tvCreatedBy) tvCreatedBy.textContent = createdBy;
-      if (tvHelpdesk) tvHelpdesk.textContent = helpdesk;
-      if (tvSource) tvSource.textContent = source;
+      if (tvCreator) {
+        tvCreator.textContent = creator;
+        tvCreator.title = creator;
+      }
+      if (tvCreatedBy) {
+        tvCreatedBy.textContent = createdBy;
+        tvCreatedBy.title = createdBy;
+      }
+      if (tvHelpdesk) {
+        tvHelpdesk.textContent = helpdesk;
+        tvHelpdesk.title = helpdesk;
+      }
+      if (tvSource) {
+        tvSource.textContent = source;
+        tvSource.title = source;
+      }
 
       if (tvResponseTime) {
         const human = data.rawDetails?.responseHuman;

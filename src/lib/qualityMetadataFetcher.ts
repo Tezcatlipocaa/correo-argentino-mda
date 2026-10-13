@@ -2,6 +2,7 @@ import type { ChannelType } from "@/types/quality";
 import { wiseCxGet } from "@/lib/wise-cx-client";
 import { invgateGet } from "@/lib/invgateClient";
 import { cleanHtmlText } from "@/lib/titleNormalizer";
+import { getCategories } from "@lib/invgate/automation/categories";
 
 export interface ExtractedQualityMetadata {
   caseNumber: string;
@@ -565,10 +566,13 @@ export function parseInvgateAgMetadata(
   const description = cleanHtmlText(incident?.description || "");
 
   const categoryName =
-    extra?.categoryName ??
+    (extra?.categoryName && extra.categoryName !== "Sin categoría"
+      ? extra.categoryName
+      : null) ??
     incident?.category?.name ??
-    (typeof incident?.category === "string" ? incident.category : "") ??
-    "";
+    (typeof incident?.category === "string" ? incident.category : null) ??
+    extra?.categoryName ??
+    "Sin categoría";
 
   const helpdeskName =
     extra?.helpdeskName ??
@@ -756,14 +760,14 @@ export async function fetchInvgateTicketMetadata(
     // 3. Resolver categoría si existe category_id
     if (incident.category_id) {
       try {
-        const catRes = await invgateGet<any>("categories?page_size=500");
+        const catRes = await getCategories();
         if (catRes.ok && Array.isArray(catRes.data)) {
           const cat = catRes.data.find((c: any) => c.id === incident.category_id);
           if (cat?.name) {
             categoryName = cat.name;
           }
-        } else if (catRes.ok && Array.isArray(catRes.data?.data)) {
-          const cat = catRes.data.data.find((c: any) => c.id === incident.category_id);
+        } else if (catRes.ok && Array.isArray((catRes.data as any)?.data)) {
+          const cat = (catRes.data as any).data.find((c: any) => c.id === incident.category_id);
           if (cat?.name) {
             categoryName = cat.name;
           }
