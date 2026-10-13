@@ -39,7 +39,10 @@ function encrypt(text: string): string {
   return `${iv.toString("hex")}:${cipher.getAuthTag().toString("hex")}:${encrypted}`;
 }
 
-const LINK_TITLE = "Enlace Creds E2E";
+const LINK_TITLE =
+  "Enlace Credenciales E2E con un título largo que debe truncarse";
+const LINK_SUBTITLE =
+  "Subtítulo de credenciales E2E lo bastante largo como para truncarse";
 const LONG_USERNAME = "usuario.mesa.ayuda.mda@correoargentino.com.ar";
 const LONG_PASSWORD = "Sup3r-S3cret-P@ssw0rd-Larga!";
 
@@ -81,6 +84,7 @@ test.beforeAll(async () => {
     .values({
       categoryId,
       title: LINK_TITLE,
+      subtitle: LINK_SUBTITLE,
       url: "https://example.com/creds-layout",
       credentialUsername: LONG_USERNAME,
       credentialPassword: encrypt(LONG_PASSWORD),
@@ -125,18 +129,6 @@ const hOverlap = (a: Rect, b: Rect): number =>
 const vOverlap = (a: Rect, b: Rect): number =>
   Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
 
-const toRect = (el: Element): Rect => {
-  const r = el.getBoundingClientRect();
-  return {
-    left: r.left,
-    right: r.right,
-    top: r.top,
-    bottom: r.bottom,
-    width: r.width,
-    height: r.height,
-  };
-};
-
 interface Layout {
   card: Rect;
   container: Rect | null;
@@ -144,6 +136,9 @@ interface Layout {
   toggle: Rect | null;
   copies: Rect[];
   usernameCode: Rect | null;
+  actions: Rect | null;
+  title: Rect | null;
+  subtitle: Rect | null;
 }
 
 async function measure(item: Locator): Promise<Layout> {
@@ -169,6 +164,9 @@ async function measure(item: Locator): Promise<Layout> {
         root.querySelectorAll("details [data-copy-control]"),
       ).map((el) => rect(el) as Rect),
       usernameCode: rect(root.querySelector("details code")),
+      actions: rect(root.querySelector("[data-link-actions]")),
+      title: rect(root.querySelector("[data-link-title]")),
+      subtitle: rect(root.querySelector("[data-link-subtitle]")),
     };
   });
 }
@@ -184,9 +182,15 @@ async function openCredentials(item: Locator, page: Page): Promise<void> {
 }
 
 function assertNoOverlapOrOverflow(label: string, l: Layout): void {
-  const group = [l.input, l.toggle, l.usernameCode, ...l.copies].filter(
-    (r): r is Rect => r !== null,
-  );
+  const group = [
+    l.actions,
+    l.title,
+    l.subtitle,
+    l.input,
+    l.toggle,
+    l.usernameCode,
+    ...l.copies,
+  ].filter((r): r is Rect => r !== null);
 
   // 1. Todo dentro de la tarjeta (sin desborde horizontal)
   for (const [i, r] of group.entries()) {
@@ -224,6 +228,8 @@ function assertNoOverlapOrOverflow(label: string, l: Layout): void {
     ["input/copy", l.input, l.copies[1] ?? null],
     ["toggle/copy", l.toggle, l.copies[1] ?? null],
     ["username/copy", l.usernameCode, l.copies[0] ?? null],
+    ["actions/title", l.actions, l.title],
+    ["actions/subtitle", l.actions, l.subtitle],
   ].filter((e): e is [string, Rect, Rect] => e[1] !== null && e[2] !== null);
 
   for (const [name, a, b] of cmp) {

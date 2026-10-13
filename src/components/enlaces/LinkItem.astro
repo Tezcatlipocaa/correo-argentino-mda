@@ -87,7 +87,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
       </div>
 
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" data-link-head>
           <span
             class:list={[
               "text-base-content truncate text-sm font-bold",
@@ -95,6 +95,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
             ]}
             title={link.title}
             data-highlight-target
+            data-link-title
           >
             {link.title}
           </span>
@@ -115,6 +116,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
                   link.deprecated && "opacity-50",
                 ]}
                 data-highlight-target
+                data-link-subtitle
               >
                 {linkSubtitle}
               </span>
@@ -319,7 +321,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
      contraseña. Fuera de flujo para que no roben ancho; se muestran igual al
      hacer hover/focus. Condicionado por el ancho real de la tarjeta, no por el
      número de columnas (el 4-columnas y el móvil comparten el problema). */
-  [data-link-body] {
+  [data-link-item] {
     container-type: inline-size;
   }
 
@@ -328,6 +330,15 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
       position: absolute;
       top: 0.5rem;
       right: 0.5rem;
+    }
+
+    /* Reserva un canal a la derecha solo en el título/subtítulo (no en todo el
+       body) para que las acciones flotantes no tapen el texto truncado al
+       aparecer en hover. Las credenciales quedan fuera del canal y conservan el
+       ancho que ganaron al sacar las acciones del flujo. */
+    [data-link-head],
+    [data-link-subtitle] {
+      margin-right: 4.75rem;
     }
   }
 </style>
