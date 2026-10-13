@@ -647,8 +647,9 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
     // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS]
     // INICIO: Forzar disponibilidad para operadores solicitados y/o estados de devolución
     // para pruebas de asignación de autogestiones y visualización en la cola.
-    // Permite que Ignacio Revainera, Altamirano Darío y Franco González (o cualquier
-    // operador en Devolución Supervisión) figuren disponibles y próximos en cola.
+    // Permite que Ignacio Revainera, Altamirano Darío, Franco González y Malena
+    // López Rojas (o cualquier operador en Devolución Supervisión) figuren
+    // disponibles y próximos en cola.
     // INSTRUCCIONES DE REVERSIÓN: Eliminar este bloque condicional completo.
     // =========================================================================
     const testTargetNames = [
@@ -656,6 +657,8 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
       "altamirano dario",
       "dario altamirano",
       "franco gonzalez",
+      "malena lopez rojas",
+      "lopez rojas malena",
     ];
     const normAgentName = (agent.name || "")
       .toLowerCase()
