@@ -1629,7 +1629,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
   const STATE_LABEL: Record<string, string> = {
     cumple: "Cumple",
     nocumple: "No cumple",
-    na: "N/A",
   };
 
   // Clases literales: Tailwind escanea el fuente, no puede resolver `progress-${x}`.
@@ -2024,7 +2023,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
      * El estado se escribe en un atributo (`data-criterion-state` + `aria-pressed`)
      * y lo pinta el CSS: así no hay clases que sincronizar a mano.
      */
-    function setItemState(item: HTMLElement, state: "cumple" | "nocumple" | "na") {
+    function setItemState(item: HTMLElement, state: "cumple" | "nocumple") {
       const checkbox = item.querySelector(".audit-checkbox") as HTMLInputElement | null;
 
       item.dataset.criterionState = state;
@@ -2041,26 +2040,19 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       });
 
       if (checkbox) {
-        if (state === "nocumple") {
-          checkbox.checked = false;
-          checkbox.dataset.isNa = "false";
-        } else {
-          // "cumple" y "na" se envían marcados; la penalización la decide el estado.
-          checkbox.checked = true;
-          checkbox.dataset.isNa = state === "na" ? "true" : "false";
-        }
+        checkbox.checked = state === "cumple";
       }
 
       markAsInProgress();
       recalculateScores();
     }
 
-    // Bind 3-state buttons
+    // Bind 2-state buttons
     document.querySelectorAll(".checklist-item").forEach((item) => {
       const htmlItem = item as HTMLElement;
       item.querySelectorAll<HTMLButtonElement>(".state-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          const state = btn.dataset.state as "cumple" | "nocumple" | "na";
+          const state = btn.dataset.state as "cumple" | "nocumple";
           if (state) setItemState(htmlItem, state);
         });
       });
@@ -2732,12 +2724,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       );
 
       const totalCriteria = checkboxes.length;
-      // Los tres estados son una decisión activa del supervisor: no existe un
-      // estado "pendiente". Contamos los desvíos (No cumple / N/A) en vez de los
-      // checkboxes marcados, porque "No cumple" es una evaluación válida y no un
-      // criterio sin completar.
       let failedCriteria = 0;
-      let naCriteria = 0;
       let hasSection2 = true;
 
       const isReclamo =
@@ -2756,8 +2743,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         hasSection2 = false;
 
       checkboxes.forEach((cb) => {
-        if (cb.dataset.isNa === "true") naCriteria++;
-        else if (!cb.checked) failedCriteria++;
+        if (!cb.checked) failedCriteria++;
       });
 
       /*
@@ -2767,9 +2753,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         puntos sobre una base de 45/55, no como porcentajes, así que el preview
         mostraba 90% donde correspondía 78%.
       */
-      // Espejo exacto de lo que ve el backend: `score = checkbox.checked`. El N/A
-        // viaja marcado (setItemState lo marca) y por eso NO penaliza; excluirlo
-        // acá haría que el preview mostrara unscore que la base nunca guarda.
+      // Espejo exacto de lo que ve el backend: `score = checkbox.checked`.
       const compliant = new Set<string>(
         checkboxes.filter((cb) => cb.checked).map((cb) => cb.name),
       );
@@ -2827,21 +2811,15 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         if (icon) icon.setAttribute("class", `shrink-0 ${SCORE_TONE[tone].text}`);
       }
       if (progressText) {
-        // Solo se nombran las categorías que realmente tienen desvíos.
-        const parts: string[] = [];
-        if (failedCriteria) parts.push(`${failedCriteria} sin cumplir`);
-        if (naCriteria) parts.push(`${naCriteria} N/A`);
         progressText.textContent =
-          parts.length === 0
+          failedCriteria === 0
             ? `Sin desvíos en ${totalCriteria} criterios`
-            : `${parts.join(" · ")} de ${totalCriteria}`;
+            : `${failedCriteria} sin cumplir de ${totalCriteria}`;
       }
       if (footerHint) {
         footerHint.textContent =
           failedCriteria === 0
-            ? naCriteria > 0
-              ? `${totalCriteria - naCriteria} criterios en Cumple · ${naCriteria} N/A. Guardá la auditoría cuando quieras.`
-              : `${totalCriteria} criterios en Cumple. Guardá la auditoría cuando quieras.`
+            ? `${totalCriteria} criterios en Cumple. Guardá la auditoría cuando quieras.`
             : `${failedCriteria} ${failedCriteria === 1 ? "criterio sin cumplir" : "criterios sin cumplir"} sobre ${totalCriteria}. Revisá la devolución antes de guardar.`;
       }
 
