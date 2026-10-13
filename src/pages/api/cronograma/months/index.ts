@@ -8,7 +8,7 @@ import {
 } from "@db/schema";
 import { and, eq, like, inArray, desc, lt } from "drizzle-orm";
 import { logAdminFromAstro } from "@lib/auditLogger";
-import { jsonResponse, sanitizeError } from "@lib/apiResponse";
+import { jsonResponse, jsonError, sanitizeError } from "@lib/apiResponse";
 
 const MONTH_LABELS = [
   "Enero",
@@ -33,10 +33,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { year, month } = body; // month is 0-indexed (0 = Enero)
+    const year = Number(body.year);
+    const month = Number(body.month); // month is 0-indexed (0 = Enero)
 
-    if (year === undefined || month === undefined) {
-      return jsonResponse({ error: "Year and month are required" }, 400);
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 0 || month > 11) {
+      return jsonError("Year y month son requeridos y deben ser válidos (month 0-11)", 400);
     }
 
     const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -109,31 +110,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    // Handle saturdayRotationConfig copy
-    const targetRotationConfig = await db
+    // Copy saturdayRotationConfig from the nearest previous month. El guard
+    // 409 ya garantiza que no existe config para este mes, así que siempre se
+    // copia la más reciente anterior.
+    const prevRotationConfigResult = await db
       .select()
       .from(saturdayRotationConfig)
-      .where(eq(saturdayRotationConfig.month, monthPrefix))
+      .where(lt(saturdayRotationConfig.month, monthPrefix))
+      .orderBy(desc(saturdayRotationConfig.month))
       .limit(1);
-    let rotationConfigInsert = null;
-    if (targetRotationConfig.length === 0) {
-      const prevRotationConfigResult = await db
-        .select()
-        .from(saturdayRotationConfig)
-        .where(lt(saturdayRotationConfig.month, monthPrefix))
-        .orderBy(desc(saturdayRotationConfig.month))
-        .limit(1);
 
-      const prevRotationConfig = prevRotationConfigResult[0];
-      if (prevRotationConfig) {
-        rotationConfigInsert = {
-          month: monthPrefix,
-          rotationOrder: prevRotationConfig.rotationOrder,
-          startDate: prevRotationConfig.startDate,
-          startGroup: prevRotationConfig.startGroup,
-          disabledGroups: "",
-        };
-      }
+    const prevRotationConfig = prevRotationConfigResult[0];
+    let rotationConfigInsert = null;
+    if (prevRotationConfig) {
+      rotationConfigInsert = {
+        month: monthPrefix,
+        rotationOrder: prevRotationConfig.rotationOrder,
+        startDate: prevRotationConfig.startDate,
+        startGroup: prevRotationConfig.startGroup,
+        disabledGroups: "",
+      };
     }
 
     // 5. Transaction: Delete existing, insert schedules, insert agentSaturdayGroups, upsert saturdayRotationConfig
