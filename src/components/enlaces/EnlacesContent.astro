@@ -194,30 +194,18 @@ const cleanBase = getCleanBase();
     color: inherit;
   }
 
-/* View mode: icon sizes */
-[data-view-mode="compact"] {
-  --link-icon-size: 28px;
-  --link-icon-container: 36px;
-}
-
-[data-view-mode="normal"] {
-  --link-icon-size: 36px;
-  --link-icon-container: 44px;
-}
-
-[data-view-mode="large"] {
-  --link-icon-size: 44px;
-  --link-icon-container: 52px;
-}
+/* Los tamaños de ícono por modo viven en global.css (siempre presentes);
+   acá solo se aplican a las cajas del grid. */
 
 /* View columns: el ancho de los ítems usa el conteo efectivo que setea JS
-   (misma fuente que masonry), evitando desacuerdos con media queries de viewport */
+   (misma fuente que masonry), evitando desacuerdos con media queries de viewport.
+   `--columns-effective` siempre está definido (:root en global.css). */
 .masonry-grid {
   position: relative;
 }
 
 .masonry-grid .grid-item {
-  width: calc((100% - (8px * (var(--columns-effective, 3) - 1))) / var(--columns-effective, 3));
+  width: calc((100% - (8px * (var(--columns-effective) - 1))) / var(--columns-effective));
   margin-bottom: 8px;
   break-inside: avoid;
 }

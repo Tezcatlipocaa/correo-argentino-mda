@@ -160,6 +160,9 @@ const globalFontFaceCss = `
         const cols = localStorage.getItem("enlacesViewColumns");
         if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
           root.setAttribute("data-view-columns", cols);
+          // Ancho del grid antes del primer paint (el island llega despues):
+          // evita el relayout 3 -> N. El default 3 vive en global.css (:root).
+          root.style.setProperty("--columns-effective", cols);
         }
 
         const toggle = document.getElementById("theme-toggle");

@@ -63,7 +63,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
     {/* Left: Icon and Details */}
     <div class="flex min-w-0 flex-1 items-start gap-3">
       <div
-        class="icon-container bg-base-200 flex shrink-0 items-center justify-center overflow-hidden rounded p-1"
+        class="icon-container bg-base-200 flex max-w-full shrink-0 items-center justify-center overflow-hidden rounded p-1"
       >
         {
           iconUrl ? (
@@ -72,7 +72,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
               alt={`Ícono de ${link.title}`}
               width={36}
               height={36}
-              class="h-full w-full object-contain"
+              class="h-full w-full max-w-full object-contain"
               loading="lazy"
               decoding="async"
             />
