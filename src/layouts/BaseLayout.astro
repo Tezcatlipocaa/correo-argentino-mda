@@ -159,10 +159,18 @@ const globalFontFaceCss = `
         }
         const cols = localStorage.getItem("enlacesViewColumns");
         if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
-          root.setAttribute("data-view-columns", cols);
+          // Cap responsive: espeja getColumnCap() de EnlacesContent.astro
+          // (fuente de verdad) para que el ancho del primer frame no exceda lo
+          // que el island fijara al hidratar -> sin relayout. El grid aun no
+          // existe en <head>, se aproxima con el viewport; los umbrales son los
+          // mismos 768/1280 de getColumnCap.
+          const width = window.innerWidth;
+          const cap = width < 768 ? 1 : width < 1280 ? 2 : 4;
+          const effective = String(Math.min(Number(cols), cap));
+          root.setAttribute("data-view-columns", effective);
           // Ancho del grid antes del primer paint (el island llega despues):
           // evita el relayout 3 -> N. El default 3 vive en global.css (:root).
-          root.style.setProperty("--columns-effective", cols);
+          root.style.setProperty("--columns-effective", effective);
         }
 
         const toggle = document.getElementById("theme-toggle");

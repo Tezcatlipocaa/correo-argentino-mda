@@ -101,7 +101,11 @@ interface Recorder {
   maxImg: number;
 }
 
-async function record(page: import("@playwright/test").Page, columns: number) {
+async function record(
+  page: import("@playwright/test").Page,
+  columns: number,
+  viewport: { width: number; height: number } = { width: 1600, height: 900 },
+) {
   await page.addInitScript(
     ({ cols, key }) => {
       try {
@@ -179,7 +183,7 @@ async function record(page: import("@playwright/test").Page, columns: number) {
     },
   );
 
-  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.setViewportSize(viewport);
   await page.goto("/recursos", { waitUntil: "load" });
   await page.waitForSelector("#important-links-grid .grid-item");
   // El island fija data-view-mode al correr su script: señal de que ya terminó.
@@ -225,6 +229,39 @@ test.describe("/recursos — primer paint sin flash", () => {
       );
     });
   }
+
+  test("viewport angosto: el primer frame respeta el cap responsive, no la columna guardada", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, admin.signedSessionId);
+    // Guardado 4, pero a 1000px el cap de getColumnCap() es 2.
+    const rec = await record(page, 4, { width: 1000, height: 800 });
+
+    const withCards = rec.frames.filter(
+      (f) => f.count > 0 && f.firstWidth !== null && f.gridWidth,
+    );
+    expect(withCards.length, "hubo frames con tarjetas").toBeGreaterThan(0);
+
+    const CAP = 2;
+    const last = withCards[withCards.length - 1];
+    const gridWidth = last.gridWidth as number;
+    const expected = (gridWidth - 8 * (CAP - 1)) / CAP;
+
+    // Sin el clamp del script inline el primer frame mediria 4 columnas y
+    // recien al hidratar el island saltaria a 2 -> relayout.
+    for (const [i, f] of withCards.entries()) {
+      expect(
+        Math.abs((f.firstWidth as number) - expected),
+        `frame #${i} (count=${f.count}) ancho ${f.firstWidth} ≠ cap ${CAP} col (${expected.toFixed(1)})`,
+      ).toBeLessThanOrEqual(2);
+    }
+
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-view-columns",
+      String(CAP),
+    );
+  });
 
   test("mode ausente: sin desborde de viewport y con íconos acotados", async ({
     context,

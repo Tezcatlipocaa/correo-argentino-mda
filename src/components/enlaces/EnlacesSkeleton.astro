@@ -16,7 +16,10 @@ import PageHeader from "@components/ui/PageHeader.astro";
     <div class="skeleton mb-6 h-28 w-full rounded-xl"></div>
 
     <!-- Masonry Grid Skeleton: misma fuente de columnas que el grid real
-         (--columns-effective), para que el fallback no muestre 3 fijas. -->
+         (--columns-effective), para que el fallback no muestre 3 fijas.
+         Sin `skeleton-debounced` a proposito (issue #123, propuesta #5): para
+         /recursos el esqueleto conviene visible desde el primer paint, no tras
+         el fade de 300ms. No reponer la clase. -->
     <div
       class="mt-4 grid gap-2"
       style="grid-template-columns: repeat(var(--columns-effective), minmax(0, 1fr));"
