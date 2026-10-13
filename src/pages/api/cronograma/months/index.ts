@@ -39,6 +39,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return jsonResponse({ error: "Year and month are required" }, 400);
     }
 
+    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    // Guard: este flujo solo crea meses nuevos. Re-crear un mes existente
+    // borraría sus ediciones/overrides (la transacción de abajo hace
+    // delete+reinsert). Cortar antes de cualquier escritura. Para regenerar
+    // hay que eliminar primero el mes con DELETE.
+    const [existingSchedule] = await db
+      .select({ id: schedules.id })
+      .from(schedules)
+      .where(like(schedules.date, `${monthPrefix}-%`))
+      .limit(1);
+    const [existingRotation] = await db
+      .select({ month: saturdayRotationConfig.month })
+      .from(saturdayRotationConfig)
+      .where(eq(saturdayRotationConfig.month, monthPrefix))
+      .limit(1);
+    if (existingSchedule || existingRotation) {
+      return jsonResponse(
+        {
+          error: `El mes ${monthPrefix} ya existe. Para regenerarlo, primero eliminá el mes existente.`,
+        },
+        409,
+      );
+    }
+
     // 1. Fetch all agents with legacy saturday fields
     const dbAgents = await db
       .select({
@@ -49,7 +74,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .from(agents);
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
 
     // 2. Load all historical agentSaturdayGroups records to find each operator's most recent non-null group
     const allPrevRecords = await db
@@ -209,6 +233,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
       tx.delete(agentSaturdayGroups)
         .where(eq(agentSaturdayGroups.month, monthPrefix))
+        .run();
+
+      // También la config de rotación: si sobrevive, el guard 409 del POST
+      // impide recrear el mes recién eliminado.
+      tx.delete(saturdayRotationConfig)
+        .where(eq(saturdayRotationConfig.month, monthPrefix))
         .run();
     });
 
