@@ -193,4 +193,37 @@ test.describe("regla única de mes inicial", () => {
     const lastDay = new Date(y, m, 0).getDate();
     expect(max).toBe(`${future}-${String(lastDay).padStart(2, "0")}`);
   });
+
+  test("con el mes resuelto sin schedules, min/max salen del mes resuelto", async ({
+    context,
+    page,
+  }) => {
+    // El mes en curso está en la lista pero ningún operador tiene asistencia
+    // en él: min/max debe derivarse del mes resuelto, no quedar vacío ni salir
+    // de uniqueDates (que no tiene fechas de ese mes).
+    const current = monthOffset(0);
+    const prev = monthOffset(-2);
+
+    await stubCronogramaGet(page, {
+      operators: [operatorWithDate(`${prev}-10`)],
+      weekendOvertimeConfigs: [],
+      availableMonths: [prev, current],
+      activeMonth: prev,
+    });
+    await loginAsAdmin(context, adminCookie);
+
+    expect(await readInitialMonth(page)).toBe(current);
+
+    const value = await page.locator("#date-input").inputValue();
+    expect(value).toBe(`${current}-01`);
+
+    const [y, m] = current.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    expect(await page.locator("#date-input").getAttribute("min")).toBe(
+      `${current}-01`,
+    );
+    expect(await page.locator("#date-input").getAttribute("max")).toBe(
+      `${current}-${String(lastDay).padStart(2, "0")}`,
+    );
+  });
 });

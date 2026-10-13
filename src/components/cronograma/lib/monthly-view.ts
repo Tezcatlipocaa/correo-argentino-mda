@@ -22,6 +22,7 @@ import {
 import { isFeriado, getFeriadoName } from "./feriados";
 import { getActiveGroupForDate } from "./rotation-helper";
 import { resolveInitialMonth } from "./initialMonth";
+import { currentMonthYM, monthOptionsHtml } from "./monthLabel";
 import {
   reloadDataForActiveMonth,
   updateDateInputDisplay,
@@ -183,40 +184,16 @@ export function updateMonthDisplay(): void {
   updatePasivaActiveMonthBadge();
 }
 
-const MESES_ES = [
-  "ENERO",
-  "FEBRERO",
-  "MARZO",
-  "ABRIL",
-  "MAYO",
-  "JUNIO",
-  "JULIO",
-  "AGOSTO",
-  "SEPTIEMBRE",
-  "OCTUBRE",
-  "NOVIEMBRE",
-  "DICIEMBRE",
-];
-const T_MONTH = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-
 export function renderMonthSelect(): void {
   const selects = MONTH_NAVIGATOR_IDS.map(
     (navId) => document.getElementById(navId) as HTMLSelectElement | null,
   ).filter((el): el is HTMLSelectElement => el !== null);
   if (selects.length === 0) return;
 
-  const html = state.uniqueMonths
-    .map((ymStr) => {
-      const [, monthStr] = ymStr.split("-");
-      const month = parseInt(monthStr, 10) - 1;
-      const year = ymStr.slice(0, 4);
-      const isCurrent = ymStr === T_MONTH;
-      const label = isCurrent
-        ? `${MESES_ES[month]} ${year} (mes actual)`
-        : `${MESES_ES[month]} ${year}`;
-      return `<option value="${ymStr}-01">${label}</option>`;
-    })
-    .join("");
+  // El "mes actual" se recalcula en cada render: una pestaña longeva debe
+  // marcar el mes nuevo sin recargar. Con lista vacía se emite un estado vacío
+  // explícito (nunca se dejan los selects sin opciones).
+  const html = monthOptionsHtml(state.uniqueMonths, currentMonthYM());
 
   const dateInput = document.getElementById(
     "date-input",
