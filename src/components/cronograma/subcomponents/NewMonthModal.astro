@@ -47,7 +47,7 @@ const MONTHS = [
         size="sm"
       >
         {MONTHS.map((label, i) => (
-          <option value={String(i)} data-month={String(i)}>{label}</option>
+          <option value={String(i)} data-month={String(i)} data-label={label}>{label}</option>
         ))}
       </SelectField>
       <p class="text-base-content/60 text-xs">
@@ -78,21 +78,6 @@ const MONTHS = [
   import { createMonth } from "../lib/api";
   import { state } from "../lib/state";
   import { showToast } from "../lib/notifications";
-
-  const MONTH_NAMES = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ];
 
   const modal = document.getElementById(
     "new-month-modal",
@@ -137,12 +122,11 @@ const MONTHS = [
       let firstFree = -1;
       for (const opt of Array.from(monthSelect.options)) {
         const idx = parseInt(opt.dataset.month ?? opt.value, 10);
+        const label = opt.dataset.label ?? opt.textContent ?? "";
         const isExisting =
           !Number.isNaN(year) && existing.has(monthKey(year, idx));
         opt.disabled = isExisting;
-        opt.textContent = isExisting
-          ? `${MONTH_NAMES[idx]} (ya cargado)`
-          : MONTH_NAMES[idx];
+        opt.textContent = isExisting ? `${label} (ya cargado)` : label;
         if (!isExisting && firstFree === -1) firstFree = idx;
       }
       monthSelect.value = firstFree === -1 ? "" : String(firstFree);
