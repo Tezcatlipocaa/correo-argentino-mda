@@ -269,6 +269,8 @@ export async function reloadDataForActiveMonth(
         ? dateInput.value.slice(0, 7)
         : new Date().toISOString().slice(0, 7));
 
+    applyDateInputMonthBounds(dateInput, monthToLoad);
+
     const payload = await fetchCronogramaFullData(monthToLoad);
     state.cronoData = payload.operators;
     state.overtimeConfigs = payload.weekendOvertimeConfigs;
@@ -320,6 +322,19 @@ export async function reloadDataForActiveMonth(
 }
 
 /**
+ * Fija el `min`/`max` del date input al rango completo del mes indicado.
+ */
+function applyDateInputMonthBounds(
+  dateInput: HTMLInputElement | null,
+  month: string,
+): void {
+  if (!dateInput) return;
+  const [year, monthIndex] = month.split("-").map(Number);
+  dateInput.min = `${month}-01`;
+  dateInput.max = `${month}-${String(getDaysInMonth(year, monthIndex - 1)).padStart(2, "0")}`;
+}
+
+/**
  * Aplica la regla única de mes inicial al date input: fija el valor al día
  * válido del mes resuelto (hoy si pertenece y tiene dato, si no el último día
  * de ese mes con dato, si no el día 1) y el min/max al rango de ese mes.
@@ -339,9 +354,7 @@ function applyInitialMonthToDateInput(
   dateInput.value = datesInMonth.includes(todayStr)
     ? todayStr
     : datesInMonth[datesInMonth.length - 1] || `${initialMonth}-01`;
-  const [year, month] = initialMonth.split("-").map(Number);
-  dateInput.min = `${initialMonth}-01`;
-  dateInput.max = `${initialMonth}-${String(getDaysInMonth(year, month - 1)).padStart(2, "0")}`;
+  applyDateInputMonthBounds(dateInput, initialMonth);
 }
 
 async function init(): Promise<void> {
@@ -369,10 +382,9 @@ async function init(): Promise<void> {
       console.warn("Failed to load holidays:", err);
     }
 
-    await loadRotationConfig(activeMonth);
-
     applyInitialMonthToDateInput(dateInput);
     updateDateInputDisplay();
+    await loadRotationConfig(dateInput?.value.slice(0, 7) || activeMonth);
 
     renderDaily();
     renderMonthly();

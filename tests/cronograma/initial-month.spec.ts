@@ -146,4 +146,51 @@ test.describe("regla única de mes inicial", () => {
     expect(month).not.toBe(future2);
     expect(month <= current).toBe(true);
   });
+
+  test("al navegar de mes, min/max cubren el mes navegado", async ({
+    context,
+    page,
+  }) => {
+    const current = monthOffset(0);
+    const future = monthOffset(3);
+
+    await stubCronogramaGet(page, {
+      operators: [
+        operatorWithDate(`${current}-15`),
+        operatorWithDate(`${future}-15`),
+      ],
+      weekendOvertimeConfigs: [],
+      availableMonths: [current, future],
+      activeMonth: current,
+    });
+    await loginAsAdmin(context, adminCookie);
+
+    await page.goto("/supervision/cronograma");
+    await page.waitForSelector("#monthly-table");
+    await page.waitForFunction(
+      () => {
+        const el = document.getElementById(
+          "date-input",
+        ) as HTMLInputElement | null;
+        return !!el && !!el.value;
+      },
+      null,
+      { timeout: 20000 },
+    );
+
+    await page.selectOption("#month-selector", `${future}-01`);
+    await page.waitForFunction(
+      (fm) =>
+        (
+          document.getElementById("date-input") as HTMLInputElement
+        )?.value.startsWith(fm),
+      future,
+      { timeout: 20000 },
+    );
+
+    const max = await page.locator("#date-input").getAttribute("max");
+    const [y, m] = future.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    expect(max).toBe(`${future}-${String(lastDay).padStart(2, "0")}`);
+  });
 });
