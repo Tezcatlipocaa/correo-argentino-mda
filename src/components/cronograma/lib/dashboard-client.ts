@@ -54,6 +54,7 @@ import {
   updateGroupsActiveMonthBadge,
   renderMonthSelect,
   changeMonth,
+  MONTH_NAVIGATOR_IDS,
   renderDaily,
   renderHourly,
   renderMonthly,
@@ -1400,52 +1401,31 @@ function updateBrushUI(): void {
 }
 
 function setupEventListeners(): void {
-  // Month Select Change Handler
-  document.getElementById("month-selector")?.addEventListener("change", (e) => {
-    const select = e.target as HTMLSelectElement;
-    const val = select.value;
-    if (!val) return;
-    const dateInput = document.getElementById(
-      "date-input",
-    ) as HTMLInputElement | null;
-    if (dateInput) {
-      dateInput.value = val;
-      updateDateInputDisplay();
-      reloadDataForActiveMonth(val.slice(0, 7));
-    }
+  // Navegador de mes único (Mensual/Grupos/Pasiva): select + flechas.
+  // Todos comparten `date-input` como fuente de verdad.
+  MONTH_NAVIGATOR_IDS.forEach((navId) => {
+    document.getElementById(navId)?.addEventListener("change", (e) => {
+      const select = e.target as HTMLSelectElement;
+      const val = select.value;
+      if (!val) return;
+      const dateInput = document.getElementById(
+        "date-input",
+      ) as HTMLInputElement | null;
+      if (dateInput) {
+        dateInput.value = val;
+        updateDateInputDisplay();
+        reloadDataForActiveMonth(val.slice(0, 7));
+      }
+    });
+
+    document.getElementById(`${navId}-prev`)?.addEventListener("click", () => {
+      changeMonth(-1);
+    });
+
+    document.getElementById(`${navId}-next`)?.addEventListener("click", () => {
+      changeMonth(1);
+    });
   });
-
-  document
-    .getElementById("groups-month-selector")
-    ?.addEventListener("change", (e) => {
-      const select = e.target as HTMLSelectElement;
-      const val = select.value;
-      if (!val) return;
-      const dateInput = document.getElementById(
-        "date-input",
-      ) as HTMLInputElement | null;
-      if (dateInput) {
-        dateInput.value = val;
-        updateDateInputDisplay();
-        reloadDataForActiveMonth(val.slice(0, 7));
-      }
-    });
-
-  document
-    .getElementById("pasiva-month-selector")
-    ?.addEventListener("change", (e) => {
-      const select = e.target as HTMLSelectElement;
-      const val = select.value;
-      if (!val) return;
-      const dateInput = document.getElementById(
-        "date-input",
-      ) as HTMLInputElement | null;
-      if (dateInput) {
-        dateInput.value = val;
-        updateDateInputDisplay();
-        reloadDataForActiveMonth(val.slice(0, 7));
-      }
-    });
 
   // Holidays Modal Trigger
   const holidaysModal = document.getElementById("holidays-modal") as
@@ -1479,6 +1459,9 @@ function setupEventListeners(): void {
       updateDateInputDisplay();
       renderDaily();
       renderMonthly();
+      // Mantener el select y el estado de las flechas en sincronía con
+      // `date-input` (fuente de verdad), incluso si el mes queda fuera de lista.
+      updateMonthDisplay();
     });
   }
 
@@ -1497,14 +1480,6 @@ function setupEventListeners(): void {
 
   backToMonthlyBtn?.addEventListener("click", () => {
     showMonthlyView();
-  });
-
-  document.getElementById("prev-month-btn")?.addEventListener("click", () => {
-    changeMonth(-1);
-  });
-
-  document.getElementById("next-month-btn")?.addEventListener("click", () => {
-    changeMonth(1);
   });
 
   document
@@ -1967,8 +1942,8 @@ function setupEventListeners(): void {
         await loadRotationConfig(activeYM);
 
         updateDateInputDisplay();
-        updateMonthDisplay();
         renderMonthSelect();
+        updateMonthDisplay();
         clearParsedDatesCache();
         renderDaily();
         renderMonthly();
