@@ -122,10 +122,12 @@ export function updateNavigationButtons(): void {
 
     const currentIndex = months.indexOf(currentYM);
     if (currentIndex === -1) {
-      // Mes seleccionado fuera de la lista: no dejar las flechas inertes.
-      // Al menos una dirección resuelve al mes disponible más cercano.
-      if (nextBtn) nextBtn.disabled = false;
-      if (prevBtn) prevBtn.disabled = false;
+      // Mes seleccionado fuera de la lista: cada flecha refleja disponibilidad
+      // real en SU dirección (prev = hay algún mes anterior a currentYM;
+      // next = hay algún mes posterior). Así la flecha "anterior" nunca avanza
+      // al futuro ni viceversa aunque `changeMonth` use un fallback.
+      if (prevBtn) prevBtn.disabled = !months.some((m) => m < currentYM);
+      if (nextBtn) nextBtn.disabled = !months.some((m) => m > currentYM);
       return;
     }
 

@@ -1,28 +1,17 @@
 ---
 // MonthNavigator.astro — navegador de mes único (select + flechas).
 import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
 // Un solo componente para los selectores de mes de Mensual/Grupos/Pasiva: el
 // select y las flechas comparten altura (select-sm / btn-sm btn-square),
 // ícono 18 y estado deshabilitado nativo (`disabled`, sin clases inyectadas
 // por JS). El JS (`monthly-view.ts`) hidrata las opciones y el estado.
-interface MonthOption {
-  value: string;
-  label: string;
-}
-
-interface Props {
+interface Props extends HTMLAttributes<"select"> {
   id: string;
-  months?: MonthOption[];
-  selected?: string;
   class?: string;
 }
 
-const {
-  id,
-  months = [],
-  selected = "",
-  class: className = "",
-} = Astro.props;
+const { id, class: className = "", ...rest } = Astro.props;
 
 const prevId = `${id}-prev`;
 const nextId = `${id}-next`;
@@ -38,19 +27,7 @@ const nextId = `${id}-next`;
   >
     <Icon name="boxicons:chevron-left-filled" size={18} />
   </button>
-  <select id={id} class="select select-sm gap-2 bg-base-100">
-    {
-      months.map((opt) => (
-        <option
-          value={opt.value}
-          selected={opt.value === selected}
-          class="bg-base-100 text-base-content"
-        >
-          {opt.label}
-        </option>
-      ))
-    }
-  </select>
+  <select id={id} class="select select-sm gap-2 bg-base-100" {...rest}></select>
   <button
     type="button"
     id={nextId}

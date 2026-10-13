@@ -182,6 +182,42 @@ test.describe("navegador de mes único", () => {
     expect([current, next]).toContain(month);
   });
 
+  test("cada flecha se deshabilita según la disponibilidad en su dirección", async ({
+    context,
+    page,
+  }) => {
+    const current = monthOffset(0);
+    const next = monthOffset(1);
+    const before = monthOffset(-6);
+    const after = monthOffset(6);
+
+    await setSessionCookie(context, user.signedSessionId);
+    await stubCronogramaGet(page, () => ({
+      operators: [operatorWithDate(`${current}-10`)],
+      weekendOvertimeConfigs: [],
+      availableMonths: [current, next],
+      activeMonth: current,
+    }));
+    await gotoAndWait(page);
+
+    const setDate = (ym: string) =>
+      page.evaluate((value) => {
+        const el = document.getElementById("date-input") as HTMLInputElement;
+        el.value = `${value}-01`;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }, ym);
+
+    // Mes anterior a todos los disponibles: no hay "anterior" → prev disabled.
+    await setDate(before);
+    await expect(page.locator("#month-selector-prev")).toBeDisabled();
+    await expect(page.locator("#month-selector-next")).toBeEnabled();
+
+    // Mes posterior a todos los disponibles: no hay "siguiente" → next disabled.
+    await setDate(after);
+    await expect(page.locator("#month-selector-prev")).toBeEnabled();
+    await expect(page.locator("#month-selector-next")).toBeDisabled();
+  });
+
   test("tras crear un mes, el select queda en el mes creado", async ({
     context,
     page,
