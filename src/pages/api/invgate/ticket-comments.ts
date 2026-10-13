@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getTicketComments } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 
 export const GET: APIRoute = async ({ url, locals }) => {
@@ -17,7 +18,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       return jsonResponse({ error: "request_id inválido o faltante" }, 400);
     }
 
-    const result = await getTicketComments(requestId, 3950, isNaN(creatorId as number) ? undefined : creatorId);
+    const result = await getTicketComments(requestId, AGS_HELPDESK_ID, isNaN(creatorId as number) ? undefined : creatorId);
 
     if (!result.ok) {
       return jsonResponse({ error: result.message || "Error al obtener comentarios", comments: [], commenting_operators: [] }, 500);

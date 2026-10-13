@@ -15,6 +15,7 @@ import {
   getLockStatus,
 } from "@lib/disponibilidad";
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import { AUTOGESTION_AUTOMATION_RULES } from "@/lib/autogestion/rulesEngine";
 import { getAutogestionRuleStates, resolveRuleEnabled } from "@/lib/autogestion/ruleState";
 import { getCsrfTokenForSession } from "@lib/csrf";
@@ -141,8 +142,8 @@ const nextSuggestedOperators = availableOperators.length > 0
     }).slice(0, 10)
   : [];
 
-// Fetch unassigned InvGate tickets for Helpdesk 3950
-const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+// Fetch unassigned InvGate tickets for the autogestions helpdesk
+const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
 const unassignedTickets = unassignedRes.tickets;
 const unassignedCount = unassignedTickets.length;
 
@@ -359,7 +360,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             <div class="flex items-center gap-2.5 min-w-0">
               <Icon name="boxicons:inbox" size={22} class="text-secondary shrink-0" />
               <h3 class="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-base-content/80 truncate">
-                Sin Asignar (Mesa 3950)
+                Sin Asignar (Mesa #${AGS_HELPDESK_ID})
               </h3>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -966,7 +967,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
               <span id="automation-active-count" class="badge badge-secondary badge-soft font-mono font-bold text-xs">{activeRulesCount} activa{activeRulesCount !== 1 ? "s" : ""}</span>
             </div>
             <p class="text-xs text-base-content/60">
-              Reglas y patrones programados para la asignación inteligente y distribución autónoma de tickets en Helpdesk 3950
+              Reglas y patrones programados para la asignación inteligente y distribución autónoma de tickets en la mesa de autogestiones
             </p>
           </div>
         </div>
@@ -1268,7 +1269,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
       <!-- Modal Footer -->
       <div class="p-4 sm:p-5 bg-base-200/40 border-t border-base-300 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <span class="text-xs text-base-content/45 font-medium text-center sm:text-left">Mesa de Ayuda #3950</span>
+        <span class="text-xs text-base-content/45 font-medium text-center sm:text-left">Mesa de Ayuda #${AGS_HELPDESK_ID}</span>
         <div class="flex flex-wrap items-center justify-end gap-2">
           <button
             id="ticket-modal-assign-to-btn"
@@ -1396,7 +1397,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
       <!-- Footer -->
       <div class="p-3.5 sm:p-4 bg-base-200/40 border-t border-base-300 flex items-center justify-between">
-        <span class="text-xs text-base-content/45 font-medium">Mesa de Ayuda #3950</span>
+        <span class="text-xs text-base-content/45 font-medium">Mesa de Ayuda #${AGS_HELPDESK_ID}</span>
         <form method="dialog">
           <button class="btn btn-sm btn-ghost font-semibold rounded-lg">Cerrar</button>
         </form>
@@ -3092,7 +3093,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       });
     }
 
-    // Fetch unassigned tickets for Helpdesk 3950 (con abort controller & anti-solapamiento)
+    // Fetch unassigned tickets for the autogestions helpdesk (con abort controller & anti-solapamiento)
     let isFetchingTickets = false;
     const fetchUnassignedTickets = async () => {
       if (isFetchingTickets) return;
@@ -3102,7 +3103,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       ticketsAbortController = new AbortController();
 
       try {
-        const res = await fetch("/api/invgate/unassigned-tickets?helpdesk_id=3950", {
+        const res = await fetch(`/api/invgate/unassigned-tickets?helpdesk_id=${AGS_HELPDESK_ID}`, {
           signal: ticketsAbortController.signal,
         });
         if (!res.ok) return;

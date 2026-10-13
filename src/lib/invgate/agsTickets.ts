@@ -4,6 +4,7 @@ import { getCategoryMap, getLastCategoryName } from "./categoryCache";
 import { getFullUserMap } from "./userCache";
 import { getHelpdeskMemberIdSet, getHelpdeskMemberMap, type HelpdeskMemberUser } from "./helpdeskMembersCache";
 import { getLocationsMap } from "./locationsMapCache";
+import { AGS_HELPDESK_ID } from "./agsHelpdesk";
 
 export interface CommentingOperator {
   id: number;
@@ -36,20 +37,20 @@ let unassignedTicketsCache: { data: UnassignedTicketsResult; timestamp: number }
 const UNASSIGNED_CACHE_TTL_MS = 25 * 1000; // 25 segundos
 
 /**
- * Invalida el caché en memoria de tickets sin asignar de la mesa 3950.
+ * Invalida el caché en memoria de tickets sin asignar de la mesa de autogestiones.
  */
 export function invalidateUnassignedTicketsCache(): void {
   unassignedTicketsCache = null;
 }
 
 /**
- * Trae los tickets sin asignar de una mesa de ayuda (por defecto ID 3950).
+ * Trae los tickets sin asignar de una mesa de ayuda (por defecto la de autogestiones).
  */
 export async function getUnassignedTicketsByHelpdesk(
-  helpdeskId: number = 3950
+  helpdeskId: number = AGS_HELPDESK_ID
 ): Promise<UnassignedTicketsResult> {
   const now = Date.now();
-  if (helpdeskId === 3950 && unassignedTicketsCache && now - unassignedTicketsCache.timestamp < UNASSIGNED_CACHE_TTL_MS) {
+  if (helpdeskId === AGS_HELPDESK_ID && unassignedTicketsCache && now - unassignedTicketsCache.timestamp < UNASSIGNED_CACHE_TTL_MS) {
     return unassignedTicketsCache.data;
   }
 
@@ -75,7 +76,7 @@ export async function getUnassignedTicketsByHelpdesk(
         helpdeskId,
         tickets: [],
       };
-      if (helpdeskId === 3950) {
+      if (helpdeskId === AGS_HELPDESK_ID) {
         unassignedTicketsCache = { data: emptyResult, timestamp: now };
       }
       return emptyResult;
@@ -149,7 +150,7 @@ export async function getUnassignedTicketsByHelpdesk(
       tickets: enrichedTickets,
     };
 
-    if (helpdeskId === 3950) {
+    if (helpdeskId === AGS_HELPDESK_ID) {
       unassignedTicketsCache = { data: result, timestamp: Date.now() };
     }
 
@@ -170,7 +171,7 @@ export async function getUnassignedTicketsByHelpdesk(
 export async function reassignTicketToAgent(
   requestId: number,
   agentId: number,
-  helpdeskId: number = 3950,
+  helpdeskId: number = AGS_HELPDESK_ID,
   authorId: number = 1
 ): Promise<{ ok: boolean; message?: string }> {
   try {
@@ -313,7 +314,7 @@ const COMMENTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
  */
 export async function getTicketComments(
   requestId: number,
-  helpdeskId: number = 3950,
+  helpdeskId: number = AGS_HELPDESK_ID,
   creatorId?: number
 ): Promise<TicketCommentsResult> {
   const cacheKey = `${requestId}_${creatorId || 0}`;

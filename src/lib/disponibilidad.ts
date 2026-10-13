@@ -4,6 +4,7 @@ import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { activeAgentCondition } from "@lib/activeUsers";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
 import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment, invalidateUnassignedTicketsCache } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import {
   getWiseCxPresenceMap,
   findWiseCxPresenceForAgent,
@@ -222,8 +223,8 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
   ];
   const dayName = dayNames[now.getDay()];
 
-  // Obtener miembros de la Mesa 3950 de InvGate
-  const helpdeskMembers = await getHelpdeskMembers(3950);
+  // Obtener miembros de la mesa de autogestiones
+  const helpdeskMembers = await getHelpdeskMembers(AGS_HELPDESK_ID);
   const helpdeskUsernames = new Set(
     helpdeskMembers
       .map((m) => (m.username ? m.username.split("@")[0].toLowerCase().trim() : ""))
@@ -261,7 +262,7 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
     .leftJoin(users, eq(users.id, agents.userId))
     .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
 
-  // Filtrar solo operadores que pertenecen a la Mesa 3950 de InvGate
+  // Filtrar solo operadores que pertenecen a la mesa de autogestiones
   const dbAgents = dbAgentsAll.filter((agent) => {
     if (helpdeskMembers.length === 0) return true; // Fallback por seguridad si falla InvGate
     
@@ -643,47 +644,6 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
     info.proximoTurnoDisponible = proximoTurno.proximoTurnoDisponible;
     info.proximoTurnoMotivo = proximoTurno.proximoTurnoMotivo;
 
-    // =========================================================================
-    // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS]
-    // INICIO: Forzar disponibilidad para operadores solicitados y/o estados de devolución
-    // para pruebas de asignación de autogestiones y visualización en la cola.
-    // Permite que Ignacio Revainera, Altamirano Darío, Franco González y Malena
-    // López Rojas (o cualquier operador en Devolución Supervisión) figuren
-    // disponibles y próximos en cola.
-    // INSTRUCCIONES DE REVERSIÓN: Eliminar este bloque condicional completo.
-    // =========================================================================
-    const testTargetNames = [
-      "ignacio revainera",
-      "altamirano dario",
-      "dario altamirano",
-      "franco gonzalez",
-      "malena lopez rojas",
-      "lopez rojas malena",
-    ];
-    const normAgentName = (agent.name || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-    const isTargetTestOperator = testTargetNames.some((target) => {
-      const parts = target.split(" ");
-      return parts.every((p) => normAgentName.includes(p));
-    });
-
-    const isDevolucion =
-      (info.wiseCxStatus || "").toLowerCase().includes("devolucion") ||
-      (info.motivo || "").toLowerCase().includes("devolucion");
-
-    if (isTargetTestOperator || isDevolucion) {
-      info.disponible = true;
-      delete info.motivo;
-      delete info.retornoEstimado;
-    }
-    // =========================================================================
-    // [TEMPORAL_TESTING_AUTOGESTIONES - BORRAR DESPUÉS DE PRUEBAS] FIN
-    // =========================================================================
-
     return info;
   });
 
@@ -733,8 +693,8 @@ export async function asignarSiguienteAutogestion(
   const winner = available[0];
   const now = Date.now();
 
-  // Consultar ticket sin asignar de InvGate Mesa 3950
-  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+  // Consultar ticket sin asignar en la mesa de autogestiones
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
   if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
       success: false,
@@ -746,12 +706,12 @@ export async function asignarSiguienteAutogestion(
   if (!winner.invgateId) {
     return {
       success: false,
-      error: `El operador ${winner.nombre} no tiene un ID de InvGate vinculado en Mesa 3950.`,
+      error: `El operador ${winner.nombre} no tiene un ID de InvGate vinculado en Mesa ${AGS_HELPDESK_ID}.`,
     };
   }
   const targetInvgateId = winner.invgateId;
   const authorId = authorInvgateId || targetInvgateId || 1;
-  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, 3950, authorId);
+  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, AGS_HELPDESK_ID, authorId);
   if (!reassignRes.ok) {
     return {
       success: false,
@@ -821,8 +781,8 @@ export async function asignarManual(
   const list = await getDisponibilidadHoy();
   const targetAgent = list.find((a) => a.agentId === agentId);
 
-  // Consultar ticket sin asignar de InvGate Mesa 3950
-  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+  // Consultar ticket sin asignar en la mesa de autogestiones
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
   if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
       success: false,
@@ -838,7 +798,7 @@ export async function asignarManual(
     if (ticketId) {
       return {
         success: false,
-        error: `El ticket #${ticketId} ya no se encuentra sin asignar en la Mesa 3950.`,
+        error: `El ticket #${ticketId} ya no se encuentra sin asignar en la Mesa ${AGS_HELPDESK_ID}.`,
       };
     }
     targetTicket = unassignedRes.tickets[0];
@@ -847,12 +807,12 @@ export async function asignarManual(
   if (!targetAgent?.invgateId) {
     return {
       success: false,
-      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa 3950.`,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa ${AGS_HELPDESK_ID}.`,
     };
   }
   const targetInvgateId = targetAgent.invgateId;
   const authorId = authorInvgateId || targetInvgateId || 1;
-  const reassignRes = await reassignTicketToAgent(targetTicket.id, targetInvgateId, 3950, authorId);
+  const reassignRes = await reassignTicketToAgent(targetTicket.id, targetInvgateId, AGS_HELPDESK_ID, authorId);
   if (!reassignRes.ok) {
     return {
       success: false,
@@ -939,7 +899,7 @@ export async function asignarYPosponer(
   if (!targetAgent?.invgateId) {
     return {
       success: false,
-      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa 3950.`,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa ${AGS_HELPDESK_ID}.`,
     };
   }
 
@@ -947,7 +907,7 @@ export async function asignarYPosponer(
   const authorId = authorInvgateId || targetInvgateId || 1;
 
   // 1. Reasignar ticket al operador
-  const reassignRes = await reassignTicketToAgent(ticketId, targetInvgateId, 3950, authorId);
+  const reassignRes = await reassignTicketToAgent(ticketId, targetInvgateId, AGS_HELPDESK_ID, authorId);
   if (!reassignRes.ok) {
     return {
       success: false,
@@ -1039,7 +999,7 @@ export async function asignarSugeridasAutogestion(
   authorInvgateId?: number
 ): Promise<BatchAssignmentResult> {
   const list = await getDisponibilidadHoy();
-  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
 
   if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
@@ -1092,7 +1052,7 @@ export async function asignarSugeridasAutogestion(
   for (let i = 0; i < pairs.length; i++) {
     const { ticket, op } = pairs[i];
     const authorId = authorInvgateId || op.invgateId || 1;
-    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, 3950, authorId);
+    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, AGS_HELPDESK_ID, authorId);
     const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
 
     if (reassignRes.ok) {
@@ -1188,7 +1148,7 @@ export async function asignarTodasEnCola(
     return tA - tB;
   });
 
-  const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
   if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
       success: false,
@@ -1209,7 +1169,7 @@ export async function asignarTodasEnCola(
     const ticket = unassignedRes.tickets[i];
     const op = available[i];
     const authorId = authorInvgateId || op.invgateId || 1;
-    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, 3950, authorId);
+    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, AGS_HELPDESK_ID, authorId);
     const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
 
     if (reassignRes.ok) {

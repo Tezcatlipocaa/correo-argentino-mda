@@ -1,12 +1,13 @@
 import type { APIRoute } from "astro";
 import { getAssignmentHistory } from "@lib/disponibilidad";
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 
 export const GET: APIRoute = async () => {
   try {
     const history = await getAssignmentHistory(50);
-    const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+    const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
     const unassignedTicketIds = new Set(
       unassignedRes.ok ? unassignedRes.tickets.map((t) => t.id) : []
     );

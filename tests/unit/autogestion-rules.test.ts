@@ -185,7 +185,9 @@ describe("Autogestión Automation Rules - Solicitud rechazada en revisión", () 
     expect(ruleDoc).toBeDefined();
     expect(ruleDoc?.name).toContain("Rechazada");
     expect(ruleDoc?.intervalMinutes).toBe(10);
-    expect(ruleDoc?.status).toBe("active");
+    // El catálogo arranca apagado a propósito: un deploy con `active` asigna
+    // tickets reales apenas la app levanta. Encenderla es decisión operativa.
+    expect(ruleDoc?.status).toBe("inactive");
     expect(ruleDoc?.conditions.length).toBeGreaterThanOrEqual(3);
   });
 

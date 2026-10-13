@@ -17,6 +17,9 @@ vi.mock("@/lib/invgate/helpdeskMembersCache", () => ({
   ]),
 }));
 
+// Clasificación real de "Devolución Supervisión": bloqueante, no asignable para
+// autogestiones. El override que la forzaba a disponible se retiró al desplegar
+// las automatizaciones a producción (issue #290).
 vi.mock("@/lib/wise-cx-presence", async () => {
   const actual = await vi.importActual<any>("@/lib/wise-cx-presence");
   return {
@@ -25,22 +28,22 @@ vi.mock("@/lib/wise-cx-presence", async () => {
       {
         fullName: "Ignacio Revainera",
         status: "Devolución Supervisión",
-        statusCategory: "disponible", // categorizado por el override
-        badgeVariant: "info",
+        statusCategory: "bloqueante",
+        badgeVariant: "error",
         inCall: false,
       },
       {
         fullName: "Altamirano Dario",
         status: "Devolución Supervisión",
-        statusCategory: "disponible",
-        badgeVariant: "info",
+        statusCategory: "bloqueante",
+        badgeVariant: "error",
         inCall: false,
       },
       {
         fullName: "Franco Gonzalez",
         status: "Devolución Supervisión",
-        statusCategory: "disponible",
-        badgeVariant: "info",
+        statusCategory: "bloqueante",
+        badgeVariant: "error",
         inCall: false,
       },
     ]),
@@ -50,12 +53,12 @@ vi.mock("@/lib/wise-cx-presence", async () => {
 import { db } from "@db/index";
 import { getDisponibilidadHoy } from "@lib/disponibilidad";
 
-describe("Disponibilidad Override - Testing Autogestiones", () => {
+describe("Disponibilidad - Devolución Supervisión no es asignable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("debe evaluar a los operadores en Devolución Supervisión (y a los 3 asignados) con disponible = true", async () => {
+  it("debe marcar como no disponible a los operadores en Devolución Supervisión", async () => {
     const mockAgents = [
       {
         id: 1,
@@ -109,7 +112,7 @@ describe("Disponibilidad Override - Testing Autogestiones", () => {
 
     expect(result.length).toBe(3);
     for (const op of result) {
-      expect(op.disponible).toBe(true);
+      expect(op.disponible).toBe(false);
     }
   });
 });

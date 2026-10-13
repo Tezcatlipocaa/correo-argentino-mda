@@ -6,6 +6,7 @@ import {
   addTicketComment,
   invalidateUnassignedTicketsCache,
 } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import type { AgentDisponibilidad } from "@lib/disponibilidad";
 import type {
   AutogestionRuleDoc,
@@ -32,6 +33,11 @@ export const RULE_IDS = {
  *
  * OJO: `status` es el estado por DEFAULT, no el estado real. El estado real vive
  * en la tabla `autogestion_rule_state` (ver `ruleState.ts`).
+ *
+ * Las reglas arrancan en `inactive` a propósito: un despliegue con el catálogo
+ * en `active` asigna tickets reales apenas alguien levanta la app. Encenderlas
+ * es una decisión operativa explícita (toggle del supervisor o fila en la tabla),
+ * no el estado inicial de un fresh install.
  */
 export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
   {
@@ -40,7 +46,7 @@ export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
     name: "Devolución de Solicitudes Rechazadas",
     description:
       "Asigna de manera autónoma al operador creador aquellos tickets que ingresan a la mesa con la categoría 'Solicitud rechazada en revisión', permitiendo que el operador subsane o complete la gestión de forma inmediata.",
-    status: "active",
+    status: "inactive",
     intervalMinutes: 10,
     triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 1)",
     conditions: [
@@ -75,13 +81,13 @@ export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
     name: "Asignación Cíclica de Nuevas Autogestiones",
     description:
       "Distribuye de manera autónoma las nuevas autogestiones de categorías generales al operador disponible que encabeza la fila de espera cíclica (mayor tiempo sin recibir AGS o sin asignaciones previas hoy).",
-    status: "active",
+    status: "inactive",
     intervalMinutes: 10,
     triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 2, posterior a Solicitudes Rechazadas)",
     conditions: [
       {
         label: "Categoría General / Cliente",
-        description: "Tickets de la mesa 3950 que no correspondan a 'Solicitud rechazada en revisión' (o creados por clientes externos).",
+        description: "Tickets de la mesa de autogestiones que no correspondan a 'Solicitud rechazada en revisión' (o creados por clientes externos).",
         required: true,
       },
       {
@@ -192,8 +198,8 @@ export async function executeAutoAssignment(
   const authorId = targetInvgateId || 1;
 
   try {
-    // 1. Reasignar ticket en InvGate Helpdesk 3950
-    const reassignRes = await reassignTicketToAgent(ticketId, targetInvgateId, 3950, authorId);
+    // 1. Reasignar ticket en la mesa de autogestiones
+    const reassignRes = await reassignTicketToAgent(ticketId, targetInvgateId, AGS_HELPDESK_ID, authorId);
     if (!reassignRes.ok) {
       return {
         success: false,

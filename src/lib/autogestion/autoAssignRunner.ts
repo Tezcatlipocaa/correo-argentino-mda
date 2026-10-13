@@ -1,4 +1,5 @@
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import { getDisponibilidadHoy } from "@lib/disponibilidad";
 import { evaluateAllAutogestionRules, executeAutoAssignment, AUTOGESTION_AUTOMATION_RULES } from "./rulesEngine";
 import { getAutogestionRuleStates, resolveRuleEnabled } from "./ruleState";
@@ -66,8 +67,8 @@ export async function runAutoAssignCycle(
       return result;
     }
 
-    // 1. Obtener tickets sin asignar de la mesa de autogestión (3950)
-    const unassignedRes = await getUnassignedTicketsByHelpdesk(3950);
+    // 1. Obtener tickets sin asignar de la mesa de autogestiones
+    const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
     if (!unassignedRes.ok) {
       const err = `Error al consultar tickets sin asignar de InvGate: ${unassignedRes.error || "Desconocido"}`;
       console.error(`[AutoAssignRunner] ${err}`);

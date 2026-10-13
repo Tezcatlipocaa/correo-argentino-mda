@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { AUTOGESTION_AUTOMATION_RULES } from "@/lib/autogestion/rulesEngine";
 
 describe("Autogestión UI Documentation - Catálogo documental", () => {
-  it("debe contener la lista de reglas activas para el supervisor", () => {
+  it("debe contener el catálogo de reglas para el supervisor, todas apagadas por default", () => {
     expect(AUTOGESTION_AUTOMATION_RULES.length).toBeGreaterThan(0);
     const rejectedRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "solicitud_rechazada");
     expect(rejectedRule).toBeDefined();
-    expect(rejectedRule?.status).toBe("active");
+    expect(rejectedRule?.status).toBe("inactive");
   });
 
   it("la regla de solicitudes rechazadas debe documentar la cadencia de 10 minutos y sus condiciones", () => {
@@ -33,7 +33,7 @@ describe("Autogestión UI Documentation - Catálogo documental", () => {
     const cyclicRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "asignacion_ciclica_general");
     expect(cyclicRule).toBeDefined();
     expect(cyclicRule?.priority).toBe(2);
-    expect(cyclicRule?.status).toBe("active");
+    expect(cyclicRule?.status).toBe("inactive");
     expect(cyclicRule?.intervalMinutes).toBe(10);
     expect(cyclicRule?.triggerEvent).toContain("Prioridad 2");
 

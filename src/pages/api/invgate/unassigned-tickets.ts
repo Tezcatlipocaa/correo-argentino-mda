@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getUnassignedTicketsByHelpdesk } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 
 export const GET: APIRoute = async ({ url, locals }) => {
@@ -9,7 +10,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
   try {
     const helpdeskParam = url.searchParams.get("helpdesk_id");
-    const helpdeskId = helpdeskParam ? parseInt(helpdeskParam, 10) : 3950;
+    const helpdeskId = helpdeskParam ? parseInt(helpdeskParam, 10) : AGS_HELPDESK_ID;
 
     if (isNaN(helpdeskId)) {
       return jsonResponse({ error: "helpdesk_id inválido" }, 400);

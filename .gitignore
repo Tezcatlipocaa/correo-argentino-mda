@@ -1,3 +1,6 @@
+# worktrees locales (lanes paralelas)
+.slim/
+
 # build output
 dist/
 # generated types
