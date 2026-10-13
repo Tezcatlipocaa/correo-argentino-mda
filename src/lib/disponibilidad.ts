@@ -771,9 +771,6 @@ export async function asignarSiguienteAutogestion(
 
   const ticketAssigned = oldestTicket.pretty_id || `#${oldestTicket.id}`;
 
-  // Clear any existing undo states
-  await db.update(agents).set({ lastAutogestionUndo: null });
-
   const prevValue = winner.lastAutogestionAssignedAt;
 
   // Update in DB
@@ -887,9 +884,6 @@ export async function asignarManual(
   const assignTime = Date.now();
 
   if (!skipQueueUpdate) {
-    // Clear any existing undo states
-    await db.update(agents).set({ lastAutogestionUndo: null });
-
     // Update lastAutogestionAssignedAt for the manually assigned agent
     await db
       .update(agents)
@@ -993,9 +987,7 @@ export async function asignarYPosponer(
   const assignTime = Date.now();
 
   if (!skipQueueUpdate) {
-    // 3. Limpiar undo y actualizar estado del agente
-    await db.update(agents).set({ lastAutogestionUndo: null });
-
+    // 3. Actualizar estado del agente
     await db
       .update(agents)
       .set({

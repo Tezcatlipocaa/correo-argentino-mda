@@ -1,10 +1,45 @@
 import type { APIRoute } from "astro";
 import { reassignTicketToAgent } from "@lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@lib/invgate/agsHelpdesk";
 import { getDisponibilidadHoy } from "@lib/disponibilidad";
 import { db } from "@db/index";
-import { assignmentHistory } from "@db/schema";
+import { agents, assignmentHistory } from "@db/schema";
+import { and, desc, eq, inArray, lt, ne } from "drizzle-orm";
 import { requireWriteAccess } from "@lib/rbac-middleware";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
+
+/**
+ * Restaura la rotación cíclica del operador al que se le deshizo una asignación.
+ *
+ * El valor previo NO sale de `agents.last_autogestion_undo`: esa columna es un
+ * slot único por agente que las rutas de asignación borran globalmente, así que
+ * solo conserva la última asignación del sistema. Se deriva del historial: la
+ * última fila no-deshecha de este ticket identifica al operador, y la fila
+ * inmediatamente anterior de ese mismo operador es el timestamp a restaurar.
+ *
+ * Si la asignación era de la regla P1 (solicitud rechazada), que no escribe
+ * `last_autogestion_assigned_at` porque corre con skipQueueUpdate, la fila
+ * anterior es la última asignación cíclica real y la restauración es un no-op:
+ * el valor actual ya es ese.
+ */
+async function restoreCyclicRotation(agentId: number, assignedAt: number): Promise<void> {
+  const [previous] = await db
+    .select({ assignedAt: assignmentHistory.assignedAt })
+    .from(assignmentHistory)
+    .where(
+      and(
+        eq(assignmentHistory.agentId, agentId),
+        lt(assignmentHistory.assignedAt, assignedAt)
+      )
+    )
+    .orderBy(desc(assignmentHistory.assignedAt))
+    .limit(1);
+
+  await db
+    .update(agents)
+    .set({ lastAutogestionAssignedAt: previous?.assignedAt ?? null })
+    .where(eq(agents.id, agentId));
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = await requireWriteAccess(locals, "asignacion_ag");
@@ -27,17 +62,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const loggedOp = list.find((op) => op.username && op.username.split("@")[0].toLowerCase().trim() === userClean);
     const authorInvgateId = loggedOp?.invgateId || 1;
 
+    // Última asignación viva de este ticket (sin deshacer): define a quién se le
+    // revierte la rotación. Sin ella el ticket se devuelve igual a la cola, pero
+    // no hay operador al que restituirle su turno.
+    const [currentAssignment] = await db
+      .select({
+        agentId: assignmentHistory.agentId,
+        agentName: assignmentHistory.agentName,
+        assignedAt: assignmentHistory.assignedAt,
+      })
+      .from(assignmentHistory)
+      .where(
+        and(
+          inArray(assignmentHistory.ticketNumber, [`#${numericId}`, String(ticketNumber)]),
+          ne(assignmentHistory.type, "undo")
+        )
+      )
+      .orderBy(desc(assignmentHistory.assignedAt))
+      .limit(1);
+
     // Call InvGate QA to reassign ticket to agent_id: 0 (unassigned)
-    const reassignRes = await reassignTicketToAgent(numericId, 0, 3950, authorInvgateId);
+    const reassignRes = await reassignTicketToAgent(numericId, 0, AGS_HELPDESK_ID, authorInvgateId);
     if (!reassignRes.ok) {
       return jsonResponse({ success: false, error: `Error al desasignar ticket #${numericId} en InvGate: ${reassignRes.message}` }, 400);
     }
 
-    // Log history undo event
+    // Log history undo event con el operador real: el cooldown de la P1 y la
+    // trazabilidad del supervisor dependen de este agentId (antes era 0).
     try {
       await db.insert(assignmentHistory).values({
-        agentId: 0,
-        agentName: "Sin Asignar",
+        agentId: currentAssignment?.agentId ?? 0,
+        agentName: currentAssignment?.agentName || "Sin Asignar",
         ticketNumber: `#${numericId}`,
         assignedBy: `Deshecho por ${locals.user?.username || "Sistema"}`,
         assignedAt: Date.now(),
@@ -45,6 +100,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } catch (hErr) {
       console.error("Error logging undo ticket history:", hErr);
+    }
+
+    if (currentAssignment) {
+      try {
+        await restoreCyclicRotation(currentAssignment.agentId, currentAssignment.assignedAt);
+      } catch (rErr) {
+        // El ticket ya volvió a la cola en InvGate: una falla al restituir la
+        // rotación no debe reportarse como error del deshacer.
+        console.error("Error restaurando rotación cíclica al deshacer:", rErr);
+      }
     }
 
     return jsonResponse({ success: true, message: `Ticket #${numericId} devuelto a sin asignar.` }, 200);
