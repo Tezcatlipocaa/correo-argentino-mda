@@ -278,7 +278,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               <!-- Left: Title, Navigation & Maximize button -->
               <div class="flex shrink-0 flex-wrap items-center gap-3">
                 <!-- Month Navigator -->
-                <MonthNavigator id="month-selector" class="ml-2" />
+                <MonthNavigator
+                  id="month-selector"
+                  class="ml-2"
+                  aria-label="Mes de la vista Mensual"
+                />
 
                 <!-- Agregar nuevo mes -->
                 <ActionButton
@@ -448,7 +452,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             title="Configuración de Grupos"
             subtitle="Establece la rotación y horarios de sábados aplicados únicamente al mes seleccionado."
           >
-            <MonthNavigator id="groups-month-selector" class="shrink-0" />
+            <MonthNavigator
+              id="groups-month-selector"
+              class="shrink-0"
+              aria-label="Mes de la vista Grupal"
+            />
           </CronoCardHeader>
           <!-- Configuration form -->
           <div
@@ -881,7 +889,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             iconBg="bg-info/15"
             iconColor="text-info"
           >
-            <MonthNavigator id="pasiva-month-selector" class="shrink-0" />
+            <MonthNavigator
+              id="pasiva-month-selector"
+              class="shrink-0"
+              aria-label="Mes de la vista Pasiva"
+            />
           </CronoCardHeader>
           <div class="overflow-x-auto">
             <table
