@@ -246,7 +246,7 @@ test.describe("navegador de mes único", () => {
     await gotoAndWait(page);
 
     await page.click("#add-month-btn");
-    await page.fill("#new-month-year", String(futureYear));
+    await page.selectOption("#new-month-year", String(futureYear));
     await page.selectOption("#new-month-month", String(futureMonth - 1));
     await page.click("#confirm-new-month");
 
