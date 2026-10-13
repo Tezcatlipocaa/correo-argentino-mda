@@ -14,6 +14,8 @@ import {
 import { normalizeRole, hasPermission } from "@lib/rbac";
 import { isSectionVisibleSync } from "@lib/helpdeskAccess";
 import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
+import { COLUMN_CAP_SM, COLUMN_CAP_LG } from "@lib/enlacesColumns";
+import { DEFAULT_VIEW_COLUMNS } from "@lib/viewMode";
 import { ClientRouter } from "astro:transitions";
 
 // Components
@@ -145,7 +147,10 @@ const globalFontFaceCss = `
     <meta charset="utf-8" />
     {isAutomationModule && <ClientRouter />}
 
-    <script is:inline>
+    <script
+      is:inline
+      define:vars={{ capSm: COLUMN_CAP_SM, capLg: COLUMN_CAP_LG, defaultColumns: DEFAULT_VIEW_COLUMNS }}
+    >
       const applyTheme = () => {
         const savedTheme = localStorage.getItem("theme");
         const theme =
@@ -158,20 +163,19 @@ const globalFontFaceCss = `
           root.setAttribute("data-view-mode", mode);
         }
         const cols = localStorage.getItem("enlacesViewColumns");
-        if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
-          // Cap responsive: espeja getColumnCap() de EnlacesContent.astro
-          // (fuente de verdad) para que el ancho del primer frame no exceda lo
-          // que el island fijara al hidratar -> sin relayout. El grid aun no
-          // existe en <head>, se aproxima con el viewport; los umbrales son los
-          // mismos 768/1280 de getColumnCap.
-          const width = window.innerWidth;
-          const cap = width < 768 ? 1 : width < 1280 ? 2 : 4;
-          const effective = String(Math.min(Number(cols), cap));
-          root.setAttribute("data-view-columns", effective);
-          // Ancho del grid antes del primer paint (el island llega despues):
-          // evita el relayout 3 -> N. El default 3 vive en global.css (:root).
-          root.style.setProperty("--columns-effective", effective);
-        }
+        // 767/1280: umbrales de @lib/enlacesColumns (fuente única, inyectada).
+        const cap = window.innerWidth < capSm ? 1 : window.innerWidth < capLg ? 2 : 4;
+        const pref =
+          cols === "1" || cols === "2" || cols === "3" || cols === "4"
+            ? Number(cols)
+            : defaultColumns;
+        // Se aplica SIEMPRE (no solo con valor guardado): cubre al usuario
+        // default (sin localStorage), que si no pintaria el :root 3 y el
+        // island lo bajaria al cap -> flash. Mismo ancho (viewport) y mismo
+        // calculo que applyEffectiveColumns() del island, sobre <html>.
+        const effective = String(Math.min(pref, cap));
+        root.setAttribute("data-view-columns", effective);
+        root.style.setProperty("--columns-effective", effective);
 
         const toggle = document.getElementById("theme-toggle");
         if (toggle instanceof HTMLInputElement) {

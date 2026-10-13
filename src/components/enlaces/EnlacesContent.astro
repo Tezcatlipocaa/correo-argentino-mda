@@ -255,6 +255,7 @@ const cleanBase = getCleanBase();
     type ViewMode,
     type ViewColumns,
   } from "@lib/viewMode";
+  import { resolveEffectiveColumns } from "@lib/enlacesColumns";
 
   const searchInput = document.getElementById(
     "important-links-search",
@@ -272,18 +273,12 @@ const cleanBase = getCleanBase();
 
   const GAP = 8;
 
-  // Máximo de columnas según el ancho del contenedor (responsive)
-  const getColumnCap = (): ViewColumns => {
-    const width = linksGrid?.offsetWidth ?? 0;
-    if (width < 768) return 1;
-    if (width < 1280) return 2;
-    return 4;
-  };
-
-  // Columnas efectivas: preferencia del usuario (localStorage, intacta)
-  // acotada por responsive. El atributo en <html> es solo salida (CSS highlight)
+  // Columnas efectivas: preferencia del usuario (localStorage, intacta) acotada
+  // por el cap responsive. El cap y los umbrales viven en @lib/enlacesColumns
+  // (fuente única compartida con el script inline pre-paint de BaseLayout) y se
+  // miden sobre el MISMO ancho (viewport) para que el primer frame no discrepe.
   const getEffectiveColumns = (): ViewColumns =>
-    Math.min(getViewColumns(), getColumnCap()) as ViewColumns;
+    resolveEffectiveColumns(getViewColumns(), window.innerWidth);
 
   const getColumnWidth = (): number => {
     if (!linksGrid) return 0;
@@ -297,12 +292,17 @@ const cleanBase = getCleanBase();
     msnry.layout();
   };
 
-  // Aplica el conteo efectivo: atributo en <html> (alimentan el highlight de
-  // los tabs vía CSS), variable CSS de ancho y releo de masonry
+  // Aplica el conteo efectivo: atributo en <html> (alimenta el highlight de
+  // los tabs vía CSS), variable CSS de ancho en <html> (mismo nodo y mismo
+  // cálculo que el inline pre-paint: un único escritor convergente) y releo de
+  // masonry
   const applyEffectiveColumns = (): void => {
     const effective = getEffectiveColumns();
     document.documentElement.setAttribute("data-view-columns", String(effective));
-    linksGrid?.style.setProperty("--columns-effective", String(effective));
+    document.documentElement.style.setProperty(
+      "--columns-effective",
+      String(effective),
+    );
     layoutMasonry();
   };
 

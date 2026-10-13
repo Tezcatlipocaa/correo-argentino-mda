@@ -103,14 +103,18 @@ interface Recorder {
 
 async function record(
   page: import("@playwright/test").Page,
-  columns: number,
+  columns: number | null,
   viewport: { width: number; height: number } = { width: 1600, height: 900 },
 ) {
   await page.addInitScript(
     ({ cols, key }) => {
       try {
         window.localStorage.removeItem("enlacesViewMode");
-        window.localStorage.setItem(key, String(cols));
+        if (cols == null) {
+          window.localStorage.removeItem(key);
+        } else {
+          window.localStorage.setItem(key, String(cols));
+        }
       } catch {
         /* ignore */
       }
@@ -250,6 +254,76 @@ test.describe("/recursos — primer paint sin flash", () => {
 
     // Sin el clamp del script inline el primer frame mediria 4 columnas y
     // recien al hidratar el island saltaria a 2 -> relayout.
+    for (const [i, f] of withCards.entries()) {
+      expect(
+        Math.abs((f.firstWidth as number) - expected),
+        `frame #${i} (count=${f.count}) ancho ${f.firstWidth} ≠ cap ${CAP} col (${expected.toFixed(1)})`,
+      ).toBeLessThanOrEqual(2);
+    }
+
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-view-columns",
+      String(CAP),
+    );
+  });
+
+  // Regresión #123 (causa 1, caso borde): el inline usaba window.innerWidth y el
+  // island el ancho del contenedor, que va ~78-320px por detrás del viewport y
+  // encima topa en max-w-7xl (1280). En 1280/1366 el inline calculaba cap 4 y el
+  // island cap 2 -> primer frame a 4 y relayout a 2.
+  for (const width of [1280, 1366]) {
+    test(`viewport ${width} con 4 guardadas: sin salto 4→2 (cap consistente)`, async ({
+      context,
+      page,
+    }) => {
+      await setSessionCookie(context, admin.signedSessionId);
+      const rec = await record(page, 4, { width, height: 900 });
+
+      const withCards = rec.frames.filter(
+        (f) => f.count > 0 && f.firstWidth !== null && f.gridWidth,
+      );
+      expect(withCards.length, "hubo frames con tarjetas").toBeGreaterThan(0);
+
+      const CAP = 4;
+      const last = withCards[withCards.length - 1];
+      const gridWidth = last.gridWidth as number;
+      const expected = (gridWidth - 8 * (CAP - 1)) / CAP;
+
+      for (const [i, f] of withCards.entries()) {
+        expect(
+          Math.abs((f.firstWidth as number) - expected),
+          `frame #${i} (count=${f.count}) ancho ${f.firstWidth} ≠ cap ${CAP} col (${expected.toFixed(1)})`,
+        ).toBeLessThanOrEqual(2);
+      }
+
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-view-columns",
+        String(CAP),
+      );
+    });
+  }
+
+  // Regresión #123 (causa 1, usuario default): sin preferencia guardada el inline
+  // no tocaba nada, así que el primer frame pintaba el default :root (3) y el
+  // island lo bajaba al cap (2) -> flash 3→2. El fix aplica siempre
+  // min(saved ?? 3, cap).
+  test("usuario sin preferencia a 1200: sin salto 3→2", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, admin.signedSessionId);
+    const rec = await record(page, null, { width: 1200, height: 800 });
+
+    const withCards = rec.frames.filter(
+      (f) => f.count > 0 && f.firstWidth !== null && f.gridWidth,
+    );
+    expect(withCards.length, "hubo frames con tarjetas").toBeGreaterThan(0);
+
+    const CAP = 2;
+    const last = withCards[withCards.length - 1];
+    const gridWidth = last.gridWidth as number;
+    const expected = (gridWidth - 8 * (CAP - 1)) / CAP;
+
     for (const [i, f] of withCards.entries()) {
       expect(
         Math.abs((f.firstWidth as number) - expected),
