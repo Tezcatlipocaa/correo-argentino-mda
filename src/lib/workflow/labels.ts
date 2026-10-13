@@ -36,11 +36,13 @@ export function normalizeForCompare(raw: string): string {
 
 export function stripLeadingOrdinals(normalized: string): string {
   let stripped = normalized;
+  // El prefijo jerárquico "1-Equipamiento"/"1.1-Equipamiento" del workflow
+  // AUTSUC encadena la numeración de etapa, no forma parte de la etiqueta. Va
+  // ANTES del strip de ordinales: si no, "1-Equipamiento" se interpreta como
+  // ordinal "1" y queda "-equipamiento" (el \b matchea entre dígito y guion).
+  stripped = stripped.replace(LEADING_HIERARCHY_NUMBER_RE, "");
   // Puede haber marcadores compuestos: "1° 2do" no ocurre en la práctica;
   // un solo paso de strip es suficiente.
   stripped = stripped.replace(LEADING_ORDINAL_RE, "");
-  // El prefijo jerárquico "1-Equipamiento"/"1.1-Equipamiento" del workflow
-  // AUTSUC encadena la numeración de etapa, no forma parte de la etiqueta.
-  stripped = stripped.replace(LEADING_HIERARCHY_NUMBER_RE, "");
   return stripped.trim();
 }

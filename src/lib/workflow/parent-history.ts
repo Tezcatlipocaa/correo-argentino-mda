@@ -1,10 +1,13 @@
 import {
   and,
+  asc,
   count,
   desc,
   eq,
+  gte,
   inArray,
-  like,
+  isNotNull,
+  lt,
   notInArray,
   or,
   sql,
@@ -28,7 +31,7 @@ import { nowSeconds } from "./time";
  * Se puebla como side-effect del scan de discovery y nunca poda filas.
  */
 
-export type AutomationParentRecord = typeof automationParents.$inferSelect;
+type AutomationParentRecord = typeof automationParents.$inferSelect;
 
 /**
  * Inserta/actualiza los padres vistos en un scan. `firstSeenAt` solo se fija
@@ -57,6 +60,12 @@ export function upsertAutomationParents(
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             closedAt: item.closedAt,
+            estimatedEndAt: item.estimatedEndAt ?? null,
+            region: item.region ?? null,
+            locality: item.locality ?? null,
+            progressPercent: item.progressPercent ?? null,
+            assignedGroupId: item.assignedGroupId ?? null,
+            assignedGroupName: item.assignedGroupName ?? null,
             firstSeenAt: now,
             lastSeenAt: now,
           })
@@ -71,6 +80,11 @@ export function upsertAutomationParents(
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               closedAt: item.closedAt,
+              estimatedEndAt: item.estimatedEndAt ?? null,
+              region: item.region ?? null,
+              locality: item.locality ?? null,
+              assignedGroupId: item.assignedGroupId ?? null,
+              assignedGroupName: item.assignedGroupName ?? null,
               lastSeenAt: now,
             },
           })
@@ -86,37 +100,42 @@ function toSummary(
   row: AutomationParentRecord,
   closure: AutomationClosure | undefined,
 ): AutomationSummary {
-  if (closure) {
-    return {
-      id: row.automationId,
-      prettyId: row.prettyId,
-      branchCode: row.branchCode,
-      branchName: row.branchName,
-      displayName: row.displayName,
-      statusId: row.statusId,
-      isActive: false,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      closedAt: closure.closedAt,
-      localClosure: closure,
-    };
-  }
-
-  return {
+  const base: AutomationSummary = {
     id: row.automationId,
     prettyId: row.prettyId,
     branchCode: row.branchCode,
     branchName: row.branchName,
     displayName: row.displayName,
     statusId: row.statusId,
-    isActive: isActiveStatus(row.statusId),
+    isActive: closure ? false : isActiveStatus(row.statusId),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    closedAt: row.closedAt,
+    closedAt: closure ? closure.closedAt : row.closedAt,
+    estimatedEndAt: row.estimatedEndAt,
+    region: row.region,
+    locality: row.locality,
+    assignedGroupId: row.assignedGroupId,
+    assignedGroupName: row.assignedGroupName,
+    progressPercent: row.progressPercent,
   };
+
+  return closure ? { ...base, localClosure: closure } : base;
 }
 
 export type AutomationParentStatusFilter = "all" | "active" | "finalized";
+
+/** Orden del listado. */
+export type AutomationParentOrder = "recent" | "oldest" | "updated";
+
+/** Buckets de antigüedad (por `createdAt`) para el filtro de casos en curso. */
+export type AutomationParentAge = "0-7" | "8-15" | "16-30" | "30+";
+
+export const AUTOMATION_PARENT_AGE_BUCKETS: readonly AutomationParentAge[] = [
+  "0-7",
+  "8-15",
+  "16-30",
+  "30+",
+];
 
 export interface AutomationParentsQuery {
   page?: number;
@@ -124,6 +143,14 @@ export interface AutomationParentsQuery {
   /** Término de búsqueda por NIS, prettyId, sucursal o título. */
   q?: string;
   status?: AutomationParentStatusFilter;
+  /** Región exacta (columna `region`). */
+  region?: string;
+  /** Bucket de antigüedad por `createdAt`. */
+  age?: AutomationParentAge;
+  /** Rango de creación (epoch segundos), inclusivo/excluyente. */
+  from?: number;
+  to?: number;
+  order?: AutomationParentOrder;
 }
 
 export interface AutomationParentsPage {
@@ -169,26 +196,43 @@ function normalizedSearchColumn(column: AnySQLiteColumn): SQL {
   return sql`lower(${expr})`;
 }
 
+const DAY_SECONDS = 86_400;
+
+/** Rango de `createdAt` (en días hacia atrás) de cada bucket de antigüedad. */
+const AGE_RANGES: Readonly<
+  Record<AutomationParentAge, { minDays: number; maxDays: number | null }>
+> = {
+  "0-7": { minDays: 0, maxDays: 7 },
+  "8-15": { minDays: 7, maxDays: 15 },
+  "16-30": { minDays: 15, maxDays: 30 },
+  "30+": { minDays: 30, maxDays: null },
+};
+
 function buildParentsWhere(
-  q: string,
-  status: AutomationParentStatusFilter,
+  query: AutomationParentsQuery,
   closureIds: readonly number[],
+  nowSeconds: number,
 ) {
   const conditions: (SQL | undefined)[] = [];
-  const term = q.trim();
+  const term = (query.q ?? "").trim();
 
   if (term) {
-    const pattern = `%${normalizeForCompare(term)}%`;
+    // Substring literal vía `instr` (no `LIKE`): evita que `%`/`_` del término
+    // actúen como comodines.
+    const needle = normalizeForCompare(term);
+    const contains = (column: AnySQLiteColumn): SQL =>
+      sql`instr(${normalizedSearchColumn(column)}, ${needle}) > 0`;
     conditions.push(
       or(
-        like(normalizedSearchColumn(automationParents.branchCode), pattern),
-        like(normalizedSearchColumn(automationParents.prettyId), pattern),
-        like(normalizedSearchColumn(automationParents.branchName), pattern),
-        like(normalizedSearchColumn(automationParents.displayName), pattern),
+        contains(automationParents.branchCode),
+        contains(automationParents.prettyId),
+        contains(automationParents.branchName),
+        contains(automationParents.displayName),
       ),
     );
   }
 
+  const status = query.status ?? "all";
   if (status === "active") {
     conditions.push(
       inArray(automationParents.statusId, [...ACTIVE_STATUS_IDS]),
@@ -209,13 +253,56 @@ function buildParentsWhere(
     conditions.push(or(...finalized));
   }
 
+  if (query.region) {
+    conditions.push(eq(automationParents.region, query.region));
+  }
+  if (query.from !== undefined) {
+    conditions.push(gte(automationParents.createdAt, query.from));
+  }
+  if (query.to !== undefined) {
+    conditions.push(lt(automationParents.createdAt, query.to));
+  }
+  if (query.age && AGE_RANGES[query.age]) {
+    const range = AGE_RANGES[query.age];
+    if (range.minDays > 0) {
+      conditions.push(
+        lt(
+          automationParents.createdAt,
+          nowSeconds - range.minDays * DAY_SECONDS,
+        ),
+      );
+    }
+    if (range.maxDays !== null) {
+      conditions.push(
+        gte(
+          automationParents.createdAt,
+          nowSeconds - range.maxDays * DAY_SECONDS,
+        ),
+      );
+    }
+  }
+
   return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+/** Orden SQL del listado según `AutomationParentOrder`. */
+function buildOrderBy(order: AutomationParentOrder = "recent") {
+  if (order === "oldest") {
+    return [asc(automationParents.createdAt), asc(automationParents.automationId)];
+  }
+  if (order === "updated") {
+    return [
+      desc(automationParents.updatedAt),
+      desc(automationParents.createdAt),
+    ];
+  }
+  return [desc(automationParents.createdAt), desc(automationParents.automationId)];
 }
 
 /**
  * Página de padres para el listado "Todas las automatizaciones". La búsqueda y
- * el filtro de estado corren en SQL para que la paginación sea correcta sobre
- * todo el historial (no solo la página visible).
+ * los filtros corren en SQL para que la paginación sea correcta sobre todo el
+ * historial (no solo la página visible).
  */
 export function listAutomationParentsPage(
   query: AutomationParentsQuery = {},
@@ -224,13 +311,10 @@ export function listAutomationParentsPage(
     query.pageSize && query.pageSize > 0
       ? Math.floor(query.pageSize)
       : AUTOMATION_PARENTS_PAGE_SIZE;
-  const status = query.status ?? "all";
 
   try {
     const closures = listClosures();
-    const where = buildParentsWhere(query.q ?? "", status, [
-      ...closures.keys(),
-    ]);
+    const where = buildParentsWhere(query, [...closures.keys()], nowSeconds());
 
     const total = db
       .select({ value: count() })
@@ -248,10 +332,7 @@ export function listAutomationParentsPage(
       .select()
       .from(automationParents)
       .where(where)
-      .orderBy(
-        desc(automationParents.createdAt),
-        desc(automationParents.automationId),
-      )
+      .orderBy(...buildOrderBy(query.order))
       .limit(pageSize)
       .offset((page - 1) * pageSize)
       .all();
@@ -265,6 +346,121 @@ export function listAutomationParentsPage(
     };
   } catch {
     return { items: [], total: 0, page: 1, pageSize, totalPages: 1 };
+  }
+}
+
+/**
+ * Normaliza los query params del listado/export a un `AutomationParentsQuery`.
+ * Ignora valores inválidos (fail-open a "sin filtro").
+ */
+export function parseAutomationParentsQuery(
+  params: URLSearchParams,
+): AutomationParentsQuery {
+  const statusRaw = params.get("status") ?? "all";
+  const status: AutomationParentStatusFilter = (
+    ["all", "active", "finalized"] as const
+  ).includes(statusRaw as AutomationParentStatusFilter)
+    ? (statusRaw as AutomationParentStatusFilter)
+    : "all";
+
+  const ageRaw = params.get("age") ?? "";
+  const age = (AUTOMATION_PARENT_AGE_BUCKETS as readonly string[]).includes(
+    ageRaw,
+  )
+    ? (ageRaw as AutomationParentAge)
+    : undefined;
+
+  const orderRaw = params.get("order") ?? "recent";
+  const order: AutomationParentOrder = (
+    ["recent", "oldest", "updated"] as const
+  ).includes(orderRaw as AutomationParentOrder)
+    ? (orderRaw as AutomationParentOrder)
+    : "recent";
+
+  const page = Number.parseInt(params.get("page") ?? "1", 10);
+
+  return {
+    q: (params.get("q") ?? "").trim(),
+    status,
+    region: (params.get("region") ?? "").trim() || undefined,
+    age,
+    from: parseDateParam(params.get("from"), false),
+    to: parseDateParam(params.get("to"), true),
+    order,
+    page: Number.isInteger(page) ? page : 1,
+  };
+}
+
+/**
+ * Convierte un param de fecha `YYYY-MM-DD` a epoch en segundos (hora local).
+ * `endOfDay` desplaza al inicio del día siguiente para que un `lt` inclusive
+ * cubra todo el día elegido.
+ */
+function parseDateParam(
+  value: string | null,
+  endOfDay: boolean,
+): number | undefined {
+  if (!value) return undefined;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return undefined;
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return undefined;
+  if (endOfDay) date.setDate(date.getDate() + 1);
+  return Math.floor(date.getTime() / 1000);
+}
+
+/** Todas las filas que matchean los filtros (sin paginar) para exportar. */
+export function listAutomationParentsForExport(
+  query: AutomationParentsQuery = {},
+  limit = 5000,
+): AutomationSummary[] {
+  try {
+    const closures = listClosures();
+    const where = buildParentsWhere(query, [...closures.keys()], nowSeconds());
+    const rows = db
+      .select()
+      .from(automationParents)
+      .where(where)
+      .orderBy(...buildOrderBy(query.order))
+      .limit(limit)
+      .all();
+    return rows.map((row) => toSummary(row, closures.get(row.automationId)));
+  } catch {
+    return [];
+  }
+}
+
+/** Epoch (`last_seen_at`) del último scan que tocó el historial. */
+export function getAutomationParentsDataAsOf(): number | null {
+  try {
+    const row = db
+      .select({ value: sql<number | null>`max(${automationParents.lastSeenAt})` })
+      .from(automationParents)
+      .get();
+    return typeof row?.value === "number" ? row.value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Regiones distintas presentes en el historial (para el filtro). */
+export function listAutomationRegions(): string[] {
+  try {
+    const rows = db
+      .selectDistinct({ region: automationParents.region })
+      .from(automationParents)
+      .where(isNotNull(automationParents.region))
+      .all();
+    return rows
+      .map((row) => row.region)
+      .filter((region): region is string => Boolean(region))
+      .sort((a, b) => a.localeCompare(b, "es-AR"));
+  } catch {
+    return [];
   }
 }
 
@@ -305,6 +501,42 @@ export function upsertAutomationParentStatus(
         statusId: status.statusId,
         updatedAt: status.updatedAt,
         closedAt: status.closedAt,
+        lastSeenAt: nowSeconds(),
+      })
+      .where(eq(automationParents.automationId, automationId))
+      .run();
+  } catch {
+    return;
+  }
+}
+
+/** Suma 1 al contador de reaperturas locales del padre. */
+export function incrementAutomationReopenCount(automationId: number): void {
+  try {
+    db.update(automationParents)
+      .set({ reopenCount: sql`${automationParents.reopenCount} + 1` })
+      .where(eq(automationParents.automationId, automationId))
+      .run();
+  } catch {
+    return;
+  }
+}
+
+/**
+ * Persiste el progreso calculado (detalle o path liviano) en el historial.
+ * El scan de discovery NO escribe esta columna, así que el dato sobrevive a
+ * re-escaneos; sólo lo tienen los casos que se abrieron/resolvieron alguna vez.
+ */
+export function updateAutomationParentProgress(
+  automationId: number,
+  progress: { percent: number; completed: number; applicableTotal: number },
+): void {
+  try {
+    db.update(automationParents)
+      .set({
+        progressPercent: progress.percent,
+        progressCompleted: progress.completed,
+        progressTotal: progress.applicableTotal,
         lastSeenAt: nowSeconds(),
       })
       .where(eq(automationParents.automationId, automationId))

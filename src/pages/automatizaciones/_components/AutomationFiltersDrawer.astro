@@ -1,0 +1,233 @@
+---
+import { Icon } from "astro-icon/components";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  /** Id del form del listado al que se asocian los controles (atributo `form`). */
+  formId: string;
+  status: string;
+  statusOptions: Option[];
+  region: string;
+  age: string;
+  order: string;
+  fromDate: string;
+  toDate: string;
+  regionOptions: Option[];
+  ageOptions: Option[];
+  orderOptions: Option[];
+  /** Link que limpia los filtros del drawer. */
+  clearHref: string;
+}
+
+const {
+  formId,
+  status,
+  statusOptions,
+  region,
+  age,
+  order,
+  fromDate,
+  toDate,
+  regionOptions,
+  ageOptions,
+  orderOptions,
+  clearHref,
+} = Astro.props;
+---
+
+<dialog
+  id="automation-filters-drawer"
+  class="automation-filters-drawer"
+  aria-label="Filtros del listado"
+>
+  <form method="dialog" class="automation-filters-backdrop">
+    <button
+      type="submit"
+      class="h-full w-full cursor-default"
+      aria-label="Cerrar filtros"
+    ></button>
+  </form>
+
+  <div class="automation-filters-panel">
+    <header
+      class="border-base-300 flex items-center justify-between gap-2 border-b px-4 py-3"
+    >
+      <h2 class="text-base-content flex items-center gap-2 text-sm font-semibold">
+        <Icon
+          name="boxicons:filter-filled"
+          size={18}
+          class="acc-text shrink-0"
+          aria-hidden="true"
+        />
+        Filtros
+      </h2>
+      <button
+        type="button"
+        data-close-filters
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label="Cerrar filtros"
+      >
+        <Icon name="boxicons:x" size={18} aria-hidden="true" />
+      </button>
+    </header>
+
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+      <SelectField
+        id="filter-status"
+        name="status"
+        label="Estado"
+        size="sm"
+        value={status}
+        options={statusOptions}
+        form={formId}
+      />
+      <SelectField
+        id="filter-region"
+        name="region"
+        label="Región"
+        size="sm"
+        value={region}
+        options={regionOptions}
+        form={formId}
+      />
+      <SelectField
+        id="filter-age"
+        name="age"
+        label="Antigüedad"
+        size="sm"
+        value={age}
+        options={ageOptions}
+        form={formId}
+      />
+      <div class="grid grid-cols-2 gap-3">
+        <FormField
+          id="filter-from"
+          name="from"
+          type="date"
+          label="Desde"
+          size="sm"
+          value={fromDate}
+          form={formId}
+        />
+        <FormField
+          id="filter-to"
+          name="to"
+          type="date"
+          label="Hasta"
+          size="sm"
+          value={toDate}
+          form={formId}
+        />
+      </div>
+      <SelectField
+        id="filter-order"
+        name="order"
+        label="Orden"
+        size="sm"
+        value={order}
+        options={orderOptions}
+        form={formId}
+      />
+    </div>
+
+    <footer
+      class="border-base-300 flex items-center justify-end gap-2 border-t px-4 py-3"
+    >
+      <a href={clearHref} class="btn btn-ghost btn-sm">Limpiar</a>
+      <button
+        type="submit"
+        form={formId}
+        class="btn btn-sm gap-1 acc-btn"
+      >
+        <Icon name="boxicons:check-filled" size={16} aria-hidden="true" />
+        Aplicar filtros
+      </button>
+    </footer>
+  </div>
+</dialog>
+
+<style is:global>
+  .automation-filters-drawer {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    overflow: hidden;
+    transition:
+      display 300ms allow-discrete,
+      overlay 300ms allow-discrete;
+  }
+
+  .automation-filters-drawer:not([open]) {
+    display: none;
+  }
+
+  .automation-filters-backdrop {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: default;
+  }
+
+  .automation-filters-drawer::backdrop {
+    background-color: rgb(0 0 0 / 0%);
+    transition:
+      background-color 300ms ease,
+      display 300ms allow-discrete,
+      overlay 300ms allow-discrete;
+  }
+
+  .automation-filters-drawer[open]::backdrop {
+    background-color: rgb(0 0 0 / 40%);
+  }
+
+  .automation-filters-panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: flex;
+    width: 20rem;
+    max-width: 100%;
+    flex-direction: column;
+    background-color: var(--color-base-100);
+    border-inline-start: 1px solid var(--color-base-300);
+    box-shadow: -8px 0 24px rgb(0 0 0 / 0.15);
+    transform: translateX(100%);
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .automation-filters-drawer[open] .automation-filters-panel {
+    transform: translateX(0);
+  }
+
+  @starting-style {
+    .automation-filters-drawer[open]::backdrop {
+      background-color: rgb(0 0 0 / 0%);
+    }
+    .automation-filters-drawer[open] .automation-filters-panel {
+      transform: translateX(100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .automation-filters-drawer,
+    .automation-filters-drawer::backdrop,
+    .automation-filters-panel {
+      transition: none;
+    }
+  }
+</style>

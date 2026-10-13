@@ -566,6 +566,53 @@ check(
   );
 }
 
+// Prefijo jerárquico "1-Equipamiento" SIN alias: no debe confundirse con un
+// ordinal inicial (regresión: "1-Equipamiento" -> "-equipamiento").
+{
+  const tpl = {
+    stages: [
+      {
+        id: 1,
+        name: "Etapa",
+        description: null,
+        position: 1,
+        scope: "workflow",
+        gateItemId: null,
+      },
+    ],
+    tickets: [
+      {
+        id: 1,
+        stageId: 1,
+        matchLabel: "Equipamiento",
+        aliases: [],
+        displayName: null,
+        blocking: true,
+        kind: "ticket",
+        position: 1,
+      },
+    ],
+  };
+  const result = buildStageGroups(
+    [
+      node({
+        refId: 20,
+        stepLabel: "1-Equipamiento",
+        title: "AUTSUC #1 - 1-Equipamiento",
+      }),
+    ],
+    tpl,
+    { workflowKind: "workflow" },
+  );
+  const item = result.groups[0].items[0];
+  check(
+    "prefijo jerárquico '1-Equipamiento' matchea el template 'Equipamiento' (no queda 'Sin etapa')",
+    item.nodes.length === 1 &&
+      item.nodes[0].refId === 20 &&
+      result.stagelessNodes.length === 0,
+  );
+}
+
 if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exit(1);

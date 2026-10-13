@@ -6,7 +6,8 @@ import SearchBar from "@components/ui/SearchBar.astro";
 import Pagination from "@components/ui/Pagination.astro";
 import AutomationCardList from "./AutomationCardList.astro";
 import AutomationRecentList from "./AutomationRecentList.astro";
-import AutomationParentsList from "./AutomationParentsList.astro";
+import AutomationParentsTable from "./AutomationParentsTable.astro";
+import AutomationFiltersDrawer from "./AutomationFiltersDrawer.astro";
 import AutomationEmptyState from "./AutomationEmptyState.astro";
 import {
   discoverAutomationsWithMeta,
@@ -17,30 +18,48 @@ import type {
   AutomationSummary,
 } from "@lib/workflow/discovery";
 import {
+  AUTOMATION_PARENT_AGE_BUCKETS,
+  getAutomationParentsDataAsOf,
   listAutomationParentsPage,
+  listAutomationRegions,
   listRecentAutomationParents,
+  parseAutomationParentsQuery,
 } from "@lib/workflow/parent-history";
-import type { AutomationParentStatusFilter } from "@lib/workflow/parent-history";
+import type {
+  AutomationParentAge,
+  AutomationParentOrder,
+  AutomationParentStatusFilter,
+} from "@lib/workflow/parent-history";
 import { getIncidentStatuses } from "@lib/invgate/automation/statuses";
 import { buildStatusNameLookup } from "@lib/workflow/automation-status";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import { getCleanBase } from "@lib/baseUrl";
+import { resolveUrl } from "@lib/url";
 import { isLoggedIn } from "@lib/rbac";
 
 const user = Astro.locals.user;
 const canQuery = isLoggedIn(user);
 
 const searchParams = Astro.url.searchParams;
-const requestedPage = Number.parseInt(searchParams.get("page") ?? "1", 10);
-const q = (searchParams.get("q") ?? "").trim();
-const statusRaw = searchParams.get("status") ?? "all";
-const status: AutomationParentStatusFilter = (
-  ["all", "active", "finalized"] as const
-).includes(statusRaw as AutomationParentStatusFilter)
-  ? (statusRaw as AutomationParentStatusFilter)
-  : "all";
+const parsedQuery = parseAutomationParentsQuery(searchParams);
+const requestedPage = parsedQuery.page ?? 1;
+const q = parsedQuery.q ?? "";
+const status: AutomationParentStatusFilter = parsedQuery.status ?? "all";
+const region = parsedQuery.region ?? "";
+const age: AutomationParentAge | "" = parsedQuery.age ?? "";
+const order: AutomationParentOrder = parsedQuery.order ?? "recent";
+const fromDate = (searchParams.get("from") ?? "").trim();
+const toDate = (searchParams.get("to") ?? "").trim();
+const view: "cards" | "table" =
+  searchParams.get("view") === "table" ? "table" : "cards";
 const forceRefresh = searchParams.get("refresh") === "1";
-const hasListFilters = q.length > 0 || status !== "all";
+const hasListFilters =
+  q.length > 0 ||
+  status !== "all" ||
+  region !== "" ||
+  age !== "" ||
+  fromDate !== "" ||
+  toDate !== "";
 
 let discovery: AutomationDiscoveryResult | null = null;
 let discoveryStale = false;
@@ -68,8 +87,20 @@ async function discoveryRefresh(): Promise<AutomationDiscoveryResult> {
 }
 
 const pageResult = canQuery
-  ? listAutomationParentsPage({ page: requestedPage, q, status })
+  ? listAutomationParentsPage({
+      page: requestedPage,
+      q,
+      status,
+      region: region || undefined,
+      age: age || undefined,
+      from: parsedQuery.from,
+      to: parsedQuery.to,
+      order,
+    })
   : { items: [], total: 0, page: 1, pageSize: 20, totalPages: 1 };
+
+const regions = canQuery ? listAutomationRegions() : [];
+const dataAsOf = canQuery ? getAutomationParentsDataAsOf() : null;
 
 let recentParents = canQuery ? listRecentAutomationParents(4) : [];
 let allParents = pageResult.items;
@@ -130,30 +161,98 @@ const statusFilters = [
   { key: "finalized", label: "Terminadas" },
 ] as const;
 
-/** Href del listado preservando filtros; `page` null resetea la paginación. */
-function buildListHref(overrides: {
+/** Query params del listado preservando filtros. */
+function buildFilterParams(overrides: {
   page?: number | null;
   q?: string | null;
   status?: AutomationParentStatusFilter | null;
+  region?: string | null;
+  age?: AutomationParentAge | null;
+  from?: string | null;
+  to?: string | null;
+  order?: AutomationParentOrder | null;
+  view?: "cards" | "table" | null;
   refresh?: boolean;
-}): string {
+}): URLSearchParams {
   const nextQ = overrides.q === undefined ? q : (overrides.q ?? "");
   const nextStatus =
     overrides.status === undefined ? status : (overrides.status ?? "all");
+  const nextRegion =
+    overrides.region === undefined ? region : (overrides.region ?? "");
+  const nextAge = overrides.age === undefined ? age : (overrides.age ?? "");
+  const nextFrom =
+    overrides.from === undefined ? fromDate : (overrides.from ?? "");
+  const nextTo = overrides.to === undefined ? toDate : (overrides.to ?? "");
+  const nextOrder =
+    overrides.order === undefined ? order : (overrides.order ?? "recent");
+  const nextView =
+    overrides.view === undefined ? view : (overrides.view ?? "cards");
   const nextPage = overrides.page === undefined ? page : overrides.page;
 
   const params = new URLSearchParams();
   if (nextQ) params.set("q", nextQ);
   if (nextStatus !== "all") params.set("status", nextStatus);
+  if (nextRegion) params.set("region", nextRegion);
+  if (nextAge) params.set("age", nextAge);
+  if (nextFrom) params.set("from", nextFrom);
+  if (nextTo) params.set("to", nextTo);
+  if (nextOrder && nextOrder !== "recent") params.set("order", nextOrder);
+  if (nextView === "table") params.set("view", "table");
   if (nextPage && nextPage > 1) params.set("page", String(nextPage));
   if (overrides.refresh) params.set("refresh", "1");
+  return params;
+}
 
-  const search = params.toString();
+/** Href del listado preservando filtros; `page` null resetea la paginación. */
+function buildListHref(overrides: Parameters<typeof buildFilterParams>[0]): string {
+  const search = buildFilterParams(overrides).toString();
   return `${Astro.url.pathname}${search ? `?${search}` : ""}`;
 }
+
+/** Href de export CSV del listado con los filtros actuales. */
+function buildExportHref(): string {
+  const search = buildFilterParams({}).toString();
+  return `${getCleanBase()}api/automatizaciones/export.csv${search ? `?${search}` : ""}`;
+}
+
+const regionOptions = [
+  { value: "", label: "Todas" },
+  ...regions.map((value) => ({ value, label: value })),
+];
+
+const ageOptions = [
+  { value: "", label: "Todas" },
+  ...AUTOMATION_PARENT_AGE_BUCKETS.map((value) => ({
+    value,
+    label: value === "30+" ? "Más de 30 días" : `${value} días`,
+  })),
+];
+
+const orderOptions = [
+  { value: "recent", label: "Más nuevas" },
+  { value: "oldest", label: "Más antiguas" },
+  { value: "updated", label: "Actualizadas" },
+];
+
+const statusOptions = statusFilters.map((filter) => ({
+  value: filter.key,
+  label: filter.label,
+}));
+
+const stateLabel =
+  statusFilters.find((filter) => filter.key === status)?.label ?? "Todas";
+
+/** Cantidad de filtros activos (estado/región/antigüedad/fechas/orden). */
+const activeFilterCount =
+  (status !== "all" ? 1 : 0) +
+  (region ? 1 : 0) +
+  (age ? 1 : 0) +
+  (fromDate ? 1 : 0) +
+  (toDate ? 1 : 0) +
+  (order !== "recent" ? 1 : 0);
 ---
 
-<PageContainer width="xl">
+<PageContainer width="xl" gap="lg" class="acc">
   <PageHeader
     title="Automatizaciones"
     description="Monitoreo de automatizaciones de sucursales manuales ejecutadas en InvGate Service Management."
@@ -182,6 +281,7 @@ function buildListHref(overrides: {
         {discoveryStale && (
           <div
             role="status"
+            aria-live="polite"
             data-automation-stale
             data-automation-revalidate-href={`${getCleanBase()}api/automatizaciones/revalidate`}
             class="text-base-content/60 flex items-center gap-2 text-xs"
@@ -199,12 +299,13 @@ function buildListHref(overrides: {
             />
           )
         ) : (
-          <>
-            <div class="mb-2 flex flex-wrap items-center gap-x-3">
-              <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-col gap-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-1 flex-wrap items-center gap-2">
                 <form
+                  id="automation-filters-form"
                   method="get"
-                  class="flex w-full items-center gap-2 sm:w-auto"
+                  class="flex items-center"
                   role="search"
                   data-automation-search-form
                 >
@@ -214,11 +315,11 @@ function buildListHref(overrides: {
                     value={q}
                     placeholder="Buscar por NIS o sucursal..."
                     ariaLabel="Buscar automatización por NIS o nombre de sucursal"
-                    class="automation-search w-full sm:w-72"
+                    class="automation-search w-full sm:w-64"
                     clearable
                   />
-                  {status !== "all" && (
-                    <input type="hidden" name="status" value={status} />
+                  {view === "table" && (
+                    <input type="hidden" name="view" value="table" />
                   )}
                 </form>
 
@@ -233,18 +334,59 @@ function buildListHref(overrides: {
                   />
                   Actualizar
                 </a>
+
+                {dataAsOf && (
+                  <span class="text-base-content/60 text-xs">
+                    Datos al {formatEpochDateTime(dataAsOf)}
+                  </span>
+                )}
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <a
+                  href={resolveUrl("/automatizaciones/metricas")}
+                  data-astro-prefetch="hover"
+                  class="btn btn-ghost btn-sm gap-1"
+                >
+                  <Icon
+                    name="boxicons:bar-chart-big-filled"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  Métricas
+                </a>
+
+                <a
+                  href={buildExportHref()}
+                  class="btn btn-ghost btn-sm gap-1"
+                  download
+                >
+                  <Icon
+                    name="boxicons:file-detail-filled"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  Exportar CSV
+                </a>
               </div>
             </div>
 
+            <p
+              id="automatizaciones-live"
+              class="sr-only"
+              role="status"
+              aria-live="polite"
+            ></p>
+
             <div data-automation-results>
-            {!hasListFilters && (
+            {!hasListFilters && view === "cards" && (
               <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <section class="flex flex-col gap-3 lg:col-span-2">
                   <div class="flex flex-wrap items-baseline gap-x-2">
                     {featured?.isActive && (
                       <span class="relative mr-1 flex size-2 self-center">
-                        <span class="bg-secondary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                        <span class="bg-secondary relative inline-flex size-2 rounded-full" />
+                        <span class="acc-surface absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                        <span class="acc-surface relative inline-flex size-2 rounded-full" />
                       </span>
                     )}
                     <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
@@ -287,8 +429,8 @@ function buildListHref(overrides: {
               </div>
             )}
 
-            <section class="flex flex-col gap-3 my-3">
-              <article class="flex items-center justify-between">
+            <section class="flex flex-col gap-4 mt-4">
+              <article class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                   <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
                     {hasListFilters
@@ -302,54 +444,125 @@ function buildListHref(overrides: {
                   </span>
                 </div>
 
-                <div
-                  class="join"
-                  role="group"
-                  aria-label="Filtrar automatizaciones por estado"
-                >
-                  {statusFilters.map((filter) => (
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="join" role="group" aria-label="Vista del listado">
                     <a
-                      href={buildListHref({
-                        status: filter.key === "all" ? null : filter.key,
-                        page: null,
-                      })}
-                      aria-current={filter.key === status ? "true" : false}
+                      href={buildListHref({ view: "cards", page: null })}
+                      aria-current={view === "cards" ? "true" : false}
+                      aria-label="Tarjetas"
+                      title="Vista de tarjetas"
                       class:list={[
-                        "join-item border-base-300 bg-base-200 text-base-content/70 border px-3 py-1.5 text-sm font-medium",
-                        "cursor-pointer transition-colors duration-200",
-                        "hover:border-steel-azure-700 hover:bg-steel-azure-700 hover:text-white",
-                        filter.key === status &&
-                          "border-secondary bg-secondary hover:border-steel-azure-700 hover:bg-steel-azure-700 text-white",
+                        "join-item btn btn-sm btn-square acc-flat",
+                        view === "cards" && "acc-btn",
                       ]}
                     >
-                      {filter.label}
+                      <Icon
+                        name="boxicons:apps"
+                        size={16}
+                        aria-hidden="true"
+                      />
                     </a>
-                  ))}
+                    <a
+                      href={buildListHref({ view: "table", page: null })}
+                      aria-current={view === "table" ? "true" : false}
+                      aria-label="Tabla"
+                      title="Vista de tabla"
+                      class:list={[
+                        "join-item btn btn-sm btn-square acc-flat",
+                        view === "table" && "acc-btn",
+                      ]}
+                    >
+                      <Icon
+                        name="boxicons:table-filled"
+                        size={16}
+                        aria-hidden="true"
+                      />
+                    </a>
+                  </div>
+
+                  <button
+                    type="button"
+                    data-open-filters
+                    class="btn btn-ghost btn-sm gap-1"
+                    aria-haspopup="dialog"
+                  >
+                    <Icon
+                      name="boxicons:filter-filled"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Filtros{status !== "all" ? ` · ${stateLabel}` : ""}
+                    </span>
+                    {activeFilterCount > 0 && (
+                      <span class="badge acc-badge badge-sm">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </article>
 
-              <AutomationParentsList
-                items={allParents}
-                statusNames={statusNames}
-                defaultOpenId={q ? (allParents[0]?.id ?? null) : null}
-                emptyMessage={
-                  hasListFilters
-                    ? "Ninguna automatización coincide con la búsqueda o el filtro."
-                    : "No hay automatizaciones registradas todavía."
-                }
-              />
+              {view === "table" ? (
+                <AutomationParentsTable
+                  items={allParents}
+                  emptyMessage={
+                    hasListFilters
+                      ? "Ninguna automatización coincide con la búsqueda o el filtro."
+                      : "No hay automatizaciones registradas todavía."
+                  }
+                />
+              ) : allParents.length === 0 ? (
+                <AutomationEmptyState
+                  message={
+                    hasListFilters
+                      ? "Ninguna automatización coincide con la búsqueda o el filtro."
+                      : "No hay automatizaciones registradas todavía."
+                  }
+                />
+              ) : (
+                <AutomationCardList
+                  items={allParents}
+                  statusNames={statusNames}
+                  defaultOpenId={q ? (allParents[0]?.id ?? null) : null}
+                />
+              )}
               {totalPages > 1 && (
                 <div class="flex justify-center pt-2">
                   <Pagination
                     totalPages={totalPages}
                     currentPage={page}
                     hrefFor={(target) => buildListHref({ page: target })}
+                    accent
                   />
                 </div>
               )}
             </section>
             </div>
-          </>
+
+            <AutomationFiltersDrawer
+              formId="automation-filters-form"
+              status={status}
+              statusOptions={statusOptions}
+              region={region}
+              age={age}
+              order={order}
+              fromDate={fromDate}
+              toDate={toDate}
+              regionOptions={regionOptions}
+              ageOptions={ageOptions}
+              orderOptions={orderOptions}
+              clearHref={buildListHref({
+                status: null,
+                region: null,
+                age: null,
+                from: null,
+                to: null,
+                order: null,
+                page: null,
+              })}
+            />
+          </div>
         )}
       </>
     )
