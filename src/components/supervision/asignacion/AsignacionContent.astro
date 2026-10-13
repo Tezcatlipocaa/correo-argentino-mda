@@ -364,7 +364,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span
-                class={`badge badge-md border ${unassignedCount > 0 ? "bg-secondary/20 text-secondary border-secondary/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`}
+                class={`font-mono font-bold text-sm ${unassignedCount > 0 ? "text-secondary" : "text-base-content/50"}`}
                 id="stat-unassigned-count"
               >
                 {unassignedCount}
@@ -514,7 +514,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                             {op.nombre}
                           </span>
                           {idx === 0 && (
-                            <span class="badge badge-sm border bg-secondary/20 text-secondary border-secondary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>
+                            <span class="font-bold uppercase text-xs text-secondary shrink-0">Siguiente</span>
                           )}
                           {(() => {
                             const isDescon = (op.wiseCxStatus && op.wiseCxStatus.toLowerCase().includes("desconectado")) || (op.motivo && op.motivo.toLowerCase().includes("desconectado"));
@@ -1043,7 +1043,6 @@ function formatWiseMinutes(min: number | undefined | null): string {
                         </label>
                       )
                     }
-                    <span class="badge badge-neutral badge-soft font-mono text-xs">ID: {rule.id}</span>
                   </div>
                   <p class="text-xs text-base-content/70 mt-1 max-w-2xl leading-relaxed">
                     {rule.description}
@@ -1741,7 +1740,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
       const newCount = Math.max(0, (isNaN(currentCount) ? 0 : currentCount) - 1);
       if (countEl) {
         countEl.textContent = String(newCount);
-        countEl.className = `badge badge-md border ${newCount > 0 ? "bg-secondary/20 text-secondary border-secondary/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
+        countEl.className = `font-mono font-bold text-sm ${newCount > 0 ? "text-secondary" : "text-base-content/50"}`;
       }
       updateActionBarSubtitle();
       const listEl = document.getElementById("unassigned-tickets-list");
@@ -2140,7 +2139,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
                       <span class="truncate font-extrabold text-sm text-base-content">
                         ${escapeHtml(op.nombre)}
                       </span>
-                      ${isFirst ? '<span class="badge badge-sm border bg-secondary/20 text-secondary border-secondary/40 font-bold uppercase text-xs px-2.5 py-0.5 shrink-0 shadow-xs">Siguiente</span>' : ''}
+                      ${isFirst ? '<span class="font-bold uppercase text-xs text-secondary shrink-0">Siguiente</span>' : ''}
                       ${statusBadge}
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 font-medium flex-wrap">
@@ -3117,7 +3116,7 @@ function formatWiseMinutes(min: number | undefined | null): string {
 
         if (countEl) {
           countEl.textContent = String(count);
-          countEl.className = `badge badge-md border ${count > 0 ? "bg-secondary/20 text-secondary border-secondary/40" : "bg-base-300/50 text-base-content/60 border-base-300"} font-mono font-bold text-xs px-2.5 py-1 shadow-xs`;
+          countEl.className = `font-mono font-bold text-sm ${count > 0 ? "text-secondary" : "text-base-content/50"}`;
         }
         if (listEl) {
           const prevScroll = listEl.scrollTop;
