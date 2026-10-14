@@ -3,19 +3,32 @@ import SkeletonMetric from "@components/ui/skeletons/SkeletonMetric.astro";
 ---
 
 <div class="skeleton-debounced flex w-full flex-col gap-6 pb-24">
+  <!-- Header Skeleton -->
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center justify-between">
+      <div class="skeleton h-8 w-36 rounded-lg"></div>
+      <div class="skeleton h-9 w-32 rounded-xl"></div>
+    </div>
+    <div class="space-y-2">
+      <div class="skeleton h-8 w-64 rounded-lg"></div>
+      <div class="skeleton h-4 w-96 rounded"></div>
+    </div>
+  </div>
+
   <!-- Controls & Filters Bar Skeleton -->
   <div
-    class="bg-base-100 border-base-300 flex flex-col justify-between gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-center"
+    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between"
   >
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="skeleton h-9 w-32 rounded-xl"></div>
-      <div class="skeleton h-9 w-28 rounded-xl"></div>
-      <div class="skeleton h-9 w-36 rounded-xl"></div>
-      <div class="skeleton h-9 w-36 rounded-xl"></div>
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="skeleton h-6 w-14 rounded-lg"></div>
+      <div class="skeleton h-6 w-14 rounded-lg"></div>
+      <div class="skeleton h-6 w-24 rounded-lg"></div>
+      <div class="skeleton h-6 w-24 rounded-lg"></div>
+      <div class="skeleton h-6 w-24 rounded-lg"></div>
     </div>
-    <div class="flex items-center gap-2">
-      <div class="skeleton h-9 w-28 rounded-xl"></div>
-      <div class="skeleton h-9 w-32 rounded-xl"></div>
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="skeleton h-6 w-44 rounded-lg"></div>
+      <div class="skeleton h-6 w-24 rounded-lg"></div>
     </div>
   </div>
 

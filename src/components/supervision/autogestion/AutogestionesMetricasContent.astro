@@ -57,37 +57,40 @@ const MODALITY_CONFIG: Record<
 
 <PageContainer class="flex min-h-0 flex-1 flex-col gap-6 pb-20">
   <!-- Encabezado de Página -->
-  <PageHeader
-    title="Métricas de Autogestiones"
-    subtitle="Tablero analítico, distribución operativa y auditoría de asignaciones de AGS"
-    icon="boxicons:bar-chart-big-filled"
-  >
-    <div slot="actions" class="flex flex-wrap items-center gap-2">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <a
         href={`${baseNoSlash}/supervision/asignacion-autogestiones`}
-        class="btn btn-sm btn-outline rounded-xl font-bold uppercase tracking-wider text-xs gap-2"
+        class="btn btn-ghost btn-sm gap-2 text-base-content/70 hover:text-base-content -ml-2 w-fit font-medium text-xs tracking-wide"
       >
-        <Icon name="boxicons:checklist" size={18} />
-        Ir a Asignación
+        <Icon name="boxicons:arrow-left-stroke-filled" size={18} />
+        Volver a Asignación
       </a>
-      <a
-        id="btn-export-csv"
-        href={`${cleanBase}api/autogestion/metricas/export.csv?preset=${initialPreset}${initialFrom ? `&from=${initialFrom}` : ""}${initialTo ? `&to=${initialTo}` : ""}`}
-        class="btn btn-sm btn-secondary rounded-xl font-bold uppercase tracking-wider text-xs gap-2 shadow-sm"
-        download
-      >
-        <Icon name="boxicons:file-detail-filled" size={18} />
-        Exportar CSV
-      </a>
+      <div class="flex flex-wrap items-center gap-2">
+        <a
+          id="btn-export-csv"
+          href={`${cleanBase}api/autogestion/metricas/export.csv?preset=${initialPreset}${initialFrom ? `&from=${initialFrom}` : ""}${initialTo ? `&to=${initialTo}` : ""}`}
+          class="btn btn-sm btn-secondary rounded-xl font-bold uppercase tracking-wider text-xs gap-2 shadow-sm"
+          download
+        >
+          <Icon name="boxicons:file-detail-filled" size={18} />
+          Exportar CSV
+        </a>
+      </div>
     </div>
-  </PageHeader>
+
+    <PageHeader
+      title="Métricas de Autogestiones"
+      description="Tablero analítico, distribución operativa y auditoría de asignaciones de AGS"
+    />
+  </div>
 
   <!-- Barra de Filtros y Controles -->
   <div
-    class="bg-base-100 border-base-300 flex flex-col justify-between gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-center"
+    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between"
   >
     <!-- Selector de Presets -->
-    <div id="presets-filter-bar" class="flex flex-wrap items-center gap-1.5">
+    <div id="presets-filter-bar" class="flex flex-wrap items-center gap-1.5 shrink-0">
       <button
         type="button"
         data-preset="hoy"
@@ -125,9 +128,10 @@ const MODALITY_CONFIG: Record<
       </button>
     </div>
 
-    <!-- Fechas Personalizadas y Refresco -->
-    <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-2">
+    <!-- Fechas Personalizadas y Sincronización -->
+    <div class="flex flex-wrap items-center gap-3 lg:justify-end">
+      <!-- Selector de Fechas Desde / Hasta -->
+      <div class="flex flex-wrap items-center gap-2">
         <label class="text-xs font-bold text-base-content/60 uppercase tracking-wider">Desde</label>
         <input
           type="date"
@@ -151,9 +155,8 @@ const MODALITY_CONFIG: Record<
         </button>
       </div>
 
-      <div class="divider divider-horizontal my-0 hidden sm:flex"></div>
-
-      <div class="flex items-center gap-2">
+      <!-- Sincronizar y Estado -->
+      <div class="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-base-300 pt-2 sm:pt-0 sm:pl-3">
         <button
           type="button"
           id="btn-refresh-metrics"
@@ -168,7 +171,7 @@ const MODALITY_CONFIG: Record<
         </span>
         <span class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-2 px-2.5 ml-1" title="Visualizando datos de demostración aleatorios">
           <span class="size-1.5 rounded-full bg-info animate-pulse"></span>
-          Datos de Prueba (Demo)
+          Demo
         </span>
       </div>
     </div>
