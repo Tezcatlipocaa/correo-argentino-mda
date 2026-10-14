@@ -59,7 +59,7 @@ import {
   renderMonthly,
   clearParsedDatesCache,
 } from "./monthly-view";
-import { currentMonthKey } from "@lib/cronogramaMonths";
+import { currentMonthKey, resolveInitialMonth } from "@lib/cronogramaMonths";
 
 export function isWeekend(dateStr: string): boolean {
   if (!dateStr) return false;
@@ -334,7 +334,7 @@ async function init(): Promise<void> {
 
     const activeMonth =
       payload.activeMonth ||
-      (dateInput?.value ? dateInput.value.slice(0, 7) : todayStr.slice(0, 7));
+      resolveInitialMonth(state.availableMonths, todayStr);
 
     try {
       const feriadosRes = await fetch("/api/cronograma/feriados");
@@ -347,12 +347,12 @@ async function init(): Promise<void> {
 
     await loadRotationConfig(activeMonth);
 
-    const hasDataForToday =
-      activeMonth === todayStr.slice(0, 7) &&
-      state.cronoData.some((op) => op.asistencia[todayStr]);
-    const initialDate = hasDataForToday
+    const monthDates = state.uniqueDates.filter((d) =>
+      d.startsWith(activeMonth),
+    );
+    const initialDate = monthDates.includes(todayStr)
       ? todayStr
-      : state.uniqueDates[state.uniqueDates.length - 1] || `${activeMonth}-01`;
+      : monthDates[monthDates.length - 1] || `${activeMonth}-01`;
 
     if (dateInput) {
       dateInput.value = initialDate;
