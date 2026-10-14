@@ -230,6 +230,17 @@ export function renderMonthSelect(): void {
   if (pasivaSelect) pasivaSelect.innerHTML = html;
 }
 
+/**
+ * Día del mes "preferido" del usuario. Se recuerda entre navegaciones para no
+ * perderlo cuando el mes destino tiene menos días (31-10 → 30-11 → 31-10,
+ * issue #275). Se actualiza solo cuando el usuario elige una fecha a mano.
+ */
+let preferredDay: number | null = null;
+
+export function setPreferredDay(day: number): void {
+  if (Number.isInteger(day) && day >= 1 && day <= 31) preferredDay = day;
+}
+
 export function changeMonth(offset: number): void {
   const dateInput = document.getElementById(
     "date-input",
@@ -255,8 +266,11 @@ export function changeMonth(offset: number): void {
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10) - 1;
 
-  const dayStr = dateInput.value.split("-")[2];
-  let day = parseInt(dayStr, 10);
+  const currentDay = parseInt(dateInput.value.split("-")[2], 10);
+  if (preferredDay == null && Number.isInteger(currentDay)) {
+    preferredDay = currentDay;
+  }
+  let day = preferredDay ?? 1;
   const daysInNewMonth = getDaysInMonth(year, month);
   if (day > daysInNewMonth) {
     day = daysInNewMonth;

@@ -53,6 +53,7 @@ import {
   updateGroupsActiveMonthBadge,
   renderMonthSelect,
   changeMonth,
+  setPreferredDay,
   renderDaily,
   renderHourly,
   renderMonthly,
@@ -1452,6 +1453,8 @@ function setupEventListeners(): void {
   ) as HTMLInputElement | null;
   if (dateInput) {
     dateInput.addEventListener("change", () => {
+      const day = parseInt(dateInput.value.split("-")[2], 10);
+      if (Number.isInteger(day)) setPreferredDay(day);
       updateDateInputDisplay();
       renderDaily();
       renderMonthly();
