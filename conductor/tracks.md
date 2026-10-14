@@ -75,5 +75,5 @@
 - [x] **Track: Rediseño de Pantalla Completa: Nueva Auditoría de Calidad**
   *Link: [./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md](./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md)*
 ---
-- [~] **Track: Métricas y Estadísticas de Autogestiones (Chart.js por CDN)**
+- [x] **Track: Métricas y Estadísticas de Autogestiones (Chart.js por CDN)**
   *Link: [./tracks/autogestiones_metricas_20261014/index.md](./tracks/autogestiones_metricas_20261014/index.md)*
