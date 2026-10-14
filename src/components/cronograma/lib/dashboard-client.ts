@@ -1991,6 +1991,12 @@ function setupEventListeners(): void {
 
     const formData = new FormData();
     formData.append("file", file);
+    // #261: el servidor valida el mes; sin esto rechazaría el import.
+    const activeMonth =
+      (
+        document.getElementById("date-input") as HTMLInputElement | null
+      )?.value?.slice(0, 7) ?? "";
+    formData.append("month", activeMonth);
 
     const btn = document.getElementById("import-csv-btn");
     const originalContent = btn ? btn.innerHTML : "";
