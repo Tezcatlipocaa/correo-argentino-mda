@@ -225,9 +225,20 @@ export function renderMonthSelect(): void {
     })
     .join("");
 
-  if (mainSelect) mainSelect.innerHTML = html;
-  if (groupsSelect) groupsSelect.innerHTML = html;
-  if (pasivaSelect) pasivaSelect.innerHTML = html;
+  const dateInput = document.getElementById(
+    "date-input",
+  ) as HTMLInputElement | null;
+  const selectedValue = dateInput?.value
+    ? `${dateInput.value.slice(0, 7)}-01`
+    : "";
+
+  for (const sel of [mainSelect, groupsSelect, pasivaSelect]) {
+    if (!sel) continue;
+    sel.innerHTML = html;
+    // Reemplazar el innerHTML resetea la selección a la primera opción.
+    // Restaurarla evita el desfase select ↔ date-input (#140).
+    if (selectedValue) sel.value = selectedValue;
+  }
 }
 
 /**
