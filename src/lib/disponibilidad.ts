@@ -1,12 +1,23 @@
 import { db } from "@db/index";
-import { agents, users, schedules, assignmentLock } from "@db/schema";
-import { eq, and } from "drizzle-orm";
+import { agents, users, schedules, assignmentLock, assignmentHistory } from "@db/schema";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { activeAgentCondition } from "@lib/activeUsers";
+import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
+import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment, invalidateUnassignedTicketsCache, MDA_COMMENT_PREFIX } from "@/lib/invgate/agsTickets";
+import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
+import {
+  getWiseCxPresenceMap,
+  findWiseCxPresenceForAgent,
+  estadoAptoParaAgs,
+  type WiseCxBadgeVariant,
+  type WiseCxStatusCategory,
+} from "@/lib/wise-cx-presence";
 
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
 
 export interface AgentDisponibilidad {
   agentId: number;
+  invgateId?: number;
   nombre: string;
   username?: string;
   location: string;
@@ -16,10 +27,24 @@ export interface AgentDisponibilidad {
   breakInicioHoy?: string; // "12:00"
   breakFinHoy?: string; // "13:00"
   retornoEstimado?: string; // "13:00"
+  breakInminente?: boolean; // true si faltan <= 10 min para entrar en break
+  breakInminenteMin?: number; // minutos que faltan para el break
+  salidaInminente?: boolean; // true si faltan <= 10 min para terminar su jornada
+  salidaInminenteMin?: number; // minutos que faltan para el fin de jornada
+  proximoTurnoDisponible?: string; // Formato "YYYY-MM-DDTHH:mm"
+  proximoTurnoMotivo?: string; // "Fin de break (13:00)", "Próximo turno (Vie 21/08 08:00)"
   lastAutogestionAssignedAt: number | null;
   lastAutogestionAssignedBy?: string | null;
   lastAutogestionUndo?: number | null;
   modalidadHoy?: string; // "Presencial", "Home Office", "Horas Extras", "Franco", etc.
+  // Wise CX Estados en Vivo
+  wiseCxStatus?: string;
+  wiseCxCategory?: WiseCxStatusCategory;
+  wiseCxBadgeVariant?: WiseCxBadgeVariant;
+  wiseCxFieldColor?: string;
+  wiseCxMinutesInStatus?: number;
+  wiseCxSince?: string;
+  wiseCxInCall?: boolean;
   estadoExcepcional?: string; // Tipo de excepción activa: "devolucion_supervisor" | "break_extendido" | "problema_tecnico"
   estadoExcepcionalMotivo?: string; // Comentario del supervisor
   estadoExcepcionalAt?: number; // Timestamp
@@ -41,7 +66,149 @@ export function getLocalDateString(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
-export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
+/**
+ * Calcula el próximo turno disponible para un operador (o fin de break si está en break).
+ * Excluye operadores en vacaciones.
+ */
+export function calcularProximoTurnoDisponible(
+  agent: {
+    name: string;
+    horarioDefault?: string | null;
+    esquemaSemanal?: any;
+    esquemaHorario?: any;
+  },
+  dbSchedules: Array<{ date: string; agentName: string; status: string; horario?: string | null }>,
+  currentStatus: string,
+  currentMotivo: string | undefined,
+  currentHorario: string,
+  currentBreakFin: string,
+  retornoEstimado: string | undefined,
+  isCurrentlyOnBreak: boolean,
+  isDisponible: boolean,
+  now: Date = new Date()
+): { proximoTurnoDisponible?: string; proximoTurnoMotivo?: string } {
+  // Solo aplica para operadores no disponibles o en break (no para operadores actualmente disponibles)
+  if (isDisponible && !isCurrentlyOnBreak) {
+    return {};
+  }
+
+  // Excluir vacaciones según requerimiento explícito
+  if (currentStatus === "Vacaciones" || currentMotivo === "Vacaciones") {
+    return {};
+  }
+
+  const workingStatuses = ["Presencial Monte Grande", "Presencial Parque Patricios", "Home Office"];
+  const dayNames = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+  const shortDays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const todayStr = getLocalDateString(now);
+
+  // 1. Si está en break o break extendido hoy
+  if (isCurrentlyOnBreak) {
+    const returnTime = retornoEstimado && /^\d{1,2}:\d{2}$/.test(retornoEstimado)
+      ? retornoEstimado
+      : currentBreakFin && /^\d{1,2}:\d{2}$/.test(currentBreakFin)
+        ? currentBreakFin
+        : null;
+
+    if (returnTime) {
+      const [rH, rM] = returnTime.split(":").map(Number);
+      const returnDate = new Date(now);
+      returnDate.setHours(rH, rM, 0, 0);
+
+      // Si la hora de retorno aún no pasó hoy
+      if (returnDate > now) {
+        return {
+          proximoTurnoDisponible: `${todayStr}T${pad(rH)}:${pad(rM)}`,
+          proximoTurnoMotivo: `Fin de break (${pad(rH)}:${pad(rM)})`,
+        };
+      }
+    }
+  }
+
+  // 2. Si hoy es un día laborable pero aún no empezó su turno (now < startTime)
+  if (workingStatuses.includes(currentStatus) && currentHorario) {
+    const [startStr] = currentHorario.split(" - ");
+    if (startStr && /^\d{1,2}:\d{2}$/.test(startStr.trim())) {
+      const [sH, sM] = startStr.trim().split(":").map(Number);
+      const startDate = new Date(now);
+      startDate.setHours(sH, sM, 0, 0);
+
+      if (now < startDate) {
+        return {
+          proximoTurnoDisponible: `${todayStr}T${pad(sH)}:${pad(sM)}`,
+          proximoTurnoMotivo: `Inicio de turno hoy (${pad(sH)}:${pad(sM)})`,
+        };
+      }
+    }
+  }
+
+  // 3. Buscar el próximo turno hábil en los próximos 14 días (desde mañana)
+  const parseSafeObj = (val: unknown): Record<string, any> => {
+    if (!val) return {};
+    if (typeof val === "object") return val as Record<string, any>;
+    try {
+      return JSON.parse(val as string);
+    } catch {
+      return {};
+    }
+  };
+  const esquemaSemanalMap = parseSafeObj(agent.esquemaSemanal);
+  const esquemaHorarioMap = parseSafeObj(agent.esquemaHorario);
+
+  for (let d = 1; d <= 14; d++) {
+    const targetDate = new Date(now.getTime() + d * 24 * 3600 * 1000);
+    const targetDateStr = getLocalDateString(targetDate);
+    const targetDayName = dayNames[targetDate.getDay()];
+    const targetShortDay = shortDays[targetDate.getDay()];
+
+    // Buscar si hay excepción para ese día
+    const override = dbSchedules.find((s) => s.date === targetDateStr && s.agentName === agent.name);
+
+    let dayStatus = "Franco";
+    let dayHorario = "";
+
+    if (override) {
+      dayStatus = override.status;
+      dayHorario = override.horario || "";
+    } else if (esquemaSemanalMap[targetDayName]) {
+      const diaConfig = esquemaSemanalMap[targetDayName];
+      if (typeof diaConfig === "object" && diaConfig !== null) {
+        if (diaConfig.activo !== false) {
+          dayStatus = diaConfig.modalidad || "Home Office";
+          dayHorario = diaConfig.horario || "";
+        }
+      } else {
+        dayStatus = diaConfig || "Franco";
+        dayHorario = esquemaHorarioMap[targetDayName] || "";
+      }
+    }
+
+    if (workingStatuses.includes(dayStatus)) {
+      if (!dayHorario || dayHorario === "-" || dayHorario.trim() === "") {
+        dayHorario = agent.horarioDefault || "08:00 - 17:00";
+      }
+
+      const [startStr] = dayHorario.split(" - ");
+      const [hS, mS] = (startStr || "08:00").trim().split(":").map(Number);
+      const validH = isNaN(hS) ? 8 : hS;
+      const validM = isNaN(mS) ? 0 : mS;
+
+      const dateLabel = `${targetShortDay} ${pad(targetDate.getDate())}/${pad(targetDate.getMonth() + 1)}`;
+      const timeLabel = `${pad(validH)}:${pad(validM)}`;
+
+      return {
+        proximoTurnoDisponible: `${targetDateStr}T${timeLabel}`,
+        proximoTurnoMotivo: `Próximo turno (${dateLabel} ${timeLabel})`,
+      };
+    }
+  }
+
+  return {};
+}
+
+export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentDisponibilidad[]> {
   const todayStr = getLocalDateString();
   const now = new Date();
 
@@ -57,8 +224,21 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
   ];
   const dayName = dayNames[now.getDay()];
 
+  // Obtener miembros de la mesa de autogestiones
+  const helpdeskMembers = await getHelpdeskMembers(AGS_HELPDESK_ID);
+  const helpdeskUsernames = new Set(
+    helpdeskMembers
+      .map((m) => (m.username ? m.username.split("@")[0].toLowerCase().trim() : ""))
+      .filter(Boolean)
+  );
+  const helpdeskFullNames = new Set(
+    helpdeskMembers
+      .map((m) => m.fullName.toLowerCase().replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+  );
+
   // 1. Fetch all agents
-  const dbAgents = await db
+  const dbAgentsAll = await db
     .select({
       id: agents.id,
       name: agents.name,
@@ -83,21 +263,59 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     .leftJoin(users, eq(users.id, agents.userId))
     .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
 
-  // 2. Fetch today's persistent schedule overrides
+  // Filtrar solo operadores que pertenecen a la mesa de autogestiones
+  const dbAgents = dbAgentsAll.filter((agent) => {
+    if (helpdeskMembers.length === 0) return true; // Fallback por seguridad si falla InvGate
+    
+    // Check 1: Match por username
+    if (agent.username) {
+      const cleanUser = agent.username.split("@")[0].toLowerCase().trim();
+      if (helpdeskUsernames.has(cleanUser)) return true;
+    }
+    
+    // Check 2: Match por nombre completo o cruzado (Apellido / Nombre)
+    if (agent.name) {
+      const cleanName = agent.name.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+      const tokens = cleanName.split(" ").filter((t) => t.length > 2);
+
+      for (const member of helpdeskMembers) {
+        const memberClean = member.fullName.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        // Exact match normalized
+        if (cleanName === memberClean) return true;
+
+        // Si los tokens principales del nombre están incluidos
+        if (tokens.length >= 2) {
+          const matchesAllTokens = tokens.every((tok) => memberClean.includes(tok));
+          if (matchesAllTokens) return true;
+        }
+      }
+    }
+
+    return false;
+  });
+
+  const endDate14Str = getLocalDateString(new Date(now.getTime() + 14 * 24 * 3600 * 1000));
+
+  // 2. Fetch today's and upcoming persistent schedule overrides (next 14 days)
   const dbSchedules = await db
     .select()
     .from(schedules)
-    .where(eq(schedules.date, todayStr));
+    .where(and(gte(schedules.date, todayStr), lte(schedules.date, endDate14Str)));
 
-  // 3. Process each agent
+  // 3. Consultar presencia en tiempo real de Wise CX (Wallboard Analytics)
+  const wiseCxPresenceList = await getWiseCxPresenceMap(forceRefresh);
+
+  // 4. Process each agent
   const list: AgentDisponibilidad[] = dbAgents.map((agent) => {
     const workingStatuses = [
       "Presencial Monte Grande",
       "Presencial Parque Patricios",
       "Home Office",
     ];
-    // Check if there is an override for this agent today (vinculo por id)
-    const schedule = dbSchedules.find((s) => s.agentId === agent.id);
+    // Check if there is an override for this agent today (vinculo por id o nombre)
+    const schedule = dbSchedules.find(
+      (s) => s.date === todayStr && (s.agentId === agent.id || s.agentName === agent.name)
+    );
 
     let status = "Franco";
     let horario = "";
@@ -111,19 +329,37 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       breakFin = schedule.breakFin || "";
     } else {
       // Fallback to weekly schedule
-      const esquemaSemanal =
-        (agent.esquemaSemanal as Record<string, string>) || {};
-      const esquemaHorario =
-        (agent.esquemaHorario as Record<string, string>) || {};
-      const esquemaBreakInicio =
-        (agent.esquemaBreakInicio as Record<string, string>) || {};
-      const esquemaBreakFin =
-        (agent.esquemaBreakFin as Record<string, string>) || {};
+      const parseSafe = (val: unknown): Record<string, any> => {
+        if (!val) return {};
+        if (typeof val === "object") return val as Record<string, any>;
+        try {
+          return JSON.parse(val as string);
+        } catch {
+          return {};
+        }
+      };
 
-      status = esquemaSemanal[dayName] ?? "Franco";
-      horario = esquemaHorario[dayName] || "";
-      breakInicio = esquemaBreakInicio[dayName] || "";
-      breakFin = esquemaBreakFin[dayName] || "";
+      const esquemaSemanal = parseSafe(agent.esquemaSemanal);
+      const esquemaHorario = parseSafe(agent.esquemaHorario);
+      const esquemaBreakInicio = parseSafe(agent.esquemaBreakInicio);
+      const esquemaBreakFin = parseSafe(agent.esquemaBreakFin);
+
+      const diaVal = esquemaSemanal[dayName];
+      if (typeof diaVal === "object" && diaVal !== null) {
+        if (diaVal.activo === false) {
+          status = "Franco";
+        } else {
+          status = diaVal.modalidad || "Home Office";
+          if (diaVal.horario) horario = diaVal.horario;
+          if (diaVal.breakInicio) breakInicio = diaVal.breakInicio;
+          if (diaVal.breakFin) breakFin = diaVal.breakFin;
+        }
+      } else {
+        status = diaVal ?? "Franco";
+        horario = esquemaHorario[dayName] || "";
+        breakInicio = esquemaBreakInicio[dayName] || "";
+        breakFin = esquemaBreakFin[dayName] || "";
+      }
     }
 
     // Map database blank or invalid status to Franco
@@ -159,8 +395,39 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
       }
     }
 
+    let matchedInvgateId: number | undefined;
+
+    // Check 1: Match por username
+    if (agent.username) {
+      const cleanUser = agent.username.split("@")[0].toLowerCase().trim();
+      const m = helpdeskMembers.find((mem) => {
+        if (!mem.username) return false;
+        const memClean = mem.username.split("@")[0].toLowerCase().trim();
+        return memClean === cleanUser;
+      });
+      if (m) matchedInvgateId = m.id;
+    }
+
+    // Check 2: Match por nombre completo o cruzado (Apellido / Nombre)
+    if (!matchedInvgateId && agent.name) {
+      const cleanName = agent.name.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+      const tokens = cleanName.split(" ").filter((t) => t.length > 2);
+
+      for (const mem of helpdeskMembers) {
+        const memClean = mem.fullName.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        if (cleanName === memClean) {
+          matchedInvgateId = mem.id;
+          break;
+        }
+        if (tokens.length >= 2 && tokens.every((tok) => memClean.includes(tok))) {
+          matchedInvgateId = mem.id;
+          break;
+        }
+      }
+    }
     const info: AgentDisponibilidad = {
       agentId: agent.id,
+      invgateId: matchedInvgateId,
       nombre: agent.name,
       username: agent.username || undefined,
       location: agent.location || "Monte Grande",
@@ -191,152 +458,203 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
     if (!workingStatuses.includes(status)) {
       info.disponible = false;
       info.motivo = status; // "Franco", "Vacaciones", "Licencia"
-      applyOverride();
-      return info;
-    }
-
-    // Parse the shift hours
-    const parts = horario.split(" - ");
-    if (parts.length !== 2) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      applyOverride();
-      return info;
-    }
-
-    const [startStr, endStr] = parts;
-    const [hS, mS] = startStr.split(":").map(Number);
-    const [hE, mE] = endStr.split(":").map(Number);
-
-    if (isNaN(hS) || isNaN(mS) || isNaN(hE) || isNaN(mE)) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      applyOverride();
-      return info;
-    }
-
-    const startTime = new Date(now);
-    startTime.setHours(hS, mS, 0, 0);
-
-    const endTime = new Date(now);
-    endTime.setHours(hE, mE, 0, 0);
-
-    // Check if within shift
-    if (now < startTime) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      info.retornoEstimado = startStr;
-      applyOverride();
-      return info;
-    }
-
-    if (now > endTime) {
-      info.disponible = false;
-      info.motivo = "Fuera de horario";
-      applyOverride();
-      return info;
-    }
-
-    // Check break times
-    let breakStart: Date;
-    let breakEnd: Date;
-
-    if (breakInicio && breakFin) {
-      const [bhS, bmS] = breakInicio.split(":").map(Number);
-      const [bhE, bmE] = breakFin.split(":").map(Number);
-
-      if (!isNaN(bhS) && !isNaN(bmS) && !isNaN(bhE) && !isNaN(bmE)) {
-        breakStart = new Date(now);
-        breakStart.setHours(bhS, bmS, 0, 0);
-        breakEnd = new Date(now);
-        breakEnd.setHours(bhE, bmE, 0, 0);
-      } else {
-        // Fallback calculation if breaks format is invalid
-        const shiftDuration = endTime.getTime() - startTime.getTime();
-        breakStart = new Date(
-          startTime.getTime() + shiftDuration / 2 - 30 * 60000,
-        );
-        breakEnd = new Date(breakStart.getTime() + 60 * 60000);
-      }
     } else {
-      // Estimate 1 hour break in the middle of the shift
-      const shiftDuration = endTime.getTime() - startTime.getTime();
-      breakStart = new Date(
-        startTime.getTime() + shiftDuration / 2 - 30 * 60000,
-      );
-      breakEnd = new Date(breakStart.getTime() + 60 * 60000);
-    }
-
-    // Auto-cleanup of break_extendido if it expired
-    if (agent.estadoExcepcional === "break_extendido") {
-      if (
-        agent.estadoExcepcionalMinutos !== null &&
-        agent.estadoExcepcionalMinutos !== undefined
-      ) {
-        const extraMinutes = agent.estadoExcepcionalMinutos;
-        const extendedBreakEnd = new Date(
-          breakEnd.getTime() + extraMinutes * 60000,
-        );
-        if (now >= extendedBreakEnd) {
-          // Clear in DB asynchronously
-          db.update(agents)
-            .set({
-              estadoExcepcional: null,
-              estadoExcepcionalMotivo: null,
-              estadoExcepcionalAt: null,
-              estadoExcepcionalMinutos: null,
-            })
-            .where(eq(agents.id, agent.id))
-            .catch((err) =>
-              console.error(
-                `Error auto-clearing break_extendido state for agent ${agent.id}:`,
-                err,
-              ),
-            );
-
-          // Mutate local object and info so we don't apply the override in this render
-          agent.estadoExcepcional = null;
-          agent.estadoExcepcionalMotivo = null;
-          agent.estadoExcepcionalAt = null;
-          agent.estadoExcepcionalMinutos = null;
-
-          info.estadoExcepcional = undefined;
-          info.estadoExcepcionalMotivo = undefined;
-          info.estadoExcepcionalAt = undefined;
-          info.estadoExcepcionalMinutos = undefined;
-        } else {
-          // Format return time
-          const retHours = String(extendedBreakEnd.getHours()).padStart(2, "0");
-          const retMins = String(extendedBreakEnd.getMinutes()).padStart(
-            2,
-            "0",
-          );
-          info.retornoEstimado = `${retHours}:${retMins}`;
-        }
+      // Parse the shift hours
+      const parts = horario.split(" - ");
+      if (parts.length !== 2) {
+        info.disponible = false;
+        info.motivo = "Fuera de horario";
       } else {
-        // Manual / No auto-cleanup
-        info.retornoEstimado = "Manual";
+        const [startStr, endStr] = parts;
+        const [hS, mS] = startStr.split(":").map(Number);
+        const [hE, mE] = endStr.split(":").map(Number);
+
+        if (isNaN(hS) || isNaN(mS) || isNaN(hE) || isNaN(mE)) {
+          info.disponible = false;
+          info.motivo = "Fuera de horario";
+        } else {
+          const startTime = new Date(now);
+          startTime.setHours(hS, mS, 0, 0);
+
+          const endTime = new Date(now);
+          endTime.setHours(hE, mE, 0, 0);
+
+          // Check if within shift
+          if (now < startTime) {
+            info.disponible = false;
+            info.motivo = "Fuera de horario";
+            info.retornoEstimado = startStr;
+          } else if (now > endTime) {
+            info.disponible = false;
+            info.motivo = "Fuera de horario";
+          } else {
+            // Check break times
+            let breakStart: Date;
+            let breakEnd: Date;
+
+            if (breakInicio && breakFin) {
+              const [bhS, bmS] = breakInicio.split(":").map(Number);
+              const [bhE, bmE] = breakFin.split(":").map(Number);
+
+              if (!isNaN(bhS) && !isNaN(bmS) && !isNaN(bhE) && !isNaN(bmE)) {
+                breakStart = new Date(now);
+                breakStart.setHours(bhS, bmS, 0, 0);
+                breakEnd = new Date(now);
+                breakEnd.setHours(bhE, bmE, 0, 0);
+              } else {
+                // Fallback calculation if breaks format is invalid
+                const shiftDuration = endTime.getTime() - startTime.getTime();
+                breakStart = new Date(startTime.getTime() + shiftDuration / 2 - 30 * 60000);
+                breakEnd = new Date(breakStart.getTime() + 60 * 60000);
+              }
+            } else {
+              // Estimate 1 hour break in the middle of the shift
+              const shiftDuration = endTime.getTime() - startTime.getTime();
+              breakStart = new Date(startTime.getTime() + shiftDuration / 2 - 30 * 60000);
+              breakEnd = new Date(breakStart.getTime() + 60 * 60000);
+            }
+
+            // Check if currently in break
+            if (now >= breakStart && now <= breakEnd) {
+              info.disponible = false;
+              info.motivo = "En break";
+              
+              // Format return time if not already set
+              if (!info.retornoEstimado) {
+                const retHours = String(breakEnd.getHours()).padStart(2, "0");
+                const retMins = String(breakEnd.getMinutes()).padStart(2, "0");
+                info.retornoEstimado = `${retHours}:${retMins}`;
+              }
+            } else {
+              // If we passed all checks, agent is available
+              info.disponible = true;
+            }
+          }
+        }
       }
     }
 
-    // Check if currently in break
-    if (now >= breakStart && now <= breakEnd) {
-      info.disponible = false;
-      info.motivo = "En break";
+    // 4. Cruzar con presencia en tiempo real de Wise CX (Prioridad operativa en vivo)
+    const wisePresence = findWiseCxPresenceForAgent(agent.name, wiseCxPresenceList);
+    if (wisePresence) {
+      info.wiseCxStatus = wisePresence.status;
+      info.wiseCxCategory = wisePresence.statusCategory;
+      info.wiseCxBadgeVariant = wisePresence.badgeVariant;
+      info.wiseCxFieldColor = wisePresence.fieldColor;
+      info.wiseCxMinutesInStatus = wisePresence.statusCategory === "desconectado" ? undefined : wisePresence.minutesInStatus;
+      info.wiseCxSince = wisePresence.userStatusDate;
+      info.wiseCxInCall = wisePresence.inCall;
 
-      // Format return time if not already set
-      if (!info.retornoEstimado) {
-        const retHours = String(breakEnd.getHours()).padStart(2, "0");
-        const retMins = String(breakEnd.getMinutes()).padStart(2, "0");
-        info.retornoEstimado = `${retHours}:${retMins}`;
+      if (wisePresence.inCall) {
+        // Regla confirmada: En llamada pueden recibir AGS (se encolan)
+        info.disponible = true;
+        delete info.motivo;
+        delete info.retornoEstimado;
+        if (!workingStatuses.includes(status)) {
+          info.modalidadHoy = "Guardia";
+        }
+      } else if (wisePresence.statusCategory === "disponible") {
+        // Operador disponible en Wise CX (prioridad en vivo sobre cronograma)
+        info.disponible = true;
+        delete info.motivo;
+        delete info.retornoEstimado;
+        if (!workingStatuses.includes(status)) {
+          info.modalidadHoy = "Guardia";
+        }
+      } else if (wisePresence.statusCategory === "desconectado") {
+        // Si estaba dentro de horario laboral, desconectado lo bloquea
+        if (workingStatuses.includes(status)) {
+          info.disponible = false;
+          info.motivo = "Desconectado";
+        }
+      } else if (wisePresence.statusCategory === "invisible") {
+        // Si estaba dentro de horario laboral, invisible lo bloquea
+        if (workingStatuses.includes(status)) {
+          info.disponible = false;
+          info.motivo = "Invisible";
+        }
+      } else if (wisePresence.statusCategory === "bloqueado") {
+        // Administrativo, Almuerzo, Baño, Devolución Supervisión, Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
+        if (estadoAptoParaAgs(wisePresence.status)) {
+          // Baño / Llamada saliente / Llamada Sin Atender no bloquean: el ticket se encola.
+          info.disponible = true;
+          delete info.motivo;
+          delete info.retornoEstimado;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
+        } else {
+          info.disponible = false;
+          info.motivo = wisePresence.motivoBloqueo || wisePresence.status;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
+
+          if (wisePresence.status.toLowerCase().includes("almuerzo") && wisePresence.userStatusDate) {
+            const startUtc = new Date(wisePresence.userStatusDate.replace(" ", "T") + "Z").getTime();
+            if (!isNaN(startUtc)) {
+              // Estimar fin de almuerzo (+45 min desde que ingresó)
+              const estEnd = new Date(startUtc + 45 * 60000);
+              const rH = String(estEnd.getHours()).padStart(2, "0");
+              const rM = String(estEnd.getMinutes()).padStart(2, "0");
+              info.retornoEstimado = `${rH}:${rM}`;
+            }
+          }
+        }
       }
-      applyOverride();
-      return info;
     }
 
-    // If we passed all checks, agent is available
-    info.disponible = true;
-    applyOverride();
+    // Verificar si el break es inminente (faltan <= 10 min y está disponible)
+    if (info.disponible && breakInicio) {
+      const [bhS, bmS] = breakInicio.split(":").map(Number);
+      if (!isNaN(bhS) && !isNaN(bmS)) {
+        const breakStartTime = new Date(now);
+        breakStartTime.setHours(bhS, bmS, 0, 0);
+        const diffMs = breakStartTime.getTime() - now.getTime();
+        const diffMin = Math.ceil(diffMs / 60000);
+        if (diffMin > 0 && diffMin <= 10) {
+          info.breakInminente = true;
+          info.breakInminenteMin = diffMin;
+        }
+      }
+    }
+
+    // Verificar si el fin de jornada / salida es inminente (faltan <= 10 min y está disponible)
+    if (info.disponible && horario) {
+      const parts = horario.split(" - ");
+      if (parts.length === 2) {
+        const [_, endStr] = parts;
+        const [ehS, emS] = endStr.split(":").map(Number);
+        if (!isNaN(ehS) && !isNaN(emS)) {
+          const shiftEndTime = new Date(now);
+          shiftEndTime.setHours(ehS, emS, 0, 0);
+          const diffMs = shiftEndTime.getTime() - now.getTime();
+          const diffMin = Math.ceil(diffMs / 60000);
+          if (diffMin > 0 && diffMin <= 10) {
+            info.salidaInminente = true;
+            info.salidaInminenteMin = diffMin;
+          }
+        }
+      }
+    }
+
+    // Calcular sugerencia de próximo turno disponible
+    const proximoTurno = calcularProximoTurnoDisponible(
+      agent,
+      dbSchedules,
+      status,
+      info.motivo,
+      horario,
+      breakFin,
+      info.retornoEstimado,
+      info.motivo === "En break",
+      info.disponible,
+      now
+    );
+
+    info.proximoTurnoDisponible = proximoTurno.proximoTurnoDisponible;
+    info.proximoTurnoMotivo = proximoTurno.proximoTurnoMotivo;
+
     return info;
   });
 
@@ -345,9 +663,11 @@ export async function getDisponibilidadHoy(): Promise<AgentDisponibilidad[]> {
 
 export async function asignarSiguienteAutogestion(
   assignedBy: string = "Sistema",
+  authorInvgateId?: number
 ): Promise<{
   success: boolean;
   agent?: AgentDisponibilidad;
+  ticketNumber?: string;
   error?: string;
 }> {
   const list = await getDisponibilidadHoy();
@@ -384,8 +704,43 @@ export async function asignarSiguienteAutogestion(
   const winner = available[0];
   const now = Date.now();
 
-  // Clear any existing undo states
-  await db.update(agents).set({ lastAutogestionUndo: null });
+  // Consultar ticket sin asignar en la mesa de autogestiones
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      error: "No hay autogestiones sin asignar en la mesa de ayuda para entregar.",
+    };
+  }
+
+  const oldestTicket = unassignedRes.tickets[0];
+  if (!winner.invgateId) {
+    return {
+      success: false,
+      error: `El operador ${winner.nombre} no tiene un ID de InvGate vinculado en Mesa ${AGS_HELPDESK_ID}.`,
+    };
+  }
+  const targetInvgateId = winner.invgateId;
+  const authorId = authorInvgateId || targetInvgateId || 1;
+  const reassignRes = await reassignTicketToAgent(oldestTicket.id, targetInvgateId, AGS_HELPDESK_ID, authorId);
+  if (!reassignRes.ok) {
+    return {
+      success: false,
+      error: `Error al reasignar ticket #${oldestTicket.id} en InvGate a ${winner.nombre}: ${reassignRes.message}`,
+    };
+  }
+
+  // Comentario público automático en InvGate
+  try {
+    const commentRes = await addTicketComment(oldestTicket.id, `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`, authorId, 1);
+    if (!commentRes.ok) {
+      console.warn(`[asignarSiguienteAutogestion] No se pudo agregar comentario público al ticket #${oldestTicket.id}: ${commentRes.message}`);
+    }
+  } catch (commentErr) {
+    console.error(`[asignarSiguienteAutogestion] Error agregando comentario público a ticket #${oldestTicket.id}:`, commentErr);
+  }
+
+  const ticketAssigned = oldestTicket.pretty_id || `#${oldestTicket.id}`;
 
   const prevValue = winner.lastAutogestionAssignedAt;
 
@@ -403,83 +758,496 @@ export async function asignarSiguienteAutogestion(
   winner.lastAutogestionAssignedBy = assignedBy;
   winner.lastAutogestionUndo = prevValue;
 
+  // Record audit history entry
+  try {
+    await db.insert(assignmentHistory).values({
+      agentId: winner.agentId,
+      agentName: winner.nombre,
+      ticketNumber: ticketAssigned || null,
+      assignedBy,
+      assignedAt: now,
+      type: "cyclic",
+    });
+  } catch (historyErr) {
+    console.error("Error saving assignment history:", historyErr);
+  }
+
+  invalidateUnassignedTicketsCache();
+
   return {
     success: true,
     agent: winner,
+    ticketNumber: ticketAssigned,
   };
 }
 
 export async function asignarManual(
   agentId: number,
   assignedBy: string = "Sistema",
-): Promise<{ success: boolean; error?: string }> {
-  // Clear any existing undo states
-  await db.update(agents).set({ lastAutogestionUndo: null });
+  authorInvgateId?: number,
+  ticketId?: number,
+  skipQueueUpdate: boolean = false,
+  comment?: string
+): Promise<{ success: boolean; ticketNumber?: string; error?: string; skipQueueUpdate?: boolean }> {
+  const list = await getDisponibilidadHoy();
+  const targetAgent = list.find((a) => a.agentId === agentId);
 
-  // Get current state to preserve
+  // Consultar ticket sin asignar en la mesa de autogestiones
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      error: "No hay autogestiones sin asignar en la mesa de ayuda para entregar.",
+    };
+  }
+
+  let targetTicket = ticketId
+    ? unassignedRes.tickets.find((t) => t.id === ticketId)
+    : unassignedRes.tickets[0];
+
+  if (!targetTicket) {
+    if (ticketId) {
+      return {
+        success: false,
+        error: `El ticket #${ticketId} ya no se encuentra sin asignar en la Mesa ${AGS_HELPDESK_ID}.`,
+      };
+    }
+    targetTicket = unassignedRes.tickets[0];
+  }
+
+  if (!targetAgent?.invgateId) {
+    return {
+      success: false,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa ${AGS_HELPDESK_ID}.`,
+    };
+  }
+  const targetInvgateId = targetAgent.invgateId;
+  const authorId = authorInvgateId || targetInvgateId || 1;
+  const reassignRes = await reassignTicketToAgent(targetTicket.id, targetInvgateId, AGS_HELPDESK_ID, authorId);
+  if (!reassignRes.ok) {
+    return {
+      success: false,
+      error: `Error al reasignar ticket #${targetTicket.id} en InvGate: ${reassignRes.message}`,
+    };
+  }
+
+  // Comentario público automático en InvGate
+  try {
+    const publicComment = comment?.trim() || `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`;
+    const commentRes = await addTicketComment(targetTicket.id, publicComment, authorId, 1);
+    if (!commentRes.ok) {
+      console.warn(`[asignarManual] No se pudo agregar comentario público al ticket #${targetTicket.id}: ${commentRes.message}`);
+    }
+  } catch (commentErr) {
+    console.error(`[asignarManual] Error agregando comentario público a ticket #${targetTicket.id}:`, commentErr);
+  }
+
+  const ticketAssigned = targetTicket.pretty_id || `#${targetTicket.id}`;
+
   const [ag] = await db
-    .select({ lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt })
+    .select({
+      lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt,
+      name: agents.name,
+    })
     .from(agents)
     .where(eq(agents.id, agentId));
   const prevValue = ag ? ag.lastAutogestionAssignedAt : null;
+  const assignTime = Date.now();
 
-  // Update lastAutogestionAssignedAt for the manually assigned agent
-  await db
-    .update(agents)
-    .set({
-      lastAutogestionAssignedAt: Date.now(),
-      lastAutogestionAssignedBy: assignedBy,
-      lastAutogestionUndo: prevValue,
+  if (!skipQueueUpdate) {
+    // Update lastAutogestionAssignedAt for the manually assigned agent
+    await db
+      .update(agents)
+      .set({ 
+        lastAutogestionAssignedAt: assignTime,
+        lastAutogestionAssignedBy: assignedBy,
+        lastAutogestionUndo: prevValue,
+      })
+      .where(eq(agents.id, agentId));
+  }
+
+  // Record audit history entry
+  try {
+    const targetName = targetAgent?.nombre || ag?.name || `ID ${agentId}`;
+    await db.insert(assignmentHistory).values({
+      agentId,
+      agentName: targetName,
+      ticketNumber: ticketAssigned || null,
+      assignedBy,
+      assignedAt: assignTime,
+      type: skipQueueUpdate ? "revision" : "manual",
+    });
+  } catch (historyErr) {
+    console.error("Error saving assignment history:", historyErr);
+  }
+
+  invalidateUnassignedTicketsCache();
+
+  return { success: true, ticketNumber: ticketAssigned, skipQueueUpdate };
+}
+
+/**
+ * Asigna un ticket manualmente a un agente y lo pone en estado 'Esperando fecha' en InvGate.
+ */
+export async function asignarYPosponer(
+  agentId: number,
+  assignedBy: string,
+  authorInvgateId?: number,
+  ticketId?: number,
+  postponeDate?: string,
+  reason: string = "Pospuesto por supervisión",
+  skipQueueUpdate: boolean = false
+): Promise<{ success: boolean; error?: string; ticketNumber?: string; postponeDate?: string; skipQueueUpdate?: boolean }> {
+  if (!ticketId) {
+    return { success: false, error: "Se requiere especificar un ticket para posponer." };
+  }
+  if (!postponeDate) {
+    return { success: false, error: "Se requiere especificar una fecha futura para posponer." };
+  }
+
+  const allOps = await getDisponibilidadHoy();
+  const targetAgent = allOps.find((op) => op.agentId === agentId);
+  if (!targetAgent?.invgateId) {
+    return {
+      success: false,
+      error: `El operador seleccionado (ID ${agentId}) no tiene un ID de InvGate vinculado en Mesa ${AGS_HELPDESK_ID}.`,
+    };
+  }
+
+  const targetInvgateId = targetAgent.invgateId;
+  const authorId = authorInvgateId || targetInvgateId || 1;
+
+  // 1. Reasignar ticket al operador
+  const reassignRes = await reassignTicketToAgent(ticketId, targetInvgateId, AGS_HELPDESK_ID, authorId);
+  if (!reassignRes.ok) {
+    return {
+      success: false,
+      error: `Error al reasignar ticket #${ticketId} en InvGate: ${reassignRes.message}`,
+    };
+  }
+
+  // 2. Cambiar estado a 'esperando fecha' con la fecha especificada
+  const waitDateRes = await setTicketWaitingForDate(ticketId, postponeDate, authorId, reason || "Pospuesto por supervisión");
+  if (!waitDateRes.ok) {
+    return {
+      success: false,
+      error: `Ticket #${ticketId} reasignado al operador, pero falló al posponer (Esperando fecha) en InvGate: ${waitDateRes.message}`,
+    };
+  }
+
+  // 2b. Si se especificó un motivo/comentario, publicarlo como nota interna (visible para el operador)
+  const trimmedComment = reason?.trim();
+  if (trimmedComment && trimmedComment !== "Pospuesto por supervisión") {
+    try {
+      await addTicketComment(ticketId, trimmedComment, authorId, 0);
+    } catch (commentErr) {
+      console.error(`Error agregando nota interna a ticket #${ticketId}:`, commentErr);
+    }
+  }
+
+  const ticketAssigned = `#${ticketId}`;
+
+  const [ag] = await db
+    .select({
+      lastAutogestionAssignedAt: agents.lastAutogestionAssignedAt,
+      name: agents.name,
     })
+    .from(agents)
     .where(eq(agents.id, agentId));
-  return { success: true };
-}
+  const prevValue = ag ? ag.lastAutogestionAssignedAt : null;
+  const assignTime = Date.now();
 
-export async function marcarEstadoExcepcional(
-  agentId: number,
-  tipo: string,
-  motivo?: string,
-  tiempoExtra?: number | null,
-): Promise<{ success: boolean; error?: string }> {
-  try {
+  if (!skipQueueUpdate) {
+    // 3. Actualizar estado del agente
     await db
       .update(agents)
       .set({
-        estadoExcepcional: tipo,
-        estadoExcepcionalMotivo: motivo || null,
-        estadoExcepcionalAt: Date.now(),
-        estadoExcepcionalMinutos: tiempoExtra || null,
+        lastAutogestionAssignedAt: assignTime,
+        lastAutogestionAssignedBy: assignedBy,
+        lastAutogestionUndo: prevValue,
       })
       .where(eq(agents.id, agentId));
-    return { success: true };
-  } catch (err: any) {
-    return {
-      success: false,
-      error: err?.message || "Error al marcar estado excepcional",
-    };
   }
+
+  // 4. Registrar en historial de asignaciones
+  try {
+    const targetName = targetAgent?.nombre || ag?.name || `ID ${agentId}`;
+    await db.insert(assignmentHistory).values({
+      agentId,
+      agentName: targetName,
+      ticketNumber: ticketAssigned,
+      assignedBy,
+      assignedAt: assignTime,
+      type: skipQueueUpdate ? "revision" : "manual",
+    });
+  } catch (historyErr) {
+    console.error("Error guardando historial de asignación pospuesta:", historyErr);
+  }
+
+  invalidateUnassignedTicketsCache();
+
+  return { success: true, ticketNumber: ticketAssigned, postponeDate, skipQueueUpdate };
 }
 
-export async function limpiarEstadoExcepcional(
-  agentId: number,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await db
-      .update(agents)
-      .set({
-        estadoExcepcional: null,
-        estadoExcepcionalMotivo: null,
-        estadoExcepcionalAt: null,
-        estadoExcepcionalMinutos: null,
-      })
-      .where(eq(agents.id, agentId));
-    return { success: true };
-  } catch (err: any) {
+export interface BatchAssignmentItem {
+  ticketId: number;
+  ticketPrettyId?: string;
+  agentId: number;
+  agentName: string;
+  creatorName?: string;
+}
+
+export interface BatchAssignmentResult {
+  success: boolean;
+  assignedCount: number;
+  totalAttempted: number;
+  items: Array<BatchAssignmentItem & { success: boolean; error?: string }>;
+  error?: string;
+}
+
+export async function asignarSugeridasAutogestion(
+  assignedBy: string = "Sistema",
+  authorInvgateId?: number
+): Promise<BatchAssignmentResult> {
+  const list = await getDisponibilidadHoy();
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
+
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
     return {
       success: false,
-      error: err?.message || "Error al limpiar estado excepcional",
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay autogestiones sin asignar en la mesa de ayuda.",
     };
   }
+
+  // Find matches where creator is available and has an invgateId
+  const pairs: Array<{ ticket: (typeof unassignedRes.tickets)[0]; op: AgentDisponibilidad }> = [];
+
+  for (const ticket of unassignedRes.tickets) {
+    const creatorUsername = (ticket.creator_username || "").toLowerCase().trim();
+    const creatorNameNorm = (ticket.creator_name || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+    const matchingOp = list.find((op) => {
+      if (!op.disponible || !op.invgateId) return false;
+      if (op.username && creatorUsername && op.username.split("@")[0].toLowerCase().trim() === creatorUsername) return true;
+      if (op.nombre && creatorNameNorm) {
+        const opNameNorm = op.nombre.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        if (opNameNorm === creatorNameNorm) return true;
+        const tokens = creatorNameNorm.split(" ").filter((k: string) => k.length > 2);
+        if (tokens.length >= 2 && tokens.every((k: string) => opNameNorm.includes(k))) return true;
+      }
+      return false;
+    });
+
+    if (matchingOp) {
+      pairs.push({ ticket, op: matchingOp });
+    }
+  }
+
+  if (pairs.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay autogestiones con creadores disponibles actualmente.",
+    };
+  }
+
+  const results: Array<BatchAssignmentItem & { success: boolean; error?: string }> = [];
+  let assignedCount = 0;
+  const now = Date.now();
+
+  for (let i = 0; i < pairs.length; i++) {
+    const { ticket, op } = pairs[i];
+    const authorId = authorInvgateId || op.invgateId || 1;
+    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, AGS_HELPDESK_ID, authorId);
+    const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
+
+    if (reassignRes.ok) {
+      try {
+        const commentRes = await addTicketComment(ticket.id, `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`, authorId, 1);
+        if (!commentRes.ok) {
+          console.warn(`[asignarSugeridasAutogestion] No se pudo agregar comentario público al ticket #${ticket.id}: ${commentRes.message}`);
+        }
+      } catch (cErr) {
+        console.error(`[asignarSugeridasAutogestion] Error agregando comentario público a ticket #${ticket.id}:`, cErr);
+      }
+      assignedCount++;
+      const assignTime = now + i;
+      await db
+        .update(agents)
+        .set({
+          lastAutogestionAssignedAt: assignTime,
+          lastAutogestionAssignedBy: assignedBy,
+          lastAutogestionUndo: null,
+        })
+        .where(eq(agents.id, op.agentId));
+
+      try {
+        await db.insert(assignmentHistory).values({
+          agentId: op.agentId,
+          agentName: op.nombre,
+          ticketNumber: ticketAssigned,
+          assignedBy,
+          assignedAt: assignTime,
+          type: "batch_suggested",
+        });
+      } catch (hErr) {
+        console.error("Error saving batch suggested history:", hErr);
+      }
+
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: true,
+      });
+    } else {
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: false,
+        error: reassignRes.message,
+      });
+    }
+  }
+
+  if (assignedCount > 0) {
+    invalidateUnassignedTicketsCache();
+  }
+
+  return {
+    success: assignedCount > 0,
+    assignedCount,
+    totalAttempted: pairs.length,
+    items: results,
+    error: assignedCount === 0 ? "No se pudo asignar ninguna autogestión sugerida." : undefined,
+  };
+}
+
+export async function asignarTodasEnCola(
+  assignedBy: string = "Sistema",
+  authorInvgateId?: number
+): Promise<BatchAssignmentResult> {
+  const list = await getDisponibilidadHoy();
+  const available = list.filter((a) => a.disponible && a.invgateId);
+
+  if (available.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay operadores disponibles con ID de InvGate para asignar.",
+    };
+  }
+
+  // Sort available by queue order (lastAutogestionAssignedAt ASC)
+  available.sort((a, b) => {
+    const tA = a.lastAutogestionAssignedAt ?? 0;
+    const tB = b.lastAutogestionAssignedAt ?? 0;
+    if (a.lastAutogestionAssignedAt === null && b.lastAutogestionAssignedAt !== null) return -1;
+    if (a.lastAutogestionAssignedAt !== null && b.lastAutogestionAssignedAt === null) return 1;
+    return tA - tB;
+  });
+
+  const unassignedRes = await getUnassignedTicketsByHelpdesk(AGS_HELPDESK_ID);
+  if (!unassignedRes.ok || unassignedRes.tickets.length === 0) {
+    return {
+      success: false,
+      assignedCount: 0,
+      totalAttempted: 0,
+      items: [],
+      error: "No hay autogestiones sin asignar en la mesa de ayuda.",
+    };
+  }
+
+  // Pair up tickets with operators sequentially
+  const assignCountToAttempt = Math.min(unassignedRes.tickets.length, available.length);
+  const results: Array<BatchAssignmentItem & { success: boolean; error?: string }> = [];
+  let assignedCount = 0;
+  const now = Date.now();
+
+  for (let i = 0; i < assignCountToAttempt; i++) {
+    const ticket = unassignedRes.tickets[i];
+    const op = available[i];
+    const authorId = authorInvgateId || op.invgateId || 1;
+    const reassignRes = await reassignTicketToAgent(ticket.id, op.invgateId!, AGS_HELPDESK_ID, authorId);
+    const ticketAssigned = ticket.pretty_id || `#${ticket.id}`;
+
+    if (reassignRes.ok) {
+      try {
+        const commentRes = await addTicketComment(ticket.id, `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`, authorId, 1);
+        if (!commentRes.ok) {
+          console.warn(`[asignarTodasEnCola] No se pudo agregar comentario público al ticket #${ticket.id}: ${commentRes.message}`);
+        }
+      } catch (cErr) {
+        console.error(`[asignarTodasEnCola] Error agregando comentario público a ticket #${ticket.id}:`, cErr);
+      }
+      assignedCount++;
+      const assignTime = now + i;
+      await db
+        .update(agents)
+        .set({
+          lastAutogestionAssignedAt: assignTime,
+          lastAutogestionAssignedBy: assignedBy,
+          lastAutogestionUndo: null,
+        })
+        .where(eq(agents.id, op.agentId));
+
+      try {
+        await db.insert(assignmentHistory).values({
+          agentId: op.agentId,
+          agentName: op.nombre,
+          ticketNumber: ticketAssigned,
+          assignedBy,
+          assignedAt: assignTime,
+          type: "batch_all",
+        });
+      } catch (hErr) {
+        console.error("Error saving batch all history:", hErr);
+      }
+
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: true,
+      });
+    } else {
+      results.push({
+        ticketId: ticket.id,
+        ticketPrettyId: ticketAssigned,
+        agentId: op.agentId,
+        agentName: op.nombre,
+        creatorName: ticket.creator_name,
+        success: false,
+        error: reassignRes.message,
+      });
+    }
+  }
+
+  if (assignedCount > 0) {
+    invalidateUnassignedTicketsCache();
+  }
+
+  return {
+    success: assignedCount > 0,
+    assignedCount,
+    totalAttempted: assignCountToAttempt,
+    items: results,
+    error: assignedCount === 0 ? "No se pudo asignar ninguna autogestión en cola." : undefined,
+  };
 }
 
 export async function deshacerAsignacion(): Promise<{
@@ -511,6 +1279,19 @@ export async function deshacerAsignacion(): Promise<{
     })
     .where(eq(agents.id, target.id));
 
+  try {
+    await db.insert(assignmentHistory).values({
+      agentId: target.id,
+      agentName: target.name,
+      ticketNumber: null,
+      assignedBy: "Sistema (Deshacer)",
+      assignedAt: Date.now(),
+      type: "undo",
+    });
+  } catch (historyErr) {
+    console.error("Error saving undo history:", historyErr);
+  }
+
   return { success: true, agentName: target.name };
 }
 
@@ -520,6 +1301,19 @@ export function isLockExpired(
 ): boolean {
   const timeout = releaseRequested ? 1 * 60 * 1000 : LOCK_TIMEOUT_MS;
   return Date.now() > lastActivityAt + timeout;
+}
+
+export async function getAssignmentHistory(limit: number = 50) {
+  try {
+    return await db
+      .select()
+      .from(assignmentHistory)
+      .orderBy(desc(assignmentHistory.assignedAt))
+      .limit(limit);
+  } catch (err) {
+    console.error("Error fetching assignment history:", err);
+    return [];
+  }
 }
 
 export async function getLockStatus(): Promise<
@@ -731,4 +1525,51 @@ export async function ensureHasLock(
   }
   await heartbeatLock(locals.user.id);
   return { ok: true };
+}
+
+export async function marcarEstadoExcepcional(
+  agentId: number,
+  tipo: string,
+  motivo?: string,
+  tiempoExtra?: number | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(agents)
+      .set({
+        estadoExcepcional: tipo,
+        estadoExcepcionalMotivo: motivo || null,
+        estadoExcepcionalAt: Date.now(),
+        estadoExcepcionalMinutos: tiempoExtra || null,
+      })
+      .where(eq(agents.id, agentId));
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Error al marcar estado excepcional",
+    };
+  }
+}
+
+export async function limpiarEstadoExcepcional(
+  agentId: number,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(agents)
+      .set({
+        estadoExcepcional: null,
+        estadoExcepcionalMotivo: null,
+        estadoExcepcionalAt: null,
+        estadoExcepcionalMinutos: null,
+      })
+      .where(eq(agents.id, agentId));
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Error al limpiar estado excepcional",
+    };
+  }
 }
