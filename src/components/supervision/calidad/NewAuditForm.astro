@@ -1053,6 +1053,43 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
               />
             </header>
 
+            <!-- Acciones masivas -->
+            <div
+              id="invgate-ag-mda-actions"
+              class="flex items-center justify-between gap-3 rounded-xl border border-base-200 bg-base-200/40 px-3 py-1.5"
+            >
+              <span class="text-xs font-medium text-base-content/60">
+                Parámetros a evaluar
+              </span>
+              <div
+                class="inline-flex items-center gap-0.5 rounded-lg border border-base-200 bg-base-100 p-0.5"
+                role="group"
+                aria-label="Acciones masivas de la sección"
+              >
+                <button
+                  type="button"
+                  class="toggle-all-section-btn btn btn-xs gap-1 rounded-md px-2 font-semibold text-base-content/70 hover:bg-base-200 hover:text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  data-target-group="invgate-ag-s2"
+                  data-action="check-all"
+                  title="Marcar todos como Cumple"
+                >
+                  <Icon name="boxicons:checkbox-checked" size={14} class="shrink-0" aria-hidden="true" />
+                  <span>Todos</span>
+                </button>
+                <div class="mx-0.5 h-3 w-px bg-base-300"></div>
+                <button
+                  type="button"
+                  class="toggle-all-section-btn btn btn-xs gap-1 rounded-md px-2 font-semibold text-base-content/70 hover:bg-base-200 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/50"
+                  data-target-group="invgate-ag-s2"
+                  data-action="uncheck-all"
+                  title="Marcar todos como No cumple"
+                >
+                  <Icon name="boxicons:checkbox" size={14} class="shrink-0" aria-hidden="true" />
+                  <span>Ninguno</span>
+                </button>
+              </div>
+            </div>
+
             <div
               id="invgate-ag-mda-block"
               data-checklist-group="invgate-ag-s2"
@@ -1315,7 +1352,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                   <p id="tv-title" class="mt-0.5 text-xs font-semibold text-base-content break-words line-clamp-2">
                     -
                   </p>
-                  <div id="tv-title-match-badge" class="mt-1"></div>
                 </div>
                 <dl class="grid grid-cols-2 gap-1.5 text-xs">
                   <div class="col-span-2 min-w-0 rounded-lg bg-base-100 p-1.5">
@@ -1343,10 +1379,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                     <dd id="tv-helpdesk" class="truncate font-semibold">-</dd>
                   </div>
                   <div class="min-w-0 rounded-lg bg-base-100 p-1.5">
-                    <div class="flex items-center justify-between gap-1">
-                      <dt class="text-base-content/50">Origen</dt>
-                      <div id="tv-source-match-badge" class="shrink-0"></div>
-                    </div>
+                    <dt class="text-base-content/50">Origen</dt>
                     <dd id="tv-source" class="truncate font-semibold">-</dd>
                   </div>
                 </dl>
@@ -1718,7 +1751,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
     const ticketEmptyState = document.getElementById("ticket-empty-state");
     const ticketViewerContent = document.getElementById("ticket-viewer-content");
     const tvTitle = document.getElementById("tv-title");
-    const tvTitleMatchBadge = document.getElementById("tv-title-match-badge");
     const tvCategory = document.getElementById("tv-category");
     const tvPriority = document.getElementById("tv-priority");
     const tvStatus = document.getElementById("tv-status");
@@ -1726,7 +1758,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
     const tvCreatedBy = document.getElementById("tv-created-by");
     const tvHelpdesk = document.getElementById("tv-helpdesk");
     const tvSource = document.getElementById("tv-source");
-    const tvSourceMatchBadge = document.getElementById("tv-source-match-badge");
     const tvResponseTime = document.getElementById("tv-response-time");
     const tvDescription = document.getElementById("tv-description");
 
@@ -1762,6 +1793,78 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         } catch {}
       }
     });
+
+    // Auto-selección del operador para llamadas y correos de Wise
+    function autoSelectAgentFromOperator(operatorNameOrUser: string, operatorNick?: string): boolean {
+      if (!formAgentSelect) return false;
+      const rawTarget = (operatorNameOrUser || "").trim();
+      const rawNick = (operatorNick || "").trim();
+      if (!rawTarget && !rawNick) return false;
+
+      const normalize = (str: string) =>
+        str
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, " ")
+          .trim();
+
+      const normTarget = normalize(rawTarget);
+      const normNick = normalize(rawNick);
+      const targetTokens = normTarget.split(/\s+/).filter((t) => t.length >= 2);
+
+      let bestOption: HTMLOptionElement | null = null;
+      let bestScore = 0;
+
+      for (const opt of Array.from(formAgentSelect.options)) {
+        if (!opt.value) continue;
+        const optUsername = normalize(opt.dataset.username || "");
+        const optText = normalize(opt.textContent || "");
+
+        // 1. Coincidencia directa con nick / username de Wise
+        if (normNick && optUsername && (optUsername === normNick || normNick.includes(optUsername))) {
+          bestOption = opt;
+          bestScore = 100;
+          break;
+        }
+
+        // 2. Coincidencia de username en target
+        if (optUsername && (optUsername === normTarget || normTarget.split(/\s+/).includes(optUsername))) {
+          bestOption = opt;
+          bestScore = 98;
+          break;
+        }
+
+        // 3. Coincidencia idéntica de texto / nombre completo
+        if (optText === normTarget) {
+          bestOption = opt;
+          bestScore = 95;
+          break;
+        }
+
+        // 4. Coincidencia de tokens (nombres y apellidos)
+        const optTokens = optText.split(/\s+/).filter((t) => t.length >= 2);
+        if (targetTokens.length > 0 && optTokens.length > 0) {
+          const targetMatchesInOpt = targetTokens.filter((t) => optTokens.includes(t)).length;
+          const optMatchesInTarget = optTokens.filter((t) => targetTokens.includes(t)).length;
+
+          const score = (targetMatchesInOpt / targetTokens.length) * 0.6 + (optMatchesInTarget / optTokens.length) * 0.4;
+          if (score >= 0.5 && score > bestScore) {
+            bestScore = score;
+            bestOption = opt;
+          }
+        }
+      }
+
+      if (bestOption && bestScore >= 0.5) {
+        if (formAgentSelect.value !== bestOption.value) {
+          formAgentSelect.value = bestOption.value;
+          formAgentSelect.dispatchEvent(new Event("change"));
+        }
+        return true;
+      }
+      return false;
+    }
 
     window.addEventListener("beforeunload", (e) => {
       if (isFormDirty && !isSubmitting) {
@@ -1970,7 +2073,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         tvTitle.textContent = "-";
         tvTitle.removeAttribute("title");
       }
-      if (tvTitleMatchBadge) tvTitleMatchBadge.innerHTML = "";
       if (tvCategory) {
         tvCategory.textContent = "-";
         tvCategory.removeAttribute("title");
@@ -1993,7 +2095,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         tvSource.textContent = "-";
         tvSource.removeAttribute("title");
       }
-      if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
       if (tvResponseTime) tvResponseTime.textContent = "-";
       if (tvDescription) tvDescription.textContent = "-";
       if (btnInspectInvgate) {
@@ -2032,9 +2133,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       // decir "desactivado por regla" sobre un criterio en Cumple se contradice.
       item.querySelector(".rule-auto-badge")?.classList.add("hidden");
 
-      const statusBadge = item.querySelector(".criteria-status-badge");
-      if (statusBadge) statusBadge.textContent = STATE_LABEL[state] || state;
-
       item.querySelectorAll<HTMLButtonElement>(".state-btn").forEach((btn) => {
         btn.setAttribute("aria-pressed", String(btn.dataset.state === state));
       });
@@ -2070,24 +2168,12 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       const item = checkbox?.closest(".checklist-item") as HTMLElement | null;
       const match = matchApprovedTitle(titleStr, approvedTitles);
 
-      if (tvTitleMatchBadge) {
-        if (match.matched) {
-          tvTitleMatchBadge.innerHTML = `
-            <span class="badge badge-xs badge-soft badge-success font-semibold" title="Coincide con: ${match.matchedTitle}">
-              Título homologado
-            </span>
-          `;
-          if (item) setItemState(item, "cumple");
-          setParamRuleBadge(checkboxName, false);
-        } else {
-          tvTitleMatchBadge.innerHTML = `
-            <span class="badge badge-xs badge-soft badge-warning font-semibold" title="No coincide con el catálogo de títulos">
-              Título no homologado
-            </span>
-          `;
-          if (item) setItemState(item, "nocumple");
-          setParamRuleBadge(checkboxName, true, "Desactivado por regla");
-        }
+      if (match.matched) {
+        if (item) setItemState(item, "cumple");
+        setParamRuleBadge(checkboxName, false);
+      } else {
+        if (item) setItemState(item, "nocumple");
+        setParamRuleBadge(checkboxName, true, "Desactivado por regla");
       }
       recalculateScores();
     }
@@ -2096,7 +2182,6 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
     function evaluateTicketSource(sourceStr: string) {
       const channel = formChannelType?.value || "wise_call";
       if (channel === "invgate_ticket") {
-        if (tvSourceMatchBadge) tvSourceMatchBadge.innerHTML = "";
         return;
       }
 
@@ -2122,14 +2207,84 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       const checkbox = document.querySelector(`input[name="${checkboxName}"]`) as HTMLInputElement | null;
       const item = checkbox?.closest(".checklist-item") as HTMLElement | null;
 
-      if (tvSourceMatchBadge) {
-        tvSourceMatchBadge.innerHTML = isValid
-          ? `<span class="badge badge-xs badge-soft badge-success font-semibold" title="El origen coincide con el canal">Origen válido</span>`
-          : `<span class="badge badge-xs badge-soft badge-warning font-semibold" title="El origen no coincide con el canal">Origen no coincide</span>`;
-      }
-
       if (item) setItemState(item, isValid ? "cumple" : "nocumple");
       setParamRuleBadge(checkboxName, !isValid, "Origen incorrecto");
+
+      recalculateScores();
+    }
+
+    // Auto-evaluación del SLA de 90 minutos para Mails Wise (email_sla_90min)
+    function evaluateWiseEmailSla(data: any) {
+      const channel = formChannelType?.value || "wise_call";
+      if (channel !== "wise_email") return;
+
+      const checkboxName = "email_sla_90min";
+      const checkbox = document.querySelector(`input[name="${checkboxName}"]`) as HTMLInputElement | null;
+      if (!checkbox) return;
+      const item = checkbox.closest(".checklist-item") as HTMLElement | null;
+
+      const isSla90MinMet = data.rawDetails?.isSla90MinMet;
+      const responseSeconds = data.rawDetails?.responseSeconds;
+
+      if (typeof isSla90MinMet === "boolean") {
+        if (item) setItemState(item, isSla90MinMet ? "cumple" : "nocumple");
+        if (isSla90MinMet) {
+          setParamRuleBadge(checkboxName, false);
+        } else {
+          const human = responseSeconds ? `Excedió 90m (~${Math.round(responseSeconds / 60)}m)` : "Excedió SLA 90m";
+          setParamRuleBadge(checkboxName, true, human);
+        }
+        recalculateScores();
+      }
+    }
+
+    // Auto-evaluación de SLAs nativos de InvGate (Primera Respuesta y Resolución)
+    function evaluateInvgateSlas(data: any) {
+      const channel = formChannelType?.value || "wise_call";
+      const firstReplySla = data.rawDetails?.slaIncidentFirstReply;
+      const resolutionSla = data.rawDetails?.slaIncidentResolution;
+
+      // 1. SLA Primera Respuesta en Autogestión (ag_mda_sla_primera_respuesta)
+      if (channel === "invgate_ticket" && firstReplySla) {
+        const checkboxName = "ag_mda_sla_primera_respuesta";
+        const checkbox = document.querySelector(`input[name="${checkboxName}"]`) as HTMLInputElement | null;
+        if (checkbox) {
+          const item = checkbox.closest(".checklist-item") as HTMLElement | null;
+          const isOk = String(firstReplySla).toLowerCase() === "correcto";
+          if (item) setItemState(item, isOk ? "cumple" : "nocumple");
+          if (isOk) {
+            setParamRuleBadge(checkboxName, false);
+          } else {
+            setParamRuleBadge(checkboxName, true, `SLA ${firstReplySla}`);
+          }
+        }
+      }
+
+      // 2. SLA Resolución en Autogestión (ag_mda_sla_resolucion) y Mails (email_mda_sla_resolucion)
+      let resParamName = "";
+      if (channel === "invgate_ticket") {
+        resParamName = "ag_mda_sla_resolucion";
+      } else if (channel === "wise_email") {
+        resParamName = "email_mda_sla_resolucion";
+      }
+
+      if (resParamName && resolutionSla) {
+        const checkbox = document.querySelector(`input[name="${resParamName}"]`) as HTMLInputElement | null;
+        if (checkbox) {
+          const item = checkbox.closest(".checklist-item") as HTMLElement | null;
+          const sLower = String(resolutionSla).toLowerCase();
+          // "correcto" o "pausado" cumplen; si está "vencido" o "incumplido" no cumple
+          const isFailed = sLower === "vencido" || sLower === "incumplido";
+          const isOk = !isFailed;
+
+          if (item) setItemState(item, isOk ? "cumple" : "nocumple");
+          if (isOk) {
+            setParamRuleBadge(resParamName, false);
+          } else {
+            setParamRuleBadge(resParamName, true, `SLA ${resolutionSla}`);
+          }
+        }
+      }
 
       recalculateScores();
     }
@@ -2217,6 +2372,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       if (data.source || data.rawDetails?.source) {
         evaluateTicketSource(data.source || data.rawDetails?.source);
       }
+      evaluateInvgateSlas(data);
     }
 
     // Única puerta a la API de metadatos. Valida status y content-type ANTES de
@@ -2240,11 +2396,13 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
     }
 
     // Autocompleta los campos técnicos que el caso trae resueltos.
-    function applyTechnicalFields(d: any, { overwrite }: { overwrite: boolean }) {
+    function applyTechnicalFields(d: any, { overwrite, includeDate = true }: { overwrite: boolean; includeDate?: boolean }) {
       const set = (el: HTMLInputElement | null, v?: string) => {
         if (el && v && (overwrite || !el.value)) el.value = v;
       };
-      set(formDate, d.date);
+      if (includeDate) {
+        set(formDate, d.date);
+      }
       set(formDuration, d.duration);
       set(formRingTime, d.ringTime);
       set(formCreationTime, d.creationTime);
@@ -2310,7 +2468,17 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
           resetTicketViewer();
         }
 
-        const base = `Caso ${d.caseNumber || id}${d.operator ? ` de ${d.operator}` : ""}${d.duration ? ` (${d.duration})` : ""}.`;
+        evaluateWiseEmailSla(d);
+
+        const agentSelected = d.operator || d.rawDetails?.operatorNick
+          ? autoSelectAgentFromOperator(d.operator, d.rawDetails?.operatorNick)
+          : false;
+
+        let base = `Caso ${d.caseNumber || id}${d.operator ? ` de ${d.operator}` : ""}${d.duration ? ` (${d.duration})` : ""}.`;
+        if (agentSelected && d.operator) {
+          base += ` Operador ${d.operator} seleccionado.`;
+        }
+
         showNotification(
           channelSwitched
             ? `${base} Detectado como ${CHANNEL_LABEL[d.detectedChannel] || d.detectedChannel}: se cambió el canal.`
@@ -2361,19 +2529,45 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
           return;
         }
 
-        applyTechnicalFields(d, { overwrite: false });
+        const currentChannel = formChannelType?.value || "wise_call";
+
+        // Autoconmutación a Autogestión si el ticket fue creado vía Portal Web por un usuario fuera de la MDA (2510)
+        let channelSwitched = false;
+        if (d.rawDetails?.isAutogestionDetected && currentChannel !== "invgate_ticket") {
+          const targetBtn = document.querySelector(
+            `.channel-btn[data-channel="invgate_ticket"]`,
+          ) as HTMLButtonElement | null;
+          if (targetBtn) {
+            targetBtn.click();
+            channelSwitched = true;
+          }
+        }
+
+        const effectiveChannel = formChannelType?.value || "wise_call";
+        const allowDateFromInvgate = effectiveChannel === "invgate_ticket";
+        applyTechnicalFields(d, { overwrite: false, includeDate: allowDateFromInvgate });
         if (formIsPas && typeof d.isPas === "boolean") formIsPas.checked = d.isPas;
+        if (typeof d.staysInMda === "boolean") {
+          setInvgateTicketMode(d.staysInMda ? "si" : "no");
+        }
 
         if (invgateSearchInput && d.caseNumber) invgateSearchInput.value = d.caseNumber;
         syncInvgateDeepLink();
 
         populateTicketViewer(d);
 
+        let notifMsg = `Ticket ${d.caseNumber || id} cargado${d.isPas ? " (PAS)" : ""}.`;
+        if (channelSwitched) {
+          notifMsg = `Ticket ${d.caseNumber || id} cargado. Detectado origen Portal Web (autogestión fuera de MDA): conmutado al canal Autogestión.`;
+        } else if (d.staysInMda === false) {
+          notifMsg = `Ticket ${d.caseNumber || id} cargado. Derivado a ${d.helpdesk || "otra mesa"}: sección MDA conmutada a "No aplica".`;
+        } else if (d.rawDetails?.reassignedWithoutComment) {
+          notifMsg = `Ticket ${d.caseNumber || id} cargado. Sin comentarios del operador: verificá en InvGate.`;
+        }
+
         showNotification(
-          d.rawDetails?.reassignedWithoutComment
-            ? `Ticket ${d.caseNumber || id} cargado. Sin comentarios del operador: verificá en InvGate.`
-            : `Ticket ${d.caseNumber || id} cargado${d.isPas ? " (PAS)" : ""}.`,
-          d.rawDetails?.reassignedWithoutComment ? "warning" : "success",
+          notifMsg,
+          channelSwitched || d.staysInMda === false ? "info" : (d.rawDetails?.reassignedWithoutComment ? "warning" : "success"),
         );
       } catch (err) {
         console.error("[InvGate] Error de red:", err);
@@ -2654,12 +2848,14 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
     // Mismo patrón que los otros dos selectores: al desactivar se esconden los
     // parámetros de la sección 2 y el total pasa a ser el de la sección 1.
     const invgateModeBtns = document.querySelectorAll(".invgate-ticket-mode-btn");
+    const invgateMdaActions = document.getElementById("invgate-ag-mda-actions");
     const invgateMdaBlock = document.getElementById("invgate-ag-mda-block");
 
     function setInvgateTicketMode(mode: "si" | "no") {
       if (!toggleStaysMda) return;
       toggleStaysMda.value = mode === "si" ? "true" : "false";
       paintModeButtons(invgateModeBtns, mode);
+      invgateMdaActions?.classList.toggle("hidden", mode === "no");
       invgateMdaBlock?.classList.toggle("hidden", mode === "no");
       markAsInProgress();
       recalculateScores();
