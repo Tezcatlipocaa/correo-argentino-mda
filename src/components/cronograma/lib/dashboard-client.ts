@@ -1486,6 +1486,18 @@ function setupEventListeners(): void {
     changeMonth(1);
   });
 
+  for (const [prevId, nextId] of [
+    ["groups-prev-month-btn", "groups-next-month-btn"],
+    ["pasiva-prev-month-btn", "pasiva-next-month-btn"],
+  ]) {
+    document.getElementById(prevId)?.addEventListener("click", () => {
+      changeMonth(-1);
+    });
+    document.getElementById(nextId)?.addEventListener("click", () => {
+      changeMonth(1);
+    });
+  }
+
   document
     .getElementById("monthly-tfoot")
     ?.addEventListener("click", (event) => {
