@@ -1756,30 +1756,9 @@ function setupEventListeners(): void {
   const saveIndicator = document.getElementById("save-indicator");
   let activeCell: HTMLElement | null = null;
 
-  monthlyBody?.addEventListener("contextmenu", (e) => {
-    const container = document.getElementById("cronograma-app-container");
-    const userRole = container?.dataset.userRole || "agent";
-    const isReadOnly = ["agent", "referent"].includes(userRole);
-    if (isReadOnly) return;
-
-    const trigger = (e.target as HTMLElement).closest<HTMLElement>(
-      "[data-monthly-detail]",
-    );
-    if (!trigger || !quickEditMenu) return;
-
+  function openQuickEditMenu(trigger: HTMLElement): void {
+    if (!quickEditMenu) return;
     const dateVal = trigger.dataset.date;
-    if (dateVal && isWeekend(dateVal)) {
-      if (!state.isEditMode) {
-        e.preventDefault();
-        showToast(
-          "Los fines de semana se deben administrar desde las secciones de Grupos o Extras (active el Modo Editar para marcar Licencia/Vacación/Franco)",
-          "warning",
-        );
-        return;
-      }
-    }
-
-    e.preventDefault();
     activeCell = trigger;
 
     const targetName = document.getElementById("quick-edit-target-name");
@@ -1875,6 +1854,64 @@ function setupEventListeners(): void {
 
     quickEditMenu.style.left = `${left}px`;
     quickEditMenu.style.top = `${top}px`;
+
+    // Foco al primer ítem visible (accesibilidad por teclado, #268).
+    quickEditMenu
+      .querySelector<HTMLButtonElement>(
+        "#quick-edit-options button:not(.hidden)",
+      )
+      ?.focus();
+  }
+
+  function closeQuickEditMenu(restoreFocus: boolean): void {
+    if (!quickEditMenu || quickEditMenu.classList.contains("hidden")) return;
+    quickEditMenu.classList.add("hidden");
+    if (restoreFocus) activeCell?.focus();
+  }
+
+  monthlyBody?.addEventListener("contextmenu", (e) => {
+    const container = document.getElementById("cronograma-app-container");
+    const userRole = container?.dataset.userRole || "agent";
+    const isReadOnly = ["agent", "referent"].includes(userRole);
+    if (isReadOnly) return;
+
+    const trigger = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-monthly-detail]",
+    );
+    if (!trigger || !quickEditMenu) return;
+
+    const dateVal = trigger.dataset.date;
+    if (dateVal && isWeekend(dateVal) && !state.isEditMode) {
+      e.preventDefault();
+      showToast(
+        "Los fines de semana se deben administrar desde las secciones de Grupos o Extras (active el Modo Editar para marcar Licencia/Vacación/Franco)",
+        "warning",
+      );
+      return;
+    }
+
+    e.preventDefault();
+    openQuickEditMenu(trigger);
+  });
+
+  // Disparo por teclado: Shift+F10 o la tecla Menú contextual sobre una celda.
+  monthlyBody?.addEventListener("keydown", (e) => {
+    if (!(e.shiftKey && e.key === "F10") && e.key !== "ContextMenu") return;
+    const container = document.getElementById("cronograma-app-container");
+    const userRole = container?.dataset.userRole || "agent";
+    if (["agent", "referent"].includes(userRole)) return;
+
+    const trigger = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-monthly-detail]",
+    );
+    if (!trigger || !quickEditMenu) return;
+    e.preventDefault();
+    openQuickEditMenu(trigger);
+  });
+
+  // Escape cierra el menú y devuelve el foco a la celda (#268).
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeQuickEditMenu(true);
   });
 
   document
@@ -1891,13 +1928,13 @@ function setupEventListeners(): void {
         if (!state.isEditMode) {
           saveIndicator?.classList.remove("hidden");
         }
-        quickEditMenu.classList.add("hidden");
+        closeQuickEditMenu(true);
       }
     });
 
   document.addEventListener("click", (e) => {
     if (quickEditMenu && !quickEditMenu.contains(e.target as Node)) {
-      quickEditMenu.classList.add("hidden");
+      closeQuickEditMenu(false);
     }
   });
 
