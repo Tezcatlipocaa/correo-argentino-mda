@@ -158,6 +158,13 @@ async function fillerRowHeight(page: Page): Promise<number> {
   });
 }
 
+/** Orden de las filas visibles (por nombre normalizado). */
+async function rowOperatorOrder(page: Page): Promise<string[]> {
+  return page.$$eval("#monthly-tbody tr[data-op-name]", (trs) =>
+    trs.map((tr) => tr.getAttribute("data-op-name") || ""),
+  );
+}
+
 let user: TestUser;
 
 test.beforeAll(async () => {
@@ -408,5 +415,102 @@ test.describe("patcheo dirigido de la vista mensual", () => {
     await expect(
       page.locator(`#monthly-thead button[data-click-day="${d}"] .bg-error`),
     ).toHaveCount(1);
+  });
+
+  test("con orden entrada activo, editar la celda de referencia reordena las filas", async ({
+    context,
+    page,
+  }) => {
+    const ym = monthOffset(0);
+    const dates = datesOfMonth(ym);
+    // referenceDate de sortOperators en la vista mensual es hoy (mismo mes).
+    const ref = `${ym}-${pad(new Date().getDate())}`;
+    const all: Record<string, string> = {};
+    dates.forEach((x) => (all[x] = P));
+    const payload = {
+      operators: [
+        { ...operator(1, "Alfa", all), horario: "08:00 - 17:00" },
+        { ...operator(2, "Zeta", all), horario: "10:00 - 19:00" },
+      ],
+      weekendOvertimeConfigs: [],
+      availableMonths: [ym],
+      activeMonth: ym,
+    };
+    await setSessionCookie(context, user.signedSessionId);
+    await stubCronogramaGet(page, () => payload);
+    await gotoAndWait(page);
+
+    // Modo editar: habilita el quick-edit aunque la celda de referencia caiga
+    // en fin de semana.
+    await page.click("#toggle-edit-mode-btn");
+
+    // Orden por entrada: Alfa (08:00) antes que Zeta (10:00).
+    await page.locator("#monthly-sort-container summary").click();
+    await page
+      .locator(
+        '#monthly-sort-container [data-sort-option][data-value="entry-time"]',
+      )
+      .click();
+    expect(await rowOperatorOrder(page)).toEqual(["alfa", "zeta"]);
+
+    // La celda de referencia pasa a Franco: la clave de orden de Alfa se vuelve
+    // 9999 y debe caer detrás de Zeta (rebuild, no fila stale).
+    await page
+      .locator(
+        `#monthly-tbody button[data-monthly-detail][data-operator="Alfa"][data-date="${ref}"]`,
+      )
+      .click({ button: "right" });
+    await expect(page.locator("#quick-edit-menu")).toBeVisible();
+    await page
+      .locator('#quick-edit-options button[data-status="Franco"]')
+      .click();
+
+    expect(await rowOperatorOrder(page)).toEqual(["zeta", "alfa"]);
+  });
+
+  test("un edit que no cambia membresía ni violación sigue patcheando", async ({
+    context,
+    page,
+  }) => {
+    const ym = monthOffset(0);
+    const dates = datesOfMonth(ym);
+    const d = firstMonday(ym);
+    const all: Record<string, string> = {};
+    dates.forEach((x) => (all[x] = P));
+    const payload = {
+      operators: [
+        operator(1, "Target Op", { ...all }),
+        operator(2, "Otro Op A", { ...all }),
+        operator(3, "Otro Op B", { ...all }),
+      ],
+      weekendOvertimeConfigs: [],
+      availableMonths: [ym],
+      activeMonth: ym,
+    };
+    await setSessionCookie(context, user.signedSessionId);
+    await stubCronogramaGet(page, () => payload);
+    await gotoAndWait(page);
+
+    await markRows(page);
+    expect(await sentinelAlive(page, "__tbodyRow")).toBe(true);
+
+    // P → HO: la cobertura activa no cambia y no cruza violación, así que la
+    // fila se patchea (el sentinela sobrevive).
+    await page
+      .locator(
+        `#monthly-tbody button[data-monthly-detail][data-operator="Target Op"][data-date="${d}"]`,
+      )
+      .click({ button: "right" });
+    await expect(page.locator("#quick-edit-menu")).toBeVisible();
+    await page
+      .locator('#quick-edit-options button[data-status="Home Office"]')
+      .click();
+
+    expect(await sentinelAlive(page, "__tbodyRow")).toBe(true);
+    await expect(
+      page.locator(
+        `#monthly-tbody td[data-cell-op="1"][data-cell-date="${d}"] button[data-monthly-detail]`,
+      ),
+    ).toHaveAttribute("data-status", "Home Office");
   });
 });
