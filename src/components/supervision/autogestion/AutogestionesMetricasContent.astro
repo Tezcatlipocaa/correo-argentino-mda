@@ -45,7 +45,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
         href={`${baseNoSlash}/supervision/asignacion-autogestiones`}
         class="btn btn-sm btn-outline rounded-xl font-bold uppercase tracking-wider text-xs gap-2"
       >
-        <Icon name="boxicons:list-check" size={18} />
+        <Icon name="boxicons:checklist" size={18} />
         Ir a Asignación
       </a>
       <a
@@ -54,7 +54,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
         class="btn btn-sm btn-secondary rounded-xl font-bold uppercase tracking-wider text-xs gap-2 shadow-sm"
         download
       >
-        <Icon name="boxicons:download" size={18} />
+        <Icon name="boxicons:file-detail-filled" size={18} />
         Exportar CSV
       </a>
     </div>
@@ -138,7 +138,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
           class="btn btn-xs btn-outline rounded-lg font-bold uppercase tracking-wider text-tiny gap-1.5"
           title="Actualizar datos y cola de InvGate"
         >
-          <Icon name="boxicons:refresh" size={16} id="icon-refresh" />
+          <Icon name="boxicons:refresh-cw" size={16} id="icon-refresh" />
           <span>Sincronizar</span>
         </button>
         <span class="text-tiny font-mono text-base-content/50" id="sync-timestamp" data-timestamp={lastSyncAt}>
@@ -155,7 +155,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Total Asignadas</span>
         <div class="p-2 rounded-xl bg-primary/10 text-primary">
-          <Icon name="boxicons:check-double" size={24} />
+          <Icon name="boxicons:badge-check-filled" size={24} />
         </div>
       </div>
       <div class="flex items-baseline gap-2">
@@ -171,7 +171,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Cola en Espera</span>
         <div class="p-2 rounded-xl bg-warning/10 text-warning">
-          <Icon name="boxicons:time-five" size={24} />
+          <Icon name="boxicons:clock" size={24} />
         </div>
       </div>
       <div class="flex items-baseline gap-2">
@@ -187,7 +187,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Automatización</span>
         <div class="p-2 rounded-xl bg-secondary/10 text-secondary">
-          <Icon name="boxicons:bot" size={24} />
+          <Icon name="boxicons:chip-filled" size={24} />
         </div>
       </div>
       <div class="flex items-baseline gap-2">
@@ -240,7 +240,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
             Agrupado por {range.grouping === "hour" ? "hora" : "día"}
           </p>
         </div>
-        <Icon name="boxicons:line-chart" size={20} class="text-base-content/40" />
+        <Icon name="boxicons:chart-line" size={20} class="text-base-content/40" />
       </div>
       <div class="relative flex h-64 w-full items-center justify-center">
         <canvas id="chart-temporal"></canvas>
@@ -257,7 +257,7 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
           <h3 class="font-bold text-sm text-base-content tracking-tight">Distribución de Carga por Operador</h3>
           <p class="text-tiny text-base-content/50 font-medium">Cantidad de tickets entregados en el período</p>
         </div>
-        <Icon name="boxicons:bar-chart-alt-2" size={20} class="text-base-content/40" />
+        <Icon name="boxicons:bar-chart" size={20} class="text-base-content/40" />
       </div>
       <div class="relative flex h-72 w-full items-center justify-center">
         <canvas id="chart-operadores"></canvas>
