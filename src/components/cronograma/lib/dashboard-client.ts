@@ -58,6 +58,7 @@ import {
   renderMonthly,
   clearParsedDatesCache,
 } from "./monthly-view";
+import { currentMonthKey } from "@lib/cronogramaMonths";
 
 export function isWeekend(dateStr: string): boolean {
   if (!dateStr) return false;
@@ -266,7 +267,7 @@ export async function reloadDataForActiveMonth(
       targetMonth ||
       (dateInput?.value
         ? dateInput.value.slice(0, 7)
-        : new Date().toISOString().slice(0, 7));
+        : currentMonthKey());
 
     const payload = await fetchCronogramaFullData(monthToLoad);
     state.cronoData = payload.operators;
@@ -1018,7 +1019,7 @@ export async function renderGroupsView(): Promise<void> {
     ) as HTMLInputElement | null;
     const month = dateInput?.value
       ? dateInput.value.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
+      : currentMonthKey();
     const res = await fetch(`/api/cronograma/rotation-config?month=${month}`);
     if (!res.ok)
       throw new Error("No se pudo cargar la configuración de rotación");
@@ -2520,7 +2521,7 @@ function setupEventListeners(): void {
     ) as HTMLInputElement | null;
     const month = dateInput?.value
       ? dateInput.value.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
+      : currentMonthKey();
 
     try {
       const res = await fetch("/api/cronograma/rotation-config", {
@@ -2571,7 +2572,7 @@ function setupEventListeners(): void {
         "date-input",
       ) as HTMLInputElement | null;
       const month =
-        dateInput?.value?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+        dateInput?.value?.slice(0, 7) || currentMonthKey();
 
       const disabledGroups = ["A", "B", "C", "D"]
         .filter((g) => {
@@ -2622,7 +2623,7 @@ function setupEventListeners(): void {
       ) as HTMLInputElement | null;
       const month = dateInput?.value
         ? dateInput.value.slice(0, 7)
-        : new Date().toISOString().slice(0, 7);
+        : currentMonthKey();
 
       try {
         const res = await fetch("/api/cronograma/rotation-groups/members", {
@@ -2678,7 +2679,7 @@ function setupEventListeners(): void {
         ) as HTMLInputElement | null;
         const month = dateInput?.value
           ? dateInput.value.slice(0, 7)
-          : new Date().toISOString().slice(0, 7);
+          : currentMonthKey();
 
         try {
           const res = await fetch("/api/cronograma/rotation-groups/members", {
@@ -2804,7 +2805,7 @@ function setupEventListeners(): void {
     ) as HTMLInputElement | null;
     const month = dateInput?.value
       ? dateInput.value.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
+      : currentMonthKey();
 
     try {
       const res = await fetch("/api/cronograma/rotation-groups/members", {
