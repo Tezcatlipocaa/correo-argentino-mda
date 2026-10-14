@@ -94,47 +94,28 @@ export function updateNavigationButtons(): void {
   const dateInput = document.getElementById(
     "date-input",
   ) as HTMLInputElement | null;
-  const nextBtn = document.getElementById(
-    "next-month-btn",
-  ) as HTMLButtonElement | null;
-  const prevBtn = document.getElementById(
-    "prev-month-btn",
-  ) as HTMLButtonElement | null;
   if (!dateInput || !state.cronoData) return;
 
   const currentYM = dateInput.value.slice(0, 7);
   const currentIndex = state.uniqueMonths.indexOf(currentYM);
+  const len = state.uniqueMonths.length;
 
-  if (state.uniqueMonths.length === 0) {
-    if (nextBtn) nextBtn.disabled = true;
-    if (prevBtn) prevBtn.disabled = true;
-    return;
-  }
+  // Con el mes actual fuera de la lista (currentIndex === -1) las flechas
+  // quedan habilitadas: changeMonth degrada al mes disponible más cercano
+  // (#140). Solo se deshabilitan en los extremos reales de la lista.
+  const atStart = len === 0 || currentIndex === 0;
+  const atEnd = len === 0 || currentIndex === len - 1;
 
-  if (nextBtn) {
-    const hasNext =
-      currentIndex !== -1 && currentIndex < state.uniqueMonths.length - 1;
-    nextBtn.disabled = !hasNext;
-    if (!hasNext) {
-      nextBtn.classList.add("opacity-30", "cursor-not-allowed");
-      nextBtn.classList.remove("hover:bg-base-200");
-    } else {
-      nextBtn.classList.remove("opacity-30", "cursor-not-allowed");
-      nextBtn.classList.add("hover:bg-base-200");
-    }
-  }
-
-  if (prevBtn) {
-    const hasPrev = currentIndex > 0;
-    prevBtn.disabled = !hasPrev;
-    if (!hasPrev) {
-      prevBtn.classList.add("opacity-30", "cursor-not-allowed");
-      prevBtn.classList.remove("hover:bg-base-200");
-    } else {
-      prevBtn.classList.remove("opacity-30", "cursor-not-allowed");
-      prevBtn.classList.add("hover:bg-base-200");
-    }
-  }
+  document
+    .querySelectorAll<HTMLButtonElement>('[data-month-nav="prev"]')
+    .forEach((b) => {
+      b.disabled = atStart;
+    });
+  document
+    .querySelectorAll<HTMLButtonElement>('[data-month-nav="next"]')
+    .forEach((b) => {
+      b.disabled = atEnd;
+    });
 }
 
 export function updatePasivaActiveMonthBadge(): void {
@@ -263,9 +244,22 @@ export function changeMonth(offset: number): void {
   const currentYM = dateInput.value.slice(0, 7);
   const currentIndex = state.uniqueMonths.indexOf(currentYM);
 
-  if (currentIndex === -1) return;
-
-  let newIndex = currentIndex + offset;
+  let newIndex: number;
+  if (currentIndex === -1) {
+    // Mes actual fuera de la lista: resolver al más cercano en la dirección
+    // pedida, en vez de quedar inerte (#140).
+    if (offset > 0) {
+      const next = state.uniqueMonths.find((m) => m > currentYM);
+      newIndex = next
+        ? state.uniqueMonths.indexOf(next)
+        : state.uniqueMonths.length - 1;
+    } else {
+      const prev = [...state.uniqueMonths].reverse().find((m) => m < currentYM);
+      newIndex = prev ? state.uniqueMonths.indexOf(prev) : 0;
+    }
+  } else {
+    newIndex = currentIndex + offset;
+  }
   if (newIndex < 0) newIndex = 0;
   if (newIndex >= state.uniqueMonths.length)
     newIndex = state.uniqueMonths.length - 1;
