@@ -21,6 +21,8 @@ import {
 } from "./types";
 import { isFeriado, getFeriadoName } from "./feriados";
 import { getActiveGroupForDate } from "./rotation-helper";
+import { resolveInitialMonth } from "./initialMonth";
+import { currentMonthYM, monthOptionsHtml } from "./monthLabel";
 import {
   reloadDataForActiveMonth,
   updateDateInputDisplay,
@@ -90,51 +92,49 @@ export function isBreakAtHour(
   }
 }
 
+export const MONTH_NAVIGATOR_IDS = [
+  "month-selector",
+  "groups-month-selector",
+  "pasiva-month-selector",
+] as const;
+
 export function updateNavigationButtons(): void {
   const dateInput = document.getElementById(
     "date-input",
   ) as HTMLInputElement | null;
-  const nextBtn = document.getElementById(
-    "next-month-btn",
-  ) as HTMLButtonElement | null;
-  const prevBtn = document.getElementById(
-    "prev-month-btn",
-  ) as HTMLButtonElement | null;
   if (!dateInput || !state.cronoData) return;
 
   const currentYM = dateInput.value.slice(0, 7);
-  const currentIndex = state.uniqueMonths.indexOf(currentYM);
+  const months = state.uniqueMonths;
 
-  if (state.uniqueMonths.length === 0) {
-    if (nextBtn) nextBtn.disabled = true;
-    if (prevBtn) prevBtn.disabled = true;
-    return;
-  }
+  MONTH_NAVIGATOR_IDS.forEach((navId) => {
+    const nextBtn = document.getElementById(
+      `${navId}-next`,
+    ) as HTMLButtonElement | null;
+    const prevBtn = document.getElementById(
+      `${navId}-prev`,
+    ) as HTMLButtonElement | null;
 
-  if (nextBtn) {
-    const hasNext =
-      currentIndex !== -1 && currentIndex < state.uniqueMonths.length - 1;
-    nextBtn.disabled = !hasNext;
-    if (!hasNext) {
-      nextBtn.classList.add("opacity-30", "cursor-not-allowed");
-      nextBtn.classList.remove("hover:bg-base-200");
-    } else {
-      nextBtn.classList.remove("opacity-30", "cursor-not-allowed");
-      nextBtn.classList.add("hover:bg-base-200");
+    if (months.length === 0) {
+      if (nextBtn) nextBtn.disabled = true;
+      if (prevBtn) prevBtn.disabled = true;
+      return;
     }
-  }
 
-  if (prevBtn) {
-    const hasPrev = currentIndex > 0;
-    prevBtn.disabled = !hasPrev;
-    if (!hasPrev) {
-      prevBtn.classList.add("opacity-30", "cursor-not-allowed");
-      prevBtn.classList.remove("hover:bg-base-200");
-    } else {
-      prevBtn.classList.remove("opacity-30", "cursor-not-allowed");
-      prevBtn.classList.add("hover:bg-base-200");
+    const currentIndex = months.indexOf(currentYM);
+    if (currentIndex === -1) {
+      // Mes seleccionado fuera de la lista: cada flecha refleja disponibilidad
+      // real en SU dirección (prev = hay algún mes anterior a currentYM;
+      // next = hay algún mes posterior). Así la flecha "anterior" nunca avanza
+      // al futuro ni viceversa aunque `changeMonth` use un fallback.
+      if (prevBtn) prevBtn.disabled = !months.some((m) => m < currentYM);
+      if (nextBtn) nextBtn.disabled = !months.some((m) => m > currentYM);
+      return;
     }
-  }
+
+    if (nextBtn) nextBtn.disabled = currentIndex >= months.length - 1;
+    if (prevBtn) prevBtn.disabled = currentIndex <= 0;
+  });
 }
 
 export function updatePasivaActiveMonthBadge(): void {
@@ -184,50 +184,29 @@ export function updateMonthDisplay(): void {
   updatePasivaActiveMonthBadge();
 }
 
-const MESES_ES = [
-  "ENERO",
-  "FEBRERO",
-  "MARZO",
-  "ABRIL",
-  "MAYO",
-  "JUNIO",
-  "JULIO",
-  "AGOSTO",
-  "SEPTIEMBRE",
-  "OCTUBRE",
-  "NOVIEMBRE",
-  "DICIEMBRE",
-];
-const T_MONTH = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-
 export function renderMonthSelect(): void {
-  const mainSelect = document.getElementById(
-    "month-selector",
-  ) as HTMLSelectElement | null;
-  const groupsSelect = document.getElementById(
-    "groups-month-selector",
-  ) as HTMLSelectElement | null;
-  const pasivaSelect = document.getElementById(
-    "pasiva-month-selector",
-  ) as HTMLSelectElement | null;
-  if (!mainSelect && !groupsSelect && !pasivaSelect) return;
+  const selects = MONTH_NAVIGATOR_IDS.map(
+    (navId) => document.getElementById(navId) as HTMLSelectElement | null,
+  ).filter((el): el is HTMLSelectElement => el !== null);
+  if (selects.length === 0) return;
 
-  const html = state.uniqueMonths
-    .map((ymStr) => {
-      const [, monthStr] = ymStr.split("-");
-      const month = parseInt(monthStr, 10) - 1;
-      const year = ymStr.slice(0, 4);
-      const isCurrent = ymStr === T_MONTH;
-      const label = isCurrent
-        ? `${MESES_ES[month]} ${year} (mes actual)`
-        : `${MESES_ES[month]} ${year}`;
-      return `<option value="${ymStr}-01">${label}</option>`;
-    })
-    .join("");
+  // El "mes actual" se recalcula en cada render: una pestaña longeva debe
+  // marcar el mes nuevo sin recargar. Con lista vacía se emite un estado vacío
+  // explícito (nunca se dejan los selects sin opciones).
+  const html = monthOptionsHtml(state.uniqueMonths, currentMonthYM());
 
-  if (mainSelect) mainSelect.innerHTML = html;
-  if (groupsSelect) groupsSelect.innerHTML = html;
-  if (pasivaSelect) pasivaSelect.innerHTML = html;
+  const dateInput = document.getElementById(
+    "date-input",
+  ) as HTMLInputElement | null;
+  const activeValue = dateInput?.value
+    ? `${dateInput.value.slice(0, 7)}-01`
+    : "";
+
+  selects.forEach((select) => {
+    select.innerHTML = html;
+    // Preservar la selección: `date-input` es la fuente de verdad del mes activo.
+    if (activeValue) select.value = activeValue;
+  });
 }
 
 export function changeMonth(offset: number): void {
@@ -236,20 +215,33 @@ export function changeMonth(offset: number): void {
   ) as HTMLInputElement | null;
   if (!dateInput) return;
 
-  if (state.uniqueMonths.length === 0) return;
+  const months = state.uniqueMonths;
+  if (months.length === 0) return;
 
   const currentYM = dateInput.value.slice(0, 7);
-  const currentIndex = state.uniqueMonths.indexOf(currentYM);
+  const currentIndex = months.indexOf(currentYM);
 
-  if (currentIndex === -1) return;
+  let targetYM: string | undefined;
+  if (currentIndex === -1) {
+    // Mes seleccionado fuera de la lista: resolver al disponible más cercano
+    // en la dirección pedida; si no hay en esa dirección, aplicar la regla de
+    // #139. Nunca queda inerte (salvo lista vacía).
+    if (offset > 0) {
+      targetYM =
+        months.filter((m) => m > currentYM)[0] ??
+        resolveInitialMonth(months, currentYM);
+    } else {
+      const past = months.filter((m) => m < currentYM);
+      targetYM = past[past.length - 1] ?? resolveInitialMonth(months, currentYM);
+    }
+  } else {
+    let newIndex = currentIndex + offset;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex >= months.length) newIndex = months.length - 1;
+    targetYM = months[newIndex];
+  }
 
-  let newIndex = currentIndex + offset;
-  if (newIndex < 0) newIndex = 0;
-  if (newIndex >= state.uniqueMonths.length)
-    newIndex = state.uniqueMonths.length - 1;
-
-  const targetYM = state.uniqueMonths[newIndex];
-  if (targetYM === currentYM) return;
+  if (!targetYM || targetYM === currentYM) return;
 
   const [yearStr, monthStr] = targetYM.split("-");
   const year = parseInt(yearStr, 10);
@@ -258,9 +250,10 @@ export function changeMonth(offset: number): void {
   const dayStr = dateInput.value.split("-")[2];
   let day = parseInt(dayStr, 10);
   const daysInNewMonth = getDaysInMonth(year, month);
-  if (day > daysInNewMonth) {
+  if (!Number.isFinite(day) || day > daysInNewMonth) {
     day = daysInNewMonth;
   }
+  if (day < 1) day = 1;
 
   dateInput.value = `${year}-${(month + 1).toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
 

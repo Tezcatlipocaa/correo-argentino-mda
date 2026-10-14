@@ -18,6 +18,7 @@ import {
   debounce,
   timeToMinutes,
 } from "./utils";
+import { resolveInitialMonth } from "./initialMonth";
 import {
   updateButtonGroupState,
   STATUS_FILTER_CONFIGS,
@@ -53,6 +54,7 @@ import {
   updateGroupsActiveMonthBadge,
   renderMonthSelect,
   changeMonth,
+  MONTH_NAVIGATOR_IDS,
   renderDaily,
   renderHourly,
   renderMonthly,
@@ -268,6 +270,8 @@ export async function reloadDataForActiveMonth(
         ? dateInput.value.slice(0, 7)
         : new Date().toISOString().slice(0, 7));
 
+    applyDateInputMonthBounds(dateInput, monthToLoad);
+
     const payload = await fetchCronogramaFullData(monthToLoad);
     state.cronoData = payload.operators;
     state.overtimeConfigs = payload.weekendOvertimeConfigs;
@@ -318,6 +322,42 @@ export async function reloadDataForActiveMonth(
   }
 }
 
+/**
+ * Fija el `min`/`max` del date input al rango completo del mes indicado.
+ */
+function applyDateInputMonthBounds(
+  dateInput: HTMLInputElement | null,
+  month: string,
+): void {
+  if (!dateInput) return;
+  const [year, monthIndex] = month.split("-").map(Number);
+  dateInput.min = `${month}-01`;
+  dateInput.max = `${month}-${String(getDaysInMonth(year, monthIndex - 1)).padStart(2, "0")}`;
+}
+
+/**
+ * Aplica la regla única de mes inicial al date input: fija el valor al día
+ * válido del mes resuelto (hoy si pertenece y tiene dato, si no el último día
+ * de ese mes con dato, si no el día 1) y el min/max al rango de ese mes.
+ */
+function applyInitialMonthToDateInput(
+  dateInput: HTMLInputElement | null,
+): void {
+  const todayStr = formatYMD(new Date());
+  const initialMonth = resolveInitialMonth(
+    state.uniqueMonths,
+    todayStr.slice(0, 7),
+  );
+  if (!dateInput) return;
+  const datesInMonth = state.uniqueDates.filter((d) =>
+    d.startsWith(initialMonth),
+  );
+  dateInput.value = datesInMonth.includes(todayStr)
+    ? todayStr
+    : datesInMonth[datesInMonth.length - 1] || `${initialMonth}-01`;
+  applyDateInputMonthBounds(dateInput, initialMonth);
+}
+
 async function init(): Promise<void> {
   try {
     const dateInput = document.getElementById(
@@ -343,23 +383,9 @@ async function init(): Promise<void> {
       console.warn("Failed to load holidays:", err);
     }
 
-    await loadRotationConfig(activeMonth);
-
-    const hasDataForToday =
-      activeMonth === todayStr.slice(0, 7) &&
-      state.cronoData.some((op) => op.asistencia[todayStr]);
-    const initialDate = hasDataForToday
-      ? todayStr
-      : state.uniqueDates[state.uniqueDates.length - 1] || `${activeMonth}-01`;
-
-    if (dateInput) {
-      dateInput.value = initialDate;
-      updateDateInputDisplay();
-      if (state.uniqueDates.length > 0) {
-        dateInput.min = state.uniqueDates[0];
-        dateInput.max = state.uniqueDates[state.uniqueDates.length - 1];
-      }
-    }
+    applyInitialMonthToDateInput(dateInput);
+    updateDateInputDisplay();
+    await loadRotationConfig(dateInput?.value.slice(0, 7) || activeMonth);
 
     renderDaily();
     renderMonthly();
@@ -1375,52 +1401,31 @@ function updateBrushUI(): void {
 }
 
 function setupEventListeners(): void {
-  // Month Select Change Handler
-  document.getElementById("month-selector")?.addEventListener("change", (e) => {
-    const select = e.target as HTMLSelectElement;
-    const val = select.value;
-    if (!val) return;
-    const dateInput = document.getElementById(
-      "date-input",
-    ) as HTMLInputElement | null;
-    if (dateInput) {
-      dateInput.value = val;
-      updateDateInputDisplay();
-      reloadDataForActiveMonth(val.slice(0, 7));
-    }
+  // Navegador de mes único (Mensual/Grupos/Pasiva): select + flechas.
+  // Todos comparten `date-input` como fuente de verdad.
+  MONTH_NAVIGATOR_IDS.forEach((navId) => {
+    document.getElementById(navId)?.addEventListener("change", (e) => {
+      const select = e.target as HTMLSelectElement;
+      const val = select.value;
+      if (!val) return;
+      const dateInput = document.getElementById(
+        "date-input",
+      ) as HTMLInputElement | null;
+      if (dateInput) {
+        dateInput.value = val;
+        updateDateInputDisplay();
+        reloadDataForActiveMonth(val.slice(0, 7));
+      }
+    });
+
+    document.getElementById(`${navId}-prev`)?.addEventListener("click", () => {
+      changeMonth(-1);
+    });
+
+    document.getElementById(`${navId}-next`)?.addEventListener("click", () => {
+      changeMonth(1);
+    });
   });
-
-  document
-    .getElementById("groups-month-selector")
-    ?.addEventListener("change", (e) => {
-      const select = e.target as HTMLSelectElement;
-      const val = select.value;
-      if (!val) return;
-      const dateInput = document.getElementById(
-        "date-input",
-      ) as HTMLInputElement | null;
-      if (dateInput) {
-        dateInput.value = val;
-        updateDateInputDisplay();
-        reloadDataForActiveMonth(val.slice(0, 7));
-      }
-    });
-
-  document
-    .getElementById("pasiva-month-selector")
-    ?.addEventListener("change", (e) => {
-      const select = e.target as HTMLSelectElement;
-      const val = select.value;
-      if (!val) return;
-      const dateInput = document.getElementById(
-        "date-input",
-      ) as HTMLInputElement | null;
-      if (dateInput) {
-        dateInput.value = val;
-        updateDateInputDisplay();
-        reloadDataForActiveMonth(val.slice(0, 7));
-      }
-    });
 
   // Holidays Modal Trigger
   const holidaysModal = document.getElementById("holidays-modal") as
@@ -1454,6 +1459,9 @@ function setupEventListeners(): void {
       updateDateInputDisplay();
       renderDaily();
       renderMonthly();
+      // Mantener el select y el estado de las flechas en sincronía con
+      // `date-input` (fuente de verdad), incluso si el mes queda fuera de lista.
+      updateMonthDisplay();
     });
   }
 
@@ -1472,14 +1480,6 @@ function setupEventListeners(): void {
 
   backToMonthlyBtn?.addEventListener("click", () => {
     showMonthlyView();
-  });
-
-  document.getElementById("prev-month-btn")?.addEventListener("click", () => {
-    changeMonth(-1);
-  });
-
-  document.getElementById("next-month-btn")?.addEventListener("click", () => {
-    changeMonth(1);
   });
 
   document
@@ -1936,24 +1936,14 @@ function setupEventListeners(): void {
         state.cronoData = payload.operators;
         state.availableMonths = payload.availableMonths || [];
 
-        if (state.uniqueDates.length > 0) {
-          const targetDate = state.uniqueDates[state.uniqueDates.length - 1];
-          dateInput.value = targetDate;
-          dateInput.min = state.uniqueDates[0];
-          dateInput.max = targetDate;
-        } else {
-          const todayStr = formatYMD(new Date());
-          dateInput.value = todayStr;
-          dateInput.removeAttribute("min");
-          dateInput.removeAttribute("max");
-        }
+        applyInitialMonthToDateInput(dateInput);
 
         const activeYM = dateInput.value.slice(0, 7);
         await loadRotationConfig(activeYM);
 
         updateDateInputDisplay();
-        updateMonthDisplay();
         renderMonthSelect();
+        updateMonthDisplay();
         clearParsedDatesCache();
         renderDaily();
         renderMonthly();

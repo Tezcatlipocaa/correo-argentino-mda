@@ -8,7 +8,7 @@ import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import FilterButtonBar from "@components/ui/FilterButtonBar.astro";
 import SortDropdown from "@components/ui/SortDropdown.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
-import MonthSelect from "@components/ui/MonthSelect.astro";
+import MonthNavigator from "./MonthNavigator.astro";
 
 import OperatorDrawer from "./subcomponents/OperatorDrawer.astro";
 import MonthlyDetailModal from "./subcomponents/MonthlyDetailModal.astro";
@@ -278,27 +278,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
               <!-- Left: Title, Navigation & Maximize button -->
               <div class="flex shrink-0 flex-wrap items-center gap-3">
                 <!-- Month Navigator -->
-                <div class="ml-2 flex items-center gap-1">
-                  <button
-                    type="button"
-                    id="prev-month-btn"
-                    class="btn btn-xs btn-ghost p-1 min-h-8 min-w-8"
-                    title="Mes anterior"
-                    aria-label="Mes anterior"
-                  >
-                    <Icon name="boxicons:chevron-left-filled" size={14} />
-                  </button>
-                  <MonthSelect id="month-selector" />
-                  <button
-                    type="button"
-                    id="next-month-btn"
-                    class="btn btn-xs btn-ghost p-1 min-h-8 min-w-8"
-                    title="Mes siguiente"
-                    aria-label="Mes siguiente"
-                  >
-                    <Icon name="boxicons:chevron-right-filled" size={14} />
-                  </button>
-                </div>
+                <MonthNavigator
+                  id="month-selector"
+                  class="ml-2"
+                  aria-label="Mes de la vista Mensual"
+                />
 
                 <!-- Agregar nuevo mes -->
                 <ActionButton
@@ -468,7 +452,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             title="Configuración de Grupos"
             subtitle="Establece la rotación y horarios de sábados aplicados únicamente al mes seleccionado."
           >
-            <MonthSelect id="groups-month-selector" class="shrink-0" />
+            <MonthNavigator
+              id="groups-month-selector"
+              class="shrink-0"
+              aria-label="Mes de la vista Grupal"
+            />
           </CronoCardHeader>
           <!-- Configuration form -->
           <div
@@ -901,7 +889,11 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
             iconBg="bg-info/15"
             iconColor="text-info"
           >
-            <MonthSelect id="pasiva-month-selector" class="shrink-0" />
+            <MonthNavigator
+              id="pasiva-month-selector"
+              class="shrink-0"
+              aria-label="Mes de la vista Pasiva"
+            />
           </CronoCardHeader>
           <div class="overflow-x-auto">
             <table

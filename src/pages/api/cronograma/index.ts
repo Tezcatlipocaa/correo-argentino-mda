@@ -16,6 +16,7 @@ import { logAdminFromAstro } from "@lib/auditLogger";
 import { jsonResponse } from "@lib/apiResponse";
 import { requireWriteAccess } from "@lib/rbac-middleware";
 import { buildNameToAgentId, resolveAgentIdByName } from "@lib/scheduleLinks";
+import { resolveInitialMonth } from "@components/cronograma/lib/initialMonth";
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -30,16 +31,9 @@ export const GET: APIRoute = async ({ url }) => {
 
     const d = new Date();
     const currentMonthDefault = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const pastOrCurrentMonths = availableMonths.filter(
-      (m) => m <= currentMonthDefault,
-    );
     const activeMonth =
       url.searchParams.get("month") ||
-      (pastOrCurrentMonths.length > 0
-        ? pastOrCurrentMonths[pastOrCurrentMonths.length - 1]
-        : availableMonths.length > 0
-          ? availableMonths[availableMonths.length - 1]
-          : currentMonthDefault);
+      resolveInitialMonth(availableMonths, currentMonthDefault);
 
     // 2. Cargar configuración de rotación para este mes
     let configList = await db
