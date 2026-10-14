@@ -62,6 +62,7 @@ import {
   buildMonthlyRowStartHtml,
   buildMonthlyCoverageCellHtml,
   syncMonthlyFillerRow,
+  matchesStatusFilter,
 } from "./monthly-view";
 
 export function isWeekend(dateStr: string): boolean {
@@ -475,27 +476,16 @@ function countDailyCoverage(date: string): {
 }
 
 /**
- * Misma regla de membresía que el filtro de estado de renderMonthly(). Tras una
- * edición de celda la única dimensión que puede cambiar es el estado, así que
- * re-evaluar esto alcanza para detectar que la fila debe desaparecer.
+ * Celda de día mensual (franco o con estado). Builder único compartido por
+ * `renderMonthly()` (monthly-view.ts, vía import) y el patcheo dirigido (#265)
+ * para que el markup no diverja. Devuelve además si la celda es un solapamiento
+ * de licencias, para que el render completo mantenga el contador de inconsistencias.
  */
-function matchesActiveFilter(op: OperatorData, dates: string[]): boolean {
-  if (state.activeFilter === "all") return true;
-  return dates.some((d) => {
-    const s = op.asistencia[d];
-    if (state.activeFilter === "Licencia") {
-      return s === OperatorStatus.Licencia || s === OperatorStatus.Vacaciones;
-    }
-    return s === state.activeFilter;
-  });
-}
-
-// NOTE: keep in sync with the day-cell markup generated inside renderMonthly() (monthly-view.ts)
-function buildMonthlyCellHtml(
+export function buildMonthlyCellHtml(
   op: OperatorData,
   date: string,
   rowIndex: number,
-): string {
+): { html: string; isLicenseOverlap: boolean } {
   const container = document.getElementById("cronograma-app-container");
   const userRole = container?.dataset.userRole || "agent";
   const hideComments = ["agent", "referent"].includes(userRole);
@@ -565,7 +555,8 @@ function buildMonthlyCellHtml(
       francoAria += ` (Feriado: ${feriadoName})`;
     }
 
-    return `<td class="${cellClass}"${cellMarkerAttr}>
+    return {
+      html: `<td class="${cellClass}"${cellMarkerAttr}>
             <button
               type="button"
               class="${francoBtnClass}"
@@ -586,7 +577,9 @@ function buildMonthlyCellHtml(
               ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight">HE: ${dayOvertime.startTime}</span>` : ""}
               ${hasComment ? `<div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ${dayOvertime ? "mt-0.5" : ""}" title="Tiene comentario"></div>` : ""}
             </button>
-          </td>`;
+          </td>`,
+      isLicenseOverlap,
+    };
   }
 
   let initials = "";
@@ -646,7 +639,8 @@ function buildMonthlyCellHtml(
     statusAria += ` (Feriado: ${feriadoName})`;
   }
 
-  return `
+  return {
+    html: `
           <td class="${cellClass}"${cellMarkerAttr}>
             <button
               type="button"
@@ -672,7 +666,9 @@ function buildMonthlyCellHtml(
               ${hasComment ? `<div class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 border border-base-100" title="Tiene comentario"></div>` : ""}
             </button>
           </td>
-        `;
+        `,
+    isLicenseOverlap,
+  };
 }
 
 function findLiveMonthlyCell(
@@ -746,7 +742,7 @@ function patchAfterCellEdit(operatorId: number, dates: string[]): void {
 
   // 1. Celdas editadas (mismo markup que renderMonthly).
   for (const { td, date } of cells) {
-    tpl.innerHTML = buildMonthlyCellHtml(op, date, rowIndex).trim();
+    tpl.innerHTML = buildMonthlyCellHtml(op, date, rowIndex).html.trim();
     const fresh = tpl.content.firstElementChild as HTMLElement | null;
     if (!fresh) {
       renderMonthly();
@@ -862,7 +858,7 @@ function updateCellStatus(cell: HTMLElement, newStatus: string): void {
       overlapCrossed ||
       prevCritical !== postCritical ||
       opId == null ||
-      !matchesActiveFilter(op, getDatesArrayForCurrentMonth())
+      !matchesStatusFilter(op, getDatesArrayForCurrentMonth())
     ) {
       // El cambio de criticidad toca el th del día, el solapamiento de
       // licencias toca celdas de OTROS operadores y perder la membresía del

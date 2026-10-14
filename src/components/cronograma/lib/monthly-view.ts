@@ -30,6 +30,7 @@ import {
   showGroupsView,
   updateViewSwitcherUI,
   resolveOperatorStatusAndHorario,
+  buildMonthlyCellHtml,
 } from "./dashboard-client";
 
 let _dailyDateFormatter: Intl.DateTimeFormat | null = null;
@@ -1296,6 +1297,28 @@ export function buildMonthlyCoverageCellHtml(c: {
     `;
 }
 
+/**
+ * Predicado único de membresía al filtro de estado activo. Lo usan el filtro de
+ * `renderMonthly()` y el guard del patcheo dirigido (#265) para que no diverjan:
+ * si una edición saca al operador del filtro, la fila no puede quedar stale.
+ */
+export function matchesStatusFilter(
+  op: OperatorData,
+  dates: string[],
+): boolean {
+  if (state.activeFilter === "all") return true;
+  return dates.some((d) => {
+    const status = op.asistencia[d];
+    if (state.activeFilter === "Licencia") {
+      return (
+        status === OperatorStatus.Licencia ||
+        status === OperatorStatus.Vacaciones
+      );
+    }
+    return status === state.activeFilter;
+  });
+}
+
 export function renderMonthly(): void {
   // Remove container skeleton -- persists only until first render
   document.getElementById("monthly-view-skeleton")?.remove();
@@ -1446,18 +1469,7 @@ export function renderMonthly(): void {
       return false;
     }
 
-    if (state.activeFilter === "all") return true;
-
-    return dates.some((d) => {
-      const status = op.asistencia[d];
-      if (state.activeFilter === "Licencia") {
-        return (
-          status === OperatorStatus.Licencia ||
-          status === OperatorStatus.Vacaciones
-        );
-      }
-      return status === state.activeFilter;
-    });
+    return matchesStatusFilter(op, dates);
   });
 
   const sortedOps = sortOperators(filteredOps, selectedDateStr);
@@ -1501,184 +1513,10 @@ export function renderMonthly(): void {
         ${rowStart.html}
       `;
 
-      // NOTE: keep in sync with buildMonthlyCellHtml() in dashboard-client.ts (targeted cell update path)
       parsedDates.forEach((pd) => {
-        const date = pd.str;
-        const { status, horario: dailyHorario } =
-          resolveOperatorStatusAndHorario(op, date, pd.day, pd.activeGroup);
-        const styles = getStatusStyles(status);
-        const isTodayCell = pd.isToday;
-        const safeName = escapeHtml(op.nombre);
-        const safeDate = escapeHtml(date);
-        const safeStatus = escapeHtml(status || "Franco");
-        const safeHorario = escapeHtml(dailyHorario);
-        const username = op.username || "";
-
-        const breakInicio = (op.breaks_inicio && op.breaks_inicio[date]) || "";
-        const breakFin = (op.breaks_fin && op.breaks_fin[date]) || "";
-
-        // Marcadores del patcheo dirigido (#265): identifican la celda sin
-        // depender de índices posicionales.
-        const cellMarkerAttr =
-          op.id != null
-            ? ` data-cell-op="${op.id}" data-cell-date="${date}"`
-            : "";
-
-        // --- RULE: License Overlap Check ---
-        const isLicenseOverlap =
-          (status === OperatorStatus.Licencia ||
-            status === OperatorStatus.Vacaciones) &&
-          coveragePerDay[date].licenses > state.maxLicenseOverlapLimit;
-        if (isLicenseOverlap) totalInconsistencies++;
-
-        const isFrancoCell = status === OperatorStatus.Franco || !status;
-        let cellClass = `p-1 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
-        if (isTodayCell) {
-          cellClass += isFrancoCell
-            ? " bg-base-200/80 dark:bg-base-300/20"
-            : " bg-secondary/10";
-        }
-        if (isLicenseOverlap)
-          cellClass += " ring-1 ring-inset ring-error/30 bg-error/[0.03]";
-
-        const isHoliday = pd.isHoliday;
-        if (isHoliday) cellClass += " bg-orange-100 dark:bg-orange-950";
-
-        const hasComment =
-          !hideComments && !!(op.comentarios && op.comentarios[date]);
-        const dayOvertime = (op.weekendOvertimes || []).find(
-          (s) => s.date === date,
-        );
-        const otAttr = dayOvertime
-          ? `data-overtime="${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`
-          : "";
-
-        if (isFrancoCell) {
-          let francoBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center relative hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
-          if (isHoliday) {
-            francoBtnClass +=
-              " line-through !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
-          }
-          let tooltipAttrs = "";
-          if (dayOvertime) {
-            const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
-            francoBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
-            tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
-          }
-          let francoAria = `Ver detalle de ${safeName} el ${safeDate}: Franco`;
-          if (isHoliday && pd.feriadoName) {
-            francoAria += ` (Feriado: ${pd.feriadoName})`;
-          }
-
-          tbodyHtml += `<td class="${cellClass}"${cellMarkerAttr}>
-            <button
-              type="button"
-              class="${francoBtnClass}"
-              data-monthly-detail
-              data-operator="${safeName}"
-              data-date="${safeDate}"
-              data-status="Franco"
-              data-horario="${safeHorario}"
-              data-username="${escapeHtml(username)}"
-              data-comment="${hideComments ? "" : escapeHtml(op.comentarios?.[date] || "")}"
-              data-break-inicio="${escapeHtml(breakInicio)}"
-              data-break-fin="${escapeHtml(breakFin)}"
-              aria-label="${francoAria}"
-              ${otAttr}
-              ${isHoliday && pd.feriadoName && !dayOvertime ? `title="Franco (Feriado: ${pd.feriadoName})"` : ""}
-              ${tooltipAttrs}
-            >
-              ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight">HE: ${dayOvertime.startTime}</span>` : ""}
-              ${hasComment ? `<div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ${dayOvertime ? "mt-0.5" : ""}" title="Tiene comentario"></div>` : ""}
-            </button>
-          </td>`;
-          return;
-        }
-
-        let initials = "";
-        if (status === OperatorStatus.PresencialMonteGrande) initials = "MG";
-        else if (status === OperatorStatus.PresencialParquePatricios)
-          initials = "PP";
-        else if (status === OperatorStatus.HomeOffice) initials = "HO";
-        else if (status === OperatorStatus.Licencia) initials = "L";
-        else if (status === OperatorStatus.Vacaciones) initials = "V";
-
-        let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30" : "border-base-300/30"} ${styles.bgClass} ${isLicenseOverlap ? "border-error/40" : ""}`;
-
-        let tooltipAttrs = "";
-        const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
-
-        if (
-          status === OperatorStatus.PresencialMonteGrande ||
-          status === OperatorStatus.PresencialParquePatricios ||
-          status === OperatorStatus.HomeOffice
-        ) {
-          statusBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
-          let tipText = safeHorario;
-          if (dayOvertime) {
-            tipText += `\nHE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}`;
-          }
-          tooltipAttrs = `data-tip="${tipText}"`;
-        } else if (dayOvertime) {
-          statusBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
-          tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
-        }
-
-        const isSaturday = pd.day === 6;
-        const isRotationCell = !!(
-          isSaturday &&
-          op.saturdayGroup &&
-          op.saturdayGroup === pd.activeGroup &&
-          !(op.overrides && op.overrides[date])
-        );
-
-        if (isRotationCell) {
-          statusBtnClass +=
-            " ring-1 ring-inset ring-secondary/35 border-secondary/40 hover:ring-secondary/50";
-        }
-
-        if (isHoliday) {
-          statusBtnClass +=
-            " line-through !bg-orange-200 dark:!bg-orange-600 !text-orange-800 dark:!text-orange-100 !border-orange-300 dark:!border-orange-500 !shadow-none";
-        }
-
-        let statusTitle = `${op.nombre} - ${date}: ${status} ${isLicenseOverlap ? "(Solapamiento Crítico)" : ""}`;
-        if (isRotationCell) {
-          statusTitle += ` (Rotación Sábado Grupo ${op.saturdayGroup})`;
-        }
-        let statusAria = `Ver detalle de ${safeName} el ${safeDate}: ${safeStatus}`;
-        if (isHoliday && pd.feriadoName) {
-          statusTitle += ` (Feriado: ${pd.feriadoName})`;
-          statusAria += ` (Feriado: ${pd.feriadoName})`;
-        }
-
-        tbodyHtml += `
-          <td class="${cellClass}"${cellMarkerAttr}>
-            <button
-              type="button"
-              class="${statusBtnClass}"
-              ${tooltipAttrs ? "" : `title="${statusTitle}"`}
-              data-monthly-detail
-              data-operator="${safeName}"
-              data-date="${safeDate}"
-              data-status="${safeStatus}"
-              data-horario="${safeHorario}"
-              data-username="${escapeHtml(username)}"
-              data-comment="${hideComments ? "" : escapeHtml(op.comentarios?.[date] || "")}"
-              data-break-inicio="${escapeHtml(breakInicio)}"
-              data-break-fin="${escapeHtml(breakFin)}"
-              aria-label="${statusAria}"
-              ${otAttr}
-              ${isRotationCell ? `data-saturday-rotation="true" data-rotation-horario="${escapeHtml(op.saturdayHorario || "07:00 - 13:00")}"` : ""}
-              ${tooltipAttrs}
-            >
-              <span class="font-black text-xs tracking-tight">${initials}</span>
-              ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight mt-0.5 scale-90">HE: ${dayOvertime.startTime}</span>` : ""}
-              ${isLicenseOverlap ? '<div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-error border border-base-100"></div>' : ""}
-              ${hasComment ? `<div class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 border border-base-100" title="Tiene comentario"></div>` : ""}
-            </button>
-          </td>
-        `;
+        const cell = buildMonthlyCellHtml(op, pd.str, opIdx);
+        if (cell.isLicenseOverlap) totalInconsistencies++;
+        tbodyHtml += cell.html;
       });
       tbodyHtml += `</tr>`;
     });
