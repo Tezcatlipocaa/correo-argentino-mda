@@ -707,6 +707,14 @@ function patchAfterCellEdit(operatorId: number, dates: string[]): void {
     return;
   }
 
+  // Sin mes activo (#date-input vacío) getDatesArrayForCurrentMonth() da []:
+  // parchear dejaría stats y badges en cero → rebuild (usa su propio fallback).
+  const monthDates = getDatesArrayForCurrentMonth();
+  if (monthDates.length === 0) {
+    renderMonthly();
+    return;
+  }
+
   const cells: { td: HTMLElement; date: string }[] = [];
   for (const date of dates) {
     const td = tbody.querySelector<HTMLElement>(
@@ -755,7 +763,7 @@ function patchAfterCellEdit(operatorId: number, dates: string[]): void {
   const rowStart = buildMonthlyRowStartHtml(op, {
     isReadOnly,
     isCurrentUser,
-    dates: getDatesArrayForCurrentMonth(),
+    dates: monthDates,
   });
   tpl.innerHTML = rowStart.html.trim();
   const freshStart = Array.from(tpl.content.children) as HTMLElement[];
@@ -858,12 +866,14 @@ function updateCellStatus(cell: HTMLElement, newStatus: string): void {
       overlapCrossed ||
       prevCritical !== postCritical ||
       opId == null ||
-      !matchesStatusFilter(op, getDatesArrayForCurrentMonth())
+      !matchesStatusFilter(op, getDatesArrayForCurrentMonth()) ||
+      state.activeSort === "entry-time"
     ) {
       // El cambio de criticidad toca el th del día, el solapamiento de
-      // licencias toca celdas de OTROS operadores y perder la membresía del
-      // filtro activo elimina la fila: nada de eso se puede reproducir con un
-      // parche de celdas → rebuild completo.
+      // licencias toca celdas de OTROS operadores, perder la membresía del
+      // filtro activo elimina la fila y con orden por `entry-time` la clave
+      // depende de asistencia/horarios de la celda mutada (reordena filas):
+      // nada de eso se puede reproducir con un parche de celdas → rebuild.
       renderMonthly();
     } else {
       patchAfterCellEdit(opId, [date]);
