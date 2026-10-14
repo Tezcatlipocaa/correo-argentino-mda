@@ -35,6 +35,12 @@ describe("currentMonthYM", () => {
     expect(currentMonthYM(new Date(2026, 0, 15))).toBe("2026-01");
     expect(currentMonthYM(new Date(2026, 11, 1))).toBe("2026-12");
   });
+
+  it("currentMonthYM usa fecha local, no UTC", () => {
+    // 31/10/2026 23:30 local: en UTC-3 ya es 01/11/2026 UTC. Si el derivador
+    // usara toISOString() devolvería "2026-11".
+    expect(currentMonthYM(new Date(2026, 9, 31, 23, 30))).toBe("2026-10");
+  });
 });
 
 describe("monthOptionsHtml", () => {
