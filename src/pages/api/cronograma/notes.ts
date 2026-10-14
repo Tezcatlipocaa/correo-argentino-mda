@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ request }) => {
     // Lectura pura: nunca crea agentes. Un nombre inexistente devuelve notas
     // vacías sin escribir en `agents` (#264).
     const agent = await db
-      .select({ id: agents.id, notes: agents.notes })
+      .select({ notes: agents.notes })
       .from(agents)
       .where(eq(sql`lower(${agents.name})`, agentName.trim().toLowerCase()))
       .limit(1);
