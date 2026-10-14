@@ -9,7 +9,7 @@ import { getAutogestionesMetricasData } from "@/lib/autogestion/metricasService"
 const cleanBase = getCleanBase();
 const baseNoSlash = getBaseNoSlash();
 
-const searchParams = getResolvedSearchParams(Astro.request);
+const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 const initialPreset = searchParams.get("preset") || "ultimos_7_dias";
 const initialFrom = searchParams.get("from") || "";
 const initialTo = searchParams.get("to") || "";
