@@ -11,6 +11,7 @@ import {
 import { eq, and, desc, lt, like, lte, sql } from "drizzle-orm";
 import { activeAgentCondition } from "@lib/activeUsers";
 import { resolveInitialMonth } from "@components/cronograma/lib/initialMonth";
+import { currentMonthYM } from "@components/cronograma/lib/monthLabel";
 
 export type CronogramaPayload = {
   operators: any[];
@@ -82,9 +83,9 @@ export function resolveCronogramaMonth(
   requested: string | null,
   availableMonths: string[],
 ): string {
-  const d = new Date();
-  const currentMonthDefault = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  return requested || resolveInitialMonth(availableMonths, currentMonthDefault);
+  return (
+    requested || resolveInitialMonth(availableMonths, currentMonthYM(new Date()))
+  );
 }
 
 /** Payload completo del mes activo. */
