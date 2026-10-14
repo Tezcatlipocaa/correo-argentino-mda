@@ -11,7 +11,7 @@ import {
   users,
 } from "@db/schema";
 import { eq, and, desc, lt, like, sql } from "drizzle-orm";
-import { activeAgentCondition } from "@lib/activeUsers";
+import { eligibleAgentsCondition } from "@lib/cronogramaAgents";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { jsonResponse } from "@lib/apiResponse";
 import { requireWriteAccess } from "@lib/rbac-middleware";
@@ -141,7 +141,7 @@ export const GET: APIRoute = async ({ url }) => {
       })
       .from(agents)
       .leftJoin(users, eq(users.id, agents.userId))
-      .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
+      .where(eligibleAgentsCondition());
 
     // 6. Cargar horas extras de fin de semana para este mes (Scope Overtime Configuration by Month)
     const dbOvertimeConfigs = await db

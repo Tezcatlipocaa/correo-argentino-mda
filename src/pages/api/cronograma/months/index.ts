@@ -5,8 +5,10 @@ import {
   schedules,
   agentSaturdayGroups,
   saturdayRotationConfig,
+  users,
 } from "@db/schema";
 import { and, eq, like, inArray, desc, lt } from "drizzle-orm";
+import { eligibleAgentsCondition } from "@lib/cronogramaAgents";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
 
@@ -43,14 +45,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { year, month } = parsed;
 
-    // 1. Fetch all agents with legacy saturday fields
+    // 1. Fetch de agentes elegibles (en cronograma + activos). Misma
+    // condición que el GET para no generar filas muertas de inactivos (#262).
     const dbAgents = await db
       .select({
         id: agents.id,
         saturdayGroup: agents.saturdayGroup,
         saturdayHorario: agents.saturdayHorario,
       })
-      .from(agents);
+      .from(agents)
+      .leftJoin(users, eq(users.id, agents.userId))
+      .where(eligibleAgentsCondition());
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const monthPrefix = parsed.prefix;
