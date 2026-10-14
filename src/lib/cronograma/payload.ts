@@ -33,6 +33,43 @@ export function groupByAgentId<T extends { agentId: number | null }>(
   return map;
 }
 
+/** Deriva los mapas de grupo del mes activo y del mes anterior más cercano. */
+export function deriveGroupMaps<
+  T extends {
+    agentId: number;
+    month: string;
+    saturdayGroup: string | null;
+    saturdayHorario: string | null;
+  },
+>(
+  rows: T[],
+  activeMonth: string,
+): { monthly: Map<number, T>; previous: Map<number, T> } {
+  const monthly = new Map<number, T>();
+  let prevMonth: string | undefined;
+  for (const row of rows) {
+    if (row.month === activeMonth && !monthly.has(row.agentId)) {
+      monthly.set(row.agentId, row);
+    }
+    if (
+      row.month < activeMonth &&
+      (prevMonth === undefined || row.month > prevMonth)
+    ) {
+      prevMonth = row.month;
+    }
+  }
+
+  const previous = new Map<number, T>();
+  if (prevMonth !== undefined) {
+    for (const row of rows) {
+      if (row.month === prevMonth && !previous.has(row.agentId)) {
+        previous.set(row.agentId, row);
+      }
+    }
+  }
+  return { monthly, previous };
+}
+
 export async function listAvailableMonths(): Promise<string[]> {
   const dbSchedulesList = await db
     .select({ month: sql<string>`distinct substr(${schedules.date}, 1, 7)` })
@@ -53,10 +90,8 @@ export function resolveCronogramaMonth(
 /** Payload completo del mes activo. */
 export async function buildCronogramaPayload(
   activeMonth: string,
-  availableMonths?: string[],
+  availableMonths: string[],
 ): Promise<CronogramaPayload> {
-  const months = availableMonths ?? (await listAvailableMonths());
-
   // Cargar configuración de rotación para este mes
   let configList = await db
     .select()
@@ -94,32 +129,15 @@ export async function buildCronogramaPayload(
 
   // Cargar asignaciones de grupos de sábados: la consulta única trae todos los
   // meses <= activeMonth ordenados desc; el mes actual y el anterior se derivan
-  // en JS preservando la semántica previa (mismo fallback, mismo first-wins).
+  // en JS preservando la semántica previa (ver deriveGroupMaps).
   const dbSaturdayGroups = await db
     .select()
     .from(agentSaturdayGroups)
     .where(lte(agentSaturdayGroups.month, activeMonth))
     .orderBy(desc(agentSaturdayGroups.month));
 
-  const dbMonthlyGroups = dbSaturdayGroups.filter(
-    (g) => g.month === activeMonth,
-  );
-  const monthlyGroupsMap = new Map(
-    dbMonthlyGroups.map((g) => [g.agentId, g]),
-  );
-
-  const prevMonth = dbSaturdayGroups.find((g) => g.month < activeMonth)?.month;
-
-  const previousGroupsMap = new Map<
-    number,
-    typeof agentSaturdayGroups.$inferSelect
-  >();
-  for (const pg of dbSaturdayGroups) {
-    if (pg.month !== prevMonth) continue;
-    if (!previousGroupsMap.has(pg.agentId)) {
-      previousGroupsMap.set(pg.agentId, pg);
-    }
-  }
+  const { monthly: monthlyGroupsMap, previous: previousGroupsMap } =
+    deriveGroupMaps(dbSaturdayGroups, activeMonth);
 
   // Cargar todos los agentes
   const dbAgents = await db
@@ -349,7 +367,7 @@ export async function buildCronogramaPayload(
   return {
     operators: merged,
     weekendOvertimeConfigs: dbOvertimeConfigs,
-    availableMonths: months,
+    availableMonths,
     activeMonth,
   };
 }
