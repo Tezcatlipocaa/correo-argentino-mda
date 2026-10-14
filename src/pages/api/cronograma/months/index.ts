@@ -116,68 +116,110 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // 5. Transaction: Delete existing, insert schedules, insert agentSaturdayGroups, upsert saturdayRotationConfig
-    await db.transaction((tx) => {
-      // 5.1 Batch delete schedules (por agentId: los nombres stale no
-      // pueden dejar filas huérfanas en el mes)
-      tx.delete(schedules)
-        .where(
-          and(
-            inArray(
-              schedules.agentId,
-              dbAgents.map((a) => a.id),
-            ),
-            like(schedules.date, `${monthPrefix}-%`),
-          ),
-        )
-        .run();
-
-      // 5.2 Chunk-insert schedules
-      const allInserts = [];
-      for (const op of dbAgents) {
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-          allInserts.push({
-            agentId: op.id,
-            date: dateStr,
-            status: "Franco",
-            comment: "",
-            horario: "",
-            entradaReal: "",
-            salidaReal: "",
-            breakInicio: "",
-            breakFin: "",
-            isOverride: false,
-          });
+    // 5. Transaction: guard de existencia + delete/insert atómicos.
+    // El guard corre DENTRO del tx (better-sqlite3 es síncrono y de una sola
+    // conexión): dos POST concurrentes al mismo mes no pueden intercalarse
+    // entre el SELECT del guard y las escrituras (#274).
+    const MONTH_EXISTS = "CRONO_MONTH_EXISTS";
+    try {
+      await db.transaction((tx) => {
+        const existingSchedule = tx
+          .select({ id: schedules.id })
+          .from(schedules)
+          .where(like(schedules.date, `${monthPrefix}-%`))
+          .limit(1)
+          .all();
+        const existingGroup = tx
+          .select({ id: agentSaturdayGroups.id })
+          .from(agentSaturdayGroups)
+          .where(eq(agentSaturdayGroups.month, monthPrefix))
+          .limit(1)
+          .all();
+        const existingRotation = tx
+          .select({ id: saturdayRotationConfig.id })
+          .from(saturdayRotationConfig)
+          .where(eq(saturdayRotationConfig.month, monthPrefix))
+          .limit(1)
+          .all();
+        // Definición única de "mes existente" (#273): schedules OR grupos OR rotación.
+        if (
+          existingSchedule.length ||
+          existingGroup.length ||
+          existingRotation.length
+        ) {
+          throw new Error(MONTH_EXISTS);
         }
-      }
 
-      const CHUNK_SIZE = 100;
-      for (let i = 0; i < allInserts.length; i += CHUNK_SIZE) {
-        tx.insert(schedules)
-          .values(allInserts.slice(i, i + CHUNK_SIZE))
+        // 5.1 Batch delete schedules
+        tx.delete(schedules)
+          .where(
+            and(
+              inArray(
+                schedules.agentId,
+                dbAgents.map((a) => a.id),
+              ),
+              like(schedules.date, `${monthPrefix}-%`),
+            ),
+          )
           .run();
-      }
 
-      // 5.3 Delete existing agentSaturdayGroups for target month
-      tx.delete(agentSaturdayGroups)
-        .where(eq(agentSaturdayGroups.month, monthPrefix))
-        .run();
-
-      // 5.4 Chunk-insert new agentSaturdayGroups records
-      if (agentSaturdayGroupInserts.length > 0) {
-        for (let i = 0; i < agentSaturdayGroupInserts.length; i += CHUNK_SIZE) {
-          tx.insert(agentSaturdayGroups)
-            .values(agentSaturdayGroupInserts.slice(i, i + CHUNK_SIZE))
+        // 5.2 Chunk-insert schedules
+        const allInserts = [];
+        for (const op of dbAgents) {
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            allInserts.push({
+              agentId: op.id,
+              date: dateStr,
+              status: "Franco",
+              comment: "",
+              horario: "",
+              entradaReal: "",
+              salidaReal: "",
+              breakInicio: "",
+              breakFin: "",
+              isOverride: false,
+            });
+          }
+        }
+        const CHUNK_SIZE = 100;
+        for (let i = 0; i < allInserts.length; i += CHUNK_SIZE) {
+          tx.insert(schedules)
+            .values(allInserts.slice(i, i + CHUNK_SIZE))
             .run();
         }
-      }
 
-      // 5.5 Upsert saturdayRotationConfig
-      if (rotationConfigInsert) {
-        tx.insert(saturdayRotationConfig).values(rotationConfigInsert).run();
+        // 5.3 Delete existing agentSaturdayGroups for target month
+        tx.delete(agentSaturdayGroups)
+          .where(eq(agentSaturdayGroups.month, monthPrefix))
+          .run();
+
+        // 5.4 Chunk-insert new agentSaturdayGroups records
+        if (agentSaturdayGroupInserts.length > 0) {
+          for (let i = 0; i < agentSaturdayGroupInserts.length; i += CHUNK_SIZE) {
+            tx.insert(agentSaturdayGroups)
+              .values(agentSaturdayGroupInserts.slice(i, i + CHUNK_SIZE))
+              .run();
+          }
+        }
+
+        // 5.5 Upsert saturdayRotationConfig
+        if (rotationConfigInsert) {
+          tx.insert(saturdayRotationConfig).values(rotationConfigInsert).run();
+        }
+      });
+    } catch (error: any) {
+      if (error?.message === MONTH_EXISTS) {
+        return jsonResponse(
+          {
+            error:
+              "El mes ya existe en los registros. No se puede volver a crear para evitar pérdida de datos.",
+          },
+          409,
+        );
       }
-    });
+      throw error;
+    }
 
     await logAdminFromAstro(
       locals,
