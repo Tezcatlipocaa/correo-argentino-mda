@@ -24,13 +24,34 @@ const invgateWebBase = invgateApiBase
   ? invgateApiBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")
   : "";
 
-const TYPE_BADGE_CLASSES: Record<string, string> = {
-  cyclic: "badge-primary",
-  manual: "badge-warning",
-  batch_suggested: "badge-secondary",
-  batch_all: "badge-info",
-  revision: "badge-neutral",
-  undo: "badge-error",
+const MODALITY_CONFIG: Record<
+  string,
+  { label: string; badgeClass: string }
+> = {
+  cyclic: {
+    label: "Cíclica General",
+    badgeClass: "badge-secondary text-secondary-content font-bold",
+  },
+  batch_suggested: {
+    label: "Sugerida por Creador",
+    badgeClass: "badge-secondary badge-outline font-bold",
+  },
+  batch_all: {
+    label: "Masiva en Cola",
+    badgeClass: "badge-info text-info-content font-bold",
+  },
+  manual: {
+    label: "Manual Supervisor",
+    badgeClass: "badge-primary text-primary-content font-bold",
+  },
+  revision: {
+    label: "Revisión Pospuesta",
+    badgeClass: "badge-neutral text-neutral-content font-bold",
+  },
+  undo: {
+    label: "Deshecha / Anulada",
+    badgeClass: "badge-error text-error-content font-bold",
+  },
 };
 ---
 
@@ -312,13 +333,13 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
 
     <div class="overflow-x-auto max-h-96">
       <table class="table table-zebra table-sm w-full text-xs">
-        <thead class="bg-base-200/50 sticky top-0 z-10 backdrop-blur-sm">
+        <thead class="bg-base-200 text-base-content sticky top-0 z-10 border-b border-base-300">
           <tr>
-            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/60">Ticket</th>
-            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/60">Operador</th>
-            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/60">Asignado Por</th>
-            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/60">Modalidad</th>
-            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/60 text-right">Fecha / Hora</th>
+            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/70">Ticket</th>
+            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/70">Operador</th>
+            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/70">Asignado Por</th>
+            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/70">Modalidad</th>
+            <th class="font-bold uppercase tracking-wider text-tiny text-base-content/70 text-right">Fecha / Hora</th>
           </tr>
         </thead>
         <tbody id="table-assignments-body">
@@ -332,7 +353,10 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
             recentAssignments.map((r) => {
               const ticketIdNum = r.ticketNumber?.replace(/[^0-9]/g, "");
               const invgateLink = invgateWebBase && ticketIdNum ? `${invgateWebBase}/incident/view/id/${ticketIdNum}` : null;
-              const badgeClass = TYPE_BADGE_CLASSES[r.type] || "badge-ghost";
+              const modality = MODALITY_CONFIG[r.type] || {
+                label: r.type,
+                badgeClass: "badge-ghost",
+              };
 
               return (
                 <tr class="hover:bg-base-200/40 transition-colors">
@@ -348,8 +372,8 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
                   <td class="font-semibold text-base-content">{r.agentName}</td>
                   <td class="text-base-content/70">{r.assignedBy}</td>
                   <td>
-                    <span class={`badge badge-xs font-bold uppercase tracking-wider ${badgeClass}`}>
-                      {r.type}
+                    <span class={`badge badge-sm py-2 px-2.5 text-tiny uppercase tracking-wider ${modality.badgeClass}`}>
+                      {modality.label}
                     </span>
                   </td>
                   <td class="text-right font-mono text-tiny text-base-content/60">

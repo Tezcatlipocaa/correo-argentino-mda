@@ -328,18 +328,39 @@ function updateTable(assignments: any[]) {
     return;
   }
 
-  const badgeMap: Record<string, string> = {
-    cyclic: "badge-primary",
-    manual: "badge-warning",
-    batch_suggested: "badge-secondary",
-    batch_all: "badge-info",
-    revision: "badge-neutral",
-    undo: "badge-error",
+  const modalityConfig: Record<string, { label: string; badgeClass: string }> = {
+    cyclic: {
+      label: "Cíclica General",
+      badgeClass: "badge-secondary text-secondary-content font-bold",
+    },
+    batch_suggested: {
+      label: "Sugerida por Creador",
+      badgeClass: "badge-secondary badge-outline font-bold",
+    },
+    batch_all: {
+      label: "Masiva en Cola",
+      badgeClass: "badge-info text-info-content font-bold",
+    },
+    manual: {
+      label: "Manual Supervisor",
+      badgeClass: "badge-primary text-primary-content font-bold",
+    },
+    revision: {
+      label: "Revisión Pospuesta",
+      badgeClass: "badge-neutral text-neutral-content font-bold",
+    },
+    undo: {
+      label: "Deshecha / Anulada",
+      badgeClass: "badge-error text-error-content font-bold",
+    },
   };
 
   tbody.innerHTML = assignments
     .map((r) => {
-      const badgeClass = badgeMap[r.type] || "badge-ghost";
+      const modality = modalityConfig[r.type] || {
+        label: r.type,
+        badgeClass: "badge-ghost",
+      };
       const formattedDate = new Date(r.assignedAt).toLocaleString([], {
         day: "2-digit",
         month: "2-digit",
@@ -353,7 +374,7 @@ function updateTable(assignments: any[]) {
           <td class="font-mono font-bold">${r.ticketNumber || "—"}</td>
           <td class="font-semibold text-base-content">${r.agentName}</td>
           <td class="text-base-content/70">${r.assignedBy}</td>
-          <td><span class="badge badge-xs font-bold uppercase tracking-wider ${badgeClass}">${r.type}</span></td>
+          <td><span class="badge badge-sm py-2 px-2.5 text-tiny uppercase tracking-wider ${modality.badgeClass}">${modality.label}</span></td>
           <td class="text-right font-mono text-tiny text-base-content/60">${formattedDate}</td>
         </tr>
       `;
