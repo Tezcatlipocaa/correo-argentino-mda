@@ -151,6 +151,13 @@ async function sentinelAlive(page: Page, key: SentinelKey): Promise<boolean> {
   }, key);
 }
 
+async function fillerRowHeight(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const row = document.querySelector<HTMLElement>("#monthly-filler-row tr");
+    return row ? parseFloat(row.style.height || "0") : -1;
+  });
+}
+
 let user: TestUser;
 
 test.beforeAll(async () => {
@@ -183,6 +190,9 @@ test.describe("patcheo dirigido de la vista mensual", () => {
     );
     const beforeP = Number(await targetRow.locator("td").nth(1).innerText());
     expect(beforeP).toBeGreaterThan(0);
+
+    const fillerBefore = await fillerRowHeight(page);
+    expect(fillerBefore).toBeGreaterThan(0);
 
     await markRows(page);
 
@@ -219,6 +229,11 @@ test.describe("patcheo dirigido de la vista mensual", () => {
     await expect(
       page.locator(`#monthly-tfoot td[data-coverage-date="${d}"]`),
     ).toContainText("2");
+
+    // (e) el badge de violación agrandó la fila → el filler se resincroniza
+    const fillerAfter = await fillerRowHeight(page);
+    expect(fillerAfter).toBeGreaterThanOrEqual(0);
+    expect(fillerAfter).toBeLessThan(fillerBefore);
   });
 
   test("el pincel sobre una celda también patchea sin reconstruir las filas", async ({
@@ -270,6 +285,71 @@ test.describe("patcheo dirigido de la vista mensual", () => {
 
     // La tabla oculta no se tocó.
     expect(await sentinelAlive(page, "__hiddenTbodyRow")).toBe(true);
+  });
+
+  test("con filtro Licencia activo, editar la única licencia no deja la fila stale", async ({
+    context,
+    page,
+  }) => {
+    const ym = monthOffset(0);
+    const dates = datesOfMonth(ym);
+    const firstIdx = dates.indexOf(firstMonday(ym));
+    const mon = dates[firstIdx];
+    const tue = dates[firstIdx + 1];
+    const wed = dates[firstIdx + 2];
+    const thu = dates[firstIdx + 3];
+    const fri = dates[firstIdx + 4];
+
+    // HO,HO,Licencia,HO,HO con maxConsecutiveHO=2: el Franco del medio corta
+    // la racha (sin violación). Editarla a Franco la fusiona (5 > 2) y la
+    // cobertura no cruza umbral: el caso del review.
+    const target: Record<string, string> = {};
+    dates.forEach((d) => (target[d] = "Franco"));
+    target[mon] = HO;
+    target[tue] = HO;
+    target[wed] = "Licencia";
+    target[thu] = HO;
+    target[fri] = HO;
+    const other: Record<string, string> = {};
+    dates.forEach((d) => (other[d] = P));
+    const payload = {
+      operators: [
+        {
+          ...operator(1, "Filtro Target", target),
+          maxConsecutiveHO: 2,
+        },
+        operator(2, "Otro Op A", other),
+        operator(3, "Otro Op B", other),
+      ],
+      weekendOvertimeConfigs: [],
+      availableMonths: [ym],
+      activeMonth: ym,
+    };
+
+    await setSessionCookie(context, user.signedSessionId);
+    await stubCronogramaGet(page, () => payload);
+    await gotoAndWait(page);
+
+    await page.click("#filter-monthly-status-licencia");
+    const filteredRow = page.locator(
+      `#monthly-tbody tr:has(button[data-operator="Filtro Target"])`,
+    );
+    await expect(filteredRow).toHaveCount(1);
+
+    await page
+      .locator(
+        `#monthly-tbody button[data-monthly-detail][data-operator="Filtro Target"][data-date="${wed}"]`,
+      )
+      .click({ button: "right" });
+    await expect(page.locator("#quick-edit-menu")).toBeVisible();
+    await page
+      .locator('#quick-edit-options button[data-status="Franco"]')
+      .click();
+
+    // Sin la única Licencia, el operador deja de matchear el filtro activo:
+    // la fila no puede quedar stale.
+    await expect(filteredRow).toHaveCount(0);
+    await expect(page.locator("#monthly-tbody")).toContainText("Sin resultados");
   });
 
   test("documentado: si el cambio cruza el umbral de cobertura, cae al rebuild completo", async ({

@@ -61,6 +61,7 @@ import {
   clearParsedDatesCache,
   buildMonthlyRowStartHtml,
   buildMonthlyCoverageCellHtml,
+  syncMonthlyFillerRow,
 } from "./monthly-view";
 
 export function isWeekend(dateStr: string): boolean {
@@ -473,6 +474,22 @@ function countDailyCoverage(date: string): {
   return { pmg, ppp, ho, licenses };
 }
 
+/**
+ * Misma regla de membresía que el filtro de estado de renderMonthly(). Tras una
+ * edición de celda la única dimensión que puede cambiar es el estado, así que
+ * re-evaluar esto alcanza para detectar que la fila debe desaparecer.
+ */
+function matchesActiveFilter(op: OperatorData, dates: string[]): boolean {
+  if (state.activeFilter === "all") return true;
+  return dates.some((d) => {
+    const s = op.asistencia[d];
+    if (state.activeFilter === "Licencia") {
+      return s === OperatorStatus.Licencia || s === OperatorStatus.Vacaciones;
+    }
+    return s === state.activeFilter;
+  });
+}
+
 // NOTE: keep in sync with the day-cell markup generated inside renderMonthly() (monthly-view.ts)
 function buildMonthlyCellHtml(
   op: OperatorData,
@@ -777,6 +794,10 @@ function patchAfterCellEdit(operatorId: number, dates: string[]): void {
     }
     coverageTd.replaceWith(fresh);
   }
+
+  // El badge de violación puede cambiar el alto de la fila: reajustar el
+  // filler para que el tfoot siga clavado al fondo (igual que renderMonthly).
+  syncMonthlyFillerRow();
 }
 
 function updateCellStatus(cell: HTMLElement, newStatus: string): void {
@@ -837,10 +858,16 @@ function updateCellStatus(cell: HTMLElement, newStatus: string): void {
       (prevCoverage.licenses > state.maxLicenseOverlapLimit) !==
         (postCoverage.licenses > state.maxLicenseOverlapLimit);
 
-    if (overlapCrossed || prevCritical !== postCritical || opId == null) {
-      // El cambio de criticidad toca el th del día y el solapamiento de
-      // licencias toca celdas de OTROS operadores: no se pueden reproducir
-      // con un parche de celdas → rebuild completo.
+    if (
+      overlapCrossed ||
+      prevCritical !== postCritical ||
+      opId == null ||
+      !matchesActiveFilter(op, getDatesArrayForCurrentMonth())
+    ) {
+      // El cambio de criticidad toca el th del día, el solapamiento de
+      // licencias toca celdas de OTROS operadores y perder la membresía del
+      // filtro activo elimina la fila: nada de eso se puede reproducir con un
+      // parche de celdas → rebuild completo.
       renderMonthly();
     } else {
       patchAfterCellEdit(opId, [date]);
