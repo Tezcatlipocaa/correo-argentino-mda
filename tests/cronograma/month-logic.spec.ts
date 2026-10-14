@@ -37,22 +37,19 @@ test.describe("Cronograma month logic", () => {
     }
 
     await page.goto("/supervision/cronograma");
-    await page.waitForSelector("#monthly-table");
+    await expect(page.locator("#date-input")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
 
     await page.evaluate((date) => {
       const input = document.getElementById("date-input") as HTMLInputElement;
       input.value = date;
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }, `${M31.prefix}-31`);
-    await page.waitForTimeout(500);
 
     await page.click("#next-month-btn");
-    await page.waitForTimeout(800);
-    expect(await page.locator("#date-input").inputValue()).toBe(`${M30.prefix}-30`);
+    await expect(page.locator("#date-input")).toHaveValue(`${M30.prefix}-30`);
 
     await page.click("#prev-month-btn");
-    await page.waitForTimeout(800);
-    expect(await page.locator("#date-input").inputValue()).toBe(`${M31.prefix}-31`);
+    await expect(page.locator("#date-input")).toHaveValue(`${M31.prefix}-31`);
   });
 
   test("la vista abre en un mes <= hoy, nunca en el más futuro (#139)", async ({ context, page }) => {
@@ -61,7 +58,7 @@ test.describe("Cronograma month logic", () => {
     expect([200, 409]).toContain(res.status());
 
     await page.goto("/supervision/cronograma");
-    await page.waitForSelector("#monthly-table");
+    await expect(page.locator("#date-input")).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
 
     const value = await page.locator("#date-input").inputValue();
     const ym = value.slice(0, 7);
