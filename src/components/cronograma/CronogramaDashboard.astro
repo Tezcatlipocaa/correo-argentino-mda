@@ -39,11 +39,18 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
 
 // Payload del primer render embebido por SSR: el cliente lo consume de
 // `window.__CRONOGRAMA_INITIAL_DATA__` y evita el GET a /api/cronograma.
-const availableMonths = await listAvailableMonths();
-const initialData = await buildCronogramaPayload(
-  resolveCronogramaMonth(null, availableMonths),
-  availableMonths,
-);
+// Si el armado falla, se emite `null`: el cliente cae al GET normal y
+// conserva su manejo de error (toast) en vez de dejar el skeleton colgado.
+let initialData = null;
+try {
+  const months = await listAvailableMonths();
+  initialData = await buildCronogramaPayload(
+    resolveCronogramaMonth(null, months),
+    months,
+  );
+} catch (err) {
+  console.error("[cronograma] SSR payload failed", err);
+}
 ---
 
 <div

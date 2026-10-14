@@ -3,8 +3,8 @@ import type { Page } from "@playwright/test";
 /**
  * Neutraliza el canal SSR de datos iniciales del cronograma (#267): desde que
  * el primer render embebe el payload real de la DB, los specs que controlan el
- * payload vía `page.route("** /api/cronograma")` necesitan forzar el fallback
- * del cliente al GET. El setter vacío ignora la asignación del script inline.
+ * payload del GET con `page.route` necesitan forzar el fallback del cliente.
+ * El setter vacío ignora la asignación del script inline.
  */
 export async function ignoreSsrInitialData(page: Page): Promise<void> {
   await page.addInitScript(() => {
