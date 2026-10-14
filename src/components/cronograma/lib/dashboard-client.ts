@@ -1987,8 +1987,23 @@ function setupEventListeners(): void {
 
     target.value = ""; // Reset selection
 
+    const dateInputForImport = document.getElementById(
+      "date-input",
+    ) as HTMLInputElement | null;
+    const currentMonthForImport = dateInputForImport?.value
+      ? dateInputForImport.value.slice(0, 7)
+      : "";
+    if (!currentMonthForImport) {
+      showToast(
+        "No hay un mes activo. Seleccione un mes antes de importar.",
+        "warning",
+      );
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("month", currentMonthForImport);
 
     const btn = document.getElementById("import-csv-btn");
     const originalContent = btn ? btn.innerHTML : "";
