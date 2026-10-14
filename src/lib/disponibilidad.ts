@@ -3,11 +3,12 @@ import { agents, users, schedules, assignmentLock, assignmentHistory } from "@db
 import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { activeAgentCondition } from "@lib/activeUsers";
 import { getHelpdeskMembers } from "@/lib/invgate/helpdeskMembersCache";
-import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment, invalidateUnassignedTicketsCache } from "@/lib/invgate/agsTickets";
+import { getUnassignedTicketsByHelpdesk, reassignTicketToAgent, setTicketWaitingForDate, addTicketComment, invalidateUnassignedTicketsCache, MDA_COMMENT_PREFIX } from "@/lib/invgate/agsTickets";
 import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import {
   getWiseCxPresenceMap,
   findWiseCxPresenceForAgent,
+  estadoAptoParaAgs,
   type WiseCxBadgeVariant,
   type WiseCxStatusCategory,
 } from "@/lib/wise-cx-presence";
@@ -574,20 +575,30 @@ export async function getDisponibilidadHoy(forceRefresh = false): Promise<AgentD
         }
       } else if (wisePresence.statusCategory === "bloqueado") {
         // Administrativo, Almuerzo, Baño, Devolución Supervisión, Llamada saliente, Llamada Sin Atender, No Disponible, Reunión
-        info.disponible = false;
-        info.motivo = wisePresence.motivoBloqueo || wisePresence.status;
-        if (!workingStatuses.includes(status)) {
-          info.modalidadHoy = "Guardia";
-        }
+        if (estadoAptoParaAgs(wisePresence.status)) {
+          // Baño / Llamada saliente / Llamada Sin Atender no bloquean: el ticket se encola.
+          info.disponible = true;
+          delete info.motivo;
+          delete info.retornoEstimado;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
+        } else {
+          info.disponible = false;
+          info.motivo = wisePresence.motivoBloqueo || wisePresence.status;
+          if (!workingStatuses.includes(status)) {
+            info.modalidadHoy = "Guardia";
+          }
 
-        if (wisePresence.status.toLowerCase().includes("almuerzo") && wisePresence.userStatusDate) {
-          const startUtc = new Date(wisePresence.userStatusDate.replace(" ", "T") + "Z").getTime();
-          if (!isNaN(startUtc)) {
-            // Estimar fin de almuerzo (+45 min desde que ingresó)
-            const estEnd = new Date(startUtc + 45 * 60000);
-            const rH = String(estEnd.getHours()).padStart(2, "0");
-            const rM = String(estEnd.getMinutes()).padStart(2, "0");
-            info.retornoEstimado = `${rH}:${rM}`;
+          if (wisePresence.status.toLowerCase().includes("almuerzo") && wisePresence.userStatusDate) {
+            const startUtc = new Date(wisePresence.userStatusDate.replace(" ", "T") + "Z").getTime();
+            if (!isNaN(startUtc)) {
+              // Estimar fin de almuerzo (+45 min desde que ingresó)
+              const estEnd = new Date(startUtc + 45 * 60000);
+              const rH = String(estEnd.getHours()).padStart(2, "0");
+              const rM = String(estEnd.getMinutes()).padStart(2, "0");
+              info.retornoEstimado = `${rH}:${rM}`;
+            }
           }
         }
       }
@@ -721,7 +732,7 @@ export async function asignarSiguienteAutogestion(
 
   // Comentario público automático en InvGate
   try {
-    const commentRes = await addTicketComment(oldestTicket.id, "Se asigna para su verificación.", authorId, 1);
+    const commentRes = await addTicketComment(oldestTicket.id, `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`, authorId, 1);
     if (!commentRes.ok) {
       console.warn(`[asignarSiguienteAutogestion] No se pudo agregar comentario público al ticket #${oldestTicket.id}: ${commentRes.message}`);
     }
@@ -822,7 +833,7 @@ export async function asignarManual(
 
   // Comentario público automático en InvGate
   try {
-    const publicComment = comment?.trim() || "Se asigna para su verificación.";
+    const publicComment = comment?.trim() || `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`;
     const commentRes = await addTicketComment(targetTicket.id, publicComment, authorId, 1);
     if (!commentRes.ok) {
       console.warn(`[asignarManual] No se pudo agregar comentario público al ticket #${targetTicket.id}: ${commentRes.message}`);
@@ -1057,7 +1068,7 @@ export async function asignarSugeridasAutogestion(
 
     if (reassignRes.ok) {
       try {
-        const commentRes = await addTicketComment(ticket.id, "Se asigna para su verificación.", authorId, 1);
+        const commentRes = await addTicketComment(ticket.id, `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`, authorId, 1);
         if (!commentRes.ok) {
           console.warn(`[asignarSugeridasAutogestion] No se pudo agregar comentario público al ticket #${ticket.id}: ${commentRes.message}`);
         }
@@ -1174,7 +1185,7 @@ export async function asignarTodasEnCola(
 
     if (reassignRes.ok) {
       try {
-        const commentRes = await addTicketComment(ticket.id, "Se asigna para su verificación.", authorId, 1);
+        const commentRes = await addTicketComment(ticket.id, `${MDA_COMMENT_PREFIX}Se asigna para su verificación.`, authorId, 1);
         if (!commentRes.ok) {
           console.warn(`[asignarTodasEnCola] No se pudo agregar comentario público al ticket #${ticket.id}: ${commentRes.message}`);
         }

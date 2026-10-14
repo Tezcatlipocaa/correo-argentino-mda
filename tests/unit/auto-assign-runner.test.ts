@@ -5,7 +5,7 @@ vi.mock("@/lib/invgate/agsTickets", () => ({
   getUnassignedTicketsByHelpdesk: vi.fn(),
   reassignTicketToAgent: vi.fn(),
   addTicketComment: vi.fn(),
-  invalidateUnassignedTicketsCache: vi.fn(),
+  invalidateUnassignedTicketsCache: vi.fn(),  MDA_COMMENT_PREFIX: "[Portal MDA] ",
 }));
 
 vi.mock("@lib/disponibilidad", () => ({

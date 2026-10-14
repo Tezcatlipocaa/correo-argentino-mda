@@ -25,7 +25,7 @@ vi.mock("@db/index", () => ({
 vi.mock("@/lib/invgate/agsTickets", () => ({
   reassignTicketToAgent: vi.fn(),
   addTicketComment: vi.fn(),
-  invalidateUnassignedTicketsCache: vi.fn(),
+  invalidateUnassignedTicketsCache: vi.fn(),  MDA_COMMENT_PREFIX: "[Portal MDA] ",
 }));
 
 vi.mock("@lib/disponibilidad", () => ({
@@ -186,7 +186,7 @@ describe("Autogestión Automation Rules - Asignación Cíclica General", () => {
     expect(reassignTicketToAgent).toHaveBeenCalledWith(8001, 102, 3950, expect.any(Number));
     expect(addTicketComment).toHaveBeenCalledWith(
       8001,
-      "Se asigna para su gestión.",
+      "[Portal MDA] Se asigna para su gestión.",
       expect.any(Number),
       1
     );

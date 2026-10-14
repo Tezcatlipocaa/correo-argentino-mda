@@ -25,7 +25,7 @@ vi.mock("@db/index", () => ({
 vi.mock("@/lib/invgate/agsTickets", () => ({
   reassignTicketToAgent: vi.fn(),
   addTicketComment: vi.fn(),
-  invalidateUnassignedTicketsCache: vi.fn(),
+  invalidateUnassignedTicketsCache: vi.fn(),  MDA_COMMENT_PREFIX: "[Portal MDA] ",
 }));
 
 vi.mock("@lib/disponibilidad", () => ({
@@ -91,10 +91,14 @@ describe("Toggle de automatizaciones AGS - reglas deshabilitadas", () => {
       new Set([RULE_IDS.rejected])
     );
 
-    // El ticket rechazado queda intacto: la cíclica lo descarta por categoría.
-    expect(actionable.some((r) => r.ticketId === rejectedTicket.id)).toBe(false);
+    // Sin P1, el ticket rechazado no tiene dueño: la cíclica lo toma como comodín.
+    const rejected = actionable.find((r) => r.ticketId === rejectedTicket.id);
+    expect(rejected?.ruleId).toBe(RULE_IDS.cyclic);
+    expect(rejected?.skipQueueUpdate).toBe(false);
     // El ticket general sí se asigna por la regla cíclica.
-    const cyclic = actionable.find((r) => r.ruleId === RULE_IDS.cyclic);
+    const cyclic = actionable.find(
+      (r) => r.ruleId === RULE_IDS.cyclic && r.ticketId === generalTicket.id
+    );
     expect(cyclic?.ticketId).toBe(generalTicket.id);
     expect(cyclic?.canAssign).toBe(true);
   });

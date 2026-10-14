@@ -1,10 +1,7 @@
 import type { AgentDisponibilidad } from "@lib/disponibilidad";
 import type { RuleEvaluationResult } from "../types";
 
-import {
-  normalizeText,
-  REJECTED_REQUEST_TARGET_CATEGORY,
-} from "./rejectedRequestRule";
+import { isRejectedRequestCategory } from "./rejectedRequestRule";
 
 /**
  * Ordena los operadores disponibles según el orden cíclico de autogestión:
@@ -27,6 +24,11 @@ export function sortOperatorsByCyclicQueue(
  * Evalúa si un ticket general de autogestión puede ser asignado al próximo operador en cola.
  * Verifica previamente que NO sea una "Solicitud rechazada en revisión", ya que esa categoría
  * tiene su propia regla y política de atención.
+ *
+ * `includeRejected` lo activa `evaluateAllAutogestionRules` solo con los tickets que
+ * la regla de rechazadas NO pudo asignar (creador ausente o no disponible, o P1
+ * apagada): sin eso, esas solicitudes rechazadas quedaban sin dueño en la mesa para
+ * siempre, porque las dos reglas se excluían mutuamente.
  */
 export function evaluateGeneralCyclicRule(
   ticket: {
@@ -38,7 +40,8 @@ export function evaluateGeneralCyclicRule(
     creator_username?: string;
     creator_name?: string;
   },
-  allOperators: AgentDisponibilidad[]
+  allOperators: AgentDisponibilidad[],
+  options: { includeRejected?: boolean } = {}
 ): RuleEvaluationResult {
   const ticketId = ticket.id;
   const ticketNumber = ticket.pretty_id || `#${ticket.id}`;
@@ -46,11 +49,10 @@ export function evaluateGeneralCyclicRule(
   const ruleName = "Asignación Cíclica de Nuevas Autogestiones";
 
   // 1. Verificar que NO sea una "Solicitud rechazada en revisión"
-  const normalizedCategory = normalizeText(ticket.category_name);
-  const normalizedLastCategory = normalizeText(ticket.category_last_name);
   const isRejectedCategory =
-    (normalizedLastCategory && normalizedLastCategory.includes(REJECTED_REQUEST_TARGET_CATEGORY)) ||
-    (normalizedCategory && normalizedCategory.includes(REJECTED_REQUEST_TARGET_CATEGORY));
+    !options.includeRejected &&
+    (isRejectedRequestCategory(ticket.category_last_name) ||
+      isRejectedRequestCategory(ticket.category_name));
 
   if (isRejectedCategory) {
     return {

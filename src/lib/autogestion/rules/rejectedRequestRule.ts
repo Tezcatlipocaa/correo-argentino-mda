@@ -16,6 +16,20 @@ export function normalizeText(text: string | null | undefined): string {
 export const REJECTED_REQUEST_TARGET_CATEGORY = "solicitud rechazada en revision";
 
 /**
+ * El nombre de la categoría NO es estable entre instancias de InvGate: en QA es
+ * "Solicitud rechazada en revisión" (singular) y en producción
+ * "Solicitudes rechazadas en revisión" (plural, id 2591). Comparar por el
+ * singular con `includes` nunca matcheaba en prod.
+ */
+const REJECTED_CATEGORY_PATTERN = /solicitud(?:es)?\s+rechazadas?\s+en\s+revision/;
+
+export function isRejectedRequestCategory(
+  name: string | null | undefined
+): boolean {
+  return REJECTED_CATEGORY_PATTERN.test(normalizeText(name));
+}
+
+/**
  * Evalúa si un ticket de InvGate cumple con la regla de autoasignación por solicitud rechazada:
  * 1. Categoría = "Solicitud rechazada en revisión"
  * 2. Creador del ticket = Operador de Mesa de Ayuda registrado
@@ -39,11 +53,9 @@ export function evaluateRejectedRequestRule(
   const ruleName = "Devolución de Solicitudes Rechazadas";
 
   // 1. Evaluar Categoría
-  const normalizedCategory = normalizeText(ticket.category_name);
-  const normalizedLastCategory = normalizeText(ticket.category_last_name);
   const matchesCategory =
-    (normalizedLastCategory && normalizedLastCategory.includes(REJECTED_REQUEST_TARGET_CATEGORY)) ||
-    (normalizedCategory && normalizedCategory.includes(REJECTED_REQUEST_TARGET_CATEGORY));
+    isRejectedRequestCategory(ticket.category_last_name) ||
+    isRejectedRequestCategory(ticket.category_name);
 
   if (!matchesCategory) {
     return {

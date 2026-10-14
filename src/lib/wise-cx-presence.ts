@@ -65,6 +65,16 @@ export function normalizePresenceText(s: string): string {
 /**
  * Clasifica el estado de telefonía según las reglas de negocio MDA
  */
+// Estados que en Wise CX aparecen como pausa/bloqueo pero NO impiden recibir
+// autogestiones: el ticket se encola igual que en llamada.
+const ESTADOS_APTOS_PARA_AGS = ["bano", "saliente", "sin atender"];
+
+/** Un estado bloqueante (rojo) puede ser apto para autogestiones. */
+export function estadoAptoParaAgs(statusRaw: string): boolean {
+  const norm = normalizePresenceText(statusRaw);
+  return ESTADOS_APTOS_PARA_AGS.some((k) => norm.includes(k));
+}
+
 export function classifyWiseCxStatus(
   statusRaw: string,
   inCall: boolean
@@ -134,7 +144,7 @@ export function classifyWiseCxStatus(
   return {
     statusCategory: "bloqueado",
     badgeVariant: "error",
-    canReceiveAgs: false,
+    canReceiveAgs: estadoAptoParaAgs(statusRaw),
     motivoBloqueo: motivo,
   };
 }

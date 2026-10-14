@@ -6,6 +6,13 @@ import { getHelpdeskMemberIdSet, getHelpdeskMemberMap, type HelpdeskMemberUser }
 import { getLocationsMap } from "./locationsMapCache";
 import { AGS_HELPDESK_ID } from "./agsHelpdesk";
 
+/**
+ * Prefijo de los comentarios canned que escribe el portal. Sin esto, InvGate los
+ * muestra como si los hubiera escrito el operador destinatario, porque el autor
+ * (`author_id`) es ese mismo operador cuando la acción no viene de un humano.
+ */
+export const MDA_COMMENT_PREFIX = "[Portal MDA] ";
+
 export interface CommentingOperator {
   id: number;
   name: string;

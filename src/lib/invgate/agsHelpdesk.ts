@@ -11,7 +11,11 @@
  * romper el comportamiento previo en QA; producción define 2510 en el `.env`.
  */
 function readHelpdeskIdFromEnv(): number {
-  const raw = process.env.INVGATE_AGENTS_HELPDESK_ID;
+  // Runtime-first (PM2/server.mjs con dotenv) y, si no existe, import.meta.env:
+  // `astro dev` NO puebla process.env desde .env, solo import.meta.env.
+  const raw =
+    process.env.INVGATE_AGENTS_HELPDESK_ID ||
+    (typeof import.meta !== "undefined" ? (import.meta.env as any)?.INVGATE_AGENTS_HELPDESK_ID : "");
   if (raw) {
     const parsed = parseInt(raw, 10);
     if (!Number.isNaN(parsed) && parsed > 0) return parsed;

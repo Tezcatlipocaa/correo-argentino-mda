@@ -22,7 +22,7 @@ vi.mock("@db/index", () => ({
 vi.mock("@/lib/invgate/agsTickets", () => ({
   reassignTicketToAgent: vi.fn(),
   addTicketComment: vi.fn(),
-  invalidateUnassignedTicketsCache: vi.fn(),
+  invalidateUnassignedTicketsCache: vi.fn(),  MDA_COMMENT_PREFIX: "[Portal MDA] ",
 }));
 
 vi.mock("@lib/disponibilidad", () => ({
@@ -165,7 +165,7 @@ describe("Autogestión Automation Rules - Solicitud rechazada en revisión", () 
     // 2. Comentario explicativo
     expect(addTicketComment).toHaveBeenCalledWith(
       9001,
-      expect.stringContaining("Asignado automáticamente"),
+      expect.stringContaining("[Portal MDA] Asignado automáticamente"),
       expect.any(Number),
       expect.any(Number)
     );

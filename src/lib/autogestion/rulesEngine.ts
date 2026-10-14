@@ -5,6 +5,7 @@ import {
   reassignTicketToAgent,
   addTicketComment,
   invalidateUnassignedTicketsCache,
+  MDA_COMMENT_PREFIX,
 } from "@/lib/invgate/agsTickets";
 import { AGS_HELPDESK_ID } from "@/lib/invgate/agsHelpdesk";
 import type { AgentDisponibilidad } from "@lib/disponibilidad";
@@ -45,14 +46,14 @@ export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
     priority: 1,
     name: "Devolución de Solicitudes Rechazadas",
     description:
-      "Asigna de manera autónoma al operador creador aquellos tickets que ingresan a la mesa con la categoría 'Solicitud rechazada en revisión', permitiendo que el operador subsane o complete la gestión de forma inmediata.",
+      "Asigna de manera autónoma al operador creador aquellos tickets que ingresan a la mesa con la categoría 'Solicitudes rechazadas en revisión', permitiendo que el operador subsane o complete la gestión de forma inmediata. Si el creador no es un operador disponible, el ticket pasa a la Asignación Cíclica General.",
     status: "inactive",
     intervalMinutes: 10,
     triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 1)",
     conditions: [
       {
         label: "Categoría del Ticket",
-        description: "El ticket debe pertenecer a la categoría 'Solicitud rechazada en revisión'.",
+        description: "El ticket debe pertenecer a la categoría 'Solicitudes rechazadas en revisión' (el nombre se compara sin tildes y admitiendo singular o plural).",
         required: true,
       },
       {
@@ -80,14 +81,14 @@ export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
     priority: 2,
     name: "Asignación Cíclica de Nuevas Autogestiones",
     description:
-      "Distribuye de manera autónoma las nuevas autogestiones de categorías generales al operador disponible que encabeza la fila de espera cíclica (mayor tiempo sin recibir AGS o sin asignaciones previas hoy).",
+      "Actúa como regla comodín: reparte cualquier autogestión que quede sin asignar al operador disponible que encabeza la fila de espera cíclica (mayor tiempo sin recibir AGS o sin asignaciones previas hoy), incluida una 'Solicitud rechazada en revisión' que la regla de Devolución no pudo devolver a su creador.",
     status: "inactive",
     intervalMinutes: 10,
     triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 2, posterior a Solicitudes Rechazadas)",
     conditions: [
       {
-        label: "Categoría General / Cliente",
-        description: "Tickets de la mesa de autogestiones que no correspondan a 'Solicitud rechazada en revisión' (o creados por clientes externos).",
+        label: "Cualquier Categoría (comodín)",
+        description: "Cualquier ticket de la mesa de autogestiones al que la regla de Devolución no le haya asignado un dueño: nuevas solicitudes, categorías generales, tickets de operadores MDA y también solicitudes rechazadas cuyo creador no es un operador disponible (o cuando la regla de Devolución está apagada).",
         required: true,
       },
       {
@@ -163,7 +164,11 @@ export function evaluateAllAutogestionRules(
         break;
       }
 
-      const cyclicEval = evaluateGeneralCyclicRule(ticket, availableOperatorsForCyclic);
+      // Lo que llega acá ya quedó fuera de la regla de rechazadas (sin creador
+      // disponible, o con esa regla apagada): se asigna cíclicamente y rota la cola.
+      const cyclicEval = evaluateGeneralCyclicRule(ticket, availableOperatorsForCyclic, {
+        includeRejected: true,
+      });
       if (cyclicEval.canAssign && cyclicEval.targetOperator) {
         actionableResults.push(cyclicEval);
         assignedAgentIdsInCycle.add(cyclicEval.targetOperator.agentId);
@@ -213,10 +218,11 @@ export async function executeAutoAssignment(
     // 2. Publicar comentario automático aclaratorio
     try {
       const commentMessage =
-        customComment ||
-        (ruleId === "asignacion_ciclica_general"
-          ? "Se asigna para su gestión."
-          : `Asignado automáticamente por regla de autogestión: ${ruleName}. Para su correspondiente subsanación y verificación.`);
+        MDA_COMMENT_PREFIX +
+        (customComment ||
+          (ruleId === "asignacion_ciclica_general"
+            ? "Se asigna para su gestión."
+            : `Asignado automáticamente por regla de autogestión: ${ruleName}. Para su correspondiente subsanación y verificación.`));
       await addTicketComment(ticketId, commentMessage, authorId, 1);
     } catch (commentErr: any) {
       console.warn(
