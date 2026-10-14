@@ -377,6 +377,7 @@ async function fetchMetrics(params: { preset?: string; from?: string; to?: strin
     if (params.preset) query.set("preset", params.preset);
     if (params.from) query.set("from", params.from);
     if (params.to) query.set("to", params.to);
+    query.set("mock", "1");
 
     const res = await fetch(`${cleanBase}api/autogestion/metricas?${query.toString()}`);
     if (!res.ok) throw new Error("Error al consultar métricas");

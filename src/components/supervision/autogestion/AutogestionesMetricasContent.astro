@@ -13,8 +13,9 @@ const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 const initialPreset = searchParams.get("preset") || "ultimos_7_dias";
 const initialFrom = searchParams.get("from") || "";
 const initialTo = searchParams.get("to") || "";
+const initialMock = searchParams.get("mock") === "1" || searchParams.get("demo") === "1" || true;
 
-const data = await getAutogestionesMetricasData(initialPreset, initialFrom, initialTo);
+const data = await getAutogestionesMetricasData(initialPreset, initialFrom, initialTo, initialMock);
 const { kpis, recentAssignments, range, lastSyncAt } = data;
 
 const invgateApiBase =
@@ -143,6 +144,10 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
         </button>
         <span class="text-tiny font-mono text-base-content/50" id="sync-timestamp" data-timestamp={lastSyncAt}>
           {new Date(lastSyncAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+        <span class="badge badge-xs badge-info badge-outline font-semibold gap-1 py-2 px-2.5 ml-1" title="Visualizando datos de demostración aleatorios">
+          <span class="size-1.5 rounded-full bg-info animate-pulse"></span>
+          Datos de Prueba (Demo)
         </span>
       </div>
     </div>

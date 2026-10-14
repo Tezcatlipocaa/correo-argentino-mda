@@ -279,11 +279,113 @@ export function generateCsvExport(
   return [headers.join(","), ...rows.map((row) => row.join(","))].join("\r\n");
 }
 
+export function getMockMetricasData(preset?: string, from?: string, to?: string) {
+  const range = parseDateRange(preset, from, to);
+  const now = Date.now();
+
+  const mockOperators = [
+    { id: 101, name: "María González" },
+    { id: 102, name: "Lucas Benítez" },
+    { id: 103, name: "Florencia Álvarez" },
+    { id: 104, name: "Martín Rodríguez" },
+    { id: 105, name: "Camila Díaz" },
+    { id: 106, name: "Facundo Romero" },
+    { id: 107, name: "Julieta Sosa" },
+    { id: 108, name: "Ignacio Torres" },
+  ];
+
+  const types = ["cyclic", "cyclic", "batch_suggested", "batch_all", "manual", "revision"];
+  const creators = [
+    "Sucursal 1400 - La Plata",
+    "Sucursal 1640 - Martínez",
+    "Sucursal 5000 - Córdoba Centro",
+    "Sucursal 2000 - Rosario",
+    "Sucursal 3000 - Santa Fe",
+    "Sucursal 7600 - Mar del Plata",
+    "Planta Logística Monte Grande",
+    "Atención al Cliente Web",
+  ];
+  const categories = [
+    "Reclamo de Envíos Nacionales",
+    "Consulta de Imposición / Seguimiento",
+    "Modificación de Domicilio",
+    "Retención en Sucursal",
+    "Soporte Sistema Paquetería",
+    "Alta de Carta Documento Digital",
+    "Validación de Identidad Portal",
+  ];
+
+  // Generar asignaciones aleatorias simuladas
+  const mockRecords: Array<{
+    id: number;
+    agentId: number;
+    agentName: string;
+    ticketNumber: string;
+    assignedBy: string;
+    assignedAt: number;
+    type: string;
+  }> = [];
+
+  const spanMs = range.toMs - range.fromMs;
+  const count = range.grouping === "hour" ? 45 : 280;
+
+  for (let i = 1; i <= count; i++) {
+    const op = mockOperators[Math.floor(Math.random() * mockOperators.length)];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const assignedAt = range.fromMs + Math.floor(Math.random() * spanMs);
+    const ticketId = 150000 + Math.floor(Math.random() * 8500);
+
+    mockRecords.push({
+      id: i,
+      agentId: op.id,
+      agentName: op.name,
+      ticketNumber: `#${ticketId}`,
+      assignedBy: type === "manual" ? "supervisor" : "Sistema MDA (AGS Bot)",
+      assignedAt,
+      type,
+    });
+  }
+
+  mockRecords.sort((a, b) => b.assignedAt - a.assignedAt);
+
+  // Simular cola en espera de InvGate
+  const mockUnassigned = [];
+  const pendingCount = 38;
+  for (let i = 0; i < pendingCount; i++) {
+    mockUnassigned.push({
+      category_name: categories[Math.floor(Math.random() * categories.length)],
+      creator_name: creators[Math.floor(Math.random() * creators.length)],
+    });
+  }
+
+  const kpis = calculateKpis(mockRecords, pendingCount);
+  const temporal = aggregateTemporal(mockRecords, range.grouping, range.fromMs, range.toMs);
+  const byOperator = aggregateByOperator(mockRecords);
+  const byType = aggregateByType(mockRecords);
+  const queueStats = aggregateInvgateQueue(mockUnassigned);
+
+  return {
+    range,
+    kpis,
+    temporal,
+    byOperator,
+    byType,
+    queueStats,
+    recentAssignments: mockRecords.slice(0, 50),
+    lastSyncAt: now,
+    isMock: true,
+  };
+}
+
 export async function getAutogestionesMetricasData(
   preset?: string,
   from?: string,
-  to?: string
+  to?: string,
+  forceMock?: boolean
 ) {
+  if (forceMock) {
+    return getMockMetricasData(preset, from, to);
+  }
   const range = parseDateRange(preset, from, to);
 
   // 1. Obtener registros de assignment_history en el rango solicitado
