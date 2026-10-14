@@ -15,13 +15,13 @@ const weight = p.weight ?? 0;
 ---
 
 {/*
-  Fila de criterio: texto cómodo a la izquierda, control de 3 estados y nota
+  Fila de criterio: texto cómodo a la izquierda, control de 2 estados y nota
   alineados en columnas fijas (xl+) para que el ojo baje en vertical.
   El estado vive en `data-criterion-state`; el CSS lo paints (borde + badge),
   por eso setItemState() no manipula clases.
 */}
 <div
-  class="checklist-item group grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2.5 border-l-[3px] border-l-base-300 py-3 pr-1 pl-4 transition-colors motion-reduce:transition-none hover:bg-base-200/40 data-[criterion-state=nocumple]:border-l-error data-[criterion-state=nocumple]:bg-error/5 data-[criterion-state=na]:border-l-base-content/25 xl:grid-cols-[minmax(0,1fr)_3.5rem_15rem_2.25rem] xl:items-center xl:gap-x-3"
+  class="checklist-item group grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2.5 border-l-[3px] border-l-base-300 py-3 pr-1 pl-4 transition-colors motion-reduce:transition-none hover:bg-base-200/40 data-[criterion-state=nocumple]:border-l-error data-[criterion-state=nocumple]:bg-error/5 xl:grid-cols-[minmax(0,1fr)_3.5rem_13rem_2.25rem] xl:items-center xl:gap-x-3"
   data-criterion-state="cumple"
 >
   {/* Espejo del estado para el backend: lo gobierna el control de la fila. */}
@@ -42,12 +42,7 @@ const weight = p.weight ?? 0;
       {p.name}
     </span>
     <span
-      class="criteria-status-badge badge badge-sm border-0 bg-base-200/70 font-semibold text-base-content/60 data-[criterion-state=nocumple]:bg-error/15 data-[criterion-state=nocumple]:text-error data-[criterion-state=na]:bg-base-300 data-[criterion-state=na]:text-base-content/70"
-    >
-      Cumple
-    </span>
-    <span
-      class="rule-auto-badge badge badge-sm hidden border-0 bg-warning/20 font-semibold text-warning"
+      class="rule-auto-badge badge badge-sm hidden border border-base-300 bg-base-200/80 font-medium text-base-content/70"
       data-rule-badge={p.code}
     >
       Regla
@@ -68,7 +63,7 @@ const weight = p.weight ?? 0;
     <div
       role="group"
       aria-label={`Estado de evaluación para ${p.name}`}
-      class="criteria-state-join grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-lg border border-base-200 bg-base-200/60 p-1 xl:w-full xl:flex-none xl:grid-cols-[4.75rem_1fr_2.75rem]"
+      class="criteria-state-join grid min-w-0 flex-1 grid-cols-2 gap-1 rounded-lg border border-base-200 bg-base-200/60 p-1 xl:w-full xl:flex-none xl:grid-cols-2"
     >
       <button
         type="button"
@@ -85,14 +80,6 @@ const weight = p.weight ?? 0;
         data-state="nocumple"
       >
         No cumple
-      </button>
-      <button
-        type="button"
-        aria-pressed="false"
-        class="state-btn h-7 min-h-7 truncate rounded-md px-2 text-xs font-medium whitespace-nowrap text-base-content/55 transition-colors motion-reduce:transition-none hover:bg-base-100/70 hover:text-base-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-base-content/40 aria-pressed:bg-base-300 aria-pressed:font-bold aria-pressed:text-base-content aria-pressed:ring-1 aria-pressed:ring-base-content/15"
-        data-state="na"
-      >
-        N/A
       </button>
     </div>
 

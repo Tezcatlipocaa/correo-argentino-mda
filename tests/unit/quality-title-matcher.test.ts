@@ -53,6 +53,33 @@ describe("Quality Title Matcher", () => {
     expect(matchApprovedTitle("Token", []).matched).toBe(false);
   });
 
+  it("recognizes operational prefix exceptions for HH and STS", () => {
+    const titlesWithPrefixes = [
+      "HH- Configuración",
+      "STS- Desconexión de agentes",
+      "HH- Extravío",
+    ];
+
+    // Zxxxxx HH
+    const resZ = matchApprovedTitle("Z06805 HH - Configuración", titlesWithPrefixes);
+    expect(resZ.matched).toBe(true);
+    expect(resZ.matchedTitle).toBe("HH- Configuración");
+
+    // Lxxxxx HH
+    const resL = matchApprovedTitle("L12345 HH - Configuración", titlesWithPrefixes);
+    expect(resL.matched).toBe(true);
+    expect(resL.matchedTitle).toBe("HH- Configuración");
+
+    // NIS Telegrafico STS
+    const resSTS = matchApprovedTitle("I5868 STS - Desconexión de agentes", titlesWithPrefixes);
+    expect(resSTS.matched).toBe(true);
+    expect(resSTS.matchedTitle).toBe("STS- Desconexión de agentes");
+
+    // No debe machear prefijo con otro sistema que no sea HH o STS
+    const resOther = matchApprovedTitle("Z06805 Token - Configuración", ["Token - Configuración"]);
+    expect(resOther.matched).toBe(false);
+  });
+
   it("cleans HTML tags and entities from ticket descriptions", () => {
     expect(cleanHtmlText("<p>Falla en equipo aforadora <strong>sucursal</strong>.<br>No imprime.</p>"))
       .toBe("Falla en equipo aforadora sucursal.\nNo imprime.");

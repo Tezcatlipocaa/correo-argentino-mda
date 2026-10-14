@@ -352,7 +352,135 @@ describe("InvGate Ticket Metadata Resolution", () => {
       expect(res.formattedDuration).toBe("00:20:00");
       expect(res.humanText).toBe("20 min");
       expect(res.hasOperatorComment).toBe(true);
-      expect(res.reassignedWithoutComment).toBe(false);
+    });
+  });
+
+  describe("PAS Automatic Detection (Location 6388 & Group 6362)", () => {
+    it("detects PAS when ticket location_id is 6388", () => {
+      const incident = {
+        id: 88001,
+        location_id: 6388,
+        location: { id: 6388, name: "PAS (O5597) Av Fair 1101 (B1842IGA)" },
+      };
+      const metadata = parseInvgateAgMetadata(incident);
+      expect(metadata.isPas).toBe(true);
+      expect(metadata.rawDetails?.isPas).toBe(true);
+    });
+
+    it("does not detect PAS for regular non-PAS ticket", () => {
+      const incident = {
+        id: 88002,
+        location_id: 1200,
+        location: { id: 1200, name: "Sucursal Centro" },
+        helpdesk: { id: 10, name: "Soporte Microinformática" },
+      };
+      const metadata = parseInvgateAgMetadata(incident);
+      expect(metadata.isPas).toBe(false);
+      expect(metadata.rawDetails?.isPas).toBe(false);
+    });
+
+    it("detects PAS via fetchInvgateTicketMetadata when requester has location 6388 in user profile", async () => {
+      const mockIncident = {
+        id: 88003,
+        user_id: 901,
+        created_at: 1727784000,
+      };
+
+      vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
+        if (endpoint.startsWith("incident?id=88003")) {
+          return { ok: true, data: mockIncident, status: 200 };
+        }
+        if (endpoint === "user?id=901") {
+          return {
+            ok: true,
+            data: { id: 901, name: "Operador", lastname: "PAS", location_id: 6388 },
+            status: 200,
+          };
+        }
+        if (endpoint === "users.groups?ids[]=901") {
+          return { ok: true, data: [{ id: 901, groups: {}, locations: { "6388": { id: 6388 } } }], status: 200 };
+        }
+        return { ok: false, status: 404 };
+      });
+
+      const result = await fetchInvgateTicketMetadata(88003);
+      expect(result.ok).toBe(true);
+      expect(result.data?.isPas).toBe(true);
+    });
+
+    it("detects PAS via fetchInvgateTicketMetadata when requester belongs to group 6362 (OPS-Grandes Clientes-PAS)", async () => {
+      const mockIncident = {
+        id: 88004,
+        user_id: 902,
+        created_at: 1727784000,
+      };
+
+      vi.spyOn(invgateClient, "invgateGet").mockImplementation(async (endpoint: string): Promise<any> => {
+        if (endpoint.startsWith("incident?id=88004")) {
+          return { ok: true, data: mockIncident, status: 200 };
+        }
+        if (endpoint === "user?id=902") {
+          return {
+            ok: true,
+            data: { id: 902, name: "Juan", lastname: "Perez", location_id: 1100 },
+            status: 200,
+          };
+        }
+        if (endpoint === "users.groups?ids[]=902") {
+          return {
+            ok: true,
+            data: [
+              {
+                id: 902,
+                groups: {
+                  "6362": { id: 6362, name: "OPS-Grandes Clientes-PAS" },
+                },
+                locations: {},
+              },
+            ],
+            status: 200,
+          };
+        }
+        return { ok: false, status: 404 };
+      });
+
+      const result = await fetchInvgateTicketMetadata(88004);
+      expect(result.ok).toBe(true);
+      expect(result.data?.isPas).toBe(true);
+    });
+  });
+
+  describe("Radicación en MDA (staysInMda) Detection", () => {
+    it("marks staysInMda as true when helpdesk_id is 2510 (Mesa de Ayuda TI)", () => {
+      const incident = {
+        id: 99001,
+        helpdesk_id: 2510,
+        helpdesk: { id: 2510, name: "Mesa de Ayuda TI" },
+      };
+      const metadata = parseInvgateAgMetadata(incident);
+      expect(metadata.staysInMda).toBe(true);
+      expect(metadata.rawDetails?.staysInMda).toBe(true);
+    });
+
+    it("marks staysInMda as true when helpdesk name contains Mesa de Ayuda", () => {
+      const incident = {
+        id: 99002,
+        helpdesk: { name: "Mesa de Ayuda TI - Nivel 1" },
+      };
+      const metadata = parseInvgateAgMetadata(incident);
+      expect(metadata.staysInMda).toBe(true);
+      expect(metadata.rawDetails?.staysInMda).toBe(true);
+    });
+
+    it("marks staysInMda as false when ticket is derived to another area (e.g. Microinformática)", () => {
+      const incident = {
+        id: 99003,
+        helpdesk_id: 1050,
+        helpdesk: { id: 1050, name: "Soporte Microinformática" },
+      };
+      const metadata = parseInvgateAgMetadata(incident);
+      expect(metadata.staysInMda).toBe(false);
+      expect(metadata.rawDetails?.staysInMda).toBe(false);
     });
   });
 });
