@@ -26,6 +26,7 @@ const MONTH_LABELS = [
 ];
 
 import { requireWriteAccess } from "@lib/rbac-middleware";
+import { parseYearMonth } from "@lib/cronogramaMonths";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = await requireWriteAccess(locals, "cronograma");
@@ -33,11 +34,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { year, month } = body; // month is 0-indexed (0 = Enero)
-
-    if (year === undefined || month === undefined) {
-      return jsonResponse({ error: "Year and month are required" }, 400);
+    const parsed = parseYearMonth(body);
+    if (!parsed) {
+      return jsonResponse(
+        { error: "Year and month must be integers (month 0-11)" },
+        400,
+      );
     }
+    const { year, month } = parsed;
 
     // 1. Fetch all agents with legacy saturday fields
     const dbAgents = await db
@@ -49,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .from(agents);
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const monthPrefix = parsed.prefix;
 
     // 2. Load all historical agentSaturdayGroups records to find each operator's most recent non-null group
     const allPrevRecords = await db
@@ -193,13 +197,15 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { year, month } = body; // month is 0-indexed (0 = Enero)
-
-    if (year === undefined || month === undefined) {
-      return jsonResponse({ error: "Year and month are required" }, 400);
+    const parsed = parseYearMonth(body);
+    if (!parsed) {
+      return jsonResponse(
+        { error: "Year and month must be integers (month 0-11)" },
+        400,
+      );
     }
-
-    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const { year, month } = parsed;
+    const monthPrefix = parsed.prefix;
 
     // Transaction for atomic delete
     await db.transaction((tx) => {
