@@ -24,25 +24,34 @@ let currentFilter = {
   to: "",
 };
 
-// Paleta semántica armónica con DaisyUI v5
+// Paleta armónica enfocada en Secondary institucional (#254888), sus gradaciones y acentos
 const COLORS = {
-  primary: "rgba(79, 70, 229, 0.85)",
-  secondary: "rgba(2, 132, 199, 0.85)",
-  accent: "rgba(16, 185, 129, 0.85)",
-  warning: "rgba(245, 158, 11, 0.85)",
-  info: "rgba(56, 189, 248, 0.85)",
-  error: "rgba(239, 68, 68, 0.85)",
-  neutral: "rgba(100, 116, 139, 0.85)",
+  // Secondary institucional principal (Steel Azure)
+  secondary: "rgba(37, 72, 136, 0.90)",
+  // Variantes y análogos de Secondary
+  secondaryDark: "rgba(23, 49, 97, 0.95)",
+  secondaryMedium: "rgba(45, 87, 163, 0.85)",
+  secondaryLight: "rgba(58, 110, 165, 0.85)", // Accent oficial (#3a6ea5)
+  secondarySoft: "rgba(79, 134, 198, 0.80)",
+  infoSlate: "rgba(40, 121, 168, 0.85)",      // Info oficial (#2879a8)
+  tealAzure: "rgba(20, 125, 140, 0.85)",
+  indigoAzure: "rgba(67, 56, 202, 0.85)",
+
+  // Primary institucional reservado para destacados puntuales (School-bus yellow #ffc72c)
+  primary: "rgba(255, 199, 44, 0.92)",
+  primaryAmber: "rgba(226, 173, 31, 0.90)",  // Warning oficial (#e2ad1f)
+
+  // Paleta armónica para gráficos circulares y multicategoría
   palette: [
-    "rgba(79, 70, 229, 0.85)",
-    "rgba(2, 132, 199, 0.85)",
-    "rgba(16, 185, 129, 0.85)",
-    "rgba(245, 158, 11, 0.85)",
-    "rgba(236, 72, 153, 0.85)",
-    "rgba(168, 85, 247, 0.85)",
-    "rgba(20, 184, 166, 0.85)",
-    "rgba(249, 115, 22, 0.85)",
-    "rgba(100, 116, 139, 0.85)",
+    "rgba(37, 72, 136, 0.90)",  // Secondary Steel Azure
+    "rgba(58, 110, 165, 0.85)", // Accent Azul
+    "rgba(40, 121, 168, 0.85)",  // Info Slate
+    "rgba(79, 134, 198, 0.80)", // Light Azure
+    "rgba(255, 199, 44, 0.90)", // Primary Amarillo (acento puntual)
+    "rgba(45, 87, 163, 0.85)",  // Medium Azure
+    "rgba(20, 125, 140, 0.85)", // Teal Azure
+    "rgba(100, 116, 139, 0.85)",// Neutral Charcoal
+    "rgba(148, 163, 184, 0.85)",// Slate Muted
   ],
 };
 
@@ -196,7 +205,8 @@ function updateCharts(data: any) {
           {
             label: "Tickets Asignados",
             data: counts.length ? counts : [0],
-            backgroundColor: COLORS.primary,
+            backgroundColor: COLORS.secondaryMedium,
+            hoverBackgroundColor: COLORS.secondaryDark,
             borderRadius: 6,
           },
         ],
@@ -273,7 +283,8 @@ function updateCharts(data: any) {
           {
             label: "Tickets Pendientes",
             data: counts.length ? counts : [0],
-            backgroundColor: COLORS.accent,
+            backgroundColor: COLORS.secondaryLight,
+            hoverBackgroundColor: COLORS.secondary,
             borderRadius: 6,
           },
         ],

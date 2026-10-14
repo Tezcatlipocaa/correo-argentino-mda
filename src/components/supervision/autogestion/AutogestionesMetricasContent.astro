@@ -155,43 +155,43 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
 
   <!-- Grilla de Tarjetas KPI -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <!-- Total Asignadas -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm p-5 rounded-2xl relative overflow-hidden group">
+    <!-- Total Asignadas: Secondary Institucional (Steel Azure) -->
+    <div class="card bg-base-100 border border-secondary/25 shadow-sm p-5 rounded-2xl relative overflow-hidden group hover:border-secondary/50 transition-all">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Total Asignadas</span>
-        <div class="p-2 rounded-xl bg-primary/10 text-primary">
+        <span class="text-xs font-bold uppercase tracking-widest text-base-content/60">Total Asignadas</span>
+        <div class="p-2.5 rounded-xl bg-secondary/15 text-secondary">
           <Icon name="boxicons:badge-check-filled" size={24} />
         </div>
       </div>
       <div class="flex items-baseline gap-2">
-        <span class="text-4xl font-black tracking-tight text-base-content font-mono" id="kpi-total-asignadas">
+        <span class="text-4xl font-black tracking-tight text-secondary font-mono" id="kpi-total-asignadas">
           {kpis.totalAsignadas}
         </span>
         <span class="text-xs text-base-content/60 font-semibold">tickets entregados</span>
       </div>
     </div>
 
-    <!-- Cola Pendiente InvGate -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm p-5 rounded-2xl relative overflow-hidden group">
+    <!-- Cola Pendiente InvGate: Primary (School-bus yellow suave como llamado de atención) -->
+    <div class="card bg-base-100 border border-primary/30 shadow-sm p-5 rounded-2xl relative overflow-hidden group hover:border-primary/60 transition-all">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Cola en Espera</span>
-        <div class="p-2 rounded-xl bg-warning/10 text-warning">
-          <Icon name="boxicons:clock" size={24} />
+        <span class="text-xs font-bold uppercase tracking-widest text-base-content/60">Cola en Espera</span>
+        <div class="p-2.5 rounded-xl bg-primary/20 text-base-content">
+          <Icon name="boxicons:clock" size={24} class="text-amber-600 dark:text-primary" />
         </div>
       </div>
       <div class="flex items-baseline gap-2">
-        <span class="text-4xl font-black tracking-tight text-warning font-mono" id="kpi-cola-pendiente">
+        <span class="text-4xl font-black tracking-tight text-base-content font-mono" id="kpi-cola-pendiente">
           {kpis.colaPendiente}
         </span>
         <span class="text-xs text-base-content/60 font-semibold">tickets sin asignar</span>
       </div>
     </div>
 
-    <!-- Tasa de Automatización -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm p-5 rounded-2xl relative overflow-hidden group">
+    <!-- Tasa de Automatización: Variante Secondary / Indigo Suave -->
+    <div class="card bg-base-100 border border-secondary/20 shadow-sm p-5 rounded-2xl relative overflow-hidden group hover:border-secondary/40 transition-all">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Automatización</span>
-        <div class="p-2 rounded-xl bg-secondary/10 text-secondary">
+        <span class="text-xs font-bold uppercase tracking-widest text-base-content/60">Automatización</span>
+        <div class="p-2.5 rounded-xl bg-secondary/10 text-secondary">
           <Icon name="boxicons:chip-filled" size={24} />
         </div>
       </div>
@@ -203,11 +203,11 @@ const TYPE_BADGE_CLASSES: Record<string, string> = {
       </div>
     </div>
 
-    <!-- Operadores Activos -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm p-5 rounded-2xl relative overflow-hidden group">
+    <!-- Operadores Activos: Info / Celeste Institucional -->
+    <div class="card bg-base-100 border border-info/20 shadow-sm p-5 rounded-2xl relative overflow-hidden group hover:border-info/40 transition-all">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold uppercase tracking-widest text-base-content/50">Operadores con Carga</span>
-        <div class="p-2 rounded-xl bg-info/10 text-info">
+        <span class="text-xs font-bold uppercase tracking-widest text-base-content/60">Operadores con Carga</span>
+        <div class="p-2.5 rounded-xl bg-info/15 text-info">
           <Icon name="boxicons:group" size={24} />
         </div>
       </div>
