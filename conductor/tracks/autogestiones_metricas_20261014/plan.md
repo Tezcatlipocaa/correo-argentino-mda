@@ -1,17 +1,17 @@
 # Plan de Implementación: Métricas y Estadísticas de Autogestiones
 
-## Phase 1: Capa de Datos, Servicio de Agregación y Endpoints API
-- [ ] Task: Escribir tests de dominio para el servicio de métricas de autogestión
-  - [ ] Crear `src/lib/autogestion/metricasService.test.ts` definiendo casos de prueba para agregaciones temporales, por operador y por tipo
-  - [ ] Ejecutar `npm run test:domain` y verificar el estado inicial de pruebas
-- [ ] Task: Implementar el servicio de agregación de métricas `src/lib/autogestion/metricasService.ts`
-  - [ ] Implementar consultas optimizadas en SQLite sobre `assignment_history` (volumen temporal, carga por operador, desglose por tipo `cyclic`/`manual`/`batch_suggested`/`batch_all`)
-  - [ ] Integrar lectura de la cola en vivo de InvGate (`getUnassignedTicketsByHelpdesk`) para métricas de tickets pendientes y categorías
-  - [ ] Implementar cálculo de KPIs globales (total asignadas, % automatización, operadores únicos)
-- [ ] Task: Implementar endpoints API para consumo dinámico y exportación
-  - [ ] Crear `src/pages/api/autogestion/metricas/index.ts` (GET con filtros de fecha `from`, `to`, `preset`)
-  - [ ] Crear `src/pages/api/autogestion/metricas/export.csv.ts` para descarga de reporte tabular
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 1: Capa de Datos, Servicio de Agregación y Endpoints API [checkpoint: efbeb3b]
+- [x] Task: Escribir tests de dominio para el servicio de métricas de autogestión (efbeb3b)
+  - [x] Crear `src/lib/autogestion/metricasService.test.ts` definiendo casos de prueba para agregaciones temporales, por operador y por tipo
+  - [x] Ejecutar `npm run test:domain` y verificar el estado inicial de pruebas
+- [x] Task: Implementar el servicio de agregación de métricas `src/lib/autogestion/metricasService.ts` (efbeb3b)
+  - [x] Implementar consultas optimizadas en SQLite sobre `assignment_history` (volumen temporal, carga por operador, desglose por tipo `cyclic`/`manual`/`batch_suggested`/`batch_all`)
+  - [x] Integrar lectura de la cola en vivo de InvGate (`getUnassignedTicketsByHelpdesk`) para métricas de tickets pendientes y categorías
+  - [x] Implementar cálculo de KPIs globales (total asignadas, % automatización, operadores únicos)
+- [x] Task: Implementar endpoints API para consumo dinámico y exportación (efbeb3b)
+  - [x] Crear `src/pages/api/autogestion/metricas/index.ts` (GET con filtros de fecha `from`, `to`, `preset`)
+  - [x] Crear `src/pages/api/autogestion/metricas/export.csv.ts` para descarga de reporte tabular
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Estructura de Página, Skeleton y Componentes UI (Astro + DaisyUI v5)
 - [ ] Task: Crear página base con control de acceso y Skeleton de carga
