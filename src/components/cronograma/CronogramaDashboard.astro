@@ -20,6 +20,11 @@ import GroupCard from "./subcomponents/GroupCard.astro";
 import CronoCardHeader from "./subcomponents/CronoCardHeader.astro";
 import CronoDatePicker from "./subcomponents/CronoDatePicker.astro";
 import { STATUS_FILTER_OPTIONS } from "./lib/filters";
+import {
+  buildCronogramaPayload,
+  listAvailableMonths,
+  resolveCronogramaMonth,
+} from "@lib/cronograma/payload";
 
 interface Props {
   userRole?: string;
@@ -31,6 +36,14 @@ const currentUsername = currentUser?.username
   ? currentUser.username.toLowerCase()
   : "";
 const currentUserId = currentUser?.id ? String(currentUser.id) : "";
+
+// Payload del primer render embebido por SSR: el cliente lo consume de
+// `window.__CRONOGRAMA_INITIAL_DATA__` y evita el GET a /api/cronograma.
+const availableMonths = await listAvailableMonths();
+const initialData = await buildCronogramaPayload(
+  resolveCronogramaMonth(null, availableMonths),
+  availableMonths,
+);
 ---
 
 <div
@@ -265,6 +278,9 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       </div>
 
       <!-- Monthly View Section (Shown by default) -->
+      <!-- #267: la tabla mensual no está virtualizada; el DOM aceptado es
+           (operadores filtrados) × (días del mes). Si el plantel crece al
+           punto de degradar el render, evaluar virtualización recién ahí. -->
       <div id="monthly-view" class="min-h-0 flex-1">
         <div
           class="bg-base-100 border-base-300 flex h-full flex-col overflow-hidden rounded-2xl border shadow-md"
@@ -1899,6 +1915,10 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
   is:inline
   src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
 ></script>
+
+<script define:vars={{ initialData }}>
+  window.__CRONOGRAMA_INITIAL_DATA__ = initialData;
+</script>
 
 <script>
   import "./lib/dashboard-client";

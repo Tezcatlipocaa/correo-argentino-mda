@@ -15,6 +15,7 @@ import {
   setSessionCookie,
   type TestUser,
 } from "../helpers/auth";
+import { ignoreSsrInitialData } from "../helpers/cronograma";
 
 function monthOffset(offset: number): string {
   const d = new Date();
@@ -37,6 +38,7 @@ async function stubCronogramaGet(
   page: Page,
   getPayload: () => Record<string, unknown>,
 ): Promise<void> {
+  await ignoreSsrInitialData(page);
   await page.route("**/api/cronograma**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname !== "/api/cronograma") return route.continue();
