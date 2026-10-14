@@ -485,6 +485,7 @@ export function buildMonthlyCellHtml(
   op: OperatorData,
   date: string,
   rowIndex: number,
+  precomputedLicenses?: number,
 ): { html: string; isLicenseOverlap: boolean } {
   const container = document.getElementById("cronograma-app-container");
   const userRole = container?.dataset.userRole || "agent";
@@ -503,11 +504,11 @@ export function buildMonthlyCellHtml(
   const isHoliday = !!feriadoName;
   const isSaturday = dayOfWeek === 6;
 
-  const coverage = countDailyCoverage(date);
+  const licenses = precomputedLicenses ?? countDailyCoverage(date).licenses;
   const isLicenseOverlap =
     (status === OperatorStatus.Licencia ||
       status === OperatorStatus.Vacaciones) &&
-    coverage.licenses > state.maxLicenseOverlapLimit;
+    licenses > state.maxLicenseOverlapLimit;
 
   const isFrancoCell = status === OperatorStatus.Franco || !status;
   let cellClass = `p-1 border-r border-b border-base-200/50 text-center transition-colors duration-300`;

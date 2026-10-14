@@ -1514,7 +1514,12 @@ export function renderMonthly(): void {
       `;
 
       parsedDates.forEach((pd) => {
-        const cell = buildMonthlyCellHtml(op, pd.str, opIdx);
+        const cell = buildMonthlyCellHtml(
+          op,
+          pd.str,
+          opIdx,
+          coveragePerDay[pd.str].licenses,
+        );
         if (cell.isLicenseOverlap) totalInconsistencies++;
         tbodyHtml += cell.html;
       });
