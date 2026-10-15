@@ -12,14 +12,14 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (20f216f2)
 
 ## Phase 2: Integración en el Evaluador IA y Calibración del Prompt
-- [ ] Task: Integrar rúbricas en `buildPrompt()` dentro de `src/lib/qualityAiEvaluator.ts`
-  - [ ] Modificar `buildPrompt` para recibir las rúbricas formateadas de los criterios evaluados.
-  - [ ] Escribir test unitario que verifique que el prompt contiene las secciones de rúbricas correspondientes.
-  - [ ] Ajustar instrucciones del sistema para forzar al LLM a apegarse estrictamente a las definiciones y ejemplos del Markdown.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Integrar rúbricas en `buildPrompt()` dentro de `src/lib/qualityAiEvaluator.ts` (528fc42a)
+  - [x] Modificar `buildPrompt` para recibir las rúbricas formateadas de los criterios evaluados.
+  - [x] Escribir test unitario que verifique que el prompt contiene las secciones de rúbricas correspondientes.
+  - [x] Ajustar instrucciones del sistema para forzar al LLM a apegarse estrictamente a las definiciones y ejemplos del Markdown.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (528fc42a)
 
 ## Phase 3: Verificación con Benchmark y Validación de Consistencia Inter-Modelo
-- [ ] Task: Actualizar `scripts/ai-benchmark-models.mts` y medir consistencia
+- [~] Task: Actualizar `scripts/ai-benchmark-models.mts` y medir consistencia
   - [ ] Ejecutar el benchmark comparando Nemotron vs DeepSeek con las nuevas rúbricas maestras.
   - [ ] Verificar que la variabilidad y discrepancia en justificaciones y veredictos se reduzca significativamente.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
