@@ -9,8 +9,8 @@
   - [x] Parsing de eventos `text` con soporte para modelos `-free`.
 - [x] Task: Implementar proveedor Google Gemini HTTP (`src/lib/ai/geminiProvider.ts`) a262ac7
   - [x] Cliente directo `fetch` para la API REST oficial de Gemini con `responseSchema`.
-- [~] Task: Refactorizar `src/lib/qualityAiEvaluator.ts` para usar la factoría de proveedores
-  - [ ] Soporte para selección dinámica de modelo/proveedor desde la petición o fallback a `.env`.
+- [x] Task: Refactorizar `src/lib/qualityAiEvaluator.ts` para usar la factoría de proveedores 9065078
+  - [x] Soporte para selección dinámica de modelo/proveedor desde la petición o fallback a `.env`.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Endpoint API y Suite de Benchmarking
