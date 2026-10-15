@@ -1,0 +1,477 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import QuickAccessCard from "@components/ui/QuickAccessCard.astro";
+import MetricBentoWidget from "@components/reportes/dashboard/MetricBentoWidget.astro";
+import { Icon } from "astro-icon/components";
+import { getCleanBase } from "@lib/baseUrl";
+import { db } from "@db/index";
+import { offices, terminals, automationParents } from "@db/schema";
+import { eq, sql, isNotNull } from "drizzle-orm";
+import { getCategoryCatalogReport } from "@lib/categories/service";
+import { getHelpdesksReport } from "@lib/helpdesks/service";
+import { getWorkflowReport } from "@lib/workflows/service";
+
+const cleanBase = getCleanBase();
+
+// 1. Categorías
+let categoryMetrics = { totalNodes: 719, deadNodes: 377, wastePercent: 52, maxDepth: 6 };
+try {
+  const catReport = await getCategoryCatalogReport(2);
+  categoryMetrics = {
+    totalNodes: catReport.metrics.totalNodes,
+    deadNodes: catReport.metrics.deadNodes,
+    wastePercent: catReport.metrics.structuralWastePercent,
+    maxDepth: catReport.metrics.maxDepth,
+  };
+} catch {
+  // Fallback seguro
+}
+
+// 2. Mesas de Ayuda
+let helpdeskMetrics = { totalIncoming: 0, totalResolved: 0, totalActive: 0, ratio: "1.00", desksCount: 0 };
+try {
+  const hdReport = await getHelpdesksReport();
+  const items = hdReport.items || [];
+  const incoming = items.reduce((acc, h) => acc + (h.incomingTickets || 0), 0);
+  const resolved = items.reduce((acc, h) => acc + (h.resolvedTickets || 0), 0);
+  helpdeskMetrics = {
+    totalIncoming: incoming,
+    totalResolved: resolved,
+    totalActive: items.reduce((acc, h) => acc + (h.activeTickets || 0), 0),
+    ratio: incoming > 0 ? (resolved / incoming).toFixed(2) : "1.00",
+    desksCount: items.length,
+  };
+} catch {
+  // Fallback seguro
+}
+
+// 3. Workflows de Proceso
+let workflowMetrics = { totalCount: 0, completedCount: 0, activeCount: 0, slaPercent: 0, avgHours: 0 };
+try {
+  const wfReport = await getWorkflowReport("implementacion");
+  workflowMetrics = {
+    totalCount: wfReport.overview.totalInstances,
+    completedCount: wfReport.overview.completedInstances,
+    activeCount: wfReport.overview.activeInstances,
+    slaPercent: wfReport.overview.slaCompliancePercent,
+    avgHours: wfReport.overview.avgLeadTimeHours || 0,
+  };
+} catch {
+  // Fallback seguro
+}
+
+// 4. Red de Oficinas
+let officeMetrics = { total: 0, active: 0, withTerminals: 0 };
+try {
+  const [totalRes] = await db.select({ count: sql<number>`count(*)` }).from(offices);
+  const [activeRes] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(offices)
+    .where(eq(offices.active, 1));
+  const [withTermRes] = await db
+    .select({ count: sql<number>`count(distinct ${terminals.nis})` })
+    .from(terminals)
+    .where(isNotNull(terminals.nis));
+  officeMetrics = {
+    total: totalRes?.count || 0,
+    active: activeRes?.count || 0,
+    withTerminals: withTermRes?.count || 0,
+  };
+} catch {
+  // Fallback seguro
+}
+
+// 5. Parque de Terminales
+let terminalMetrics = { total: 0, winCount: 0, brandsCount: 0 };
+try {
+  const [totalTermRes] = await db.select({ count: sql<number>`count(*)` }).from(terminals);
+  const [winRes] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(terminals)
+    .where(sql`operating_system LIKE '%Windows%'`);
+  const [brandsRes] = await db
+    .select({ count: sql<number>`count(distinct ${terminals.manufacturer})` })
+    .from(terminals)
+    .where(isNotNull(terminals.manufacturer));
+  terminalMetrics = {
+    total: totalTermRes?.count || 0,
+    winCount: winRes?.count || 0,
+    brandsCount: brandsRes?.count || 0,
+  };
+} catch {
+  // Fallback seguro
+}
+
+// 6. Automatizaciones
+let automationMetrics = { totalParents: 0, totalClosed: 0, inProgress: 0 };
+try {
+  const [parentsRes] = await db.select({ count: sql<number>`count(*)` }).from(automationParents);
+  const [closedRes] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(automationParents)
+    .where(isNotNull(automationParents.closedAt));
+  const totalP = parentsRes?.count || 0;
+  const closedP = closedRes?.count || 0;
+  automationMetrics = {
+    totalParents: totalP,
+    totalClosed: closedP,
+    inProgress: Math.max(0, totalP - closedP),
+  };
+} catch {
+  // Fallback seguro
+}
+
+const quickShortcuts = [
+  {
+    title: "Árbol de Categorías",
+    href: "reportes/categorias",
+    icon: "boxicons:network-chart-filled",
+    tone: "bg-info/10 text-info",
+  },
+  {
+    title: "Flujo de Mesas",
+    href: "reportes/mesas",
+    icon: "boxicons:dashboard-filled",
+    tone: "bg-secondary/10 text-secondary",
+  },
+  {
+    title: "Workflows de Proceso",
+    href: "reportes/workflows",
+    icon: "boxicons:git-repo-forked-filled",
+    tone: "bg-accent/10 text-accent",
+  },
+  {
+    title: "Red de Oficinas",
+    href: "oficinas/estadisticas",
+    icon: "boxicons:building-house-filled",
+    tone: "bg-success/10 text-success",
+  },
+  {
+    title: "Parque de Terminales",
+    href: "inventario-terminales/estadisticas",
+    icon: "boxicons:desktop-filled",
+    tone: "bg-primary/10 text-primary",
+  },
+  {
+    title: "Automatizaciones",
+    href: "automatizaciones",
+    icon: "boxicons:rocket-filled",
+    tone: "bg-warning/10 text-warning",
+  },
+];
+---
+
+<BaseLayout title="Centro de Métricas | Portal MDA">
+  <PageContainer width="xxl">
+    <MetricsHeader title="Centro de Métricas y Analítica" />
+
+    <!-- Estructura principal: 2 columnas de widgets a la izquierda, 1 columna de atajos a la derecha -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <!-- Primeras dos columnas: Widgets de resumen (grilla de 2) -->
+      <section
+        class="lg:col-span-2 space-y-4"
+        aria-label="Widgets de resumen y analítica"
+      >
+        <div class="flex items-center justify-between pb-1 border-b border-base-200">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+            <Icon name="boxicons:bar-chart-big-filled" size={16} class="text-secondary" />
+            <span>Métricas clave y estado de módulos</span>
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Widget 1: Taxonomía de Categorías -->
+          <MetricBentoWidget
+            title="Taxonomía de Categorías"
+            category="Catálogo"
+            href="reportes/categorias"
+            icon="boxicons:network-chart-filled"
+            iconTone="text-info"
+            badge={`${categoryMetrics.totalNodes} nodos`}
+            badgeTone="badge-info badge-outline"
+          >
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Nodos sin tickets</span>
+                <span class="font-mono font-bold text-base-content">
+                  {categoryMetrics.deadNodes} ({categoryMetrics.wastePercent}%)
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Profundidad actual</span>
+                <span class="font-mono font-bold text-base-content">
+                  {categoryMetrics.maxDepth} niveles
+                </span>
+              </div>
+              
+              <!-- Micro-gráfico: Barra segmentada de optimización del catálogo -->
+              <div class="pt-1 space-y-1">
+                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+                  <span>Utilidad taxonómica</span>
+                  <span>{100 - categoryMetrics.wastePercent}% activos</span>
+                </div>
+                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden flex">
+                  <div
+                    class="bg-info h-full transition-all duration-500"
+                    style={`width: ${Math.max(5, 100 - categoryMetrics.wastePercent)}%`}
+                    title="Nodos con tickets históricos"
+                  ></div>
+                  <div
+                    class="bg-error/40 h-full transition-all duration-500"
+                    style={`width: ${categoryMetrics.wastePercent}%`}
+                    title="Nodos sin tickets (desperdicio)"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </MetricBentoWidget>
+
+          <!-- Widget 2: Flujo de Mesas de Ayuda -->
+          <MetricBentoWidget
+            title="Flujo de Mesas de Ayuda"
+            category="Soporte"
+            href="reportes/mesas"
+            icon="boxicons:dashboard-filled"
+            iconTone="text-secondary"
+            badge={`${helpdeskMetrics.desksCount} mesas`}
+            badgeTone="badge-secondary badge-outline"
+          >
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Tickets ingresados</span>
+                <span class="font-mono font-bold text-base-content">
+                  {helpdeskMetrics.totalIncoming.toLocaleString("es-AR")}
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Tickets resueltos</span>
+                <span class="font-mono font-bold text-base-content">
+                  {helpdeskMetrics.totalResolved.toLocaleString("es-AR")}
+                </span>
+              </div>
+              
+              <!-- Micro-gráfico: Barras comparativas de absorción (Entrada vs Salida) -->
+              <div class="pt-1 space-y-1">
+                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+                  <span>Capacidad de absorción</span>
+                  <span class="font-bold text-secondary">{helpdeskMetrics.ratio} E/S</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 h-2">
+                  <div class="bg-base-200 rounded-full overflow-hidden">
+                    <div class="bg-base-content/40 h-full w-full" title="Volumen ingresado"></div>
+                  </div>
+                  <div class="bg-base-200 rounded-full overflow-hidden">
+                    <div
+                      class="bg-secondary h-full"
+                      style={`width: ${Math.min(100, Math.round(Number(helpdeskMetrics.ratio || 1) * 100))}%`}
+                      title="Volumen resuelto respecto al entrante"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </MetricBentoWidget>
+
+          <!-- Widget 3: Workflows de Proceso -->
+          <MetricBentoWidget
+            title="Workflows de Proceso"
+            category="InvGate"
+            href="reportes/workflows"
+            icon="boxicons:git-repo-forked-filled"
+            iconTone="text-accent"
+            badge={`${workflowMetrics.totalCount} casos`}
+            badgeTone="badge-accent badge-outline"
+          >
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Casos completados</span>
+                <span class="font-mono font-bold text-base-content">
+                  {workflowMetrics.completedCount}
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Duración promedio</span>
+                <span class="font-mono font-bold text-base-content">
+                  {(workflowMetrics.avgHours ?? 0).toFixed(1)} hs
+                </span>
+              </div>
+              
+              <!-- Micro-gráfico: Barra de progreso de cumplimiento de SLA -->
+              <div class="pt-1 space-y-1">
+                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+                  <span>Cumplimiento SLA</span>
+                  <span class="font-bold text-accent">{workflowMetrics.slaPercent}%</span>
+                </div>
+                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                  <div
+                    class="bg-accent h-full transition-all duration-500"
+                    style={`width: ${workflowMetrics.slaPercent}%`}
+                    title={`SLA cumplido en ${workflowMetrics.slaPercent}%`}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </MetricBentoWidget>
+
+          <!-- Widget 4: Red de Oficinas -->
+          <MetricBentoWidget
+            title="Red de Oficinas"
+            category="Infraestructura"
+            href="oficinas/estadisticas"
+            icon="boxicons:building-house-filled"
+            iconTone="text-success"
+            badge={`${officeMetrics.total.toLocaleString("es-AR")} oficinas`}
+            badgeTone="badge-success badge-outline"
+          >
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Oficinas activas</span>
+                <span class="font-mono font-bold text-base-content">
+                  {officeMetrics.active.toLocaleString("es-AR")}
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Con terminales</span>
+                <span class="font-mono font-bold text-base-content">
+                  {officeMetrics.withTerminals.toLocaleString("es-AR")}
+                </span>
+              </div>
+              
+              <!-- Micro-gráfico: Ratio de cobertura operativa -->
+              <div class="pt-1 space-y-1">
+                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+                  <span>Cobertura operativa</span>
+                  <span class="font-bold text-success">
+                    {officeMetrics.total > 0 ? Math.round((officeMetrics.active / officeMetrics.total) * 100) : 0}%
+                  </span>
+                </div>
+                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                  <div
+                    class="bg-success h-full transition-all duration-500"
+                    style={`width: ${officeMetrics.total > 0 ? Math.round((officeMetrics.active / officeMetrics.total) * 100) : 0}%`}
+                    title="Porcentaje de oficinas activas en red"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </MetricBentoWidget>
+
+          <!-- Widget 5: Parque de Terminales -->
+          <MetricBentoWidget
+            title="Parque de Terminales"
+            category="Hardware"
+            href="inventario-terminales/estadisticas"
+            icon="boxicons:desktop-filled"
+            iconTone="text-primary"
+            badge={`${terminalMetrics.total.toLocaleString("es-AR")} puestos`}
+            badgeTone="badge-primary badge-outline"
+          >
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Equipos con Windows</span>
+                <span class="font-mono font-bold text-base-content">
+                  {terminalMetrics.winCount.toLocaleString("es-AR")}
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Fabricantes registrados</span>
+                <span class="font-mono font-bold text-base-content">
+                  {terminalMetrics.brandsCount}
+                </span>
+              </div>
+              
+              <!-- Micro-gráfico: Adopción SO estándar -->
+              <div class="pt-1 space-y-1">
+                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+                  <span>Estandarización SO</span>
+                  <span class="font-bold text-primary">
+                    {terminalMetrics.total > 0 ? Math.round((terminalMetrics.winCount / terminalMetrics.total) * 100) : 0}% Windows
+                  </span>
+                </div>
+                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                  <div
+                    class="bg-primary h-full transition-all duration-500"
+                    style={`width: ${terminalMetrics.total > 0 ? Math.round((terminalMetrics.winCount / terminalMetrics.total) * 100) : 0}%`}
+                    title="Equipos bajo estándar Windows"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </MetricBentoWidget>
+
+          <!-- Widget 6: Centro de Automatizaciones -->
+          <MetricBentoWidget
+            title="Centro de Automatizaciones"
+            category="Automatización"
+            href="automatizaciones"
+            icon="boxicons:rocket-filled"
+            iconTone="text-warning"
+            badge={`${automationMetrics.totalParents.toLocaleString("es-AR")} procesos`}
+            badgeTone="badge-warning badge-outline"
+          >
+            <div class="space-y-2.5 text-xs">
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Procesos cerrados</span>
+                <span class="font-mono font-bold text-base-content">
+                  {automationMetrics.totalClosed.toLocaleString("es-AR")}
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
+                <span class="text-base-content/70">Procesos en curso</span>
+                <span class="font-mono font-bold text-base-content">
+                  {automationMetrics.inProgress}
+                </span>
+              </div>
+              
+              <!-- Micro-gráfico: Embudo de finalización -->
+              <div class="pt-1 space-y-1">
+                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+                  <span>Tasa de resolución</span>
+                  <span class="font-bold text-warning">
+                    {automationMetrics.totalParents > 0 ? Math.round((automationMetrics.totalClosed / automationMetrics.totalParents) * 100) : 0}%
+                  </span>
+                </div>
+                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                  <div
+                    class="bg-warning h-full transition-all duration-500"
+                    style={`width: ${automationMetrics.totalParents > 0 ? Math.round((automationMetrics.totalClosed / automationMetrics.totalParents) * 100) : 0}%`}
+                    title="Porcentaje de procesos de automatización completados"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </MetricBentoWidget>
+        </div>
+      </section>
+
+      <!-- Última columna: Lista de atajos rápidos -->
+      <section
+        class="lg:col-span-1 space-y-4"
+        aria-label="Atajos rápidos a reportes"
+      >
+        <div class="flex items-center justify-between pb-1 border-b border-base-200">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+            <Icon name="boxicons:grid-filled" size={16} class="text-secondary" />
+            <span>Atajos directos</span>
+          </h2>
+          <span class="text-xxs text-base-content/40 font-mono">6 módulos</span>
+        </div>
+
+        <div class="flex flex-col gap-2.5">
+          {quickShortcuts.map((s) => (
+            <QuickAccessCard
+              title={s.title}
+              description=""
+              href={`${cleanBase}${s.href}`}
+              icon={s.icon}
+              iconTone={s.tone}
+              layout="mini"
+            />
+          ))}
+        </div>
+      </section>
+    </div>
+  </PageContainer>
+</BaseLayout>

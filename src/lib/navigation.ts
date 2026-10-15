@@ -50,27 +50,6 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    id: "reportes",
-    label: "Reportes",
-    items: [
-      {
-        href: "/reportes/categorias",
-        label: "Árbol de Categorías",
-        icon: "boxicons:network-chart-filled",
-      },
-      {
-        href: "/reportes/mesas",
-        label: "Flujo de Mesas",
-        icon: "boxicons:dashboard-filled",
-      },
-      {
-        href: "/reportes/workflows",
-        label: "Workflows de Proceso",
-        icon: "boxicons:git-repo-forked-filled",
-      },
-    ],
-  },
-  {
     id: "accesos-rapidos",
     label: "Accesos rápidos",
     items: [
@@ -88,6 +67,11 @@ export const navSections: NavSection[] = [
             href: "/oficinas/estadisticas",
             label: "Estadísticas",
             icon: "boxicons:bar-chart-big-filled",
+          },
+          {
+            href: "/oficinas/estructura",
+            label: "Estructura de red",
+            icon: "boxicons:network-chart-filled",
           },
         ],
       },
@@ -134,6 +118,33 @@ export const navSections: NavSection[] = [
         href: "/automatizaciones",
         label: "Automatizaciones",
         icon: "boxicons:rocket-filled",
+      },
+      {
+        href: "/reportes",
+        label: "Métricas",
+        icon: "boxicons:bar-chart-big-filled",
+        children: [
+          {
+            href: "/reportes",
+            label: "Dashboard General",
+            icon: "boxicons:grid-filled",
+          },
+          {
+            href: "/reportes/categorias",
+            label: "Árbol de Categorías",
+            icon: "boxicons:network-chart-filled",
+          },
+          {
+            href: "/reportes/mesas",
+            label: "Flujo de Mesas",
+            icon: "boxicons:dashboard-filled",
+          },
+          {
+            href: "/reportes/workflows",
+            label: "Workflows de Proceso",
+            icon: "boxicons:git-repo-forked-filled",
+          },
+        ],
       },
     ],
   },

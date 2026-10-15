@@ -117,6 +117,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
   { path: "/oficinas/estadisticas", roles: ["admin", "supervisor"] },
+  { path: "/oficinas/estructura", roles: ["admin", "supervisor"] },
   { path: "/base-conocimiento/categorias", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/create", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/edit", roles: [...KB_ACCESS_ROLES] },

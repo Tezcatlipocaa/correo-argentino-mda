@@ -1,0 +1,84 @@
+---
+import { Icon } from "astro-icon/components";
+import { getCleanBase } from "@lib/baseUrl";
+
+interface Props {
+  title: string;
+  category?: string;
+  href: string;
+  icon: string;
+  iconTone?: string;
+  badge?: string;
+  badgeTone?: string;
+  class?: string;
+}
+
+const {
+  title,
+  category,
+  href,
+  icon,
+  iconTone = "text-secondary",
+  badge,
+  badgeTone = "badge-ghost",
+  class: className = "",
+} = Astro.props;
+
+const cleanBase = getCleanBase();
+const resolvedHref = href.startsWith("http")
+  ? href
+  : `${cleanBase}${href.startsWith("/") ? href.slice(1) : href}`;
+---
+
+<article
+  class:list={[
+    "card bg-base-100 border border-base-300 rounded-2xl shadow-xs transition-colors flex flex-col justify-between overflow-hidden",
+    className,
+  ]}
+>
+  <div class="p-5 space-y-3.5">
+    <!-- Header -->
+    <header class="flex items-start justify-between gap-2.5">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <Icon name={icon} size={20} class:list={[iconTone, "shrink-0"]} />
+        <div class="min-w-0">
+          {category && (
+            <p class="text-xxs font-semibold uppercase tracking-wider text-base-content/50 truncate">
+              {category}
+            </p>
+          )}
+          <h3 class="text-sm sm:text-base font-bold text-base-content truncate">
+            {title}
+          </h3>
+        </div>
+      </div>
+
+      {badge && (
+        <span class:list={["badge badge-xs font-mono shrink-0", badgeTone]}>
+          {badge}
+        </span>
+      )}
+    </header>
+
+    <!-- Content Slot (KPIs / Metrics) -->
+    <div class="pt-0.5">
+      <slot />
+    </div>
+  </div>
+
+  <!-- Footer Action -->
+  <footer class="px-5 py-3 border-t border-base-200/60 bg-base-200/30 flex justify-end">
+    <a
+      href={resolvedHref}
+      class="text-xs font-semibold text-secondary hover:text-secondary-focus hover:underline inline-flex items-center gap-1 group transition-colors"
+      aria-label={`Ver más sobre ${title}`}
+    >
+      <span>Ver más</span>
+      <Icon
+        name="boxicons:chevron-right"
+        size={14}
+        class="transition-transform group-hover:translate-x-0.5"
+      />
+    </a>
+  </footer>
+</article>
