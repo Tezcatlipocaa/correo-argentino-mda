@@ -283,7 +283,10 @@ export function getModulePermissions(
     perm.canRead = canAccessKb;
     perm.canWrite = canAccessKb;
   } else if (moduleName === "usuarios") {
-    // Solo admin lee/escribe (los endpoints de lectura de AD exponen datos sensibles)
+    // Solo admin lee/escribe: `ad-groups-licenses` usa este módulo y expone
+    // datos de AD. Los endpoints que alimentan `/buscador-usuarios` (ALL_ROLES)
+    // — search/status/net-user/invgate-user — NO usan este módulo: exigen solo
+    // sesión vía `requireSession`, porque la página es para todo rol logueado.
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   } else if (moduleName === "permisos") {
