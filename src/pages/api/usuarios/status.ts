@@ -2,12 +2,12 @@ import type { APIRoute } from "astro";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { jsonResponse } from "@lib/apiResponse";
-import { requireReadAccess } from "@lib/rbac-middleware";
+import { requireSession } from "@lib/rbac-middleware";
 
 const STATUS_PATH = resolve("src/data/last-sync-users-status.json");
 
 export const GET: APIRoute = async ({ locals }) => {
-  const denied = await requireReadAccess(locals, "usuarios");
+  const denied = await requireSession(locals);
   if (denied) return denied;
   try {
     const content = await readFile(STATUS_PATH, "utf-8");

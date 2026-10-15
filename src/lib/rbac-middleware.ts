@@ -1,6 +1,15 @@
 import { getModulePermissions } from "./rbac";
 import { jsonError } from "@lib/apiResponse";
 
+/** Exige solo sesión iniciada (cualquier rol). 401 si no hay sesión. */
+export async function requireSession(locals: App.Locals): Promise<Response | null> {
+  const user = locals.user;
+  if (!user || user.id === 0) {
+    return jsonError("Sesión no iniciada", 401, "no-store");
+  }
+  return null;
+}
+
 /**
  * Verifica si el usuario tiene permiso de escritura para un módulo determinado.
  * Si no está autorizado, retorna un objeto Response (401 o 403) listo para ser devuelto por el API Route.

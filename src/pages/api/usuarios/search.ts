@@ -3,7 +3,7 @@ import { db } from "@db/index";
 import { employees, offices, employeeOffices } from "@db/schema";
 import { or, and, eq, sql, getTableColumns, inArray } from "drizzle-orm";
 import { jsonResponse, jsonError } from "@lib/apiResponse";
-import { requireReadAccess } from "@lib/rbac-middleware";
+import { requireSession } from "@lib/rbac-middleware";
 
 const ACCENT_FOLD: Record<string, string> = {
   a: "[aAáàâäãåæÁÀÂÄÃÅÆ]",
@@ -33,7 +33,7 @@ function buildGlobPattern(word: string): string {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const denied = await requireReadAccess(locals, "usuarios");
+  const denied = await requireSession(locals);
   if (denied) return denied;
   try {
     const url = new URL(request.url);

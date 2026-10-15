@@ -2,13 +2,10 @@ import type { APIRoute } from "astro";
 import fs from "node:fs";
 import path from "node:path";
 import { getAppsDir } from "@lib/storage";
-import { requireReadAccess } from "@lib/rbac-middleware";
+import { requireSession } from "@lib/rbac-middleware";
 
 export const GET: APIRoute = async ({ params, locals }) => {
-  // No hay módulo "aplicativos"/"recursos": los binarios alimentan el catálogo
-  // /recursos/aplicativos (ALL_ROLES). Se usa "automatizaciones" (canRead=true
-  // para todo rol logueado) para preservar ese acceso; ver reporte de Task 3.
-  const denied = await requireReadAccess(locals, "automatizaciones");
+  const denied = await requireSession(locals);
   if (denied) return denied;
   const { filename } = params;
   const appsDir = getAppsDir();

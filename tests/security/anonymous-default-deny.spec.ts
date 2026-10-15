@@ -75,7 +75,7 @@ test.describe("default-deny para anónimos (#232)", () => {
     expect(res.status()).toBe(200);
   });
 
-  test("un usuario logueado no recibe 401 en una API privada", async ({
+  test("un usuario logueado recibe 200 en /api/usuarios/status", async ({
     context,
   }) => {
     const user = await createTestUserAndSession("agent");
@@ -85,23 +85,24 @@ test.describe("default-deny para anónimos (#232)", () => {
         "/api/usuarios/status?username=a",
         { maxRedirects: 0 },
       );
-      expect(res.status()).not.toBe(401);
+      // Guard de sesión (no de rol): cualquier rol logueado accede.
+      expect(res.status()).toBe(200);
     } finally {
       await cleanupTestUser(user.userId, user.sessionId);
     }
   });
 
-  test("un agent sin permiso de lectura de usuarios recibe 403 en net-user", async ({
+  test("un agent logueado no recibe 401 en /api/usuarios/search (vs. anónimo 401)", async ({
     context,
   }) => {
     const user = await createTestUserAndSession("agent");
     try {
       await setSessionCookie(context, user.signedSessionId);
-      const res = await context.request.get("/api/usuarios/net-user?username=a", {
+      const res = await context.request.get("/api/usuarios/search?q=a", {
         maxRedirects: 0,
       });
-      // El guard de módulo corre ANTES del throw de LDAP del handler.
-      expect(res.status()).toBe(403);
+      // El guard es solo de sesión: un agent logueado pasa (200), no 403.
+      expect(res.status()).toBe(200);
     } finally {
       await cleanupTestUser(user.userId, user.sessionId);
     }
