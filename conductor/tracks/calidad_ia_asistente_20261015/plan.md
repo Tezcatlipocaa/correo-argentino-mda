@@ -1,10 +1,10 @@
 # Implementation Plan: Asistente IA Espectacular para Auditorías de Calidad
 
 ## Phase 1: Arquitectura de Inferencia Desacoplada y Abstracción de Proveedores
-- [ ] Task: Definir interfaces y esquemas Zod unificados en `src/lib/ai/types.ts`
-  - [ ] Escribir tipos para `AiEvaluationRequest`, `AiEvaluationVerdict`, `AiEvaluationSummary` y la interfaz `AiProvider`.
-  - [ ] Definir esquema Zod estricto para validar las respuestas del LLM incluyendo resumen y justificaciones estructuradas.
-- [ ] Task: Implementar proveedor OpenCode CLI (`src/lib/ai/opencodeProvider.ts`)
+- [x] Task: Definir interfaces y esquemas Zod unificados en `src/lib/ai/types.ts` 61a1236
+  - [x] Escribir tipos para `AiEvaluationRequest`, `AiEvaluationVerdict`, `AiEvaluationSummary` y la interfaz `AiProvider`.
+  - [x] Definir esquema Zod estricto para validar las respuestas del LLM incluyendo resumen y justificaciones estructuradas.
+- [~] Task: Implementar proveedor OpenCode CLI (`src/lib/ai/opencodeProvider.ts`)
   - [ ] Manejo de ejecución desacoplada por `spawn` en Windows sin fugas de procesos.
   - [ ] Parsing de eventos `text` con soporte para modelos `-free`.
 - [ ] Task: Implementar proveedor Google Gemini HTTP (`src/lib/ai/geminiProvider.ts`)
