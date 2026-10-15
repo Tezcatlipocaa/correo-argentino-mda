@@ -17,10 +17,10 @@
 - [x] Task: Actualizar endpoint `POST /api/calidad/ai-evaluate` 78d3f54
   - [x] Recibir parámetro opcional `model` y `provider`.
   - [x] Devolver veredictos desglosados (cita textual, razonamiento, confianza) y resumen general de atención.
-- [~] Task: Desarrollar script CLI de benchmarking (`scripts/ai-benchmark-models.mts`)
-  - [ ] Extracción de N casos históricos de `mda.db`.
-  - [ ] Ejecución paralela/secuencial comparando `deepseek-v4.1-flash-free` vs `nemotron-3.5-lightning-free`.
-  - [ ] Impresión de tabla comparativa de latencia, tasa de éxito JSON y coincidencia con supervisor.
+- [x] Task: Desarrollar script CLI de benchmarking (`scripts/ai-benchmark-models.mts`) 3ad9394
+  - [x] Extracción de N casos históricos de `mda.db`.
+  - [x] Ejecución paralela/secuencial comparando `deepseek-v4.1-flash-free` vs `nemotron-3.5-lightning-free`.
+  - [x] Impresión de tabla comparativa de latencia, tasa de éxito JSON y coincidencia con supervisor.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Interfaz de Usuario "Modo IA Espectacular" en Nueva Auditoría
