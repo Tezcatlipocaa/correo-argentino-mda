@@ -81,7 +81,7 @@ function applyRateLimit(
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
-        : `ip:${clientAddress ?? "unknown"}`;
+        : `ip:${clientAddress}`;
 
     if (isWrite && relativePath === "/api/cronograma/import") {
       const uploadKey = `upload:${identifier}:${relativePath}`;
@@ -124,7 +124,7 @@ function applyRateLimit(
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
-        : `ip:${clientAddress ?? "unknown"}`;
+        : `ip:${clientAddress}`;
     const result = checkRateLimit(
       `kb-write:${identifier}:${relativePath}`,
       RATE_LIMITS.kbCategoryWrite,
@@ -151,7 +151,7 @@ function applyRateLimit(
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
-        : `ip:${clientAddress ?? "unknown"}`;
+        : `ip:${clientAddress}`;
     const result = checkRateLimit(
       `kb-article-write:${identifier}`,
       RATE_LIMITS.kbArticleWrite,

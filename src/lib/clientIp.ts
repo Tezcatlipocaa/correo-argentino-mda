@@ -1,16 +1,22 @@
-const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+function isLoopback(addr: string): boolean {
+  return addr === "::1" || addr === "::ffff:127.0.0.1" || addr.startsWith("127.");
+}
 
 /**
- * IP del cliente detrás del proxy inverso (#235). Sólo confía en el primer hop
- * de `X-Forwarded-For` cuando la conexión directa es loopback (Apache local);
- * así un cliente remoto no puede spoofear la IP y evadir el rate limit.
+ * IP del cliente detrás del proxy inverso (#235). Sólo confía en
+ * `X-Forwarded-For` cuando la conexión directa es loopback (Apache local), y
+ * toma el **último** hop: `mod_proxy_http` *agrega* la IP real al final de la
+ * cadena, así que el último valor es el que puso el proxy de confianza y un
+ * cliente remoto no puede spoofearlo rotando el header.
+ * Mismas semánticas que Express `trust proxy: "loopback"`.
  */
 export function resolveClientIp(
   socketAddress: string | undefined,
   forwardedFor: string | null | undefined,
 ): string {
-  if (socketAddress && !LOOPBACK.has(socketAddress)) return socketAddress;
-  const first = forwardedFor?.split(",")[0]?.trim();
-  if (first) return first;
+  if (socketAddress && !isLoopback(socketAddress)) return socketAddress;
+  const chain = forwardedFor?.split(",").map((s) => s.trim());
+  const last = chain?.[chain.length - 1];
+  if (last) return last;
   return socketAddress ?? "unknown";
 }

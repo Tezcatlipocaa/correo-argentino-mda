@@ -288,6 +288,13 @@ ServerSignature Off
 `ServerSignature Off` quita la firma en las páginas de error generadas por Apache.
 Aplicar y reiniciar Apache (XAMPP: `Net Stop Apache2.4` / `Net Start Apache2.4`).
 
+**Premisa de confianza (#235):** la app resuelve la IP del cliente confiando en
+`X-Forwarded-For` **sólo cuando la conexión directa es loopback** (ver
+`src/lib/clientIp.ts`). Esto asume que Apache es el **único** proxy confiable:
+no exponer el puerto `4321` directamente y no agregar otro proxy delante. Si otro
+salto intermedio no-loopback puede inyectar o reescribir `X-Forwarded-For`, el rate
+limit de login (y todo bucket `ip:`) se vuelve spoofeable.
+
 ---
 
 ## Paso 6: Verificar que funciona

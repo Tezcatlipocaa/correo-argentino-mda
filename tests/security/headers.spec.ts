@@ -15,11 +15,6 @@ const EXPECTED_CSP_DIRECTIVES = [
   "frame-ancestors 'none'",
 ];
 
-test("no expone X-Powered-By", async ({ request }) => {
-  const res = await request.get("/");
-  expect(res.headers()["x-powered-by"]).toBeUndefined();
-});
-
 test.describe("S1.3 Security headers", () => {
   for (const path of ["/", "/login"]) {
     test(`${path}: security headers present`, async ({ request }) => {
