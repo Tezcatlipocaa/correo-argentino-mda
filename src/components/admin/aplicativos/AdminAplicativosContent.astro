@@ -850,15 +850,4 @@ const truncatePath = (filePath: string | null) => {
       showToast("Error al guardar el nuevo orden de categorías", "alert-error");
     }
   };
-
-  // Toast from URL query param
-  const urlParams = new URLSearchParams(window.location.search);
-  const toastMsg = urlParams.get("toast_msg");
-  const toastType = urlParams.get("toast_type") || "alert-success";
-  if (toastMsg) {
-    showToast(decodeURIComponent(toastMsg), toastType);
-    // clean search params without reloading
-    const newUrl = window.location.pathname;
-    window.history.replaceState({}, document.title, newUrl);
-  }
 </script>
