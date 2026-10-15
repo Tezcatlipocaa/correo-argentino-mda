@@ -44,13 +44,23 @@ async function runBenchmark() {
 
   const validAudits = audits.filter((a) => a.ticketId && /^\d+$/.test(a.ticketId.trim())).slice(0, limit);
 
-  if (validAudits.length === 0) {
+  let targetAudits = validAudits;
+
+  if (targetAudits.length === 0) {
     console.log("⚠️ No se encontraron auditorías históricas con ticket InvGate en database/mda.db.");
-    console.log("Probando con caso simulado de verificación...");
-    return;
+    console.log("👉 Ejecutando benchmark con caso de prueba representativo (Simulado con Rúbricas Maestras)...\n");
+    targetAudits = [
+      {
+        id: 999999,
+        ticketId: "SIM-88412",
+        channelType: "wise_call",
+        agentId: 1,
+        totalScore: 100,
+      },
+    ];
   }
 
-  console.log(`Auditorías seleccionadas para el benchmark: ${validAudits.length}`);
+  console.log(`Auditorías seleccionadas para el benchmark: ${targetAudits.length}`);
 
   const results: Record<string, BenchmarkResult> = {};
 
@@ -65,7 +75,7 @@ async function runBenchmark() {
     };
   }
 
-  for (const audit of validAudits) {
+  for (const audit of targetAudits) {
     const ticketId = audit.ticketId!.trim();
     console.log(`\n------------------------------------------------------------------------`);
     console.log(`📋 Audit ID #${audit.id} | Ticket InvGate #${ticketId} | Canal: ${audit.channelType}`);
