@@ -6,17 +6,14 @@ import { eq, sql } from "drizzle-orm";
 import { chromium } from "playwright";
 import "dotenv/config";
 import { fullInvgateSync } from "../src/lib/invgate/userSync";
+import { requireEnv } from "../src/lib/env";
 
 const MIDPOINT_URL = "https://cdc.correoargentino.com.ar";
 const LOGIN_URL = `${MIDPOINT_URL}/midpoint/login`;
 const USERS_TABLE_URL = `${MIDPOINT_URL}/midpoint/admin/users`;
 
-const MIDPOINT_USER = process.env.MIDPOINT_USER;
-const MIDPOINT_PASS = process.env.MIDPOINT_PASS;
-if (!MIDPOINT_USER || !MIDPOINT_PASS) {
-  console.error("Faltan MIDPOINT_USER/MIDPOINT_PASS. Definilas en .env antes de correr el sync.");
-  process.exit(1);
-}
+const MIDPOINT_USER = requireEnv("MIDPOINT_USER");
+const MIDPOINT_PASS = requireEnv("MIDPOINT_PASS");
 
 const STATUS_PATH = resolve("src/data/last-sync-users-status.json");
 
@@ -63,8 +60,8 @@ async function syncUsers(): Promise<void> {
     console.log("[SyncUsers] Navegando a la página de login...");
     await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded" });
 
-    await page.fill('input[name="username"]', MIDPOINT_USER!);
-    await page.fill('input[name="password"]', MIDPOINT_PASS!);
+    await page.fill('input[name="username"]', MIDPOINT_USER);
+    await page.fill('input[name="password"]', MIDPOINT_PASS);
     await page.keyboard.press("Enter");
     await page.waitForURL((url) => !url.toString().includes("/login"), {
       timeout: 30000,

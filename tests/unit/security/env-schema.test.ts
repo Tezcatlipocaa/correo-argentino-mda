@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateServerEnv } from "../../../src/lib/env";
+import { assertServerEnv, validateServerEnv } from "../../../src/lib/env";
 
 const base = {
   SESSION_SECRET: "x".repeat(48),
@@ -31,5 +31,19 @@ describe("validateServerEnv", () => {
     const result = validateServerEnv({ ...base, SESSION_SECRET: "corto" } as NodeJS.ProcessEnv);
     expect(result.ok).toBe(false);
     expect(result.invalid).toContain("SESSION_SECRET");
+  });
+});
+
+describe("assertServerEnv", () => {
+  it("aborta en producción si falta una crítica", () => {
+    expect(() =>
+      assertServerEnv({ ...base, NODE_ENV: "production", SESSION_SECRET: "" } as NodeJS.ProcessEnv),
+    ).toThrow();
+  });
+
+  it("no aborta fuera de producción", () => {
+    expect(() =>
+      assertServerEnv({ ...base, NODE_ENV: "development", SESSION_SECRET: "" } as NodeJS.ProcessEnv),
+    ).not.toThrow();
   });
 });

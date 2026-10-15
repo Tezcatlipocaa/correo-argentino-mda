@@ -5,13 +5,21 @@
  * Uso: npx tsx scripts/verify-env.mts
  */
 import "dotenv/config";
-import { validateServerEnv } from "../src/lib/env";
+import { validateServerEnv, validateScriptEnv } from "../src/lib/env";
 
 const result = validateServerEnv();
-if (!result.ok) {
-  console.error(
-    `[verify-env] Variables críticas ausentes o inválidas — faltan: ${result.missing.join(", ") || "-"}; inválidas: ${result.invalid.join(", ") || "-"}`,
-  );
+const scripts = validateScriptEnv();
+if (!result.ok || !scripts.ok) {
+  if (!result.ok) {
+    console.error(
+      `[verify-env] Variables críticas ausentes o inválidas — faltan: ${result.missing.join(", ") || "-"}; inválidas: ${result.invalid.join(", ") || "-"}`,
+    );
+  }
+  if (!scripts.ok) {
+    console.error(
+      `[verify-env] Prerequisitos de jobs ausentes (script-critical) — faltan: ${scripts.missing.join(", ") || "-"}. Los jobs de sync morirían en silencio.`,
+    );
+  }
   process.exit(1);
 }
 console.log(

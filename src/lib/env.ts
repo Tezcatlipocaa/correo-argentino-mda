@@ -7,18 +7,35 @@ import { z } from "zod";
  */
 const criticalSchema = z.object({
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET debe tener al menos 32 caracteres"),
-  ENCRYPTION_KEY: z.string().min(16, "ENCRYPTION_KEY es requerida"),
+  ENCRYPTION_KEY: z.string().min(16, "ENCRYPTION_KEY debe tener al menos 16 caracteres"),
 });
 
 const optionalKeys = [
   "EXTERNAL_STORAGE_DIR",
   "INTERNAL_ORIGIN",
+  "SESSION_COOKIE_SECURE",
+  "PORT",
+  "HOST",
   "INVGATE_API_KEY",
   "INVGATE_API_USERNAME",
   "INVGATE_BASE_URL",
   "INVGATE_QA_API_KEY",
   "INVGATE_QA_API_USERNAME",
   "INVGATE_QA_BASE_URL",
+  "INVGATE_MCP_TOKEN",
+  "INVGATE_METRICS",
+  "INVGATE_AUTOMATION_GROUP_ID",
+  "INVGATE_AUTOMATION_CATEGORY_ID",
+  "INVGATE_AUTOMATION_VIEW_ID",
+  "AUTOMATION_DETAIL_TTL_MIN",
+  "AUTOMATION_PROGRESS_TTL_MIN",
+  "AUTOMATION_CHILD_CACHE_TTL_MIN",
+  "AUTOMATION_USERS_CACHE_TTL_MIN",
+  "AUTOMATION_CLOSE_THRESHOLD",
+  "AUTOMATION_STALLED_THRESHOLD_DAYS",
+  "AUTOMATION_AGE_THRESHOLD_DAYS",
+  "TITLE_KB_THRESHOLD",
+  "REVAL_OUT",
   "LDAP_SERVER",
   "LDAP_PORT",
   "LDAP_BASE_DN",
@@ -29,6 +46,18 @@ const optionalKeys = [
   "WISE_CX_API_KEY",
   "WISE_CX_API_USER",
   "WISE_CX_BASE_URL",
+] as const;
+
+/**
+ * Prerequisitos de los jobs PM2 de sincronización (#234): sin ellos, los jobs
+ * (`autorestart:false` + `cron_restart` diario) mueren en silencio. Los exige
+ * `scripts/verify-env.mts` en el deploy; NO bloquean el runtime web (por eso no
+ * van en `criticalSchema`). Si un script deja de usar una clave, sacarla de acá.
+ */
+export const SCRIPT_CRITICAL_KEYS = [
+  "MIDPOINT_USER",
+  "MIDPOINT_PASS",
+  "LEGACY_INVENTORY_URL",
 ] as const;
 
 export type ServerEnvValidation = {
@@ -61,6 +90,33 @@ export function validateServerEnv(env: NodeJS.ProcessEnv = process.env): ServerE
 
   const absentOptional = optionalKeys.filter((key) => valueOf(env, key) === undefined);
   return { ok: missing.length === 0 && invalid.length === 0, missing, invalid, absentOptional };
+}
+
+/**
+ * Verifica los prerequisitos de los jobs PM2 (#234). A diferencia de las
+ * críticas de runtime, falla siempre que falte una (no sólo en producción):
+ * son condición para que los jobs de sync funcionen tras el deploy.
+ */
+export function validateScriptEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): { ok: boolean; missing: string[] } {
+  const missing = SCRIPT_CRITICAL_KEYS.filter((key) => valueOf(env, key) === undefined);
+  return { ok: missing.length === 0, missing };
+}
+
+/**
+ * Lee una variable obligatoria y aborta con exit 1 si falta (#234). Devuelve
+ * `string` (el narrowing del `const` no llega a las function declarations
+ * hoisted, por eso un guard manual no basta), y centraliza el fail-fast de los
+ * scripts de mantenimiento. `env` inyectable para tests.
+ */
+export function requireEnv(key: string, env: NodeJS.ProcessEnv = process.env): string {
+  const value = valueOf(env, key);
+  if (value === undefined) {
+    console.error(`Falta ${key}. Definila en .env (ver .env.example) antes de correr el script.`);
+    process.exit(1);
+  }
+  return value;
 }
 
 /**
