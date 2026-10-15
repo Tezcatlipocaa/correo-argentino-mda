@@ -24,12 +24,12 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) 3ad9394
 
 ## Phase 3: Interfaz de Usuario "Modo IA Espectacular" en Nueva Auditoría
-- [ ] Task: Diseñar y maquetar el modal de inspección IA en `src/components/supervision/calidad/`
-  - [ ] Selector de modelo activo (Nemotron, DeepSeek, etc.).
-  - [ ] Animación de gradiente/resplandor y barra de progreso por etapas (*Extrayendo datos...*, *Procesando IA...*, *Sintetizando...*).
-  - [ ] Sección de "Resumen Ejecutivo de la Atención".
-  - [ ] Grilla de veredictos con toggles individuales de selección y tags de color según Cumple / No cumple.
-- [ ] Task: Implementar lógica de cliente en `NewAuditForm.astro`
+- [x] Task: Diseñar y maquetar el modal de inspección IA en `src/components/supervision/calidad/` 08fce07
+  - [x] Selector de modelo activo (Nemotron, DeepSeek, etc.).
+  - [x] Animación de gradiente/resplandor y barra de progreso por etapas (*Extrayendo datos...*, *Procesando IA...*, *Sintetizando...*).
+  - [x] Sección de "Resumen Ejecutivo de la Atención".
+  - [x] Grilla de veredictos con toggles individuales de selección y tags de color según Cumple / No cumple.
+- [~] Task: Implementar lógica de cliente en `NewAuditForm.astro`
   - [ ] Disparo de la llamada al endpoint con el modelo seleccionado.
   - [ ] Transición fluida de estados (idle -> loading con etapas -> preview de veredictos).
   - [ ] Aplicación selectiva de sugerencias al formulario y actualización del campo Notas generales con el resumen de atención.
