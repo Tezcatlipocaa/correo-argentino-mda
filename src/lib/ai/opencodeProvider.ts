@@ -8,7 +8,27 @@ import type { AiProvider } from "./types.js";
 const env = (k: string) =>
   process.env[k] ?? (import.meta.env as Record<string, string | undefined> | undefined)?.[k];
 
-const q = (s: string) => `"${s.replace(/"/g, "")}"`;
+function killProcessTree(pid: number | undefined) {
+  if (!pid) return;
+  if (process.platform === "win32") {
+    try {
+      spawn("taskkill", ["/pid", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    } catch {
+      // Ignorar fallo al forzar cierre
+    }
+  } else {
+    try {
+      process.kill(-pid, "SIGKILL");
+    } catch {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {}
+    }
+  }
+}
 
 export function extractModelText(stdout: string): string {
   let text = "";
@@ -51,22 +71,27 @@ export class OpenCodeProvider implements AiProvider {
     await writeFile(file, prompt, "utf8");
 
     try {
-      const child = spawn(
-        q(bin),
-        ["run", "--standalone", "--model", q(this.model), "--format", "json", "--file", q(file), q(message)],
-        { cwd: dir, shell: true, stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
-      );
+      const isWin = process.platform === "win32";
+      // En Windows spawn directo con shell o cmd.exe
+      const args = ["run", "--standalone", "--model", this.model, "--format", "json", "--file", file, message];
+
+      const child = spawn(bin, args, {
+        cwd: dir,
+        shell: isWin,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      });
 
       return await new Promise<string>((resolve, reject) => {
         let out = "";
         let err = "";
         const timer = setTimeout(() => {
-          child.kill();
+          killProcessTree(child.pid);
           reject(new Error(`OpenCode no respondió en ${Math.round(this.timeoutMs / 1000)}s`));
         }, this.timeoutMs);
 
-        child.stdout.on("data", (d) => (out += d));
-        child.stderr.on("data", (d) => (err += d));
+        child.stdout?.on("data", (d) => (out += d));
+        child.stderr?.on("data", (d) => (err += d));
         child.on("error", (e) => {
           clearTimeout(timer);
           reject(e);

@@ -1029,6 +1029,7 @@ export async function fetchInvgateTicketMetadata(
       targetOperatorUsername: options?.targetOperatorUsername,
       targetOperatorName: options?.targetOperatorName,
     });
+    metadata.raw = incident;
     return { ok: true, data: metadata };
 
   } catch (err) {

@@ -1,6 +1,6 @@
 import { db } from "../src/db/index.js";
 import { qualityAudits, auditScores, auditParameters } from "../src/db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { fetchInvgateTicketMetadata } from "../src/lib/qualityMetadataFetcher.js";
 import { evaluateWithAi } from "../src/lib/qualityAiEvaluator.js";
 import type { ChannelType } from "../src/types/quality.js";
@@ -39,7 +39,7 @@ async function runBenchmark() {
       totalScore: qualityAudits.totalScore,
     })
     .from(qualityAudits)
-    .where(eq(qualityAudits.ticketId, qualityAudits.ticketId))
+    .where(isNotNull(qualityAudits.ticketId))
     .limit(limit * 3);
 
   const validAudits = audits.filter((a) => a.ticketId && /^\d+$/.test(a.ticketId.trim())).slice(0, limit);

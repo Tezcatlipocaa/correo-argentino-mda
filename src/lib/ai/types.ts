@@ -24,5 +24,5 @@ export interface AiProvider {
 
 export interface AiEvaluationOptions {
   model?: string;
-  provider?: "opencode" | "gemini";
+  provider?: "opencode";
 }

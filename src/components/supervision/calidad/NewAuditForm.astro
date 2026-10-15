@@ -424,7 +424,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
           class="btn btn-xs gap-1.5 border-secondary/40 bg-gradient-to-r from-secondary/20 to-primary/20 text-secondary hover:border-secondary hover:from-secondary/30 hover:to-primary/30 font-bold shadow-2xs transition-all hover:scale-102"
           title="Abrir Asistente IA para sugerir veredictos basados en el ticket InvGate"
         >
-          <Icon name="boxicons:bot" size={15} class="text-secondary animate-pulse" aria-hidden="true" />
+          <Icon name="boxicons:magic-wand" size={15} class="text-secondary animate-pulse" aria-hidden="true" />
           <span>Asistente IA</span>
           <span class="badge badge-2xs badge-secondary font-mono">PRO</span>
         </button>
@@ -2781,8 +2781,6 @@ function evaluateOrthographyRule(title: string, description: string) {
       if (!ticketId) return;
 
       const selectedModel = aiModelSelect?.value || "opencode/nemotron-3.5-lightning-free";
-      const isGemini = selectedModel.startsWith("gemini");
-      const provider = isGemini ? "gemini" : "opencode";
 
       if (aiBtnStart) aiBtnStart.disabled = true;
       aiErrorState?.classList.add("hidden");
@@ -2802,7 +2800,6 @@ function evaluateOrthographyRule(title: string, description: string) {
             channel: formChannelType?.value || "wise_call",
             ticketId,
             model: selectedModel,
-            provider,
           }),
         });
 
@@ -2827,6 +2824,14 @@ function evaluateOrthographyRule(title: string, description: string) {
         if (aiSummaryText) aiSummaryText.textContent = json.resumen || "Sin resumen disponible.";
         if (aiCountBadge) aiCountBadge.textContent = `${json.verdicts.length} sugerencias`;
 
+        const escapeHtml = (str: string) =>
+          str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
         if (aiVerdictsList) {
           aiVerdictsList.innerHTML = "";
           json.verdicts.forEach((v: any) => {
@@ -2837,18 +2842,22 @@ function evaluateOrthographyRule(title: string, description: string) {
 
             const row = document.createElement("div");
             row.className = "flex items-start justify-between gap-3 pt-3";
+            const safeCode = escapeHtml(String(v.codigo || ""));
+            const safeEvidencia = v.evidencia ? escapeHtml(String(v.evidencia)) : "";
+            const safeRazonamiento = v.razonamiento ? escapeHtml(String(v.razonamiento)) : "";
+
             row.innerHTML = `
               <div class="min-w-0 flex-1 space-y-1">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-mono text-xs font-bold text-base-content/90">${v.codigo}</span>
+                  <span class="font-mono text-xs font-bold text-base-content/90">${safeCode}</span>
                   <span class="badge badge-xs font-bold ${isNull ? "badge-ghost" : isCompliant ? "badge-success text-success-content" : "badge-error text-error-content"}">
                     ${isNull ? "Sin evidencia" : isCompliant ? "Cumple" : "No cumple"} (${pct}%)
                   </span>
                 </div>
-                ${v.evidencia ? `<p class="text-xs text-base-content/80 italic font-sans bg-base-100 p-2 rounded-lg border border-base-200">"${v.evidencia}"</p>` : ""}
-                ${v.razonamiento ? `<p class="text-xxs text-base-content/60 font-sans">💡 ${v.razonamiento}</p>` : ""}
+                ${safeEvidencia ? `<p class="text-xs text-base-content/80 italic font-sans bg-base-100 p-2 rounded-lg border border-base-200">"${safeEvidencia}"</p>` : ""}
+                ${safeRazonamiento ? `<p class="text-xxs text-base-content/60 font-sans">💡 ${safeRazonamiento}</p>` : ""}
               </div>
-              <input type="checkbox" class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary shrink-0 mt-1" data-code="${v.codigo}" checked />
+              <input type="checkbox" class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary shrink-0 mt-1" data-code="${safeCode}" checked />
             `;
             aiVerdictsList.appendChild(row);
           });
