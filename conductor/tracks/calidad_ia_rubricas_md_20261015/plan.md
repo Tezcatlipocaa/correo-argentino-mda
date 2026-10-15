@@ -19,7 +19,7 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (528fc42a)
 
 ## Phase 3: Verificación con Benchmark y Validación de Consistencia Inter-Modelo
-- [~] Task: Actualizar `scripts/ai-benchmark-models.mts` y medir consistencia
-  - [ ] Ejecutar el benchmark comparando Nemotron vs DeepSeek con las nuevas rúbricas maestras.
-  - [ ] Verificar que la variabilidad y discrepancia en justificaciones y veredictos se reduzca significativamente.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Actualizar `scripts/ai-benchmark-models.mts` y medir consistencia (a4e1a268)
+  - [x] Ejecutar el benchmark comparando Nemotron vs DeepSeek con las nuevas rúbricas maestras.
+  - [x] Verificar que la variabilidad y discrepancia en justificaciones y veredictos se reduzca significativamente.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (a4e1a268)
