@@ -13,7 +13,7 @@
   - [x] Soporte para selección dinámica de modelo/proveedor desde la petición o fallback a `.env`.
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) 9065078
 
-## Phase 2: Endpoint API y Suite de Benchmarking
+## Phase 2: Endpoint API y Suite de Benchmarking [checkpoint: 3ad9394]
 - [x] Task: Actualizar endpoint `POST /api/calidad/ai-evaluate` 78d3f54
   - [x] Recibir parámetro opcional `model` y `provider`.
   - [x] Devolver veredictos desglosados (cita textual, razonamiento, confianza) y resumen general de atención.
@@ -21,7 +21,7 @@
   - [x] Extracción de N casos históricos de `mda.db`.
   - [x] Ejecución paralela/secuencial comparando `deepseek-v4.1-flash-free` vs `nemotron-3.5-lightning-free`.
   - [x] Impresión de tabla comparativa de latencia, tasa de éxito JSON y coincidencia con supervisor.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) 3ad9394
 
 ## Phase 3: Interfaz de Usuario "Modo IA Espectacular" en Nueva Auditoría
 - [ ] Task: Diseñar y maquetar el modal de inspección IA en `src/components/supervision/calidad/`
