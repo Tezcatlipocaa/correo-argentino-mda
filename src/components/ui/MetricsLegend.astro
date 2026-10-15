@@ -1,0 +1,114 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface LegendItem {
+  label: string;
+  description: string;
+  formula?: string;
+}
+
+interface Props {
+  title: string;
+  items: readonly LegendItem[];
+  /** Muestra la leyenda dentro de un `<details>` colapsable. */
+  collapsible?: boolean;
+  /** Nivel del encabezado, para no romper la jerarquía de la página. */
+  headingLevel?: "h2" | "h3";
+  class?: string;
+}
+
+const {
+  title,
+  items,
+  collapsible = false,
+  headingLevel = "h2",
+  class: className = "",
+} = Astro.props;
+
+const Heading = headingLevel;
+const hasExtra = Astro.slots.has("extra");
+---
+
+{
+  collapsible ? (
+    <details
+      class:list={[
+        "group card bg-base-100 border-base-300 border shadow-sm",
+        className,
+      ]}
+    >
+      <summary class="flex cursor-pointer list-none items-center gap-2 p-4 select-none [&::-webkit-details-marker]:hidden">
+        <Icon
+          name="boxicons:book-open"
+          size={18}
+          class="text-secondary shrink-0"
+          aria-hidden="true"
+        />
+        <Heading class="text-base-content text-sm font-semibold">{title}</Heading>
+        <Icon
+          name="boxicons:chevron-down"
+          size={16}
+          class="text-base-content/40 ml-auto transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
+      <div class="border-base-300 border-t p-4">
+        <dl class="grid gap-4 sm:grid-cols-2">
+          {items.map((item) => (
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-base-content text-sm font-semibold">
+                {item.label}
+              </dt>
+              <dd class="text-base-content/70 text-sm">{item.description}</dd>
+              {item.formula && (
+                <dd class="text-base-content/50 font-mono text-xs">
+                  {item.formula}
+                </dd>
+              )}
+            </div>
+          ))}
+        </dl>
+        {hasExtra && <slot name="extra" />}
+      </div>
+    </details>
+  ) : (
+    <div
+      class:list={[
+        "card bg-base-100 border-base-300 border shadow-sm",
+        className,
+      ]}
+    >
+      <div class="flex items-center gap-2 p-4">
+        <Icon
+          name="boxicons:book-open"
+          size={18}
+          class="text-secondary shrink-0"
+          aria-hidden="true"
+        />
+        <Heading class="text-base-content text-sm font-semibold">{title}</Heading>
+      </div>
+      <div class="border-base-300 border-t p-4">
+        <dl class="grid gap-4 sm:grid-cols-2">
+          {items.map((item) => (
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-base-content text-sm font-semibold">
+                {item.label}
+              </dt>
+              <dd class="text-base-content/70 text-sm">{item.description}</dd>
+              {item.formula && (
+                <dd class="text-base-content/50 font-mono text-xs">
+                  {item.formula}
+                </dd>
+              )}
+            </div>
+          ))}
+        </dl>
+        {hasExtra && (
+          <div class="border-base-300 mt-4 border-t pt-4">
+            <slot name="extra" />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

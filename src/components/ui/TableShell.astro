@@ -1,0 +1,159 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  /** Clase de alto máximo del área con scroll interno vertical. */
+  maxHeightClass?: string;
+  /** Muestra el botón de pantalla completa (Fullscreen API). */
+  fullscreen?: boolean;
+  /**
+   * Apila cada fila como tarjeta en pantallas chicas para evitar el scroll
+   * horizontal. Requiere que cada `<td>` declare `data-label="..."`.
+   */
+  stackOnMobile?: boolean;
+  wrapperClass?: string;
+  /** Nombre accesible de la tabla (usado en el botón de pantalla completa). */
+  label?: string;
+}
+
+const {
+  maxHeightClass = "max-h-[70vh]",
+  fullscreen = true,
+  stackOnMobile = true,
+  wrapperClass = "",
+  label = "tabla",
+} = Astro.props;
+---
+
+<div
+  class:list={[
+    "table-shell rounded-box border-base-200 bg-base-100 relative border shadow-sm",
+    stackOnMobile && "table-shell--stack",
+    wrapperClass,
+  ]}
+  data-fullscreen-root
+  data-table-label={label}
+>
+  {
+    fullscreen && (
+      <div class="flex justify-end px-2 pt-2">
+        <button
+          type="button"
+          class="btn btn-ghost btn-xs gap-1"
+          data-fullscreen-toggle
+          title="Ver en pantalla completa"
+          aria-label={`Ver ${label} en pantalla completa`}
+        >
+          <Icon
+            name="boxicons:fullscreen"
+            size={16}
+            data-fs-enter
+            is:inline
+          />
+          <Icon
+            name="boxicons:fullscreen-exit"
+            size={16}
+            class="hidden"
+            data-fs-exit
+            is:inline
+          />
+        </button>
+      </div>
+    )
+  }
+  <div
+    class:list={[
+      "scrollbar-thin",
+      maxHeightClass === "max-h-none" ? "overflow-x-auto" : "overflow-auto",
+      maxHeightClass,
+    ]}
+    data-table-scroll
+  >
+    <slot />
+  </div>
+</div>
+
+<style is:global>
+  .table-shell [data-table-scroll] thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--color-base-100);
+  }
+
+  .table-shell.is-fullscreen {
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    border: none;
+  }
+
+  .table-shell.is-fullscreen [data-table-scroll] {
+    max-height: none !important;
+    flex: 1 1 auto;
+  }
+
+  @media (max-width: 767px) {
+    .table-shell--stack table,
+    .table-shell--stack tbody,
+    .table-shell--stack tr,
+    .table-shell--stack td,
+    .table-shell--stack th {
+      display: block;
+      width: 100%;
+    }
+
+    .table-shell--stack thead {
+      display: none;
+    }
+
+    .table-shell--stack tbody {
+      padding: 0.5rem;
+    }
+
+    .table-shell--stack tr {
+      border: 1px solid var(--color-base-200);
+      border-radius: var(--radius-box);
+      margin-bottom: 0.75rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .table-shell--stack tr:last-child {
+      margin-bottom: 0;
+    }
+
+    .table-shell--stack tbody th[scope="row"] {
+      padding: 0 0 0.35rem;
+      border: none;
+      font-weight: 700;
+      text-align: left;
+    }
+
+    .table-shell--stack td {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.3rem 0;
+      border: none;
+      text-align: left !important;
+    }
+
+    .table-shell--stack td::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      font-weight: 600;
+      color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+    }
+
+    .table-shell--stack td:not([data-label])::before {
+      content: none;
+    }
+  }
+</style>
+
+<script>
+  import { initFullscreenToggle } from "@lib/fullscreenToggle";
+
+  initFullscreenToggle();
+</script>

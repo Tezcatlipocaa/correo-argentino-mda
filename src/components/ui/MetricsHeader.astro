@@ -1,0 +1,47 @@
+---
+import PageHeader from "./PageHeader.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  headingLevel?: "h1" | "h2";
+  backHref?: string;
+  backLabel?: string;
+  /** Etiqueta opcional (por ejemplo el período o el origen de los datos). */
+  badge?: string;
+  badgeClass?: string;
+  class?: string;
+}
+
+const {
+  badge,
+  badgeClass = "badge-outline font-semibold",
+  class: className = "",
+  ...headerProps
+} = Astro.props;
+
+const hasActions = Astro.slots.has("actions");
+---
+
+<div
+  class:list={[
+    "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+    className,
+  ]}
+>
+  <div class="min-w-0">
+    <PageHeader {...headerProps} />
+    {
+      badge && (
+        <span class:list={["badge mt-2", badgeClass]}>{badge}</span>
+      )
+    }
+  </div>
+  {
+    hasActions && (
+      <div class="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+        <slot name="actions" />
+      </div>
+    )
+  }
+</div>

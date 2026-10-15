@@ -76,12 +76,12 @@ const chartProps = JSON.stringify({
       </div>
     )}
 
-    <div class="relative h-55 w-full" data-chart-body>
+    <div class="relative min-h-[13.75rem] w-full" data-chart-body>
       <canvas
         data-chart-canvas
         role="img"
         aria-label={ariaLabel}
-        class="hidden"
+        class="hidden h-55 w-full"
       />
       <div
         class="text-base-content/50 absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-medium"
@@ -92,7 +92,7 @@ const chartProps = JSON.stringify({
       <div
         id={tableId}
         data-chart-table
-        class="absolute inset-0 hidden overflow-auto p-1"
+        class="hidden w-full overflow-x-auto p-1"
       />
     </div>
 
@@ -399,36 +399,40 @@ function initChartCard(card: HTMLElement): void {
     tableWrap.innerHTML = "";
     if (!hasData()) return;
     const table = document.createElement("table");
-    table.className = "table table-sm";
+    table.className = "table table-sm table-zebra w-full text-xs";
     const caption = document.createElement("caption");
     caption.className = "sr-only";
     caption.textContent = `Datos del gráfico: ${title}`;
     table.appendChild(caption);
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
-    const corner = document.createElement("th");
-    corner.scope = "col";
-    corner.textContent = "Serie";
-    headRow.appendChild(corner);
-    currentLabels.forEach((label) => {
+    const catTh = document.createElement("th");
+    catTh.scope = "col";
+    catTh.textContent = "Categoría / Segmento";
+    headRow.appendChild(catTh);
+    currentSeries.forEach((s) => {
       const th = document.createElement("th");
       th.scope = "col";
-      th.textContent = label;
+      th.className = "text-right";
+      th.textContent = s.label;
       headRow.appendChild(th);
     });
     thead.appendChild(headRow);
     table.appendChild(thead);
     const tbody = document.createElement("tbody");
-    currentSeries.forEach((s) => {
+    currentLabels.forEach((label, i) => {
       const row = document.createElement("tr");
-      const th = document.createElement("th");
-      th.scope = "row";
-      th.textContent = s.label;
-      row.appendChild(th);
-      currentLabels.forEach((label, i) => {
+      const rowTh = document.createElement("th");
+      rowTh.scope = "row";
+      rowTh.className = "font-medium";
+      rowTh.textContent = label;
+      row.appendChild(rowTh);
+      currentSeries.forEach((s) => {
         const td = document.createElement("td");
-        td.dataset.label = label;
-        td.textContent = String(s.data[i] ?? 0);
+        td.className = "text-right font-mono";
+        td.dataset.label = s.label;
+        const val = s.data[i] ?? 0;
+        td.textContent = typeof val === "number" ? val.toLocaleString("es-AR") : String(val);
         row.appendChild(td);
       });
       tbody.appendChild(row);

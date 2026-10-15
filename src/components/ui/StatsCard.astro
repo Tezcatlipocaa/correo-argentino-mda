@@ -10,10 +10,12 @@ interface Delta {
 }
 
 interface Props {
-  icon: string;
   label: string;
   value: string | number;
-  subtitle: string;
+  /** Ícono del KPI. Si se omite, no se renderiza la figura. */
+  icon?: string;
+  /** Descripción breve bajo el número. Si se omite, no se renderiza. */
+  subtitle?: string;
   color?:
     | "primary"
     | "secondary"
@@ -28,6 +30,8 @@ interface Props {
   hint?: string;
   formula?: string;
   delta?: Delta;
+  /** `lg`: número, label e ícono más grandes (KPI destacado de sección). */
+  size?: "default" | "lg";
   class?: string;
 }
 
@@ -40,9 +44,12 @@ const {
   hint,
   formula,
   delta,
+  size = "default",
   class: className = "",
 } = Astro.props;
 
+const isLarge = size === "lg";
+const iconSize = isLarge ? 32 : 24;
 const colorClass = color === "auto" ? "acc-text" : `text-${color}`;
 
 const deltaValue = delta?.value ?? null;
@@ -56,38 +63,57 @@ const deltaSuffix = delta?.suffix ?? "%";
 
 <div
   class:list={[
-    "card card-border bg-base-100 border-base-200 shadow-sm p-5",
+    "stats bg-base-100 border-base-200 w-full min-w-0 overflow-visible! border shadow-sm",
     className,
   ]}
 >
-  <div class="card-body">
-    <div class="stat">
-      <div class:list={["stat-figure", colorClass]}>
-        <Icon name={`boxicons:${icon}`} size={18} is:inline />
-      </div>
-      <div class="stat-title flex items-center gap-1">
-        <span>{label}</span>
-        {hint && <MetricInfo label={label} description={hint} formula={formula} />}
-      </div>
-      <div class:list={["stat-value flex items-center gap-2", colorClass]}>
-        <span data-kpi-value>{value}</span>
-        {
-          hasDelta && (
-            <span
-              class:list={[
-                "badge badge-sm gap-0.5 font-normal",
-                deltaGood ? "badge-success badge-soft" : "badge-error badge-soft",
-              ]}
-            >
-              <Icon name={deltaArrow} size={12} aria-hidden="true" />
-              {deltaSign}
-              {deltaValue}
-              {deltaSuffix}
-            </span>
-          )
-        }
-      </div>
-      <div class="stat-desc">{subtitle}</div>
+  <div class="stat min-w-0">
+    {
+      icon && (
+        <div class:list={["stat-figure", colorClass]}>
+          <Icon
+            name={`boxicons:${icon}`}
+            size={iconSize}
+            class="inline-block"
+            is:inline
+          />
+        </div>
+      )
+    }
+    <div
+      class="stat-title flex min-w-0 items-center gap-1 whitespace-normal!"
+    >
+      <span class="min-w-0">{label}</span>
+      {hint && <MetricInfo label={label} description={hint} formula={formula} />}
     </div>
+    <div
+      class:list={[
+        "stat-value flex min-w-0 flex-wrap items-center gap-2 whitespace-normal!",
+        colorClass,
+        isLarge && "text-4xl!",
+      ]}
+    >
+      <span data-kpi-value class="tabular-nums">{value}</span>
+      {
+        hasDelta && (
+          <span
+            class:list={[
+              "badge badge-sm gap-0.5 font-normal",
+              deltaGood ? "badge-success badge-soft" : "badge-error badge-soft",
+            ]}
+          >
+            <Icon name={deltaArrow} size={12} aria-hidden="true" />
+            {deltaSign}
+            {deltaValue}
+            {deltaSuffix}
+          </span>
+        )
+      }
+    </div>
+    {
+      subtitle && (
+        <div class="stat-desc min-w-0 whitespace-normal!">{subtitle}</div>
+      )
+    }
   </div>
 </div>

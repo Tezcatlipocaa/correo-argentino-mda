@@ -1,0 +1,45 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  id: string;
+  /** Endpoint relativo; el cliente le antepone `BASE_URL`. */
+  endpoint: string;
+  label?: string;
+  title?: string;
+  successMsg?: string;
+  errorMsg?: string;
+  class?: string;
+}
+
+const {
+  id,
+  endpoint,
+  label = "Actualizar",
+  title = "Actualizar datos",
+  successMsg = "Datos actualizados con éxito",
+  errorMsg = "Error al actualizar los datos",
+  class: className = "btn btn-soft gap-2",
+} = Astro.props;
+---
+
+<button
+  id={id}
+  type="button"
+  class={className}
+  title={title}
+  data-report-refresh
+  data-refresh-endpoint={endpoint}
+  data-refresh-success={successMsg}
+  data-refresh-error={errorMsg}
+>
+  <Icon name="boxicons:refresh-cw" size={18} />
+  <span>{label}</span>
+</button>
+
+<script>
+  import { initReportRefresh } from "@lib/reportRefresh";
+
+  initReportRefresh();
+  document.addEventListener("astro:page-load", initReportRefresh);
+</script>
