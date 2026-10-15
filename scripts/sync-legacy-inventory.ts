@@ -4,8 +4,15 @@ import Database from "better-sqlite3";
 import { db } from "../src/db/index";
 import { terminals, offices } from "../src/db/schema";
 import { normalizeSearchValue } from "../src/lib/clientSearch";
+import "dotenv/config";
 
-const LEGACY_URL = "http://b1842zacs0255/mda/terminales_consulta.php";
+const LEGACY_URL = process.env.LEGACY_INVENTORY_URL;
+if (!LEGACY_URL) {
+  console.error(
+    "Falta LEGACY_INVENTORY_URL. Definila en .env (ver .env.example) antes de correr el sync.",
+  );
+  process.exit(1);
+}
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -92,7 +99,7 @@ async function upsertRecord(
 async function fetchRemoteRecords(
   validNisSet: Set<string>,
 ): Promise<TerminalRecord[]> {
-  const response = await fetch(LEGACY_URL, {
+  const response = await fetch(LEGACY_URL!, {
     headers: { "User-Agent": USER_AGENT },
   });
 

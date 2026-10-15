@@ -16,6 +16,8 @@ import {
   isFingerprintValid,
   computeFingerprint,
 } from "./lib/sessionFingerprint";
+import { assertServerEnv } from "./lib/env";
+assertServerEnv();
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

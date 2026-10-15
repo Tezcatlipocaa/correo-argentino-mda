@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 
-const MASTER_KEY = import.meta.env.ENCRYPTION_KEY;
+const MASTER_KEY = process.env.ENCRYPTION_KEY || import.meta.env.ENCRYPTION_KEY;
 if (!MASTER_KEY) {
   throw new Error(
     "[encryption] ENCRYPTION_KEY no está configurada. " +

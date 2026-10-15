@@ -34,6 +34,9 @@ if errorlevel 1 (
     echo [MDA Auto-Deploy] ADVERTENCIA: apply de enriquecimiento de titulos fallo. Se continua.
 )
 
+echo 5c. Validando variables de entorno criticas (verify-env)...
+call npx tsx scripts/verify-env.mts || (echo [auto-deploy] verify-env FALLO & exit /b 1)
+
 echo 6. Compilando la nueva version de Astro (incluye guard verify-build)...
 call npm run build
 if errorlevel 1 (
