@@ -74,6 +74,7 @@
 ---
 - [x] **Track: Rediseño de Pantalla Completa: Nueva Auditoría de Calidad**
   *Link: [./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md](./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md)*
-
-
+---
+- [x] **Track: Árbol Interactivo de Estructura de Oficinas**
+  *Link: [./tracks/oficinas_estructura_arbol_20261013/index.md](./tracks/oficinas_estructura_arbol_20261013/index.md)*
 

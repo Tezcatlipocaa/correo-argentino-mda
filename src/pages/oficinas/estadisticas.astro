@@ -1,22 +1,35 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
 import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
 import OficinasEstadisticasContent from "@components/offices/stats/OficinasEstadisticasContent.astro";
 import { getCleanBase } from "@lib/baseUrl";
+import { Icon } from "astro-icon/components";
 
 const cleanBase = getCleanBase();
 ---
 
 <BaseLayout>
-  <PageContainer width="xl">
-    <PageHeader
+  <PageContainer width="xxl">
+    <MetricsHeader
       backHref={`${cleanBase}oficinas`}
       backLabel="Volver al directorio"
       title="Estadísticas de oficinas"
       description="Usuarios, incidentes, parque y modernización de la red."
-    />
+      badge="Últimos 30 días"
+    >
+      <Fragment slot="actions">
+        <a
+          href={`${cleanBase}oficinas/estructura`}
+          class="btn btn-outline btn-sm gap-2"
+          title="Ver estructura jerárquica de la red"
+        >
+          <Icon name="boxicons:network-chart-filled" size={18} />
+          <span>Estructura</span>
+        </a>
+      </Fragment>
+    </MetricsHeader>
 
     <OficinasEstadisticasContent server:defer>
       <ChartCardSkeleton slot="fallback" count={3} />

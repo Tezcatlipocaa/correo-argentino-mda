@@ -1,10 +1,13 @@
 ---
+import { Icon } from "astro-icon/components";
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
 import { getCleanBase } from "@lib/baseUrl";
 
 const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
@@ -15,14 +18,13 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
 
 <div class="flex w-full flex-col gap-6 pb-24">
   <div class="flex flex-wrap items-center gap-2">
-    <span class="badge badge-outline font-semibold">Últimos 30 días</span>
     <span data-invgate-badge class="badge badge-warning badge-outline hidden">
       Sin datos en vivo de InvGate
     </span>
   </div>
 
   <div
-    class="bg-base-100 border-base-300 flex flex-col gap-4 rounded-2xl border p-4 shadow-sm md:flex-row md:items-end"
+    class="card bg-base-100 border border-base-300 flex flex-col gap-4 rounded-2xl p-4 shadow-xs md:flex-row md:items-end"
   >
     <SelectField
       id="stats-provincia"
@@ -63,17 +65,25 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
     />
   </div>
 
-  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+  <StatsGrid base={1} lg={5} class="w-full">
     <div data-kpi="oficinas">
       <StatsCard
         icon="building-house"
         label="Oficinas activas"
         value="…"
         subtitle="Activas / totales"
+        size="lg"
       />
     </div>
     <div data-kpi="usuarios">
-      <StatsCard icon="group" label="Usuarios" value="…" subtitle="InvGate" color="info" />
+      <StatsCard
+        icon="group"
+        label="Usuarios"
+        value="…"
+        subtitle="InvGate"
+        color="info"
+        size="lg"
+      />
     </div>
     <div data-kpi="terminales">
       <StatsCard
@@ -82,6 +92,7 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
         value="…"
         subtitle="Parque de oficinas activas"
         color="secondary"
+        size="lg"
       />
     </div>
     <div data-kpi="incidentes">
@@ -91,6 +102,7 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
         value="…"
         subtitle="En vivo, por oficina"
         color="warning"
+        size="lg"
       />
     </div>
     <div data-kpi="eventos">
@@ -100,9 +112,10 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
         value="…"
         subtitle="Activos hoy"
         color="warning"
+        size="lg"
       />
     </div>
-  </div>
+  </StatsGrid>
 
   <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
     <ChartCard
@@ -123,19 +136,20 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
 
   <section
     data-mass-events-card
-    class="rounded-box border-base-300 bg-base-100 hidden flex-col gap-3 border p-4 shadow-sm"
+    class="card border border-warning/40 bg-base-100 hidden flex-col gap-3 rounded-2xl p-4 shadow-xs"
   >
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="card-title text-base">
-        Eventos masivos <span class="text-warning">(hoy)</span>
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
+      <h2 class="card-title text-base text-base-content flex items-center gap-2">
+        <Icon name="boxicons:alert-circle-filled" class="text-warning" size={20} />
+        <span>Eventos masivos <span class="text-warning">(hoy)</span></span>
       </h2>
-      <span class="text-base-content/60 text-sm" data-mass-events-hint></span>
+      <span class="text-base-content/60 text-xs font-mono" data-mass-events-hint></span>
     </div>
     <div class="flex flex-col gap-2" data-mass-events-list></div>
   </section>
 
   <section class="flex flex-col gap-3">
-    <h2 class="font-semibold">Ranking de oficinas</h2>
+    <SectionHeader title="Ranking de oficinas" />
     <DataTable
       id="ranking-table"
       ariaLabel="Ranking de oficinas por métricas"
@@ -171,14 +185,24 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
     </DataTable>
 
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <span class="text-base-content/60 text-sm" data-ranking-total></span>
-      <div class="join">
-        <button type="button" class="btn join-item btn-sm" data-page-prev aria-label="Página anterior">
-          «
+      <span class="text-base-content/60 text-sm font-medium" data-ranking-total></span>
+      <div class="join border border-base-300 rounded-lg overflow-hidden bg-base-100">
+        <button
+          type="button"
+          class="btn btn-ghost join-item btn-sm px-2.5"
+          data-page-prev
+          aria-label="Página anterior"
+        >
+          <Icon name="boxicons:chevron-left" size={18} />
         </button>
-        <span class="btn join-item btn-sm pointer-events-none no-animation" data-page-label>1</span>
-        <button type="button" class="btn join-item btn-sm" data-page-next aria-label="Página siguiente">
-          »
+        <span class="btn btn-ghost join-item btn-sm pointer-events-none no-animation font-mono text-xs px-3" data-page-label>1</span>
+        <button
+          type="button"
+          class="btn btn-ghost join-item btn-sm px-2.5"
+          data-page-next
+          aria-label="Página siguiente"
+        >
+          <Icon name="boxicons:chevron-right" size={18} />
         </button>
       </div>
     </div>
@@ -365,34 +389,39 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
       nameCell.className = "min-w-0";
       const link = document.createElement("a");
       link.className =
-        "text-primary block truncate text-sm font-medium hover:underline";
+        "text-base-content hover:text-primary block truncate text-sm font-semibold transition-colors hover:underline";
       link.href = `${base}oficinas/estadisticas/${encodeURIComponent(row.code)}`;
       link.textContent = `${row.name} (${row.code})`;
       nameCell.appendChild(link);
       tr.appendChild(nameCell);
 
-      appendCell(tr, row.provincia ?? "—", "truncate text-sm");
+      appendCell(tr, row.provincia ?? "—", "truncate text-sm text-base-content/80");
       appendCell(
         tr,
         row.usuarios === null ? "—" : String(row.usuarios),
-        "text-right font-mono text-sm",
+        "text-right font-mono text-sm text-base-content/90",
       );
       appendCell(
         tr,
         row.incidentes === null ? "—" : String(row.incidentes),
-        "text-right font-mono text-sm",
+        "text-right font-mono text-sm text-base-content/90",
       );
       appendCell(
         tr,
         row.eventos === null ? "—" : String(row.eventos),
-        "text-right font-mono text-sm",
+        "text-right font-mono text-sm text-base-content/90",
       );
-      appendCell(tr, String(row.terminales), "text-right font-mono text-sm");
-      appendCell(
-        tr,
-        row.activa ? "Activa" : "Cerrada",
-        row.activa ? "text-sm text-success" : "text-sm text-error",
-      );
+      appendCell(tr, String(row.terminales), "text-right font-mono text-sm text-base-content/90");
+      
+      const statusCell = document.createElement("div");
+      statusCell.className = "text-sm";
+      const statusBadge = document.createElement("span");
+      statusBadge.className = row.activa
+        ? "badge badge-xs font-semibold badge-soft badge-success"
+        : "badge badge-xs font-semibold badge-soft badge-error";
+      statusBadge.textContent = row.activa ? "Activa" : "Cerrada";
+      statusCell.appendChild(statusBadge);
+      tr.appendChild(statusCell);
 
       tr.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).closest("a")) return;

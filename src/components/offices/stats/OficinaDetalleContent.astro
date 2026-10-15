@@ -3,6 +3,7 @@ import StatsCard from "@components/ui/StatsCard.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
 import type { ChartData, MassEvent } from "@lib/officeStats";
 
 interface IncidenteJson {
@@ -123,7 +124,7 @@ const incidentesRowGridClass = `grid ${incidentesGridClass} items-center`;
   </div>
 
   <section class="flex flex-col gap-3">
-    <h2 class="font-semibold">Incidentes abiertos</h2>
+    <SectionHeader title="Incidentes abiertos" />
     {
       invgateOk && incidentes.length > 0 ? (
         <DataTable
@@ -176,7 +177,7 @@ const incidentesRowGridClass = `grid ${incidentesGridClass} items-center`;
   {
     eventos.length > 0 && (
       <section class="flex flex-col gap-3">
-        <h2 class="font-semibold">Eventos masivos en curso</h2>
+        <SectionHeader title="Eventos masivos en curso" />
         {eventos.map((evento) => (
           <div class="rounded-box border-base-300 bg-base-100 flex flex-wrap items-center gap-3 border px-3 py-2 shadow-sm">
             <span class="badge badge-warning font-bold">{evento.oficinas} oficinas</span>

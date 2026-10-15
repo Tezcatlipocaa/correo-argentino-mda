@@ -227,7 +227,15 @@ const mainTabs = [
 
   {
     canViewOfficeStats && (
-      <div class="mb-4 flex justify-end">
+      <div class="mb-4 flex justify-end gap-2">
+        <a
+          href={resolveUrl("/oficinas/estructura")}
+          class="btn btn-soft btn-sm md:btn-md gap-2"
+          data-cta-estructura-oficinas
+        >
+          <Icon name="boxicons:network-chart-filled" size={18} />
+          Estructura
+        </a>
         <a
           href={resolveUrl("/oficinas/estadisticas")}
           class="btn btn-soft btn-sm md:btn-md gap-2"
