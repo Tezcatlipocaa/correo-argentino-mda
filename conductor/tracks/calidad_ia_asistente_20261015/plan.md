@@ -29,9 +29,9 @@
   - [x] Animación de gradiente/resplandor y barra de progreso por etapas (*Extrayendo datos...*, *Procesando IA...*, *Sintetizando...*).
   - [x] Sección de "Resumen Ejecutivo de la Atención".
   - [x] Grilla de veredictos con toggles individuales de selección y tags de color según Cumple / No cumple.
-- [~] Task: Implementar lógica de cliente en `NewAuditForm.astro`
-  - [ ] Disparo de la llamada al endpoint con el modelo seleccionado.
-  - [ ] Transición fluida de estados (idle -> loading con etapas -> preview de veredictos).
-  - [ ] Aplicación selectiva de sugerencias al formulario y actualización del campo Notas generales con el resumen de atención.
-  - [ ] Renderizado de insignias visuales luminosas tipo badge en los criterios aplicados.
+- [x] Task: Implementar lógica de cliente en `NewAuditForm.astro` a404d5c
+  - [x] Disparo de la llamada al endpoint con el modelo seleccionado.
+  - [x] Transición fluida de estados (idle -> loading con etapas -> preview de veredictos).
+  - [x] Aplicación selectiva de sugerencias al formulario y actualización del campo Notas generales con el resumen de atención.
+  - [x] Renderizado de insignias visuales luminosas tipo badge en los criterios aplicados.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
