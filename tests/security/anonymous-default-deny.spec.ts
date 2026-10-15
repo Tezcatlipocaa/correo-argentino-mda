@@ -91,6 +91,22 @@ test.describe("default-deny para anónimos (#232)", () => {
     }
   });
 
+  test("un agent sin permiso de lectura de usuarios recibe 403 en net-user", async ({
+    context,
+  }) => {
+    const user = await createTestUserAndSession("agent");
+    try {
+      await setSessionCookie(context, user.signedSessionId);
+      const res = await context.request.get("/api/usuarios/net-user?username=a", {
+        maxRedirects: 0,
+      });
+      // El guard de módulo corre ANTES del throw de LDAP del handler.
+      expect(res.status()).toBe(403);
+    } finally {
+      await cleanupTestUser(user.userId, user.sessionId);
+    }
+  });
+
   for (const path of ["/buscador-usuarios", "/contactos", "/"]) {
     test(`anónimo es redirigido a /login en ${path}`, async ({ page }) => {
       const res = await page.goto(path);

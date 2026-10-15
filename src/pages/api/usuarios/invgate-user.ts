@@ -4,6 +4,7 @@ import { employees } from "@db/schema";
 import { sql } from "drizzle-orm";
 import { invgateGet } from "@lib/invgateClient";
 import { jsonResponse, sanitizeError } from "@lib/apiResponse";
+import { requireReadAccess } from "@lib/rbac-middleware";
 import type {
   InvgateUser,
   InvgateUsersByResponse,
@@ -138,7 +139,9 @@ async function collectIncidentRequests(
   return [...seen.values()];
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  const denied = await requireReadAccess(locals, "usuarios");
+  if (denied) return denied;
   try {
     const url = new URL(request.url);
     const raw = url.searchParams.get("username")?.trim() || "";
