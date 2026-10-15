@@ -75,8 +75,12 @@
 - [x] **Track: Rediseño de Pantalla Completa: Nueva Auditoría de Calidad**
   *Link: [./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md](./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md)*
 ---
-- [ ] **Track: Asistente IA Espectacular para Auditorías de Calidad (Modelos Free & Gemini)**
+- [x] **Track: Asistente IA Espectacular para Auditorías de Calidad (Modelos Free & Gemini)**
   *Link: [./tracks/calidad_ia_asistente_20261015/index.md](./tracks/calidad_ia_asistente_20261015/index.md)*
+---
+- [ ] **Track: Rúbricas Estandarizadas de Calidad en Markdown para Homogeneización de Modelos IA**
+  *Link: [./tracks/calidad_ia_rubricas_md_20261015/index.md](./tracks/calidad_ia_rubricas_md_20261015/index.md)*
+
 
 
 
