@@ -7,9 +7,9 @@
 - [x] Task: Implementar proveedor OpenCode CLI (`src/lib/ai/opencodeProvider.ts`) b8645a7
   - [x] Manejo de ejecución desacoplada por `spawn` en Windows sin fugas de procesos.
   - [x] Parsing de eventos `text` con soporte para modelos `-free`.
-- [~] Task: Implementar proveedor Google Gemini HTTP (`src/lib/ai/geminiProvider.ts`)
-  - [ ] Cliente directo `fetch` para la API REST oficial de Gemini con `responseSchema`.
-- [ ] Task: Refactorizar `src/lib/qualityAiEvaluator.ts` para usar la factoría de proveedores
+- [x] Task: Implementar proveedor Google Gemini HTTP (`src/lib/ai/geminiProvider.ts`) a262ac7
+  - [x] Cliente directo `fetch` para la API REST oficial de Gemini con `responseSchema`.
+- [~] Task: Refactorizar `src/lib/qualityAiEvaluator.ts` para usar la factoría de proveedores
   - [ ] Soporte para selección dinámica de modelo/proveedor desde la petición o fallback a `.env`.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
