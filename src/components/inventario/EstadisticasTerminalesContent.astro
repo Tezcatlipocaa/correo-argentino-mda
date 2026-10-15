@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import { db } from "@db/index";
@@ -113,7 +114,7 @@ const CHARTS: {
     </a>
   </div>
 
-  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <StatsGrid base={1} lg={4} class="w-full">
     <div data-kpi="total">
       <StatsCard
         icon="desktop"
@@ -121,6 +122,7 @@ const CHARTS: {
         value={formatCount(initial.kpis.total)}
         subtitle="Parque PC completo"
         hint="Todos los terminales del parque PC, sin importar el estado de conexión."
+        size="lg"
       />
     </div>
     <div data-kpi="sucursales">
@@ -131,6 +133,7 @@ const CHARTS: {
         subtitle="Oficinas con al menos un equipo"
         color="info"
         hint="Oficinas (NIS) con al menos un terminal asignado en el parque filtrado."
+        size="lg"
       />
     </div>
     <div data-kpi="pctWin11">
@@ -141,6 +144,7 @@ const CHARTS: {
         subtitle="Del parque filtrado"
         color="success"
         hint="Porcentaje de equipos con Windows 11 sobre el parque filtrado."
+        size="lg"
       />
     </div>
     <div data-kpi="pctWin10">
@@ -151,9 +155,10 @@ const CHARTS: {
         subtitle="Parque a migrar (EOL)"
         color="warning"
         hint="Porcentaje de equipos con Windows 10 (fin de soporte) sobre el parque filtrado."
+        size="lg"
       />
     </div>
-  </div>
+  </StatsGrid>
 
   <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
     {

@@ -191,7 +191,11 @@ const visibleQuickAccessItems =
         {
           user?.id !== 0 ? (
             <>
-              ¡Hola, <span class="text-secondary dark:text-primary">{displayName}</span>!
+              ¡Hola,{" "}
+              <span class="text-secondary dark:text-primary">
+                {displayName}
+              </span>
+              !
             </>
           ) : (
             "¡Hola!"
@@ -212,9 +216,7 @@ const visibleQuickAccessItems =
       <!-- Módulos Principales -->
       {
         visibleMainModules.length > 0 && (
-          <div
-            class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
-          >
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-6">
             {visibleMainModules.map((mod) => (
               <QuickAccessCard
                 href={mod.href}
@@ -230,9 +232,7 @@ const visibleQuickAccessItems =
       }
 
       <!-- Enlaces de acceso rápido -->
-      <div
-        class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
-      >
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-6">
         {
           visibleQuickAccessItems.map((item) => (
             <QuickAccessCard

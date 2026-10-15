@@ -1,5 +1,6 @@
 ﻿---
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
@@ -74,13 +75,14 @@ const activoOptions = [
     />
   </div>
 
-  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <StatsGrid base={1} lg={4} class="w-full">
     <div data-kpi="total">
       <StatsCard
         icon="group"
         label="Usuarios totales"
         value="…"
         subtitle="Todos los roles"
+        size="lg"
       />
     </div>
     <div data-kpi="activos">
@@ -90,6 +92,7 @@ const activoOptions = [
         value="…"
         subtitle="Con acceso habilitado"
         color="success"
+        size="lg"
       />
     </div>
     <div data-kpi="inactivos">
@@ -99,6 +102,7 @@ const activoOptions = [
         value="…"
         subtitle="Acceso deshabilitado"
         color="warning"
+        size="lg"
       />
     </div>
     <div data-kpi="asistencia">
@@ -108,9 +112,10 @@ const activoOptions = [
         value="…"
         subtitle="Operadores controlados"
         color="info"
+        size="lg"
       />
     </div>
-  </div>
+  </StatsGrid>
 
   <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
     <ChartCard

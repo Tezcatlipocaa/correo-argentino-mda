@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
+import TableShell from "@components/ui/TableShell.astro";
 import { Icon } from "astro-icon/components";
 import { getCleanBase } from "@lib/baseUrl";
 import { db } from "@db/index";
@@ -383,7 +384,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
       id="table-view-container"
       class="bg-base-100 border-base-300 hidden overflow-hidden rounded-2xl border shadow-sm"
     >
-      <div class="overflow-x-auto">
+      <TableShell stackOnMobile={false} label="Historial de registros">
         <table class="table w-full">
           <thead>
             <tr class="bg-base-200/50 text-base-content/60 text-xs uppercase">
@@ -403,7 +404,7 @@ const years = [currentYear, currentYear - 1, currentYear - 2];
             </tr>
           </tbody>
         </table>
-      </div>
+      </TableShell>
     </div>
 
     <!-- Drawer Lateral de Detalle de Jornada -->

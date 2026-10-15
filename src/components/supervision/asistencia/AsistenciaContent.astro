@@ -3,6 +3,7 @@ import { getCleanBase } from "@lib/baseUrl";
 import { Icon } from "astro-icon/components";
 import SearchBar from "@components/ui/SearchBar.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
+import TableShell from "@components/ui/TableShell.astro";
 import { getAttendanceData } from "@lib/attendance";
 
 const cleanBase = getCleanBase();
@@ -219,7 +220,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
   <div
     class="bg-base-100 border-base-300 relative z-0 overflow-hidden rounded-2xl border shadow-md"
   >
-    <div class="min-h-75 overflow-x-auto">
+    <TableShell stackOnMobile={false} label="Control de asistencia">
       <table
         class="w-full border-collapse text-left text-xs"
         id="attendance-table"
@@ -650,6 +651,7 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
           </tr>
         </tbody>
       </table>
+    </TableShell>
 
       <SearchEmptyState
         id="asistencia-empty-state"
