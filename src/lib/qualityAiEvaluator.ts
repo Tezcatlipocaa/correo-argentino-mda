@@ -4,6 +4,7 @@ import type { ChannelType } from "@/types/quality";
 import type { ExtractedQualityMetadata } from "@/lib/qualityMetadataFetcher";
 import { AiResponseSchema, type AiEvaluationOptions, type AiVerdict, type AiResponse } from "@/lib/ai/types";
 import { getAiProvider } from "@/lib/ai/providerFactory";
+import { getRubricsForCriteria } from "@/lib/ai/rubricsLoader";
 
 export { AiVerdict };
 
@@ -105,26 +106,48 @@ export function buildTicketContext(meta: ExtractedQualityMetadata, rawIncident?:
   return lines.join("\n").slice(0, MAX_CONTEXT_CHARS);
 }
 
-export function buildPrompt(criteria: AiCriterion[], ticketContext: string): string {
+export function buildPrompt(
+  criteria: AiCriterion[],
+  ticketContext: string,
+  customRubrics?: string,
+): string {
   const list = criteria.map((c) => `- ${c.code} | ${c.name} | ${c.hint}`).join("\n");
-  return [
+  const rubricsText = customRubrics ?? getRubricsForCriteria(criteria.map((c) => c.code));
+
+  const promptSections = [
     "Sos auditor de calidad de la Mesa de Ayuda TI de Correo Argentino.",
     "Tu tarea es:",
     "1. Escribir un resumen ejecutivo (máx 2-3 oraciones) de la atención brindada en el campo 'resumen'.",
-    "2. Evaluar SOLO los criterios listados, basándote EXCLUSIVAMENTE en los datos del ticket. No inventes hechos.",
+    "2. Evaluar SOLO los criterios listados, basándote EXCLUSIVAMENTE en los datos del ticket y aplicando con RIGOR las Rúbricas Oficiales que se adjuntan a continuación. No inventes hechos.",
     'Para cada criterio devolvé "cumple": true, false, o null si NO hay evidencia suficiente (null no penaliza).',
     '"confianza" es un número entre 0 y 1.',
     '"evidencia" es una cita textual concreta del ticket o comentario (máx 160 caracteres).',
-    '"razonamiento" explica brevemente por qué cumple o no cumple con el estándar esperado (máx 180 caracteres).',
+    '"razonamiento" explica brevemente por qué cumple o no cumple apoyándote en las reglas de la rúbrica (máx 180 caracteres).',
     "No uses herramientas ni leas otros archivos. Respondé ÚNICAMENTE con JSON válido, sin bloques markdown ni texto extra, con esta forma exacta:",
     '{"resumen":"El operador atendió la solicitud...","resultados":[{"codigo":"<code>","cumple":true,"confianza":0.85,"evidencia":"...","razonamiento":"..."}]}',
     "",
-    "CRITERIOS (codigo | nombre | qué se evalúa):",
+    "CRITERIOS A EVALUAR (codigo | nombre | qué se evalúa):",
     list,
+  ];
+
+  if (rubricsText.trim()) {
+    promptSections.push(
+      "",
+      "---",
+      "RÚBRICAS OFICIALES Y EJEMPLOS DE EVALUACIÓN (Fuente Única de Verdad):",
+      "Debes basar tu veredicto estrictamente en las reglas y ejemplos 'Cumple' y 'No Cumple' aquí detallados para cada código.",
+      rubricsText,
+      "---",
+    );
+  }
+
+  promptSections.push(
     "",
-    "DATOS DEL TICKET:",
+    "DATOS DEL TICKET A EVALUAR:",
     ticketContext,
-  ].join("\n");
+  );
+
+  return promptSections.join("\n");
 }
 
 let inFlight = 0;
