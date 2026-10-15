@@ -155,20 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           throw new Error(MONTH_EXISTS);
         }
 
-        // 5.1 Batch delete schedules
-        tx.delete(schedules)
-          .where(
-            and(
-              inArray(
-                schedules.agentId,
-                dbAgents.map((a) => a.id),
-              ),
-              like(schedules.date, `${monthPrefix}-%`),
-            ),
-          )
-          .run();
-
-        // 5.2 Chunk-insert schedules
+        // 5.1 Chunk-insert schedules (mes nuevo garantizado por guard 409)
         const allInserts = [];
         for (const op of dbAgents) {
           for (let d = 1; d <= daysInMonth; d++) {
@@ -194,12 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             .run();
         }
 
-        // 5.3 Delete existing agentSaturdayGroups for target month
-        tx.delete(agentSaturdayGroups)
-          .where(eq(agentSaturdayGroups.month, monthPrefix))
-          .run();
-
-        // 5.4 Chunk-insert new agentSaturdayGroups records
+        // 5.2 Chunk-insert new agentSaturdayGroups records
         if (agentSaturdayGroupInserts.length > 0) {
           for (let i = 0; i < agentSaturdayGroupInserts.length; i += CHUNK_SIZE) {
             tx.insert(agentSaturdayGroups)
