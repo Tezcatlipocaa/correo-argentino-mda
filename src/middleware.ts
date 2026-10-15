@@ -186,11 +186,13 @@ function setSecurityHeaders(response: Response): Response {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
+      // #241: el CDN de Chart.js fuera de script-src (ya vive bundleado en
+      // ChartCard.astro) y de connect-src (nadie lo fetchea).
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://wms.ign.gob.ar",
       "font-src 'self'",
-      "connect-src 'self' data: https://docs.google.com https://cdn.jsdelivr.net https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
+      "connect-src 'self' data: https://docs.google.com https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
       "media-src 'self' data: blob: https:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
