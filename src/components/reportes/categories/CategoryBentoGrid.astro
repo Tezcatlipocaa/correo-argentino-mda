@@ -1,5 +1,6 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import type { TreeMetricsResult } from "@lib/categories/metrics-engine";
 
@@ -44,13 +45,14 @@ const modelMaxClicksSeries = [7, 3, 2, 3];
 ---
 
 <div class="space-y-6" aria-label="Métricas y estadísticas del catálogo de categorías">
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+  <StatsGrid base={2} md={5}>
     <StatsCard
       icon="trash"
       label="Desperdicio"
       value={`${metrics.structuralWastePercent}%`}
       subtitle={`${metrics.deadNodes} nodos sin uso`}
       color="error"
+      size="lg"
     />
     <StatsCard
       icon="sitemap"
@@ -58,6 +60,7 @@ const modelMaxClicksSeries = [7, 3, 2, 3];
       value={`${metrics.weightedAvgDepth}`}
       subtitle="clics promedio"
       color="primary"
+      size="lg"
     />
     <StatsCard
       icon="timer"
@@ -65,6 +68,7 @@ const modelMaxClicksSeries = [7, 3, 2, 3];
       value={`${metrics.closureDistribution.immediatePercent}%`}
       subtitle="resueltos ≤15 min"
       color="success"
+      size="lg"
     />
     <StatsCard
       icon="pie-chart"
@@ -72,6 +76,7 @@ const modelMaxClicksSeries = [7, 3, 2, 3];
       value={`${metrics.pareto.top50}%`}
       subtitle="del volumen total"
       color="warning"
+      size="lg"
     />
     <StatsCard
       icon="x-circle"
@@ -79,8 +84,9 @@ const modelMaxClicksSeries = [7, 3, 2, 3];
       value={`${metrics.anomalies.singleChildCount + metrics.anomalies.wildcardCount}`}
       subtitle={`${metrics.anomalies.singleChildCount} hijos únicos, ${metrics.anomalies.wildcardCount} genéricos`}
       color="info"
+      size="lg"
     />
-  </div>
+  </StatsGrid>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <ChartCard

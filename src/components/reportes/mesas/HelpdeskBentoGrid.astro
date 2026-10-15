@@ -1,5 +1,6 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import type { HelpdesksReportData } from "@/types/helpdesks";
 
@@ -14,13 +15,14 @@ const labels = items.map((item) => item.displayName || item.name);
 ---
 
 <div class="space-y-6" aria-label="Métricas y estadísticas de mesas de ayuda">
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+  <StatsGrid base={2} md={5}>
     <StatsCard
       icon="headphone-mic"
       label="Mesas Monitoreadas"
       value={overview.totalHelpdesks}
       subtitle="Colas operativas activas"
       color="primary"
+      size="lg"
     />
     <StatsCard
       icon="clock"
@@ -28,6 +30,7 @@ const labels = items.map((item) => item.displayName || item.name);
       value={overview.totalActiveTickets}
       subtitle={`${overview.totalWaitingTickets} en espera`}
       color="warning"
+      size="lg"
     />
     <StatsCard
       icon="check-circle"
@@ -35,6 +38,7 @@ const labels = items.map((item) => item.displayName || item.name);
       value={overview.totalResolvedMonth.toLocaleString("es-AR")}
       subtitle={`Ratio E/S: ${overview.globalInOutRatio}`}
       color="success"
+      size="lg"
     />
     <StatsCard
       icon="shield-quarter"
@@ -42,6 +46,7 @@ const labels = items.map((item) => item.displayName || item.name);
       value={`${overview.globalSlaCompliancePercent}%`}
       subtitle="Meta corporativa: ≥90%"
       color="info"
+      size="lg"
     />
     <StatsCard
       icon="star"
@@ -49,8 +54,9 @@ const labels = items.map((item) => item.displayName || item.name);
       value={`${overview.globalAvgCsat} / 5`}
       subtitle="Satisfacción de usuario"
       color="secondary"
+      size="lg"
     />
-  </div>
+  </StatsGrid>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <ChartCard

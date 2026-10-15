@@ -104,4 +104,108 @@ test.describe("Módulo de Auditoría de Categorías (/reportes/categorias)", () 
     await expect(panelReport).toBeVisible();
     await expect(panelMetrics).toBeHidden();
   });
+
+  test("endpoint /api/reportes/categorias/node-details responde con metadatos y respeta RBAC", async ({ context }) => {
+    const resAnon = await context.request.get(
+      "/api/reportes/categorias/node-details?id=296&name=Denarius",
+    );
+    expect([401, 403]).toContain(resAnon.status());
+
+    await setSessionCookie(context, agentUser.signedSessionId);
+    const resAgent = await context.request.get(
+      "/api/reportes/categorias/node-details?id=296&name=Denarius",
+    );
+    expect(resAgent.status()).toBe(403);
+
+    await setSessionCookie(context, adminUser.signedSessionId);
+    const resAdmin = await context.request.get(
+      "/api/reportes/categorias/node-details?id=296&name=Denarius",
+    );
+    expect(resAdmin.status()).toBe(200);
+
+    const json = await resAdmin.json();
+    expect(json.id).toBe(296);
+    expect(json.name).toBe("Denarius");
+    expect(Array.isArray(json.kbArticles)).toBe(true);
+    expect(json.invgateStatus).toEqual({
+      existsInCatalog: true,
+      catalogId: 296,
+    });
+  });
+
+  test("inspector lateral abre con vínculo InvGate/KB y se cierra con backdrop y Escape", async ({ context, page }) => {
+    await setSessionCookie(context, adminUser.signedSessionId);
+    await page.goto("/reportes/categorias");
+
+    const drawer = page.locator("#category-inspector-drawer");
+    const backdrop = page.locator("#category-inspector-backdrop");
+    const invgateBadge = page.locator("#inspect-invgate-badge");
+    const kbContainer = page.locator("#inspect-kb-container");
+
+    await expect(drawer).toHaveClass(/translate-x-full/);
+    await expect(backdrop).toHaveClass(/opacity-0/);
+
+    // Disparar apertura del inspector para un nodo
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("category:inspect", {
+          detail: {
+            node: {
+              id: 296,
+              name: "Denarius",
+              path: "Sistemas > Denarius",
+              totalTickets: 120,
+              depth: 1,
+              status: "active",
+              anomalies: [],
+              isLeaf: false,
+            },
+          },
+        }),
+      );
+    });
+
+    // Drawer y backdrop visibles
+    await expect(drawer).not.toHaveClass(/translate-x-full/);
+    await expect(backdrop).toHaveClass(/opacity-100/);
+
+    // Bloque InvGate & KB visible y actualizado
+    await expect(page.getByText("Vínculo InvGate & KB")).toBeVisible();
+    await expect(invgateBadge).toBeVisible();
+    await expect(invgateBadge).toContainText("Catálogo ID: 296");
+    await expect(kbContainer).toBeVisible();
+
+    // Cerrar haciendo click en el backdrop
+    await backdrop.click({ force: true });
+    await expect(drawer).toHaveClass(/translate-x-full/);
+    await expect(backdrop).toHaveClass(/opacity-0/);
+
+    // Abrir nuevamente y cerrar con tecla Escape
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("category:inspect", {
+          detail: {
+            node: {
+              id: 9999,
+              name: "Categoria Externa",
+              path: "Externa",
+              totalTickets: 10,
+              depth: 0,
+              status: "active",
+              anomalies: [],
+              isLeaf: true,
+            },
+          },
+        }),
+      );
+    });
+    await expect(drawer).not.toHaveClass(/translate-x-full/);
+    await expect(backdrop).toHaveClass(/opacity-100/);
+
+    await page.keyboard.press("Escape");
+    await expect(drawer).toHaveClass(/translate-x-full/);
+    await expect(backdrop).toHaveClass(/opacity-0/);
+  });
 });
+
+

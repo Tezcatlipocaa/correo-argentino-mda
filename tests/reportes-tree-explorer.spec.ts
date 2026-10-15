@@ -31,6 +31,7 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
     await expect(page.locator("#vCur")).toBeVisible();
     await expect(page.locator("#vA")).toBeVisible();
     await expect(page.locator("#vB")).toBeVisible();
+    await expect(page.locator("#vCmp")).toBeVisible();
   });
 
   test("permite alternar vistas de árbol", async ({ context, page }) => {
@@ -44,6 +45,7 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
     const btnCur = page.locator("#vCur");
     const btnA = page.locator("#vA");
     const btnB = page.locator("#vB");
+    const btnCmp = page.locator("#vCmp");
 
     await expect(btnC).toBeVisible();
     await btnCur.click();
@@ -55,8 +57,15 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
     await btnB.click();
     await expect(btnB).toHaveClass(/on|active|btn-active/);
 
+    await btnCmp.click();
+    await expect(btnCmp).toHaveClass(/on|active|btn-active/);
+    await expect(page.locator("#cmp")).toBeVisible();
+    await expect(page.locator("#tree")).toBeHidden();
+
     await btnC.click();
     await expect(btnC).toHaveClass(/on|active|btn-active/);
+    await expect(page.locator("#tree")).toBeVisible();
+    await expect(page.locator("#cmp")).toBeHidden();
   });
 
   test("permite expandir y colapsar nodos", async ({ context, page }) => {
@@ -89,10 +98,10 @@ test.describe("Explorador del Árbol Interactivo (/reportes/categorias)", () => 
     await expect(page.locator("#tree-explorer-container .hit, #tree-explorer-container li.hit").first()).toBeVisible();
 
     const clearBtn = page.locator("#btn-tree-search-clear");
-    if (await clearBtn.isVisible()) {
-      await clearBtn.click();
-      await expect(searchInput).toHaveValue("");
-    }
+    await expect(clearBtn).toBeVisible();
+    await clearBtn.click();
+    await expect(searchInput).toHaveValue("");
+    await expect(page.locator("#tree-explorer-container li.hit")).toHaveCount(0);
   });
 
   test("permite alternar modo pantalla completa y salir con Escape", async ({ context, page }) => {

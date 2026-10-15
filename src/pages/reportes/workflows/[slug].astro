@@ -1,14 +1,16 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
 import WorkflowBentoGrid from "@components/reportes/workflows/WorkflowBentoGrid.astro";
 import WorkflowInstancesTable from "@components/reportes/workflows/WorkflowInstancesTable.astro";
 import WorkflowTimelineDrawer from "@components/reportes/workflows/WorkflowTimelineDrawer.astro";
 import { getWorkflowReport } from "@lib/workflows/service";
 import { getWorkflowConfig } from "@lib/workflows/registry";
 import { getCleanBase } from "@lib/baseUrl";
-import { Icon } from "astro-icon/components";
+import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
+import RefreshReportButton from "@components/ui/RefreshReportButton.astro";
 
 const { slug } = Astro.params;
 const currentSlug = slug || "implementacion";
@@ -23,46 +25,36 @@ const report = await getWorkflowReport(currentSlug);
 
 <BaseLayout title={`${report.config.name} | Reportes de Workflows`}>
   <PageContainer>
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-base-200">
-      <PageHeader
-        title={report.config.name}
-        description={report.config.description}
-      />
-      <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
-        <a
+    <MetricsHeader
+      title={report.config.name}
+      description={report.config.description}
+    >
+      <Fragment slot="actions">
+        <ExportCsvButton
           href={`${getCleanBase()}api/reportes/workflows/${currentSlug}/export`}
           class="btn btn-outline btn-sm gap-2"
           title="Exportar a CSV"
-        >
-          <Icon name="boxicons:file-detail-filled" size={18} />
-          <span>Exportar CSV</span>
-        </a>
-        <button
+          iconSize={18}
+        />
+        <RefreshReportButton
           id="btn-refresh-workflows"
-          data-slug={currentSlug}
-          type="button"
-          class="btn btn-outline btn-sm gap-2"
+          endpoint={`api/reportes/workflows/${currentSlug}/refresh`}
           title="Refrescar métricas del workflow"
-        >
-          <Icon name="boxicons:refresh-cw" size={18} />
-          <span>Actualizar</span>
-        </button>
-      </div>
-    </div>
+          successMsg="Métricas del workflow actualizadas con éxito"
+          errorMsg="Error al refrescar métricas del workflow"
+        />
+      </Fragment>
+    </MetricsHeader>
 
     <section aria-label="Métricas de resumen del workflow" class="mt-6">
       <WorkflowBentoGrid data={report} />
     </section>
 
     <section aria-label="Instancias del proceso de workflow" class="mt-10 space-y-4">
-      <div>
-        <h2 class="text-xl font-bold tracking-tight text-base-content">
-          Instancias Monitoreadas del Proceso
-        </h2>
-        <p class="text-xs text-base-content/60 mt-0.5">
-          Detalle cronológico de tickets orquestados, avance de etapas, aprobaciones y cumplimiento de acuerdos de nivel de servicio.
-        </p>
-      </div>
+      <SectionHeader
+        title="Instancias Monitoreadas del Proceso"
+        description="Detalle cronológico de tickets orquestados, avance de etapas, aprobaciones y cumplimiento de acuerdos de nivel de servicio."
+      />
       <WorkflowInstancesTable instances={report.instances} />
     </section>
 
@@ -71,41 +63,12 @@ const report = await getWorkflowReport(currentSlug);
 </BaseLayout>
 
 <script>
-  import { showToast } from "@lib/toastClient";
   import type {
     WorkflowProcessInstance,
     WorkflowStageItem,
     WorkflowApprovalItem,
     WorkflowChildTicket,
   } from "@/types/workflows";
-
-  const refreshBtn = document.getElementById("btn-refresh-workflows");
-  const slug = refreshBtn?.dataset.slug || "implementacion";
-
-  refreshBtn?.addEventListener("click", async () => {
-    refreshBtn.classList.add("loading");
-    try {
-      const res = await fetch(
-        `${import.meta.env.BASE_URL}api/reportes/workflows/${slug}/refresh`,
-        {
-          method: "POST",
-        },
-      );
-      if (res.ok) {
-        showToast("Métricas del workflow actualizadas con éxito", "alert-success");
-        setTimeout(() => {
-          window.location.reload();
-        }, 600);
-      } else {
-        showToast("Error al refrescar métricas del workflow", "alert-error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast("Error de conexión al refrescar el workflow", "alert-error");
-    } finally {
-      refreshBtn.classList.remove("loading");
-    }
-  });
 
   const drawer = document.getElementById("workflow-timeline-drawer");
   const backdrop = document.getElementById("drawer-backdrop");

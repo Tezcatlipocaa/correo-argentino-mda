@@ -1,43 +1,72 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
+import MetricsLegend from "@components/ui/MetricsLegend.astro";
+import RefreshReportButton from "@components/ui/RefreshReportButton.astro";
 import HelpdeskBentoGrid from "@components/reportes/mesas/HelpdeskBentoGrid.astro";
 import HelpdeskTable from "@components/reportes/mesas/HelpdeskTable.astro";
 import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
 import { getHelpdesksReport } from "@lib/helpdesks/service";
+import { resolveUrl } from "@lib/url";
 import { Icon } from "astro-icon/components";
 
 const report = await getHelpdesksReport();
+
+const legendItems = [
+  { label: "Operadores", description: "Miembros asignados a la mesa de ayuda." },
+  { label: "Ingresos", description: "Tickets recibidos en el mes." },
+  { label: "Resueltos", description: "Tickets resueltos en el mes." },
+  {
+    label: "Ratio E/S",
+    description:
+      "Entradas sobre salidas (ingresos vs. resueltos). Valores cercanos a 1 indican mejor absorción de la demanda.",
+  },
+  {
+    label: "Activos",
+    description: "Backlog activo; entre paréntesis, los tickets en espera.",
+  },
+  {
+    label: "1ª Respuesta",
+    description: "Tiempo promedio hasta la primera respuesta.",
+  },
+  { label: "MTTR", description: "Tiempo medio de resolución." },
+  {
+    label: "SLA",
+    description: "Porcentaje de cumplimiento del tiempo de resolución.",
+  },
+  {
+    label: "CSAT",
+    description: "Satisfacción promedio del usuario (escala 1 a 5).",
+  },
+];
 ---
 
 <BaseLayout title="Mesas de Ayuda | Reportes">
   <PageContainer>
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-base-200">
-      <PageHeader
-        title="Métricas de Mesas de Ayuda y Flujo Operativo"
-        description="Tablero consolidado de colas operativas, volumen mensual, cumplimiento de SLA y satisfacción de usuarios."
-      />
-      <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
+    <MetricsHeader
+      title="Métricas de Mesas de Ayuda y Flujo Operativo"
+      description="Tablero consolidado de colas operativas, volumen mensual, cumplimiento de SLA y satisfacción de usuarios."
+    >
+      <Fragment slot="actions">
         <a
-          href="/reportes/categorias"
+          href={resolveUrl("/reportes/categorias")}
           class="btn btn-outline btn-sm gap-2"
           title="Ver árbol de categorías"
         >
           <Icon name="boxicons:network-chart" size={18} />
           <span>Árbol de Categorías</span>
         </a>
-        <button
+        <RefreshReportButton
           id="btn-refresh-helpdesks"
-          type="button"
-          class="btn btn-outline btn-sm gap-2"
+          endpoint="api/reportes/mesas/refresh"
           title="Refrescar métricas de mesas de ayuda"
-        >
-          <Icon name="boxicons:refresh-cw" size={18} />
-          <span>Actualizar</span>
-        </button>
-      </div>
-    </div>
+          successMsg="Métricas de mesas actualizadas con éxito"
+          errorMsg="Error al refrescar mesas de ayuda"
+        />
+      </Fragment>
+    </MetricsHeader>
 
     <section aria-label="Métricas de resumen de mesas de ayuda" class="mt-6">
       <HelpdeskBentoGrid data={report} server:defer>
@@ -48,49 +77,46 @@ const report = await getHelpdesksReport();
     </section>
 
     <section aria-label="Detalle por mesa de ayuda" class="mt-10 space-y-4">
-      <div>
-        <h2 class="text-xl font-bold tracking-tight text-base-content">
-          Desempeño Individual por Mesa de Ayuda
-        </h2>
-        <p class="text-xs text-base-content/60 mt-0.5">
-          Detalle de operadores, volumen mensual, tiempos de respuesta y niveles de servicio por cola de atención.
-        </p>
-      </div>
+      <SectionHeader
+        title="Desempeño Individual por Mesa de Ayuda"
+        description="Detalle de operadores, volumen mensual, tiempos de respuesta y niveles de servicio por cola de atención."
+      />
       <HelpdeskTable items={report.items} />
+
+      <MetricsLegend
+        title="Leyenda de columnas e indicadores"
+        headingLevel="h3"
+        items={legendItems}
+      >
+        <div slot="extra" class="space-y-2">
+          <p class="text-base-content text-sm font-semibold">
+            Código de colores
+          </p>
+          <ul class="text-base-content/70 grid gap-2 text-sm sm:grid-cols-2">
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-success shrink-0"></span>
+              Ratio E/S mayor o igual a 0,95 · SLA mayor o igual al 90%
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-info shrink-0"></span>
+              Ratio E/S entre 0,90 y 0,95
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-warning shrink-0"></span>
+              Ratio E/S menor a 0,90
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-error shrink-0"></span>
+              SLA menor al 90%
+            </li>
+          </ul>
+        </div>
+      </MetricsLegend>
     </section>
   </PageContainer>
 </BaseLayout>
 
 <script>
-  import { showToast } from "@lib/toastClient";
-
-  const refreshBtn = document.getElementById("btn-refresh-helpdesks");
-
-  refreshBtn?.addEventListener("click", async () => {
-    refreshBtn.classList.add("loading");
-    try {
-      const res = await fetch(
-        `${import.meta.env.BASE_URL}api/reportes/mesas/refresh`,
-        {
-          method: "POST",
-        },
-      );
-      if (res.ok) {
-        showToast("Métricas de mesas actualizadas con éxito", "alert-success");
-        setTimeout(() => {
-          window.location.reload();
-        }, 600);
-      } else {
-        showToast("Error al refrescar mesas de ayuda", "alert-error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast("Error de conexión al refrescar mesas de ayuda", "alert-error");
-    } finally {
-      refreshBtn.classList.remove("loading");
-    }
-  });
-
   window.addEventListener("chart-card:segment-click", (e: Event) => {
     const customEvent = e as CustomEvent<{ label?: string }>;
     const label = customEvent.detail?.label;
@@ -100,9 +126,9 @@ const report = await getHelpdesksReport();
     if (!table) return;
 
     const row =
-      table.querySelector<HTMLTableRowElement>(`tr[data-helpdesk-name="${label}"]`) ||
-      table.querySelector<HTMLTableRowElement>(`tr[data-helpdesk-display-name="${label}"]`) ||
-      Array.from(table.querySelectorAll<HTMLTableRowElement>("tbody tr")).find((r) => {
+      table.querySelector<HTMLElement>(`[data-helpdesk-name="${label}"]`) ||
+      table.querySelector<HTMLElement>(`[data-helpdesk-display-name="${label}"]`) ||
+      Array.from(table.querySelectorAll<HTMLElement>("[data-table-row]")).find((r) => {
         const name = r.dataset.helpdeskName?.trim().toLowerCase();
         const disp = r.dataset.helpdeskDisplayName?.trim().toLowerCase();
         const target = label.trim().toLowerCase();

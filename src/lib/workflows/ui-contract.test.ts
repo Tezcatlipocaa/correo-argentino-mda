@@ -77,15 +77,17 @@ describe("Contratos Visuales y Páginas de Workflows (Tasks 6, 7, 8, 9)", () => 
     const content = fs.readFileSync(file, "utf8");
 
     assert.ok(content.includes('id="table-workflows"'));
-    assert.ok(content.includes("table table-sm table-zebra w-full"));
-    assert.ok(content.includes("<th>Ticket</th>"));
-    assert.ok(content.includes("<th>Título</th>"));
-    assert.ok(content.includes("<th>Estado</th>"));
-    assert.ok(content.includes("<th>Grupo Asignado</th>"));
-    assert.ok(content.includes("<th>Creador</th>"));
-    assert.ok(content.includes("Progreso</th>"));
-    assert.ok(content.includes("SLA</th>"));
-    assert.ok(content.includes("Acción</th>"));
+    assert.ok(content.includes("DataTable"));
+    assert.ok(content.includes('headerVariant="subtle"'));
+    assert.ok(content.includes("DataTableHeaderCell"));
+    assert.ok(content.includes('sortKey="ticket"'));
+    assert.ok(content.includes('sortKey="titulo"'));
+    assert.ok(content.includes('sortKey="estado"'));
+    assert.ok(content.includes('sortKey="grupo"'));
+    assert.ok(content.includes('sortKey="creador"'));
+    assert.ok(content.includes('sortKey="progreso"'));
+    assert.ok(content.includes('sortKey="sla"'));
+    assert.ok(content.includes("Acción"));
     assert.ok(content.includes("data-workflow-row="));
     assert.ok(content.includes("btn-inspect-workflow"));
   });

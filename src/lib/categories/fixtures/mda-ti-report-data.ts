@@ -155,7 +155,7 @@ export const MDA_TI_REPORT_DATA: MdaReportData = deepFreeze({
         label: "de los nodos nunca recibió un ticket (377 de 719)",
       },
       {
-        value: "4,71 → 3",
+        value: "4,71",
         label: "selecciones para llegar a una categoría",
       },
       {
@@ -230,14 +230,16 @@ export const MDA_TI_REPORT_DATA: MdaReportData = deepFreeze({
       {
         point: "Lenguaje de sistema",
         magnitude: "casos verificados",
-        measurement: "Nombres que describen el sistema, no el problema del usuario",
+        measurement:
+          "Nombres que describen el sistema, no el problema del usuario",
         userImpact:
           '"Hace mucho riuido", "No inica Giros", "Nettern- Error de conexión", "Craddle", "Error 40020": tipeo y jerga interna',
       },
     ],
   },
   section2: {
-    title: "2. La demanda está concentrada: pocas categorías hacen todo el trabajo",
+    title:
+      "2. La demanda está concentrada: pocas categorías hacen todo el trabajo",
     description:
       "Si el uso se concentra, el rediseño puede enfocarse en el tramo que importa y retirar el resto sin costo operativo.",
     pareto: [
@@ -697,10 +699,10 @@ export const MDA_TI_REPORT_DATA: MdaReportData = deepFreeze({
         withPropuestaC: "0 conflictos estructurales",
       },
       {
-        today: "2.547 tickets de cierre inmediato (21,4%) repartidos a 3, 4 y 5 selecciones",
+        today:
+          "2.547 tickets de cierre inmediato (21,4%) repartidos a 3, 4 y 5 selecciones",
         withPropuestaC: "todos a 3 selecciones",
       },
     ],
   },
 });
-

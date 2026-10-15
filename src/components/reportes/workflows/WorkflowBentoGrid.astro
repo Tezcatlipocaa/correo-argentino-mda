@@ -1,5 +1,6 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import type { WorkflowReportData, WorkflowStatus } from "@/types/workflows";
 
@@ -38,13 +39,14 @@ const groupData = Object.values(overview.groupDistribution);
 ---
 
 <div class="space-y-6" aria-label="Métricas y estadísticas de workflows">
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+  <StatsGrid base={2} md={3} lg={6}>
     <StatsCard
       icon="git-repo-forked"
       label="Total Procesos"
       value={overview.totalInstances}
       subtitle="Instancias monitoreadas"
       color="primary"
+      size="lg"
     />
     <StatsCard
       icon="clock"
@@ -52,6 +54,7 @@ const groupData = Object.values(overview.groupDistribution);
       value={overview.activeInstances}
       subtitle="En curso"
       color="warning"
+      size="lg"
     />
     <StatsCard
       icon="check-circle"
@@ -59,6 +62,7 @@ const groupData = Object.values(overview.groupDistribution);
       value={overview.completedInstances}
       subtitle="Completados"
       color="success"
+      size="lg"
     />
     <StatsCard
       icon="user-check"
@@ -66,6 +70,7 @@ const groupData = Object.values(overview.groupDistribution);
       value={overview.pendingApprovalsCount}
       subtitle="Pendientes CAB/Seg"
       color="secondary"
+      size="lg"
     />
     <StatsCard
       icon="timer"
@@ -73,6 +78,7 @@ const groupData = Object.values(overview.groupDistribution);
       value={`${overview.avgLeadTimeHours}h`}
       subtitle="Inicio a fin"
       color="info"
+      size="lg"
     />
     <StatsCard
       icon="shield-quarter"
@@ -80,8 +86,9 @@ const groupData = Object.values(overview.groupDistribution);
       value={`${overview.slaCompliancePercent}%`}
       subtitle="Meta: ≥85%"
       color="success"
+      size="lg"
     />
-  </div>
+  </StatsGrid>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <ChartCard

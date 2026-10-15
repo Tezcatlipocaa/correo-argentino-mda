@@ -35,7 +35,7 @@ test.describe("Módulo de Métricas de Mesas de Ayuda (/reportes/mesas)", () => 
       page.getByRole("heading", { name: "Métricas de Mesas de Ayuda y Flujo Operativo" })
     ).toBeVisible();
     await expect(page.locator(".stat-value").first()).toBeVisible();
-    await expect(page.locator("table#table-helpdesks")).toBeVisible();
+    await expect(page.locator("#table-helpdesks")).toBeVisible();
     await expect(page.locator("canvas").first()).toBeVisible();
   });
 
@@ -63,7 +63,7 @@ test.describe("Módulo de Métricas de Mesas de Ayuda (/reportes/mesas)", () => 
     await setSessionCookie(context, adminUser.signedSessionId);
     await page.goto("/reportes/mesas");
 
-    const rows = page.locator("#table-helpdesks tbody tr");
+    const rows = page.locator("#table-helpdesks [data-table-row]");
     await expect(rows.first()).toBeVisible();
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);

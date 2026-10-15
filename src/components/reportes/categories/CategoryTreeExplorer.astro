@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import SearchBar from "@components/ui/SearchBar.astro";
 import rawData from "@lib/categories/fixtures/mda-ti-canonical.json";
 
 const rawTreeData = {
@@ -18,9 +19,9 @@ const rawTreeData = {
   class="relative flex flex-col bg-base-100 border border-base-300 rounded-box shadow-sm overflow-hidden"
   data-testid="tree-explorer"
 >
-  <div class="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 p-3 bg-base-200/80 backdrop-blur-sm border-b border-base-300">
-    <div class="flex flex-wrap items-center gap-1.5">
-      <div class="join" role="group" aria-label="Selector de vistas del catálogo">
+  <div class="sticky top-0 z-30 flex flex-col gap-2.5 p-3.5 bg-base-200/90 backdrop-blur-md border-b border-base-300">
+    <div class="flex flex-wrap items-center justify-between gap-2.5">
+      <div class="join overflow-x-auto max-w-full" role="group" aria-label="Selector de vistas del catálogo">
         <button
           id="vC"
           type="button"
@@ -63,66 +64,62 @@ const rawTreeData = {
         </button>
       </div>
 
-      <div class="divider divider-horizontal mx-0.5 my-0 h-6"></div>
+      <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+        <button
+          id="btn-toggle-fullscreen"
+          type="button"
+          class="btn btn-sm btn-outline gap-1.5"
+          title="Alternar pantalla completa"
+          aria-label="Alternar pantalla completa"
+        >
+          <Icon name="boxicons:fullscreen" size={18} class="icon-expand" />
+          <Icon name="boxicons:fullscreen-exit" size={18} class="icon-compress hidden" />
+          <span class="fs-text text-xs">Pantalla completa</span>
+        </button>
+      </div>
+    </div>
 
+    <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-base-300/60">
       <div class="join">
         <button
           id="btn-expand-all"
           type="button"
-          class="btn btn-sm btn-ghost join-item gap-1 text-xs"
-          title="Expandir todas las ramas"
+          class="btn btn-sm btn-outline join-item gap-1 text-xs"
+          title="Expandir todas las ramas del árbol"
         >
           <Icon name="boxicons:chevron-down" size={16} />
-          <span>Expandir</span>
+          <span>Expandir todo</span>
         </button>
         <button
           id="btn-collapse-all"
           type="button"
-          class="btn btn-sm btn-ghost join-item gap-1 text-xs"
+          class="btn btn-sm btn-outline join-item gap-1 text-xs"
           title="Colapsar todo el árbol"
         >
           <Icon name="boxicons:chevron-up" size={16} />
-          <span>Colapsar</span>
+          <span>Colapsar todo</span>
         </button>
       </div>
-    </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="relative flex items-center">
-        <input
+      <div class="w-60 sm:w-80">
+        <SearchBar
           id="tree-search-input"
-          type="search"
           placeholder="Buscar categoría o ruta..."
-          class="input input-sm input-bordered w-48 sm:w-64 pr-8 text-xs font-mono"
-          aria-label="Buscar categorías"
+          size="sm"
+          clearable
         />
-        <button
-          id="btn-tree-search-clear"
-          type="button"
-          class="btn btn-ghost btn-xs btn-circle absolute right-1 text-base-content/50 hover:text-base-content"
-          title="Limpiar búsqueda"
-          aria-label="Limpiar búsqueda"
-        >
-          ✕
-        </button>
       </div>
-
-      <button
-        id="btn-toggle-fullscreen"
-        type="button"
-        class="btn btn-sm btn-outline gap-1.5"
-        title="Alternar pantalla completa"
-        aria-label="Alternar pantalla completa"
-      >
-        <Icon name="boxicons:fullscreen" size={18} class="icon-expand" />
-        <Icon name="boxicons:fullscreen-exit" size={18} class="icon-compress hidden" />
-        <span class="fs-text text-xs">Pantalla completa</span>
-      </button>
     </div>
   </div>
 
-  <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-base-200/40 border-b border-base-200 text-xs text-base-content/70">
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+  <div class="px-4 py-2.5 border-b border-base-200 bg-base-200/40 text-xs space-y-2">
+    <div class="flex items-center justify-between">
+      <span class="font-semibold text-xs text-base-content/80 flex items-center gap-1.5">
+        <Icon name="boxicons:info-circle" size={14} class="text-secondary" />
+        Guía de colores, convenciones y códigos
+      </span>
+    </div>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-base-content/70">
       <span class="inline-flex items-center gap-1.5">
         <span class="w-2.5 h-2.5 rounded-full bg-warning"></span>
         <span>nivel 1</span>
@@ -149,31 +146,34 @@ const rawTreeData = {
       </span>
     </div>
 
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xxs font-mono text-base-content/60">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xxs font-mono text-base-content/70 pt-1.5 border-t border-base-200">
       <span><strong class="text-base-content">tk</strong> tickets</span>
       <span><strong class="text-base-content">h</strong> hojas</span>
-      <span class="text-success font-semibold">100+ verde</span>
-      <span class="text-base-content/40">0 sin uso</span>
+      <span class="badge badge-xs badge-ghost border border-base-300/60 opacity-60">0 tk</span>
+      <span class="badge badge-xs badge-soft badge-neutral font-medium text-base-content">&lt; 50 tk</span>
+      <span class="badge badge-xs bg-info/15 text-info border-info/30">&lt; 200 tk</span>
+      <span class="badge badge-xs bg-secondary/20 text-secondary border-secondary/35 font-bold">&ge; 200 tk</span>
       <span>[id] InvGate</span>
     </div>
   </div>
 
   <div class="p-4 overflow-x-auto min-h-[480px]">
-    <div id="tree-note" class="alert alert-info alert-soft text-xs mb-4"></div>
+    <div id="tree-note" class="alert alert-soft alert-info text-xs mb-4"></div>
     <ul id="tree" class="root space-y-1" role="tree"></ul>
     <div id="cmp" class="hidden space-y-6"></div>
   </div>
 
   <div class="flex items-center justify-between px-4 py-2 bg-base-200/50 border-t border-base-300 text-xs text-base-content/60 font-mono">
     <span id="tree-explorer-foot"></span>
-    <span class="text-xxs text-base-content/40">Presione Escape para salir de pantalla completa</span>
+    <span class="fs-escape-hint text-xxs text-base-content/40 hidden">Presione Escape para salir de pantalla completa</span>
   </div>
 </div>
 
 <script is:inline type="application/json" id="tree-canonical-data" set:html={JSON.stringify(rawTreeData)}></script>
 
 <style is:global>
-  #tree-explorer-container.fullscreen-active {
+  #tree-explorer-container.fullscreen-active,
+  #tree-explorer-container:fullscreen {
     position: fixed !important;
     inset: 0 !important;
     z-index: 250 !important;
@@ -212,9 +212,9 @@ const rawTreeData = {
     color: var(--color-base-content);
     opacity: 0.45;
   }
-  #tree-explorer-container li.hit > .row {
-    background-color: oklch(from var(--color-success) l c h / 0.15) !important;
-    box-shadow: inset 4px 0 0 var(--color-success);
+  #tree-explorer-container.fullscreen-active .fs-escape-hint,
+  #tree-explorer-container:fullscreen .fs-escape-hint {
+    display: inline-block !important;
   }
 </style>
 
@@ -415,8 +415,16 @@ const rawTreeData = {
     if (open) ul.classList.remove("hidden");
     else ul.classList.add("hidden");
     li.setAttribute("aria-expanded", open ? "true" : "false");
-    const tw = li.querySelector(":scope > .row > .tw");
-    if (tw) tw.textContent = open ? "▾" : "▸";
+    const tw = li.querySelector<HTMLElement>(":scope > .row > .tw");
+    if (tw) {
+      if (open) {
+        tw.classList.add("rotate-90");
+        tw.setAttribute("aria-label", "Plegar rama");
+      } else {
+        tw.classList.remove("rotate-90");
+        tw.setAttribute("aria-label", "Desplegar rama");
+      }
+    }
   }
 
   function isOpen(li: HTMLElement): boolean {
@@ -508,6 +516,34 @@ const rawTreeData = {
     }
   }
 
+  function escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function highlightMatch(text: string, q: string): string {
+    if (!q) return escapeHtml(text);
+    const lower = text.toLowerCase();
+    const qLower = q.toLowerCase();
+    let idx = 0;
+    let result = "";
+    while (idx < text.length) {
+      const matchIdx = lower.indexOf(qLower, idx);
+      if (matchIdx === -1) {
+        result += escapeHtml(text.slice(idx));
+        break;
+      }
+      result += escapeHtml(text.slice(idx, matchIdx));
+      result += `<mark class="bg-warning/35 text-base-content font-bold px-0.5 rounded">${escapeHtml(text.slice(matchIdx, matchIdx + q.length))}</mark>`;
+      idx = matchIdx + q.length;
+    }
+    return result;
+  }
+
   function applyFilter(): void {
     const list = allLis();
     let hits = 0;
@@ -515,17 +551,24 @@ const rawTreeData = {
 
     list.forEach((li) => {
       const row = li.querySelector(":scope > .row") as HTMLElement | null;
-      if (!row) return;
-      const rawText = (row.textContent + " " + (row.getAttribute("data-raw") || "")).toLowerCase();
+      const nm = li.querySelector(":scope > .row > .nm") as HTMLElement | null;
+      if (!row || !nm) return;
+
+      const origText = nm.getAttribute("data-label") || nm.textContent || "";
+      const rawText = (origText + " " + (row.getAttribute("data-raw") || "")).toLowerCase();
       const isHit = Boolean(q && rawText.indexOf(q) >= 0);
 
       if (isHit) {
         li.classList.add("hit");
-        row.classList.add("hit");
         hits++;
+        if (origText.toLowerCase().includes(q)) {
+          nm.innerHTML = highlightMatch(origText, q);
+        } else {
+          nm.textContent = origText;
+        }
       } else {
         li.classList.remove("hit");
-        row.classList.remove("hit");
+        nm.textContent = origText;
       }
     });
 
@@ -557,20 +600,32 @@ const rawTreeData = {
       li.tabIndex = -1;
 
       const row = document.createElement("div");
-      row.className = "row flex items-center gap-2 flex-wrap py-1 px-2 rounded-md hover:bg-base-200 transition-colors text-xs";
+      row.className = "row flex items-center gap-2 flex-wrap py-1 px-2.5 rounded-lg hover:bg-base-200 transition-colors text-xs";
       row.setAttribute("data-raw", name);
 
       const has = Boolean(children && children.length);
       if (has) li.setAttribute("aria-expanded", "false");
 
-      const tw = document.createElement("span");
-      tw.className = "tw w-5 text-center cursor-pointer select-none text-xs font-mono text-base-content/50";
-      tw.textContent = has ? "▾" : "•";
+      let tw: HTMLElement;
+      if (has) {
+        const toggleIcon = document.createElement("span");
+        toggleIcon.className = "tw inline-flex items-center justify-center w-5 h-5 text-base-content/60 hover:text-primary cursor-pointer select-none transition-transform duration-150 shrink-0";
+        toggleIcon.setAttribute("role", "button");
+        toggleIcon.setAttribute("aria-label", "Alternar rama");
+        toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"/></svg>`;
+        tw = toggleIcon;
+      } else {
+        const sp = document.createElement("span");
+        sp.className = "tw inline-flex items-center justify-center w-5 h-5 text-base-content/25 select-none shrink-0";
+        sp.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>`;
+        tw = sp;
+      }
 
       const nm = document.createElement("span");
       nm.className = "nm font-medium text-base-content";
       const lb = label(n, padre);
       nm.textContent = lb;
+      nm.setAttribute("data-label", lb);
       if (lb !== name) nm.title = name;
       if (has) nm.classList.add("clk", "cursor-pointer", "hover:text-primary");
 
@@ -585,11 +640,19 @@ const rawTreeData = {
       }
 
       if (tickets !== undefined && tickets !== null) {
-        const vSpan = document.createElement("span");
-        const isHot = tickets >= 100;
-        const isZero = tickets === 0;
-        vSpan.className = `v text-xxs font-mono tabular-nums ${isZero ? "zero text-base-content/30" : isHot ? "hot text-success font-semibold" : "text-base-content/70"}`;
         if (tickets > 0 || !has) {
+          const vSpan = document.createElement("span");
+          let tierClass = "badge-ghost opacity-60";
+          if (tickets === 0) {
+            tierClass = "badge-ghost border border-base-300/60 opacity-60";
+          } else if (tickets < 50) {
+            tierClass = "badge-soft badge-neutral font-medium text-base-content";
+          } else if (tickets < 200) {
+            tierClass = "bg-info/15 text-info border-info/30";
+          } else {
+            tierClass = "bg-secondary/20 text-secondary border-secondary/35 font-bold";
+          }
+          vSpan.className = `v badge badge-sm font-mono tabular-nums ${tierClass}`;
           vSpan.textContent = `${tickets} ${isLeafish(type) ? "tk" : "h"}`;
           row.appendChild(vSpan);
         }
@@ -597,21 +660,21 @@ const rawTreeData = {
 
       if (n.conf) {
         const tConf = document.createElement("span");
-        tConf.className = "tag conf badge badge-xs badge-error";
+        tConf.className = "tag conf badge badge-xs badge-error gap-1";
         tConf.textContent = "2 padres";
         row.appendChild(tConf);
       }
 
       if (n.pend) {
         const tPend = document.createElement("span");
-        tPend.className = "tag pend badge badge-xs badge-warning";
+        tPend.className = "tag pend badge badge-xs badge-warning gap-1";
         tPend.textContent = "fusión pendiente";
         row.appendChild(tPend);
       }
 
       if (n.into) {
         const tGone = document.createElement("span");
-        tGone.className = "tag gone badge badge-xs badge-info";
+        tGone.className = "tag gone badge badge-xs badge-info gap-1";
         tGone.textContent = `se fusiona en [${n.into}]`;
         row.appendChild(tGone);
       }
@@ -627,16 +690,16 @@ const rawTreeData = {
 
       if (n.fuse && n.fuse.length) {
         const fb = document.createElement("div");
-        fb.className = "fuse ml-7 my-1 p-2 border-l-2 border-warning bg-base-200/50 text-xxs text-base-content/70 rounded";
-        const fh = document.createElement("span");
-        fh.className = "fh block font-semibold text-warning uppercase tracking-wider mb-1";
+        fb.className = "fuse alert alert-warning alert-soft text-xs border border-warning/30 p-2.5 my-1 ml-7 rounded-xl";
+        const fh = document.createElement("div");
+        fh.className = "fh block font-semibold text-warning tracking-wide mb-1";
         const fvol = n.fuse.reduce((acc, x) => acc + x.v, 0);
         fh.innerHTML = `absorbe <strong>${n.fuse.length}</strong> ${n.fuse.length === 1 ? "categoría" : "categorías"} &middot; <strong>${fvol.toLocaleString("es")}</strong> tk`;
         fb.appendChild(fh);
 
         n.fuse.forEach((x) => {
-          const fi = document.createElement("span");
-          fi.className = "fi block font-mono text-xxs tabular-nums";
+          const fi = document.createElement("div");
+          fi.className = "fi block font-mono text-xs tabular-nums text-base-content/80";
           const fid = document.createElement("span");
           fid.className = "id mr-2 text-base-content/40";
           fid.textContent = x.id ? `[${x.id}]` : "[sin id]";
@@ -677,7 +740,7 @@ const rawTreeData = {
     const ej = D.ej || [];
 
     let h = '<h3 class="text-sm font-bold text-base-content mb-2 border-b border-base-300 pb-1.5">Métricas estructurales</h3><p class="text-xs text-base-content/60 mb-3">12.076 tickets de la rama 2 (2025-11-21 a 2026-10-06).</p>';
-    h += '<div class="overflow-x-auto mb-6"><table class="table table-sm table-zebra w-full text-xs font-mono"><caption class="sr-only">Métricas estructurales comparativas</caption><thead><tr><th scope="col">Métrica</th><th scope="col" class="text-right">Actual</th><th scope="col" class="text-right">A - intención</th><th scope="col" class="text-right">B - sistema</th><th scope="col" class="text-right">C - híbrida</th></tr></thead><tbody>';
+    h += '<div class="table-shell table-shell--stack rounded-box border border-base-300 bg-base-100 mb-6"><div class="scrollbar-thin overflow-x-auto max-h-none" data-table-scroll><table class="table table-sm table-zebra w-full text-xs font-mono"><caption class="sr-only">Métricas estructurales comparativas</caption><thead><tr><th scope="col">Métrica</th><th scope="col" class="text-right">Actual</th><th scope="col" class="text-right">A - intención</th><th scope="col" class="text-right">B - sistema</th><th scope="col" class="text-right">C - híbrida</th></tr></thead><tbody>';
 
     comp.forEach((r) => {
       const w = { actual: "", a: "", b: "", c: "" };
@@ -687,23 +750,23 @@ const rawTreeData = {
       else if (r.mejor === "actual") w.actual = "text-success font-bold bg-success/10";
 
       h += `<tr><td scope="row" class="font-sans font-medium">${esc(r.m)}${r.u ? ` <span class="text-base-content/50 font-normal">(${esc(r.u)})</span>` : ""}</td>` +
-           `<td class="text-right ${w.actual}">${esc(r.actual)}</td>` +
-           `<td class="text-right ${w.a}">${esc(r.a)}</td>` +
-           `<td class="text-right ${w.b}">${esc(r.b)}</td>` +
-           `<td class="text-right ${w.c}">${esc(r.c)}</td></tr>`;
+           `<td class="text-right ${w.actual}" data-label="Actual">${esc(r.actual)}</td>` +
+           `<td class="text-right ${w.a}" data-label="A - intención">${esc(r.a)}</td>` +
+           `<td class="text-right ${w.b}" data-label="B - sistema">${esc(r.b)}</td>` +
+           `<td class="text-right ${w.c}" data-label="C - híbrida">${esc(r.c)}</td></tr>`;
     });
-    h += '</tbody></table></div>';
+    h += '</tbody></table></div></div>';
 
     h += '<h3 class="text-sm font-bold text-base-content mb-2 border-b border-base-300 pb-1.5">Las 30 categorías más usadas: dónde están hoy y dónde quedarían</h3>';
     h += '<p class="text-xs text-base-content/60 mb-3">Ordenadas por volumen. En B todas quedan a 2 selecciones.</p>';
-    h += '<div class="overflow-x-auto"><table class="table table-sm table-zebra w-full text-xs font-mono"><caption class="sr-only">30 categorías más usadas</caption><thead><tr><th scope="col" class="text-right">Tickets</th><th scope="col" class="text-right">Sel. hoy</th><th scope="col">Ruta actual</th><th scope="col">Ruta B</th><th scope="col">Ruta C</th></tr></thead><tbody>';
+    h += '<div class="table-shell table-shell--stack rounded-box border border-base-300 bg-base-100"><div class="scrollbar-thin overflow-x-auto max-h-none" data-table-scroll><table class="table table-sm table-zebra w-full text-xs font-mono"><caption class="sr-only">30 categorías más usadas</caption><thead><tr><th scope="col" class="text-right">Tickets</th><th scope="col" class="text-right">Sel. hoy</th><th scope="col">Ruta actual</th><th scope="col">Ruta B</th><th scope="col">Ruta C</th></tr></thead><tbody>';
 
     ej.forEach((r) => {
       const seg = (r.desde || "").split(" > ");
-      h += `<tr><td class="text-right font-bold">${r.v}</td><td class="text-right">${seg.length}</td>` +
-           `<td class="font-sans">${esc(r.desde)}</td><td class="font-sans">${cleanPath(r.hasta)}</td><td class="font-sans">${cleanPath(r.hastaC)}</td></tr>`;
+      h += `<tr><td class="text-right font-bold" data-label="Tickets">${r.v}</td><td class="text-right" data-label="Sel. hoy">${seg.length}</td>` +
+           `<td class="font-sans" data-label="Ruta actual">${esc(r.desde)}</td><td class="font-sans" data-label="Ruta B">${cleanPath(r.hasta)}</td><td class="font-sans" data-label="Ruta C">${cleanPath(r.hastaC)}</td></tr>`;
     });
-    h += '</tbody></table></div>';
+    h += '</tbody></table></div></div>';
 
     cmpEl.innerHTML = h;
 
@@ -776,25 +839,52 @@ const rawTreeData = {
     build();
   }
 
-  function toggleFullscreen(forceActive?: boolean): void {
+  function updateFullscreenUI(active: boolean): void {
     const container = document.getElementById("tree-explorer-container");
     const btnFs = document.getElementById("btn-toggle-fullscreen");
     if (!container) return;
     const iconExpand = btnFs?.querySelector(".icon-expand");
     const iconCompress = btnFs?.querySelector(".icon-compress");
     const fsText = btnFs?.querySelector(".fs-text");
+    const fsEscapeHint = container.querySelector(".fs-escape-hint");
 
-    const active = forceActive !== undefined ? forceActive : !container.classList.contains("fullscreen-active");
     if (active) {
       container.classList.add("fullscreen-active");
       iconExpand?.classList.add("hidden");
       iconCompress?.classList.remove("hidden");
       if (fsText) fsText.textContent = "Salir";
+      btnFs?.setAttribute("aria-pressed", "true");
+      fsEscapeHint?.classList.remove("hidden");
     } else {
       container.classList.remove("fullscreen-active");
       iconExpand?.classList.remove("hidden");
       iconCompress?.classList.add("hidden");
       if (fsText) fsText.textContent = "Pantalla completa";
+      btnFs?.setAttribute("aria-pressed", "false");
+      fsEscapeHint?.classList.add("hidden");
+    }
+  }
+
+  function toggleFullscreen(forceActive?: boolean): void {
+    const container = document.getElementById("tree-explorer-container");
+    if (!container) return;
+
+    const currentActive =
+      container.classList.contains("fullscreen-active") ||
+      document.fullscreenElement === container;
+
+    const shouldBeActive = forceActive !== undefined ? forceActive : !currentActive;
+
+    updateFullscreenUI(shouldBeActive);
+
+    if (shouldBeActive) {
+      if (container.requestFullscreen && document.fullscreenElement !== container) {
+        container.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
     }
   }
 
@@ -807,6 +897,8 @@ const rawTreeData = {
       clearTimeout(debounceTimer);
       debounceTimer = null;
     }
+    currentView = "c";
+    query = "";
   }
 
   function initTreeExplorer(): void {
@@ -817,11 +909,26 @@ const rawTreeData = {
     abortController = new AbortController();
     const { signal } = abortController;
 
+    const handleFullscreenChange = () => {
+      const isNowFs = document.fullscreenElement === container;
+      if (!isNowFs && container.classList.contains("fullscreen-active")) {
+        updateFullscreenUI(false);
+      } else if (isNowFs && !container.classList.contains("fullscreen-active")) {
+        updateFullscreenUI(true);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange, { signal });
+
     window.addEventListener(
       "keydown",
       (e) => {
-        if (e.key === "Escape" && container.classList.contains("fullscreen-active")) {
-          toggleFullscreen(false);
+        if (e.key === "Escape") {
+          const isFs =
+            container.classList.contains("fullscreen-active") ||
+            document.fullscreenElement === container;
+          if (isFs) {
+            toggleFullscreen(false);
+          }
         }
       },
       { signal }
@@ -831,7 +938,9 @@ const rawTreeData = {
     btnFs?.addEventListener("click", () => toggleFullscreen(), { signal });
 
     const searchInput = document.getElementById("tree-search-input") as HTMLInputElement | null;
-    const clearBtn = document.getElementById("btn-tree-search-clear");
+    const clearBtn =
+      document.getElementById("clear-tree-search-input") ||
+      document.querySelector('[data-clear-btn="tree-search-input"]');
 
     searchInput?.addEventListener(
       "input",

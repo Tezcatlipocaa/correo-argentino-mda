@@ -1,5 +1,10 @@
 ---
 import { MDA_TI_REPORT_DATA, type MdaReportData } from "@lib/categories/fixtures/mda-ti-report-data";
+import TableShell from "@components/ui/TableShell.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
+import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import { Icon } from "astro-icon/components";
 
 interface Props {
   data?: MdaReportData;
@@ -9,88 +14,88 @@ const { data = MDA_TI_REPORT_DATA } = Astro.props;
 const { hero, section1, section2, section3, section4, section5, section6, section7 } = data;
 ---
 
-<article class="space-y-12 text-base-content">
-  <header class="rounded-2xl overflow-hidden bg-neutral text-neutral-content p-6 sm:p-10 shadow-lg border border-neutral-content/10">
+<article id="category-executive-report" class="space-y-12 text-base-content relative transition-all" data-fullscreen-root>
+  <header class="rounded-2xl bg-base-100 text-base-content p-6 sm:p-10 shadow-sm border border-base-300 relative">
+    <div class="absolute top-4 right-4 sm:top-6 sm:right-6">
+      <button
+        id="btn-report-fullscreen"
+        type="button"
+        class="btn btn-sm btn-ghost gap-1.5 text-xs text-base-content/80 hover:text-base-content"
+        title="Alternar pantalla completa"
+        aria-label="Alternar informe en pantalla completa"
+      >
+        <Icon name="boxicons:fullscreen" size={18} class="icon-expand" />
+        <Icon name="boxicons:fullscreen-exit" size={18} class="icon-compress hidden" />
+        <span class="fs-text hidden sm:inline">Pantalla completa</span>
+      </button>
+    </div>
+
     <div class="max-w-5xl space-y-6">
-      <div class="space-y-2">
-        <p class="text-xs sm:text-sm font-bold uppercase tracking-widest text-error">
+      <div class="space-y-2 pr-12 sm:pr-0">
+        <p class="text-xs sm:text-sm font-bold uppercase tracking-widest text-secondary">
           {hero.eyebrow}
         </p>
-        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-neutral-content leading-tight">
+        <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-base-content leading-tight">
           {hero.title}
         </h1>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-neutral-content/20">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-6 border-t border-base-200">
         {hero.kpis.map((kpi) => (
-          <div class="p-4 rounded-xl bg-neutral-content/5 border border-neutral-content/10 space-y-1">
-            <span class="block text-3xl sm:text-4xl font-extrabold font-mono tracking-tight text-error stat-value">
-              {kpi.value}
-            </span>
-            <span class="block text-xs sm:text-sm text-neutral-content/80 leading-snug">
-              {kpi.label}
-            </span>
-          </div>
+          <StatsCard label={kpi.label} value={kpi.value} color="error" size="lg" />
         ))}
       </div>
 
-      <p class="text-sm sm:text-base text-neutral-content/90 max-w-4xl leading-relaxed">
+      <p class="text-sm sm:text-base text-base-content/85 max-w-4xl leading-relaxed">
         {hero.subtitle}
       </p>
 
-      <div class="pt-4 border-t border-neutral-content/15 text-xs text-neutral-content/70 max-w-4xl leading-relaxed">
-        <strong class="text-neutral-content font-semibold">Método:</strong> {hero.methodology}
+      <div class="pt-4 border-t border-base-200 text-xs text-base-content/70 max-w-4xl leading-relaxed">
+        <strong class="text-base-content font-semibold">Método:</strong> {hero.methodology}
       </div>
     </div>
   </header>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-1-heading">
-    <div class="space-y-2">
-      <h2 id="sec-1-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">1.</span>
-        <span>Radiografía: dónde duele hoy</span>
-      </h2>
-      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
-        {section1.description}
-      </p>
-    </div>
+    <SectionHeader
+      id="sec-1-heading"
+      index={1}
+      title="Radiografía: dónde duele hoy"
+      description={section1.description}
+    />
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">719</span>
-        <span class="block text-xs text-base-content/70">nodos en la rama</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">377</span>
-        <span class="block text-xs text-base-content/70">nunca recibieron ticket (52%)</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">4,71</span>
-        <span class="block text-xs text-base-content/70">selecciones promedio para ubicar categoría</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">552</span>
-        <span class="block text-xs text-base-content/70">tickets (4,6%) exigen 6 o más clics</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-warning">25</span>
-        <span class="block text-xs text-base-content/70">nodos comodín ("Consulta", "Fallas")</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-error">227</span>
-        <span class="block text-xs text-base-content/70">ramas con subárbol entero en 0</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono">62,4%</span>
-        <span class="block text-xs text-base-content/70">de tickets entran por teléfono</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono">16</span>
-        <span class="block text-xs text-base-content/70">hojas concentran el 50% del volumen</span>
-      </div>
-    </div>
+    <StatsGrid base={2} lg={4}>
+      <StatsCard value="719" label="nodos en la rama" color="error" />
+      <StatsCard
+        value="377"
+        label="nunca recibieron ticket (52%)"
+        color="error"
+      />
+      <StatsCard
+        value="4,71"
+        label="selecciones promedio para ubicar categoría"
+        color="error"
+      />
+      <StatsCard
+        value="552"
+        label="tickets (4,6%) exigen 6 o más clics"
+        color="error"
+      />
+      <StatsCard
+        value="25"
+        label={`nodos comodín ("Consulta", "Fallas")`}
+        color="warning"
+      />
+      <StatsCard
+        value="227"
+        label="ramas con subárbol entero en 0"
+        color="error"
+      />
+      <StatsCard value="62,4%" label="de tickets entran por teléfono" />
+      <StatsCard value="16" label="hojas concentran el 50% del volumen" />
+    </StatsGrid>
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table data-testid="table-weak-points" class="table table-sm md:table-md w-full">
         <caption class="sr-only">Diagnóstico de puntos débiles y desperdicio estructural del árbol de categorías actual</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -105,30 +110,27 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           {section1.weakPoints.map((item) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="font-bold text-base-content py-3 px-4 text-left font-normal">{item.point}</th>
-              <td class="text-right font-mono font-semibold py-3 px-4 text-error whitespace-nowrap">
+              <td class="text-right font-mono font-semibold py-3 px-4 text-error whitespace-nowrap" data-label="Magnitud">
                 {item.magnitude}
               </td>
-              <td class="text-base-content/80 py-3 px-4">{item.measurement}</td>
-              <td class="text-base-content/90 py-3 px-4">{item.userImpact}</td>
+              <td class="text-base-content/80 py-3 px-4" data-label="Cómo se mide">{item.measurement}</td>
+              <td class="text-base-content/90 py-3 px-4" data-label="Por qué afecta al usuario">{item.userImpact}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
   </section>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-2-heading">
-    <div class="space-y-2">
-      <h2 id="sec-2-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">2.</span>
-        <span>La demanda está concentrada: pocas categorías hacen todo el trabajo</span>
-      </h2>
-      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
-        {section2.description}
-      </p>
-    </div>
+    <SectionHeader
+      id="sec-2-heading"
+      index={2}
+      title="La demanda está concentrada: pocas categorías hacen todo el trabajo"
+      description={section2.description}
+    />
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table data-testid="table-pareto" class="table table-sm md:table-md w-full">
         <caption class="sr-only">Concentración de demanda por tramos del catálogo</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -145,17 +147,17 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           {section2.pareto.map((row) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="font-semibold py-3 px-4 text-left font-normal">{row.range}</th>
-              <td class="text-right font-mono py-3 px-4">{row.leaves}</td>
-              <td class="text-right font-mono text-base-content/70 py-3 px-4">{row.catalogPercent}</td>
-              <td class="text-right font-mono font-bold py-3 px-4">{row.tickets.toLocaleString("es-AR")}</td>
-              <td class="text-right font-mono font-semibold py-3 px-4">{row.volumePercent}</td>
-              <td class="py-3 px-4">
+              <td class="text-right font-mono py-3 px-4" data-label="Hojas">{row.leaves}</td>
+              <td class="text-right font-mono text-base-content/70 py-3 px-4" data-label="% Catálogo">{row.catalogPercent}</td>
+              <td class="text-right font-mono font-bold py-3 px-4" data-label="Tickets">{row.tickets.toLocaleString("es-AR")}</td>
+              <td class="text-right font-mono font-semibold py-3 px-4" data-label="% Volumen">{row.volumePercent}</td>
+              <td class="py-3 px-4" data-label="Cobertura">
                 <div class="w-full bg-base-200 rounded-md h-6 overflow-hidden flex items-center relative">
                   <div
-                    class="h-full bg-primary/70 transition-all"
+                    class="h-full bg-secondary transition-all"
                     style={`width: ${parseFloat(row.volumePercent.replace(",", ".")) * 1.2}%`}
                   ></div>
-                  <span class="absolute left-2 text-xs font-mono font-bold text-base-content">
+                  <span class="absolute left-2.5 text-xs font-mono font-bold text-white drop-shadow-xs">
                     {row.coverage}
                   </span>
                 </div>
@@ -164,14 +166,14 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3 shadow-sm">
         <h3 class="font-bold text-sm uppercase tracking-wide text-base-content/80">
           Distribución de hojas por uso
         </h3>
-        <div class="overflow-x-auto">
+        <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
           <table class="table table-xs md:table-sm w-full">
             <caption class="sr-only">Distribución de hojas por volumen de tickets</caption>
             <thead class="bg-base-200/50">
@@ -184,19 +186,19 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
               {section2.usageDistribution.map((item) => (
                 <tr class="hover:bg-base-200/30">
                   <th scope="row" class="py-2 text-left font-normal">{item.bracket}</th>
-                  <td class="text-right font-mono font-bold py-2">{item.leaves}</td>
+                  <td class="text-right font-mono font-bold py-2" data-label="Hojas">{item.leaves}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TableShell>
       </div>
 
       <div class="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3 shadow-sm">
         <h3 class="font-bold text-sm uppercase tracking-wide text-base-content/80">
           Volumen mensual de la rama
         </h3>
-        <div class="overflow-x-auto">
+        <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
           <table class="table table-xs md:table-sm w-full">
             <caption class="sr-only">Volumen mensual histórico de la rama Mesa de Ayuda TI</caption>
             <thead class="bg-base-200/50">
@@ -209,54 +211,51 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
               {section2.monthlyVolume.map((item) => (
                 <tr class="hover:bg-base-200/30">
                   <th scope="row" class="py-2 text-left font-normal">{item.month}</th>
-                  <td class="text-right font-mono font-bold py-2">{item.tickets.toLocaleString("es-AR")}</td>
+                  <td class="text-right font-mono font-bold py-2" data-label="Tickets">{item.tickets.toLocaleString("es-AR")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TableShell>
       </div>
     </div>
 
-    <div class="rounded-xl bg-success/10 border-l-4 border-success p-4 text-sm text-base-content space-y-1">
-      <strong class="text-success font-bold block">Lectura para la decisión:</strong>
-      <p class="text-base-content/80">
+    <div class="rounded-xl bg-base-200/70 p-5 text-sm text-base-content space-y-1.5">
+      <strong class="text-secondary font-bold text-base block">Lectura para la decisión:</strong>
+      <p class="text-base-content/85 leading-relaxed">
         De 490 hojas, solo 340 recibieron tickets y 50 acumulan casi el 80% del volumen. Los 377 nodos vacíos se pueden retirar sin costo operativo ni tickets que reasignar.
       </p>
     </div>
   </section>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-3-heading">
-    <div class="space-y-2">
-      <h2 id="sec-3-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">3.</span>
-        <span>Casi la mitad del volumen se cierra en el acto</span>
-      </h2>
-      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
-        {section3.description}
-      </p>
-    </div>
+    <SectionHeader
+      id="sec-3-heading"
+      index={3}
+      title="Casi la mitad del volumen se cierra en el acto"
+      description={section3.description}
+    />
 
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="p-4 rounded-xl bg-success/10 border border-success/30 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-success">46,2%</span>
-        <span class="block text-xs text-base-content/70">se cierra en 15 minutos o menos</span>
-      </div>
-      <div class="p-4 rounded-xl bg-success/10 border border-success/30 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-success">37,3%</span>
-        <span class="block text-xs text-base-content/70">se cierra en 1 minuto o menos</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono">89,8%</span>
-        <span class="block text-xs text-base-content/70">con fecha de resolución</span>
-      </div>
-      <div class="p-4 rounded-xl bg-base-200/60 border border-base-300 space-y-1">
-        <span class="block text-2xl sm:text-3xl font-bold font-mono text-warning">10,2%</span>
-        <span class="block text-xs text-base-content/70">sin fecha de resolución (1.212)</span>
-      </div>
-    </div>
+    <StatsGrid base={2} lg={4}>
+      <StatsCard
+        value="46,2%"
+        label="se cierra en 15 minutos o menos"
+        color="success"
+      />
+      <StatsCard
+        value="37,3%"
+        label="se cierra en 1 minuto o menos"
+        color="success"
+      />
+      <StatsCard value="89,8%" label="con fecha de resolución" />
+      <StatsCard
+        value="10,2%"
+        label="sin fecha de resolución (1.212)"
+        color="warning"
+      />
+    </StatsGrid>
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table data-testid="table-closure-times" class="table table-sm md:table-md w-full">
         <caption class="sr-only">Distribución del volumen de tickets según el tiempo transcurrido entre creación y cierre</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -272,16 +271,16 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           {section3.closureTimes.map((row) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="font-semibold py-3 px-4 text-left font-normal">{row.timeframe}</th>
-              <td class="text-right font-mono font-bold py-3 px-4">{row.tickets.toLocaleString("es-AR")}</td>
-              <td class="text-right font-mono py-3 px-4">{row.volumePercent}</td>
-              <td class="text-right font-mono font-semibold py-3 px-4">{row.cumulativePercent}</td>
-              <td class="py-3 px-4">
+              <td class="text-right font-mono font-bold py-3 px-4" data-label="Tickets">{row.tickets.toLocaleString("es-AR")}</td>
+              <td class="text-right font-mono py-3 px-4" data-label="% Rama">{row.volumePercent}</td>
+              <td class="text-right font-mono font-semibold py-3 px-4" data-label="Acumulado">{row.cumulativePercent}</td>
+              <td class="py-3 px-4" data-label="Cobertura">
                 <div class="w-full bg-base-200 rounded-md h-6 overflow-hidden flex items-center relative">
                   <div
-                    class="h-full bg-primary/70 transition-all"
+                    class="h-full bg-secondary transition-all"
                     style={`width: ${parseFloat(row.volumePercent.replace(",", ".")) * 2}%`}
                   ></div>
-                  <span class="absolute left-2 text-xs font-mono font-bold text-base-content">
+                  <span class="absolute left-2.5 text-xs font-mono font-bold text-white drop-shadow-xs">
                     {row.coverage}
                   </span>
                 </div>
@@ -290,7 +289,7 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
 
     <div class="space-y-3 pt-2">
       <h3 class="font-bold text-base text-base-content">
@@ -299,7 +298,7 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
       <p class="text-xs sm:text-sm text-base-content/70">
         10 hojas que concentran más de 2.200 tickets resueltos en menos de 15 minutos. Elegir la hoja <em>es</em> la resolución.
       </p>
-      <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
         <table class="table table-sm w-full">
           <caption class="sr-only">Hojas con mayor volumen resueltas en 15 minutos o menos (atajos del operador)</caption>
           <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -314,21 +313,21 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
             {section3.immediateLeaves.map((leaf) => (
               <tr class="hover:bg-base-200/40">
                 <th scope="row" class="font-medium py-2.5 px-4 text-left font-normal">{leaf.leaf}</th>
-                <td class="text-right font-mono font-bold py-2.5 px-4">{leaf.tickets.toLocaleString("es-AR")}</td>
-                <td class="text-right font-mono py-2.5 px-4 text-error font-bold">{leaf.selections}</td>
-                <td class="text-right font-mono font-bold text-success py-2.5 px-4">{leaf.closesUnder15MinPercent}</td>
+                <td class="text-right font-mono font-bold py-2.5 px-4" data-label="Tickets">{leaf.tickets.toLocaleString("es-AR")}</td>
+                <td class="text-right font-mono py-2.5 px-4 text-error font-bold" data-label="Selecciones hoy">{leaf.selections}</td>
+                <td class="text-right font-mono font-bold text-success py-2.5 px-4" data-label="Cierra en ≤15 min">{leaf.closesUnder15MinPercent}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </TableShell>
     </div>
 
     <div class="space-y-3 pt-2">
       <h3 class="font-bold text-base text-base-content">
         Trabajo de ciclo largo (requiere gestión física o tercerizada)
       </h3>
-      <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+      <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
         <table class="table table-sm w-full">
           <caption class="sr-only">Hojas que corresponden a trabajo de ciclo largo con resolución de varios días</caption>
           <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -343,38 +342,35 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
             {section3.longCycleLeaves.map((leaf) => (
               <tr class="hover:bg-base-200/40">
                 <th scope="row" class="font-medium py-2.5 px-4 text-left font-normal">{leaf.leaf}</th>
-                <td class="text-right font-mono font-bold py-2.5 px-4">
+                <td class="text-right font-mono font-bold py-2.5 px-4" data-label="Tickets">
                   {leaf.tickets ? leaf.tickets.toLocaleString("es-AR") : "—"}
                 </td>
-                <td class="text-right font-mono py-2.5 px-4">{leaf.closesUnder15MinPercent}</td>
-                <td class="text-right font-mono font-semibold py-2.5 px-4 text-warning">{leaf.resolutionMedian}</td>
+                <td class="text-right font-mono py-2.5 px-4" data-label="Cierra en ≤15 min">{leaf.closesUnder15MinPercent}</td>
+                <td class="text-right font-mono font-semibold py-2.5 px-4 text-warning" data-label="Mediana de resolución">{leaf.resolutionMedian}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </TableShell>
     </div>
 
-    <div class="rounded-xl bg-success/10 border-l-4 border-success p-4 text-sm text-base-content space-y-1">
-      <strong class="text-success font-bold block">Consecuencia para el diseño:</strong>
-      <p class="text-base-content/80">
+    <div class="rounded-xl bg-base-200/70 p-5 text-sm text-base-content space-y-1.5">
+      <strong class="text-secondary font-bold text-base block">Consecuencia para el diseño:</strong>
+      <p class="text-base-content/85 leading-relaxed">
         Hay que optimizar para enrutar rápido el 46% que se resuelve en el acto, no el 2,6% que necesita trabajo real. Las hojas de cierre inmediato hoy están a 3, 4 y hasta 5 selecciones. En la Propuesta C todas quedan a exactamente 3 selecciones.
       </p>
     </div>
   </section>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-4-heading">
-    <div class="space-y-2">
-      <h2 id="sec-4-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">4.</span>
-        <span>Tres formas de reordenar, medidas contra el árbol actual</span>
-      </h2>
-      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
-        {section4.description}
-      </p>
-    </div>
+    <SectionHeader
+      id="sec-4-heading"
+      index={4}
+      title="Tres formas de reordenar, medidas contra el árbol actual"
+      description={section4.description}
+    />
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table data-testid="table-comparison-matrix" class="table table-sm md:table-md w-full">
         <caption class="sr-only">Matriz comparativa de métricas entre la taxonomía actual y las propuestas A, B y C</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -383,36 +379,36 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
             <th scope="col" class="py-3 px-4 text-right">Hoy</th>
             <th scope="col" class="py-3 px-4 text-right">Propuesta A · Intención</th>
             <th scope="col" class="py-3 px-4 text-right">Propuesta B · Sistema</th>
-            <th scope="col" class="py-3 px-4 text-right bg-primary/10 text-primary">Propuesta C · Híbrida</th>
+            <th scope="col" class="py-3 px-4 text-right bg-secondary/10 text-secondary font-bold">Propuesta C · Híbrida</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-base-200 text-sm">
           {section4.indicators.map((ind) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="font-medium py-3 px-4 text-left font-normal">{ind.indicator}</th>
-              <td class="text-right font-mono font-semibold py-3 px-4 text-error">{ind.today}</td>
-              <td class="text-right font-mono py-3 px-4">{ind.propuestaA}</td>
-              <td class="text-right font-mono py-3 px-4">{ind.propuestaB}</td>
-              <td class="text-right font-mono font-bold py-3 px-4 bg-primary/5 text-primary">
+              <td class="text-right font-mono font-semibold py-3 px-4 text-error" data-label="Hoy">{ind.today}</td>
+              <td class="text-right font-mono py-3 px-4" data-label="Propuesta A">{ind.propuestaA}</td>
+              <td class="text-right font-mono py-3 px-4" data-label="Propuesta B">{ind.propuestaB}</td>
+              <td class="text-right font-mono font-bold py-3 px-4 bg-secondary/5 text-secondary" data-label="Propuesta C">
                 {ind.propuestaC}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="rounded-xl bg-warning/10 border-l-4 border-warning p-4 text-sm text-base-content space-y-1">
-        <strong class="text-warning font-bold block">El límite de la Propuesta A:</strong>
-        <p class="text-base-content/80">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="rounded-xl bg-base-200/70 p-5 text-sm text-base-content space-y-1.5">
+        <strong class="text-base-content font-bold text-base block">El límite de la Propuesta A:</strong>
+        <p class="text-base-content/85 leading-relaxed">
           36 sistemas sirven a más de una intención ("Impresora láser" recibe consultas, fallas y cambios). InvGate admite un solo padre, por lo que A obliga a duplicar esos nodos con sufijo y queda en 453 nodos.
         </p>
       </div>
 
-      <div class="rounded-xl bg-success/10 border-l-4 border-success p-4 text-sm text-base-content space-y-1">
-        <strong class="text-success font-bold block">Por qué gana la Propuesta C:</strong>
-        <p class="text-base-content/80">
+      <div class="rounded-xl bg-base-200/70 p-5 text-sm text-base-content space-y-1.5">
+        <strong class="text-secondary font-bold text-base block">Por qué gana la Propuesta C:</strong>
+        <p class="text-base-content/85 leading-relaxed">
           Mantiene el eje de sistemas y agrupa en 10 familias que bajan la primera pantalla de 52 a 10 opciones reconocibles. Sin duplicaciones ni conflicto estructural.
         </p>
       </div>
@@ -420,14 +416,13 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
   </section>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-5-heading">
-    <div class="space-y-2">
-      <h2 id="sec-5-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">5.</span>
-        <span>Qué hace falta para aplicarlo, y qué no</span>
-      </h2>
-    </div>
+    <SectionHeader
+      id="sec-5-heading"
+      index={5}
+      title="Qué hace falta para aplicarlo, y qué no"
+    />
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table class="table table-sm md:table-md w-full">
         <caption class="sr-only">Acciones requeridas, alcance y tickets a mover para implementar la propuesta</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -442,35 +437,32 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           {section5.actions.map((act) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="font-bold py-3 px-4 text-left font-normal">{act.action}</th>
-              <td class="text-right font-mono py-3 px-4">{act.scope}</td>
-              <td class="text-right font-mono font-bold py-3 px-4 text-success">{act.ticketsToMove}</td>
-              <td class="text-base-content/80 py-3 px-4">{act.observation}</td>
+              <td class="text-right font-mono py-3 px-4" data-label="Alcance">{act.scope}</td>
+              <td class="text-right font-mono font-bold py-3 px-4 text-success" data-label="Tickets a mover">{act.ticketsToMove}</td>
+              <td class="text-base-content/80 py-3 px-4" data-label="Observación">{act.observation}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
 
-    <div class="rounded-xl bg-info/10 border-l-4 border-info p-4 text-sm text-base-content space-y-1">
-      <strong class="text-info font-bold block">Resumen operativo:</strong>
-      <p class="text-base-content/80">
+    <div class="rounded-xl bg-base-200/70 p-5 text-sm text-base-content space-y-1.5">
+      <strong class="text-secondary font-bold text-base block">Resumen operativo:</strong>
+      <p class="text-base-content/85 leading-relaxed">
         La etapa sin riesgo cubre el 96,3% del volumen sin mover un solo ticket histórico. Solo cambia la jerarquía de navegación y se retiran ramas sin uso.
       </p>
     </div>
   </section>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-6-heading">
-    <div class="space-y-2">
-      <h2 id="sec-6-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">6.</span>
-        <span>Dónde el rediseño NO ayuda: advertencia metodológica</span>
-      </h2>
-      <p class="text-sm sm:text-base text-base-content/70 max-w-3xl">
-        {section6.description}
-      </p>
-    </div>
+    <SectionHeader
+      id="sec-6-heading"
+      index={6}
+      title="Dónde el rediseño NO ayuda: advertencia metodológica"
+      description={section6.description}
+    />
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table class="table table-sm md:table-md w-full">
         <caption class="sr-only">Advertencias metodológicas y contraste empírico de hipótesis intuitivas sobre tiempos de resolución</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
@@ -484,13 +476,13 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
           {section6.hypotheses.map((hyp) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="font-bold py-3 px-4 text-left font-normal">{hyp.hypothesis}</th>
-              <td class="text-right font-mono py-3 px-4 text-base-content/70">{hyp.resolutionTime}</td>
-              <td class="text-base-content/90 py-3 px-4 leading-relaxed">{hyp.reality}</td>
+              <td class="text-right font-mono py-3 px-4 text-base-content/70" data-label="Tiempo de resolución">{hyp.resolutionTime}</td>
+              <td class="text-base-content/90 py-3 px-4 leading-relaxed" data-label="Qué dicen los datos">{hyp.reality}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
 
     <div class="rounded-xl bg-neutral/5 border border-base-300 p-4 text-sm text-base-content space-y-1">
       <strong class="font-bold block text-base-content">Conclusión honesta:</strong>
@@ -501,38 +493,136 @@ const { hero, section1, section2, section3, section4, section5, section6, sectio
   </section>
 
   <section class="border-t-2 border-base-300 pt-8 space-y-6" aria-labelledby="sec-7-heading">
-    <div class="space-y-2">
-      <h2 id="sec-7-heading" class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-baseline gap-2">
-        <span class="text-error font-mono text-2xl sm:text-3xl">7.</span>
-        <span>Resumen para la decisión</span>
-      </h2>
-    </div>
+    <SectionHeader id="sec-7-heading" index={7} title="Resumen para la decisión" />
 
-    <div class="overflow-x-auto rounded-xl border border-base-300 bg-base-100 shadow-sm">
+    <TableShell label="Informe ejecutivo de categorías" fullscreen={false} maxHeightClass="max-h-none">
       <table data-testid="table-decision-balance" class="table table-sm md:table-md w-full">
         <caption class="sr-only">Resumen comparativo para la decisión: situación actual frente a la Propuesta C</caption>
         <thead class="bg-base-200/80 text-base-content text-xs uppercase tracking-wider font-semibold">
           <tr>
             <th scope="col" class="py-3 px-4 w-1/2">Situación hoy</th>
-            <th scope="col" class="py-3 px-4 w-1/2 bg-primary/10 text-primary">Con la Propuesta C</th>
+            <th scope="col" class="py-3 px-4 w-1/2 bg-secondary/10 text-secondary font-bold">Con la Propuesta C</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-base-200 text-sm">
           {section7.balance.map((item) => (
             <tr class="hover:bg-base-200/40">
               <th scope="row" class="py-3 px-4 text-error font-medium text-left font-normal">{item.today}</th>
-              <td class="py-3 px-4 bg-primary/5 text-primary font-bold">{item.withPropuestaC}</td>
+              <td class="py-3 px-4 bg-secondary/5 text-secondary font-bold" data-label="Con la Propuesta C">{item.withPropuestaC}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableShell>
 
-    <div class="rounded-xl bg-primary/10 border-l-4 border-primary p-5 text-sm text-base-content space-y-2 shadow-sm">
-      <strong class="text-primary font-bold text-base block">Decisión que se pide:</strong>
-      <p class="text-base-content/90 leading-relaxed">
+    <div class="rounded-xl bg-base-200/70 p-6 text-sm text-base-content space-y-2">
+      <strong class="text-secondary font-bold text-base block">Decisión que se pide:</strong>
+      <p class="text-base-content/85 leading-relaxed">
         Aprobar la Propuesta C como estructura taxonómica objetivo y autorizar la implementación de la etapa sin riesgo (reparentado y retiro de nodos vacíos, 0 tickets movidos).
       </p>
     </div>
   </section>
 </article>
+
+<style is:global>
+  #category-executive-report.fullscreen-active,
+  #category-executive-report:fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 250 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    background-color: var(--color-base-100) !important;
+    padding: 2rem 1.5rem !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+  }
+</style>
+
+<script>
+  let abortController: AbortController | null = null;
+
+  function toggleReportFullscreen(forceActive?: boolean): void {
+    const container = document.getElementById("category-executive-report");
+    const btnFs = document.getElementById("btn-report-fullscreen");
+    if (!container) return;
+
+    const iconExpand = btnFs?.querySelector(".icon-expand");
+    const iconCompress = btnFs?.querySelector(".icon-compress");
+    const fsText = btnFs?.querySelector(".fs-text");
+
+    const isNativeFs = document.fullscreenElement === container;
+    const isClassFs = container.classList.contains("fullscreen-active");
+    const willBeActive = forceActive !== undefined ? forceActive : !(isNativeFs || isClassFs);
+
+    if (willBeActive) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen().catch(() => {
+          container.classList.add("fullscreen-active");
+        });
+      } else {
+        container.classList.add("fullscreen-active");
+      }
+      container.classList.add("fullscreen-active");
+      iconExpand?.classList.add("hidden");
+      iconCompress?.classList.remove("hidden");
+      btnFs?.setAttribute("aria-pressed", "true");
+      if (fsText) fsText.textContent = "Salir";
+    } else {
+      if (document.fullscreenElement === container && document.exitFullscreen) {
+        void document.exitFullscreen().catch(() => {});
+      }
+      container.classList.remove("fullscreen-active");
+      iconExpand?.classList.remove("hidden");
+      iconCompress?.classList.add("hidden");
+      btnFs?.setAttribute("aria-pressed", "false");
+      if (fsText) fsText.textContent = "Pantalla completa";
+    }
+  }
+
+  function teardownReportFullscreen(): void {
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
+  }
+
+  function initReportFullscreen(): void {
+    const container = document.getElementById("category-executive-report");
+    const btnFs = document.getElementById("btn-report-fullscreen");
+    if (!container || !btnFs) return;
+
+    teardownReportFullscreen();
+    abortController = new AbortController();
+    const { signal } = abortController;
+
+    btnFs.addEventListener("click", () => toggleReportFullscreen(), { signal });
+
+    document.addEventListener(
+      "fullscreenchange",
+      () => {
+        const isFs = document.fullscreenElement === container;
+        if (!isFs && container.classList.contains("fullscreen-active")) {
+          toggleReportFullscreen(false);
+        }
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "Escape" && container.classList.contains("fullscreen-active")) {
+          toggleReportFullscreen(false);
+        }
+      },
+      { signal }
+    );
+  }
+
+  initReportFullscreen();
+  document.addEventListener("astro:page-load", initReportFullscreen);
+  document.addEventListener("astro:before-swap", teardownReportFullscreen);
+</script>

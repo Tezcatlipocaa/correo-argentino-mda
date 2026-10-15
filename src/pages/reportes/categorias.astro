@@ -1,7 +1,8 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
 import CategoryBentoGrid from "@components/reportes/categories/CategoryBentoGrid.astro";
 import CategoryTreeCanvas from "@components/reportes/categories/CategoryTreeCanvas";
 import CategoryActionPlans from "@components/reportes/categories/CategoryActionPlans.astro";
@@ -9,51 +10,93 @@ import CategoryInspector from "@components/reportes/categories/CategoryInspector
 import CategoryExecutiveReport from "@components/reportes/categories/CategoryExecutiveReport.astro";
 import CategoryTreeExplorer from "@components/reportes/categories/CategoryTreeExplorer.astro";
 import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import RefreshReportButton from "@components/ui/RefreshReportButton.astro";
 import { getCategoryCatalogReport } from "@lib/categories/service";
+import { MDA_TI_PROPUESTA_C } from "@lib/categories/fixtures/mda-ti-canonical";
+import type { CategoryNode } from "@/types/categories";
 import { Icon } from "astro-icon/components";
 
 const report = await getCategoryCatalogReport(1);
 const { tree, metrics } = report;
+
+const propuestaCTree: CategoryNode = {
+  id: 9999,
+  parentId: null,
+  name: "Propuesta C (Híbrida)",
+  path: "Mesa de Ayuda TI > Propuesta C",
+  depth: 1,
+  totalTickets: MDA_TI_PROPUESTA_C.children.reduce(
+    (acc, c) => acc + (c.tickets || c.v || 0),
+    0,
+  ),
+  isLeaf: false,
+  status: "normal",
+  anomalies: [],
+  children: MDA_TI_PROPUESTA_C.families.map((fam, idx) => ({
+    id: 9000 + idx,
+    parentId: 9999,
+    name: fam.name,
+    path: `Mesa de Ayuda TI > ${fam.name}`,
+    depth: 2,
+    totalTickets: fam.tickets || fam.v || 0,
+    isLeaf: !fam.children || fam.children.length === 0,
+    status: "normal",
+    anomalies: [],
+    children: (fam.children || []).map((sys, sidx) => ({
+      id: 9100 + idx * 50 + sidx,
+      parentId: 9000 + idx,
+      name: sys.name,
+      path: `Mesa de Ayuda TI > ${fam.name} > ${sys.name}`,
+      depth: 3,
+      totalTickets: sys.tickets || sys.v || 0,
+      isLeaf: !sys.children || sys.children.length === 0,
+      status: "normal",
+      anomalies: [],
+      children: (sys.children || []).map((leaf, lidx) => ({
+        id: Number(leaf.id) || 9500 + idx * 100 + sidx * 10 + lidx,
+        parentId: 9100 + idx * 50 + sidx,
+        name: leaf.name,
+        path: `Mesa de Ayuda TI > ${fam.name} > ${sys.name} > ${leaf.name}`,
+        depth: 4,
+        totalTickets: leaf.tickets || leaf.v || 0,
+        isLeaf: true,
+        status: "normal",
+        anomalies: [],
+        children: [],
+      })),
+    })),
+  })),
+};
 ---
 
 <BaseLayout title="Árbol de Categorías | Reportes">
   <PageContainer>
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-base-200">
-      <PageHeader
-        title="Auditoría y Métricas del Árbol de Categorías"
-        description="Diagnóstico integral de la taxonomía del catálogo, análisis de dispersión y plan de simplificación estructural."
-      />
-      <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
-        <button
-          id="btn-nav-executive"
-          type="button"
-          class="btn btn-primary btn-sm gap-2"
-          title="Ver Informe Ejecutivo para Dirección"
-          data-switch-tab="report"
-        >
-          <Icon name="boxicons:file" size={18} />
-          <span>Informe para Dirección</span>
-        </button>
-        <button
+    <MetricsHeader
+      title="Auditoría y Métricas del Árbol de Categorías"
+      description="Diagnóstico integral de la taxonomía del catálogo, análisis de dispersión y plan de simplificación estructural."
+    >
+      <Fragment slot="actions">
+        <RefreshReportButton
           id="btn-refresh-categories"
-          type="button"
-          class="btn btn-outline btn-sm gap-2"
+          endpoint="api/reportes/categorias/refresh"
           title="Refrescar catálogo y recalcular métricas"
-        >
-          <Icon name="boxicons:refresh-cw" size={18} />
-          <span>Actualizar</span>
-        </button>
-      </div>
-    </div>
+          successMsg="Métricas y árbol actualizados con éxito"
+          errorMsg="Error al refrescar categorías"
+        />
+      </Fragment>
+    </MetricsHeader>
 
     <!-- Navegación de Pestañas DaisyUI -->
-    <div class="mt-6">
-      <div role="tablist" class="tabs tabs-box bg-base-200/60 p-1 rounded-xl w-fit">
+    <div class="flex justify-center">
+      <div
+        role="tablist"
+        class="tabs tabs-box bg-base-200/60 w-fit rounded-xl p-1"
+      >
         <button
           id="tab-report"
           role="tab"
           type="button"
-          class="tab tab-active font-semibold gap-2 transition-all"
+          class="tab tab-active gap-2 font-semibold transition-all"
           data-tab="report"
           aria-selected="true"
           aria-controls="panel-report"
@@ -65,7 +108,7 @@ const { tree, metrics } = report;
           id="tab-explorer"
           role="tab"
           type="button"
-          class="tab font-semibold gap-2 transition-all"
+          class="tab gap-2 font-semibold transition-all"
           data-tab="explorer"
           aria-selected="false"
           aria-controls="panel-explorer"
@@ -77,7 +120,7 @@ const { tree, metrics } = report;
           id="tab-metrics"
           role="tab"
           type="button"
-          class="tab font-semibold gap-2 transition-all"
+          class="tab gap-2 font-semibold transition-all"
           data-tab="metrics"
           aria-selected="false"
           aria-controls="panel-metrics"
@@ -96,11 +139,17 @@ const { tree, metrics } = report;
       aria-labelledby="tab-report"
       class="mt-6 space-y-10"
     >
-      <section id="informe-ejecutivo" aria-label="Informe Ejecutivo para Dirección">
+      <section
+        id="informe-ejecutivo"
+        aria-label="Informe Ejecutivo para Dirección"
+      >
         <CategoryExecutiveReport />
       </section>
 
-      <section aria-label="Planes de Acción" class="pt-6 border-t border-base-200">
+      <section
+        aria-label="Planes de Acción"
+        class="border-base-200 border-t pt-6"
+      >
         <CategoryActionPlans />
       </section>
     </div>
@@ -111,22 +160,26 @@ const { tree, metrics } = report;
       role="tabpanel"
       data-tab-panel="explorer"
       aria-labelledby="tab-explorer"
-      class="mt-6 space-y-10 hidden"
+      class="mt-6 hidden space-y-10"
     >
-      <section aria-label="Explorador del Árbol de Categorías" class="space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 class="text-xl font-bold tracking-tight text-base-content">
-              Explorador Jerárquico Interactivo
-            </h2>
-            <p class="text-xs text-base-content/60 mt-0.5">
-              Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas.
-            </p>
-          </div>
+      <section
+        aria-label="Explorador del Árbol de Categorías"
+        class="space-y-4"
+      >
+        <div
+          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <SectionHeader
+            title="Explorador Jerárquico Interactivo"
+            description="Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas."
+          />
 
           <div class="flex items-center gap-3">
             <div class="flex items-center gap-1.5">
-              <label for="branch-selector" class="text-xs font-medium text-base-content/70">
+              <label
+                for="branch-selector"
+                class="text-base-content/70 text-xs font-medium"
+              >
                 Rama:
               </label>
               <select
@@ -162,19 +215,22 @@ const { tree, metrics } = report;
         </div>
 
         <div class="relative w-full">
-          <CategoryTreeCanvas client:visible rootNode={tree} />
+          <CategoryTreeCanvas
+            client:load
+            rootNode={tree}
+            propuestaCNode={propuestaCTree}
+          />
         </div>
       </section>
 
-      <section aria-label="Explorador de Taxonomía y Propuestas" class="space-y-4">
-        <div>
-          <h2 class="text-xl font-bold tracking-tight text-base-content">
-            Explorador de Taxonomía y Propuestas Estructurales
-          </h2>
-          <p class="text-xs text-base-content/60 mt-0.5">
-            Vista tabular interactiva con buscador rápido, selector de modelos y modo pantalla completa.
-          </p>
-        </div>
+      <section
+        aria-label="Explorador de Taxonomía y Propuestas"
+        class="space-y-4"
+      >
+        <SectionHeader
+          title="Explorador de Taxonomía y Propuestas Estructurales"
+          description="Vista tabular interactiva con buscador rápido, selector de modelos y modo pantalla completa."
+        />
 
         <CategoryTreeExplorer />
       </section>
@@ -186,11 +242,11 @@ const { tree, metrics } = report;
       role="tabpanel"
       data-tab-panel="metrics"
       aria-labelledby="tab-metrics"
-      class="mt-6 space-y-6 hidden"
+      class="mt-6 hidden space-y-6"
     >
       <section aria-label="Métricas de resumen">
         <CategoryBentoGrid metrics={metrics} server:defer>
-          <div slot="fallback" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div slot="fallback" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ChartCardSkeleton count={4} />
           </div>
         </CategoryBentoGrid>
@@ -204,14 +260,19 @@ const { tree, metrics } = report;
 <script>
   import { showToast } from "@lib/toastClient";
 
-  const refreshBtn = document.getElementById("btn-refresh-categories");
-  const branchSelect = document.getElementById("branch-selector") as HTMLSelectElement | null;
+  const branchSelect = document.getElementById(
+    "branch-selector",
+  ) as HTMLSelectElement | null;
   const viewActualBtn = document.getElementById("btn-view-actual");
   const viewPropuestaBtn = document.getElementById("btn-view-propuesta");
 
   // Tab switching logic
-  const tabs = document.querySelectorAll<HTMLButtonElement>('[role="tab"][data-tab]');
-  const panels = document.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tab-panel]');
+  const tabs = document.querySelectorAll<HTMLButtonElement>(
+    '[role="tab"][data-tab]',
+  );
+  const panels = document.querySelectorAll<HTMLElement>(
+    '[role="tabpanel"][data-tab-panel]',
+  );
 
   function switchTab(tabKey: string, updateHash = true) {
     let target = tabKey;
@@ -271,46 +332,37 @@ const { tree, metrics } = report;
     if (hash) switchTab(hash, false);
   });
 
-  refreshBtn?.addEventListener("click", async () => {
-    refreshBtn.classList.add("loading");
-    try {
-      const res = await fetch(
-        `${import.meta.env.BASE_URL}api/reportes/categorias/refresh`,
-        {
-          method: "POST",
-        },
-      );
-      if (res.ok) {
-        showToast("Métricas y árbol actualizados con éxito", "alert-success");
-        setTimeout(() => {
-          window.location.reload();
-        }, 600);
-      } else {
-        showToast("Error al refrescar categorías", "alert-error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast("Error de conexión al refrescar categorías", "alert-error");
-    } finally {
-      refreshBtn.classList.remove("loading");
-    }
-  });
-
   viewActualBtn?.addEventListener("click", () => {
     viewActualBtn.classList.add("btn-active");
     viewPropuestaBtn?.classList.remove("btn-active");
+    window.dispatchEvent(
+      new CustomEvent("category:switch-model", {
+        detail: { model: "actual" },
+      }),
+    );
     showToast("Visualizando taxonomía Actual", "alert-info");
   });
 
   viewPropuestaBtn?.addEventListener("click", () => {
     viewPropuestaBtn.classList.add("btn-active");
     viewActualBtn?.classList.remove("btn-active");
+    window.dispatchEvent(
+      new CustomEvent("category:switch-model", {
+        detail: { model: "propuesta_c" },
+      }),
+    );
     showToast("Visualizando Propuesta C (Optimización)", "alert-info");
   });
 
   branchSelect?.addEventListener("change", (e) => {
     const target = e.target as HTMLSelectElement;
     const value = target.value;
+    const branchId = value === "all" ? null : Number(value);
+    window.dispatchEvent(
+      new CustomEvent("category:filter-branch", {
+        detail: { branchId },
+      }),
+    );
     if (value === "all") {
       showToast("Mostrando árbol completo", "alert-info");
     } else {

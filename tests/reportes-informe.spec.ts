@@ -40,4 +40,33 @@ test.describe("Informe Ejecutivo de Rediseño de Categorías (/reportes/categori
     await expect(page.locator("table[data-testid='table-comparison-matrix'], table:has-text('Nodos totales (hoy 719)')")).toBeVisible();
     await expect(page.locator("table[data-testid='table-decision-balance'], table:has-text('Situación hoy')")).toBeVisible();
   });
+
+  test("permite alternar pantalla completa y salir con Escape", async ({ context, page }) => {
+    await setSessionCookie(context, adminUser.signedSessionId, "localhost");
+    await setSessionCookie(context, adminUser.signedSessionId, "127.0.0.1");
+    await page.goto("/reportes/categorias");
+
+    const reportContainer = page.locator("#category-executive-report");
+    const fullscreenBtn = page.locator("#btn-report-fullscreen");
+
+    await expect(reportContainer).toBeVisible();
+    await expect(fullscreenBtn).toBeVisible();
+
+    // Estado inicial: no pantalla completa
+    await expect(reportContainer).not.toHaveClass(/fullscreen-active/);
+
+    // Activar pantalla completa
+    await fullscreenBtn.click();
+    await expect(reportContainer).toHaveClass(/fullscreen-active/);
+
+    // Salir de pantalla completa mediante botón
+    await fullscreenBtn.click();
+    await expect(reportContainer).not.toHaveClass(/fullscreen-active/);
+
+    // Volver a activar y salir con Escape
+    await fullscreenBtn.click();
+    await expect(reportContainer).toHaveClass(/fullscreen-active/);
+    await page.keyboard.press("Escape");
+    await expect(reportContainer).not.toHaveClass(/fullscreen-active/);
+  });
 });

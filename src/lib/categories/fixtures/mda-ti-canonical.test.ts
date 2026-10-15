@@ -52,7 +52,7 @@ test("MDA_TI_REPORT_DATA exports hero with 4 KPIs and sections 1 to 6", () => {
   assert.equal(MDA_TI_REPORT_DATA.hero.title, "Rediseño del árbol de categorías");
   assert.equal(MDA_TI_REPORT_DATA.hero.kpis.length, 4);
   assert.equal(MDA_TI_REPORT_DATA.hero.kpis[0].value, "52%");
-  assert.equal(MDA_TI_REPORT_DATA.hero.kpis[1].value, "4,71 → 3");
+  assert.equal(MDA_TI_REPORT_DATA.hero.kpis[1].value, "4,71");
   assert.equal(MDA_TI_REPORT_DATA.hero.kpis[2].value, "46%");
   assert.equal(MDA_TI_REPORT_DATA.hero.kpis[3].value, "0");
 
