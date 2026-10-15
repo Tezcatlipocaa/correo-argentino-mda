@@ -336,38 +336,33 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.request.headers.get("referer"),
   );
 
-  // Proteger endpoints de API para usuarios no autenticados
-  if (
-    lowerPath.startsWith("/api/cronograma") ||
-    lowerPath.startsWith("/api/disponibilidad") ||
-    lowerPath.startsWith("/api/asistencia") ||
-    lowerPath.startsWith("/api/calidad") ||
-    lowerPath.startsWith("/api/admin") ||
-    lowerPath.startsWith("/api/export") ||
-    lowerPath.startsWith("/api/profile")
-  ) {
-    if (currentUser.id === 0) {
-      return jsonError("Sesión no iniciada", 401, "no-store");
-    }
-  }
-
-  // Redirigir si no está autenticado e intenta acceder a supervisión, admin o automatizaciones (insensible a mayúsculas/minúsculas)
-  if (
-    lowerPath === "/supervision" ||
-    lowerPath.startsWith("/supervision/") ||
-    lowerPath === "/admin" ||
-    lowerPath.startsWith("/admin/") ||
-    lowerPath === "/automatizaciones" ||
-    lowerPath.startsWith("/automatizaciones/")
-  ) {
-    if (currentUser.id === 0) {
-      return redirect(resolveUrl("/login"));
-    }
-  }
-
   if (relativePath === "/login") {
     const response = await next();
     return setSecurityHeaders(response);
+  }
+
+  // Default-deny de sesión (#232): todo /api/** y /_server-islands/** exige
+  // sesión salvo la allowlist pública; toda página exige sesión salvo /404
+  // (/login ya retornó arriba). Un endpoint nuevo queda protegido por defecto.
+  const PUBLIC_API_PREFIXES = ["/api/icons"];
+  // `/generador-firmas` es pública por diseño (sección que debe funcionar sin
+  // login) y `/404` se sirve sin sesión. Cualquier otra página exige sesión.
+  const PUBLIC_PAGE_PATHS = new Set(["/404", "/generador-firmas"]);
+
+  if (currentUser.id === 0) {
+    const isApiLike =
+      lowerPath.startsWith("/api/") ||
+      lowerPath.startsWith("/_server-islands/");
+    if (isApiLike) {
+      const isPublicApi = PUBLIC_API_PREFIXES.some((prefix) =>
+        lowerPath.startsWith(prefix),
+      );
+      if (!isPublicApi) {
+        return jsonError("Sesión no iniciada", 401, "no-store");
+      }
+    } else if (!PUBLIC_PAGE_PATHS.has(relativePath)) {
+      return redirect(resolveUrl("/login"));
+    }
   }
 
   const role = (currentUser.role || "").toLowerCase().trim();
