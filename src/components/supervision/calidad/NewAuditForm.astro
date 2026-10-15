@@ -5,6 +5,7 @@ import FormField from "@components/ui/forms/FormField.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
 import MonthSelect from "@components/ui/MonthSelect.astro";
 import CriterionRow from "@components/supervision/calidad/CriterionRow.astro";
+import AiInspectionModal from "@components/supervision/calidad/AiInspectionModal.astro";
 import type { AuditParameter, QualityCall } from "@/types/quality";
 import { getCleanBase } from "@lib/baseUrl";
 
@@ -417,6 +418,16 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
           <Icon name="boxicons:info-circle" size={14} class="shrink-0 text-secondary" aria-hidden="true" />
           Configuración aplicada: {wiseCallParams.length} criterios
         </p>
+        <button
+          type="button"
+          id="btn-ai-evaluate"
+          class="btn btn-xs gap-1.5 border-secondary/40 bg-gradient-to-r from-secondary/20 to-primary/20 text-secondary hover:border-secondary hover:from-secondary/30 hover:to-primary/30 font-bold shadow-2xs transition-all hover:scale-102"
+          title="Abrir Asistente IA para sugerir veredictos basados en el ticket InvGate"
+        >
+          <Icon name="boxicons:bot" size={15} class="text-secondary animate-pulse" aria-hidden="true" />
+          <span>Asistente IA</span>
+          <span class="badge badge-2xs badge-secondary font-mono">PRO</span>
+        </button>
         <ul
           class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xxs font-medium text-base-content/60"
           aria-label="Estados posibles de un criterio"
@@ -1639,6 +1650,9 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       </form>
     </div>
   </Modal>
+
+  <!-- Modal Espectacular de Inspección Asistida por IA -->
+  <AiInspectionModal id="modal-ai-inspection" />
 </div>
 
 <style is:global>
@@ -2692,6 +2706,237 @@ function evaluateOrthographyRule(title: string, description: string) {
 
     btnInspectInvgate?.addEventListener("click", () => openTechnicalDetail("invgate"));
     btnInspectWise?.addEventListener("click", () => openTechnicalDetail("wise"));
+
+    // MODO IA ESPECTACULAR: Asistente con modal interactivo, selección de modelo,
+    // barra de progreso por etapas, resumen ejecutivo y aplicación selectiva.
+    const AI_MIN_CONFIDENCE = 0.6;
+    const btnAiEvaluate = document.getElementById("btn-ai-evaluate") as HTMLButtonElement | null;
+    const modalAi = document.getElementById("modal-ai-inspection") as HTMLDialogElement | null;
+    const aiModelSelect = document.getElementById("ai-modal-model-select") as HTMLSelectElement | null;
+    const aiLoadingState = document.getElementById("ai-modal-loading-state");
+    const aiErrorState = document.getElementById("ai-modal-error-state");
+    const aiErrorMsg = document.getElementById("ai-modal-error-msg");
+    const aiResultsState = document.getElementById("ai-modal-results-state");
+    const aiSummaryText = document.getElementById("ai-modal-summary-text");
+    const aiVerdictsList = document.getElementById("ai-modal-verdicts-list");
+    const aiCountBadge = document.getElementById("ai-modal-count-badge");
+    const aiBtnStart = document.getElementById("ai-modal-btn-start") as HTMLButtonElement | null;
+    const aiBtnApply = document.getElementById("ai-modal-btn-apply") as HTMLButtonElement | null;
+    const aiBtnCancel = document.getElementById("ai-modal-btn-cancel") as HTMLButtonElement | null;
+    const aiToggleAllBtn = document.getElementById("ai-modal-toggle-all-btn") as HTMLButtonElement | null;
+    const formNotes = document.getElementById("form-notes") as HTMLTextAreaElement | null;
+
+    const aiStep1 = document.getElementById("ai-step-1");
+    const aiStep2 = document.getElementById("ai-step-2");
+    const aiStep3 = document.getElementById("ai-step-3");
+    const aiStageTitle = document.getElementById("ai-modal-stage-title");
+    const aiStageDesc = document.getElementById("ai-modal-stage-desc");
+
+    let currentAiResults: { model: string; resumen: string; verdicts: Array<{ codigo: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }> } | null = null;
+    let selectedVerdicts = new Set<string>();
+
+    function updateAiStage(stage: 1 | 2 | 3) {
+      if (aiStep1) aiStep1.className = `step ${stage >= 1 ? "step-secondary" : ""}`;
+      if (aiStep2) aiStep2.className = `step ${stage >= 2 ? "step-secondary" : ""}`;
+      if (aiStep3) aiStep3.className = `step ${stage >= 3 ? "step-secondary" : ""}`;
+
+      if (stage === 1) {
+        if (aiStageTitle) aiStageTitle.textContent = "Extrayendo metadatos del ticket...";
+        if (aiStageDesc) aiStageDesc.textContent = "Obteniendo título, descripción y comentarios del ticket InvGate.";
+      } else if (stage === 2) {
+        if (aiStageTitle) aiStageTitle.textContent = "Procesando contexto con modelo IA...";
+        if (aiStageDesc) aiStageDesc.textContent = "Evaluando cumplimiento de procedimientos técnicos y de atención.";
+      } else if (stage === 3) {
+        if (aiStageTitle) aiStageTitle.textContent = "Sintetizando veredictos y justificaciones...";
+        if (aiStageDesc) aiStageDesc.textContent = "Estructurando evidencias, cálculo de confianza y resumen ejecutivo.";
+      }
+    }
+
+    btnAiEvaluate?.addEventListener("click", () => {
+      const ticketId = invgateSearchInput?.value.trim();
+      if (!ticketId) {
+        showNotification("Cargá primero el número de ticket InvGate para analizarlo con IA.", "warning");
+        invgateSearchInput?.focus();
+        return;
+      }
+
+      // Resetear estado visual del modal
+      aiLoadingState?.classList.add("hidden");
+      aiErrorState?.classList.add("hidden");
+      aiResultsState?.classList.add("hidden");
+      aiBtnApply?.classList.add("hidden");
+      if (aiBtnStart) {
+        aiBtnStart.classList.remove("hidden");
+        aiBtnStart.disabled = false;
+      }
+      modalAi?.showModal();
+    });
+
+    aiBtnCancel?.addEventListener("click", () => {
+      modalAi?.close();
+    });
+
+    async function executeAiAnalysis() {
+      const ticketId = invgateSearchInput?.value.trim();
+      if (!ticketId) return;
+
+      const selectedModel = aiModelSelect?.value || "opencode/nemotron-3.5-lightning-free";
+      const isGemini = selectedModel.startsWith("gemini");
+      const provider = isGemini ? "gemini" : "opencode";
+
+      if (aiBtnStart) aiBtnStart.disabled = true;
+      aiErrorState?.classList.add("hidden");
+      aiResultsState?.classList.add("hidden");
+      aiLoadingState?.classList.remove("hidden");
+      updateAiStage(1);
+
+      // Simulación de avance visual mientras viaja el request
+      const stageTimer1 = setTimeout(() => updateAiStage(2), 2000);
+      const stageTimer2 = setTimeout(() => updateAiStage(3), 8000);
+
+      try {
+        const res = await fetch(`${cleanBase}api/calidad/ai-evaluate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channel: formChannelType?.value || "wise_call",
+            ticketId,
+            model: selectedModel,
+            provider,
+          }),
+        });
+
+        clearTimeout(stageTimer1);
+        clearTimeout(stageTimer2);
+
+        const ct = res.headers.get("content-type") || "";
+        const json = ct.includes("application/json") ? await res.json() : null;
+
+        if (!res.ok || !json?.verdicts) {
+          aiLoadingState?.classList.add("hidden");
+          if (aiErrorMsg) aiErrorMsg.textContent = json?.error || `El servicio IA no respondió correctamente (HTTP ${res.status}).`;
+          aiErrorState?.classList.remove("hidden");
+          if (aiBtnStart) aiBtnStart.disabled = false;
+          return;
+        }
+
+        currentAiResults = json;
+        selectedVerdicts.clear();
+
+        // Renderizar lista de veredictos
+        if (aiSummaryText) aiSummaryText.textContent = json.resumen || "Sin resumen disponible.";
+        if (aiCountBadge) aiCountBadge.textContent = `${json.verdicts.length} sugerencias`;
+
+        if (aiVerdictsList) {
+          aiVerdictsList.innerHTML = "";
+          json.verdicts.forEach((v: any) => {
+            selectedVerdicts.add(v.codigo);
+            const isCompliant = v.cumple === true;
+            const isNull = v.cumple === null;
+            const pct = Math.round((v.confianza || 0) * 100);
+
+            const row = document.createElement("div");
+            row.className = "flex items-start justify-between gap-3 pt-3";
+            row.innerHTML = `
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-mono text-xs font-bold text-base-content/90">${v.codigo}</span>
+                  <span class="badge badge-xs font-bold ${isNull ? "badge-ghost" : isCompliant ? "badge-success text-success-content" : "badge-error text-error-content"}">
+                    ${isNull ? "Sin evidencia" : isCompliant ? "Cumple" : "No cumple"} (${pct}%)
+                  </span>
+                </div>
+                ${v.evidencia ? `<p class="text-xs text-base-content/80 italic font-sans bg-base-100 p-2 rounded-lg border border-base-200">"${v.evidencia}"</p>` : ""}
+                ${v.razonamiento ? `<p class="text-xxs text-base-content/60 font-sans">💡 ${v.razonamiento}</p>` : ""}
+              </div>
+              <input type="checkbox" class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary shrink-0 mt-1" data-code="${v.codigo}" checked />
+            `;
+            aiVerdictsList.appendChild(row);
+          });
+
+          // Bind toggles individuales
+          aiVerdictsList.querySelectorAll(".ai-verdict-toggle").forEach((cb) => {
+            cb.addEventListener("change", (e) => {
+              const target = e.target as HTMLInputElement;
+              const code = target.dataset.code;
+              if (!code) return;
+              if (target.checked) selectedVerdicts.add(code);
+              else selectedVerdicts.delete(code);
+              if (aiCountBadge) aiCountBadge.textContent = `${selectedVerdicts.size} seleccionadas`;
+            });
+          });
+        }
+
+        aiLoadingState?.classList.add("hidden");
+        aiResultsState?.classList.remove("hidden");
+        aiBtnStart?.classList.add("hidden");
+        aiBtnApply?.classList.remove("hidden");
+      } catch (err) {
+        clearTimeout(stageTimer1);
+        clearTimeout(stageTimer2);
+        console.error("[IA] Error:", err);
+        aiLoadingState?.classList.add("hidden");
+        if (aiErrorMsg) aiErrorMsg.textContent = "Error de conexión al consultar el asistente IA.";
+        aiErrorState?.classList.remove("hidden");
+        if (aiBtnStart) aiBtnStart.disabled = false;
+      }
+    }
+
+    aiBtnStart?.addEventListener("click", executeAiAnalysis);
+
+    aiToggleAllBtn?.addEventListener("click", () => {
+      const toggles = document.querySelectorAll<HTMLInputElement>(".ai-verdict-toggle");
+      const shouldSelectAll = selectedVerdicts.size < toggles.length;
+      toggles.forEach((t) => {
+        t.checked = shouldSelectAll;
+        const code = t.dataset.code;
+        if (code) {
+          if (shouldSelectAll) selectedVerdicts.add(code);
+          else selectedVerdicts.delete(code);
+        }
+      });
+      if (aiToggleAllBtn) aiToggleAllBtn.textContent = shouldSelectAll ? "Deseleccionar todas" : "Seleccionar todas";
+      if (aiCountBadge) aiCountBadge.textContent = `${selectedVerdicts.size} seleccionadas`;
+    });
+
+    aiBtnApply?.addEventListener("click", () => {
+      if (!currentAiResults) return;
+
+      let applied = 0;
+      for (const v of currentAiResults.verdicts) {
+        if (!selectedVerdicts.has(v.codigo)) continue;
+
+        const checkbox = document.querySelector(`input[name="${v.codigo}"]`) as HTMLInputElement | null;
+        const item = checkbox?.closest(".checklist-item") as HTMLElement | null;
+        if (!item || item.offsetParent === null) continue;
+        if (v.cumple === null || v.confianza < AI_MIN_CONFIDENCE) continue;
+
+        setItemState(item, v.cumple ? "cumple" : "nocumple");
+        const badge = document.querySelector(`[data-rule-badge="${v.codigo}"]`) as HTMLElement | null;
+        if (badge) {
+          badge.textContent = `IA ${Math.round(v.confianza * 100)}%`;
+          badge.title = v.evidencia ? `${v.evidencia}${v.razonamiento ? ` — ${v.razonamiento}` : ""}` : "";
+          badge.className = "rule-auto-badge badge badge-xs font-bold border-secondary/40 bg-secondary/15 text-secondary ring-1 ring-secondary/30";
+          badge.classList.remove("hidden");
+        }
+        applied++;
+      }
+
+      // Si generó resumen ejecutivo y el campo de notas está vacío o se desea enriquecer
+      if (currentAiResults.resumen && formNotes) {
+        const prefix = `[Asistente IA - ${currentAiResults.model}]:\n${currentAiResults.resumen}\n\n`;
+        if (!formNotes.value.includes(currentAiResults.resumen)) {
+          formNotes.value = `${prefix}${formNotes.value}`.trim();
+        }
+      }
+
+      recalculateScores();
+      modalAi?.close();
+      showNotification(
+        `✨ Asistente IA (${currentAiResults.model}): ${applied} sugerencias aplicadas con éxito. Revisá los criterios antes de guardar.`,
+        "success",
+        6000,
+      );
+    });
 
     modalCopyBtn?.addEventListener("click", async () => {
       if (!modalJson?.textContent) return;
