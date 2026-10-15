@@ -14,10 +14,10 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) 9065078
 
 ## Phase 2: Endpoint API y Suite de Benchmarking
-- [ ] Task: Actualizar endpoint `POST /api/calidad/ai-evaluate`
-  - [ ] Recibir parámetro opcional `model` y `provider`.
-  - [ ] Devolver veredictos desglosados (cita textual, razonamiento, confianza) y resumen general de atención.
-- [ ] Task: Desarrollar script CLI de benchmarking (`scripts/ai-benchmark-models.mts`)
+- [x] Task: Actualizar endpoint `POST /api/calidad/ai-evaluate` 78d3f54
+  - [x] Recibir parámetro opcional `model` y `provider`.
+  - [x] Devolver veredictos desglosados (cita textual, razonamiento, confianza) y resumen general de atención.
+- [~] Task: Desarrollar script CLI de benchmarking (`scripts/ai-benchmark-models.mts`)
   - [ ] Extracción de N casos históricos de `mda.db`.
   - [ ] Ejecución paralela/secuencial comparando `deepseek-v4.1-flash-free` vs `nemotron-3.5-lightning-free`.
   - [ ] Impresión de tabla comparativa de latencia, tasa de éxito JSON y coincidencia con supervisor.
