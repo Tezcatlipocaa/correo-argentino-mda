@@ -11,6 +11,7 @@ import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
 import { KB_CATEGORIAS_PATH, isCategoryFormKbPath } from "@lib/kbRedirects";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
+import { resolveClientIp } from "@lib/clientIp";
 import {
   isFingerprintValid,
   computeFingerprint,
@@ -53,11 +54,17 @@ function applyRateLimit(
   },
   relativePath: string,
 ): Response | null {
-  const { request, redirect, locals, clientAddress } = context;
+  const { request, redirect, locals } = context;
+  // #235: detrás de Apache el socket es loopback para todos; resolver la IP real
+  // (sólo desde loopback) para que el bucket de login sea por usuario/IP y no global.
+  const clientAddress = resolveClientIp(
+    context.clientAddress,
+    request.headers.get("x-forwarded-for"),
+  );
   const method = request.method.toUpperCase();
 
   if (relativePath === "/login" && method === "POST") {
-    const key = `login:ip:${clientAddress ?? "unknown"}`;
+    const key = `login:ip:${clientAddress}`;
     const result = checkRateLimit(key, RATE_LIMITS.login);
     if (!result.ok) {
       return redirect(

@@ -275,6 +275,19 @@ Si accedés por nombre de dominio local:
 C:\xampp\apache\bin\httpd.exe -k restart
 ```
 
+### Endurecimiento de Apache
+
+En `httpd.conf` (fuera del VirtualHost):
+
+```
+ServerTokens Prod
+ServerSignature Off
+```
+
+`ServerTokens Prod` reduce la cabecera `Server:` a `Apache` (sin versión ni módulos) y
+`ServerSignature Off` quita la firma en las páginas de error generadas por Apache.
+Aplicar y reiniciar Apache (XAMPP: `Net Stop Apache2.4` / `Net Start Apache2.4`).
+
 ---
 
 ## Paso 6: Verificar que funciona
