@@ -18,6 +18,15 @@ import {
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+// Default-deny de sesión (#232): todo /api/**, /_actions/** y
+// /_server-islands/** exige sesión salvo la allowlist pública; toda página
+// exige sesión salvo /404 (/login ya retornó arriba). Un endpoint nuevo queda
+// protegido por defecto.
+const PUBLIC_API_PREFIXES = ["/api/icons/"];
+// `/generador-firmas` es pública por diseño (sección que debe funcionar sin
+// login) y `/404` se sirve sin sesión. Cualquier otra página exige sesión.
+const PUBLIC_PAGE_PATHS = new Set(["/404", "/generador-firmas"]);
+
 const KB_WRITE_THROTTLE_MESSAGE =
   "Demasiadas operaciones. Probá en unos minutos.";
 
@@ -341,17 +350,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return setSecurityHeaders(response);
   }
 
-  // Default-deny de sesión (#232): todo /api/** y /_server-islands/** exige
-  // sesión salvo la allowlist pública; toda página exige sesión salvo /404
-  // (/login ya retornó arriba). Un endpoint nuevo queda protegido por defecto.
-  const PUBLIC_API_PREFIXES = ["/api/icons"];
-  // `/generador-firmas` es pública por diseño (sección que debe funcionar sin
-  // login) y `/404` se sirve sin sesión. Cualquier otra página exige sesión.
-  const PUBLIC_PAGE_PATHS = new Set(["/404", "/generador-firmas"]);
-
+  // Default-deny de sesión (#232). Los endpoints (`/api/**`, `/_actions/**`,
+  // `/_server-islands/**`) exigen sesión salvo la allowlist pública; toda
+  // página exige sesión salvo /404 (/login ya retornó arriba). Un endpoint
+  // nuevo queda protegido por defecto.
   if (currentUser.id === 0) {
     const isApiLike =
       lowerPath.startsWith("/api/") ||
+      lowerPath.startsWith("/_actions/") ||
       lowerPath.startsWith("/_server-islands/");
     if (isApiLike) {
       const isPublicApi = PUBLIC_API_PREFIXES.some((prefix) =>
@@ -361,6 +367,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
         return jsonError("Sesión no iniciada", 401, "no-store");
       }
     } else if (!PUBLIC_PAGE_PATHS.has(relativePath)) {
+      // Páginas: match exacto case-sensitive contra `relativePath` (Astro
+      // routea case-sensitive); los endpoints usan `lowerPath` normalizado.
       return redirect(resolveUrl("/login"));
     }
   }

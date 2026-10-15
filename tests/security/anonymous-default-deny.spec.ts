@@ -1,10 +1,12 @@
 import "dotenv/config";
+import fs from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   cleanupTestUser,
   createTestUserAndSession,
   setSessionCookie,
 } from "../helpers/auth";
+import { getIconsDir } from "../../src/lib/storage";
 
 // Páginas que DEBEN funcionar sin sesión: el login y el generador de firmas.
 const PUBLIC_PAGES = ["/login", "/generador-firmas"];
@@ -59,6 +61,35 @@ test.describe("default-deny para anónimos (#232)", () => {
       expect(new URL(page.url()).pathname).toBe(path);
     });
   }
+
+  test("anónimo accede a un ícono público de la allowlist", async ({
+    request,
+  }) => {
+    const files = fs
+      .readdirSync(getIconsDir())
+      .filter((f) => !f.startsWith("."));
+    expect(files.length).toBeGreaterThan(0);
+    const res = await request.get(`/api/icons/${files[0]}`, {
+      maxRedirects: 0,
+    });
+    expect(res.status()).toBe(200);
+  });
+
+  test("un usuario logueado no recibe 401 en una API privada", async ({
+    context,
+  }) => {
+    const user = await createTestUserAndSession("agent");
+    try {
+      await setSessionCookie(context, user.signedSessionId);
+      const res = await context.request.get(
+        "/api/usuarios/status?username=a",
+        { maxRedirects: 0 },
+      );
+      expect(res.status()).not.toBe(401);
+    } finally {
+      await cleanupTestUser(user.userId, user.sessionId);
+    }
+  });
 
   for (const path of ["/buscador-usuarios", "/contactos", "/"]) {
     test(`anónimo es redirigido a /login en ${path}`, async ({ page }) => {
