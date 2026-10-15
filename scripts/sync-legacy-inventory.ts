@@ -4,8 +4,10 @@ import Database from "better-sqlite3";
 import { db } from "../src/db/index";
 import { terminals, offices } from "../src/db/schema";
 import { normalizeSearchValue } from "../src/lib/clientSearch";
+import { requireEnv } from "../src/lib/env";
+import "dotenv/config";
 
-const LEGACY_URL = "http://b1842zacs0255/mda/terminales_consulta.php";
+const LEGACY_URL = requireEnv("LEGACY_INVENTORY_URL");
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";

@@ -45,9 +45,14 @@ async function searchCard(page: Page, username: string) {
   return card;
 }
 
-test("sin sesión no ve el botón de editar", async ({ page }) => {
-  const card = await searchCard(page, TEST_USERNAME);
-  await expect(card.locator("[data-edit-user-btn]")).toHaveCount(0);
+test("sin sesión el gate redirige a /login (no ve el botón de editar)", async ({
+  page,
+}) => {
+  // El gate default-deny redirige al anónimo antes de renderizar la página,
+  // así que el buscador (y su botón de editar) nunca llega al cliente.
+  const res = await page.goto("/buscador-usuarios");
+  expect(res?.status()).toBe(200);
+  expect(new URL(page.url()).pathname).toBe("/login");
 });
 
 test("agente ve el botón, abre el modal y guarda interno y teléfono", async ({

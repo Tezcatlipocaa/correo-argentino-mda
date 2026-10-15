@@ -34,6 +34,12 @@ if errorlevel 1 (
     echo [MDA Auto-Deploy] ADVERTENCIA: apply de enriquecimiento de titulos fallo. Se continua.
 )
 
+rem 5c. verify-env exige las criticas de runtime (SESSION_SECRET, ENCRYPTION_KEY)
+rem     y los prerequisitos de los jobs de sync (MIDPOINT_USER, MIDPOINT_PASS,
+rem     LEGACY_INVENTORY_URL). El .env de prod debe incluirlos antes del deploy.
+echo 5c. Validando variables de entorno criticas (verify-env)...
+call npx tsx scripts/verify-env.mts || (echo [auto-deploy] verify-env FALLO & exit /b 1)
+
 echo 6. Compilando la nueva version de Astro (incluye guard verify-build)...
 call npm run build
 if errorlevel 1 (

@@ -1,6 +1,15 @@
 import { getModulePermissions } from "./rbac";
 import { jsonError } from "@lib/apiResponse";
 
+/** Exige solo sesión iniciada (cualquier rol). 401 si no hay sesión. */
+export async function requireSession(locals: App.Locals): Promise<Response | null> {
+  const user = locals.user;
+  if (!user || user.id === 0) {
+    return jsonError("Sesión no iniciada", 401, "no-store");
+  }
+  return null;
+}
+
 /**
  * Verifica si el usuario tiene permiso de escritura para un módulo determinado.
  * Si no está autorizado, retorna un objeto Response (401 o 403) listo para ser devuelto por el API Route.
@@ -12,12 +21,12 @@ export async function requireWriteAccess(
 ): Promise<Response | null> {
   const user = locals.user;
   if (!user || user.id === 0) {
-    return jsonError("Sesión no iniciada", 401);
+    return jsonError("Sesión no iniciada", 401, "no-store");
   }
 
   const perms = getModulePermissions(moduleName, user.role);
   if (!perms.canWrite) {
-    return jsonError("Acceso denegado (requiere permisos de escritura)", 403);
+    return jsonError("Acceso denegado (requiere permisos de escritura)", 403, "no-store");
   }
 
   return null;
@@ -34,12 +43,12 @@ export async function requireReadAccess(
 ): Promise<Response | null> {
   const user = locals.user;
   if (!user || user.id === 0) {
-    return jsonError("Sesión no iniciada", 401);
+    return jsonError("Sesión no iniciada", 401, "no-store");
   }
 
   const perms = getModulePermissions(moduleName, user.role);
   if (!perms.canRead) {
-    return jsonError("Acceso denegado (requiere permisos de lectura)", 403);
+    return jsonError("Acceso denegado (requiere permisos de lectura)", 403, "no-store");
   }
 
   return null;

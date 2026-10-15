@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { jsonResponse, jsonError, sanitizeError } from "@lib/apiResponse";
+import { requireSession } from "@lib/rbac-middleware";
 import ldap from "ldapjs";
 
 const LDAP_SERVER =
@@ -117,7 +118,9 @@ function formatOutput(data: {
   return lines.join("\n");
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  const denied = await requireSession(locals);
+  if (denied) return denied;
   try {
     const url = new URL(request.url);
     const username = url.searchParams.get("username")?.trim();

@@ -4,6 +4,7 @@ import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC_ROOT = fileURLToPath(new URL("../../../src", import.meta.url));
+const MIDDLEWARE_PATH = join(SRC_ROOT, "middleware.ts");
 
 // El unico lugar donde se permite instanciar Chart.js es el componente que
 // centraliza tokens, tabla accesible y re-init tras server islands.
@@ -65,5 +66,10 @@ describe("Chart.js centralizado en ChartCard", () => {
 
   it("el arbol de src/ no tiene Chart.js ad-hoc", () => {
     expect(findViolations(listSourceFiles(SRC_ROOT))).toEqual([]);
+  });
+
+  it("la CSP no reintroduce cdn.jsdelivr.net", () => {
+    const source = readFileSync(MIDDLEWARE_PATH, "utf8");
+    expect(source).not.toContain("cdn.jsdelivr.net");
   });
 });

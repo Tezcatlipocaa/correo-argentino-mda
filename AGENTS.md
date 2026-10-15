@@ -97,6 +97,7 @@
 - **Toasts**: server redirects pass `?toast_msg=&toast_type=success|error|warning|info`; client `showToast()` from `@lib/toastClient.ts`
 - **DataTable sorting**: wrap in `data-table-sort-root`, rows `data-table-row` + `data-sort-*` (master-detail uses `data-master-detail-sort-item`)
 - **API routes**: usar `jsonResponse`/`jsonError` (`@lib/apiResponse`), `requireWriteAccess`/`requireReadAccess` (`@lib/rbac-middleware`), `logAdminFromAstro`; ver sección "API routes" en `docs/CONTEXT.md`
+- **`requireSession`** (`@lib/rbac-middleware`): exige solo sesión iniciada (cualquier rol), 401 si no la hay. Usarlo cuando el endpoint alimenta una página `ALL_ROLES` y no hay módulo RBAC propio (p.ej. `search`/`status`/`net-user`/`invgate-user` que sirven `/buscador-usuarios`). Si existe un módulo en `getModulePermissions`, preferir `requireReadAccess`/`requireWriteAccess`.
 
 ## Auth & RBAC
 
