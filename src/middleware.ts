@@ -347,7 +347,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     lowerPath.startsWith("/api/profile")
   ) {
     if (currentUser.id === 0) {
-      return jsonError("Sesión no iniciada", 401);
+      return jsonError("Sesión no iniciada", 401, "no-store");
     }
   }
 
@@ -391,7 +391,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   );
   if (!sectionVisible) {
     if (relativePath.startsWith("/api/")) {
-      return jsonError("Acceso no autorizado", 401);
+      return jsonError("Acceso no autorizado", 401, "no-store");
     }
     if (currentUser.id !== 0) {
       return redirect(

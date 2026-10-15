@@ -12,12 +12,12 @@ export async function requireWriteAccess(
 ): Promise<Response | null> {
   const user = locals.user;
   if (!user || user.id === 0) {
-    return jsonError("Sesión no iniciada", 401);
+    return jsonError("Sesión no iniciada", 401, "no-store");
   }
 
   const perms = getModulePermissions(moduleName, user.role);
   if (!perms.canWrite) {
-    return jsonError("Acceso denegado (requiere permisos de escritura)", 403);
+    return jsonError("Acceso denegado (requiere permisos de escritura)", 403, "no-store");
   }
 
   return null;
@@ -34,12 +34,12 @@ export async function requireReadAccess(
 ): Promise<Response | null> {
   const user = locals.user;
   if (!user || user.id === 0) {
-    return jsonError("Sesión no iniciada", 401);
+    return jsonError("Sesión no iniciada", 401, "no-store");
   }
 
   const perms = getModulePermissions(moduleName, user.role);
   if (!perms.canRead) {
-    return jsonError("Acceso denegado (requiere permisos de lectura)", 403);
+    return jsonError("Acceso denegado (requiere permisos de lectura)", 403, "no-store");
   }
 
   return null;
