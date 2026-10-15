@@ -1,8 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo, type MouseEvent, type WheelEvent } from "react";
-import type { CategoryNode, CategoryNodeStatus } from "@/types/categories";
+import React, { useState, useRef, useEffect, useMemo, type MouseEvent } from "react";
+import { Icon } from "@iconify/react";
+import type { CategoryNode } from "@/types/categories";
 
 interface Props {
   rootNode: CategoryNode;
+  propuestaCNode?: CategoryNode;
   onSelectNode?: (node: CategoryNode) => void;
 }
 
@@ -28,18 +30,92 @@ interface LayoutConnection {
   to: Point;
 }
 
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 70;
+const NODE_WIDTH = 230;
+const NODE_HEIGHT = 88;
 const HORIZONTAL_GAP = 90;
-const VERTICAL_GAP = 20;
+const VERTICAL_GAP = 24;
 
-export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
+function getTicketBadgeClass(totalTickets: number): string {
+  if (totalTickets === 0) {
+    return "badge badge-sm font-mono opacity-40 bg-base-300/40 text-base-content/40 border-transparent";
+  }
+  if (totalTickets < 50) {
+    return "badge badge-sm font-mono bg-base-200 text-base-content/80 border-base-300";
+  }
+  if (totalTickets < 200) {
+    return "badge badge-sm font-mono font-medium bg-info/15 text-info border-info/30";
+  }
+  return "badge badge-sm font-mono font-bold bg-secondary/20 text-secondary border-secondary/35 shadow-xs";
+}
+
+export default function CategoryTreeCanvas({ rootNode, propuestaCNode, onSelectNode }: Props) {
+  const [activeModel, setActiveModel] = useState<"actual" | "propuesta_c">("actual");
+  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(() => {
+    const initial = new Set<number>();
+    const sourceNode = rootNode;
+    if (sourceNode && sourceNode.children) {
+      for (const child of sourceNode.children) {
+        if (child.children && child.children.length > 0) {
+          initial.add(child.id);
+        }
+      }
+    }
+    return initial;
+  });
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [pan, setPan] = useState<Point>({ x: 50, y: 150 });
   const [zoom, setZoom] = useState<number>(1);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const dragStartRef = useRef<Point>({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleSwitchModel = (e: CustomEvent<{ model: "actual" | "propuesta_c" }>) => {
+      if (e.detail?.model) {
+        const nextModel = e.detail.model;
+        setActiveModel(nextModel);
+        setSelectedBranchId(null);
+        const sourceNode = nextModel === "propuesta_c" && propuestaCNode ? propuestaCNode : rootNode;
+        const initial = new Set<number>();
+        if (sourceNode && sourceNode.children) {
+          for (const child of sourceNode.children) {
+            if (child.children && child.children.length > 0) {
+              initial.add(child.id);
+            }
+          }
+        }
+        setCollapsedIds(initial);
+        setZoom(1);
+      }
+    };
+
+    const handleFilterBranch = (e: CustomEvent<{ branchId: number | null }>) => {
+      setSelectedBranchId(e.detail.branchId ?? null);
+      setZoom(1);
+    };
+
+    window.addEventListener("category:switch-model", handleSwitchModel as EventListener);
+    window.addEventListener("category:filter-branch", handleFilterBranch as EventListener);
+    return () => {
+      window.removeEventListener("category:switch-model", handleSwitchModel as EventListener);
+      window.removeEventListener("category:filter-branch", handleFilterBranch as EventListener);
+    };
+  }, [rootNode, propuestaCNode]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handleWheelNative = (e: globalThis.WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      setZoom((prev) => Math.min(Math.max(prev * factor, 0.2), 3));
+    };
+    container.addEventListener("wheel", handleWheelNative, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheelNative);
+  }, []);
+
 
   const toggleCollapse = (id: number, e: MouseEvent) => {
     e.stopPropagation();
@@ -52,6 +128,28 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
       }
       return next;
     });
+  };
+
+  const collapseAll = () => {
+    const activeRoot =
+      activeModel === "propuesta_c" && propuestaCNode ? propuestaCNode : rootNode;
+    const allParentIds = new Set<number>();
+    const collectParentIds = (node: CategoryNode) => {
+      if (node.children && node.children.length > 0) {
+        allParentIds.add(node.id);
+        for (const child of node.children) {
+          collectParentIds(child);
+        }
+      }
+    };
+    if (activeRoot) {
+      collectParentIds(activeRoot);
+    }
+    setCollapsedIds(allParentIds);
+  };
+
+  const expandAll = () => {
+    setCollapsedIds(new Set());
   };
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
@@ -75,21 +173,10 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
     setIsDragging(false);
   };
 
-  const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoom((prev) => Math.min(Math.max(prev * factor, 0.2), 3));
-  };
-
-  const resetView = () => {
-    setPan({ x: 50, y: 150 });
-    setZoom(1);
-  };
-
   const zoomIn = () => setZoom((prev) => Math.min(prev * 1.2, 3));
   const zoomOut = () => setZoom((prev) => Math.max(prev * 0.8, 0.2));
 
-  const { layoutNodes, connections, totalBounds } = useMemo(() => {
+  const { layoutNodes, connections, totalBounds, rootLayout } = useMemo(() => {
     const nodes: LayoutNode[] = [];
     const conns: LayoutConnection[] = [];
     let currentY = 0;
@@ -155,8 +242,19 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
       return { top: Math.min(y, minTop), bottom: Math.max(y + NODE_HEIGHT, maxBottom), center: centerY };
     }
 
-    if (rootNode) {
-      layoutSubtree(rootNode, 0);
+    const baseRootNode =
+      activeModel === "propuesta_c" && propuestaCNode ? propuestaCNode : rootNode;
+
+    let activeRootNode = baseRootNode;
+    if (selectedBranchId !== null && baseRootNode && baseRootNode.children) {
+      const branchMatch = baseRootNode.children.find((c) => c.id === selectedBranchId);
+      if (branchMatch) {
+        activeRootNode = branchMatch;
+      }
+    }
+
+    if (activeRootNode) {
+      layoutSubtree(activeRootNode, 0);
 
       const nodeMap = new Map<number, LayoutNode>();
       for (const n of nodes) {
@@ -183,36 +281,72 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
       layoutNodes: nodes,
       connections: conns,
       totalBounds: { width: maxX + 200, height: maxY + 200 },
+      rootLayout: nodes[nodes.length - 1] ?? null,
     };
-  }, [rootNode, collapsedIds]);
+  }, [rootNode, propuestaCNode, activeModel, collapsedIds, selectedBranchId]);
 
-  const getBadgeStyle = (status: CategoryNodeStatus) => {
-    switch (status) {
-      case "hot":
-        return "badge-error text-error-content";
-      case "dead":
-        return "badge-neutral text-neutral-content opacity-70";
-      case "zero":
-        return "badge-warning text-warning-content";
-      case "normal":
-      default:
-        return "badge-info text-info-content";
+  const resetView = () => {
+    const rootY = rootLayout ? rootLayout.y : 0;
+    setPan({ x: 50, y: Math.max(50, Math.round(250 - rootY)) });
+    setZoom(1);
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNowFs = document.fullscreenElement === containerRef.current;
+      setIsFullscreen(isNowFs);
+      setTimeout(resetView, 100);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [rootLayout]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (document.fullscreenElement) {
+          void document.exitFullscreen?.().catch(() => {
+            setIsFullscreen(false);
+          });
+        } else {
+          setIsFullscreen(false);
+        }
+        setTimeout(resetView, 100);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen, rootLayout]);
+
+  const toggleFullscreen = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (document.fullscreenElement === container) {
+      void document.exitFullscreen?.().catch(() => {
+        setIsFullscreen(false);
+        setTimeout(resetView, 100);
+      });
+    } else if (isFullscreen) {
+      setIsFullscreen(false);
+      setTimeout(resetView, 100);
+    } else if (container.requestFullscreen) {
+      container.requestFullscreen().catch(() => {
+        setIsFullscreen((prev) => !prev);
+        setTimeout(resetView, 100);
+      });
+    } else {
+      setIsFullscreen((prev) => !prev);
+      setTimeout(resetView, 100);
     }
   };
 
-  const getStatusLabel = (status: CategoryNodeStatus) => {
-    switch (status) {
-      case "hot":
-        return "Caliente (≥200)";
-      case "dead":
-        return "Desierto (0)";
-      case "zero":
-        return "Rama Vacía";
-      case "normal":
-      default:
-        return "Activo";
+  useEffect(() => {
+    if (rootLayout) {
+      setPan({ x: 50, y: Math.max(50, Math.round(250 - rootLayout.y)) });
     }
-  };
+  }, [activeModel, selectedBranchId]);
 
   const handleNodeClick = (node: CategoryNode, e: MouseEvent) => {
     e.stopPropagation();
@@ -228,41 +362,88 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
 
   return (
     <div
+      id="tree-canvas-container"
       ref={containerRef}
-      className="relative w-full h-[600px] overflow-hidden rounded-box border border-base-300 bg-base-200 select-none cursor-grab active:cursor-grabbing"
+      className={`relative w-full overflow-hidden border border-base-300 bg-base-200 select-none cursor-grab active:cursor-grabbing transition-all ${
+        isFullscreen
+          ? "canvas-fullscreen is-fullscreen fixed inset-0 z-200 w-screen h-screen bg-base-100 p-4 rounded-none shadow-2xl"
+          : "h-205 rounded-box"
+      }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onWheel={handleWheel}
     >
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-1 bg-base-100/90 backdrop-blur-md p-1.5 rounded-box shadow-md border border-base-300">
+      <div className="absolute top-4 right-4 z-20 flex flex-wrap items-center gap-1.5 bg-base-100/95 backdrop-blur-md p-1.5 rounded-box shadow-md border border-base-300">
         <button
           type="button"
-          onClick={zoomIn}
-          className="btn btn-xs btn-ghost btn-square text-base-content"
-          title="Acercar (+)"
+          onClick={expandAll}
+          className="btn btn-xs btn-outline btn-neutral gap-1 text-xs"
+          title="Expandir todos los nodos del árbol"
         >
-          <span className="text-base font-bold">+</span>
+          <Icon icon="boxicons:chevron-down-circle" width={13} height={13} />
+          <span>Expandir todo</span>
         </button>
-        <span className="text-xs font-mono px-1 min-w-[3rem] text-center text-base-content/70">
-          {Math.round(zoom * 100)}%
-        </span>
+
         <button
           type="button"
-          onClick={zoomOut}
-          className="btn btn-xs btn-ghost btn-square text-base-content"
-          title="Alejar (-)"
+          onClick={collapseAll}
+          className="btn btn-xs btn-outline btn-neutral gap-1 text-xs"
+          title="Colapsar todos los nodos al nodo raíz"
         >
-          <span className="text-base font-bold">-</span>
+          <Icon icon="boxicons:chevron-up-circle" width={13} height={13} />
+          <span>Colapsar todo</span>
         </button>
+
+        <div className="divider divider-horizontal my-1 mx-0.5" />
+
+        <div className="join border border-base-300 rounded-lg overflow-hidden bg-base-100">
+          <button
+            type="button"
+            onClick={zoomOut}
+            className="btn btn-xs btn-ghost join-item px-2 text-base-content/80 hover:text-base-content"
+            title="Alejar zoom (-)"
+            aria-label="Alejar"
+          >
+            <Icon icon="boxicons:minus" width={14} height={14} />
+          </button>
+          <span className="btn btn-ghost btn-xs join-item font-mono text-small px-2 min-w-12 text-center pointer-events-none">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={zoomIn}
+            className="btn btn-xs btn-ghost join-item px-2 text-base-content/80 hover:text-base-content"
+            title="Acercar zoom (+)"
+            aria-label="Acercar"
+          >
+            <Icon icon="boxicons:plus" width={14} height={14} />
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={resetView}
           className="btn btn-xs btn-ghost text-xs text-base-content"
-          title="Centrar Vista"
+          title="Centrar vista en la raíz"
         >
           Centrar
+        </button>
+
+        <button
+          id="btn-canvas-fullscreen"
+          type="button"
+          onClick={toggleFullscreen}
+          className="btn btn-xs btn-primary btn-outline gap-1 text-xs"
+          title={isFullscreen ? "Salir de pantalla completa (Esc)" : "Pantalla completa"}
+          aria-pressed={isFullscreen}
+        >
+          <Icon
+            icon={isFullscreen ? "boxicons:fullscreen-exit" : "boxicons:fullscreen"}
+            width={14}
+            height={14}
+          />
+          <span>{isFullscreen ? "Salir" : "Pantalla completa"}</span>
         </button>
       </div>
 
@@ -301,15 +482,12 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
 
         {layoutNodes.map((item) => {
           const { node, x, y, width, height, isCollapsed, hasChildren, childrenCount } = item;
-          const isDead = node.status === "dead" || node.status === "zero";
 
           return (
             <div
               key={node.id}
               onClick={(e) => handleNodeClick(node, e)}
-              className={`absolute card bg-base-100 border border-base-300 shadow-sm hover:shadow-md hover:border-primary transition-all cursor-pointer p-3 flex flex-col justify-between ${
-                isDead ? "opacity-75 bg-base-100/70" : ""
-              }`}
+              className="absolute card bg-base-100 border border-base-300 hover:border-secondary shadow-xs hover:shadow-sm transition-all cursor-pointer p-3 flex flex-col justify-between rounded-xl overflow-hidden"
               style={{
                 left: `${x}px`,
                 top: `${y}px`,
@@ -317,33 +495,40 @@ export default function CategoryTreeCanvas({ rootNode, onSelectNode }: Props) {
                 height: `${height}px`,
               }}
             >
-              <div className="flex items-start justify-between gap-1 overflow-hidden">
+              <div className="flex items-start justify-between gap-2">
                 <span
-                  className="font-medium text-xs leading-tight text-base-content truncate"
+                  className="font-bold text-xs text-base-content leading-snug line-clamp-2 flex-1"
                   title={node.name}
                 >
                   {node.name}
                 </span>
                 <span
-                  className={`badge badge-xs text-xs shrink-0 ${getBadgeStyle(node.status)}`}
+                  className={`shrink-0 ${getTicketBadgeClass(node.totalTickets)}`}
+                  title={`${node.totalTickets.toLocaleString("es-AR")} tickets`}
                 >
-                  {node.totalTickets}
+                  {`${node.totalTickets.toLocaleString("es-AR")} tk`}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between mt-1 pt-1 border-t border-base-200">
-                <span className="text-xs text-base-content/60 capitalize truncate">
-                  {getStatusLabel(node.status)}
+              <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-base-200">
+                <span className="text-xxs font-mono text-base-content/50 tracking-wide">
+                  {hasChildren ? `${childrenCount} ${childrenCount === 1 ? "hijo" : "hijos"}` : "Hoja"}
                 </span>
 
                 {hasChildren && (
                   <button
                     type="button"
                     onClick={(e) => toggleCollapse(node.id, e)}
-                    className="btn btn-circle btn-xs bg-base-200 hover:bg-base-300 border-none text-xs h-5 w-5 min-h-0"
-                    title={isCollapsed ? "Expandir rama" : "Colapsar rama"}
+                    className="btn btn-xs btn-outline btn-neutral gap-1 text-small h-6 min-h-0 px-2"
+                    title={isCollapsed ? `Expandir rama (${childrenCount} ${childrenCount === 1 ? "hijo" : "hijos"})` : "Plegar rama al padre"}
+                    aria-label={isCollapsed ? `Expandir rama (${childrenCount} ${childrenCount === 1 ? "hijo" : "hijos"})` : "Plegar rama al padre"}
                   >
-                    {isCollapsed ? `+${childrenCount}` : "-"}
+                    <Icon
+                      icon={isCollapsed ? "boxicons:plus" : "boxicons:minus"}
+                      width={11}
+                      height={11}
+                    />
+                    <span>{isCollapsed ? `+${childrenCount}` : "Plegar"}</span>
                   </button>
                 )}
               </div>
