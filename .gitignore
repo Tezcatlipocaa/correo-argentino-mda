@@ -122,3 +122,6 @@ scripts/backups
 *.key
 *.pem
 *.pfx
+
+# Proyectos de video local (Hyperframes) - no versionar
+videos/
