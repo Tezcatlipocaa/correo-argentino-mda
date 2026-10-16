@@ -83,3 +83,6 @@
 ---
 - [x] **Track: Scraping Unificado de Línea de Tiempo e Historial de Cambios InvGate (vía Azure SSO) para Evaluación IA**
   *Link: [./tracks/calidad_invgate_timeline_scraping_20261015/index.md](./tracks/calidad_invgate_timeline_scraping_20261015/index.md)*
+---
+- [ ] **Track: Council de Calidad MDA (Orquestación Multi-Agente & Fallback Resiliente)**
+  *Link: [./tracks/calidad_council_orquestacion_20261016/index.md](./tracks/calidad_council_orquestacion_20261016/index.md)*
