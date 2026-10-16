@@ -3,20 +3,23 @@ import { jsonResponse, jsonError, sanitizeError } from "@/lib/apiResponse";
 import { requireWriteAccess } from "@/lib/rbac-middleware";
 import { fetchInvgateTicketMetadata } from "@/lib/qualityMetadataFetcher";
 import { AiBusyError, evaluateWithAi } from "@/lib/qualityAiEvaluator";
+import { evaluateWithCouncil } from "@/lib/ai/councilEvaluator";
 import { CHANNEL_TYPES, type ChannelType } from "@/types/quality";
 
 /**
  * Modelos OpenCode permitidos en producción / pruebas.
  * Evita inyección de comandos o argumentos arbitrarios al CLI.
  */
-const ALLOWED_MODELS = new Set([
+export const ALLOWED_MODELS = new Set([
+  "council",
   "opencode/nemotron-3.5-lightning-free",
   "opencode/deepseek-v4.1-flash-free",
   "opencode/mimo-v2.6-flash-free",
+  "opencode/glm-5.3-flash-free",
 ]);
 
 /**
- * Evalúa con IA (OpenCode + modelo free) los criterios de calidad que salen del
+ * Evalúa con IA (OpenCode + modelo free o Council multi-agente) los criterios de calidad que salen del
  * ticket InvGate y que no tienen regla determinista. Solo sugiere: el supervisor decide.
  */
 export const POST: APIRoute = async ({ locals, request }) => {
@@ -38,6 +41,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const meta = await fetchInvgateTicketMetadata(ticketId);
     if (!meta.ok || !meta.data) return jsonError(meta.error || "No se pudo obtener el ticket", meta.status || 404);
 
+    if (model === "council") {
+      const councilResult = await evaluateWithCouncil(
+        channel,
+        meta.data,
+        meta.data.raw,
+      );
+      return jsonResponse({
+        ok: true,
+        model: "council",
+        isCouncil: true,
+        resumen: councilResult.resumen,
+        verdicts: councilResult.verdicts,
+        debate: councilResult.debate,
+      });
+    }
+
     const { model: usedModel, resumen, verdicts } = await evaluateWithAi(
       channel,
       meta.data,
@@ -51,3 +70,4 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return jsonError(sanitizeError(error, "No se pudo evaluar con IA."), 502);
   }
 };
+

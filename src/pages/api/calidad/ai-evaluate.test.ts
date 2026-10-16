@@ -14,4 +14,14 @@ describe("POST /api/calidad/ai-evaluate validaciones", () => {
     assert.equal(payload.model, "opencode/nemotron-3.5-lightning-free");
     assert.equal(payload.provider, "opencode");
   });
+
+  it("admite 'council' como modelo en el contrato de petición", () => {
+    const payload = {
+      channel: "invgate_ticket",
+      ticketId: "90688",
+      model: "council",
+    };
+    assert.equal(payload.model, "council");
+  });
 });
+
