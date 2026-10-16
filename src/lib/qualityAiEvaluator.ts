@@ -5,6 +5,7 @@ import type { ExtractedQualityMetadata } from "@/lib/qualityMetadataFetcher";
 import { AiResponseSchema, type AiEvaluationOptions, type AiVerdict, type AiResponse } from "@/lib/ai/types";
 import { getAiProvider } from "@/lib/ai/providerFactory";
 import { getRubricsForCriteria } from "@/lib/ai/rubricsLoader";
+import { fetchInvgateTicketTimeline, type InvgateTimelineEntry } from "@/lib/invgate/timelineScraper";
 
 export { AiVerdict };
 
@@ -65,7 +66,11 @@ function pickCommentText(c: any): string {
   return cleanHtmlText(String(c?.message ?? c?.comment ?? c?.content ?? c?.text ?? c?.body ?? "")).trim();
 }
 
-export function buildTicketContext(meta: ExtractedQualityMetadata, rawIncident?: any): string {
+export function buildTicketContext(
+  meta: ExtractedQualityMetadata,
+  rawIncident?: any,
+  timeline?: InvgateTimelineEntry[],
+): string {
   const lines: string[] = [
     `Ticket #${meta.caseNumber}`,
     `Título: ${meta.title || "-"}`,
@@ -84,6 +89,25 @@ export function buildTicketContext(meta: ExtractedQualityMetadata, rawIncident?:
     `SLA primera respuesta: ${meta.rawDetails?.slaIncidentFirstReply ?? "-"}`,
     `SLA resolución: ${meta.rawDetails?.slaIncidentResolution ?? "-"}`,
   ];
+
+  if (Array.isArray(timeline) && timeline.length > 0) {
+    lines.push("", `Línea de Tiempo e Historial de Cambios (${timeline.length} eventos):`);
+    for (const item of timeline) {
+      const dateLabel = item.dateStr || String(item.timestamp || "");
+      if (item.kind === "log") {
+        lines.push(`- [${dateLabel}] [CAMBIO] ${item.text}`);
+      } else {
+        const tag =
+          item.kind === "solution"
+            ? "SOLUCIÓN"
+            : item.kind === "private_note"
+              ? "NOTA INTERNA"
+              : "COMENTARIO";
+        lines.push(`- [${dateLabel}] [${tag}] ${item.author || "Usuario"}: ${item.text}`);
+      }
+    }
+    return lines.join("\n").slice(0, MAX_CONTEXT_CHARS);
+  }
 
   const rawComments = Array.isArray(rawIncident?.comments)
     ? rawIncident.comments
@@ -180,6 +204,7 @@ export async function evaluateWithAi(
   meta: ExtractedQualityMetadata,
   rawIncident?: any,
   options?: AiEvaluationOptions,
+  preloadedTimeline?: InvgateTimelineEntry[],
 ): Promise<{ model: string; resumen: string; verdicts: AiVerdict[] }> {
   const criteria = getAiCriteria(channel);
   if (criteria.length === 0) return { model: "", resumen: "", verdicts: [] };
@@ -187,8 +212,17 @@ export async function evaluateWithAi(
 
   inFlight++;
   try {
+    const timeline =
+      preloadedTimeline ??
+      (meta.caseNumber && /^\d+$/.test(String(meta.caseNumber).trim())
+        ? await fetchInvgateTicketTimeline(meta.caseNumber).catch((err) => {
+            console.warn("[qualityAiEvaluator] Fallback a comentarios API (falló scraping timeline):", err?.message);
+            return [] as InvgateTimelineEntry[];
+          })
+        : []);
+
     const provider = getAiProvider(options);
-    const prompt = buildPrompt(criteria, buildTicketContext(meta, rawIncident));
+    const prompt = buildPrompt(criteria, buildTicketContext(meta, rawIncident, timeline));
     const rawOutput = await provider.evaluate(prompt);
     const { resumen, verdicts } = parseVerdicts(rawOutput, new Set(criteria.map((c) => c.code)));
 

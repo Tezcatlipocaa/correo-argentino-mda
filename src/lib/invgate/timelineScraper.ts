@@ -64,9 +64,14 @@ export function parseInvgateTimelineHtml(html: string): InvgateTimelineEntry[] {
       continue;
     }
 
-    const tsMatch = part.match(/data-timestamp="(\d+)"[^>]*data-timestamp-switch="([^"]+)"/);
-    const timestamp = tsMatch ? Number(tsMatch[1]) : 0;
-    const dateStr = tsMatch ? tsMatch[2].trim() : "";
+    const tsNumMatch = part.match(/data-timestamp="(\d+)"/);
+    const timestamp = tsNumMatch ? Number(tsNumMatch[1]) : 0;
+    const switchMatch = part.match(/data-timestamp-switch="([^"]+)"/);
+    const dateStr = switchMatch
+      ? switchMatch[1].trim()
+      : timestamp > 0
+        ? new Date(timestamp * 1000).toISOString().replace("T", " ").slice(0, 19)
+        : "";
 
     if (firstTag.includes("activity-log")) {
       const contentMatch = part.match(
