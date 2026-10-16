@@ -407,27 +407,28 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         </div>
       </div>
 
-      <!-- Resumen + leyenda de los 3 estados -->
+      <!-- Resumen + acción IA + leyenda de los 3 estados -->
       <div
         class="mt-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-base-200/70 pt-2.5"
       >
-        <p
-          id="config-summary-text"
-          class="flex items-center gap-1.5 text-xs font-medium text-base-content/60"
-        >
-          <Icon name="boxicons:info-circle" size={14} class="shrink-0 text-secondary" aria-hidden="true" />
-          Configuración aplicada: {wiseCallParams.length} criterios
-        </p>
-        <button
-          type="button"
-          id="btn-ai-evaluate"
-          class="btn btn-xs gap-1.5 border-secondary/40 bg-gradient-to-r from-secondary/20 to-primary/20 text-secondary hover:border-secondary hover:from-secondary/30 hover:to-primary/30 font-bold shadow-2xs transition-all hover:scale-102"
-          title="Abrir Asistente IA para sugerir veredictos basados en el ticket InvGate"
-        >
-          <Icon name="boxicons:magic-wand" size={15} class="text-secondary animate-pulse" aria-hidden="true" />
-          <span>Asistente IA</span>
-          <span class="badge badge-2xs badge-secondary font-mono">PRO</span>
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+          <p
+            id="config-summary-text"
+            class="flex items-center gap-1.5 text-xs font-medium text-base-content/60"
+          >
+            <Icon name="boxicons:info-circle" size={14} class="shrink-0 text-secondary" aria-hidden="true" />
+            Configuración aplicada: {wiseCallParams.length} criterios
+          </p>
+          <button
+            type="button"
+            id="btn-ai-evaluate"
+            class="btn btn-xs border-secondary/30 from-secondary/15 to-base-100 text-secondary hover:border-secondary/60 hover:from-secondary/25 hover:to-base-100 focus-visible:ring-secondary/50 gap-1.5 rounded-lg border bg-gradient-to-r px-2.5 font-semibold shadow-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:outline-none"
+            title="Analizar ticket con el Asistente IA"
+          >
+            <Icon name="boxicons:magic-wand" size={14} class="text-secondary shrink-0" aria-hidden="true" />
+            <span>Asistente IA</span>
+          </button>
+        </div>
         <ul
           class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xxs font-medium text-base-content/60"
           aria-label="Estados posibles de un criterio"
@@ -2707,12 +2708,13 @@ function evaluateOrthographyRule(title: string, description: string) {
     btnInspectInvgate?.addEventListener("click", () => openTechnicalDetail("invgate"));
     btnInspectWise?.addEventListener("click", () => openTechnicalDetail("wise"));
 
-    // MODO IA ESPECTACULAR: Asistente con modal interactivo, selección de modelo,
-    // barra de progreso por etapas, resumen ejecutivo y aplicación selectiva.
+    // MODO IA: Asistente con modal interactivo, selección de modelo,
+    // indicador de progreso por etapas, resumen ejecutivo y aplicación selectiva.
     const AI_MIN_CONFIDENCE = 0.6;
     const btnAiEvaluate = document.getElementById("btn-ai-evaluate") as HTMLButtonElement | null;
     const modalAi = document.getElementById("modal-ai-inspection") as HTMLDialogElement | null;
     const aiModelSelect = document.getElementById("ai-modal-model-select") as HTMLSelectElement | null;
+    const aiIdleState = document.getElementById("ai-modal-idle-state");
     const aiLoadingState = document.getElementById("ai-modal-loading-state");
     const aiErrorState = document.getElementById("ai-modal-error-state");
     const aiErrorMsg = document.getElementById("ai-modal-error-msg");
@@ -2729,26 +2731,51 @@ function evaluateOrthographyRule(title: string, description: string) {
     const aiStep1 = document.getElementById("ai-step-1");
     const aiStep2 = document.getElementById("ai-step-2");
     const aiStep3 = document.getElementById("ai-step-3");
+    const aiStep4 = document.getElementById("ai-step-4");
+    const aiStepsContainer = document.getElementById("ai-modal-steps-container");
     const aiStageTitle = document.getElementById("ai-modal-stage-title");
     const aiStageDesc = document.getElementById("ai-modal-stage-desc");
 
-    let currentAiResults: { model: string; resumen: string; verdicts: Array<{ codigo: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }> } | null = null;
+    let currentAiResults: {
+      model: string;
+      resumen: string;
+      verdicts: Array<{ codigo: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }>;
+      isCouncil?: boolean;
+      debate?: Record<string, {
+        criterio: string;
+        consenso: "directo" | "arbitrado" | "sin_oposicion" | "arbitraje_fallido";
+        motivo?: string;
+        alpha?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        beta?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        juez?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+      }>;
+    } | null = null;
     let selectedVerdicts = new Set<string>();
 
-    function updateAiStage(stage: 1 | 2 | 3) {
-      if (aiStep1) aiStep1.className = `step ${stage >= 1 ? "step-secondary" : ""}`;
-      if (aiStep2) aiStep2.className = `step ${stage >= 2 ? "step-secondary" : ""}`;
-      if (aiStep3) aiStep3.className = `step ${stage >= 3 ? "step-secondary" : ""}`;
+    function getCriterionLabel(code: string): string {
+      const cb = document.querySelector(`input.audit-checkbox[name="${CSS.escape(code)}"]`);
+      const labelSpan = cb?.closest(".checklist-item")?.querySelector("span.text-sm");
+      return labelSpan?.textContent?.trim() || code;
+    }
+
+    function updateAiStage(stage: 1 | 2 | 3 | 4, isCouncil: boolean = false) {
+      if (aiStep1) aiStep1.dataset.active = stage >= 1 ? "true" : "false";
+      if (aiStep2) aiStep2.dataset.active = stage >= 2 ? "true" : "false";
+      if (aiStep3) aiStep3.dataset.active = stage >= 3 ? "true" : "false";
+      if (aiStep4) aiStep4.dataset.active = stage >= 4 ? "true" : "false";
 
       if (stage === 1) {
-        if (aiStageTitle) aiStageTitle.textContent = "Extrayendo metadatos del ticket...";
-        if (aiStageDesc) aiStageDesc.textContent = "Obteniendo título, descripción y comentarios del ticket InvGate.";
+        if (aiStageTitle) aiStageTitle.textContent = "Extrayendo metadatos e historial…";
+        if (aiStageDesc) aiStageDesc.textContent = "Obteniendo campos, comentarios y cambios del ticket en InvGate.";
       } else if (stage === 2) {
-        if (aiStageTitle) aiStageTitle.textContent = "Procesando contexto con modelo IA...";
-        if (aiStageDesc) aiStageDesc.textContent = "Evaluando cumplimiento de procedimientos técnicos y de atención.";
+        if (aiStageTitle) aiStageTitle.textContent = isCouncil ? "Evaluando con Agentes Alpha y Beta…" : "Evaluando criterios con IA…";
+        if (aiStageDesc) aiStageDesc.textContent = isCouncil ? "Alpha evalúa procesos y Beta evalúa atención/datos en paralelo." : "Contrastando la evidencia del caso contra las rúbricas de calidad.";
       } else if (stage === 3) {
-        if (aiStageTitle) aiStageTitle.textContent = "Sintetizando veredictos y justificaciones...";
-        if (aiStageDesc) aiStageDesc.textContent = "Estructurando evidencias, cálculo de confianza y resumen ejecutivo.";
+        if (aiStageTitle) aiStageTitle.textContent = isCouncil ? "Calculando consenso entre modelos…" : "Sintetizando veredictos…";
+        if (aiStageDesc) aiStageDesc.textContent = isCouncil ? "Cruzando votos de Alpha y Beta para detectar acuerdos o disputas." : "Estructurando evidencias, nivel de confianza y resumen de atención.";
+      } else if (stage === 4) {
+        if (aiStageTitle) aiStageTitle.textContent = "Arbitrando criterios en disputa…";
+        if (aiStageDesc) aiStageDesc.textContent = "Nemotron 3.5 resuelve desacuerdos y emite el laudo final con contexto quirúrgico.";
       }
     }
 
@@ -2761,6 +2788,7 @@ function evaluateOrthographyRule(title: string, description: string) {
       }
 
       // Resetear estado visual del modal
+      aiIdleState?.classList.remove("hidden");
       aiLoadingState?.classList.add("hidden");
       aiErrorState?.classList.add("hidden");
       aiResultsState?.classList.add("hidden");
@@ -2780,17 +2808,31 @@ function evaluateOrthographyRule(title: string, description: string) {
       const ticketId = invgateSearchInput?.value.trim();
       if (!ticketId) return;
 
-      const selectedModel = aiModelSelect?.value || "opencode/nemotron-3.5-lightning-free";
+      const selectedModel = aiModelSelect?.value || "council";
+      const isCouncil = selectedModel === "council";
+
+      if (aiStepsContainer) {
+        if (isCouncil) {
+          aiStepsContainer.classList.remove("grid-cols-3");
+          aiStepsContainer.classList.add("grid-cols-4");
+          aiStep4?.classList.remove("hidden");
+        } else {
+          aiStepsContainer.classList.remove("grid-cols-4");
+          aiStepsContainer.classList.add("grid-cols-3");
+          aiStep4?.classList.add("hidden");
+        }
+      }
 
       if (aiBtnStart) aiBtnStart.disabled = true;
+      aiIdleState?.classList.add("hidden");
       aiErrorState?.classList.add("hidden");
       aiResultsState?.classList.add("hidden");
       aiLoadingState?.classList.remove("hidden");
-      updateAiStage(1);
+      updateAiStage(1, isCouncil);
 
-      // Simulación de avance visual mientras viaja el request
-      const stageTimer1 = setTimeout(() => updateAiStage(2), 2000);
-      const stageTimer2 = setTimeout(() => updateAiStage(3), 8000);
+      const stageTimer1 = setTimeout(() => updateAiStage(2, isCouncil), 2000);
+      const stageTimer2 = setTimeout(() => updateAiStage(3, isCouncil), 6000);
+      const stageTimer3 = isCouncil ? setTimeout(() => updateAiStage(4, isCouncil), 12000) : null;
 
       try {
         const res = await fetch(`${cleanBase}api/calidad/ai-evaluate`, {
@@ -2805,6 +2847,7 @@ function evaluateOrthographyRule(title: string, description: string) {
 
         clearTimeout(stageTimer1);
         clearTimeout(stageTimer2);
+        if (stageTimer3) clearTimeout(stageTimer3);
 
         const ct = res.headers.get("content-type") || "";
         const json = ct.includes("application/json") ? await res.json() : null;
@@ -2820,9 +2863,8 @@ function evaluateOrthographyRule(title: string, description: string) {
         currentAiResults = json;
         selectedVerdicts.clear();
 
-        // Renderizar lista de veredictos
         if (aiSummaryText) aiSummaryText.textContent = json.resumen || "Sin resumen disponible.";
-        if (aiCountBadge) aiCountBadge.textContent = `${json.verdicts.length} sugerencias`;
+        if (aiCountBadge) aiCountBadge.textContent = `${json.verdicts.length} seleccionadas`;
 
         const escapeHtml = (str: string) =>
           str
@@ -2840,29 +2882,101 @@ function evaluateOrthographyRule(title: string, description: string) {
             const isNull = v.cumple === null;
             const pct = Math.round((v.confianza || 0) * 100);
 
-            const row = document.createElement("div");
-            row.className = "flex items-start justify-between gap-3 pt-3";
-            const safeCode = escapeHtml(String(v.codigo || ""));
+            const codeStr = String(v.codigo || "");
+            const safeCode = escapeHtml(codeStr);
+            const safeLabel = escapeHtml(getCriterionLabel(codeStr));
             const safeEvidencia = v.evidencia ? escapeHtml(String(v.evidencia)) : "";
             const safeRazonamiento = v.razonamiento ? escapeHtml(String(v.razonamiento)) : "";
 
+            const statusBadgeClass = isNull
+              ? "border-base-300 bg-base-200 text-base-content/70"
+              : isCompliant
+                ? "border-success/30 bg-success/15 text-success"
+                : "border-error/30 bg-error/15 text-error";
+            const statusText = isNull ? "Sin evidencia" : isCompliant ? "Cumple" : "No cumple";
+
+            // Metadata de debate / consenso si está presente
+            const deb = json.debate?.[v.codigo];
+            let consensusBadgeHtml = "";
+            let debateAccordionHtml = "";
+
+            if (deb) {
+              if (deb.consenso === "directo") {
+                consensusBadgeHtml = deb.motivo === "sin_evidencia"
+                  ? `<span class="badge badge-xs border border-base-300 bg-base-200 text-base-content/70 font-medium">Sin evidencia mutua</span>`
+                  : `<span class="badge badge-xs border border-success/40 bg-success/10 text-success font-medium">Consenso Directo</span>`;
+              } else if (deb.consenso === "arbitrado") {
+                consensusBadgeHtml = `<span class="badge badge-xs border border-secondary/40 bg-secondary/15 text-secondary font-medium">Laudo Juez Nemotron</span>`;
+              } else if (deb.consenso === "sin_oposicion") {
+                consensusBadgeHtml = `<span class="badge badge-xs border border-base-300 bg-base-200/80 text-base-content/70 font-medium">Agente Especializado</span>`;
+              } else if (deb.consenso === "arbitraje_fallido") {
+                consensusBadgeHtml = `<span class="badge badge-xs border border-warning/40 bg-warning/15 text-warning font-medium">Arbitraje Fallido</span>`;
+              }
+
+              // Posturas de los modelos
+              const formatVote = (agentName: string, vote?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }) => {
+                if (!vote) return "";
+                const cText = vote.cumple === null ? "Sin evidencia" : vote.cumple ? "Cumple" : "No cumple";
+                const cColor = vote.cumple === null ? "text-base-content/60" : vote.cumple ? "text-success font-semibold" : "text-error font-semibold";
+                const safeVotedEv = vote.evidencia ? escapeHtml(vote.evidencia) : "";
+                const safeVotedRaz = vote.razonamiento ? escapeHtml(vote.razonamiento) : "";
+                return `
+                  <div class="space-y-1 rounded-md border border-base-200/70 bg-base-200/30 p-2 text-xxs">
+                    <div class="flex items-center justify-between gap-1 font-mono">
+                      <span class="font-bold text-base-content">${agentName}</span>
+                      <span class="${cColor}">${cText} (${Math.round((vote.confianza || 0) * 100)}%)</span>
+                    </div>
+                    ${safeVotedRaz ? `<p class="text-base-content/80 break-words">${safeVotedRaz}</p>` : ""}
+                    ${safeVotedEv ? `<p class="italic text-base-content/60 break-words">“${safeVotedEv}”</p>` : ""}
+                  </div>
+                `;
+              };
+
+              const alphaHtml = formatVote("Agente Alpha (Procesos)", deb.alpha);
+              const betaHtml = formatVote("Agente Beta (Cliente)", deb.beta);
+              const juezHtml = formatVote("Juez Nemotron (Arbitraje)", deb.juez);
+
+              debateAccordionHtml = `
+                <details class="group mt-2 border-t border-base-200/60 pt-1.5 text-xs text-base-content/70">
+                  <summary class="flex cursor-pointer items-center justify-between gap-1 font-medium hover:text-secondary select-none">
+                    <span class="text-xxs">Ver debate y posturas del Council</span>
+                    <span class="text-xxs transition-transform group-open:rotate-180">▾</span>
+                  </summary>
+                  <div class="mt-2 space-y-1.5 pt-1">
+                    ${alphaHtml}
+                    ${betaHtml}
+                    ${juezHtml}
+                  </div>
+                </details>
+              `;
+            }
+
+            const row = document.createElement("label");
+            row.className = `flex cursor-pointer items-start justify-between gap-3.5 p-3.5 transition-colors motion-reduce:transition-none hover:bg-base-200/40 ${!isNull && !isCompliant ? "bg-error/5" : ""}`;
+
             row.innerHTML = `
-              <div class="min-w-0 flex-1 space-y-1">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-mono text-xs font-bold text-base-content/90">${safeCode}</span>
-                  <span class="badge badge-xs font-bold ${isNull ? "badge-ghost" : isCompliant ? "badge-success text-success-content" : "badge-error text-error-content"}">
-                    ${isNull ? "Sin evidencia" : isCompliant ? "Cumple" : "No cumple"} (${pct}%)
+              <div class="min-w-0 flex-1 space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-sm font-semibold text-base-content">${safeLabel}</span>
+                  <span class="badge badge-xs border font-semibold tabular-nums ${statusBadgeClass}">
+                    ${statusText} · ${pct}&nbsp;%
                   </span>
+                  ${consensusBadgeHtml}
                 </div>
-                ${safeEvidencia ? `<p class="text-xs text-base-content/80 italic font-sans bg-base-100 p-2 rounded-lg border border-base-200">"${safeEvidencia}"</p>` : ""}
-                ${safeRazonamiento ? `<p class="text-xxs text-base-content/60 font-sans">💡 ${safeRazonamiento}</p>` : ""}
+                ${safeRazonamiento ? `<p class="text-xs leading-relaxed text-base-content/80 break-words">${safeRazonamiento}</p>` : ""}
+                ${safeEvidencia ? `<blockquote class="border-l-2 border-secondary/40 bg-base-200/40 py-1 pr-2 pl-2.5 text-xs text-base-content/70 break-words">“${safeEvidencia}”</blockquote>` : ""}
+                ${debateAccordionHtml}
               </div>
-              <input type="checkbox" class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary shrink-0 mt-1" data-code="${safeCode}" checked />
+              <input
+                type="checkbox"
+                class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary mt-0.5 shrink-0 focus-visible:ring-2 focus-visible:ring-secondary/50"
+                data-code="${safeCode}"
+                checked
+              />
             `;
             aiVerdictsList.appendChild(row);
           });
 
-          // Bind toggles individuales
           aiVerdictsList.querySelectorAll(".ai-verdict-toggle").forEach((cb) => {
             cb.addEventListener("change", (e) => {
               const target = e.target as HTMLInputElement;
@@ -2882,6 +2996,7 @@ function evaluateOrthographyRule(title: string, description: string) {
       } catch (err) {
         clearTimeout(stageTimer1);
         clearTimeout(stageTimer2);
+        if (stageTimer3) clearTimeout(stageTimer3);
         console.error("[IA] Error:", err);
         aiLoadingState?.classList.add("hidden");
         if (aiErrorMsg) aiErrorMsg.textContent = "Error de conexión al consultar el asistente IA.";
@@ -2922,15 +3037,14 @@ function evaluateOrthographyRule(title: string, description: string) {
         setItemState(item, v.cumple ? "cumple" : "nocumple");
         const badge = document.querySelector(`[data-rule-badge="${v.codigo}"]`) as HTMLElement | null;
         if (badge) {
-          badge.textContent = `IA ${Math.round(v.confianza * 100)}%`;
+          badge.textContent = `IA ${Math.round(v.confianza * 100)}\u00A0%`;
           badge.title = v.evidencia ? `${v.evidencia}${v.razonamiento ? ` — ${v.razonamiento}` : ""}` : "";
-          badge.className = "rule-auto-badge badge badge-xs font-bold border-secondary/40 bg-secondary/15 text-secondary ring-1 ring-secondary/30";
+          badge.className = "rule-auto-badge badge badge-xs font-semibold border border-secondary/30 bg-secondary/10 text-secondary tabular-nums";
           badge.classList.remove("hidden");
         }
         applied++;
       }
 
-      // Si generó resumen ejecutivo y el campo de notas está vacío o se desea enriquecer
       if (currentAiResults.resumen && formNotes) {
         const prefix = `[Asistente IA - ${currentAiResults.model}]:\n${currentAiResults.resumen}\n\n`;
         if (!formNotes.value.includes(currentAiResults.resumen)) {
@@ -2941,7 +3055,7 @@ function evaluateOrthographyRule(title: string, description: string) {
       recalculateScores();
       modalAi?.close();
       showNotification(
-        `✨ Asistente IA (${currentAiResults.model}): ${applied} sugerencias aplicadas con éxito. Revisá los criterios antes de guardar.`,
+        `Asistente IA (${currentAiResults.model}): ${applied} sugerencias aplicadas. Revisá los criterios antes de guardar.`,
         "success",
         6000,
       );
