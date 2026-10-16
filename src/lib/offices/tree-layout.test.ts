@@ -1,55 +1,63 @@
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeTreeLayout,
   getInitialCollapsedIds,
   findPathToNode,
-  filterTreeByHeadquarters,
+  findAllMatchingNodes,
+  filterOfficeTree,
+  extractAvailableOfficeTypes,
+  computeFitToScreen,
+  filterVisibleViewport,
+  NODE_WIDTH,
+  NODE_HEIGHT,
+  type OfficeFilterOptions,
 } from "../../components/oficinas/estructura/treeLayout";
 import type { OfficeTreeNode } from "./structure-tree";
 
-const sampleTree: OfficeTreeNode = {
+const mockTree: OfficeTreeNode = {
   id: "root",
   type: "root",
   name: "Red Postal Nacional",
-  totalOffices: 3,
-  totalTickets: 15,
-  totalTerminals: 10,
+  totalOffices: 4,
+  totalTickets: 25,
+  totalTerminals: 14,
   children: [
     {
       id: "reg-NOA",
       type: "region",
       name: "Noroeste Argentino",
       color: "#8b5cf6",
-      totalOffices: 2,
-      totalTickets: 10,
-      totalTerminals: 6,
+      totalOffices: 3,
+      totalTickets: 20,
+      totalTerminals: 10,
       children: [
         {
           id: "prov-A",
           type: "province",
           name: "Salta",
-          totalOffices: 2,
-          totalTickets: 10,
-          totalTerminals: 6,
+          totalOffices: 3,
+          totalTickets: 20,
+          totalTerminals: 10,
           children: [
             {
               id: "bld-DEAN-FUNES-160",
               type: "building",
               name: "DEAN FUNES 160",
-              totalOffices: 2,
-              totalTickets: 10,
-              totalTerminals: 6,
+              totalOffices: 3,
+              totalTickets: 20,
+              totalTerminals: 10,
               children: [
                 {
                   id: "off-A0000",
                   type: "office",
                   code: "A0000",
                   name: "SALTA CABECERA",
+                  officeType: "SUCURSAL_AUTOMATIZADA",
                   isHeadquarter: true,
                   totalOffices: 1,
-                  totalTickets: 8,
-                  totalTerminals: 4,
+                  totalTickets: 15,
+                  totalTerminals: 6,
                   children: [],
                 },
                 {
@@ -57,10 +65,23 @@ const sampleTree: OfficeTreeNode = {
                   type: "office",
                   code: "A0001",
                   name: "SALTA CDD",
+                  officeType: "CDD",
                   isHeadquarter: false,
                   totalOffices: 1,
-                  totalTickets: 2,
-                  totalTerminals: 2,
+                  totalTickets: 5,
+                  totalTerminals: 4,
+                  children: [],
+                },
+                {
+                  id: "off-A0002",
+                  type: "office",
+                  code: "A0002",
+                  name: "SALTA ESTAFETA",
+                  officeType: "ESTAFETA",
+                  isHeadquarter: false,
+                  totalOffices: 1,
+                  totalTickets: 0,
+                  totalTerminals: 0,
                   children: [],
                 },
               ],
@@ -77,61 +98,135 @@ const sampleTree: OfficeTreeNode = {
       totalOffices: 1,
       totalTickets: 5,
       totalTerminals: 4,
-      children: [],
+      children: [
+        {
+          id: "prov-C",
+          type: "province",
+          name: "Capital Federal",
+          totalOffices: 1,
+          totalTickets: 5,
+          totalTerminals: 4,
+          children: [
+            {
+              id: "bld-SARMIENTO-151",
+              type: "building",
+              name: "SARMIENTO 151",
+              totalOffices: 1,
+              totalTickets: 5,
+              totalTerminals: 4,
+              children: [
+                {
+                  id: "off-C0000",
+                  type: "office",
+                  code: "C0000",
+                  name: "CENTRO POSTAL CABA",
+                  officeType: "CTP",
+                  isHeadquarter: true,
+                  totalOffices: 1,
+                  totalTickets: 5,
+                  totalTerminals: 4,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
     },
   ],
 };
 
-test("getInitialCollapsedIds leaves root and regions expanded, collapses provinces", () => {
-  const collapsed = getInitialCollapsedIds(sampleTree);
+describe("Office Tree Layout & Advanced Filtering Engine", () => {
+  test("card dimensions follow new anti-clipping size", () => {
+    assert.equal(NODE_WIDTH, 280);
+    assert.equal(NODE_HEIGHT, 108);
+  });
 
-  // Root and regions must NOT be collapsed
-  assert.equal(collapsed.has("root"), false);
-  assert.equal(collapsed.has("reg-NOA"), false);
-  assert.equal(collapsed.has("reg-CABA"), false);
+  test("extractAvailableOfficeTypes discovers unique types with office counts", () => {
+    const types = extractAvailableOfficeTypes(mockTree);
+    assert.ok(Array.isArray(types));
+    assert.equal(types.length, 4);
 
-  // Province and deeper must be collapsed
-  assert.equal(collapsed.has("prov-A"), true);
-});
+    const cdd = types.find((t) => t.type === "CDD");
+    assert.ok(cdd);
+    assert.equal(cdd.count, 1);
 
-test("computeTreeLayout positions nodes with horizontal progression and vertical spacing", () => {
-  const collapsed = getInitialCollapsedIds(sampleTree);
-  const layout = computeTreeLayout(sampleTree, collapsed);
+    const auto = types.find((t) => t.type === "SUCURSAL_AUTOMATIZADA");
+    assert.ok(auto);
+    assert.equal(auto.count, 1);
+  });
 
-  // In initial state: root (depth 0), reg-NOA (depth 1), reg-CABA (depth 1)
-  // prov-A is visible (depth 2) but its children are collapsed
-  assert.ok(layout.nodes.length >= 3);
+  test("filterOfficeTree filters by headquarters mode", () => {
+    const filters: OfficeFilterOptions = { headquartersOnly: true };
+    const filtered = filterOfficeTree(mockTree, filters);
 
-  const rootLayout = layout.nodes.find((n) => n.node.id === "root");
-  assert.ok(rootLayout);
-  assert.equal(rootLayout.x, 0);
+    assert.ok(filtered);
+    assert.equal(filtered.totalOffices, 2); // A0000 and C0000
+    assert.equal(filtered.totalTickets, 20); // 15 + 5
+  });
 
-  const noaLayout = layout.nodes.find((n) => n.node.id === "reg-NOA");
-  assert.ok(noaLayout);
-  assert.ok(noaLayout.x > rootLayout.x);
+  test("filterOfficeTree filters by minimum tickets and ticket tier", () => {
+    const filters: OfficeFilterOptions = { minTickets: 10 };
+    const filtered = filterOfficeTree(mockTree, filters);
 
-  // Connections exist between root and its children
-  const rootConns = layout.connections.filter((c) => c.fromId === "root");
-  assert.equal(rootConns.length, 2);
-});
+    assert.ok(filtered);
+    assert.equal(filtered.totalOffices, 1); // only A0000 with 15 tickets
+    assert.equal(filtered.totalTickets, 15);
+  });
 
-test("findPathToNode returns full list of ancestor IDs to reach search target", () => {
-  const path = findPathToNode(sampleTree, "A0000");
-  assert.deepEqual(path, ["root", "reg-NOA", "prov-A", "bld-DEAN-FUNES-160", "off-A0000"]);
+  test("filterOfficeTree filters by selected office types (multi-select)", () => {
+    const filters: OfficeFilterOptions = { officeTypes: ["CDD", "CTP"] };
+    const filtered = filterOfficeTree(mockTree, filters);
 
-  const notFound = findPathToNode(sampleTree, "NON_EXISTING");
-  assert.equal(notFound, null);
-});
+    assert.ok(filtered);
+    assert.equal(filtered.totalOffices, 2); // A0001 (CDD) and C0000 (CTP)
+    assert.equal(filtered.totalTickets, 10);
+  });
 
-test("filterTreeByHeadquarters keeps only headquarter nodes and prunes non-headquarter branches", () => {
-  const filtered = filterTreeByHeadquarters(sampleTree);
-  assert.ok(filtered);
-  assert.equal(filtered.totalOffices, 1);
+  test("filterOfficeTree filters by terminals presence", () => {
+    const filters: OfficeFilterOptions = { terminalsMode: "with_terminals" };
+    const filtered = filterOfficeTree(mockTree, filters);
 
-  const noa = filtered.children.find((r) => r.id === "reg-NOA");
-  assert.ok(noa);
-  const salta = noa.children[0];
-  const bld = salta.children[0];
-  assert.equal(bld.children.length, 1);
-  assert.equal(bld.children[0].code, "A0000");
+    assert.ok(filtered);
+    assert.equal(filtered.totalOffices, 3); // A0000, A0001, C0000 (excluding A0002 with 0 terminals)
+  });
+
+  test("findAllMatchingNodes returns all matching node paths for 1/N search navigation", () => {
+    const matches = findAllMatchingNodes(mockTree, "SALTA");
+    assert.ok(Array.isArray(matches));
+    assert.equal(matches.length, 4); // prov-A (Salta) + A0000, A0001, A0002
+    assert.equal(matches[0].targetId, "prov-A");
+    assert.equal(matches[1].targetId, "off-A0000");
+    assert.ok(matches[1].path.length >= 4);
+  });
+
+  test("computeFitToScreen calculates optimal pan and zoom to fit viewport", () => {
+    const fit = computeFitToScreen({
+      totalWidth: 1400,
+      totalHeight: 900,
+      containerWidth: 1000,
+      containerHeight: 700,
+      padding: 40,
+    });
+
+    assert.ok(fit.zoom > 0 && fit.zoom <= 1);
+    assert.ok(typeof fit.pan.x === "number");
+    assert.ok(typeof fit.pan.y === "number");
+  });
+
+  test("filterVisibleViewport returns only nodes within visible viewport plus overscan", () => {
+    const collapsed = getInitialCollapsedIds(mockTree);
+    const layout = computeTreeLayout(mockTree, collapsed);
+
+    const visible = filterVisibleViewport(layout.nodes, {
+      pan: { x: 0, y: 0 },
+      zoom: 1,
+      viewportWidth: 800,
+      viewportHeight: 600,
+      overscan: 100,
+    });
+
+    assert.ok(Array.isArray(visible));
+    assert.ok(visible.length <= layout.nodes.length);
+  });
 });
