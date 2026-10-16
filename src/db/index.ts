@@ -21,6 +21,14 @@ try {
 
 sqlite.pragma("foreign_keys = ON");
 sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("synchronous = NORMAL");
+sqlite.pragma("cache_size = -64000");
+sqlite.pragma("temp_store = MEMORY");
+sqlite.pragma("mmap_size = 268435456");
 sqlite.pragma("busy_timeout = 5000");
+
+export function getSqliteDataVersion(): number {
+  return Number(sqlite.pragma("data_version", { simple: true }) ?? 0);
+}
 
 export const db = drizzle(sqlite, { schema });

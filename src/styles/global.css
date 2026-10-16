@@ -434,3 +434,13 @@
   --btn-shadow: 0 0 0 0 rgb(0 0 0 / 0);
   --btn-inset: 0 0 0 0 rgb(0 0 0 / 0);
 }
+
+@utility cv-auto-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+
+@utility cv-auto-timeline {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 88px;
+}

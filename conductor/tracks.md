@@ -86,4 +86,11 @@
 ---
 - [x] **Track: Persistencia de Sesión del Chatbot IA en sessionStorage**
   *Link: [./tracks/admin_chatbot_session_storage_20261015/index.md](./tracks/admin_chatbot_session_storage_20261015/index.md)*
+---
+- [x] **Track: Optimización Integral de Rendimiento y Benchmarks (Inicio, Pantallas, Scroll e Historial)**
+  *Link: [./tracks/perf_optimization_20261016/index.md](./tracks/perf_optimization_20261016/index.md)*
+---
+- [x] **Track: Rediseño UI/UX, Filtros Flotantes y Rendimiento de Árboles Interactivos**
+  *Link: [./tracks/trees_ui_ux_perf_20261016/index.md](./tracks/trees_ui_ux_perf_20261016/index.md)*
+
 

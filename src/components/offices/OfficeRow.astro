@@ -85,7 +85,10 @@ const officeDirectoryRowGridClass = showActionsColumn
   data-sort-parent-nis={office.parentNis ?? ""}
   data-sort-address={`${office.address} ${office.location} ${office.region} ${office.postalCode}`}
   data-sort-group={office.location}
-  class:list={["block transition-all", !isVisibleByDefault && "hidden"]}
+  class:list={[
+    "cv-auto-row block transition-all",
+    !isVisibleByDefault && "hidden",
+  ]}
 >
   <div
     data-office-master-row={hasDetails ? "" : undefined}

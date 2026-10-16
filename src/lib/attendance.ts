@@ -130,23 +130,14 @@ export async function getAttendanceData(startDate: string, endDate: string) {
   const months = Array.from(new Set(dates.map((d) => d.substring(0, 7))));
   const scheduledMonths: Record<string, boolean> = {};
   for (const m of months) {
-    scheduledMonths[m] = false;
-  }
-
-  if (months.length > 0) {
-    const dbScheduled = await db
-      .select({
-        month: sql<string>`substr(${schedules.date}, 1, 7)`,
-      })
+    const [probe] = await db
+      .select({ id: schedules.id })
       .from(schedules)
-      .where(inArray(sql<string>`substr(${schedules.date}, 1, 7)`, months))
-      .groupBy(sql`substr(${schedules.date}, 1, 7)`);
-
-    for (const row of dbScheduled) {
-      if (row.month) {
-        scheduledMonths[row.month] = true;
-      }
-    }
+      .where(
+        and(gte(schedules.date, `${m}-01`), lte(schedules.date, `${m}-31`)),
+      )
+      .limit(1);
+    scheduledMonths[m] = Boolean(probe);
   }
 
   // Load Saturday rotation configs for these months
@@ -203,6 +194,19 @@ export async function getAttendanceData(startDate: string, endDate: string) {
           .orderBy(agentSaturdayGroups.month)
       : [];
 
+  const overridesByAgentId = new Map<
+    number,
+    (typeof agentSaturdayGroups.$inferSelect)[]
+  >();
+  for (const g of allDbAgentSaturdayGroups) {
+    let list = overridesByAgentId.get(g.agentId);
+    if (!list) {
+      list = [];
+      overridesByAgentId.set(g.agentId, list);
+    }
+    list.push(g);
+  }
+
   const resolvedAgentSaturdayConfig: Record<
     string,
     { group: string | null; horarioSat: string | null }
@@ -212,9 +216,7 @@ export async function getAttendanceData(startDate: string, endDate: string) {
     let currentGroup = agent.saturdayGroup || null;
     let currentHorario = agent.saturdayHorario || null;
 
-    const agentOverrides = allDbAgentSaturdayGroups
-      .filter((g) => g.agentId === agent.id)
-      .sort((a, b) => a.month.localeCompare(b.month));
+    const agentOverrides = overridesByAgentId.get(agent.id) ?? [];
 
     for (const m of months) {
       const configForMonth = agentOverrides.find((o) => o.month === m);
@@ -236,6 +238,33 @@ export async function getAttendanceData(startDate: string, endDate: string) {
     }
   }
 
+  const schedulesByAgentDate = new Map<
+    string,
+    typeof schedules.$inferSelect
+  >();
+  for (const s of dbSchedules) {
+    schedulesByAgentDate.set(`${s.agentId}_${s.date}`, s);
+  }
+
+  const overtimeByAgentDate = new Map<
+    string,
+    typeof weekendOvertimeShifts.$inferSelect
+  >();
+  for (const s of dbOvertimeShifts) {
+    overtimeByAgentDate.set(`${s.agentId}_${s.date}`, s);
+  }
+
+  const attendanceByAgentDateShift = new Map<
+    string,
+    typeof operatorAttendance.$inferSelect
+  >();
+  for (const a of dbAttendance) {
+    attendanceByAgentDateShift.set(
+      `${a.agentId}_${a.date}_${a.shiftType}`,
+      a,
+    );
+  }
+
   const dayNames = [
     "Domingo",
     "Lunes",
@@ -255,10 +284,9 @@ export async function getAttendanceData(startDate: string, endDate: string) {
     const isScheduledMonth = !!scheduledMonths[monthStr];
 
     dbAgents.forEach((agent) => {
+      const key = `${agent.id}_${dateStr}`;
       // Find planned override/schedule for this date and agent (vinculo por id)
-      const plan = dbSchedules.find(
-        (s) => s.agentId === agent.id && s.date === dateStr,
-      );
+      const plan = schedulesByAgentDate.get(key);
 
       let isSaturdayRotationShift = false;
       let rotationHorario = "";
@@ -350,14 +378,9 @@ export async function getAttendanceData(startDate: string, endDate: string) {
       }
 
       // Check for Overtime / HE shift
-      const overtimeShift = dbOvertimeShifts.find(
-        (s) => s.agentId === agent.id && s.date === dateStr,
-      );
-      const actualOvertime = dbAttendance.find(
-        (a) =>
-          a.agentId === agent.id &&
-          a.date === dateStr &&
-          a.shiftType === "overtime",
+      const overtimeShift = overtimeByAgentDate.get(key);
+      const actualOvertime = attendanceByAgentDateShift.get(
+        `${key}_overtime`,
       );
       const hasOvertime = !!overtimeShift || !!actualOvertime;
       const isFranco =
@@ -367,12 +390,7 @@ export async function getAttendanceData(startDate: string, endDate: string) {
 
       // 1. Emit normal row ONLY if it's not a Franco when HE is present
       if (!(isFranco && hasOvertime)) {
-        const actualNormal = dbAttendance.find(
-          (a) =>
-            a.agentId === agent.id &&
-            a.date === dateStr &&
-            a.shiftType === "normal",
-        );
+        const actualNormal = attendanceByAgentDateShift.get(`${key}_normal`);
 
         if (
           actualNormal?.horarioEstipulado &&

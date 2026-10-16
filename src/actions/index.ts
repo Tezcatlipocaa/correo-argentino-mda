@@ -13,6 +13,7 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import { calculateMultiChannelAuditScores } from "@lib/qualityCalculator";
 import { logAdminFromAstro } from "@lib/auditLogger";
+import { invalidateFeedbackCountCache } from "@lib/getUnassignedFeedbackCount";
 import {
   invalidateAutomationDetail,
   resolveAutomationDetail,
@@ -611,6 +612,7 @@ export const server = {
           })
           .returning({ id: feedback.id });
 
+        invalidateFeedbackCountCache();
         return { success: true, feedbackId: inserted.id };
       } catch (error: any) {
         console.error("Error submitting feedback:", error);
@@ -637,6 +639,7 @@ export const server = {
           .set({ status: input.newStatus })
           .where(eq(feedback.id, input.feedbackId))
           .run();
+        invalidateFeedbackCountCache();
 
         await logAdminFromAstro(
           context.locals,
@@ -671,6 +674,7 @@ export const server = {
           .set({ assignedToId })
           .where(eq(feedback.id, input.feedbackId))
           .run();
+        invalidateFeedbackCountCache();
 
         const logMessage = input.assign
           ? `Se asignó el reporte/sugerencia #${input.feedbackId} a sí mismo`

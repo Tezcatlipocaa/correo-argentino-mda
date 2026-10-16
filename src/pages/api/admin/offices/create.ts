@@ -7,6 +7,7 @@ import { officeFormSchema } from "@lib/validations";
 import { normalizeSearchValue } from "@lib/clientSearch";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { clearCache } from "@lib/invgate/locationCache";
+import { invalidateOfficeCaches } from "@lib/officeQueries";
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user || locals.user.id === 0) {
@@ -92,6 +93,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     clearCache();
+    invalidateOfficeCaches();
 
     await logAdminFromAstro(
       locals,

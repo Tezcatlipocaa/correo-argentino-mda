@@ -12,19 +12,19 @@ import { eq } from "drizzle-orm";
 const user = Astro.locals.user;
 const userRole = normalizeRole(user?.role || "agent");
 
-let displayName = user?.username || "Usuario";
+let displayName = user?.username ? user.username.trim() : "Usuario";
 if (user && user.id !== 0) {
   const matchedAgent = await db
     .select({ name: agents.name })
     .from(agents)
     .where(eq(agents.username, user.username))
     .limit(1);
-  if (matchedAgent.length > 0) {
-    displayName = matchedAgent[0].name;
+  if (matchedAgent.length > 0 && matchedAgent[0].name) {
+    displayName = matchedAgent[0].name.trim();
   }
 }
 
-if (displayName === user?.username) {
+if (displayName === user?.username?.trim()) {
   displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
 }
 
@@ -192,10 +192,7 @@ const visibleQuickAccessItems =
           user?.id !== 0 ? (
             <>
               ¡Hola,{" "}
-              <span class="text-secondary dark:text-primary">
-                {displayName}
-              </span>
-              !
+              <span class="text-secondary dark:text-primary">{displayName}</span>!
             </>
           ) : (
             "¡Hola!"

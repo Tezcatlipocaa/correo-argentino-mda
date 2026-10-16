@@ -3,6 +3,7 @@ import { db } from "@db/index";
 import { sessions } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { verifySessionId, deleteSessionCookie } from "@lib/session";
+import { invalidateSessionCache } from "@lib/sessionCache";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 
 export const ALL: APIRoute = async ({ cookies }) => {
@@ -12,6 +13,7 @@ export const ALL: APIRoute = async ({ cookies }) => {
     const sessionId = verifySessionId(signedSessionId);
     if (sessionId) {
       await db.delete(sessions).where(eq(sessions.id, sessionId));
+      invalidateSessionCache(sessionId);
     }
   }
   deleteSessionCookie(cookies);

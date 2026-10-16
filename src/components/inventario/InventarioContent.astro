@@ -23,6 +23,7 @@ import {
   getTerminalStatusCounts,
   getTTStatusCounts,
   getMediterraneaStatusCounts,
+  getCachedUniqueOperatingSystems,
 } from "@lib/terminalQueries";
 import type { TerminalSortKey, SortOrder } from "@lib/terminalQueries";
 import { and, eq } from "drizzle-orm";
@@ -81,10 +82,7 @@ const [
   getTerminalStatusCounts(),
   getTTStatusCounts(),
   getMediterraneaStatusCounts(),
-  db
-    .select({ os: terminalsTable.operatingSystem })
-    .from(terminalsTable)
-    .groupBy(terminalsTable.operatingSystem),
+  getCachedUniqueOperatingSystems(),
   getTerminalModelsByBrand(),
   getTerminalDisplay({ page: 1, limit: 50, sortBy, sortOrder }),
   showCubicsTab

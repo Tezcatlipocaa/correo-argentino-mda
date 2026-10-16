@@ -1,7 +1,7 @@
-// src/lib/permissions/mesaSync.ts
 import { db } from "../../db";
 import { mesas, users } from "../../db/schema";
 import { inArray, eq } from "drizzle-orm";
+import { invalidateAllSessionsCache } from "../sessionCache";
 import type { InvgateResult } from "@/types/invgate";
 
 export type InvGateMesa = {
@@ -142,6 +142,7 @@ export async function syncMesas(): Promise<{
         .run();
     }
   });
+  invalidateAllSessionsCache();
 
   // Usuarios cuya mesa quedó desactivada: requieren reasignación por un admin.
   // Se consulta DESPUÉS del commit para leer el estado final.

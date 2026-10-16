@@ -10,7 +10,7 @@ import {
   workLocations,
   users,
 } from "@db/schema";
-import { eq, and, desc, lt, like, sql } from "drizzle-orm";
+import { eq, and, desc, lt, like, gte, lte, sql } from "drizzle-orm";
 import { activeAgentCondition } from "@lib/activeUsers";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { jsonResponse } from "@lib/apiResponse";
@@ -130,15 +130,41 @@ export const GET: APIRoute = async ({ url }) => {
       .where(and(eq(agents.enCronograma, true), activeAgentCondition()));
 
     // 6. Cargar horas extras de fin de semana para este mes (Scope Overtime Configuration by Month)
+    const monthStart = `${activeMonth}-01`;
+    const monthEnd = `${activeMonth}-31`;
+
     const dbOvertimeConfigs = await db
       .select()
       .from(weekendOvertimeConfig)
-      .where(like(weekendOvertimeConfig.weekendStartDate, `${activeMonth}-%`));
+      .where(
+        and(
+          gte(weekendOvertimeConfig.weekendStartDate, monthStart),
+          lte(weekendOvertimeConfig.weekendStartDate, monthEnd),
+        ),
+      );
 
     const dbOvertimeShifts = await db
       .select()
       .from(weekendOvertimeShifts)
-      .where(like(weekendOvertimeShifts.weekendStartDate, `${activeMonth}-%`));
+      .where(
+        and(
+          gte(weekendOvertimeShifts.weekendStartDate, monthStart),
+          lte(weekendOvertimeShifts.weekendStartDate, monthEnd),
+        ),
+      );
+
+    const overtimeByAgentId = new Map<
+      number,
+      (typeof weekendOvertimeShifts.$inferSelect)[]
+    >();
+    for (const shift of dbOvertimeShifts) {
+      let list = overtimeByAgentId.get(shift.agentId);
+      if (!list) {
+        list = [];
+        overtimeByAgentId.set(shift.agentId, list);
+      }
+      list.push(shift);
+    }
 
     const baseline = dbAgents.map((agent) => {
       // Resolver el grupo y horario de sábado para este mes
@@ -181,12 +207,25 @@ export const GET: APIRoute = async ({ url }) => {
     const dbSchedules = await db
       .select()
       .from(schedules)
-      .where(like(schedules.date, `${activeMonth}-%`));
+      .where(and(gte(schedules.date, monthStart), lte(schedules.date, monthEnd)));
+
+    const schedulesByAgentId = new Map<
+      number,
+      (typeof schedules.$inferSelect)[]
+    >();
+    for (const s of dbSchedules) {
+      let list = schedulesByAgentId.get(s.agentId);
+      if (!list) {
+        list = [];
+        schedulesByAgentId.set(s.agentId, list);
+      }
+      list.push(s);
+    }
 
     // 8. Combinar schedules sobre la base
     const merged = baseline.map((operator: any) => {
       // Vinculo exclusivo por id (Plan B2): schedules.agent_name ya no existe.
-      const opOverrides = dbSchedules.filter((s) => s.agentId === operator.id);
+      const opOverrides = schedulesByAgentId.get(operator.id) ?? [];
 
       const newAsistencia = { ...operator.asistencia };
       const newComentarios: Record<string, string> = {};
@@ -305,9 +344,7 @@ export const GET: APIRoute = async ({ url }) => {
       });
 
       const agentOvertimes = operator.id
-        ? dbOvertimeShifts
-            .filter((s) => s.agentId === operator.id)
-            .map((s) => ({
+        ? (overtimeByAgentId.get(operator.id) ?? []).map((s) => ({
               id: s.id,
               weekendStartDate: s.weekendStartDate,
               agentId: s.agentId,

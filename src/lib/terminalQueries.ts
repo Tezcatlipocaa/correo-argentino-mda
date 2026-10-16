@@ -39,6 +39,16 @@ export type { TTPairState };
 import type { TerminalStatsRow } from "@lib/terminalStats";
 
 import { selectActiveMember } from "@lib/duplicateGroups";
+import { createQueryCache } from "@lib/queryCache";
+
+const TERMINAL_META_TTL_MS = 30_000;
+const terminalMetaCache = createQueryCache<unknown>({
+  ttlMs: TERMINAL_META_TTL_MS,
+});
+
+export function invalidateTerminalCaches(): void {
+  terminalMetaCache.invalidateAll();
+}
 
 export type TerminalSortKey = "hostname" | "hardware" | "os" | "location";
 export type SortOrder = "asc" | "desc";
@@ -690,71 +700,83 @@ export interface StatusCounts {
 }
 
 export async function getTerminalStatusCounts(): Promise<StatusCounts> {
-  const threshold = statusThresholdDate();
-  const [online] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(gte(terminals.lastContact, threshold));
-  const [offline] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(
-      or(
-        lt(terminals.lastContact, threshold),
-        isNull(terminals.lastContact),
-        eq(terminals.lastContact, ""),
-      ),
-    );
-  return { online: online.c, offline: offline.c };
+  return (await terminalMetaCache.getOrCompute(
+    "terminalStatusCounts",
+    async () => {
+      const threshold = statusThresholdDate();
+      const [online] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(gte(terminals.lastContact, threshold));
+      const [offline] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(
+          or(
+            lt(terminals.lastContact, threshold),
+            isNull(terminals.lastContact),
+            eq(terminals.lastContact, ""),
+          ),
+        );
+      return { online: online.c, offline: offline.c };
+    },
+  )) as StatusCounts;
 }
 
 export async function getTTStatusCounts(): Promise<StatusCounts> {
-  const threshold = statusThresholdDate();
-  const base = and(...ttUnionConditions());
-  const [online] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(and(base, gte(terminals.lastContact, threshold)));
-  const [offline] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(
-      and(
-        base,
-        or(
-          lt(terminals.lastContact, threshold),
-          isNull(terminals.lastContact),
-          eq(terminals.lastContact, ""),
+  return (await terminalMetaCache.getOrCompute("ttStatusCounts", async () => {
+    const threshold = statusThresholdDate();
+    const base = and(...ttUnionConditions());
+    const [online] = await db
+      .select({ c: sql<number>`count(*)` })
+      .from(terminals)
+      .where(and(base, gte(terminals.lastContact, threshold)));
+    const [offline] = await db
+      .select({ c: sql<number>`count(*)` })
+      .from(terminals)
+      .where(
+        and(
+          base,
+          or(
+            lt(terminals.lastContact, threshold),
+            isNull(terminals.lastContact),
+            eq(terminals.lastContact, ""),
+          ),
         ),
-      ),
-    );
-  return { online: online.c, offline: offline.c };
+      );
+    return { online: online.c, offline: offline.c };
+  })) as StatusCounts;
 }
 
 export async function getMediterraneaStatusCounts(): Promise<StatusCounts> {
-  const threshold = statusThresholdDate();
-  const base = or(
-    like(terminals.hostname, "TMEDI%"),
-    like(terminals.hostname, "TVMEDI%"),
-  );
-  const [online] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(and(base, gte(terminals.lastContact, threshold)));
-  const [offline] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(
-      and(
-        base,
-        or(
-          lt(terminals.lastContact, threshold),
-          isNull(terminals.lastContact),
-          eq(terminals.lastContact, ""),
-        ),
-      ),
-    );
-  return { online: online.c, offline: offline.c };
+  return (await terminalMetaCache.getOrCompute(
+    "mediterraneaStatusCounts",
+    async () => {
+      const threshold = statusThresholdDate();
+      const base = or(
+        like(terminals.hostname, "TMEDI%"),
+        like(terminals.hostname, "TVMEDI%"),
+      );
+      const [online] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(and(base, gte(terminals.lastContact, threshold)));
+      const [offline] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(
+          and(
+            base,
+            or(
+              lt(terminals.lastContact, threshold),
+              isNull(terminals.lastContact),
+              eq(terminals.lastContact, ""),
+            ),
+          ),
+        );
+      return { online: online.c, offline: offline.c };
+    },
+  )) as StatusCounts;
 }
 
 export async function getTTGroups(
@@ -931,33 +953,52 @@ export interface ModelBrandEntry {
 }
 
 export async function getTerminalModelsByBrand(): Promise<ModelBrandEntry[]> {
-  const rows = await db
-    .select({ model: terminals.model, manufacturer: terminals.manufacturer })
-    .from(terminals)
-    .where(
-      and(
-        sql`${terminals.model} IS NOT NULL AND ${terminals.model} != ''`,
-        knownBrandConditions,
-      ),
-    )
-    .groupBy(terminals.model, terminals.manufacturer)
-    .orderBy(asc(terminals.model));
+  return (await terminalMetaCache.getOrCompute(
+    "terminalModelsByBrand",
+    async () => {
+      const rows = await db
+        .select({
+          model: terminals.model,
+          manufacturer: terminals.manufacturer,
+        })
+        .from(terminals)
+        .where(
+          and(
+            sql`${terminals.model} IS NOT NULL AND ${terminals.model} != ''`,
+            knownBrandConditions,
+          ),
+        )
+        .groupBy(terminals.model, terminals.manufacturer)
+        .orderBy(asc(terminals.model));
 
-  const seen = new Set<string>();
-  const result: ModelBrandEntry[] = [];
+      const seen = new Set<string>();
+      const result: ModelBrandEntry[] = [];
 
-  for (const row of rows) {
-    if (!row.model) continue;
-    const model = row.model.trim();
-    const brand = inferBrandFromManufacturer(row.manufacturer);
-    if (!model || !brand) continue;
-    if (blockedModelPatterns.some((p) => p.test(model))) continue;
-    if (seen.has(model)) continue;
-    seen.add(model);
-    result.push({ model, brand });
-  }
+      for (const row of rows) {
+        if (!row.model) continue;
+        const model = row.model.trim();
+        const brand = inferBrandFromManufacturer(row.manufacturer);
+        if (!model || !brand) continue;
+        if (blockedModelPatterns.some((p) => p.test(model))) continue;
+        if (seen.has(model)) continue;
+        seen.add(model);
+        result.push({ model, brand });
+      }
 
-  return result;
+      return result;
+    },
+  )) as ModelBrandEntry[];
+}
+
+export async function getCachedUniqueOperatingSystems(): Promise<
+  Array<{ os: string | null }>
+> {
+  return (await terminalMetaCache.getOrCompute("uniqueOperatingSystems", () =>
+    db
+      .select({ os: terminals.operatingSystem })
+      .from(terminals)
+      .groupBy(terminals.operatingSystem),
+  )) as Array<{ os: string | null }>;
 }
 
 export async function getDistinctTerminalModels(): Promise<string[]> {

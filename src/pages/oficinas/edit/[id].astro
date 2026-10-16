@@ -17,7 +17,10 @@ import {
   getOfficeAddressKey,
   isSameBuildingConfirmed,
 } from "@lib/officeAddress";
-import { findOfficeAddressMatches } from "@lib/officeQueries";
+import {
+  findOfficeAddressMatches,
+  invalidateOfficeCaches,
+} from "@lib/officeQueries";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import type { ToastType } from "@lib/toastClient";
@@ -196,6 +199,7 @@ if (Astro.request.method === "POST") {
             ip: assetIps[i]?.toString().trim() || null,
           });
         }
+        invalidateOfficeCaches();
 
         if (oldName && oldName !== officeData.name) {
           await logAdminFromAstro(

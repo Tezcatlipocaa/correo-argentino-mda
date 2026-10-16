@@ -1,11 +1,11 @@
 import { defineMiddleware } from "astro:middleware";
 import { db } from "./db/index";
-import { users, sessions, mesas } from "./db/schema";
+import { sessions } from "./db/schema";
 import { eq } from "drizzle-orm";
 import { verifySessionId, deleteSessionCookie } from "./lib/session";
 import { hasPermission } from "./lib/rbac";
 import { getIslandEffectivePathname } from "./lib/navigation";
-import { isSectionVisibleSync, resolveSessionMesa } from "./lib/helpdeskAccess";
+import { isSectionVisibleSync } from "./lib/helpdeskAccess";
 import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
@@ -13,9 +13,9 @@ import { KB_CATEGORIAS_PATH, isCategoryFormKbPath } from "@lib/kbRedirects";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { resolveClientIp } from "@lib/clientIp";
 import {
-  isFingerprintValid,
-  computeFingerprint,
-} from "./lib/sessionFingerprint";
+  resolveSessionUser,
+  invalidateSessionCache,
+} from "./lib/sessionCache";
 import { assertServerEnv } from "./lib/env";
 assertServerEnv();
 
@@ -242,82 +242,41 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (sessionId) {
-    const [session] = await db
-      .select({
-        id: sessions.id,
-        userId: sessions.userId,
-        expiresAt: sessions.expiresAt,
-        fingerprint: sessions.fingerprint,
-      })
-      .from(sessions)
-      .where(eq(sessions.id, sessionId));
+    const resolved = await resolveSessionUser(
+      sessionId,
+      context.request.headers.get("user-agent"),
+    );
 
-    if (session && session.expiresAt > Date.now()) {
-      const currentFingerprint = computeFingerprint(
-        context.request.headers.get("user-agent"),
-      );
-      if (!isFingerprintValid(session.fingerprint, currentFingerprint)) {
-        deleteSessionCookie(cookies);
-        await db.delete(sessions).where(eq(sessions.id, sessionId));
-        sessionId = null;
-        if (relativePath !== "/login") {
-          return redirect(
-            resolveUrl(
-              `/login?toast_msg=${encodeURIComponent("Sesión inválida")}&toast_type=error`,
-            ),
-          );
-        }
-      } else {
-        const [dbUser] = await db
-          .select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            helpdeskId: users.helpdeskId,
-            helpdeskName: users.helpdeskName,
-            active: users.active,
-            mesaActive: mesas.active,
-            mesaName: mesas.name,
-          })
-          .from(users)
-          .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
-          .where(eq(users.id, session.userId));
-
-        if (dbUser && !dbUser.active) {
-          // Cuenta desactivada por un admin: se invalida la sesión y se expulsa.
-          deleteSessionCookie(cookies);
-          await db.delete(sessions).where(eq(sessions.id, sessionId));
-          sessionId = null;
-          if (relativePath !== "/login") {
-            return redirect(
-              resolveUrl(
-                `/login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
-              ),
-            );
-          }
-        } else if (dbUser) {
-          // Fail-closed: mesa desactivada, borrada o desconocida = usuario
-          // tratado como "sin mesa" (solo paginas comunes visibles) hasta que
-          // un admin le reasigne una mesa activa. resolveSessionMesa aplica
-          // la política; el nombre viene de la mesa real (join), no del
-          // campo denormalizado en users.
-          const mesa = resolveSessionMesa({
-            helpdeskId: dbUser.helpdeskId,
-            helpdeskName: dbUser.mesaName ?? null,
-            mesaActive: dbUser.mesaActive,
-          });
-          currentUser = {
-            id: dbUser.id,
-            username: dbUser.username,
-            role: dbUser.role,
-            helpdeskId: mesa.helpdeskId,
-            helpdeskName: mesa.helpdeskName,
-          };
-        }
+    if (resolved.status === "ok") {
+      currentUser = resolved.user;
+    } else if (resolved.status === "invalid_fingerprint") {
+      deleteSessionCookie(cookies);
+      invalidateSessionCache(sessionId);
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      sessionId = null;
+      if (relativePath !== "/login") {
+        return redirect(
+          resolveUrl(
+            `/login?toast_msg=${encodeURIComponent("Sesión inválida")}&toast_type=error`,
+          ),
+        );
+      }
+    } else if (resolved.status === "user_inactive") {
+      deleteSessionCookie(cookies);
+      invalidateSessionCache(sessionId);
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      sessionId = null;
+      if (relativePath !== "/login") {
+        return redirect(
+          resolveUrl(
+            `/login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
+          ),
+        );
       }
     } else {
       deleteSessionCookie(cookies);
-      if (session) {
+      invalidateSessionCache(sessionId);
+      if (resolved.hadRow) {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
       }
       if (relativePath !== "/login") {

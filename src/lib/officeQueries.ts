@@ -20,10 +20,116 @@ import {
   getOfficeAddressKey,
   normalizeOfficeAddress,
 } from "@lib/officeAddress";
+import { createQueryCache } from "@lib/queryCache";
 
-let manualHostnamesCache: Set<string> | null = null;
-let manualHostnamesCacheTime = 0;
-const MANUAL_HOSTNAMES_TTL_MS = 60_000;
+const OFFICE_META_TTL_MS = 60_000;
+const officeMetaCache = createQueryCache<unknown>({
+  ttlMs: OFFICE_META_TTL_MS,
+});
+
+export function invalidateOfficeCaches(): void {
+  officeMetaCache.invalidateAll();
+}
+
+export interface ProvinceWithRegionRow {
+  code: string;
+  name: string;
+  regionId: number;
+  regionName: string | null;
+}
+
+export async function getCachedProvincesWithRegion(): Promise<
+  ProvinceWithRegionRow[]
+> {
+  return (await officeMetaCache.getOrCompute("provincesWithRegion", async () =>
+    db
+      .select({
+        code: provinces.code,
+        name: provinces.name,
+        regionId: provinces.regionId,
+        regionName: regions.name,
+      })
+      .from(provinces)
+      .leftJoin(regions, eq(provinces.regionId, regions.id))
+      .orderBy(regions.name, provinces.name),
+  )) as ProvinceWithRegionRow[];
+}
+
+export async function getOfficeTypeCounts(): Promise<{
+  processedCounts: { type: string; count: number }[];
+  officeCountByType: Record<string, number>;
+}> {
+  const cached = (await officeMetaCache.getOrCompute(
+    "officeTypeCounts",
+    async () => {
+      const rawCounts = await db
+        .select({
+          type: offices.type,
+          officeType: offices.officeType,
+          name: offices.name,
+          invgateDisplayName: officeInvgateLinks.invgateDisplayName,
+        })
+        .from(offices)
+        .leftJoin(
+          officeInvgateLinks,
+          eq(offices.id, officeInvgateLinks.officeId),
+        );
+
+      const processedCounts: { type: string; count: number }[] = [];
+      let sucursalAutoCount = 0;
+      let sucursalNoAutoCount = 0;
+      const otherMap = new Map<string, number>();
+
+      for (const row of rawCounts) {
+        if (!row.type) continue;
+        if (row.type === "SUCURSAL") {
+          if (isSucursalAutomatizada(row)) {
+            sucursalAutoCount += 1;
+          } else {
+            sucursalNoAutoCount += 1;
+          }
+        } else {
+          otherMap.set(row.type, (otherMap.get(row.type) ?? 0) + 1);
+        }
+      }
+
+      for (const [type, count] of otherMap.entries()) {
+        processedCounts.push({ type, count });
+      }
+      if (sucursalAutoCount > 0) {
+        processedCounts.push({
+          type: "SUCURSAL_AUTOMATIZADA",
+          count: sucursalAutoCount,
+        });
+      }
+      if (sucursalNoAutoCount > 0) {
+        processedCounts.push({
+          type: "SUCURSAL_NO_AUTOMATIZADA",
+          count: sucursalNoAutoCount,
+        });
+      }
+
+      const officeCountByType = processedCounts.reduce(
+        (acc, row) => {
+          acc.all += row.count;
+          acc[row.type] = row.count;
+          return acc;
+        },
+        { all: 0 } as Record<string, number>,
+      );
+
+      return { processedCounts, officeCountByType };
+    },
+  )) as {
+    processedCounts: { type: string; count: number }[];
+    officeCountByType: Record<string, number>;
+  };
+
+  return {
+    processedCounts: cached.processedCounts.map((r) => ({ ...r })),
+    officeCountByType: { ...cached.officeCountByType },
+  };
+}
 
 export type OfficeSortKey =
   | "code"
@@ -90,49 +196,53 @@ export interface GetOfficesParams {
 }
 
 export async function hasClosedOffices(): Promise<boolean> {
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(offices)
-    .where(eq(offices.active, false));
-  return count > 0;
+  return (await officeMetaCache.getOrCompute("hasClosedOffices", async () => {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(offices)
+      .where(eq(offices.active, false));
+    return count > 0;
+  })) as boolean;
 }
 
 async function loadSiblingMap(): Promise<Map<string, SiblingOffice[]>> {
-  const rows = await db
-    .select({
-      code: offices.code,
-      name: offices.name,
-      type: offices.type,
-      officeType: offices.officeType,
-      address: offices.address,
-      provinceCode: offices.provinceCode,
-      region: regions.name,
-    })
-    .from(offices)
-    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
-    .leftJoin(regions, eq(provinces.regionId, regions.id));
-
-  return buildSiblingMap(
-    rows.map((r) => {
-      let mappedType = isSucursalAutomatizada({
-        type: r.type,
-        officeType: r.officeType,
-        name: r.name,
+  return (await officeMetaCache.getOrCompute("siblingMap", async () => {
+    const rows = await db
+      .select({
+        code: offices.code,
+        name: offices.name,
+        type: offices.type,
+        officeType: offices.officeType,
+        address: offices.address,
+        provinceCode: offices.provinceCode,
+        region: regions.name,
       })
-        ? "SUCURSAL_AUTOMATIZADA"
-        : r.type === "SUCURSAL"
-          ? "SUCURSAL_NO_AUTOMATIZADA"
-          : r.type;
-      return {
-        code: r.code,
-        name: r.name,
-        type: mappedType,
-        address: r.address ?? "",
-        region: r.region ?? "",
-        provinceCode: r.provinceCode,
-      };
-    }),
-  );
+      .from(offices)
+      .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
+      .leftJoin(regions, eq(provinces.regionId, regions.id));
+
+    return buildSiblingMap(
+      rows.map((r) => {
+        let mappedType = isSucursalAutomatizada({
+          type: r.type,
+          officeType: r.officeType,
+          name: r.name,
+        })
+          ? "SUCURSAL_AUTOMATIZADA"
+          : r.type === "SUCURSAL"
+            ? "SUCURSAL_NO_AUTOMATIZADA"
+            : r.type;
+        return {
+          code: r.code,
+          name: r.name,
+          type: mappedType,
+          address: r.address ?? "",
+          region: r.region ?? "",
+          provinceCode: r.provinceCode,
+        };
+      }),
+    );
+  })) as Map<string, SiblingOffice[]>;
 }
 
 export async function findOfficeAddressMatches({
@@ -197,16 +307,7 @@ export async function getOffices(params: GetOfficesParams) {
   const searchFilter = params.search || "";
 
   // 1. Get provinces mapping
-  const allProvincesWithRegion = await db
-    .select({
-      code: provinces.code,
-      name: provinces.name,
-      regionId: provinces.regionId,
-      regionName: regions.name,
-    })
-    .from(provinces)
-    .leftJoin(regions, eq(provinces.regionId, regions.id))
-    .orderBy(regions.name, provinces.name);
+  const allProvincesWithRegion = await getCachedProvincesWithRegion();
 
   const provincesByRegion: Record<string, { code: string; name: string }[]> =
     {};
@@ -397,23 +498,22 @@ export async function getOffices(params: GetOfficesParams) {
   });
 
   // Cached: fetch all manual hostnames globally to deduplicate terminals
-  const now = Date.now();
-  if (
-    !manualHostnamesCache ||
-    now - manualHostnamesCacheTime > MANUAL_HOSTNAMES_TTL_MS
-  ) {
-    const allManualHostnamesRows = await db
-      .select({ hostname: officeAssets.hostname })
-      .from(officeAssets)
-      .where(
-        sql`${officeAssets.hostname} IS NOT NULL AND ${officeAssets.hostname} != ''`,
+  const manualHostnames = (await officeMetaCache.getOrCompute(
+    "manualHostnames",
+    async () => {
+      const allManualHostnamesRows = await db
+        .select({ hostname: officeAssets.hostname })
+        .from(officeAssets)
+        .where(
+          sql`${officeAssets.hostname} IS NOT NULL AND ${officeAssets.hostname} != ''`,
+        );
+      return new Set(
+        allManualHostnamesRows
+          .map((r) => r.hostname?.toLowerCase())
+          .filter((h): h is string => Boolean(h)),
       );
-    manualHostnamesCache = new Set(
-      allManualHostnamesRows.map((r) => r.hostname?.toLowerCase()),
-    );
-    manualHostnamesCacheTime = now;
-  }
-  const manualHostnames = manualHostnamesCache;
+    },
+  )) as Set<string>;
 
   const siblingMap = await loadSiblingMap();
 

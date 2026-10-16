@@ -11,6 +11,7 @@ import { offices } from "@db/schema";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { normalizeSearchValue } from "@lib/clientSearch";
 import { buildBuildingKey } from "@lib/officeBuildingKey";
+import { invalidateOfficeCaches } from "@lib/officeQueries";
 import { z } from "zod";
 
 /**
@@ -359,6 +360,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
             .run();
         }
       });
+      invalidateOfficeCaches();
     }
 
     // `logAdminAction` traga sus propios errores (try/catch + console.error),

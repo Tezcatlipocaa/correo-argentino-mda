@@ -9,6 +9,7 @@ import { logAdminFromAstro } from "@lib/auditLogger";
 import { validateRequestCsrf } from "@lib/csrf";
 import { checkSlidingRateLimit } from "@lib/rateLimit";
 import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
+import { invalidateAllSessionsCache } from "@lib/sessionCache";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = await requireWriteAccess(locals, "permisos");
@@ -61,6 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .update(mesas)
       .set({ assignable })
       .where(eq(mesas.id, mesa.id));
+    invalidateAllSessionsCache();
 
     const accion = assignable ? "Habilitó" : "Deshabilitó";
     await logAdminFromAstro(
