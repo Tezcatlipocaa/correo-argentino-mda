@@ -6,14 +6,14 @@
 - [x] Task: Implementar fallback de modelos en `src/lib/ai/opencodeProvider.ts` 4a281575
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Council Engine & Consensus Rules (TDD)
-- [ ] Task: Escribir tests exhaustivos de partición y consenso en `src/lib/ai/councilEvaluator.test.ts`
-- [ ] Task: Implementar `src/lib/ai/councilEvaluator.ts` con split explícito, mergeCouncil puro y prompt quirúrgico al juez
-- [ ] Task: Exportar e integrar tipos del debate en `src/lib/ai/types.ts`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 2: Council Engine & Consensus Rules (TDD) [checkpoint: f10edec2]
+- [x] Task: Escribir tests exhaustivos de partición y consenso en `src/lib/ai/councilEvaluator.test.ts` f10edec2
+- [x] Task: Implementar `src/lib/ai/councilEvaluator.ts` con split explícito, mergeCouncil puro y prompt quirúrgico al juez f10edec2
+- [x] Task: Exportar e integrar tipos del debate en `src/lib/ai/types.ts` f10edec2
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: API Endpoint Integration (TDD)
-- [ ] Task: Actualizar tests en `src/pages/api/calidad/ai-evaluate.test.ts` con soporte para `model: "council"`
+- [~] Task: Actualizar tests en `src/pages/api/calidad/ai-evaluate.test.ts` con soporte para `model: "council"`
 - [ ] Task: Implementar branch de Council en `src/pages/api/calidad/ai-evaluate.ts` retornando payload aditivo
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
