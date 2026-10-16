@@ -1,10 +1,10 @@
 # Implementation Plan: Council de Calidad MDA (Orquestación Multi-Agente & Fallback Resiliente)
 
-## Phase 1: Core Provider & Domain Suite Update (TDD)
+## Phase 1: Core Provider & Domain Suite Update (TDD) [checkpoint: 4a281575]
 - [x] Task: Actualizar `package.json` para incluir `src/lib/ai/*.test.ts` en `test:domain` 8a7ee6d
-- [~] Task: Escribir tests para el fallback de modelos en `src/lib/ai/opencodeProvider.test.ts`
-- [ ] Task: Implementar fallback de modelos en `src/lib/ai/opencodeProvider.ts`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Escribir tests para el fallback de modelos en `src/lib/ai/opencodeProvider.test.ts` 4a281575
+- [x] Task: Implementar fallback de modelos en `src/lib/ai/opencodeProvider.ts` 4a281575
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Council Engine & Consensus Rules (TDD)
 - [ ] Task: Escribir tests exhaustivos de partición y consenso en `src/lib/ai/councilEvaluator.test.ts`
