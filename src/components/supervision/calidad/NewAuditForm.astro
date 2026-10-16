@@ -2908,69 +2908,76 @@ function evaluateOrthographyRule(title: string, description: string) {
                   : `<span class="badge badge-sm border border-success/40 bg-success/15 text-success font-medium">Consenso Directo</span>`;
               } else if (deb.consenso === "arbitrado") {
                 consensusBadgeHtml = `<span class="badge badge-sm border border-secondary/40 bg-secondary/15 text-secondary font-medium">Laudo Juez Nemotron</span>`;
-              } else if (deb.consenso === "sin_oposicion") {
-                consensusBadgeHtml = `<span class="badge badge-sm border border-base-300 bg-base-200 text-base-content/75 font-medium">Agente Especializado</span>`;
               } else if (deb.consenso === "arbitraje_fallido") {
                 consensusBadgeHtml = `<span class="badge badge-sm border border-warning/40 bg-warning/15 text-warning font-medium">Arbitraje Fallido</span>`;
               }
+              // Nota: para 'sin_oposicion' (criterio asignado a un solo agente o sin disputa) no se agrega badge repetitivo.
 
-              // Posturas de los modelos
-              const formatVote = (agentRole: string, modelName: string, iconBg: string, vote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }) => {
-                if (!vote) return "";
-                const cText = vote.cumple === null ? "Sin evidencia suficiente" : vote.cumple ? "Cumple" : "No cumple";
-                const cBadgeClass = vote.cumple === null
-                  ? "border-base-300 bg-base-200 text-base-content/70"
-                  : vote.cumple
-                    ? "border-success/30 bg-success/15 text-success font-semibold"
-                    : "border-error/30 bg-error/15 text-error font-semibold";
-                const safeVotedEv = vote.evidencia ? escapeHtml(vote.evidencia) : "";
-                const safeVotedRaz = vote.razonamiento ? escapeHtml(vote.razonamiento) : "";
-                const pct = Math.round((vote.confianza || 0) * 100);
+              // Solo renderizar el acordeón de debate si hubo contraste entre modelos o intervención arbitral.
+              // Si fue evaluado por un único agente sin oposición, el veredicto principal ya contiene toda la información.
+              const hasDebateOrArbitration = deb.consenso === "arbitrado" ||
+                deb.consenso === "arbitraje_fallido" ||
+                (deb.alphaVote && deb.betaVote);
 
-                return `
-                  <div class="rounded-xl border border-base-300/80 bg-base-100 p-3 shadow-xs space-y-2">
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
-                      <div class="flex items-center gap-2">
-                        <span class="inline-flex size-2 rounded-full ${iconBg}" aria-hidden="true"></span>
-                        <div class="flex flex-col">
-                          <span class="text-xs font-bold text-base-content">${agentRole}</span>
-                          <span class="font-mono text-xxs text-base-content/50">${modelName}</span>
+              if (hasDebateOrArbitration) {
+                // Posturas de los modelos
+                const formatVote = (agentRole: string, modelName: string, iconBg: string, vote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }) => {
+                  if (!vote) return "";
+                  const cText = vote.cumple === null ? "Sin evidencia suficiente" : vote.cumple ? "Cumple" : "No cumple";
+                  const cBadgeClass = vote.cumple === null
+                    ? "border-base-300 bg-base-200 text-base-content/70"
+                    : vote.cumple
+                      ? "border-success/30 bg-success/15 text-success font-semibold"
+                      : "border-error/30 bg-error/15 text-error font-semibold";
+                  const safeVotedEv = vote.evidencia ? escapeHtml(vote.evidencia) : "";
+                  const safeVotedRaz = vote.razonamiento ? escapeHtml(vote.razonamiento) : "";
+                  const pct = Math.round((vote.confianza || 0) * 100);
+
+                  return `
+                    <div class="rounded-xl border border-base-300/80 bg-base-100 p-3 shadow-xs space-y-2">
+                      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="inline-flex size-2 rounded-full ${iconBg}" aria-hidden="true"></span>
+                          <div class="flex flex-col">
+                            <span class="text-xs font-bold text-base-content">${agentRole}</span>
+                            <span class="font-mono text-xxs text-base-content/50">${modelName}</span>
+                          </div>
                         </div>
+                        <span class="badge badge-sm border tabular-nums ${cBadgeClass}">
+                          ${cText} · ${pct}&nbsp;%
+                        </span>
                       </div>
-                      <span class="badge badge-sm border tabular-nums ${cBadgeClass}">
-                        ${cText} · ${pct}&nbsp;%
-                      </span>
+                      ${safeVotedRaz ? `<p class="text-xs leading-relaxed text-base-content/90 break-words">${safeVotedRaz}</p>` : ""}
+                      ${safeVotedEv ? `
+                        <div class="mt-1.5 rounded-lg border-l-2 border-secondary/60 bg-base-200/50 px-2.5 py-1.5 text-xs text-base-content/75 break-words">
+                          <span class="font-semibold text-secondary mr-1">Cita textual:</span>“${safeVotedEv}”
+                        </div>
+                      ` : ""}
                     </div>
-                    ${safeVotedRaz ? `<p class="text-xs leading-relaxed text-base-content/90 break-words">${safeVotedRaz}</p>` : ""}
-                    ${safeVotedEv ? `
-                      <div class="mt-1.5 rounded-lg border-l-2 border-secondary/60 bg-base-200/50 px-2.5 py-1.5 text-xs text-base-content/75 break-words">
-                        <span class="font-semibold text-secondary mr-1">Cita textual:</span>“${safeVotedEv}”
-                      </div>
-                    ` : ""}
-                  </div>
+                  `;
+                };
+
+                const alphaHtml = formatVote("Agente Alpha (Procesos & Procedimiento)", "DeepSeek v4.1 Flash", "bg-primary", deb.alphaVote);
+                const betaHtml = formatVote("Agente Beta (Atención al Cliente & Datos)", "MiMo v2.6 Flash", "bg-accent", deb.betaVote);
+                const juezHtml = formatVote("Juez Arbitral (Desempate & Laudo Final)", "Nemotron 3.5 Lightning", "bg-secondary", deb.judgeVote);
+
+                debateAccordionHtml = `
+                  <details class="group mt-3 rounded-xl border border-base-200 bg-base-200/30 p-2.5 transition-colors">
+                    <summary class="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold text-base-content/85 hover:text-secondary select-none px-1 py-0.5">
+                      <span class="flex items-center gap-2">
+                        <span class="badge badge-xs bg-secondary/15 text-secondary border-0 font-bold">Council</span>
+                        <span>Ver debate y posturas contrapuestas</span>
+                      </span>
+                      <span class="text-xs font-bold transition-transform duration-200 group-open:rotate-180 text-base-content/50">▾</span>
+                    </summary>
+                    <div class="mt-2.5 space-y-2 pt-2 border-t border-base-200">
+                      ${alphaHtml}
+                      ${betaHtml}
+                      ${juezHtml}
+                    </div>
+                  </details>
                 `;
-              };
-
-              const alphaHtml = formatVote("Agente Alpha (Procesos & Procedimiento)", "DeepSeek v4.1 Flash", "bg-primary", deb.alphaVote);
-              const betaHtml = formatVote("Agente Beta (Atención al Cliente & Datos)", "MiMo v2.6 Flash", "bg-accent", deb.betaVote);
-              const juezHtml = formatVote("Juez Arbitral (Desempate & Laudo Final)", "Nemotron 3.5 Lightning", "bg-secondary", deb.judgeVote);
-
-              debateAccordionHtml = `
-                <details class="group mt-3 rounded-xl border border-base-200 bg-base-200/30 p-2.5 transition-colors">
-                  <summary class="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold text-base-content/85 hover:text-secondary select-none px-1 py-0.5">
-                    <span class="flex items-center gap-2">
-                      <span class="badge badge-xs bg-secondary/15 text-secondary border-0 font-bold">Council</span>
-                      <span>Ver debate y posturas de los modelos</span>
-                    </span>
-                    <span class="text-xs font-bold transition-transform duration-200 group-open:rotate-180 text-base-content/50">▾</span>
-                  </summary>
-                  <div class="mt-2.5 space-y-2 pt-2 border-t border-base-200">
-                    ${alphaHtml}
-                    ${betaHtml}
-                    ${juezHtml}
-                  </div>
-                </details>
-              `;
+              }
             }
 
             const row = document.createElement("label");
