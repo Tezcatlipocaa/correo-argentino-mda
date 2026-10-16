@@ -20,14 +20,12 @@ const descriptions: Record<TabKey, string> = {
 <BaseLayout>
   <PageContainer width="xl" gap="md">
     <div class="flex flex-col gap-3 border-b border-base-300/40 pb-5">
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-4">
         <PageHeader
           title="Recursos"
-          class="max-w-3xl"
+          class="shrink-0"
         />
-        <div class="flex items-center justify-start">
-          <RecursosTabs activeTab={activeTab} class="shrink-0" />
-        </div>
+        <RecursosTabs activeTab={activeTab} class="shrink-0" />
       </div>
       <p class="text-base-content/70 max-w-3xl text-sm sm:text-base">
         {descriptions[activeTab]}

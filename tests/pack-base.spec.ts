@@ -101,7 +101,7 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     await expect(checkbox).toBeVisible();
   });
 
-  test("los switches de pestañas de Recursos permanecen anclados arriba a la izquierda entre navegación", async ({
+  test("los switches de pestañas de Recursos permanecen anclados arriba a la derecha entre navegación", async ({
     context,
     page,
   }) => {
@@ -131,10 +131,10 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     const box3 = await tabsLocator3.boundingBox();
     expect(box3).not.toBeNull();
 
-    // Comprobamos posición arriba a la izquierda consistente (tolerancia <= 1px por subpixel rendering)
-    expect(Math.abs(box1!.x - box2!.x)).toBeLessThanOrEqual(1);
+    // Comprobamos posición en el extremo derecho consistente (tolerancia <= 5px en X por active tab font-weight, <= 1px en Y)
+    expect(Math.abs(box1!.x - box2!.x)).toBeLessThanOrEqual(5);
     expect(Math.abs(box1!.y - box2!.y)).toBeLessThanOrEqual(1);
-    expect(Math.abs(box1!.x - box3!.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box1!.x - box3!.x)).toBeLessThanOrEqual(5);
     expect(Math.abs(box1!.y - box3!.y)).toBeLessThanOrEqual(1);
   });
 
