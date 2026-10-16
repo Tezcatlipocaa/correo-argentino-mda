@@ -24,7 +24,7 @@ const MIN_TARGET_PX = 32;
 
 const ROUTES = [
   "/oficinas",
-  "/contactos",
+  "/recursos/contactos",
   "/recursos",
   "/recursos/aplicativos",
   "/inventario-terminales",

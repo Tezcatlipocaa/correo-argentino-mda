@@ -1,45 +1,40 @@
 ---
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 ---
 
-<PageContainer width="xl">
-  <div class="skeleton-debounced">
-    <PageHeader
-      description="Descarga herramientas de operatoria diaria de mesa de ayuda en formato paquete .zip o por aplicativo individual según tu necesidad."
-    />
+<div class="skeleton-debounced flex flex-col gap-6">
+  <!-- SearchBar Skeleton -->
+  <div class="skeleton h-10 w-full max-w-md rounded-box"></div>
 
-    <!-- Bundle Banner Skeleton -->
-    <div class="skeleton mb-8 h-32 w-full rounded-2xl"></div>
+  <!-- Bundle Banner Skeleton -->
+  <div class="skeleton h-24 w-full rounded-box"></div>
 
-    <!-- Folders & Cards Skeleton -->
-    <div class="mt-4 space-y-8">
-      {
-        Array.from({ length: 2 }).map(() => (
-          <div class="space-y-3">
-            <div class="flex items-center gap-2">
-              <div class="skeleton size-5 rounded" />
-              <div class="skeleton h-5 w-40 rounded" />
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map(() => (
-                <div class="card bg-base-100 border-base-300 flex h-44 flex-col justify-between rounded-2xl border p-6">
-                  <div class="space-y-2">
-                    <div class="skeleton h-5 w-32 rounded" />
-                    <div class="skeleton h-3 w-full rounded" />
-                    <div class="skeleton h-3 w-3/4 rounded" />
-                  </div>
-                  <div class="mt-4 flex items-center justify-between">
-                    <div class="skeleton h-4 w-16 rounded" />
-                    <div class="skeleton h-8 w-24 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
+  <!-- Folders & Cards Skeleton -->
+  <div class="space-y-8">
+    {
+      Array.from({ length: 2 }).map(() => (
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <div class="skeleton size-5 rounded-box" />
+            <div class="skeleton h-5 w-40 rounded" />
           </div>
-        ))
-      }
-    </div>
+
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map(() => (
+              <div class="card bg-base-100 border-base-300 flex h-44 flex-col justify-between rounded-box border p-6 shadow-xs">
+                <div class="space-y-2">
+                  <div class="skeleton h-5 w-32 rounded" />
+                  <div class="skeleton h-3 w-full rounded" />
+                  <div class="skeleton h-3 w-3/4 rounded" />
+                </div>
+                <div class="mt-4 flex items-center justify-between">
+                  <div class="skeleton h-4 w-16 rounded" />
+                  <div class="skeleton h-8 w-24 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))
+    }
   </div>
-</PageContainer>
+</div>

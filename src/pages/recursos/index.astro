@@ -1,11 +1,11 @@
 ---
-import BaseLayout from "@layouts/BaseLayout.astro";
+import RecursosLayout from "@layouts/RecursosLayout.astro";
 import EnlacesContent from "@components/enlaces/EnlacesContent.astro";
 import EnlacesSkeleton from "@components/enlaces/EnlacesSkeleton.astro";
 ---
 
-<BaseLayout>
+<RecursosLayout activeTab="enlaces">
   <EnlacesContent server:defer>
     <EnlacesSkeleton slot="fallback" />
   </EnlacesContent>
-</BaseLayout>
+</RecursosLayout>
