@@ -28,7 +28,7 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     user = await createTestUserAndSession("agent");
     await setSessionCookie(context, user.signedSessionId);
 
-    const baseURL = test.info().project.use.baseURL || "http://localhost:4323";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
     await page.goto(`${baseURL}/recursos/aplicativos`);
 
     // Banner principal
@@ -64,7 +64,7 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     user = await createTestUserAndSession("agent");
     await setSessionCookie(context, user.signedSessionId);
 
-    const baseURL = test.info().project.use.baseURL || "http://localhost:4323";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
     const response = await context.request.get(
       `${baseURL}/api/aplicativos/pack-base`,
     );
@@ -89,7 +89,7 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     admin = await createTestUserAndSession("admin");
     await setSessionCookie(context, admin.signedSessionId);
 
-    const baseURL = test.info().project.use.baseURL || "http://localhost:4323";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
 
     // Listado de aplicativos
     await page.goto(`${baseURL}/admin/aplicativos`);
@@ -108,7 +108,7 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     user = await createTestUserAndSession("agent");
     await setSessionCookie(context, user.signedSessionId);
 
-    const baseURL = test.info().project.use.baseURL || "http://localhost:4323";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
 
     // Navegar a /recursos (Enlaces)
     await page.goto(`${baseURL}/recursos`);
@@ -145,7 +145,7 @@ test.describe("Pack base de operatoria automatizado (#313)", () => {
     user = await createTestUserAndSession("agent");
     await setSessionCookie(context, user.signedSessionId);
 
-    const baseURL = test.info().project.use.baseURL || "http://localhost:4323";
+    const baseURL = test.info().project.use.baseURL ?? "http://localhost:4321";
 
     // 1. Probar en /recursos (Enlaces)
     await page.goto(`${baseURL}/recursos`);
