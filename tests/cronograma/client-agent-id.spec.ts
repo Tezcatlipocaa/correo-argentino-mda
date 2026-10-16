@@ -34,15 +34,12 @@ async function loginAsAdmin(
 // Intercepta el POST real (route.continue) y expone el body capturado.
 async function captureCronogramaPosts(page: Page): Promise<() => any> {
   let body: any = null;
-  await page.route(
-    (url) => url.pathname === "/api/cronograma",
-    async (route) => {
-      if (route.request().method() === "POST") {
-        body = route.request().postDataJSON();
-      }
-      await route.continue();
-    },
-  );
+  await page.route("**/api/cronograma", async (route) => {
+    if (route.request().method() === "POST") {
+      body = route.request().postDataJSON();
+    }
+    await route.continue();
+  });
   return () => body;
 }
 

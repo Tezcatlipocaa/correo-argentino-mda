@@ -3,7 +3,6 @@ import { OperatorStatus, type OperatorData } from "./types";
 import { escapeHtml } from "@lib/sanitize";
 import { getDaysInMonth, timeToMinutes } from "./utils";
 import { showToast } from "./notifications";
-import { currentMonthKey } from "@lib/cronogramaMonths";
 
 export let activeRotationConfig: {
   startDate: string;
@@ -110,7 +109,7 @@ export function getNextSaturdayForGroup(targetGroup: string): string | null {
   ) as HTMLInputElement | null;
   const activeMonthPrefix = dateInput?.value
     ? dateInput.value.slice(0, 7)
-    : currentMonthKey();
+    : new Date().toISOString().slice(0, 7);
   const [yearStr, monthStr] = activeMonthPrefix.split("-");
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10) - 1;

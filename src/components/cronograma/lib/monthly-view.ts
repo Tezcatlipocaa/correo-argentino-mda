@@ -247,11 +247,8 @@ export function changeMonth(offset: number): void {
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10) - 1;
 
-  const currentDay = parseInt(dateInput.value.split("-")[2], 10);
-  if (preferredDay == null && Number.isInteger(currentDay)) {
-    preferredDay = currentDay;
-  }
-  let day = preferredDay ?? 1;
+  const dayStr = dateInput.value.split("-")[2];
+  let day = parseInt(dayStr, 10);
   const daysInNewMonth = getDaysInMonth(year, month);
   if (!Number.isFinite(day) || day > daysInNewMonth) {
     day = daysInNewMonth;
