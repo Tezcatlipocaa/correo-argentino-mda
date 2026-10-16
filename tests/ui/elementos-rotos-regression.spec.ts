@@ -12,7 +12,7 @@ const ROUTES = [
   "/titulos",
   "/oficinas",
   "/inventario-terminales",
-  "/contactos",
+  "/recursos/contactos",
   "/supervision/cronograma",
   "/supervision/calidad-operadores",
   "/supervision/asignacion-autogestiones",

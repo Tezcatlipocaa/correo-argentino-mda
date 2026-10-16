@@ -1,11 +1,5 @@
 ---
-import BaseLayout from "@layouts/BaseLayout.astro";
-import ContactosContent from "@components/contactos/ContactosContent.astro";
-import ContactosSkeleton from "@components/contactos/ContactosSkeleton.astro";
+import { getCleanBase } from "@lib/baseUrl";
+const cleanBase = getCleanBase();
+return Astro.redirect(`${cleanBase}recursos/contactos`, 301);
 ---
-
-<BaseLayout>
-  <ContactosContent server:defer>
-    <ContactosSkeleton slot="fallback" />
-  </ContactosContent>
-</BaseLayout>

@@ -1,11 +1,11 @@
 ---
-import BaseLayout from "@layouts/BaseLayout.astro";
+import RecursosLayout from "@layouts/RecursosLayout.astro";
 import CatalogoContent from "@components/catalogo/CatalogoContent.astro";
 import CatalogoSkeleton from "@components/catalogo/CatalogoSkeleton.astro";
 ---
 
-<BaseLayout>
+<RecursosLayout activeTab="aplicativos">
   <CatalogoContent server:defer>
     <CatalogoSkeleton slot="fallback" />
   </CatalogoContent>
-</BaseLayout>
+</RecursosLayout>

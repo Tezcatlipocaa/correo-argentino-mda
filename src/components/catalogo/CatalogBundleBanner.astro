@@ -7,33 +7,55 @@ interface Props {
   title: string;
   description: string;
   filePath?: string | null;
+  count?: number;
+  totalSizeBytes?: number;
 }
 
-const { title, description, filePath } = Astro.props;
+const { title, description, filePath, count, totalSizeBytes } = Astro.props;
 
 const cleanBase = getCleanBase();
 const isWebUrl = (value: string): boolean => /^https?:\/\//i.test(value);
 
 const bundleUrl = resolveUrl(filePath?.trim() ?? "");
 const hasBundleUrl = bundleUrl.length > 0;
+
+function formatSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  if (mb >= 1000) return `${(mb / 1024).toFixed(2)} GB`;
+  return `${mb.toFixed(1)} MB`;
+}
+
+const sizeFormatted = formatSize(totalSizeBytes);
 ---
 
-<article class="border-primary/30 bg-primary/10 rounded-lg border p-4 sm:p-5">
+<article class="border-primary/30 bg-primary/10 rounded-box border p-4 sm:p-5">
   <div
     class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
   >
     <div class="flex min-w-0 items-start gap-3">
       <span
-        class="bg-primary text-primary-content mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-lg"
+        class="bg-primary text-primary-content mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-box"
         aria-hidden="true"
       >
         <Icon name="boxicons:package-filled" size={24} />
       </span>
 
       <div class="min-w-0 space-y-1">
-        <h2 class="text-base-content text-base font-semibold sm:text-lg">
-          {title}
-        </h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-base-content text-base font-semibold sm:text-lg">
+            {title}
+          </h2>
+          {count !== undefined && count > 0 && (
+            <span class="badge badge-primary badge-sm font-medium">
+              {count} {count === 1 ? "aplicativo" : "aplicativos"}
+              {sizeFormatted ? ` · ~${sizeFormatted}` : ""}
+            </span>
+          )}
+        </div>
         <p class="text-base-content/70 text-sm">
           {description}
         </p>

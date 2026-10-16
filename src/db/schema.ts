@@ -617,6 +617,7 @@ export const applications = sqliteTable("applications", {
   sortOrder: integer("sortOrder").default(0),
   metadata: text("metadata"),
   instructionPdfPath: text("instruction_pdf_path"),
+  inPackBase: integer("in_pack_base", { mode: "boolean" }).default(false),
 });
 
 export const applicationCategoriesRelations = relations(
