@@ -2981,24 +2981,24 @@ function evaluateOrthographyRule(title: string, description: string) {
             }
 
             const row = document.createElement("label");
-            row.className = `flex cursor-pointer items-start justify-between gap-3.5 p-4 transition-colors motion-reduce:transition-none hover:bg-base-200/40 ${!isNull && !isCompliant ? "bg-error/5" : ""}`;
+            row.className = `flex cursor-pointer items-start justify-between gap-4 p-4 sm:p-5 transition-colors motion-reduce:transition-none hover:bg-base-200/40 ${!isNull && !isCompliant ? "bg-error/5" : ""}`;
 
             row.innerHTML = `
-              <div class="min-w-0 flex-1 space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-sm font-bold text-base-content">${safeLabel}</span>
-                  <span class="badge badge-sm border font-bold tabular-nums ${statusBadgeClass}">
+              <div class="min-w-0 flex-1 space-y-2.5">
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <span class="text-sm sm:text-base font-bold text-base-content">${safeLabel}</span>
+                  <span class="badge badge-sm sm:badge-md border font-bold tabular-nums ${statusBadgeClass}" title="Nivel de certeza de la IA basado en la evidencia del ticket">
                     ${statusText} · ${pct}&nbsp;%
                   </span>
                   ${consensusBadgeHtml}
                 </div>
-                ${safeRazonamiento ? `<p class="text-xs leading-relaxed text-base-content/85 break-words">${safeRazonamiento}</p>` : ""}
-                ${safeEvidencia ? `<blockquote class="rounded-lg border-l-2 border-secondary/50 bg-base-200/50 py-1.5 pr-2.5 pl-3 text-xs text-base-content/75 break-words">“${safeEvidencia}”</blockquote>` : ""}
+                ${safeRazonamiento ? `<p class="text-xs sm:text-sm leading-relaxed text-base-content/85 break-words">${safeRazonamiento}</p>` : ""}
+                ${safeEvidencia ? `<blockquote class="rounded-lg border-l-3 border-secondary/50 bg-base-200/50 py-2 pr-3 pl-3.5 text-xs sm:text-sm text-base-content/75 break-words">“${safeEvidencia}”</blockquote>` : ""}
                 ${debateAccordionHtml}
               </div>
               <input
                 type="checkbox"
-                class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary mt-1 shrink-0 focus-visible:ring-2 focus-visible:ring-secondary/50"
+                class="ai-verdict-toggle checkbox checkbox-sm sm:checkbox-md checkbox-secondary mt-1 shrink-0 focus-visible:ring-2 focus-visible:ring-secondary/50"
                 data-code="${safeCode}"
                 checked
               />

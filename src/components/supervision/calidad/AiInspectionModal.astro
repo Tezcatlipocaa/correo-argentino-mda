@@ -15,25 +15,25 @@ const { id = "modal-ai-inspection" } = Astro.props;
   fixedFooter
   class="border-base-200 border shadow-xl"
 >
-  <div slot="content" class="space-y-4">
+  <div slot="content" class="space-y-5">
     <!-- Encabezado con gradiente sutil azul institucional y blanco -->
     <header
-      class="border-secondary/20 from-secondary/12 via-secondary/5 to-base-100 rounded-xl border bg-gradient-to-r p-4"
+      class="border-secondary/20 from-secondary/12 via-secondary/5 to-base-100 rounded-xl border bg-gradient-to-r p-4 sm:p-5"
     >
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex min-w-0 items-center gap-3">
+        <div class="flex min-w-0 items-center gap-3.5">
           <div
-            class="bg-secondary text-secondary-content flex size-9 shrink-0 items-center justify-center rounded-lg shadow-xs"
+            class="bg-secondary text-secondary-content flex size-10 shrink-0 items-center justify-center rounded-xl shadow-xs"
           >
-            <Icon name="boxicons:magic-wand" size={18} aria-hidden="true" />
+            <Icon name="boxicons:magic-wand" size={20} aria-hidden="true" />
           </div>
           <div class="min-w-0">
             <h2
-              class="text-base-content text-sm font-bold text-balance sm:text-base"
+              class="text-base-content text-base font-bold text-balance sm:text-lg"
             >
               Asistente de Auditoría IA
             </h2>
-            <p class="text-base-content/60 truncate text-xs">
+            <p class="text-base-content/70 truncate text-xs sm:text-sm">
               Evaluación asistida del ticket e historial de cambios en InvGate
             </p>
           </div>
@@ -43,11 +43,11 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <div class="flex shrink-0 items-center gap-2">
           <label
             for="ai-modal-model-select"
-            class="text-base-content/70 flex items-center gap-1 text-xs font-medium"
+            class="text-base-content/80 flex items-center gap-1.5 text-xs sm:text-sm font-medium"
           >
             <Icon
               name="boxicons:chip"
-              size={14}
+              size={16}
               class="text-secondary shrink-0"
               aria-hidden="true"
             />
@@ -57,7 +57,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
             id="ai-modal-model-select"
             name="aiModel"
             autocomplete="off"
-            class="select select-xs border-base-300 bg-base-100 text-base-content focus-visible:border-secondary focus-visible:ring-secondary/40 h-7 rounded-lg font-mono text-xs focus:outline-none focus-visible:ring-2"
+            class="select select-sm border-base-300 bg-base-100 text-base-content focus-visible:border-secondary focus-visible:ring-secondary/40 h-8 rounded-lg font-mono text-xs sm:text-sm focus:outline-none focus-visible:ring-2"
           >
             <option value="council" selected>
               Council MDA (3 Modelos + Árbitro)
@@ -79,20 +79,20 @@ const { id = "modal-ai-inspection" } = Astro.props;
     <!-- Estado inicial / guía rápida antes de ejecutar -->
     <div
       id="ai-modal-idle-state"
-      class="border-base-200 bg-base-200/30 rounded-xl border p-4"
+      class="border-base-200 bg-base-200/30 rounded-xl border p-4 sm:p-5"
     >
-      <div class="flex items-start gap-3">
+      <div class="flex items-start gap-3.5">
         <Icon
           name="boxicons:info-circle"
-          size={18}
+          size={20}
           class="text-secondary mt-0.5 shrink-0"
           aria-hidden="true"
         />
-        <div class="min-w-0 space-y-1 text-xs">
-          <p class="text-base-content font-semibold">
+        <div class="min-w-0 space-y-1.5 text-xs sm:text-sm">
+          <p class="text-base-content font-bold">
             ¿Qué analiza este asistente?
           </p>
-          <p class="text-base-content/70 leading-relaxed">
+          <p class="text-base-content/75 leading-relaxed">
             Extrae metadatos, campos personalizados, notas internas, solución e
             historial de cambios del ticket en InvGate, y contrasta cada ítem
             contra las rúbricas oficiales de calidad.
@@ -115,11 +115,11 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <div class="min-w-0 flex-1">
           <h3
             id="ai-modal-stage-title"
-            class="text-base-content text-sm font-semibold"
+            class="text-base-content text-sm sm:text-base font-bold"
           >
             Iniciando análisis con IA…
           </h3>
-          <p id="ai-modal-stage-desc" class="text-base-content/60 mt-0.5 text-xs">
+          <p id="ai-modal-stage-desc" class="text-base-content/70 mt-0.5 text-xs sm:text-sm">
             Aguardá mientras se procesan los metadatos y el historial del caso.
           </p>
         </div>
@@ -133,7 +133,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <div
           id="ai-step-1"
           data-active="true"
-          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none"
+          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/60 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors motion-reduce:transition-none"
         >
           <span class="font-mono font-bold tabular-nums">1.</span>
           <span class="truncate">Extracción</span>
@@ -141,7 +141,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <div
           id="ai-step-2"
           data-active="false"
-          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none"
+          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/60 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors motion-reduce:transition-none"
         >
           <span class="font-mono font-bold tabular-nums">2.</span>
           <span class="truncate">Evaluación</span>
@@ -149,7 +149,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <div
           id="ai-step-3"
           data-active="false"
-          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none"
+          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/60 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors motion-reduce:transition-none"
         >
           <span class="font-mono font-bold tabular-nums">3.</span>
           <span class="truncate">Consenso</span>
@@ -157,7 +157,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <div
           id="ai-step-4"
           data-active="false"
-          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/50 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none"
+          class="data-[active=true]:border-secondary data-[active=true]:bg-secondary/10 data-[active=true]:text-secondary border-base-300 bg-base-100 text-base-content/60 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors motion-reduce:transition-none"
         >
           <span class="font-mono font-bold tabular-nums">4.</span>
           <span class="truncate">Arbitraje</span>
@@ -170,18 +170,18 @@ const { id = "modal-ai-inspection" } = Astro.props;
       id="ai-modal-error-state"
       role="alert"
       aria-live="polite"
-      class="border-error/30 bg-error/10 text-error hidden rounded-xl border p-3.5 text-xs"
+      class="border-error/30 bg-error/10 text-error hidden rounded-xl border p-4 text-xs sm:text-sm"
     >
       <div class="flex items-start gap-2.5">
         <Icon
           name="boxicons:alert-circle"
-          size={16}
+          size={18}
           class="mt-0.5 shrink-0"
           aria-hidden="true"
         />
         <div class="min-w-0">
           <strong class="font-bold">No se pudo completar el análisis</strong>
-          <p id="ai-modal-error-msg" class="text-error/90 mt-0.5 break-words"></p>
+          <p id="ai-modal-error-msg" class="text-error/90 mt-1 break-words"></p>
         </div>
       </div>
     </div>
@@ -190,15 +190,15 @@ const { id = "modal-ai-inspection" } = Astro.props;
     <div id="ai-modal-results-state" class="hidden space-y-4">
       <!-- Resumen Ejecutivo -->
       <div
-        class="border-secondary/20 from-secondary/10 to-base-100 rounded-xl border bg-gradient-to-r p-3.5"
+        class="border-secondary/20 from-secondary/10 to-base-100 rounded-xl border bg-gradient-to-r p-4 sm:p-5"
       >
-        <div class="text-secondary flex items-center gap-1.5 text-xs font-bold">
-          <Icon name="boxicons:file" size={15} aria-hidden="true" />
+        <div class="text-secondary flex items-center gap-2 text-xs sm:text-sm font-bold">
+          <Icon name="boxicons:file" size={17} aria-hidden="true" />
           <span>Resumen de la Atención</span>
         </div>
         <p
           id="ai-modal-summary-text"
-          class="text-base-content/85 mt-1 text-xs leading-relaxed break-words"
+          class="text-base-content/90 mt-1.5 text-xs sm:text-sm leading-relaxed break-words"
         >
           —
         </p>
@@ -206,15 +206,15 @@ const { id = "modal-ai-inspection" } = Astro.props;
 
       <!-- Barra de control de lista de criterios -->
       <div
-        class="border-base-200 flex flex-wrap items-center justify-between gap-2 border-b pb-2"
+        class="border-base-200 flex flex-wrap items-center justify-between gap-2 border-b pb-2.5"
       >
-        <div class="flex items-center gap-2">
-          <span class="text-base-content text-xs font-bold">
+        <div class="flex items-center gap-2.5">
+          <span class="text-base-content text-xs sm:text-sm font-bold">
             Sugerencias por criterio
           </span>
           <span
             id="ai-modal-count-badge"
-            class="badge badge-xs bg-base-200 text-base-content/70 border-base-300 font-mono tabular-nums"
+            class="badge badge-sm bg-base-200 text-base-content/75 border-base-300 font-mono tabular-nums font-semibold"
           >
             0 seleccionadas
           </span>
@@ -222,7 +222,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
         <button
           type="button"
           id="ai-modal-toggle-all-btn"
-          class="btn btn-xs btn-ghost text-secondary hover:bg-secondary/10 focus-visible:ring-secondary/50 rounded-md px-2 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
+          class="btn btn-xs sm:btn-sm btn-ghost text-secondary hover:bg-secondary/10 focus-visible:ring-secondary/50 rounded-lg px-2.5 text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
         >
           Deseleccionar todas
         </button>
@@ -243,10 +243,10 @@ const { id = "modal-ai-inspection" } = Astro.props;
     slot="actions"
     class="flex flex-wrap items-center justify-between gap-3"
   >
-    <p class="text-base-content/60 flex items-center gap-1.5 text-xs">
+    <p class="text-base-content/70 flex items-center gap-1.5 text-xs sm:text-sm">
       <Icon
         name="boxicons:check-shield"
-        size={14}
+        size={16}
         class="text-secondary shrink-0"
         aria-hidden="true"
       />
@@ -256,14 +256,14 @@ const { id = "modal-ai-inspection" } = Astro.props;
       <button
         type="button"
         id="ai-modal-btn-cancel"
-        class="btn btn-sm btn-ghost text-base-content/70 hover:text-base-content focus-visible:ring-secondary/50 rounded-xl px-3.5 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
+        class="btn btn-sm btn-ghost text-base-content/70 hover:text-base-content focus-visible:ring-secondary/50 rounded-xl px-4 text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
       >
         Cerrar
       </button>
       <button
         type="button"
         id="ai-modal-btn-start"
-        class="btn btn-sm btn-secondary focus-visible:ring-secondary/60 gap-1.5 rounded-xl px-4 text-xs font-semibold shadow-none focus-visible:ring-2 focus-visible:outline-none"
+        class="btn btn-sm btn-secondary focus-visible:ring-secondary/60 gap-1.5 rounded-xl px-4 text-xs sm:text-sm font-semibold shadow-none focus-visible:ring-2 focus-visible:outline-none"
       >
         <Icon name="boxicons:play" size={16} aria-hidden="true" />
         <span>Analizar Ticket</span>
@@ -271,7 +271,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
       <button
         type="button"
         id="ai-modal-btn-apply"
-        class="btn btn-sm btn-secondary focus-visible:ring-secondary/60 hidden gap-1.5 rounded-xl px-4 text-xs font-semibold shadow-none focus-visible:ring-2 focus-visible:outline-none"
+        class="btn btn-sm btn-secondary focus-visible:ring-secondary/60 hidden gap-1.5 rounded-xl px-4 text-xs sm:text-sm font-semibold shadow-none focus-visible:ring-2 focus-visible:outline-none"
       >
         <Icon name="boxicons:check" size={16} aria-hidden="true" />
         <span>Aplicar seleccionadas</span>
