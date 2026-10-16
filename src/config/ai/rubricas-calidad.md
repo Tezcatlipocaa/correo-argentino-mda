@@ -1,7 +1,56 @@
 # Rúbricas Oficiales de Evaluación de Calidad — Mesa de Ayuda TI (Portal MDA)
 
 Este documento es la **Fuente Única de Verdad (Single Source of Truth)** para la evaluación asistida por Inteligencia Artificial en las auditorías de calidad de operadores.
-Cualquier modelo de lenguaje (Nemotron, DeepSeek, MiMo, Gemini, etc.) debe ajustarse estrictamente a las definiciones, evidencias requeridas y ejemplos expuestos a continuación.
+Cualquier modelo de lenguaje (Nemotron, DeepSeek, MiMo, etc.) debe ajustarse estrictamente a las definiciones, evidencias requeridas y ejemplos expuestos a continuación.
+
+---
+
+## Protocolo de Mantenimiento y Control de Cambios
+
+Esta sección rige la gobernanza técnica, lingüística y estructural de este archivo. Su cumplimiento es obligatorio para cualquier operador humano o agente de IA que edite las rúbricas, con el fin de prevenir la degradación del prompt (*efecto espagueti*), contradicciones semánticas o sobreajuste (*overfitting*).
+
+### 1. Formato de Solicitud de Modificación (Input de Corrección)
+Ninguna regla o ejemplo de este documento puede alterarse de forma improvisada. Toda modificación originada por una discrepancia entre el auditor humano y la IA debe documentarse y validarse previamente bajo la siguiente plantilla estructurada:
+
+```markdown
+- **Parámetro afectado (`codigo`):** [Ej: `call_ticket_prioridad` / `ag_sondeo`]
+- **Input evaluado (Contexto del caso):** [Resumen anónimo de los metadatos y comentarios del ticket InvGate que dispararon el error]
+- **Resultado arrojado por la IA:**
+  - Veredicto: [`cumple: true | false | null`] (Confianza: X%)
+  - Evidencia citada: "[Cita extraída por el modelo]"
+  - Razonamiento IA: "[Explicación errónea o desviada del modelo]"
+- **Resultado esperado (Ground Truth Humano):**
+  - Veredicto esperado: [`cumple: true | false | null`]
+  - Evidencia real determinante: "[Dato concreto del ticket que la IA ignoró o malinterpretó]"
+- **Justificación de la discrepancia (Causa Raíz):** [Explicar si el fallo se debió a ambigüedad léxica en la regla actual, omisión de un escenario operativo o falta de contraejemplo Few-Shot]
+```
+
+### 2. Condiciones de Validez (Criterios de Aceptación del Cambio)
+Un cambio en este documento solo es admisible si supera las siguientes 4 compuertas lógicas:
+1. **Generalización vs. Caso Aislado (Anti-Overfitting):** La regla modificada debe resolver un **patrón operativo recurrente** y no un caso anecdótico o excepcional. Se prohíbe mencionar nombres propios de operadores, tickets particulares o fechas específicas dentro de las reglas generales.
+2. **Consistencia Ortogonal (No Contradicción):** El ajuste en un criterio no puede invadir ni contradecir el alcance de otro parámetro del mismo canal (ej. no evaluar ortografía ni tiempos de SLA dentro de `descripcion`, ni mezclar `ag_analisis` con `ag_sondeo`).
+3. **Preservación de Reglas Deterministas:** Queda estrictamente prohibido agregar en este archivo criterios que el motor del Portal MDA ya resuelve por código determinista (`*_titulo`, `*_origen`, `*_ortografia`, `*_sla_*`).
+4. **Falsabilidad con Evidencia Textual:** Toda regla debe poder verificarse leyendo únicamente los campos exportados del ticket (`Título`, `Descripción`, `Categoría`, `Prioridad`, `Tipo`, `Estado`, `Solicitante`, `Creado por` y `Comentarios`). No se admiten reglas que exijan suponer intenciones no escritas.
+
+### 3. Estándares de Calidad y Estilo del `.md`
+Para preservar la eficiencia del *parser* selectivo (`src/lib/ai/rubricsLoader.ts`) y maximizar la atención de los modelos pequeños y medianos, toda edición debe respetar esta gramática:
+- **Delimitador Inmutable de Parsing:** Cada criterio debe iniciar obligatoriamente con el encabezado exacto `## criterio: <codigo_exacto>` en minúsculas, precedido y seguido por un separador `---`. **Nunca** utilizar el prefijo `## criterio:` para subtítulos informativos o notas generales.
+- **Estructura Canónica de Bloque:** Todo bloque de criterio debe mantener estrictamente el siguiente orden de claves:
+  1. `- **Nombre:**` Denominación oficial del parámetro y su canal entre paréntesis.
+  2. `- **Objetivo:**` Una sola oración en infinitivo que defina el propósito de negocio del ítem.
+  3. `- **Qué buscar en el ticket:**` Instrucción directa que indique exactamente qué campos del contexto comparar.
+  4. `- **Regla Cumple (\`cumple: true\`):**` Condiciones afirmativas, taxativas y observables.
+  5. `- **Regla No Cumple (\`cumple: false\`):**` Condiciones de rechazo explícitas y desvíos operativos concretos.
+  6. `- **Caso Null (\`cumple: null\`):**` (Opcional) Escenario exacto donde la falta de datos impide emitir juicio sin penalizar al operador.
+  7. `- **Ejemplo Cumple:**` y `- **Ejemplo No Cumple:**` Pares Few-Shot compuestos por `Evidencia` (máx. 160 caracteres) y `Razonamiento` (máx. 180 caracteres).
+- **Tono y Concisión:** Redactar en modo imperativo/descriptivo, lenguaje técnico neutro y sin adjetivos subjetivos ("bueno", "aceptable", "más o menos claro"). Reemplazar expresiones vagas por umbrales concretos (ej. *"menos de 15 palabras sin detalle técnico"* en lugar de *"descripción corta"*).
+- **Prohibición de Parches ("Efecto Espagueti"):** Queda prohibido agregar bloques del tipo *"Nota:", "Actualización:", "Ojo:", "Excepción agregada el día X:"* al final de un criterio. Cuando una regla evoluciona, **se reescribe y refina la regla existente** para que lea como una única pieza cohesiva.
+
+### 4. Optimización para Aprendizaje en Contexto (In-Context Learning / Modelos Free)
+Dado que los modelos gratuitos de OpenCode no se reentrenan y dependen exclusivamente de este archivo como único contexto en tiempo de ejecución, cada criterio debe maximizar su eficacia *In-Context*:
+- **Determinismo Entrada → Salida:** Cada regla debe funcionar como una tabla de decisión sin zonas grises: ante una misma `Evidencia` del ticket, distintos modelos (*Nemotron*, *DeepSeek*, *MiMo*) deben arribar de forma unívoca al mismo valor (`true`, `false` o `null`).
+- **Alineación con el Formato de Salida JSON:** Los sub-bloques `Ejemplo Cumple` y `Ejemplo No Cumple` actúan como anclas *Few-Shot* directas. Deben respetar las cotas del schema de respuesta (`evidencia` ≤ 160 caracteres, `razonamiento` ≤ 180 caracteres) para que el modelo imite exactamente esa densidad y longitud al responder.
+- **Trazabilidad Causal en los Ejemplos:** Todo `Razonamiento` de ejemplo debe vincular explícitamente el dato citado en `Evidencia` con la condición de la regla aplicada (patrón: *[Dato observado en el ticket] → [Regla de la rúbrica que se cumple o incumple]*).
 
 ---
 
