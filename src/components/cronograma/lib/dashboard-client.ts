@@ -60,6 +60,7 @@ import {
   renderMonthly,
   clearParsedDatesCache,
 } from "./monthly-view";
+import { currentMonthKey, resolveInitialMonth } from "@lib/cronogramaMonths";
 
 export function isWeekend(dateStr: string): boolean {
   if (!dateStr) return false;
@@ -268,7 +269,7 @@ export async function reloadDataForActiveMonth(
       targetMonth ||
       (dateInput?.value
         ? dateInput.value.slice(0, 7)
-        : new Date().toISOString().slice(0, 7));
+        : currentMonthKey());
 
     applyDateInputMonthBounds(dateInput, monthToLoad);
 
@@ -372,7 +373,7 @@ async function init(): Promise<void> {
 
     const activeMonth =
       payload.activeMonth ||
-      (dateInput?.value ? dateInput.value.slice(0, 7) : todayStr.slice(0, 7));
+      resolveInitialMonth(state.availableMonths, todayStr);
 
     try {
       const feriadosRes = await fetch("/api/cronograma/feriados");
@@ -1044,7 +1045,7 @@ export async function renderGroupsView(): Promise<void> {
     ) as HTMLInputElement | null;
     const month = dateInput?.value
       ? dateInput.value.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
+      : currentMonthKey();
     const res = await fetch(`/api/cronograma/rotation-config?month=${month}`);
     if (!res.ok)
       throw new Error("No se pudo cargar la configuración de rotación");
@@ -1456,6 +1457,8 @@ function setupEventListeners(): void {
   ) as HTMLInputElement | null;
   if (dateInput) {
     dateInput.addEventListener("change", () => {
+      const day = parseInt(dateInput.value.split("-")[2], 10);
+      if (Number.isInteger(day)) setPreferredDay(day);
       updateDateInputDisplay();
       renderDaily();
       renderMonthly();
@@ -1740,30 +1743,9 @@ function setupEventListeners(): void {
   const saveIndicator = document.getElementById("save-indicator");
   let activeCell: HTMLElement | null = null;
 
-  monthlyBody?.addEventListener("contextmenu", (e) => {
-    const container = document.getElementById("cronograma-app-container");
-    const userRole = container?.dataset.userRole || "agent";
-    const isReadOnly = ["agent", "referent"].includes(userRole);
-    if (isReadOnly) return;
-
-    const trigger = (e.target as HTMLElement).closest<HTMLElement>(
-      "[data-monthly-detail]",
-    );
-    if (!trigger || !quickEditMenu) return;
-
+  function openQuickEditMenu(trigger: HTMLElement): void {
+    if (!quickEditMenu) return;
     const dateVal = trigger.dataset.date;
-    if (dateVal && isWeekend(dateVal)) {
-      if (!state.isEditMode) {
-        e.preventDefault();
-        showToast(
-          "Los fines de semana se deben administrar desde las secciones de Grupos o Extras (active el Modo Editar para marcar Licencia/Vacación/Franco)",
-          "warning",
-        );
-        return;
-      }
-    }
-
-    e.preventDefault();
     activeCell = trigger;
 
     const targetName = document.getElementById("quick-edit-target-name");
@@ -1859,6 +1841,64 @@ function setupEventListeners(): void {
 
     quickEditMenu.style.left = `${left}px`;
     quickEditMenu.style.top = `${top}px`;
+
+    // Foco al primer ítem visible (accesibilidad por teclado, #268).
+    quickEditMenu
+      .querySelector<HTMLButtonElement>(
+        "#quick-edit-options button:not(.hidden)",
+      )
+      ?.focus();
+  }
+
+  function closeQuickEditMenu(restoreFocus: boolean): void {
+    if (!quickEditMenu || quickEditMenu.classList.contains("hidden")) return;
+    quickEditMenu.classList.add("hidden");
+    if (restoreFocus) activeCell?.focus();
+  }
+
+  monthlyBody?.addEventListener("contextmenu", (e) => {
+    const container = document.getElementById("cronograma-app-container");
+    const userRole = container?.dataset.userRole || "agent";
+    const isReadOnly = ["agent", "referent"].includes(userRole);
+    if (isReadOnly) return;
+
+    const trigger = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-monthly-detail]",
+    );
+    if (!trigger || !quickEditMenu) return;
+
+    const dateVal = trigger.dataset.date;
+    if (dateVal && isWeekend(dateVal) && !state.isEditMode) {
+      e.preventDefault();
+      showToast(
+        "Los fines de semana se deben administrar desde las secciones de Grupos o Extras (active el Modo Editar para marcar Licencia/Vacación/Franco)",
+        "warning",
+      );
+      return;
+    }
+
+    e.preventDefault();
+    openQuickEditMenu(trigger);
+  });
+
+  // Disparo por teclado: Shift+F10 o la tecla Menú contextual sobre una celda.
+  monthlyBody?.addEventListener("keydown", (e) => {
+    if (!(e.shiftKey && e.key === "F10") && e.key !== "ContextMenu") return;
+    const container = document.getElementById("cronograma-app-container");
+    const userRole = container?.dataset.userRole || "agent";
+    if (["agent", "referent"].includes(userRole)) return;
+
+    const trigger = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-monthly-detail]",
+    );
+    if (!trigger || !quickEditMenu) return;
+    e.preventDefault();
+    openQuickEditMenu(trigger);
+  });
+
+  // Escape cierra el menú y devuelve el foco a la celda (#268).
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeQuickEditMenu(true);
   });
 
   document
@@ -1875,13 +1915,13 @@ function setupEventListeners(): void {
         if (!state.isEditMode) {
           saveIndicator?.classList.remove("hidden");
         }
-        quickEditMenu.classList.add("hidden");
+        closeQuickEditMenu(true);
       }
     });
 
   document.addEventListener("click", (e) => {
     if (quickEditMenu && !quickEditMenu.contains(e.target as Node)) {
-      quickEditMenu.classList.add("hidden");
+      closeQuickEditMenu(false);
     }
   });
 
@@ -1977,8 +2017,23 @@ function setupEventListeners(): void {
 
     target.value = ""; // Reset selection
 
+    const dateInputForImport = document.getElementById(
+      "date-input",
+    ) as HTMLInputElement | null;
+    const currentMonthForImport = dateInputForImport?.value
+      ? dateInputForImport.value.slice(0, 7)
+      : "";
+    if (!currentMonthForImport) {
+      showToast(
+        "No hay un mes activo. Seleccione un mes antes de importar.",
+        "warning",
+      );
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("month", currentMonthForImport);
 
     const btn = document.getElementById("import-csv-btn");
     const originalContent = btn ? btn.innerHTML : "";
@@ -2495,7 +2550,7 @@ function setupEventListeners(): void {
     ) as HTMLInputElement | null;
     const month = dateInput?.value
       ? dateInput.value.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
+      : currentMonthKey();
 
     try {
       const res = await fetch("/api/cronograma/rotation-config", {
@@ -2546,7 +2601,7 @@ function setupEventListeners(): void {
         "date-input",
       ) as HTMLInputElement | null;
       const month =
-        dateInput?.value?.slice(0, 7) || new Date().toISOString().slice(0, 7);
+        dateInput?.value?.slice(0, 7) || currentMonthKey();
 
       const disabledGroups = ["A", "B", "C", "D"]
         .filter((g) => {
@@ -2597,7 +2652,7 @@ function setupEventListeners(): void {
       ) as HTMLInputElement | null;
       const month = dateInput?.value
         ? dateInput.value.slice(0, 7)
-        : new Date().toISOString().slice(0, 7);
+        : currentMonthKey();
 
       try {
         const res = await fetch("/api/cronograma/rotation-groups/members", {
@@ -2653,7 +2708,7 @@ function setupEventListeners(): void {
         ) as HTMLInputElement | null;
         const month = dateInput?.value
           ? dateInput.value.slice(0, 7)
-          : new Date().toISOString().slice(0, 7);
+          : currentMonthKey();
 
         try {
           const res = await fetch("/api/cronograma/rotation-groups/members", {
@@ -2779,7 +2834,7 @@ function setupEventListeners(): void {
     ) as HTMLInputElement | null;
     const month = dateInput?.value
       ? dateInput.value.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
+      : currentMonthKey();
 
     try {
       const res = await fetch("/api/cronograma/rotation-groups/members", {

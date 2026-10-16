@@ -104,6 +104,10 @@ export const routePermissions: RoutePermission[] = [
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
   {
+    path: "/supervision/autogestiones-metricas",
+    roles: ["admin", "supervisor", "team_leader"],
+  },
+  {
     path: "/supervision/asignacion-autogestiones",
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
@@ -171,6 +175,8 @@ export const routePermissions: RoutePermission[] = [
   // Toggle de automatizaciones AGS: el gate real (referent+) vive en el endpoint
   // vía requireWriteAccess("asignacion_ag"), igual que /api/disponibilidad.
   { path: "/api/autogestion", roles: ALL_ROLES },
+  // El gate real de cada endpoint de calidad vive en requireRead/WriteAccess.
+  { path: "/api/calidad", roles: ALL_ROLES },
   { path: "/api/cronograma", roles: ALL_ROLES },
   { path: "/api/disponibilidad", roles: ALL_ROLES },
   { path: "/api/download", roles: ALL_ROLES },
