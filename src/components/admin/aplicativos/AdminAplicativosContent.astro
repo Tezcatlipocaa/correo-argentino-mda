@@ -71,6 +71,7 @@ try {
       categoryTitle: applicationCategories.title,
       iconPath: applications.iconPath,
       sortOrder: applications.sortOrder,
+      inPackBase: applications.inPackBase,
     })
     .from(applications)
     .leftJoin(
@@ -368,15 +369,23 @@ const truncatePath = (filePath: string | null) => {
                     </div>
 
                     <div
-                      class="min-w-0 truncate font-semibold"
+                      class="flex min-w-0 items-center gap-1.5 truncate font-semibold"
                       title={app.title}
                     >
                       <span class="truncate" data-highlight-target>
                         {app.title}
                       </span>
                       {app.version && (
-                        <span class="text-base-content/50 ml-1 font-mono text-xs">
+                        <span class="text-base-content/50 font-mono text-xs">
                           v{app.version}
+                        </span>
+                      )}
+                      {app.inPackBase && (
+                        <span
+                          class="badge badge-primary badge-xs shrink-0 font-medium"
+                          title="Incluido en el Pack base (.zip)"
+                        >
+                          Pack base
                         </span>
                       )}
                     </div>
@@ -850,15 +859,4 @@ const truncatePath = (filePath: string | null) => {
       showToast("Error al guardar el nuevo orden de categorías", "alert-error");
     }
   };
-
-  // Toast from URL query param
-  const urlParams = new URLSearchParams(window.location.search);
-  const toastMsg = urlParams.get("toast_msg");
-  const toastType = urlParams.get("toast_type") || "alert-success";
-  if (toastMsg) {
-    showToast(decodeURIComponent(toastMsg), toastType);
-    // clean search params without reloading
-    const newUrl = window.location.pathname;
-    window.history.replaceState({}, document.title, newUrl);
-  }
 </script>

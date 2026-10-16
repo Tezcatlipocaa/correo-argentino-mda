@@ -523,7 +523,7 @@ Cada entrada sigue este formato:
 
 **Problema:** Al pasar la categoría de texto libre a `<select>` con catálogo, quedaron artículos con valores sin fila en `kb_categories` (hay al menos uno: categoría "Prueba" en la mesa 2509). El ABM itera el catálogo, así que ese valor quedó **invisible** ahí (no se puede renombrar ni borrar) pero visible en el listado de artículos y como opción extra en el formulario de edición; y al cambiar la categoría se pierde sin rastro en la auditoría.
 **Causa:** El plan cubrió el alta/edición nueva pero no la migración de los datos previos, ni un estado visible para lo no catalogado.
-**Solucion:** Pendiente en el plan de hardening (Task 6): script de backfill idempotente con dry-run (`scripts/backfill-kb-categories.mts`, siguiendo el patrón de `scripts/normalize-participaciones.mts`) + bloque de solo lectura "Sin catalogar" en el ABM + E2E de un artículo legacy que sobrevive a un guardado.
+**Solución:** Resuelto en #135 y script de backfill idempotente (`scripts/backfill-kb-categories.mts`) con edición explícita de categorías sin avisos obsoletos de sin catalogar.
 **Regla:** Cuando un campo deja de ser texto libre, el plan debe incluir el backfill idempotente de los valores existentes y un estado visible para lo que no quedó catalogado. Un `<select>` es sugerencia: la frontera de confianza es el POST, y aun así el dato viejo no puede desaparecer en silencio.
 **Archivos afectados:** src/lib/kb.ts, src/pages/base-conocimiento/categorias.astro
 

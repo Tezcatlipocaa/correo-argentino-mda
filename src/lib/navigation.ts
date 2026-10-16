@@ -41,6 +41,11 @@ export const navSections: NavSection[] = [
             icon: "boxicons:git-branch-filled",
           },
           {
+            href: "/supervision/autogestiones-metricas",
+            label: "Métricas de autogestiones",
+            icon: "boxicons:line-chart-filled",
+          },
+          {
             href: "/supervision/asistencia",
             label: "Control de asistencia",
             icon: "boxicons:clock-filled",
@@ -89,20 +94,8 @@ export const navSections: NavSection[] = [
       },
       {
         href: "/recursos",
-        label: "Enlaces",
-        icon: "boxicons:link-filled",
-        children: [
-          {
-            href: "/recursos/aplicativos",
-            label: "Aplicativos",
-            icon: "boxicons:link-filled",
-          },
-        ],
-      },
-      {
-        href: "/contactos",
-        label: "Contactos",
-        icon: "boxicons:phone-filled",
+        label: "Recursos",
+        icon: "boxicons:folder-filled",
       },
       {
         href: "/mesas-de-ayuda",

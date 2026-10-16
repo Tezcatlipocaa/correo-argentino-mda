@@ -77,4 +77,7 @@
 ---
 - [x] **Track: Árbol Interactivo de Estructura de Oficinas**
   *Link: [./tracks/oficinas_estructura_arbol_20261013/index.md](./tracks/oficinas_estructura_arbol_20261013/index.md)*
+---
+- [x] **Track: Refactor y Estandarización UI/UX del Módulo de Recursos (Enlaces, Aplicativos y Contactos)**
+  *Link: [./tracks/recursos_ui_refactor_20261015/index.md](./tracks/recursos_ui_refactor_20261015/index.md)*
 

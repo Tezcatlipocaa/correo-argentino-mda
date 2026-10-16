@@ -2,6 +2,7 @@ import type { ChannelType } from "@/types/quality";
 import { wiseCxGet } from "@/lib/wise-cx-client";
 import { invgateGet } from "@/lib/invgateClient";
 import { cleanHtmlText } from "@/lib/titleNormalizer";
+import { getCategories } from "@lib/invgate/automation/categories";
 
 export interface ExtractedQualityMetadata {
   caseNumber: string;
@@ -13,6 +14,7 @@ export interface ExtractedQualityMetadata {
   takeTime?: string;
   priority?: string;
   isPas?: boolean;
+  staysInMda?: boolean;
   title?: string;
   description?: string;
   category?: string;
@@ -428,6 +430,15 @@ export function parseWiseEmailMetadata(
     caseData?.solved_at,
     caseData?.closed_at,
   );
+  const endStr = firstReplyAt || caseData?.solved_at || caseData?.closed_at;
+  let responseSeconds: number | null = null;
+  if (createdAt && endStr) {
+    const startMs = Date.parse(createdAt.replace(" ", "T"));
+    const endMs = Date.parse(endStr.replace(" ", "T"));
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
+      responseSeconds = Math.floor((endMs - startMs) / 1000);
+    }
+  }
 
   return {
     caseNumber,
@@ -444,6 +455,8 @@ export function parseWiseEmailMetadata(
       firstReplyAt: firstReplyAt || undefined,
       solvedAt: caseData?.solved_at,
       closedAt: caseData?.closed_at,
+      responseSeconds,
+      isSla90MinMet: responseSeconds !== null ? responseSeconds <= 5400 : null,
     },
   };
 }
@@ -477,6 +490,42 @@ export const INVGATE_SOURCE_NAMES: Record<number, string> = {
   8: "API",
 };
 
+export const PAS_LOCATION_ID = 6388; // PAS (O5597) Av Fair 1101 (B1842IGA)
+export const PAS_GROUP_ID = 6362;    // OPS-Grandes Clientes-PAS
+export const MDA_HELPDESK_ID = 2510; // Mesa de Ayuda TI 2510
+
+export function extractIdsAndNamesFromInvgate(container: any): { ids: string[]; names: string[] } {
+  const ids: string[] = [];
+  const names: string[] = [];
+  if (!container) return { ids, names };
+
+  if (Array.isArray(container)) {
+    for (const item of container) {
+      if (item === null || item === undefined) continue;
+      if (typeof item === "object") {
+        if (item.id !== undefined && item.id !== null) ids.push(String(item.id));
+        if (item.name && typeof item.name === "string") names.push(item.name);
+      } else {
+        ids.push(String(item));
+      }
+    }
+  } else if (typeof container === "object") {
+    for (const [key, val] of Object.entries(container)) {
+      if (key && !isNaN(Number(key))) {
+        ids.push(String(key));
+      }
+      if (val !== null && typeof val === "object") {
+        const obj = val as any;
+        if (obj.id !== undefined && obj.id !== null) ids.push(String(obj.id));
+        if (obj.name && typeof obj.name === "string") names.push(obj.name);
+      } else if (typeof val === "string") {
+        names.push(val);
+      }
+    }
+  }
+  return { ids, names };
+}
+
 export function parseInvgateAgMetadata(
   incident: any,
   extra?: {
@@ -486,6 +535,8 @@ export function parseInvgateAgMetadata(
     operatorName?: string;
     helpdeskName?: string;
     sourceName?: string;
+    isCreatorInMda?: boolean;
+    isPas?: boolean;
     targetOperatorId?: number | null;
     targetOperatorUsername?: string | null;
     targetOperatorName?: string | null;
@@ -565,10 +616,13 @@ export function parseInvgateAgMetadata(
   const description = cleanHtmlText(incident?.description || "");
 
   const categoryName =
-    extra?.categoryName ??
+    (extra?.categoryName && extra.categoryName !== "Sin categoría"
+      ? extra.categoryName
+      : null) ??
     incident?.category?.name ??
-    (typeof incident?.category === "string" ? incident.category : "") ??
-    "";
+    (typeof incident?.category === "string" ? incident.category : null) ??
+    extra?.categoryName ??
+    "Sin categoría";
 
   const helpdeskName =
     extra?.helpdeskName ??
@@ -605,10 +659,55 @@ export function parseInvgateAgMetadata(
 
   const creatorName = customerName || createdByName || "";
 
-  // Condición PAS: ubicación, cliente o helpdesk contiene 'pas'
-  const locName = (incident?.location?.name || "").toLowerCase();
-  const hdName = (helpdeskName || incident?.helpdesk?.name || "").toLowerCase();
-  const isPas = locName.includes("pas") || hdName.includes("pas");
+  // Condición PAS:
+  // 1. Detección explícita provista por extra (grupo 6362 o ubicación 6388 del solicitante o ticket)
+  // 2. Ubicación del ticket ID 6388 (PAS Av Fair)
+  // 3. Fallback por nombre: ubicación o helpdesk contiene 'pas'
+  const rawLocId =
+    incident?.location_id ??
+    incident?.location?.id ??
+    (typeof incident?.location === "number" ? incident.location : null);
+  const isTicketLocationPas = rawLocId !== null && Number(rawLocId) === PAS_LOCATION_ID;
+
+  const locName = (
+    incident?.location?.name ||
+    (typeof incident?.location === "string" ? incident.location : "") ||
+    ""
+  ).toLowerCase();
+  const hdName = (
+    helpdeskName ||
+    incident?.helpdesk?.name ||
+    (typeof incident?.helpdesk === "string" ? incident.helpdesk : "") ||
+    ""
+  ).toLowerCase();
+  const isPasByName = locName.includes("pas") || hdName.includes("pas");
+
+  const isPas = Boolean(extra?.isPas || isTicketLocationPas || isPasByName);
+
+  // Detección de radicación en MDA (Queda en MDA / Aplica sección 2):
+  // Si la mesa actual del ticket es la Mesa de Ayuda TI (helpdesk 2510), o su nombre
+  // indica Mesa de Ayuda, el caso queda radicado en MDA (staysInMda = true).
+  // Si fue derivado a otra área (helpdesk diferente a 2510), staysInMda = false.
+  const currentHelpdeskId =
+    incident?.assigned_group_id ??
+    incident?.helpdesk_id ??
+    incident?.helpdesk?.id ??
+    (typeof incident?.helpdesk === "number" ? incident.helpdesk : null);
+
+  let staysInMda: boolean | undefined = undefined;
+  if (currentHelpdeskId !== null) {
+    staysInMda = Number(currentHelpdeskId) === MDA_HELPDESK_ID;
+  } else if (helpdeskName) {
+    const hdLower = helpdeskName.toLowerCase();
+    staysInMda = hdLower.includes("mesa de ayuda") || hdLower.includes("mda");
+  }
+
+  // Detección de Autogestión:
+  // Si el origen es Portal Web (source_id = 2 o nombre 'Web'/'Portal Web') y el creador
+  // NO pertenece a la Mesa de Ayuda (helpdesk 2510), se trata indefectiblemente de una autogestión.
+  const srcNorm = (sourceName || "").toLowerCase().trim();
+  const isWebSource = incident?.source_id === 2 || srcNorm.includes("web") || srcNorm.includes("portal");
+  const isAutogestionDetected = isWebSource && extra?.isCreatorInMda === false;
 
   return {
     caseNumber,
@@ -618,6 +717,7 @@ export function parseInvgateAgMetadata(
     creationTime,
     takeTime,
     isPas,
+    staysInMda,
     title,
     description,
     category: categoryName,
@@ -637,6 +737,10 @@ export function parseInvgateAgMetadata(
       creator: creatorName,
       customer: customerName || creatorName,
       createdBy: createdByName || creatorName,
+      isCreatorInMda: extra?.isCreatorInMda,
+      isAutogestionDetected,
+      isPas,
+      staysInMda,
       priority: priorityName,
       location: incident?.location?.name || incident?.location,
       helpdesk: helpdeskName || incident?.helpdesk?.name || incident?.helpdesk,
@@ -645,6 +749,8 @@ export function parseInvgateAgMetadata(
       responseHuman,
       reassignedWithoutComment,
       hasOperatorComment,
+      slaIncidentFirstReply: incident?.sla_incident_first_reply,
+      slaIncidentResolution: incident?.sla_incident_resolution,
     },
   };
 }
@@ -704,27 +810,89 @@ export async function fetchInvgateTicketMetadata(
     const targetUserId = incident.user_id;
     const targetCreatorId = incident.creator_id;
 
+    let isCustomerPas = false;
+    let customerUgEntry: any = null;
+
     if (targetUserId) {
       try {
         const uRes = await invgateGet<any>(`user?id=${targetUserId}`);
         if (uRes.ok && uRes.data) {
           const u = uRes.data;
           customerName = `${u.name || ""} ${u.lastname || ""}`.trim() || u.username || "";
+
+          // Chequear ubicación o grupo directo en el perfil del usuario
+          const uLocId = u.location_id ?? u.location?.id ?? (typeof u.location === "number" ? u.location : null);
+          if (uLocId !== null && Number(uLocId) === PAS_LOCATION_ID) {
+            isCustomerPas = true;
+          }
+          const uGroupId = u.group_id ?? u.group?.id ?? (typeof u.group === "number" ? u.group : null);
+          if (uGroupId !== null && Number(uGroupId) === PAS_GROUP_ID) {
+            isCustomerPas = true;
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
+      // Consultar grupos y ubicaciones del solicitante
+      try {
+        const ugRes = await invgateGet<any>(`users.groups?ids[]=${targetUserId}`);
+        if (ugRes.ok) {
+          const rawEntries = Array.isArray(ugRes.data)
+            ? ugRes.data
+            : (ugRes.data && typeof ugRes.data === "object" ? Object.values(ugRes.data) : []);
+          if (rawEntries.length > 0) {
+            customerUgEntry = rawEntries[0];
+
+            // Ubicación ID 6388: PAS (O5597) Av Fair 1101 (B1842IGA)
+            const locInfo = extractIdsAndNamesFromInvgate(customerUgEntry.locations);
+            if (locInfo.ids.includes(String(PAS_LOCATION_ID)) || locInfo.names.some((n) => n.toLowerCase().includes("pas"))) {
+              isCustomerPas = true;
+            }
+
+            // Grupo ID 6362: OPS-Grandes Clientes-PAS
+            const grpInfo = extractIdsAndNamesFromInvgate(customerUgEntry.groups);
+            if (grpInfo.ids.includes(String(PAS_GROUP_ID)) || grpInfo.names.some((n) => n.toLowerCase().includes("pas"))) {
+              isCustomerPas = true;
+            }
+          }
         }
       } catch {
         // Fallback silencioso
       }
     }
 
+    let isCreatorInMda = false;
     if (targetCreatorId) {
       if (targetUserId && targetCreatorId === targetUserId) {
         createdByName = customerName;
+        if (customerUgEntry) {
+          const hdInfo = extractIdsAndNamesFromInvgate(customerUgEntry.helpdesks);
+          isCreatorInMda = hdInfo.ids.includes(String(MDA_HELPDESK_ID));
+        }
       } else {
         try {
           const cRes = await invgateGet<any>(`user?id=${targetCreatorId}`);
           if (cRes.ok && cRes.data) {
             const c = cRes.data;
             createdByName = `${c.name || ""} ${c.lastname || ""}`.trim() || c.username || "";
+          }
+        } catch {
+          // Fallback silencioso
+        }
+
+        // Verificar si el usuario creador pertenece a la Mesa de Ayuda (helpdesk 2510)
+        try {
+          const ugRes = await invgateGet<any>(`users.groups?ids[]=${targetCreatorId}`);
+          if (ugRes.ok) {
+            const rawEntries = Array.isArray(ugRes.data)
+              ? ugRes.data
+              : (ugRes.data && typeof ugRes.data === "object" ? Object.values(ugRes.data) : []);
+            if (rawEntries.length > 0) {
+              const uEntry: any = rawEntries[0];
+              const hdInfo = extractIdsAndNamesFromInvgate(uEntry.helpdesks);
+              isCreatorInMda = hdInfo.ids.includes(String(MDA_HELPDESK_ID));
+            }
           }
         } catch {
           // Fallback silencioso
@@ -756,14 +924,14 @@ export async function fetchInvgateTicketMetadata(
     // 3. Resolver categoría si existe category_id
     if (incident.category_id) {
       try {
-        const catRes = await invgateGet<any>("categories?page_size=500");
+        const catRes = await getCategories();
         if (catRes.ok && Array.isArray(catRes.data)) {
           const cat = catRes.data.find((c: any) => c.id === incident.category_id);
           if (cat?.name) {
             categoryName = cat.name;
           }
-        } else if (catRes.ok && Array.isArray(catRes.data?.data)) {
-          const cat = catRes.data.data.find((c: any) => c.id === incident.category_id);
+        } else if (catRes.ok && Array.isArray((catRes.data as any)?.data)) {
+          const cat = (catRes.data as any).data.find((c: any) => c.id === incident.category_id);
           if (cat?.name) {
             categoryName = cat.name;
           }
@@ -855,6 +1023,8 @@ export async function fetchInvgateTicketMetadata(
       operatorName,
       helpdeskName,
       sourceName,
+      isCreatorInMda,
+      isPas: isCustomerPas,
       targetOperatorId: targetOpId,
       targetOperatorUsername: options?.targetOperatorUsername,
       targetOperatorName: options?.targetOperatorName,
@@ -977,13 +1147,14 @@ export async function fetchQualityCaseMetadata(
       const realChannel = discernWiseChannel(caseData.source_channel);
 
       if (realChannel === "wise_email") {
-        let operatorName = "";
-        // Con includeRaw el visor solo muestra el payload crudo: el /users/{id}
-        // existe únicamente para completar `operatorName`.
+        let operatorNick = "";
         if (caseData.user_id && !options?.includeRaw) {
           const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
-          if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
-            operatorName = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+          if (uRes.ok) {
+            operatorNick = uRes.data?.nick || "";
+            if (uRes.data?.first_name || uRes.data?.nick) {
+              operatorName = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+            }
           }
         }
 
@@ -1010,6 +1181,9 @@ export async function fetchQualityCaseMetadata(
         }
 
         const metadata = parseWiseEmailMetadata(caseData, operatorName, firstReplyAt);
+        if (metadata.rawDetails) {
+          metadata.rawDetails.operatorNick = operatorNick;
+        }
         if (options?.includeRaw) {
           metadata.raw = { case: caseData, activities: emailActivities };
         }
@@ -1031,11 +1205,18 @@ export async function fetchQualityCaseMetadata(
 
         // Con includeRaw el visor solo muestra el payload crudo: el /users/{id}
         // existe únicamente para completar `operator`.
-        if (!metadata.operator && caseData.user_id && !options?.includeRaw) {
+        let operatorNick = "";
+        if (caseData.user_id && !options?.includeRaw) {
           const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
-          if (uRes.ok && (uRes.data?.first_name || uRes.data?.nick)) {
-            metadata.operator = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+          if (uRes.ok) {
+            operatorNick = uRes.data?.nick || "";
+            if (!metadata.operator && (uRes.data?.first_name || uRes.data?.nick)) {
+              metadata.operator = `${uRes.data.first_name || ""} ${uRes.data.last_name || ""}`.trim() || uRes.data.nick;
+            }
           }
+        }
+        if (metadata.rawDetails) {
+          metadata.rawDetails.operatorNick = operatorNick;
         }
 
         if (options?.includeRaw) {

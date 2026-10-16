@@ -1,5 +1,6 @@
 import { invgateGet } from "@lib/invgateClient";
 import type { InvgateResult } from "@/types/invgate";
+import { readPersistedCache, writePersistedCache } from "@lib/invgate/cache";
 
 const CATEGORIES_ENDPOINT = "categories";
 /** Máximo documentado de page_size para /categories. */
@@ -12,6 +13,17 @@ const MAX_PAGES = 40;
  * el batch cubre el árbol exacto sin over-fetch.
  */
 const PAGE_CONCURRENCY = 6;
+
+const CATEGORIES_CACHE_KEY = "invgate.all_categories";
+const CATEGORIES_CACHE_TTL_MS = 60 * 60_000; // 1 hora
+
+let memoryCachedCategories: InvgateCategoryNode[] | null = null;
+let memoryCacheExpiresAt = 0;
+
+export function clearCategoriesCache(): void {
+  memoryCachedCategories = null;
+  memoryCacheExpiresAt = 0;
+}
 
 /** Shape validado: array plano de nodos con padre opcional. */
 export interface InvgateCategoryNode {
@@ -41,10 +53,26 @@ function parseCategoriesPage(payload: unknown): InvgateCategoryNode[] {
  * GET /categories es offset-paginado (page/page_size, máx 500 por página):
  * en producción el árbol supera las 2.8k categorías, así que se recorren
  * todas las páginas (en batches concurrentes) antes de devolver el array.
+ * Los resultados se cachean en memoria y SQLite para no repetir escaneos costosos.
  */
-export async function getCategories(): Promise<
-  InvgateResult<InvgateCategoryNode[]>
-> {
+export async function getCategories(options?: {
+  forceRefresh?: boolean;
+}): Promise<InvgateResult<InvgateCategoryNode[]>> {
+  const isTest = process.env.NODE_ENV === "test";
+
+  if (!options?.forceRefresh && !isTest) {
+    if (memoryCachedCategories && Date.now() < memoryCacheExpiresAt) {
+      return { ok: true, status: 200, data: memoryCachedCategories };
+    }
+
+    const persisted = readPersistedCache<InvgateCategoryNode[]>(CATEGORIES_CACHE_KEY);
+    if (persisted && Array.isArray(persisted) && persisted.length > 0) {
+      memoryCachedCategories = persisted;
+      memoryCacheExpiresAt = Date.now() + CATEGORIES_CACHE_TTL_MS;
+      return { ok: true, status: 200, data: persisted };
+    }
+  }
+
   const all: InvgateCategoryNode[] = [];
   let nextPage = 1;
 
@@ -69,7 +97,7 @@ export async function getCategories(): Promise<
     let reachedEnd = false;
     for (const result of results) {
       if (!result.ok) {
-        return result;
+        return result as InvgateResult<InvgateCategoryNode[]>;
       }
 
       all.push(...parseCategoriesPage(result.data));
@@ -91,6 +119,12 @@ export async function getCategories(): Promise<
     }
 
     nextPage += pages.length;
+  }
+
+  if (all.length > 0 && !isTest) {
+    memoryCachedCategories = all;
+    memoryCacheExpiresAt = Date.now() + CATEGORIES_CACHE_TTL_MS;
+    writePersistedCache(CATEGORIES_CACHE_KEY, all, CATEGORIES_CACHE_TTL_MS);
   }
 
   return { ok: true, status: 200, data: all };

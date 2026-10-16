@@ -511,6 +511,9 @@ export const qualityAudits = sqliteTable(
     staysInMda: integer("stays_in_mda", { mode: "boolean" }).notNull().default(true),
     isReclamoNovedad: integer("is_reclamo_novedad", { mode: "boolean" }).notNull().default(false),
     recordingUrl: text("recording_url"),
+    // Posición dentro de su canal+mes (0, 10, 20...): la usa el panel de
+    // detalle para numerar las auditorías 1..4 y permitir reordenarlas a mano.
+    sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => ({
     monthIdx: index("quality_audits_month_idx").on(table.month),
@@ -617,6 +620,7 @@ export const applications = sqliteTable("applications", {
   sortOrder: integer("sortOrder").default(0),
   metadata: text("metadata"),
   instructionPdfPath: text("instruction_pdf_path"),
+  inPackBase: integer("in_pack_base", { mode: "boolean" }).default(false),
 });
 
 export const applicationCategoriesRelations = relations(
@@ -1335,3 +1339,30 @@ export const deletedRecords = sqliteTable(
     entityIdx: index("deleted_records_entity_idx").on(t.entity, t.deletedAt),
   }),
 );
+
+export const assignmentHistory = sqliteTable(
+  "assignment_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    agentId: integer("agent_id").notNull(),
+    agentName: text("agent_name").notNull(),
+    ticketNumber: text("ticket_number"),
+    assignedBy: text("assigned_by").notNull(),
+    assignedAt: integer("assigned_at").notNull(),
+    type: text("type").notNull().default("cyclic"),
+  },
+  (table) => ({
+    assignedAtIdx: index("assignment_history_assigned_at_idx").on(table.assignedAt),
+  }),
+);
+
+// Estado real de habilitación de las automatizaciones de AGS. El `status` del
+// catálogo documental (AUTOGESTION_AUTOMATION_RULES) es solo el default: esta
+// tabla es la fuente de verdad cuando existe fila.
+export const autogestionRuleState = sqliteTable("autogestion_rule_state", {
+  ruleId: text("rule_id").primaryKey(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  updatedAt: integer("updated_at").notNull(),
+  updatedBy: text("updated_by"),
+});
+

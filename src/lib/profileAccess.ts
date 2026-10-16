@@ -114,7 +114,7 @@ export const profileAccessCatalog: ProfileAccessEntry[] = [
     group: "operacion",
   },
   {
-    href: "/contactos",
+    href: "/recursos/contactos",
     title: "Contactos",
     description: "Teléfonos, correos y enlaces de servicios y proveedores.",
     icon: "boxicons:phone-filled",

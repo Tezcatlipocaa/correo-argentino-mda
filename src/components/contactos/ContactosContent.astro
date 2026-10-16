@@ -5,8 +5,6 @@ import CopyButton from "@components/ui/CopyButton.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import { db } from "@db/index";
 import { asc } from "drizzle-orm";
@@ -126,16 +124,15 @@ const contactRowGridClass =
   "grid grid-cols-[1.2fr_0.8fr_2fr_4fr_4fr] items-start gap-4";
 ---
 
-<PageContainer width="xl">
-  <PageHeader
-    description="Directorio operativo para ubicar teléfonos, correos y accesos clave sin salir del flujo de soporte."
-  />
+<div class="flex flex-col gap-6">
 
-  <div class="w-full max-w-xl">
+  <div class="flex flex-wrap items-center justify-between gap-4">
     <SearchBar
       id="contacts-search"
       placeholder="Buscar por proveedor, servicio, teléfono, email o link"
       ariaLabel="Buscar contacto por proveedor, servicio, teléfono, email o link"
+      clearable={true}
+      class="max-w-md"
     />
   </div>
 
@@ -143,6 +140,8 @@ const contactRowGridClass =
     id="contacts-empty-state"
     title="Sin resultados"
     description="No hay contactos que coincidan con la búsqueda actual. Probá con otro proveedor, servicio, teléfono, correo o enlace."
+    showClearButton={true}
+    clearButtonText="Limpiar búsqueda"
   />
 
   <section
@@ -157,7 +156,7 @@ const contactRowGridClass =
         return (
           <article
             class:list={[
-              "card border-base-300 bg-base-100 overflow-hidden border border-t-4 shadow-md",
+              "card rounded-box border-base-300 bg-base-100 overflow-hidden border border-t-4 shadow-xs",
               categoryTheme.topBorderClass,
             ]}
             data-contact-category-card
@@ -172,7 +171,7 @@ const contactRowGridClass =
               <div class="flex min-w-0 items-center gap-3">
                 <span
                   class:list={[
-                    "inline-flex size-10 shrink-0 items-center justify-center rounded-lg border shadow-sm",
+                    "inline-flex size-10 shrink-0 items-center justify-center rounded-box border shadow-xs",
                     categoryTheme.iconContainerClass,
                   ]}
                   aria-hidden="true"
@@ -402,7 +401,7 @@ const contactRowGridClass =
       })
     }
   </section>
-</PageContainer>
+</div>
 
 <script>
   import { escapeHtml, escapeRegExp } from "@lib/sanitize";

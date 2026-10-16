@@ -126,7 +126,8 @@ test.describe("default-deny para anónimos (#232)", () => {
       for (const path of ["/", "/buscador-usuarios", "/contactos"]) {
         const res = await page.goto(path);
         expect(res?.status()).toBe(200);
-        expect(new URL(page.url()).pathname).toBe(path);
+        const expectedPath = path === "/contactos" ? "/recursos/contactos" : path;
+        expect(new URL(page.url()).pathname).toBe(expectedPath);
       }
     } finally {
       await cleanupTestUser(user.userId, user.sessionId);

@@ -1,9 +1,6 @@
 ---
 import { getCleanBase } from "@lib/baseUrl";
 import { Icon } from "astro-icon/components";
-import AnnouncementBanner from "@components/ui/AnnouncementBanner.astro";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import CategoryCard from "./CategoryCard.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
@@ -64,17 +61,14 @@ const importantCategories = rawCategories.map(
 const cleanBase = getCleanBase();
 ---
 
-<PageContainer width="xl">
-  <PageHeader
-    description="Accesos clave para resolver tareas operativas de soporte con menos fricción."
-    class="max-w-3xl"
-  />
+<div class="flex flex-col gap-6">
 
-  <div class="flex flex-wrap items-center gap-4">
+  <div class="flex flex-wrap items-center justify-between gap-4">
     <SearchBar
       id="important-links-search"
       placeholder="Buscar por nombre, URL o descripción"
-      class="max-w-md flex-1"
+      clearable={true}
+      class="max-w-md"
     />
 
     <div class="flex items-center gap-4" data-view-controls>
@@ -146,14 +140,14 @@ const cleanBase = getCleanBase();
       </button>
     </div>
     <label
-      class="flex items-center gap-2 cursor-pointer select-none"
+      class="flex items-center gap-2 cursor-pointer select-none text-sm"
       title="Ocultar descripciones de enlaces"
     >
       <input
         type="checkbox"
         name="hide-descriptions"
         checked={getHideDescriptions()}
-        class="checkbox checkbox-primary"
+        class="checkbox checkbox-primary checkbox-sm"
         id="hide-descriptions-toggle"
       />
       <span>Ocultar descripciones</span>
@@ -161,15 +155,6 @@ const cleanBase = getCleanBase();
   </div>
   </div>
 
-  <AnnouncementBanner
-    title="Nuevo catálogo de aplicativos"
-    description="Descarga herramientas de mesa de ayuda desde un paquete .zip o por aplicativo individual para mantener la operatoria diaria."
-    icon="boxicons:link-filled"
-    badgeLabel="Nuevo"
-    href={`${cleanBase}recursos/aplicativos`}
-    ctaLabel="Ir al catálogo"
-    tone="primary"
-  />
 
   <div id="important-links-grid" class="masonry-grid">
     {
@@ -185,8 +170,10 @@ const cleanBase = getCleanBase();
     id="important-links-empty"
     title="Sin resultados"
     description="La búsqueda no coincidió con ningún enlace. Probá con otro nombre, URL o descripción."
+    showClearButton={true}
+    clearButtonText="Limpiar búsqueda"
   />
-</PageContainer>
+</div>
 
 <style is:global>
   ::highlight(search-match) {
