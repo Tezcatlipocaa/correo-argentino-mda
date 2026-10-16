@@ -6,8 +6,9 @@ let supervisorUser: Awaited<ReturnType<typeof createTestUserAndSession>>;
 let agentUser: Awaited<ReturnType<typeof createTestUserAndSession>>;
 
 test.beforeAll(async () => {
-  supervisorUser = await createTestUserAndSession("supervisor");
-  agentUser = await createTestUserAndSession("agent");
+  const helpdeskName = "TI_GSM_MDA TI";
+  supervisorUser = await createTestUserAndSession("supervisor", { helpdeskName });
+  agentUser = await createTestUserAndSession("agent", { helpdeskName });
 });
 
 test.afterAll(async () => {
@@ -20,9 +21,10 @@ test("RBAC: el rol agent no puede acceder a /supervision/autogestiones-metricas"
   page,
 }) => {
   await setSessionCookie(context, agentUser.signedSessionId);
-  const response = await page.goto("/supervision/autogestiones-metricas");
-  const url = page.url();
-  expect(url.includes("/login") || response?.status() === 403).toBe(true);
+  await page.goto("/supervision/autogestiones-metricas");
+  // El middleware redirige al home (200) a un usuario autenticado sin permiso.
+  expect(new URL(page.url()).pathname).toBe("/");
+  await expect(page.locator("h1")).not.toContainText("Métricas de Autogestiones");
 });
 
 test("Acceso permitido para supervisor: visualización de KPIs, gráficos y controles", async ({
@@ -70,12 +72,10 @@ test("API: /api/autogestion/metricas responde JSON con estructura válida", asyn
 
   expect(res.status()).toBe(200);
   const json = await res.json();
-  expect(json.success).toBe(true);
-  expect(json.data).toBeDefined();
-  expect(json.data.kpis).toBeDefined();
-  expect(json.data.temporal).toBeDefined();
-  expect(json.data.byOperator).toBeDefined();
-  expect(json.data.byType).toBeDefined();
+  expect(json.kpis).toBeDefined();
+  expect(json.temporal).toBeDefined();
+  expect(json.byOperator).toBeDefined();
+  expect(json.byType).toBeDefined();
 });
 
 test("API: /api/autogestion/metricas/export.csv descarga archivo CSV con cabeceras", async ({

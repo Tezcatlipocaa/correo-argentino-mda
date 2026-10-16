@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createHmac, randomUUID } from "crypto";
 import { test } from "@playwright/test";
 import { db } from "../../src/db/index";
-import { users, sessions } from "../../src/db/schema";
+import { users, sessions, mesas } from "../../src/db/schema";
 import { eq } from "drizzle-orm";
 
 const SECRET_KEY =
@@ -22,13 +22,46 @@ export interface TestUser {
   username: string;
 }
 
+async function findOrCreateMesa(name: string): Promise<{ invgateId: number }> {
+  let [mesa] = await db
+    .select({ invgateId: mesas.invgateId })
+    .from(mesas)
+    .where(eq(mesas.name, name));
+  if (!mesa) {
+    await db
+      .insert(mesas)
+      .values({
+        invgateId: 910001,
+        name,
+        active: true,
+        assignable: true,
+        lastSyncedAt: new Date().toISOString(),
+      })
+      .onConflictDoNothing();
+    [mesa] = await db
+      .select({ invgateId: mesas.invgateId })
+      .from(mesas)
+      .where(eq(mesas.name, name));
+  }
+  return mesa;
+}
+
+export interface TestUserOptions {
+  helpdeskName?: string;
+}
+
 export async function createTestUserAndSession(
   role: string,
+  opts: TestUserOptions = {},
 ): Promise<TestUser> {
   const suffix = randomUUID();
   const username = `test_${role}_${suffix}`;
   const sessionId = `session_${suffix}`;
   const signedSessionId = signSessionId(sessionId);
+
+  const mesa = opts.helpdeskName
+    ? await findOrCreateMesa(opts.helpdeskName)
+    : null;
 
   let newUserId: number | undefined;
 
@@ -39,6 +72,8 @@ export async function createTestUserAndSession(
         username,
         password: "hashed_fake_password",
         role,
+        helpdeskId: mesa?.invgateId ?? null,
+        helpdeskName: mesa ? opts.helpdeskName : null,
       })
       .returning({ id: users.id });
     newUserId = newUser.id;
