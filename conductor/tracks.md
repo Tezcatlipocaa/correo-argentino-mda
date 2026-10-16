@@ -80,8 +80,6 @@
 ---
 - [x] **Track: Rúbricas Estandarizadas de Calidad en Markdown para Homogeneización de Modelos IA**
   *Link: [./tracks/calidad_ia_rubricas_md_20261015/index.md](./tracks/calidad_ia_rubricas_md_20261015/index.md)*
-
-
-
-
-
+---
+- [ ] **Track: Scraping Unificado de Línea de Tiempo e Historial de Cambios InvGate (vía Azure SSO) para Evaluación IA**
+  *Link: [./tracks/calidad_invgate_timeline_scraping_20261015/index.md](./tracks/calidad_invgate_timeline_scraping_20261015/index.md)*

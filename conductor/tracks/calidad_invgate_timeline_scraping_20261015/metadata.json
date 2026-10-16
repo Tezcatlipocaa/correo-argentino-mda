@@ -1,0 +1,8 @@
+{
+  "track_id": "calidad_invgate_timeline_scraping_20261015",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-10-15T22:03:00-03:00",
+  "updated_at": "2026-10-15T22:03:00-03:00",
+  "description": "Scraping Unificado de Línea de Tiempo e Historial de Cambios InvGate (vía Azure SSO) para Evaluación IA"
+}
