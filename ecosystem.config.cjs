@@ -6,7 +6,6 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 4321,
-        SESSION_COOKIE_SECURE: "true",
       },
     },
     {
@@ -55,6 +54,15 @@ module.exports = {
       watch: false,
       error_file: "./logs/purge-error.log",
       out_file: "./logs/purge-out.log",
+    },
+    {
+      name: "mda-auto-assign",
+      script: "node",
+      args: "--import tsx scripts/auto-assign-worker.ts",
+      autorestart: true,
+      watch: false,
+      error_file: "./logs/auto-assign-error.log",
+      out_file: "./logs/auto-assign-out.log",
     },
     {
       name: "reconcile-automation-parents",

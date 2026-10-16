@@ -64,7 +64,55 @@ export function matchApprovedTitle(
     }
   }
 
+  // 3. Excepciones de prefijo operativo para HH y STS:
+  // - HH: [Zxxxxx o Lxxxxx] HH - [Descripcion] (ej: "Z06805 HH - Configuración")
+  // - STS: [NIS Telegráfico] STS - [Descripcion] (ej: "I5868 STS - Desconexión de agentes")
+  const strippedPrefix = stripOperationalPrefix(raw);
+  if (strippedPrefix && strippedPrefix !== raw) {
+    const normalizedStripped = normalizeTitle(strippedPrefix);
+    if (normalizedStripped) {
+      for (const item of approvedTitles) {
+        const titleName = typeof item === "string" ? item : item?.name || "";
+        if (titleName.trim() === strippedPrefix || normalizeTitle(titleName) === normalizedStripped) {
+          return {
+            matched: true,
+            matchedTitle: titleName,
+            exact: false,
+            confidence: 0.9,
+          };
+        }
+      }
+    }
+  }
+
   return { matched: false, exact: false, confidence: 0 };
+}
+
+/**
+ * Remueve prefijos operativos conocidos para HH y STS:
+ * 1. [Zxxxxx o Lxxxxx] HH - ... -> HH - ...
+ * 2. [NIS Telegráfico] STS - ... -> STS - ...
+ */
+export function stripOperationalPrefix(title: string): string | null {
+  const t = (title || "").trim();
+  if (!t) return null;
+
+  // Caso 1: ID de equipo Zxxxxx o Lxxxxx seguido de HH (con guión o espacio)
+  // Ejemplos: "Z06805 HH - Configuración", "L12345 HH- Configuración"
+  const hhMatch = t.match(/^[ZLzl]\d+\s+(HH\s*[-–—].*)$/i);
+  if (hhMatch) {
+    return hhMatch[1].trim();
+  }
+
+  // Caso 2: NIS Telegráfico seguido de STS (con guión o espacio)
+  // NIS telegráfico típicamente letra(s) + dígitos, o alfanumérico corto (ej: I5868, B0091, 5868, etc.)
+  // Ejemplos: "I5868 STS - Desconexión de agentes", "B0168 STS- Consulta"
+  const stsMatch = t.match(/^[A-Za-z0-9]+\s+(STS\s*[-–—].*)$/i);
+  if (stsMatch) {
+    return stsMatch[1].trim();
+  }
+
+  return null;
 }
 
 /**

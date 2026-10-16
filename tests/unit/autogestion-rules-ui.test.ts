@@ -1,0 +1,48 @@
+import { describe, it, expect } from "vitest";
+import { AUTOGESTION_AUTOMATION_RULES } from "@/lib/autogestion/rulesEngine";
+
+describe("Autogestión UI Documentation - Catálogo documental", () => {
+  it("debe contener el catálogo de reglas para el supervisor, todas apagadas por default", () => {
+    expect(AUTOGESTION_AUTOMATION_RULES.length).toBeGreaterThan(0);
+    const rejectedRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "solicitud_rechazada");
+    expect(rejectedRule).toBeDefined();
+    expect(rejectedRule?.status).toBe("inactive");
+  });
+
+  it("la regla de solicitudes rechazadas debe documentar la cadencia de 10 minutos y sus condiciones", () => {
+    const rejectedRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "solicitud_rechazada")!;
+    expect(rejectedRule.intervalMinutes).toBe(10);
+    expect(rejectedRule.triggerEvent).toContain("10 minutos");
+
+    // Verificar que todas las condiciones requeridas estén presentes
+    const conditionLabels = rejectedRule.conditions.map((c) => c.label.toLowerCase());
+    expect(conditionLabels.some((l) => l.includes("categoría"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("creador"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("disponibilidad"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("asignable"))).toBe(true);
+  });
+
+  it("debe documentar explícitamente la no alteración del turno cíclico (skipQueueUpdate)", () => {
+    const rejectedRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "solicitud_rechazada")!;
+    expect(rejectedRule.effect.toLowerCase()).toContain("skipqueueupdate");
+  });
+
+  it("debe documentar la regla cíclica general con Prioridad 2 y rotación de cola", () => {
+    expect(AUTOGESTION_AUTOMATION_RULES.length).toBe(2);
+
+    const cyclicRule = AUTOGESTION_AUTOMATION_RULES.find((r) => r.id === "asignacion_ciclica_general");
+    expect(cyclicRule).toBeDefined();
+    expect(cyclicRule?.priority).toBe(2);
+    expect(cyclicRule?.status).toBe("inactive");
+    expect(cyclicRule?.intervalMinutes).toBe(10);
+    expect(cyclicRule?.triggerEvent).toContain("Prioridad 2");
+
+    const conditionLabels = cyclicRule!.conditions.map((c) => c.label.toLowerCase());
+    expect(conditionLabels.some((l) => l.includes("categoría"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("turno"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("disponibilidad"))).toBe(true);
+    expect(conditionLabels.some((l) => l.includes("asignable"))).toBe(true);
+
+    expect(cyclicRule?.effect.toLowerCase()).toContain("rotando su turno");
+  });
+});

@@ -65,6 +65,12 @@ const getEventSection = (action: string) => {
   ) {
     return { name: "Usuarios", badge: "badge-primary" };
   }
+  if (
+    lowercase.includes("automatización") ||
+    lowercase.includes("automatizacion")
+  ) {
+    return { name: "Automatizaciones", badge: "badge-secondary" };
+  }
   if (lowercase.includes("oficina") || lowercase.includes("nis")) {
     return { name: "Oficinas", badge: "badge-secondary" };
   }

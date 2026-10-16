@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import {
   asignarManual,
+  getDisponibilidadHoy,
   ensureHasLock,
   resetAssignmentLock,
 } from "@lib/disponibilidad";
@@ -18,17 +19,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!lockCheck.ok) return lockCheck.response;
 
   try {
-    const { agentId } = await request.json();
+    const { agentId, ticketId, skipQueueUpdate, comment } = await request.json();
 
     if (!agentId || typeof agentId !== "number") {
-      return jsonResponse(
-        { success: false, error: "ID de agente inválido" },
-        400,
-      );
+      return jsonResponse({ success: false, error: "ID de agente inválido" }, 400);
     }
 
     const assignedBy = locals.user?.username || "Sistema";
-    const result = await asignarManual(agentId, assignedBy);
+    const userClean = locals.user?.username
+      ? locals.user.username.split("@")[0].toLowerCase().trim()
+      : "";
+    const list = await getDisponibilidadHoy();
+    const loggedOp = list.find(
+      (op) =>
+        op.username && op.username.split("@")[0].toLowerCase().trim() === userClean,
+    );
+    const authorInvgateId = loggedOp?.invgateId;
+
+    const result = await asignarManual(
+      agentId,
+      assignedBy,
+      authorInvgateId,
+      typeof ticketId === "number" ? ticketId : undefined,
+      Boolean(skipQueueUpdate),
+      typeof comment === "string" ? comment : undefined,
+    );
     if (result.success) {
       await resetAssignmentLock();
     }
@@ -46,7 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error("Error retrieving agent name:", dbErr);
     }
 
-    return jsonResponse({ ...result, agentName }, result.success ? 200 : 400);
+    return jsonResponse({ ...result, agentName, skipQueueUpdate: Boolean(skipQueueUpdate) }, result.success ? 200 : 400);
   } catch (error: any) {
     console.error("POST /api/disponibilidad/asignar-manual Error:", error);
     return jsonResponse({ success: false, error: sanitizeError(error) }, 500);

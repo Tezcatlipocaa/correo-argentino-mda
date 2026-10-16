@@ -133,70 +133,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return jsonError("Formato de username inválido", 400);
     }
 
-    const client = ldap.createClient({
-      url: `${LDAP_SERVER}:${LDAP_PORT}`,
-      reconnect: false,
-      connectTimeout: 30000,
-      timeout: 60000,
-    });
-
-    client.on("error", (err) => {
-      console.error("[NetUser] LDAP Client Error:", err);
-    });
-
-    await new Promise<void>((resolve, reject) => {
-      client.bind(LDAP_USER, LDAP_PASS, (err) => {
-        if (err) {
-          console.error("[NetUser] LDAP Bind Error detallado:", err);
-          console.error(
-            "[NetUser] LDAP Bind Error código:",
-            err.code || err.name,
-          );
-          reject(
-            new Error(
-              `Error de autenticación LDAP: ${err.message || err.code || JSON.stringify(err)}`,
-            ),
-          );
-        } else {
-          resolve();
-        }
-      });
-    });
-
-    // Escape special LDAP filter characters
-    const escapedUsername = username.replace(
-      /[*()\\\0]/g,
-      (c) => "\\" + c.charCodeAt(0).toString(16).padStart(2, "0"),
-    );
-    const searchFilter = `(&(objectClass=user)(sAMAccountName=${escapedUsername}))`;
-    const opts = {
-      filter: searchFilter,
-      scope: "sub" as const,
-      attributes: [
-        "dn",
-        "cn",
-        "sAMAccountName",
-        "displayName",
-        "title",
-        "mail",
-        "employeeNumber",
-        "employeeType",
-        "physicalDeliveryOfficeName",
-        "telephoneNumber",
-        "manager",
-        "department",
-        "description",
-        "memberOf",
-        "pwdLastSet",
-        "lastLogon",
-        "lastLogonTimestamp",
-        "whenCreated",
-        "accountExpires",
-        "badPwdCount",
-        "lockoutTime",
-      ],
-    };
-
     interface LdapUserEntry {
       sAMAccountName?: string;
       cn?: string;
@@ -220,35 +156,71 @@ export const GET: APIRoute = async ({ request, locals }) => {
       lockoutTime?: number | string;
     }
 
-    const entries: LdapUserEntry[] = [];
+    const entries = await withLdapClient(async (client, config) => {
+      // Escape special LDAP filter characters
+      const escapedUsername = username.replace(
+        /[*()\\\0]/g,
+        (c) => "\\" + c.charCodeAt(0).toString(16).padStart(2, "0"),
+      );
+      const searchFilter = `(&(objectClass=user)(sAMAccountName=${escapedUsername}))`;
+      const opts = {
+        filter: searchFilter,
+        scope: "sub" as const,
+        attributes: [
+          "dn",
+          "cn",
+          "sAMAccountName",
+          "displayName",
+          "title",
+          "mail",
+          "employeeNumber",
+          "employeeType",
+          "physicalDeliveryOfficeName",
+          "telephoneNumber",
+          "manager",
+          "department",
+          "description",
+          "memberOf",
+          "pwdLastSet",
+          "lastLogon",
+          "lastLogonTimestamp",
+          "whenCreated",
+          "accountExpires",
+          "badPwdCount",
+          "lockoutTime",
+        ],
+      };
 
-    await new Promise<void>((resolve, reject) => {
-      client.search(LDAP_BASE_DN, opts, (err, res) => {
-        if (err) {
-          reject(new Error(`Error en búsqueda LDAP: ${err.message}`));
-          return;
-        }
+      const resultEntries: LdapUserEntry[] = [];
 
-        res.on("searchEntry", (entry) => {
-          const flat: Record<string, unknown> = {};
-          for (const attr of entry.pojo.attributes) {
-            flat[attr.type] =
-              attr.values.length === 1 ? attr.values[0] : attr.values;
+      await new Promise<void>((resolve, reject) => {
+        client.search(config.baseDn, opts, (err, res) => {
+          if (err) {
+            reject(new Error(`Error en búsqueda LDAP: ${err.message}`));
+            return;
           }
-          entries.push(flat as LdapUserEntry);
-        });
 
-        res.on("error", (err) => {
-          reject(new Error(`Error en búsqueda LDAP: ${err.message}`));
-        });
+          res.on("searchEntry", (entry) => {
+            const flat: Record<string, unknown> = {};
+            for (const attr of entry.pojo.attributes) {
+              flat[attr.type] =
+                attr.values.length === 1 ? attr.values[0] : attr.values;
+            }
+            resultEntries.push(flat as LdapUserEntry);
+          });
 
-        res.on("end", () => {
-          resolve();
+          res.on("error", (err) => {
+            reject(new Error(`Error en búsqueda LDAP: ${err.message}`));
+          });
+
+          res.on("end", () => {
+            resolve();
+          });
         });
       });
-    });
 
-    client.unbind();
+      return resultEntries;
+    });
 
     if (entries.length === 0) {
       return jsonResponse({
@@ -322,13 +294,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     console.error("[NetUser] Error:", error);
 
-    const msg = String(error?.message || "");
-    const isNetworkFailure =
-      /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|autenticación LDAP/i.test(
-        msg,
-      );
+    const classification = classifyLdapError(error);
 
-    if (import.meta.env.DEV && isNetworkFailure) {
+    if (
+      import.meta.env.DEV &&
+      (classification.isNetworkFailure || classification.isConfigMissing)
+    ) {
       const mockUsername =
         new URL(request.url).searchParams.get("username")?.trim() || "mock";
       console.warn(
@@ -337,10 +308,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return jsonResponse({ status: "success", ...buildDevMock(mockUsername) });
     }
 
+    const safeMessage = getLdapUserErrorMessage(error);
     return jsonResponse({
       status: "error",
-      error: sanitizeError(error) || "Error al consultar Active Directory",
-      output: `Error: ${sanitizeError(error) || "No se pudo conectar con el servidor LDAP"}`,
+      error: safeMessage,
+      output: `Error: ${safeMessage}`,
     });
   }
 };
