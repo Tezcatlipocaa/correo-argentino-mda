@@ -1,27 +1,26 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { ALLOWED_MODELS } from "./ai-evaluate.js";
 
-describe("POST /api/calidad/ai-evaluate validaciones", () => {
-  it("valida que se acepten los parámetros opcionales de modelo y proveedor", () => {
-    const payload = {
-      channel: "wise_call",
-      ticketId: "88442",
-      model: "opencode/nemotron-3.5-lightning-free",
-      provider: "opencode",
-    };
-    assert.equal(payload.channel, "wise_call");
-    assert.equal(payload.ticketId, "88442");
-    assert.equal(payload.model, "opencode/nemotron-3.5-lightning-free");
-    assert.equal(payload.provider, "opencode");
+describe("POST /api/calidad/ai-evaluate validaciones de modelos permitidos", () => {
+  it("incluye 'council' como modelo válido de orquestación", () => {
+    assert.ok(ALLOWED_MODELS.has("council"), "ALLOWED_MODELS debe incluir 'council'");
   });
 
-  it("admite 'council' como modelo en el contrato de petición", () => {
-    const payload = {
-      channel: "invgate_ticket",
-      ticketId: "90688",
-      model: "council",
-    };
-    assert.equal(payload.model, "council");
+  it("incluye únicamente modelos autorizados con sandbox y descarta modelos arbitrarios", () => {
+    const requiredModels = [
+      "council",
+      "opencode/nemotron-3.5-lightning-free",
+      "opencode/deepseek-v4.1-flash-free",
+      "opencode/mimo-v2.6-flash-free",
+      "opencode/glm-5.3-flash-free",
+    ];
+    for (const m of requiredModels) {
+      assert.ok(ALLOWED_MODELS.has(m), `Debe contener ${m}`);
+    }
+
+    assert.equal(ALLOWED_MODELS.has("arbitrary-cmd"), false);
+    assert.equal(ALLOWED_MODELS.has("opencode/unauthorized-model"), false);
   });
 });
 

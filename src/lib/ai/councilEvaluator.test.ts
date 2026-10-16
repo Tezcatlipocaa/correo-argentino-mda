@@ -9,34 +9,31 @@ import {
 import { getAiCriteria } from "../qualityAiEvaluator.js";
 import { CHANNEL_TYPES } from "../../types/quality.js";
 
-test("cobertura de buckets: todo criterio de getAiCriteria() para los 3 canales cae en Alpha o Beta (sin huérfanos)", () => {
+test("cobertura de buckets: todo criterio de getAiCriteria() para los 3 canales es clasificado por patrones explícitos de Alpha o Beta", () => {
   for (const channel of CHANNEL_TYPES) {
     const criteria = getAiCriteria(channel);
+    // splitCriteriaByAgent lanza error explícito si algún criterio no coincide con ALPHA_PATTERNS ni con BETA_PATTERNS
     const { alpha, beta } = splitCriteriaByAgent(criteria);
-    const mappedCount = alpha.length + beta.length;
-    assert.equal(
-      mappedCount,
-      criteria.length,
-      `Canal ${channel}: se esperaban ${criteria.length} criterios mapeados, pero se obtuvieron ${mappedCount}`,
-    );
+    assert.ok(alpha.length > 0, `Canal ${channel} debe tener criterios de procesos (Alpha)`);
+    assert.ok(beta.length > 0, `Canal ${channel} debe tener criterios de cliente/datos (Beta)`);
+    assert.equal(alpha.length + beta.length, criteria.length);
 
-    // Verificar que 'descripcion' caiga en Beta y no quede huérfana
-    const hasDescripcion = criteria.some((c) => c.code.endsWith("descripcion"));
-    if (hasDescripcion) {
-      assert.ok(
-        beta.some((c) => c.code.endsWith("descripcion")),
-        `Canal ${channel}: el criterio de descripción debe estar asignado a Beta`,
-      );
+    // Verificar que los códigos asignados a cada agente cumplan exclusivamente con su tipo de responsabilidad
+    for (const a of alpha) {
+      assert.match(a.code, /(?:categorizacion|tipo|prioridad|sondeo|procedimiento)/);
+    }
+    for (const b of beta) {
+      assert.match(b.code, /(?:analisis|seguimiento|exactitud_datos|ortografia|documentacion|info_complementaria|descripcion)/);
     }
   }
 });
 
-test("mergeCouncil: dos null devuelven directo + sin_evidencia (sin discrepancia)", () => {
+test("mergeCouncil: dos null devuelven directo + sin_evidencia conservando min(alpha, beta)", () => {
   const alphaMap: AgentVerdictMap = {
     criterio_a: {
       codigo: "criterio_a",
       cumple: null,
-      confianza: 0.5,
+      confianza: 0.9,
       evidencia: "",
       razonamiento: "No hay datos",
     },
@@ -45,7 +42,7 @@ test("mergeCouncil: dos null devuelven directo + sin_evidencia (sin discrepancia
     criterio_a: {
       codigo: "criterio_a",
       cumple: null,
-      confianza: 0.5,
+      confianza: 0.8,
       evidencia: "",
       razonamiento: "Sin evidencia",
     },
@@ -56,6 +53,7 @@ test("mergeCouncil: dos null devuelven directo + sin_evidencia (sin discrepancia
   assert.equal(resolved.length, 1);
   assert.equal(resolved[0].codigo, "criterio_a");
   assert.equal(resolved[0].cumple, null);
+  assert.equal(resolved[0].confianza, 0.8, "Debe ser min(0.9, 0.8) = 0.8");
   assert.equal(resolved[0].consenso, "directo");
   assert.equal(resolved[0].motivo, "sin_evidencia");
 });

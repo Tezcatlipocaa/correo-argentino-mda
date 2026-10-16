@@ -7,6 +7,8 @@ import {
   buildPrompt,
   parseVerdicts,
   AiBusyError,
+  acquireAiSlot,
+  releaseAiSlot,
 } from "@/lib/qualityAiEvaluator";
 import { getRubricsForCriteria } from "@/lib/ai/rubricsLoader";
 import { OpenCodeProvider } from "@/lib/ai/opencodeProvider";
@@ -37,8 +39,22 @@ const ALPHA_PATTERNS = [
   /procedimiento$/,
 ];
 
+const BETA_PATTERNS = [
+  /analisis$/,
+  /seguimiento$/,
+  /exactitud_datos$/,
+  /ortografia$/,
+  /documentacion$/,
+  /info_complementaria$/,
+  /descripcion$/,
+];
+
 export function isAlphaCriterion(code: string): boolean {
   return ALPHA_PATTERNS.some((re) => re.test(code));
+}
+
+export function isBetaCriterion(code: string): boolean {
+  return BETA_PATTERNS.some((re) => re.test(code));
 }
 
 export function splitCriteriaByAgent(criteria: AiCriterion[]): {
@@ -51,8 +67,10 @@ export function splitCriteriaByAgent(criteria: AiCriterion[]): {
   for (const c of criteria) {
     if (isAlphaCriterion(c.code)) {
       alpha.push(c);
-    } else {
+    } else if (isBetaCriterion(c.code)) {
       beta.push(c);
+    } else {
+      throw new Error(`Criterio no asignado a ningún agente del Council: ${c.code}`);
     }
   }
 
@@ -102,10 +120,11 @@ export function mergeCouncil(
 
     // Caso 1: Ambos devuelven null (sin evidencia)
     if (alphaVote.cumple === null && betaVote.cumple === null) {
+      const minConf = Math.min(alphaVote.confianza, betaVote.confianza);
       resolved.push({
         codigo: code,
         cumple: null,
-        confianza: 0.5,
+        confianza: minConf,
         evidencia: alphaVote.evidencia || betaVote.evidencia || "",
         razonamiento: alphaVote.razonamiento || betaVote.razonamiento || "Sin evidencia suficiente en el ticket.",
         consenso: "directo",
@@ -186,9 +205,6 @@ export function buildJudgePrompt(disputes: DisputeItem[]): string {
   ].join("\n");
 }
 
-let councilInFlight = 0;
-const MAX_COUNCIL_IN_FLIGHT = 2;
-
 export async function evaluateWithCouncil(
   channel: ChannelType,
   meta: ExtractedQualityMetadata,
@@ -206,11 +222,7 @@ export async function evaluateWithCouncil(
     };
   }
 
-  if (councilInFlight >= MAX_COUNCIL_IN_FLIGHT) {
-    throw new AiBusyError("Hay evaluaciones del Council en curso. Reintentá en unos segundos.");
-  }
-
-  councilInFlight++;
+  acquireAiSlot();
   try {
     const timeline =
       preloadedTimeline ??
@@ -368,14 +380,21 @@ export async function evaluateWithCouncil(
 
     const finalSummary = alphaSummary || betaSummary || "Atención evaluada por el Council de Calidad MDA.";
 
+    // Preservar el orden exacto de los criterios según la rúbrica del canal
+    const verdictsByCode = new Map(finalVerdicts.map((v) => [v.codigo, v]));
+    const orderedVerdicts = criteria
+      .map((c) => verdictsByCode.get(c.code))
+      .filter((v): v is AiVerdict => v !== undefined);
+
     return {
       model: "council",
       isCouncil: true,
       resumen: finalSummary,
-      verdicts: finalVerdicts,
+      verdicts: orderedVerdicts,
       debate,
     };
   } finally {
-    councilInFlight--;
+    releaseAiSlot();
   }
 }
+

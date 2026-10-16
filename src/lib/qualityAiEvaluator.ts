@@ -5,15 +5,19 @@ import type { ExtractedQualityMetadata } from "@/lib/qualityMetadataFetcher";
 import { AiResponseSchema, type AiEvaluationOptions, type AiVerdict, type AiResponse } from "@/lib/ai/types";
 import { getAiProvider } from "@/lib/ai/providerFactory";
 import { getRubricsForCriteria } from "@/lib/ai/rubricsLoader";
-import { fetchInvgateTicketTimeline, type InvgateTimelineEntry } from "@/lib/invgate/timelineScraper";
+import {
+  fetchInvgateTicketTimeline,
+  isRelevantTimelineLog,
+  type InvgateTimelineEntry,
+} from "@/lib/invgate/timelineScraper";
 
 export { AiVerdict };
 
 /**
  * Criterios que YA resuelve una regla determinista en NewAuditForm
- * (título, origen, ortografía, SLAs). La IA no los toca.
+ * (título, origen, SLAs). La IA no los toca.
  */
-const RULE_BASED_SUFFIXES = ["titulo", "origen", "ortografia", "sla_90min", "sla_resolucion", "sla_primera_respuesta"];
+const RULE_BASED_SUFFIXES = ["titulo", "origen", "sla_90min", "sla_resolucion", "sla_primera_respuesta"];
 const NEVER_EVALUATE = new Set(["call_ticket_reclamo_novedad", "email_mda_reclamo_novedad", "email_solicitud"]);
 
 /** Fase 1 (solo texto): se evalúa lo que sale del ticket InvGate, no de la llamada ni del cuerpo del mail. */
@@ -39,6 +43,7 @@ const HINTS: Array<[RegExp, string]> = [
   [/correccion_prioridad$|_prioridad$/, "La prioridad es coherente con el impacto/urgencia descritos (no todo es Media por defecto)."],
   [/descripcion$/, "La descripción es clara y trae evidencia suficiente: qué pasa, dónde, a quién, mensajes de error o pasos."],
   [/exactitud_datos$/, "Los datos del caso (solicitante, ubicación, contacto, equipo) están completos y son consistentes entre campos."],
+  [/ortografia$/, "La redacción del operador evaluado en título, descripción, notas y solución carece de errores ortográficos, gramaticales o falta de tildes (ignorando siglas y comandos técnicos)."],
   [/seguimiento$/, "El operador informó al usuario, hizo seguimiento y documentó la resolución en los comentarios."],
   [/analisis$/, "El operador interpretó correctamente la solicitud según lo que se ve en los comentarios."],
   [/sondeo$/, "El operador hizo preguntas o pruebas para diagnosticar antes de resolver o derivar."],
@@ -90,9 +95,28 @@ export function buildTicketContext(
     `SLA resolución: ${meta.rawDetails?.slaIncidentResolution ?? "-"}`,
   ];
 
+  if (rawIncident?.custom_fields && typeof rawIncident.custom_fields === "object") {
+    const cfEntries = Object.entries(rawIncident.custom_fields).filter(
+      ([_, val]) => val !== null && val !== undefined && String(val).trim() !== "",
+    );
+    if (cfEntries.length > 0) {
+      const cfFormatted = cfEntries.map(([id, val]) => `campo_${id}: "${String(val).trim()}"`).join(", ");
+      lines.push(`Campos personalizados (API custom_fields): ${cfFormatted}`);
+    }
+  }
+
   if (Array.isArray(timeline) && timeline.length > 0) {
-    lines.push("", `Línea de Tiempo e Historial de Cambios (${timeline.length} eventos):`);
-    for (const item of timeline) {
+    const relevantTimeline = timeline.filter(
+      (item) => item.kind !== "log" || isRelevantTimelineLog(item.text),
+    );
+    const trimmedTimeline = relevantTimeline.length > 25 ? relevantTimeline.slice(-25) : relevantTimeline;
+
+    lines.push(
+      "",
+      `Línea de Tiempo e Historial de Cambios (${trimmedTimeline.length} eventos):`,
+      "Leyenda de etiquetas: [SOLUCIÓN] = respuesta final visible para el cliente marcada como solución (deja el ticket en espera de aprobación del cliente) | [INTERNO] = nota privada solo visible entre agentes (el cliente NO la ve) | [COMENTARIO] = mensaje público visible para el cliente | [CAMBIO] = evento de auditoría del sistema.",
+    );
+    for (const item of trimmedTimeline) {
       const dateLabel = item.dateStr || String(item.timestamp || "");
       if (item.kind === "log") {
         lines.push(`- [${dateLabel}] [CAMBIO] ${item.text}`);
@@ -101,7 +125,7 @@ export function buildTicketContext(
           item.kind === "solution"
             ? "SOLUCIÓN"
             : item.kind === "private_note"
-              ? "NOTA INTERNA"
+              ? "INTERNO"
               : "COMENTARIO";
         lines.push(`- [${dateLabel}] [${tag}] ${item.author || "Usuario"}: ${item.text}`);
       }
@@ -143,6 +167,11 @@ export function buildPrompt(
     "Tu tarea es:",
     "1. Escribir un resumen ejecutivo (máx 2-3 oraciones) de la atención brindada en el campo 'resumen'.",
     "2. Evaluar SOLO los criterios listados, basándote EXCLUSIVAMENTE en los datos del ticket y aplicando con RIGOR las Rúbricas Oficiales que se adjuntan a continuación. No inventes hechos.",
+    "Tené en cuenta el significado de las etiquetas en la Línea de Tiempo:",
+    "- [SOLUCIÓN]: Comentario marcado como solución definitiva; es visible por el cliente y el ticket pasa a quedar en espera de aprobación del cliente.",
+    "- [INTERNO]: Nota interna privada; NO la puede ver el cliente, solo los agentes (sirve para documentar pruebas técnicas como ping, diagnósticos o motivos de derivación/rechazo entre sectores).",
+    "- [COMENTARIO]: Comentario público; es visible por el cliente (sirve para seguimiento o pedidos de información al solicitante).",
+    "- [CAMBIO]: Registro del historial de modificaciones de categoría, tipo, mesa o campos personalizados.",
     'Para cada criterio devolvé "cumple": true, false, o null si NO hay evidencia suficiente (null no penaliza).',
     '"confianza" es un número entre 0 y 1.',
     '"evidencia" es una cita textual concreta del ticket o comentario (máx 160 caracteres).',
@@ -177,6 +206,17 @@ export function buildPrompt(
 let inFlight = 0;
 const MAX_IN_FLIGHT = 2;
 
+export function acquireAiSlot(): void {
+  if (inFlight >= MAX_IN_FLIGHT) {
+    throw new AiBusyError("Hay evaluaciones IA en curso. Reintentá en unos segundos.");
+  }
+  inFlight++;
+}
+
+export function releaseAiSlot(): void {
+  inFlight = Math.max(0, inFlight - 1);
+}
+
 export function parseVerdicts(modelText: string, allowedCodes: Set<string>): { resumen: string; verdicts: AiVerdict[] } {
   const cleaned = modelText.replace(/```(?:json)?/gi, "");
   const start = cleaned.indexOf("{");
@@ -208,9 +248,8 @@ export async function evaluateWithAi(
 ): Promise<{ model: string; resumen: string; verdicts: AiVerdict[] }> {
   const criteria = getAiCriteria(channel);
   if (criteria.length === 0) return { model: "", resumen: "", verdicts: [] };
-  if (inFlight >= MAX_IN_FLIGHT) throw new AiBusyError("Hay evaluaciones IA en curso. Reintentá en unos segundos.");
+  acquireAiSlot();
 
-  inFlight++;
   try {
     const timeline =
       preloadedTimeline ??
@@ -232,6 +271,7 @@ export async function evaluateWithAi(
       verdicts,
     };
   } finally {
-    inFlight--;
+    releaseAiSlot();
   }
 }
+

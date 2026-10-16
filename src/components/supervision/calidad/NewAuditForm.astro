@@ -2742,12 +2742,13 @@ function evaluateOrthographyRule(title: string, description: string) {
       verdicts: Array<{ codigo: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }>;
       isCouncil?: boolean;
       debate?: Record<string, {
-        criterio: string;
+        codigo: string;
+        criterioNombre: string;
         consenso: "directo" | "arbitrado" | "sin_oposicion" | "arbitraje_fallido";
         motivo?: string;
-        alpha?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
-        beta?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
-        juez?: { cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        alphaVote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        betaVote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        judgeVote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
       }>;
     } | null = null;
     let selectedVerdicts = new Set<string>();
@@ -2932,9 +2933,9 @@ function evaluateOrthographyRule(title: string, description: string) {
                 `;
               };
 
-              const alphaHtml = formatVote("Agente Alpha (Procesos)", deb.alpha);
-              const betaHtml = formatVote("Agente Beta (Cliente)", deb.beta);
-              const juezHtml = formatVote("Juez Nemotron (Arbitraje)", deb.juez);
+              const alphaHtml = formatVote("Agente Alpha (Procesos)", deb.alphaVote);
+              const betaHtml = formatVote("Agente Beta (Cliente)", deb.betaVote);
+              const juezHtml = formatVote("Juez Nemotron (Arbitraje)", deb.judgeVote);
 
               debateAccordionHtml = `
                 <details class="group mt-2 border-t border-base-200/60 pt-1.5 text-xs text-base-content/70">

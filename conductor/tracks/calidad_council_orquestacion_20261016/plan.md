@@ -17,13 +17,14 @@
 - [x] Task: Implementar branch de Council en `src/pages/api/calidad/ai-evaluate.ts` retornando payload aditivo 61d9c06c
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 4: UI Experience & Debate Visualization
-- [~] Task: Añadir opción Council en `src/components/supervision/calidad/AiInspectionModal.astro`
-- [ ] Task: Añadir 4to paso "Arbitraje" condicional al indicador de etapas en `src/components/supervision/calidad/NewAuditForm.astro`
-- [ ] Task: Implementar badges de consenso y acordeón `<details>` con el debate en `src/components/supervision/calidad/NewAuditForm.astro`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 4: UI Experience & Debate Visualization [checkpoint: ebf1331]
+- [x] Task: Añadir opción Council en `src/components/supervision/calidad/AiInspectionModal.astro` ebf1331
+- [x] Task: Añadir 4to paso "Arbitraje" condicional al indicador de etapas en `src/components/supervision/calidad/NewAuditForm.astro` ebf1331
+- [x] Task: Implementar badges de consenso y acordeón `<details>` con el debate en `src/components/supervision/calidad/NewAuditForm.astro` ebf1331
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) ebf1331
 
-## Phase 5: End-to-End Validation & Production Integrity
-- [ ] Task: Ejecutar `npm run test:domain` y `npm run test:unit`
-- [ ] Task: Ejecutar `npm run build` para garantizar compilación SSR limpia
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 5: End-to-End Validation & Production Integrity [checkpoint: ebf1331]
+- [x] Task: Ejecutar `npm run test:domain` y `npm run test:unit` ebf1331
+- [x] Task: Ejecutar `npm run build` para garantizar compilación SSR limpia ebf1331
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) ebf1331
+
