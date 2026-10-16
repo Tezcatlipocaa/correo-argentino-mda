@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { jsonResponse, jsonError, sanitizeError } from "@lib/apiResponse";
 import { requireSession } from "@lib/rbac-middleware";
-import ldap from "ldapjs";
+import { withLdapClient, classifyLdapError, getLdapUserErrorMessage } from "@lib/ldap";
 
 const LDAP_SERVER =
   import.meta.env.LDAP_SERVER ||
