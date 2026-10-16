@@ -279,7 +279,7 @@ export default function AdminChatbotWidget() {
                 </h3>
               </div>
               <p className="text-base-content/60 text-small">
-                Exclusivo Administradores
+                Asistente virtual MDA
               </p>
             </div>
           </div>
@@ -313,7 +313,6 @@ export default function AdminChatbotWidget() {
             >
               <div className="chat-header text-xxs mb-0.5 flex items-center gap-1.5 opacity-60">
                 <span>{msg.sender === "user" ? "Tú" : "Referente"}</span>
-                <time>{formatTime(new Date(msg.timestamp))}</time>
               </div>
 
               <div
@@ -326,6 +325,9 @@ export default function AdminChatbotWidget() {
                 {msg.text || (
                   <span className="loading loading-dots loading-xs"></span>
                 )}
+              </div>
+              <div className="chat-footer text-xxs mt-0.5 opacity-60">
+                <time>{formatTime(new Date(msg.timestamp))}</time>
               </div>
             </div>
           ))}
