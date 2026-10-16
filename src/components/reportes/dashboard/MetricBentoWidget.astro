@@ -49,7 +49,7 @@ const resolvedHref = href.startsWith("http")
           ]}
           aria-hidden="true"
         >
-          <Icon name={icon} size={22} class:list={[iconTone, "shrink-0"]} />
+          <Icon name={icon} size={22} is:inline class:list={[iconTone, "shrink-0"]} />
         </div>
         <div class="min-w-0">
           {category && (
@@ -87,6 +87,7 @@ const resolvedHref = href.startsWith("http")
       <Icon
         name="boxicons:chevron-right"
         size={16}
+        is:inline
         class="transition-transform group-hover:translate-x-0.5"
       />
     </a>

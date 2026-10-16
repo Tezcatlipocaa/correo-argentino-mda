@@ -43,6 +43,6 @@ export const INITIAL_QUICK_PROMPTS: QuickPrompt[] = [
 export const INITIAL_GREETING: ChatMessage = {
   id: "greeting",
   sender: "assistant",
-  text: "¡Hola! Soy Referente, tu asistente virtual para administradores de Portal MDA. Próximamente podré ayudarte a consultar inventario, métricas, bases de conocimiento y ejecutar automatizaciones. ¿En qué te puedo orientar hoy?",
+  text: "¡Hola! Soy Referente. ¿En qué te puedo ayudar hoy?",
   timestamp: new Date(),
 };

@@ -60,6 +60,7 @@ const resolveStatusName = (statusId: number) =>
           <Icon
             name="boxicons:chevron-down"
             size={16}
+            is:inline
             class="text-base-content/40 transition-transform group-open:rotate-180"
             aria-hidden="true"
           />
@@ -123,7 +124,7 @@ const resolveStatusName = (statusId: number) =>
         class="btn btn-sm gap-1 acc-btn acc-flat"
       >
         Ver detalle
-        <Icon name="boxicons:chevron-right" size={14} aria-hidden="true" />
+        <Icon name="boxicons:chevron-right" size={14} is:inline aria-hidden="true" />
       </AutomationLink>
     </div>
   </div>

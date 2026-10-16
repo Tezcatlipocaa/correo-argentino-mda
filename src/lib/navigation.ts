@@ -43,7 +43,7 @@ export const navSections: NavSection[] = [
           {
             href: "/supervision/autogestiones-metricas",
             label: "Métricas de autogestiones",
-            icon: "boxicons:line-chart-filled",
+            icon: "boxicons:chart-line-filled",
           },
           {
             href: "/supervision/asistencia",
