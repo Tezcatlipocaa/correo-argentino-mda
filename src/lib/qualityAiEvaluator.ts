@@ -176,6 +176,7 @@ export function buildPrompt(
     '"confianza" es un número entre 0 y 1.',
     '"evidencia" es una cita textual concreta del ticket o comentario (máx 160 caracteres).',
     '"razonamiento" explica brevemente por qué cumple o no cumple apoyándote en las reglas de la rúbrica (máx 180 caracteres).',
+    "IMPORTANTE: Redactá siempre en español claro y profesional para un supervisor humano. NUNCA menciones nombres de variables o identificadores de base de datos/código como 'ticket_id_1', 'custom_field_x', 'type_id', ni sintaxis de programación. Hablá de 'el ticket', 'el número de caso', 'el solicitante', 'el operador', 'el campo personalizado', etc.",
     "No uses herramientas ni leas otros archivos. Respondé ÚNICAMENTE con JSON válido, sin bloques markdown ni texto extra, con esta forma exacta:",
     '{"resumen":"El operador atendió la solicitud...","resultados":[{"codigo":"<code>","cumple":true,"confianza":0.85,"evidencia":"...","razonamiento":"..."}]}',
     "",

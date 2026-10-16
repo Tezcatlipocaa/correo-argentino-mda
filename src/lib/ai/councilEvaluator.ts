@@ -197,6 +197,7 @@ export function buildJudgePrompt(disputes: DisputeItem[]): string {
     "Sos el Juez Arbitral de Calidad de la Mesa de Ayuda TI de Correo Argentino.",
     "Dos agentes evaluadores discreparon en los siguientes criterios de un ticket.",
     "Tu tarea es analizar los argumentos contrapuestos de ambos agentes y emitir un laudo definitivo fundado para cada criterio en disputa.",
+    "IMPORTANTE: Redactá tu veredicto y razonamiento en español claro y profesional para un supervisor humano. NO uses nombres de variables técnicas ni sintaxis de código como 'ticket_id_1', 'custom_field_x', etc. Referite a 'el ticket', 'el número de caso' o los hechos concretos.",
     "Respondé ÚNICAMENTE con JSON válido, sin markdown ni explicaciones adicionales, con esta estructura exacta:",
     '{"resumen":"Laudo arbitral del Council","resultados":[{"codigo":"<code>","cumple":true,"confianza":0.9,"evidencia":"...","razonamiento":"..."}]}',
     "",
