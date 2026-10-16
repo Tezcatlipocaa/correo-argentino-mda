@@ -77,4 +77,12 @@ describe("AdminChatbotWidget Contract", () => {
     expect(source).toMatch(/sessionStorage\.getItem/);
     expect(source).toMatch(/sessionStorage\.setItem/);
   });
+
+  it("soporta enlaces con subrayado para navegación y disponibilidad persistente de prompts", () => {
+    const source = readFileSync(widgetPath, "utf-8");
+    expect(source).toMatch(/renderFormattedText/);
+    expect(source).toMatch(/underline/);
+    expect(source).toMatch(/!isTyping && !isStreaming/);
+    expect(source).not.toMatch(/messages\.length === 1 && !isTyping/);
+  });
 });

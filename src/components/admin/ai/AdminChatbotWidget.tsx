@@ -16,6 +16,7 @@ import {
   INITIAL_QUICK_PROMPTS,
   INITIAL_GREETING,
 } from "./types";
+import { getBaseNoSlash } from "@/lib/baseUrl";
 
 const STORAGE_KEY_MESSAGES = "mda_admin_chatbot_messages";
 const STORAGE_KEY_OPEN = "mda_admin_chatbot_open";
@@ -169,8 +170,14 @@ export default function AdminChatbotWidget() {
       ? matchedPrompt.response
       : "Esta funcionalidad estará disponible próximamente en Referente.";
 
-    stopActiveOperations();
-    setIsTyping(true);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
     timerRef.current = setTimeout(() => {
       setIsTyping(false);
@@ -255,6 +262,40 @@ export default function AdminChatbotWidget() {
         return "border-accent/30 hover:border-accent hover:bg-accent/10";
     }
   };
+  const renderFormattedText = (text: string) => {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+      const label = match[1];
+      const rawHref = match[2];
+      const resolvedHref = rawHref.startsWith("/")
+        ? `${getBaseNoSlash()}${rawHref}`
+        : rawHref;
+
+      parts.push(
+        <a
+          key={match.index}
+          href={resolvedHref}
+          className="text-secondary dark:text-primary font-medium underline underline-offset-2 transition-opacity hover:opacity-80"
+        >
+          {label}
+        </a>,
+      );
+      lastIndex = linkRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
 
   return (
     <>
@@ -309,41 +350,59 @@ export default function AdminChatbotWidget() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`chat ${msg.sender === "user" ? "chat-end" : "chat-start"}`}
+              className={`chat flex flex-col ${
+                msg.sender === "user"
+                  ? "chat-end items-end"
+                  : "chat-start items-start"
+              }`}
             >
-              <div className="chat-header text-xxs mb-0.5 flex items-center gap-1.5 opacity-60">
+              <div
+                className={`chat-header text-xxs mb-0.5 flex items-center gap-1.5 opacity-60 ${
+                  msg.sender === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
                 <span>{msg.sender === "user" ? "Tú" : "Referente"}</span>
               </div>
 
               <div
-                className={`chat-bubble text-xs ${
+                className={`chat-bubble max-w-[85%] rounded-2xl px-4 py-2.5 text-xs ${
                   msg.sender === "user"
-                    ? "chat-bubble-secondary text-secondary-content"
-                    : "bg-base-200 text-base-content"
+                    ? "bg-secondary text-secondary-content self-end"
+                    : "bg-base-200 text-base-content self-start"
                 }`}
               >
-                {msg.text || (
+                {msg.text ? (
+                  msg.sender === "assistant" ? (
+                    renderFormattedText(msg.text)
+                  ) : (
+                    msg.text
+                  )
+                ) : (
                   <span className="loading loading-dots loading-xs"></span>
                 )}
               </div>
-              <div className="chat-footer text-xxs mt-0.5 opacity-60">
+              <div
+                className={`chat-footer text-xxs mt-0.5 flex opacity-60 ${
+                  msg.sender === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
                 <time>{formatTime(new Date(msg.timestamp))}</time>
               </div>
             </div>
           ))}
 
           {isTyping && (
-            <div className="chat chat-start">
+            <div className="chat chat-start flex flex-col items-start">
               <div className="chat-header text-xxs mb-0.5 flex items-center gap-1.5 opacity-60">
                 <span>Referente</span>
               </div>
-              <div className="chat-bubble bg-base-200 text-base-content text-xs">
+              <div className="chat-bubble bg-base-200 text-base-content self-start rounded-2xl px-4 py-2.5 text-xs">
                 <span className="loading loading-dots loading-xs"></span>
               </div>
             </div>
           )}
 
-          {messages.length === 1 && !isTyping && !isStreaming && (
+          {!isTyping && !isStreaming && (
             <div className="space-y-1.5 pt-2">
               <p className="text-base-content/60 text-small font-medium">
                 Consultas sugeridas:

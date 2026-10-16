@@ -19,7 +19,7 @@ export const INITIAL_QUICK_PROMPTS: QuickPrompt[] = [
     label: "Estado de oficinas",
     query: "¿Cuál es el estado de las oficinas y regiones?",
     response:
-      "Actualmente hay 5 regiones con sincronización activa. Podés revisar el detalle completo en el Directorio y en la vista de Estructura de red.",
+      "Actualmente hay 5 regiones con sincronización activa. Podés revisar el detalle completo en el [Directorio](/oficinas) y en la vista de [Estructura de red](/oficinas/estructura).",
     iconName: "office",
   },
   {
@@ -27,7 +27,7 @@ export const INITIAL_QUICK_PROMPTS: QuickPrompt[] = [
     label: "Automatizaciones",
     query: "¿Cómo consultar las automatizaciones?",
     response:
-      "El módulo de automatizaciones cuenta con métricas de ejecuciones y procesos de tareas programadas operativas.",
+      "El módulo de [Automatizaciones](/automatizaciones) cuenta con métricas de ejecuciones y procesos de tareas programadas operativas.",
     iconName: "automations",
   },
   {
@@ -35,7 +35,7 @@ export const INITIAL_QUICK_PROMPTS: QuickPrompt[] = [
     label: "¿Qué funciones tendrás?",
     query: "¿Qué funciones tendrás cuando estés listo?",
     response:
-      "En próximas etapas podré consultar inventario de terminales, generar reportes instantáneos, buscar tickets en InvGate y ejecutar scripts de administración.",
+      "En próximas etapas podré consultar [Inventario de terminales](/inventario-terminales), generar [Métricas](/reportes), buscar tickets en InvGate y ejecutar scripts de administración.",
     iconName: "capabilities",
   },
 ];

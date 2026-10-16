@@ -56,9 +56,13 @@ import { Icon } from "astro-icon/components";
   );
 
   const CATEGORY_LABELS: Record<string, string> = {
+    config: "Configuración incompleta",
     credentials: "Credenciales inválidas",
     network: "Error de red",
-    other: "Otro error",
+    timeout: "Tiempo de espera agotado",
+    base_dn: "Base DN no encontrado",
+    permissions: "Permisos insuficientes",
+    other: "Error de LDAP",
   };
 
   async function updateLdapStatus() {
@@ -78,7 +82,17 @@ import { Icon } from "astro-icon/components";
       const res = await fetch("/api/admin/ldap-status", {
         signal: ac.signal,
       });
-      if (!res.ok) throw new Error("Error en la respuesta de la API");
+
+      if (!res.ok) {
+        let errorMsg = `Error HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.error) errorMsg += `: ${errData.error}`;
+        } catch {
+          // noop
+        }
+        throw new Error(errorMsg);
+      }
 
       const data = await res.json();
 
@@ -105,21 +119,30 @@ import { Icon } from "astro-icon/components";
 
       if (ldapStatusDescEl) {
         const descText = data.message || "";
+        const titleText = data.detail ? `${data.message} (${data.detail})` : descText;
         ldapStatusDescEl.textContent = descText;
-        ldapStatusDescEl.title = descText;
+        ldapStatusDescEl.title = titleText;
       }
 
       if (ldapStatusIconContainer) {
         ldapStatusIconContainer.className = iconContainerClass;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(
         "[AdminLdapStatusCard] Error al verificar LDAP:",
         err,
       );
-      ldapStatusEl.textContent = "Error de Conexión";
+      const isAbort = err?.name === "AbortError";
+      ldapStatusEl.textContent = isAbort ? "Tiempo de espera agotado" : "Error de Conexión";
       ldapStatusEl.className =
         "text-lg md:text-xl font-bold mt-0.5 text-warning";
+      if (ldapStatusDescEl) {
+        const errorDesc = isAbort
+          ? "La solicitud a la API tardó más de 15 segundos"
+          : (err?.message || "No se pudo consultar el estado del servicio");
+        ldapStatusDescEl.textContent = errorDesc;
+        ldapStatusDescEl.title = errorDesc;
+      }
       if (ldapStatusIconContainer) {
         ldapStatusIconContainer.className =
           "bg-warning/15 text-warning p-3 rounded-xl shrink-0 ml-4";
