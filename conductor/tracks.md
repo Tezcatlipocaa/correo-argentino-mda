@@ -80,4 +80,10 @@
 ---
 - [x] **Track: Refactor y Estandarización UI/UX del Módulo de Recursos (Enlaces, Aplicativos y Contactos)**
   *Link: [./tracks/recursos_ui_refactor_20261015/index.md](./tracks/recursos_ui_refactor_20261015/index.md)*
+---
+- [x] **Track: Mejoras UI/UX del Chatbot IA para Administradores**
+  *Link: [./tracks/admin_chatbot_ui_ux_20261015/index.md](./tracks/admin_chatbot_ui_ux_20261015/index.md)*
+---
+- [x] **Track: Persistencia de Sesión del Chatbot IA en sessionStorage**
+  *Link: [./tracks/admin_chatbot_session_storage_20261015/index.md](./tracks/admin_chatbot_session_storage_20261015/index.md)*
 

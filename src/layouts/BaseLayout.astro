@@ -24,6 +24,7 @@ import {
   CommandPaletteModal,
 } from "@/components/ui/modals";
 import ToastContainer from "@components/ui/ToastContainer.astro";
+import AdminChatbotWidget from "@/components/admin/ai/AdminChatbotWidget";
 
 interface Props {
   title?: string;
@@ -252,6 +253,11 @@ const globalFontFaceCss = `
   <AboutProjectModal />
   <FeedbackModal />
   <ToastContainer />
+  {normalizedUserRole === "admin" && (
+    <div class="hidden md:block">
+      <AdminChatbotWidget client:idle />
+    </div>
+  )}
 
   <script src="../../scripts/toggle-mode.ts"></script>
 </html>

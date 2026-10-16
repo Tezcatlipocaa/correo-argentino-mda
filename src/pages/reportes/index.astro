@@ -16,30 +16,50 @@ import { getWorkflowReport } from "@lib/workflows/service";
 const cleanBase = getCleanBase();
 
 // 1. Categorías
-let categoryMetrics = { totalNodes: 719, deadNodes: 377, wastePercent: 52, maxDepth: 6 };
+let categoryMetrics = {
+  totalNodes: 719,
+  deadNodes: 377,
+  wastePercent: 52,
+  maxDepth: 6,
+};
 try {
   const catReport = await getCategoryCatalogReport(2);
+  const depths = Object.keys(catReport.metrics.depthDistribution || {}).map(Number);
+  const maxDepth = depths.length > 0 ? Math.max(...depths) : 6;
   categoryMetrics = {
     totalNodes: catReport.metrics.totalNodes,
     deadNodes: catReport.metrics.deadNodes,
     wastePercent: catReport.metrics.structuralWastePercent,
-    maxDepth: catReport.metrics.maxDepth,
+    maxDepth,
   };
 } catch {
   // Fallback seguro
 }
 
 // 2. Mesas de Ayuda
-let helpdeskMetrics = { totalIncoming: 0, totalResolved: 0, totalActive: 0, ratio: "1.00", desksCount: 0 };
+let helpdeskMetrics = {
+  totalIncoming: 0,
+  totalResolved: 0,
+  totalActive: 0,
+  ratio: "1.00",
+  desksCount: 0,
+};
 try {
   const hdReport = await getHelpdesksReport();
   const items = hdReport.items || [];
-  const incoming = items.reduce((acc, h) => acc + (h.incomingTickets || 0), 0);
-  const resolved = items.reduce((acc, h) => acc + (h.resolvedTickets || 0), 0);
+  const incoming = items.reduce(
+    (acc, h) => acc + (h.incomingTicketsMonth || 0),
+    0,
+  );
+  const resolved = items.reduce(
+    (acc, h) => acc + (h.resolvedTicketsMonth || 0),
+    0,
+  );
+  const active = items.reduce((acc, h) => acc + (h.backlog?.active || 0), 0);
   helpdeskMetrics = {
     totalIncoming: incoming,
     totalResolved: resolved,
-    totalActive: items.reduce((acc, h) => acc + (h.activeTickets || 0), 0),
+    totalActive: active,
     ratio: incoming > 0 ? (resolved / incoming).toFixed(2) : "1.00",
     desksCount: items.length,
   };
@@ -48,7 +68,13 @@ try {
 }
 
 // 3. Workflows de Proceso
-let workflowMetrics = { totalCount: 0, completedCount: 0, activeCount: 0, slaPercent: 0, avgHours: 0 };
+let workflowMetrics = {
+  totalCount: 0,
+  completedCount: 0,
+  activeCount: 0,
+  slaPercent: 0,
+  avgHours: 0,
+};
 try {
   const wfReport = await getWorkflowReport("implementacion");
   workflowMetrics = {
@@ -65,11 +91,13 @@ try {
 // 4. Red de Oficinas
 let officeMetrics = { total: 0, active: 0, withTerminals: 0 };
 try {
-  const [totalRes] = await db.select({ count: sql<number>`count(*)` }).from(offices);
+  const [totalRes] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(offices);
   const [activeRes] = await db
     .select({ count: sql<number>`count(*)` })
     .from(offices)
-    .where(eq(offices.active, 1));
+    .where(eq(offices.active, true));
   const [withTermRes] = await db
     .select({ count: sql<number>`count(distinct ${terminals.nis})` })
     .from(terminals)
@@ -86,7 +114,9 @@ try {
 // 5. Parque de Terminales
 let terminalMetrics = { total: 0, winCount: 0, brandsCount: 0 };
 try {
-  const [totalTermRes] = await db.select({ count: sql<number>`count(*)` }).from(terminals);
+  const [totalTermRes] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(terminals);
   const [winRes] = await db
     .select({ count: sql<number>`count(*)` })
     .from(terminals)
@@ -107,7 +137,9 @@ try {
 // 6. Automatizaciones
 let automationMetrics = { totalParents: 0, totalClosed: 0, inProgress: 0 };
 try {
-  const [parentsRes] = await db.select({ count: sql<number>`count(*)` }).from(automationParents);
+  const [parentsRes] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(automationParents);
   const [closedRes] = await db
     .select({ count: sql<number>`count(*)` })
     .from(automationParents)
@@ -152,13 +184,13 @@ const quickShortcuts = [
     title: "Parque de Terminales",
     href: "inventario-terminales/estadisticas",
     icon: "boxicons:desktop-filled",
-    tone: "bg-primary/10 text-primary",
+    tone: "bg-accent/10 text-accent",
   },
   {
     title: "Automatizaciones",
     href: "automatizaciones",
     icon: "boxicons:rocket-filled",
-    tone: "bg-warning/10 text-warning",
+    tone: "bg-secondary/10 text-secondary",
   },
 ];
 ---
@@ -168,20 +200,13 @@ const quickShortcuts = [
     <MetricsHeader title="Centro de Métricas y Analítica" />
 
     <!-- Estructura principal: 2 columnas de widgets a la izquierda, 1 columna de atajos a la derecha -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
       <!-- Primeras dos columnas: Widgets de resumen (grilla de 2) -->
       <section
-        class="lg:col-span-2 space-y-4"
+        class="space-y-4 lg:col-span-2"
         aria-label="Widgets de resumen y analítica"
       >
-        <div class="flex items-center justify-between pb-1 border-b border-base-200">
-          <h2 class="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-            <Icon name="boxicons:bar-chart-big-filled" size={16} class="text-secondary" />
-            <span>Métricas clave y estado de módulos</span>
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <!-- Widget 1: Taxonomía de Categorías -->
           <MetricBentoWidget
             title="Taxonomía de Categorías"
@@ -189,40 +214,55 @@ const quickShortcuts = [
             href="reportes/categorias"
             icon="boxicons:network-chart-filled"
             iconTone="text-info"
+            iconBoxTone="bg-info/10"
             badge={`${categoryMetrics.totalNodes} nodos`}
-            badgeTone="badge-info badge-outline"
+            badgeTone="badge-soft badge-info"
           >
-            <div class="space-y-2.5 text-xs">
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Nodos sin tickets</span>
-                <span class="font-mono font-bold text-base-content">
+            <div class="space-y-3 text-sm">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Nodos sin tickets</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {categoryMetrics.deadNodes} ({categoryMetrics.wastePercent}%)
                 </span>
               </div>
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Profundidad actual</span>
-                <span class="font-mono font-bold text-base-content">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Profundidad actual</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {categoryMetrics.maxDepth} niveles
                 </span>
               </div>
-              
+
               <!-- Micro-gráfico: Barra segmentada de optimización del catálogo -->
-              <div class="pt-1 space-y-1">
-                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+              <div class="space-y-1.5 pt-1.5">
+                <div
+                  class="text-base-content/60 flex justify-between font-mono text-xs"
+                >
                   <span>Utilidad taxonómica</span>
                   <span>{100 - categoryMetrics.wastePercent}% activos</span>
                 </div>
-                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden flex">
+                <div
+                  class="bg-base-200 flex h-2.5 w-full overflow-hidden rounded-full"
+                >
                   <div
                     class="bg-info h-full transition-all duration-500"
                     style={`width: ${Math.max(5, 100 - categoryMetrics.wastePercent)}%`}
                     title="Nodos con tickets históricos"
-                  ></div>
+                  >
+                  </div>
                   <div
                     class="bg-error/40 h-full transition-all duration-500"
                     style={`width: ${categoryMetrics.wastePercent}%`}
                     title="Nodos sin tickets (desperdicio)"
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,39 +275,57 @@ const quickShortcuts = [
             href="reportes/mesas"
             icon="boxicons:dashboard-filled"
             iconTone="text-secondary"
+            iconBoxTone="bg-secondary/10"
             badge={`${helpdeskMetrics.desksCount} mesas`}
-            badgeTone="badge-secondary badge-outline"
+            badgeTone="badge-soft badge-secondary"
           >
-            <div class="space-y-2.5 text-xs">
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Tickets ingresados</span>
-                <span class="font-mono font-bold text-base-content">
+            <div class="space-y-3 text-sm">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Tickets ingresados</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {helpdeskMetrics.totalIncoming.toLocaleString("es-AR")}
                 </span>
               </div>
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Tickets resueltos</span>
-                <span class="font-mono font-bold text-base-content">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Tickets resueltos</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {helpdeskMetrics.totalResolved.toLocaleString("es-AR")}
                 </span>
               </div>
-              
+
               <!-- Micro-gráfico: Barras comparativas de absorción (Entrada vs Salida) -->
-              <div class="pt-1 space-y-1">
-                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+              <div class="space-y-1.5 pt-1.5">
+                <div
+                  class="text-base-content/60 flex justify-between font-mono text-xs"
+                >
                   <span>Capacidad de absorción</span>
-                  <span class="font-bold text-secondary">{helpdeskMetrics.ratio} E/S</span>
+                  <span class="text-secondary font-bold"
+                    >{helpdeskMetrics.ratio} E/S</span
+                  >
                 </div>
-                <div class="grid grid-cols-2 gap-1.5 h-2">
-                  <div class="bg-base-200 rounded-full overflow-hidden">
-                    <div class="bg-base-content/40 h-full w-full" title="Volumen ingresado"></div>
+                <div class="grid h-2.5 grid-cols-2 gap-1.5">
+                  <div class="bg-base-200 overflow-hidden rounded-full">
+                    <div
+                      class="bg-base-content/40 h-full w-full"
+                      title="Volumen ingresado"
+                    >
+                    </div>
                   </div>
-                  <div class="bg-base-200 rounded-full overflow-hidden">
+                  <div class="bg-base-200 overflow-hidden rounded-full">
                     <div
                       class="bg-secondary h-full"
                       style={`width: ${Math.min(100, Math.round(Number(helpdeskMetrics.ratio || 1) * 100))}%`}
                       title="Volumen resuelto respecto al entrante"
-                    ></div>
+                    >
+                    </div>
                   </div>
                 </div>
               </div>
@@ -281,35 +339,51 @@ const quickShortcuts = [
             href="reportes/workflows"
             icon="boxicons:git-repo-forked-filled"
             iconTone="text-accent"
+            iconBoxTone="bg-accent/10"
             badge={`${workflowMetrics.totalCount} casos`}
-            badgeTone="badge-accent badge-outline"
+            badgeTone="badge-soft badge-accent"
           >
-            <div class="space-y-2.5 text-xs">
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Casos completados</span>
-                <span class="font-mono font-bold text-base-content">
+            <div class="space-y-3 text-sm">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Casos completados</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {workflowMetrics.completedCount}
                 </span>
               </div>
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Duración promedio</span>
-                <span class="font-mono font-bold text-base-content">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Duración promedio</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {(workflowMetrics.avgHours ?? 0).toFixed(1)} hs
                 </span>
               </div>
-              
+
               <!-- Micro-gráfico: Barra de progreso de cumplimiento de SLA -->
-              <div class="pt-1 space-y-1">
-                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+              <div class="space-y-1.5 pt-1.5">
+                <div
+                  class="text-base-content/60 flex justify-between font-mono text-xs"
+                >
                   <span>Cumplimiento SLA</span>
-                  <span class="font-bold text-accent">{workflowMetrics.slaPercent}%</span>
+                  <span class="text-accent font-bold"
+                    >{workflowMetrics.slaPercent}%</span
+                  >
                 </div>
-                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                <div
+                  class="bg-base-200 h-2.5 w-full overflow-hidden rounded-full"
+                >
                   <div
                     class="bg-accent h-full transition-all duration-500"
                     style={`width: ${workflowMetrics.slaPercent}%`}
                     title={`SLA cumplido en ${workflowMetrics.slaPercent}%`}
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
             </div>
@@ -322,37 +396,55 @@ const quickShortcuts = [
             href="oficinas/estadisticas"
             icon="boxicons:building-house-filled"
             iconTone="text-success"
+            iconBoxTone="bg-success/10"
             badge={`${officeMetrics.total.toLocaleString("es-AR")} oficinas`}
-            badgeTone="badge-success badge-outline"
+            badgeTone="badge-soft badge-success"
           >
-            <div class="space-y-2.5 text-xs">
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Oficinas activas</span>
-                <span class="font-mono font-bold text-base-content">
+            <div class="space-y-3 text-sm">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Oficinas activas</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {officeMetrics.active.toLocaleString("es-AR")}
                 </span>
               </div>
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Con terminales</span>
-                <span class="font-mono font-bold text-base-content">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm">Con terminales</span>
+                <span class="text-base-content font-mono text-sm font-bold">
                   {officeMetrics.withTerminals.toLocaleString("es-AR")}
                 </span>
               </div>
-              
+
               <!-- Micro-gráfico: Ratio de cobertura operativa -->
-              <div class="pt-1 space-y-1">
-                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+              <div class="space-y-1.5 pt-1.5">
+                <div
+                  class="text-base-content/60 flex justify-between font-mono text-xs"
+                >
                   <span>Cobertura operativa</span>
-                  <span class="font-bold text-success">
-                    {officeMetrics.total > 0 ? Math.round((officeMetrics.active / officeMetrics.total) * 100) : 0}%
+                  <span class="text-success font-bold">
+                    {
+                      officeMetrics.total > 0
+                        ? Math.round(
+                            (officeMetrics.active / officeMetrics.total) * 100,
+                          )
+                        : 0
+                    }%
                   </span>
                 </div>
-                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                <div
+                  class="bg-base-200 h-2.5 w-full overflow-hidden rounded-full"
+                >
                   <div
                     class="bg-success h-full transition-all duration-500"
                     style={`width: ${officeMetrics.total > 0 ? Math.round((officeMetrics.active / officeMetrics.total) * 100) : 0}%`}
                     title="Porcentaje de oficinas activas en red"
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
             </div>
@@ -364,38 +456,59 @@ const quickShortcuts = [
             category="Hardware"
             href="inventario-terminales/estadisticas"
             icon="boxicons:desktop-filled"
-            iconTone="text-primary"
+            iconTone="text-accent"
+            iconBoxTone="bg-accent/10"
             badge={`${terminalMetrics.total.toLocaleString("es-AR")} puestos`}
-            badgeTone="badge-primary badge-outline"
+            badgeTone="badge-soft badge-accent"
           >
-            <div class="space-y-2.5 text-xs">
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Equipos con Windows</span>
-                <span class="font-mono font-bold text-base-content">
+            <div class="space-y-3 text-sm">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Equipos con Windows</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {terminalMetrics.winCount.toLocaleString("es-AR")}
                 </span>
               </div>
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Fabricantes registrados</span>
-                <span class="font-mono font-bold text-base-content">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Fabricantes registrados</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {terminalMetrics.brandsCount}
                 </span>
               </div>
-              
+
               <!-- Micro-gráfico: Adopción SO estándar -->
-              <div class="pt-1 space-y-1">
-                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+              <div class="space-y-1.5 pt-1.5">
+                <div
+                  class="text-base-content/60 flex justify-between font-mono text-xs"
+                >
                   <span>Estandarización SO</span>
-                  <span class="font-bold text-primary">
-                    {terminalMetrics.total > 0 ? Math.round((terminalMetrics.winCount / terminalMetrics.total) * 100) : 0}% Windows
+                  <span class="text-accent font-bold">
+                    {
+                      terminalMetrics.total > 0
+                        ? Math.round(
+                            (terminalMetrics.winCount / terminalMetrics.total) *
+                              100,
+                          )
+                        : 0
+                    }% Windows
                   </span>
                 </div>
-                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                <div
+                  class="bg-base-200 h-2.5 w-full overflow-hidden rounded-full"
+                >
                   <div
-                    class="bg-primary h-full transition-all duration-500"
+                    class="bg-accent h-full transition-all duration-500"
                     style={`width: ${terminalMetrics.total > 0 ? Math.round((terminalMetrics.winCount / terminalMetrics.total) * 100) : 0}%`}
                     title="Equipos bajo estándar Windows"
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
             </div>
@@ -407,38 +520,60 @@ const quickShortcuts = [
             category="Automatización"
             href="automatizaciones"
             icon="boxicons:rocket-filled"
-            iconTone="text-warning"
+            iconTone="text-secondary"
+            iconBoxTone="bg-secondary/10"
             badge={`${automationMetrics.totalParents.toLocaleString("es-AR")} procesos`}
-            badgeTone="badge-warning badge-outline"
+            badgeTone="badge-soft badge-secondary"
           >
-            <div class="space-y-2.5 text-xs">
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Procesos cerrados</span>
-                <span class="font-mono font-bold text-base-content">
+            <div class="space-y-3 text-sm">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Procesos cerrados</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {automationMetrics.totalClosed.toLocaleString("es-AR")}
                 </span>
               </div>
-              <div class="flex items-baseline justify-between py-0.5 border-b border-base-200/50">
-                <span class="text-base-content/70">Procesos en curso</span>
-                <span class="font-mono font-bold text-base-content">
+              <div
+                class="border-base-200/50 flex items-baseline justify-between border-b py-1"
+              >
+                <span class="text-base-content/70 text-sm"
+                  >Procesos en curso</span
+                >
+                <span class="text-base-content font-mono text-sm font-bold">
                   {automationMetrics.inProgress}
                 </span>
               </div>
-              
+
               <!-- Micro-gráfico: Embudo de finalización -->
-              <div class="pt-1 space-y-1">
-                <div class="flex justify-between text-xxs text-base-content/60 font-mono">
+              <div class="space-y-1.5 pt-1.5">
+                <div
+                  class="text-base-content/60 flex justify-between font-mono text-xs"
+                >
                   <span>Tasa de resolución</span>
-                  <span class="font-bold text-warning">
-                    {automationMetrics.totalParents > 0 ? Math.round((automationMetrics.totalClosed / automationMetrics.totalParents) * 100) : 0}%
+                  <span class="text-secondary font-bold">
+                    {
+                      automationMetrics.totalParents > 0
+                        ? Math.round(
+                            (automationMetrics.totalClosed /
+                              automationMetrics.totalParents) *
+                              100,
+                          )
+                        : 0
+                    }%
                   </span>
                 </div>
-                <div class="h-2 w-full bg-base-200 rounded-full overflow-hidden">
+                <div
+                  class="bg-base-200 h-2.5 w-full overflow-hidden rounded-full"
+                >
                   <div
-                    class="bg-warning h-full transition-all duration-500"
+                    class="bg-secondary h-full transition-all duration-500"
                     style={`width: ${automationMetrics.totalParents > 0 ? Math.round((automationMetrics.totalClosed / automationMetrics.totalParents) * 100) : 0}%`}
                     title="Porcentaje de procesos de automatización completados"
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
             </div>
@@ -448,28 +583,22 @@ const quickShortcuts = [
 
       <!-- Última columna: Lista de atajos rápidos -->
       <section
-        class="lg:col-span-1 space-y-4"
+        class="space-y-4 lg:col-span-1"
         aria-label="Atajos rápidos a reportes"
       >
-        <div class="flex items-center justify-between pb-1 border-b border-base-200">
-          <h2 class="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-            <Icon name="boxicons:grid-filled" size={16} class="text-secondary" />
-            <span>Atajos directos</span>
-          </h2>
-          <span class="text-xxs text-base-content/40 font-mono">6 módulos</span>
-        </div>
-
         <div class="flex flex-col gap-2.5">
-          {quickShortcuts.map((s) => (
-            <QuickAccessCard
-              title={s.title}
-              description=""
-              href={`${cleanBase}${s.href}`}
-              icon={s.icon}
-              iconTone={s.tone}
-              layout="mini"
-            />
-          ))}
+          {
+            quickShortcuts.map((s) => (
+              <QuickAccessCard
+                title={s.title}
+                description=""
+                href={`${cleanBase}${s.href}`}
+                icon={s.icon}
+                iconTone={s.tone}
+                layout="mini"
+              />
+            ))
+          }
         </div>
       </section>
     </div>

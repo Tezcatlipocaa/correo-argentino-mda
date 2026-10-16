@@ -21,7 +21,7 @@ const labels = items.map((item) => item.displayName || item.name);
       label="Mesas Monitoreadas"
       value={overview.totalHelpdesks}
       subtitle="Colas operativas activas"
-      color="primary"
+      color="secondary"
       size="lg"
     />
     <StatsCard
@@ -29,7 +29,7 @@ const labels = items.map((item) => item.displayName || item.name);
       label="Tickets Activos"
       value={overview.totalActiveTickets}
       subtitle={`${overview.totalWaitingTickets} en espera`}
-      color="warning"
+      color="info"
       size="lg"
     />
     <StatsCard
