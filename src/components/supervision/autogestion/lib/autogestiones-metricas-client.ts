@@ -2,71 +2,35 @@ import { getCleanBase } from "@lib/baseUrl";
 
 const cleanBase = getCleanBase();
 
-interface ChartInstances {
-  modalidades: any;
-  temporal: any;
-  operadores: any;
-  categorias: any;
-  creadores: any;
-}
-
-const charts: ChartInstances = {
-  modalidades: null,
-  temporal: null,
-  operadores: null,
-  categorias: null,
-  creadores: null,
-};
-
 let currentFilter = {
   preset: "ultimos_7_dias",
   from: "",
   to: "",
 };
 
-// Paleta armónica enfocada en Secondary institucional (#254888), sus gradaciones y acentos
-const COLORS = {
-  // Secondary institucional principal (Steel Azure)
-  secondary: "rgba(37, 72, 136, 0.90)",
-  // Variantes y análogos de Secondary
-  secondaryDark: "rgba(23, 49, 97, 0.95)",
-  secondaryMedium: "rgba(45, 87, 163, 0.85)",
-  secondaryLight: "rgba(58, 110, 165, 0.85)", // Accent oficial (#3a6ea5)
-  secondarySoft: "rgba(79, 134, 198, 0.80)",
-  infoSlate: "rgba(40, 121, 168, 0.85)",      // Info oficial (#2879a8)
-  tealAzure: "rgba(20, 125, 140, 0.85)",
-  indigoAzure: "rgba(67, 56, 202, 0.85)",
+interface ChartWindow extends Window {
+  __chartCards?: Record<string, { setData: (labels: string[], series: { label: string; data: number[] }[]) => void }>;
+  __pendingChartUpdates?: Record<string, { labels: string[]; series: { label: string; data: number[] }[] }>;
+}
 
-  // Primary institucional reservado para destacados puntuales (School-bus yellow #ffc72c)
-  primary: "rgba(255, 199, 44, 0.92)",
-  primaryAmber: "rgba(226, 173, 31, 0.90)",  // Warning oficial (#e2ad1f)
-
-  // Paleta armónica para gráficos circulares y multicategoría
-  palette: [
-    "rgba(37, 72, 136, 0.90)",  // Secondary Steel Azure
-    "rgba(58, 110, 165, 0.85)", // Accent Azul
-    "rgba(40, 121, 168, 0.85)",  // Info Slate
-    "rgba(79, 134, 198, 0.80)", // Light Azure
-    "rgba(255, 199, 44, 0.90)", // Primary Amarillo (acento puntual)
-    "rgba(45, 87, 163, 0.85)",  // Medium Azure
-    "rgba(20, 125, 140, 0.85)", // Teal Azure
-    "rgba(100, 116, 139, 0.85)",// Neutral Charcoal
-    "rgba(148, 163, 184, 0.85)",// Slate Muted
-  ],
-};
-
-function getChartConstructor(): any {
-  return (window as any).Chart;
+// Empuja datos a una ChartCard (misma mecánica de registry que usa ChartCard.astro):
+// si la card ya está inicializada, setData directo; si no, queda encolado y la
+// card lo toma en su init, así no hay carrera de orden de scripts.
+function pushChart(
+  chartName: string,
+  labels: string[],
+  series: { label: string; data: number[] }[],
+) {
+  const win = window as ChartWindow;
+  const registered = win.__chartCards?.[chartName];
+  if (registered) {
+    registered.setData(labels, series);
+    return;
+  }
+  (win.__pendingChartUpdates ??= {})[chartName] = { labels, series };
 }
 
 function initWhenReady() {
-  const Chart = getChartConstructor();
-  if (!Chart) {
-    setTimeout(initWhenReady, 100);
-    return;
-  }
-
-  // Leer payload inicial
   const payloadEl = document.getElementById("initial-metrics-payload");
   if (payloadEl && payloadEl.textContent) {
     try {
@@ -105,210 +69,50 @@ function updateKpis(kpis: any) {
 }
 
 function updateCharts(data: any) {
-  const Chart = getChartConstructor();
-  if (!Chart) return;
+  const byType = data.byType || [];
+  pushChart(
+    "ag-modalidades",
+    byType.map((t: any) => t.label),
+    [{ label: "Asignaciones", data: byType.map((t: any) => t.count) }],
+  );
 
-  // 1. Gráfico de Modalidades (Doughnut)
-  const ctxMod = (document.getElementById("chart-modalidades") as HTMLCanvasElement)?.getContext("2d");
-  if (ctxMod) {
-    if (charts.modalidades) charts.modalidades.destroy();
-    const byType = data.byType || [];
-    const labels = byType.length ? byType.map((t: any) => t.label) : ["Sin datos"];
-    const counts = byType.length ? byType.map((t: any) => t.count) : [0];
-
-    charts.modalidades = new Chart(ctxMod, {
-      type: "doughnut",
-      data: {
-        labels,
-        datasets: [
-          {
-            data: counts,
-            backgroundColor: COLORS.palette.slice(0, Math.max(labels.length, 1)),
-            borderWidth: 0,
-          },
-        ],
+  const temporal = data.temporal || [];
+  pushChart(
+    "ag-temporal",
+    temporal.map((t: any) => t.label),
+    [
+      {
+        label: "Autogestiones Asignadas",
+        data: temporal.map((t: any) => t.count),
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "70%",
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: { boxWidth: 12, font: { size: 11, family: "Geist, sans-serif" } },
-          },
-        },
-      },
-    });
-  }
+    ],
+  );
 
-  // 2. Gráfico de Volumen Temporal (Bar)
-  const ctxTemp = (document.getElementById("chart-temporal") as HTMLCanvasElement)?.getContext("2d");
-  if (ctxTemp) {
-    if (charts.temporal) charts.temporal.destroy();
-    const temporal = data.temporal || [];
-    const labels = temporal.map((t: any) => t.label);
-    const counts = temporal.map((t: any) => t.count);
-
-    const hint = document.getElementById("temporal-grouping-hint");
-    if (hint) {
-      hint.textContent = `Agrupado por ${data.range?.grouping === "hour" ? "hora" : "día"}`;
-    }
-
-    charts.temporal = new Chart(ctxTemp, {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Autogestiones Asignadas",
-            data: counts,
-            backgroundColor: COLORS.secondary,
-            borderRadius: 6,
-          },
-        ],
+  const byOperator = (data.byOperator || []).slice(0, 15);
+  pushChart(
+    "ag-operadores",
+    byOperator.map((o: any) => o.agentName),
+    [
+      {
+        label: "Tickets Asignados",
+        data: byOperator.map((o: any) => o.count),
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0, font: { size: 10 } },
-            grid: { color: "rgba(0,0,0,0.05)" },
-          },
-          x: {
-            ticks: { font: { size: 10 } },
-            grid: { display: false },
-          },
-        },
-      },
-    });
-  }
+    ],
+  );
 
-  // 3. Gráfico de Carga por Operador (Horizontal Bar)
-  const ctxOps = (document.getElementById("chart-operadores") as HTMLCanvasElement)?.getContext("2d");
-  if (ctxOps) {
-    if (charts.operadores) charts.operadores.destroy();
-    const byOperator = (data.byOperator || []).slice(0, 15);
-    const labels = byOperator.map((o: any) => o.agentName);
-    const counts = byOperator.map((o: any) => o.count);
+  const byCat = data.queueStats?.byCategory || [];
+  pushChart(
+    "ag-categorias",
+    byCat.map((c: any) => c.label),
+    [{ label: "En cola", data: byCat.map((c: any) => c.count) }],
+  );
 
-    charts.operadores = new Chart(ctxOps, {
-      type: "bar",
-      data: {
-        labels: labels.length ? labels : ["Sin asignaciones"],
-        datasets: [
-          {
-            label: "Tickets Asignados",
-            data: counts.length ? counts : [0],
-            backgroundColor: COLORS.secondaryMedium,
-            hoverBackgroundColor: COLORS.secondaryDark,
-            borderRadius: 6,
-          },
-        ],
-      },
-      options: {
-        indexAxis: "y",
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            ticks: { precision: 0, font: { size: 10 } },
-            grid: { color: "rgba(0,0,0,0.05)" },
-          },
-          y: {
-            ticks: { font: { size: 10, family: "Geist, sans-serif" } },
-            grid: { display: false },
-          },
-        },
-      },
-    });
-  }
-
-  // 4. Gráfico de Categorías en Cola InvGate (Doughnut)
-  const ctxCat = (document.getElementById("chart-categorias") as HTMLCanvasElement)?.getContext("2d");
-  if (ctxCat) {
-    if (charts.categorias) charts.categorias.destroy();
-    const byCat = data.queueStats?.byCategory || [];
-    const labels = byCat.length ? byCat.map((c: any) => c.label) : ["Cola vacía"];
-    const counts = byCat.length ? byCat.map((c: any) => c.count) : [0];
-
-    charts.categorias = new Chart(ctxCat, {
-      type: "doughnut",
-      data: {
-        labels,
-        datasets: [
-          {
-            data: counts,
-            backgroundColor: COLORS.palette.slice(0, Math.max(labels.length, 1)),
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "65%",
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: { boxWidth: 10, font: { size: 10, family: "Geist, sans-serif" } },
-          },
-        },
-      },
-    });
-  }
-
-  // 5. Gráfico de Top Creadores / Sucursales (Bar)
-  const ctxCreators = (document.getElementById("chart-creadores") as HTMLCanvasElement)?.getContext("2d");
-  if (ctxCreators) {
-    if (charts.creadores) charts.creadores.destroy();
-    const topCreators = data.queueStats?.topCreators || [];
-    const labels = topCreators.map((c: any) => c.label);
-    const counts = topCreators.map((c: any) => c.count);
-
-    charts.creadores = new Chart(ctxCreators, {
-      type: "bar",
-      data: {
-        labels: labels.length ? labels : ["Sin tickets en cola"],
-        datasets: [
-          {
-            label: "Tickets Pendientes",
-            data: counts.length ? counts : [0],
-            backgroundColor: COLORS.secondaryLight,
-            hoverBackgroundColor: COLORS.secondary,
-            borderRadius: 6,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0, font: { size: 10 } },
-            grid: { color: "rgba(0,0,0,0.05)" },
-          },
-          x: {
-            ticks: { font: { size: 10 } },
-            grid: { display: false },
-          },
-        },
-      },
-    });
-  }
+  const topCreators = data.queueStats?.topCreators || [];
+  pushChart(
+    "ag-creadores",
+    topCreators.map((c: any) => c.label),
+    [{ label: "Tickets Pendientes", data: topCreators.map((c: any) => c.count) }],
+  );
 }
 
 function updateTable(assignments: any[]) {
@@ -414,7 +218,7 @@ async function fetchMetrics(params: { preset?: string; from?: string; to?: strin
     const res = await fetch(`${cleanBase}api/autogestion/metricas?${query.toString()}`);
     if (!res.ok) throw new Error("Error al consultar métricas");
     const json = await res.json();
-    if (json.success && json.data) {
+    if (json.data) {
       renderAll(json.data);
     }
   } catch (err) {

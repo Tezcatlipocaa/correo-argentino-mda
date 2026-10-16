@@ -10,6 +10,7 @@ interface Props {
   type: "bar" | "line" | "doughnut";
   title: string;
   subtitle?: string;
+  indexAxis?: "x" | "y";
   labels?: string[];
   series?: ChartSeries[];
   fetchUrl?: string;
@@ -25,6 +26,7 @@ const {
   type,
   title,
   subtitle,
+  indexAxis = "x",
   labels = [],
   series = [],
   fetchUrl,
@@ -44,6 +46,7 @@ const chartProps = JSON.stringify({
   chartName,
   type,
   title,
+  indexAxis,
   labels,
   series,
   fetchUrl,
@@ -132,6 +135,7 @@ interface ChartCardProps {
   chartName?: string;
   type: "bar" | "line" | "doughnut";
   title: string;
+  indexAxis?: "x" | "y";
   labels: string[];
   series: { label: string; data: number[] }[];
   fetchUrl?: string;
@@ -232,6 +236,7 @@ function initChartCard(card: HTMLElement): void {
     chartName,
     type,
     title,
+    indexAxis = "x",
     labels,
     series,
     fetchUrl,
@@ -305,6 +310,7 @@ function initChartCard(card: HTMLElement): void {
     Chart.defaults.plugins.tooltip.footerFont = { size: 12 };
     const paletteLen = tokens.palette.length;
     const isDoughnut = type === "doughnut";
+    const isHorizontal = type === "bar" && indexAxis === "y";
     chart = new Chart(ctx, {
       type,
       data: {
@@ -367,25 +373,40 @@ function initChartCard(card: HTMLElement): void {
         },
         ...(isDoughnut
           ? {}
-          : {
-              scales: {
-                x: {
-                  ticks: {
-                    color: tokens.text,
-                    font: { size: 12 },
+          : isHorizontal
+            ? {
+                indexAxis: "y",
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    ticks: { color: tokens.text, font: { size: 12 } },
+                    grid: { color: tokens.grid },
                   },
-                  grid: { display: false },
-                },
-                y: {
-                  beginAtZero: true,
-                  ticks: {
-                    color: tokens.text,
-                    font: { size: 12 },
+                  y: {
+                    ticks: { color: tokens.text, font: { size: 12 } },
+                    grid: { display: false },
                   },
-                  grid: { color: tokens.grid },
                 },
-              },
-            }),
+              }
+            : {
+                scales: {
+                  x: {
+                    ticks: {
+                      color: tokens.text,
+                      font: { size: 12 },
+                    },
+                    grid: { display: false },
+                  },
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      color: tokens.text,
+                      font: { size: 12 },
+                    },
+                    grid: { color: tokens.grid },
+                  },
+                },
+              }),
       },
     });
     canvas?.classList.remove("hidden");

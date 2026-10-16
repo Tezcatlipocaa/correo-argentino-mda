@@ -3,6 +3,7 @@ import { getCleanBase, getBaseNoSlash } from "@lib/baseUrl";
 import { getResolvedSearchParams } from "@lib/navigation";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
 import { Icon } from "astro-icon/components";
 import { getAutogestionesMetricasData } from "@/lib/autogestion/metricasService";
 
@@ -244,81 +245,44 @@ const MODALITY_CONFIG: Record<
     </div>
   </div>
 
-  <!-- Gráficos Fila 1: Modalidades y Volumen Temporal -->
+  <!-- Gráficos: Modalidades, Volumen Temporal, Carga por Operador, Categorías y Creadores -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Doughnut: Desglose por Modalidad -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5 flex flex-col justify-between">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="font-bold text-sm text-base-content tracking-tight">Modalidad de Asignación</h3>
-          <p class="text-tiny text-base-content/50 font-medium">Proporción por tipo de derivación</p>
-        </div>
-        <Icon name="boxicons:pie-chart-alt-2" size={20} class="text-base-content/40" />
-      </div>
-      <div class="relative flex h-64 w-full items-center justify-center">
-        <canvas id="chart-modalidades"></canvas>
-      </div>
+    <ChartCard
+      type="doughnut"
+      title="Modalidad de Asignación"
+      subtitle="Proporción por tipo de derivación"
+      chartName="ag-modalidades"
+    />
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        title="Volumen de Asignaciones en el Tiempo"
+        subtitle={`Agrupado por ${range.grouping === "hour" ? "hora" : "día"}`}
+        chartName="ag-temporal"
+      />
     </div>
-
-    <!-- Bar: Evolución Temporal -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5 lg:col-span-2 flex flex-col justify-between">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="font-bold text-sm text-base-content tracking-tight">Volumen de Asignaciones en el Tiempo</h3>
-          <p class="text-tiny text-base-content/50 font-medium" id="temporal-grouping-hint">
-            Agrupado por {range.grouping === "hour" ? "hora" : "día"}
-          </p>
-        </div>
-        <Icon name="boxicons:chart-line" size={20} class="text-base-content/40" />
-      </div>
-      <div class="relative flex h-64 w-full items-center justify-center">
-        <canvas id="chart-temporal"></canvas>
-      </div>
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        indexAxis="y"
+        title="Distribución de Carga por Operador"
+        subtitle="Cantidad de tickets entregados en el período"
+        chartName="ag-operadores"
+      />
     </div>
-  </div>
-
-  <!-- Gráficos Fila 2: Carga por Operador y Categorías en Cola -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Horizontal Bar: Carga por Operador -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5 lg:col-span-2 flex flex-col justify-between">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="font-bold text-sm text-base-content tracking-tight">Distribución de Carga por Operador</h3>
-          <p class="text-tiny text-base-content/50 font-medium">Cantidad de tickets entregados en el período</p>
-        </div>
-        <Icon name="boxicons:bar-chart" size={20} class="text-base-content/40" />
-      </div>
-      <div class="relative flex h-72 w-full items-center justify-center">
-        <canvas id="chart-operadores"></canvas>
-      </div>
-    </div>
-
-    <!-- Doughnut: Categorías en Cola InvGate -->
-    <div class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5 flex flex-col justify-between">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="font-bold text-sm text-base-content tracking-tight">Categorías en Cola (InvGate)</h3>
-          <p class="text-tiny text-base-content/50 font-medium">Composición temática de tickets sin asignar</p>
-        </div>
-        <Icon name="boxicons:doughnut-chart" size={20} class="text-base-content/40" />
-      </div>
-      <div class="relative flex h-72 w-full items-center justify-center">
-        <canvas id="chart-categorias"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Gráfico Fila 3: Top Solicitantes / Dependencias -->
-  <div class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="font-bold text-sm text-base-content tracking-tight">Top Orígenes / Solicitantes en Cola</h3>
-        <p class="text-tiny text-base-content/50 font-medium">Dependencias o usuarios con mayor volumen de tickets pendientes</p>
-      </div>
-      <Icon name="boxicons:building" size={20} class="text-base-content/40" />
-    </div>
-    <div class="relative flex h-56 w-full items-center justify-center">
-      <canvas id="chart-creadores"></canvas>
+    <ChartCard
+      type="doughnut"
+      title="Categorías en Cola (InvGate)"
+      subtitle="Composición temática de tickets sin asignar"
+      chartName="ag-categorias"
+    />
+    <div class="lg:col-span-3">
+      <ChartCard
+        type="bar"
+        title="Top Orígenes / Solicitantes en Cola"
+        subtitle="Dependencias o usuarios con mayor volumen de tickets pendientes"
+        chartName="ag-creadores"
+      />
     </div>
   </div>
 
@@ -402,12 +366,6 @@ const MODALITY_CONFIG: Record<
     id="initial-metrics-payload"
     type="application/json"
     set:html={JSON.stringify(data)}
-  ></script>
-
-  <!-- Script CDN de Chart.js -->
-  <script
-    is:inline
-    src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
   ></script>
 
   <!-- Lógica Interactiva en Cliente -->

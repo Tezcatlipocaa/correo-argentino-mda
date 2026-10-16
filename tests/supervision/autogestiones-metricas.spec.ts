@@ -47,12 +47,12 @@ test("Acceso permitido para supervisor: visualización de KPIs, gráficos y cont
   await expect(page.locator("#btn-export-csv")).toBeVisible();
   await expect(page.locator("#btn-refresh-metrics")).toBeVisible();
 
-  // Canvas de los 5 gráficos
-  await expect(page.locator("#chart-modalidades")).toBeVisible();
-  await expect(page.locator("#chart-temporal")).toBeVisible();
-  await expect(page.locator("#chart-operadores")).toBeVisible();
-  await expect(page.locator("#chart-categorias")).toBeVisible();
-  await expect(page.locator("#chart-creadores")).toBeVisible();
+  // Las 5 tarjetas de gráfico (ChartCard)
+  await expect(page.locator('[data-chart-name="ag-modalidades"]')).toBeVisible();
+  await expect(page.locator('[data-chart-name="ag-temporal"]')).toBeVisible();
+  await expect(page.locator('[data-chart-name="ag-operadores"]')).toBeVisible();
+  await expect(page.locator('[data-chart-name="ag-categorias"]')).toBeVisible();
+  await expect(page.locator('[data-chart-name="ag-creadores"]')).toBeVisible();
 
   // Tabla de asignaciones
   await expect(page.locator("#table-assignments-body")).toBeVisible();
