@@ -26,3 +26,30 @@ export interface AiEvaluationOptions {
   model?: string;
   provider?: "opencode";
 }
+
+export interface CouncilVote {
+  model: string;
+  cumple: boolean | null;
+  confianza: number;
+  evidencia: string;
+  razonamiento: string;
+}
+
+export interface CouncilDebateEntry {
+  codigo: string;
+  criterioNombre: string;
+  consenso: "directo" | "arbitrado" | "sin_oposicion" | "arbitraje_fallido";
+  motivo?: "sin_evidencia" | "acuerdo_alto" | "baja_confianza" | "discrepancia_cumple" | "agente_unico";
+  alphaVote?: CouncilVote;
+  betaVote?: CouncilVote;
+  judgeVote?: CouncilVote;
+}
+
+export interface CouncilEvaluationResult {
+  model: string;
+  isCouncil: true;
+  resumen: string;
+  verdicts: AiVerdict[];
+  debate: Record<string, CouncilDebateEntry>;
+}
+
