@@ -81,6 +81,11 @@ Completá las variables en `.env`. En producción prestá atención a:
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
 | `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
+> Los jobs de sincronización exigen además `MIDPOINT_USER`, `MIDPOINT_PASS`,
+> `LEGACY_INVENTORY_URL` y `INVGATE_API_KEY`/`INVGATE_BASE_URL` (o el par `_QA_`
+> de fallback). Sin ellos `sync-users` y `sync-legacy-inventory` mueren en
+> silencio (`autorestart:false`). `scripts/verify-env.mts` los valida en el deploy.
+
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
 Opcionales del módulo `/automatizaciones` (tienen default; no bloquean el arranque):

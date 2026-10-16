@@ -60,6 +60,16 @@ export const SCRIPT_CRITICAL_KEYS = [
   "LEGACY_INVENTORY_URL",
 ] as const;
 
+/**
+ * Prerequisitos "al menos uno del par" (#308): `sync-users` consume InvGate vía
+ * `invgateClient`, que acepta las `_QA_` como fallback. Exigir sólo la primaria
+ * daría falso positivo cuando el deploy usa las `_QA_`.
+ */
+export const SCRIPT_CRITICAL_ANY_OF = [
+  ["INVGATE_API_KEY", "INVGATE_QA_API_KEY"],
+  ["INVGATE_BASE_URL", "INVGATE_QA_BASE_URL"],
+] as const;
+
 export type ServerEnvValidation = {
   ok: boolean;
   missing: string[];
@@ -100,7 +110,12 @@ export function validateServerEnv(env: NodeJS.ProcessEnv = process.env): ServerE
 export function validateScriptEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): { ok: boolean; missing: string[] } {
-  const missing = SCRIPT_CRITICAL_KEYS.filter((key) => valueOf(env, key) === undefined);
+  const missing = [
+    ...SCRIPT_CRITICAL_KEYS.filter((key) => valueOf(env, key) === undefined),
+    ...SCRIPT_CRITICAL_ANY_OF
+      .filter((group) => group.every((key) => valueOf(env, key) === undefined))
+      .map((group) => group.join(" | ")),
+  ];
   return { ok: missing.length === 0, missing };
 }
 
