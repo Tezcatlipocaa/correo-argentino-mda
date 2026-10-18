@@ -268,6 +268,14 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
     if (!container) return;
 
     const handleWheel = (e: globalThis.WheelEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "[data-floating-control], [data-drawer-root], aside, [role='dialog'], .overflow-y-auto"
+        )
+      ) {
+        return;
+      }
       e.preventDefault();
       const rect = container.getBoundingClientRect();
       const cursorX = e.clientX - rect.left;
@@ -295,7 +303,14 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
 
   // Handlers de Pan sin lag de transición
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || isDrawerOpen) return;
+    if (
+      (e.target as HTMLElement)?.closest(
+        "[data-floating-control], aside, [role='dialog'], button, input, select"
+      )
+    ) {
+      return;
+    }
     setIsDragging(true);
     dragStartRef.current = {
       x: e.clientX - pan.x,
@@ -341,7 +356,12 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
       }`}
     >
       {/* Top Toolbar Estandarizada con DaisyUI v5 y ActionButton */}
-      <div className="z-20 flex flex-wrap items-center justify-between gap-3 border-b border-base-300 bg-base-100/95 p-3 backdrop-blur-md shadow-xs">
+      <div
+        data-floating-control
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="z-20 flex flex-wrap items-center justify-between gap-3 border-b border-base-300 bg-base-100/95 p-3 backdrop-blur-md shadow-xs"
+      >
         {/* Izquierda: Foco regional, Buscador 1/N */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Foco de Región */}
@@ -353,7 +373,7 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
                 setFilters((prev) => ({ ...prev, regionId: e.target.value }));
                 setPan({ x: 60, y: 120 });
               }}
-              className="select select-bordered select-xs text-xs bg-base-100 font-medium rounded-lg"
+              className="select select-xs text-xs bg-base-100 font-medium rounded-lg"
               aria-label="Filtrar por región"
             >
               <option value="all">Todas las Regiones</option>
@@ -379,12 +399,12 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
                   setSearchFeedback(null);
                   if (!e.target.value.trim()) setSearchResults([]);
                 }}
-                className="input input-bordered input-xs w-44 sm:w-56 font-mono text-xs pr-7 bg-base-100 rounded-lg"
+                className="input input-xs w-44 sm:w-56 font-mono text-xs pr-7 bg-base-100 rounded-lg"
                 aria-label="Buscar oficina o dependencia"
               />
               <button
                 type="submit"
-                className="btn btn-ghost btn-xs btn-square absolute right-1 h-5 w-5 min-h-0 text-base-content/70 hover:text-primary"
+                className="btn btn-ghost btn-xs btn-square absolute right-1 h-5 w-5 min-h-0 text-base-content/70 hover:text-secondary"
                 title="Buscar"
                 aria-label="Ejecutar búsqueda"
               >
@@ -549,10 +569,10 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
                   key={conn.id}
                   d={pathD}
                   fill="none"
-                  stroke={isHighlighted ? "#2563eb" : conn.color || "#64748b"}
-                  strokeWidth={isHighlighted ? "3" : "2"}
-                  strokeOpacity={isHighlighted ? "0.9" : "0.4"}
-                  className="transition-all duration-200"
+                  stroke="currentColor"
+                  className={`transition-colors ${
+                    isHighlighted ? "text-secondary stroke-[2.5]" : "text-base-content/25 stroke-[1.5]"
+                  }`}
                 />
               );
             })}
@@ -572,8 +592,16 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
       </div>
 
       {/* HUD Inferior Izquierdo: Resumen y Chips de Filtros Activos */}
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 max-w-md pointer-events-none">
-        <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 bg-base-100/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-base-300 shadow-sm text-xs font-mono">
+      <div
+        data-floating-control
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 max-w-md pointer-events-none"
+      >
+        <div
+          data-floating-control
+          className="pointer-events-auto flex flex-wrap items-center gap-1.5 bg-base-100/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-base-300 shadow-sm text-xs font-mono"
+        >
           <span className="font-semibold text-base-content/80">
             {effectiveTree.totalOffices.toLocaleString("es-AR")} oficinas
           </span>
@@ -582,7 +610,7 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
             {effectiveTree.totalTerminals.toLocaleString("es-AR")} term
           </span>
           <span className="text-base-content/30">·</span>
-          <span className="text-warning font-semibold">
+          <span className="text-base-content font-bold">
             {effectiveTree.totalTickets.toLocaleString("es-AR")} tickets
           </span>
 
@@ -600,13 +628,23 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
       </div>
 
       {/* Botón Flotante (FAB con Indicator) en Esquina Inferior Derecha */}
-      <div className="absolute bottom-4 right-4 z-30 flex flex-col items-end gap-3">
+      <div
+        data-floating-control
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute bottom-4 right-4 z-30 flex flex-col items-end gap-3"
+      >
         {/* Panel de Filtros Flotante Popover Card */}
         {isFilterOpen && (
-          <div className="card bg-base-100/98 backdrop-blur-lg border border-base-300 shadow-2xl w-80 sm:w-96 p-4 text-xs space-y-4 rounded-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div
+            data-floating-control
+            onWheel={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="card bg-base-100/98 backdrop-blur-lg border border-base-300 shadow-2xl w-80 sm:w-96 p-4 text-xs space-y-4 rounded-2xl animate-in fade-in zoom-in-95 duration-150"
+          >
             <div className="flex items-center justify-between border-b border-base-200 pb-2.5">
               <div className="flex items-center gap-2">
-                <Icon icon="boxicons:filter-alt" width={18} height={18} className="text-secondary" />
+                <Icon icon="boxicons:filter" width={18} height={18} className="text-secondary" />
                 <h4 className="font-bold text-sm text-base-content">Filtros de Red Postal</h4>
               </div>
               <div className="flex items-center gap-1">
@@ -776,7 +814,12 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
         )}
 
         {/* FAB Trigger Button */}
-        <div className="indicator">
+        <div
+          data-floating-control
+          onWheel={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="indicator"
+        >
           {activeFiltersCount > 0 && (
             <span className="indicator-item badge badge-secondary badge-xs font-mono font-bold">
               {activeFiltersCount}
@@ -792,7 +835,7 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
             aria-label="Abrir filtros de oficinas"
             aria-expanded={isFilterOpen}
           >
-            <Icon icon="boxicons:filter-alt" width={22} height={22} />
+            <Icon icon="boxicons:filter" width={22} height={22} />
           </button>
         </div>
       </div>
@@ -808,7 +851,7 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
   );
 }
 
-// Subcomponente memoizado: Tarjeta individual de nodo (280x108px con anti-clipping y tooltip)
+// Subcomponente memoizado: Tarjeta individual de nodo (280x108px con anti-clipping)
 const CanvasNodeCard = memo(function CanvasNodeCard({
   layout,
   isSelected,
@@ -908,11 +951,9 @@ const CanvasNodeCard = memo(function CanvasNodeCard({
         )}
       </div>
 
-      {/* Título de 2 líneas con tooltip DaisyUI */}
-      <div className="tooltip tooltip-top w-full text-left" data-tip={node.name}>
-        <div className="my-1 line-clamp-2 text-xs font-bold text-base-content leading-snug">
-          {node.name}
-        </div>
+      {/* Título de 2 líneas */}
+      <div className="w-full text-left my-1 line-clamp-2 text-xs font-bold text-base-content leading-snug">
+        {node.name}
       </div>
 
       {/* Pie: Métricas numéricas con borde superior sutil */}
@@ -923,7 +964,7 @@ const CanvasNodeCard = memo(function CanvasNodeCard({
             <span
               className={
                 node.totalTickets > 0
-                  ? "badge badge-xs font-mono font-bold bg-warning/20 text-warning border-warning/35"
+                  ? "badge badge-xs font-mono font-medium badge-soft badge-neutral text-base-content"
                   : "text-base-content/40"
               }
             >
@@ -936,7 +977,7 @@ const CanvasNodeCard = memo(function CanvasNodeCard({
             <span
               className={
                 node.totalTickets > 0
-                  ? "badge badge-xs font-mono font-bold bg-warning/20 text-warning border-warning/35"
+                  ? "badge badge-xs font-mono font-medium badge-soft badge-neutral text-base-content"
                   : "text-base-content/40"
               }
             >

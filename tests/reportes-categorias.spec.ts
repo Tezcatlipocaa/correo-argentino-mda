@@ -133,79 +133,56 @@ test.describe("Módulo de Auditoría de Categorías (/reportes/categorias)", () 
     });
   });
 
-  test("inspector lateral abre con vínculo InvGate/KB y se cierra con backdrop y Escape", async ({ context, page }) => {
+  test("Tier 3 & Tier 4: Inspector lateral unificado Drawer.tsx en árbol de categorías, sin duplicados, con posicionamiento bajo Navbar y bloqueo de scroll", async ({ context, page }) => {
+    test.setTimeout(60000);
     await setSessionCookie(context, adminUser.signedSessionId);
     await page.goto("/reportes/categorias");
 
-    const drawer = page.locator("#category-inspector-drawer");
-    const backdrop = page.locator("#category-inspector-backdrop");
-    const invgateBadge = page.locator("#inspect-invgate-badge");
-    const kbContainer = page.locator("#inspect-kb-container");
+    // Cambiar a pestaña del Explorador de Árbol
+    await page.locator('button[data-tab="explorer"]').click();
+    await expect(page.locator("section[aria-label='Explorador del Árbol de Categorías']")).toBeVisible();
 
+    // 1. Unicidad: verificar que no existen drawers duplicados ni el viejo inspector legacy
+    expect(await page.locator("#category-inspector-drawer").count()).toBe(0);
+    const drawers = page.locator("aside[role='dialog']");
+    expect(await drawers.count()).toBe(1);
+
+    const drawer = drawers.first();
+
+    // Inicialmente cerrado
     await expect(drawer).toHaveClass(/translate-x-full/);
-    await expect(backdrop).toHaveClass(/opacity-0/);
 
-    // Disparar apertura del inspector para un nodo
-    await page.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("category:inspect", {
-          detail: {
-            node: {
-              id: 296,
-              name: "Denarius",
-              path: "Sistemas > Denarius",
-              totalTickets: 120,
-              depth: 1,
-              status: "active",
-              anomalies: [],
-              isLeaf: false,
-            },
-          },
-        }),
-      );
-    });
+    // 2. Flujo de inspección: Clic en tarjeta de nodo en el árbol
+    const nodeCard = page.locator(".will-change-transform .cursor-pointer, .will-change-transform [tabindex='0']").first();
+    await expect(nodeCard).toBeVisible({ timeout: 15000 });
+    await nodeCard.click();
 
-    // Drawer y backdrop visibles
-    await expect(drawer).not.toHaveClass(/translate-x-full/);
-    await expect(backdrop).toHaveClass(/opacity-100/);
+    // 3. Drawer abierto y clases de posicionamiento
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toHaveClass(/translate-x-0/);
+    await expect(drawer).toHaveClass(/top-20/);
+    await expect(drawer).toHaveClass(/h-\[calc\(100dvh-5rem\)\]/);
 
-    // Bloque InvGate & KB visible y actualizado
-    await expect(page.getByText("Vínculo InvGate & KB")).toBeVisible();
-    await expect(invgateBadge).toBeVisible();
-    await expect(invgateBadge).toContainText("Catálogo ID: 296");
-    await expect(kbContainer).toBeVisible();
+    // Header Navbar visible y no tapado
+    const header = page.locator("header").first();
+    await expect(header).toBeVisible();
 
-    // Cerrar haciendo click en el backdrop
-    await backdrop.click({ force: true });
-    await expect(drawer).toHaveClass(/translate-x-full/);
-    await expect(backdrop).toHaveClass(/opacity-0/);
+    // 4. Bloqueo de scroll en <main>
+    const mainLocked = await page.evaluate(() => document.querySelector("main")?.style.overflow);
+    expect(mainLocked).toBe("hidden");
 
-    // Abrir nuevamente y cerrar con tecla Escape
-    await page.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("category:inspect", {
-          detail: {
-            node: {
-              id: 9999,
-              name: "Categoria Externa",
-              path: "Externa",
-              totalTickets: 10,
-              depth: 0,
-              status: "active",
-              anomalies: [],
-              isLeaf: true,
-            },
-          },
-        }),
-      );
-    });
-    await expect(drawer).not.toHaveClass(/translate-x-full/);
-    await expect(backdrop).toHaveClass(/opacity-100/);
+    // 5. Contenido del drawer: Título "Detalle de Categoría" y bloque InvGate / KB
+    await expect(drawer.locator("h3")).toContainText("Detalle de Categoría");
+    await expect(drawer.getByText("Catálogo InvGate")).toBeVisible();
 
+    // 6. Cierre con tecla Escape y restauración de scroll
     await page.keyboard.press("Escape");
     await expect(drawer).toHaveClass(/translate-x-full/);
-    await expect(backdrop).toHaveClass(/opacity-0/);
+
+    const mainRestored = await page.evaluate(() => document.querySelector("main")?.style.overflow);
+    expect(mainRestored).not.toBe("hidden");
   });
 });
+
 
 

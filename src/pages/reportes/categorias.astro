@@ -6,7 +6,6 @@ import SectionHeader from "@components/ui/SectionHeader.astro";
 import CategoryBentoGrid from "@components/reportes/categories/CategoryBentoGrid.astro";
 import CategoryTreeCanvas from "@components/reportes/categories/CategoryTreeCanvas";
 import CategoryActionPlans from "@components/reportes/categories/CategoryActionPlans.astro";
-import CategoryInspector from "@components/reportes/categories/CategoryInspector.astro";
 import CategoryExecutiveReport from "@components/reportes/categories/CategoryExecutiveReport.astro";
 import CategoryTreeExplorer from "@components/reportes/categories/CategoryTreeExplorer.astro";
 import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
@@ -166,53 +165,10 @@ const propuestaCTree: CategoryNode = {
         aria-label="Explorador del Árbol de Categorías"
         class="space-y-4"
       >
-        <div
-          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <SectionHeader
-            title="Explorador Jerárquico Interactivo"
-            description="Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas."
-          />
-
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1.5">
-              <label
-                for="branch-selector"
-                class="text-base-content/70 text-xs font-medium"
-              >
-                Rama:
-              </label>
-              <select
-                id="branch-selector"
-                class="select select-bordered select-sm text-xs"
-              >
-                <option value="all">Todas las ramas</option>
-                {
-                  tree.children.map((child) => (
-                    <option value={child.id}>{child.name}</option>
-                  ))
-                }
-              </select>
-            </div>
-
-            <div class="join">
-              <button
-                id="btn-view-actual"
-                type="button"
-                class="btn btn-sm join-item btn-active"
-              >
-                Actual
-              </button>
-              <button
-                id="btn-view-propuesta"
-                type="button"
-                class="btn btn-sm join-item"
-              >
-                Propuesta C
-              </button>
-            </div>
-          </div>
-        </div>
+        <SectionHeader
+          title="Explorador Jerárquico Interactivo"
+          description="Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas."
+        />
 
         <div class="relative w-full">
           <CategoryTreeCanvas
@@ -252,20 +208,10 @@ const propuestaCTree: CategoryNode = {
         </CategoryBentoGrid>
       </section>
     </div>
-
-    <CategoryInspector />
   </PageContainer>
 </BaseLayout>
 
 <script>
-  import { showToast } from "@lib/toastClient";
-
-  const branchSelect = document.getElementById(
-    "branch-selector",
-  ) as HTMLSelectElement | null;
-  const viewActualBtn = document.getElementById("btn-view-actual");
-  const viewPropuestaBtn = document.getElementById("btn-view-propuesta");
-
   // Tab switching logic
   const tabs = document.querySelectorAll<HTMLButtonElement>(
     '[role="tab"][data-tab]',
@@ -330,44 +276,5 @@ const propuestaCTree: CategoryNode = {
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash.replace("#", "");
     if (hash) switchTab(hash, false);
-  });
-
-  viewActualBtn?.addEventListener("click", () => {
-    viewActualBtn.classList.add("btn-active");
-    viewPropuestaBtn?.classList.remove("btn-active");
-    window.dispatchEvent(
-      new CustomEvent("category:switch-model", {
-        detail: { model: "actual" },
-      }),
-    );
-    showToast("Visualizando taxonomía Actual", "alert-info");
-  });
-
-  viewPropuestaBtn?.addEventListener("click", () => {
-    viewPropuestaBtn.classList.add("btn-active");
-    viewActualBtn?.classList.remove("btn-active");
-    window.dispatchEvent(
-      new CustomEvent("category:switch-model", {
-        detail: { model: "propuesta_c" },
-      }),
-    );
-    showToast("Visualizando Propuesta C (Optimización)", "alert-info");
-  });
-
-  branchSelect?.addEventListener("change", (e) => {
-    const target = e.target as HTMLSelectElement;
-    const value = target.value;
-    const branchId = value === "all" ? null : Number(value);
-    window.dispatchEvent(
-      new CustomEvent("category:filter-branch", {
-        detail: { branchId },
-      }),
-    );
-    if (value === "all") {
-      showToast("Mostrando árbol completo", "alert-info");
-    } else {
-      const selectedOption = target.options[target.selectedIndex];
-      showToast(`Filtrado por rama: ${selectedOption.text}`, "alert-info");
-    }
   });
 </script>

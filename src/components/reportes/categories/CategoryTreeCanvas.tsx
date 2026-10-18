@@ -9,6 +9,7 @@ import React, {
 import { Icon } from "@iconify/react";
 import type { CategoryNode } from "@/types/categories";
 import ActionButton from "@/components/ui/ActionButton";
+import Drawer from "@/components/ui/Drawer";
 import {
   computeCategoryTreeLayout,
   filterCategoryTree,
@@ -115,11 +116,8 @@ const CategoryCanvasNodeCard = React.memo(function CategoryCanvasNodeCard({
         </span>
       </div>
 
-      {/* Título de la Categoría con Tooltip DaisyUI */}
-      <div
-        className="tooltip tooltip-bottom text-left w-full my-0.5"
-        data-tip={node.name}
-      >
+      {/* Título de la Categoría */}
+      <div className="text-left w-full my-0.5">
         <h4 className="font-semibold text-xs leading-tight text-base-content line-clamp-2">
           {node.name}
         </h4>
@@ -134,28 +132,27 @@ const CategoryCanvasNodeCard = React.memo(function CategoryCanvasNodeCard({
         </span>
 
         {hasChildren && (
-          <button
+          <ActionButton
             type="button"
+            size="xs"
+            variant="ghost"
             onClick={(e) => onToggleCollapse(node.id, e)}
-            className="btn btn-xs btn-ghost border border-base-300 gap-1 text-[11px] h-6 min-h-0 px-2 hover:bg-base-200"
+            icon={isCollapsed ? "boxicons:plus" : "boxicons:minus"}
+            iconSize={12}
+            className="border border-base-300 gap-1 text-[11px] h-6 min-h-0 px-2 hover:bg-base-200"
             title={
               isCollapsed
                 ? `Expandir rama (${childrenCount} hijos)`
                 : "Plegar rama"
             }
-            aria-label={
+            ariaLabel={
               isCollapsed
                 ? `Expandir rama (${childrenCount} hijos)`
                 : "Plegar rama"
             }
           >
-            <Icon
-              icon={isCollapsed ? "boxicons:plus" : "boxicons:minus"}
-              width={12}
-              height={12}
-            />
             <span>{isCollapsed ? `+${childrenCount}` : "Plegar"}</span>
-          </button>
+          </ActionButton>
         )}
       </div>
     </div>
@@ -186,17 +183,22 @@ export default function CategoryTreeCanvas({
   const [searchMatches, setSearchMatches] = useState<{ targetId: number; node: CategoryNode; path: number[] }[]>([]);
   const [currentMatchIdx, setCurrentMatchIdx] = useState<number>(-1);
 
-  // Colapsados por defecto (nivel 1 colapsa nivel 2)
-  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(() => {
+  // Función para obtener IDs colapsados iniciales (nivel 1 colapsa nivel 2)
+  const getInitialCollapsedIds = useCallback((node: CategoryNode | null | undefined): Set<number> => {
     const initial = new Set<number>();
-    if (rootNode?.children) {
-      for (const child of rootNode.children) {
+    if (node?.children) {
+      for (const child of node.children) {
         if (child.children && child.children.length > 0) {
           initial.add(child.id);
         }
       }
     }
     return initial;
+  }, []);
+
+  // Colapsados por defecto (nivel 1 colapsa nivel 2)
+  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(() => {
+    return getInitialCollapsedIds(rootNode);
   });
 
   // Lienzo, Pan & Zoom
@@ -211,6 +213,58 @@ export default function CategoryTreeCanvas({
 
   const dragStartRef = useRef<Point>({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Función para cambiar de modelo con ajuste de viewport y colapso de nivel 1
+  const switchModel = useCallback(
+    (targetModel: "actual" | "propuesta_c") => {
+      setActiveModel(targetModel);
+      setSelectedBranchId(null);
+      setSearchQuery("");
+      setSearchMatches([]);
+      setCurrentMatchIdx(-1);
+      setInspectedNode(null);
+
+      const targetNode = targetModel === "propuesta_c" && propuestaCNode ? propuestaCNode : rootNode;
+      const initialCollapsed = getInitialCollapsedIds(targetNode);
+      setCollapsedIds(initialCollapsed);
+
+      if (!targetNode) {
+        setPan({ x: 50, y: 150 });
+        setZoom(1);
+        return;
+      }
+
+      const layout = computeCategoryTreeLayout(targetNode, initialCollapsed);
+      if (layout.nodes.length === 0) {
+        setPan({ x: 50, y: 150 });
+        setZoom(1);
+        return;
+      }
+
+      const currentW = containerRef.current?.clientWidth || viewportSize.width;
+      const currentH = containerRef.current?.clientHeight || viewportSize.height;
+
+      const padding = 60;
+      const availableWidth = Math.max(currentW - padding * 2, 200);
+      const availableHeight = Math.max(currentH - padding * 2, 200);
+
+      const scaleX = availableWidth / layout.totalWidth;
+      const scaleY = availableHeight / layout.totalHeight;
+      const nextZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.2), 1.2);
+
+      const centerX = (currentW - layout.totalWidth * nextZoom) / 2;
+      const centerY = (currentH - layout.totalHeight * nextZoom) / 2;
+
+      setZoom(nextZoom);
+      setPan({ x: Math.max(padding, centerX), y: Math.max(padding, centerY) });
+    },
+    [propuestaCNode, rootNode, viewportSize, getInitialCollapsedIds],
+  );
+
+  const switchModelRef = useRef(switchModel);
+  useEffect(() => {
+    switchModelRef.current = switchModel;
+  }, [switchModel]);
 
   // Contar filtros activos
   const activeFiltersCount = useMemo(() => {
@@ -286,9 +340,7 @@ export default function CategoryTreeCanvas({
   useEffect(() => {
     const handleSwitchModel = (e: CustomEvent<{ model: "actual" | "propuesta_c" }>) => {
       if (e.detail?.model) {
-        setActiveModel(e.detail.model);
-        setSelectedBranchId(null);
-        setZoom(1);
+        switchModelRef.current(e.detail.model);
       }
     };
 
@@ -311,6 +363,14 @@ export default function CategoryTreeCanvas({
     if (!container) return;
 
     const handleWheelNative = (e: globalThis.WheelEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "[data-floating-control], [data-drawer-root], aside, [role='dialog'], .overflow-y-auto"
+        )
+      ) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
 
@@ -395,16 +455,19 @@ export default function CategoryTreeCanvas({
       return;
     }
 
+    const currentW = containerRef.current?.clientWidth || viewportSize.width;
+    const currentH = containerRef.current?.clientHeight || viewportSize.height;
+
     const padding = 60;
-    const availableWidth = Math.max(viewportSize.width - padding * 2, 200);
-    const availableHeight = Math.max(viewportSize.height - padding * 2, 200);
+    const availableWidth = Math.max(currentW - padding * 2, 200);
+    const availableHeight = Math.max(currentH - padding * 2, 200);
 
     const scaleX = availableWidth / layoutResult.totalWidth;
     const scaleY = availableHeight / layoutResult.totalHeight;
     const nextZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.2), 1.2);
 
-    const centerX = (viewportSize.width - layoutResult.totalWidth * nextZoom) / 2;
-    const centerY = (viewportSize.height - layoutResult.totalHeight * nextZoom) / 2;
+    const centerX = (currentW - layoutResult.totalWidth * nextZoom) / 2;
+    const centerY = (currentH - layoutResult.totalHeight * nextZoom) / 2;
 
     setZoom(nextZoom);
     setPan({ x: Math.max(padding, centerX), y: Math.max(padding, centerY) });
@@ -471,6 +534,13 @@ export default function CategoryTreeCanvas({
   // Drag & Pan
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+    if (
+      (e.target as HTMLElement)?.closest(
+        "[data-floating-control], aside, [role='dialog'], button, input, select, textarea, label"
+      )
+    ) {
+      return;
+    }
     setIsDragging(true);
     dragStartRef.current = {
       x: e.clientX - pan.x,
@@ -559,52 +629,55 @@ export default function CategoryTreeCanvas({
     <div
       id="tree-canvas-container"
       ref={containerRef}
-      className={`relative w-full overflow-hidden border border-base-300 bg-base-200 select-none cursor-grab active:cursor-grabbing transition-all ${
+      className={`relative w-full overflow-hidden border border-base-300 bg-base-200 select-none transition-all ${
         isFullscreen
           ? "is-fullscreen fixed inset-0 z-[200] w-screen h-screen bg-base-100 p-4 rounded-none shadow-2xl"
           : "h-[calc(100dvh-9rem)] min-h-[780px] lg:min-h-[860px] rounded-box"
       }`}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       {/* 1. BARRA SUPERIOR DE HERRAMIENTAS (DaisyUI join + inputs) */}
-      <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div
+        data-floating-control
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none"
+      >
         {/* Lado izquierdo: Modelo, Rama y Buscador */}
-        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+        <div
+          data-floating-control
+          className="flex flex-wrap items-center gap-2 pointer-events-auto"
+        >
           {/* Selector de Modelo (Actual vs Propuesta C) */}
           <div className="join border border-base-300 rounded-lg shadow-sm bg-base-100 p-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveModel("actual");
-                setSelectedBranchId(null);
-              }}
-              className={`btn btn-xs join-item ${
-                activeModel === "actual" ? "btn-secondary btn-active" : "btn-ghost"
-              }`}
+            <ActionButton
+              id="btn-view-actual"
+              size="xs"
+              variant={activeModel === "actual" ? "solid" : "ghost"}
+              color="btn-secondary"
+              active={activeModel === "actual"}
+              className="join-item"
+              onClick={() => switchModel("actual")}
             >
               Actual
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveModel("propuesta_c");
-                setSelectedBranchId(null);
-              }}
-              className={`btn btn-xs join-item ${
-                activeModel === "propuesta_c" ? "btn-secondary btn-active" : "btn-ghost"
-              }`}
+            </ActionButton>
+            <ActionButton
+              id="btn-view-propuesta"
+              size="xs"
+              variant={activeModel === "propuesta_c" ? "solid" : "ghost"}
+              color="btn-secondary"
+              active={activeModel === "propuesta_c"}
+              className="join-item"
+              onClick={() => switchModel("propuesta_c")}
             >
               Propuesta C
-            </button>
+            </ActionButton>
           </div>
 
           {/* Selector de Rama Nivel 1 */}
           <div className="bg-base-100 rounded-lg shadow-sm border border-base-300 px-2 py-0.5 flex items-center gap-1.5">
-            <span className="text-xs text-base-content/70 font-medium">Rama:</span>
+            <label htmlFor="branch-selector" className="text-xs text-base-content/70 font-medium">Rama:</label>
             <select
+              id="branch-selector"
               value={selectedBranchId ?? "all"}
               onChange={(e) => {
                 const val = e.target.value;
@@ -643,43 +716,49 @@ export default function CategoryTreeCanvas({
             )}
             {searchMatches.length > 0 && (
               <>
-                <button
-                  type="button"
-                  onClick={handlePrevMatch}
-                  className="btn btn-xs btn-ghost join-item px-1"
+                <ActionButton
+                  size="xs"
+                  variant="ghost"
+                  className="join-item px-1"
+                  icon="boxicons:chevron-up"
+                  iconSize={14}
                   title="Coincidencia anterior"
-                >
-                  <Icon icon="boxicons:chevron-up" width={14} height={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNextMatch}
-                  className="btn btn-xs btn-ghost join-item px-1"
+                  onClick={handlePrevMatch}
+                />
+                <ActionButton
+                  size="xs"
+                  variant="ghost"
+                  className="join-item px-1"
+                  icon="boxicons:chevron-down"
+                  iconSize={14}
                   title="Siguiente coincidencia"
-                >
-                  <Icon icon="boxicons:chevron-down" width={14} height={14} />
-                </button>
+                  onClick={handleNextMatch}
+                />
               </>
             )}
             {searchQuery && (
-              <button
-                type="button"
+              <ActionButton
+                size="xs"
+                variant="ghost"
+                className="join-item px-1 text-base-content/60"
+                icon="boxicons:x"
+                iconSize={14}
+                title="Limpiar búsqueda"
                 onClick={() => {
                   setSearchQuery("");
                   setSearchMatches([]);
                   setCurrentMatchIdx(-1);
                 }}
-                className="btn btn-xs btn-ghost join-item px-1 text-base-content/60"
-                title="Limpiar búsqueda"
-              >
-                <Icon icon="boxicons:x" width={14} height={14} />
-              </button>
+              />
             )}
           </form>
         </div>
 
         {/* Lado derecho: Zoom, Expansión y Pantalla Completa */}
-        <div className="flex items-center gap-1.5 pointer-events-auto bg-base-100/95 backdrop-blur-md p-1.5 rounded-box shadow-md border border-base-300">
+        <div
+          data-floating-control
+          className="flex items-center gap-1.5 pointer-events-auto bg-base-100/95 backdrop-blur-md p-1.5 rounded-box shadow-md border border-base-300"
+        >
           <ActionButton
             size="xs"
             variant="ghost"
@@ -704,31 +783,37 @@ export default function CategoryTreeCanvas({
 
           {/* Zoom Join */}
           <div className="join border border-base-300 rounded-lg overflow-hidden bg-base-100">
-            <button
+            <ActionButton
               type="button"
-              onClick={() => setZoom((prev) => Math.max(prev * 0.85, 0.15))}
-              className="btn btn-xs btn-ghost join-item px-2"
+              size="xs"
+              variant="ghost"
+              className="join-item px-2"
+              icon="boxicons:minus"
+              iconSize={14}
               title="Alejar zoom (-)"
-            >
-              <Icon icon="boxicons:minus" width={14} height={14} />
-            </button>
+              ariaLabel="Alejar zoom (-)"
+              onClick={() => setZoom((prev) => Math.max(prev * 0.85, 0.15))}
+            />
             <span className="btn btn-ghost btn-xs join-item font-mono text-[11px] px-2 min-w-12 pointer-events-none">
               {Math.round(zoom * 100)}%
             </span>
-            <button
+            <ActionButton
               type="button"
-              onClick={() => setZoom((prev) => Math.min(prev * 1.15, 3.0))}
-              className="btn btn-xs btn-ghost join-item px-2"
+              size="xs"
+              variant="ghost"
+              className="join-item px-2"
+              icon="boxicons:plus"
+              iconSize={14}
               title="Acercar zoom (+)"
-            >
-              <Icon icon="boxicons:plus" width={14} height={14} />
-            </button>
+              ariaLabel="Acercar zoom (+)"
+              onClick={() => setZoom((prev) => Math.min(prev * 1.15, 3.0))}
+            />
           </div>
 
           <ActionButton
             size="xs"
             variant="ghost"
-            icon="boxicons:target-lock"
+            icon="boxicons:scan"
             onClick={fitToScreen}
             title="Ajustar árbol completo a la pantalla"
           >
@@ -740,7 +825,7 @@ export default function CategoryTreeCanvas({
           {/* Pantalla Completa */}
           <ActionButton
             size="xs"
-            variant={isFullscreen ? "secondary" : "ghost"}
+            variant={isFullscreen ? "solid" : "ghost"}
             icon={isFullscreen ? "boxicons:fullscreen-exit" : "boxicons:fullscreen"}
             onClick={toggleFullscreen}
             title={isFullscreen ? "Salir de pantalla completa (Esc)" : "Pantalla completa"}
@@ -751,21 +836,35 @@ export default function CategoryTreeCanvas({
       </div>
 
       {/* 2. BOTÓN FLOTANTE (FAB) DE FILTROS & POPOVER CARD */}
-      <div className="absolute bottom-4 right-4 z-40 flex flex-col items-end pointer-events-auto">
+      <div
+        data-floating-control
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute bottom-4 right-4 z-40 flex flex-col items-end pointer-events-auto"
+      >
         {filterPopoverOpen && (
-          <div className="card w-80 bg-base-100 border border-base-300 shadow-2xl p-4 mb-2 rounded-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div
+            data-floating-control
+            onWheel={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="card w-80 bg-base-100 border border-base-300 shadow-2xl p-4 mb-2 rounded-2xl animate-in fade-in zoom-in-95 duration-150"
+          >
             <div className="flex items-center justify-between border-b border-base-200 pb-2 mb-3">
               <div className="flex items-center gap-1.5 font-bold text-xs text-base-content">
-                <Icon icon="boxicons:filter-alt" width={16} height={16} className="text-secondary" />
+                <Icon icon="boxicons:filter" width={16} height={16} className="text-secondary" />
                 <span>Filtros de Taxonomía</span>
               </div>
-              <button
+              <ActionButton
                 type="button"
+                size="xs"
+                variant="ghost"
+                circle
+                icon="boxicons:x"
+                iconSize={16}
+                title="Cerrar filtros"
+                ariaLabel="Cerrar filtros"
                 onClick={() => setFilterPopoverOpen(false)}
-                className="btn btn-ghost btn-circle btn-xs"
-              >
-                <Icon icon="boxicons:x" width={16} height={16} />
-              </button>
+              />
             </div>
 
             <div className="space-y-3.5 text-xs">
@@ -777,7 +876,7 @@ export default function CategoryTreeCanvas({
                 <select
                   value={ticketTier}
                   onChange={(e) => setTicketTier(e.target.value as any)}
-                  className="select select-bordered select-xs w-full text-xs"
+                  className="select select-xs w-full text-xs"
                 >
                   <option value="all">Todos los volúmenes</option>
                   <option value="zero">Sin tickets (0 tickets)</option>
@@ -822,51 +921,68 @@ export default function CategoryTreeCanvas({
 
               {/* Botones de acción */}
               <div className="flex items-center justify-between pt-2 border-t border-base-200">
-                <button
+                <ActionButton
                   type="button"
+                  size="xs"
+                  variant="ghost"
+                  className="text-xs text-base-content/60 hover:text-base-content"
                   onClick={() => {
                     setTicketTier("all");
                     setSelectedAnomalies([]);
                     setSelectedBranchId(null);
                   }}
-                  className="btn btn-ghost btn-xs text-xs text-base-content/60 hover:text-base-content"
                 >
                   Restablecer
-                </button>
-                <button
+                </ActionButton>
+                <ActionButton
                   type="button"
+                  size="xs"
+                  color="btn-secondary"
+                  className="text-xs"
                   onClick={() => setFilterPopoverOpen(false)}
-                  className="btn btn-secondary btn-xs text-xs"
                 >
                   Aplicar
-                </button>
+                </ActionButton>
               </div>
             </div>
           </div>
         )}
 
         {/* FAB con indicador DaisyUI */}
-        <div className="indicator">
+        <div
+          data-floating-control
+          onWheel={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="indicator"
+        >
           {activeFiltersCount > 0 && (
             <span className="indicator-item badge badge-secondary badge-xs font-mono font-bold">
               {activeFiltersCount}
             </span>
           )}
-          <button
+          <ActionButton
             type="button"
-            onClick={() => setFilterPopoverOpen((prev) => !prev)}
-            className={`btn btn-circle shadow-lg border border-base-300 ${
-              activeFiltersCount > 0 ? "btn-secondary" : "btn-neutral bg-base-100 text-base-content hover:bg-base-200"
+            circle
+            color={activeFiltersCount > 0 ? "btn-secondary" : "btn-neutral"}
+            className={`shadow-lg border border-base-300 ${
+              activeFiltersCount > 0 ? "" : "bg-base-100 text-base-content hover:bg-base-200"
             }`}
+            icon="boxicons:filter"
+            iconSize={20}
             title="Abrir filtros de taxonomía"
-          >
-            <Icon icon="boxicons:filter-alt" width={20} height={20} />
-          </button>
+            ariaLabel="Abrir filtros de taxonomía"
+            onClick={() => setFilterPopoverOpen((prev) => !prev)}
+          />
         </div>
       </div>
 
       {/* 3. HUD INFERIOR CON CONTADORES Y LIMPIAR FILTROS */}
-      <div className="absolute bottom-3 left-3 z-30 flex items-center gap-2 pointer-events-auto bg-base-100/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-base-300 shadow-md text-xs">
+      <div
+        data-floating-control
+        onWheel={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute bottom-3 left-3 z-30 flex items-center gap-2 pointer-events-auto bg-base-100/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-base-300 shadow-md text-xs"
+      >
         <span className="font-mono text-base-content/70">
           <strong className="text-base-content font-bold">{visibleNodes.length}</strong>/{layoutResult.nodes.length} nodos
         </span>
@@ -895,13 +1011,20 @@ export default function CategoryTreeCanvas({
 
       {/* 4. LIENZO ESPACIAL DE NODOS Y CONEXIONES (SVG + CARDS) */}
       <div
-        className="absolute origin-top-left will-change-transform"
-        style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          width: layoutResult.totalWidth,
-          height: layoutResult.totalHeight,
-        }}
+        className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
+        <div
+          className="absolute origin-top-left will-change-transform"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            width: layoutResult.totalWidth,
+            height: layoutResult.totalHeight,
+          }}
+        >
         {/* Curvas Bézier de Conexión */}
         <svg
           className="absolute inset-0 pointer-events-none overflow-visible"
@@ -941,164 +1064,145 @@ export default function CategoryTreeCanvas({
             />
           );
         })}
+        </div>
       </div>
 
-      {/* 5. DRAWER DE INSPECCIÓN INTEGRADO (Garantiza visibilidad en Fullscreen nativo) */}
-      {inspectedNode && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs transition-opacity"
+      {/* 5. DRAWER DE INSPECCIÓN UNIFICADO */}
+      <Drawer
+        open={Boolean(inspectedNode)}
+        onClose={() => setInspectedNode(null)}
+        title="Detalle de Categoría"
+        isFullscreen={isFullscreen}
+        size="md"
+        footer={
+          <ActionButton
+            size="sm"
+            color="btn-secondary"
+            block
             onClick={() => setInspectedNode(null)}
-          />
-          <aside
-            className="fixed top-0 right-0 z-50 flex h-full w-96 flex-col justify-between border-l border-base-300 bg-base-100 p-6 shadow-2xl transition-transform"
-            aria-label="Inspector de categoría"
           >
-            <div className="space-y-5 overflow-y-auto pr-1">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-base-200 pb-3">
-                <div className="flex items-center gap-2">
-                  <Icon icon="boxicons:info-circle" width={22} height={22} className="text-secondary" />
-                  <h3 className="text-base font-bold text-base-content">Detalle de Categoría</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setInspectedNode(null)}
-                  className="btn btn-ghost btn-circle btn-sm"
-                  aria-label="Cerrar inspector"
-                >
-                  <Icon icon="boxicons:x" width={20} height={20} />
-                </button>
-              </div>
+            Cerrar Inspector
+          </ActionButton>
+        }
+      >
+        {inspectedNode && (
+          <div className="space-y-5 pr-1">
+            {/* Nombre y Ruta */}
+            <div>
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider">
+                Nombre
+              </span>
+              <p className="font-bold text-base text-base-content mt-0.5 leading-snug">
+                {inspectedNode.name}
+              </p>
+            </div>
 
-              {/* Nombre y Ruta */}
-              <div>
-                <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider">
-                  Nombre
-                </span>
-                <p className="font-bold text-base text-base-content mt-0.5 leading-snug">
-                  {inspectedNode.name}
-                </p>
-              </div>
+            <div>
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider">
+                Ruta Jerárquica
+              </span>
+              <p className="mt-1 p-2 bg-base-200 rounded-box font-mono text-xs text-base-content/80 break-words leading-relaxed">
+                {inspectedNode.path}
+              </p>
+            </div>
 
-              <div>
-                <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider">
-                  Ruta Jerárquica
-                </span>
-                <p className="mt-1 p-2 bg-base-200 rounded-box font-mono text-xs text-base-content/80 break-words leading-relaxed">
-                  {inspectedNode.path}
-                </p>
-              </div>
-
-              {/* Métricas clave */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-base-200/50 rounded-box border border-base-200">
-                  <span className="text-xs text-base-content/60">Tickets Nivel</span>
-                  <p className="font-mono text-lg font-bold text-base-content mt-1">
-                    {(inspectedNode.totalTickets || 0).toLocaleString("es-AR")} tk
-                  </p>
-                </div>
-                <div className="p-3 bg-base-200/50 rounded-box border border-base-200">
-                  <span className="text-xs text-base-content/60">Profundidad</span>
-                  <p className="font-mono text-lg font-bold text-base-content mt-1">
-                    Nivel {inspectedNode.depth}
-                  </p>
+            {/* Métricas clave */}
+            <div className="stats stats-horizontal w-full bg-base-200/50 border border-base-200 rounded-box shadow-xs">
+              <div className="stat p-3">
+                <div className="stat-title text-xs text-base-content/60">Tickets Nivel</div>
+                <div className="stat-value font-mono text-lg font-bold text-base-content">
+                  {(inspectedNode.totalTickets || 0).toLocaleString("es-AR")} tk
                 </div>
               </div>
+              <div className="stat p-3">
+                <div className="stat-title text-xs text-base-content/60">Profundidad</div>
+                <div className="stat-value font-mono text-lg font-bold text-base-content">
+                  Nivel {inspectedNode.depth}
+                </div>
+              </div>
+            </div>
 
-              {/* Estado y Anomalías */}
-              <div>
-                <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider">
-                  Estado & Taxonomía
+            {/* Estado y Anomalías */}
+            <div>
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider">
+                Estado & Taxonomía
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <span className="badge badge-sm badge-outline font-mono">
+                  {inspectedNode.isLeaf ? "Nodo Hoja" : `${inspectedNode.children?.length || 0} hijos directos`}
                 </span>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <span className="badge badge-sm badge-outline font-mono">
-                    {inspectedNode.isLeaf ? "Nodo Hoja" : `${inspectedNode.children?.length || 0} hijos directos`}
+                {inspectedNode.status && (
+                  <span className={getAnomalyBadgeClass(inspectedNode.status)}>
+                    {inspectedNode.status}
                   </span>
-                  {inspectedNode.status && (
-                    <span className={getAnomalyBadgeClass(inspectedNode.status)}>
-                      {inspectedNode.status}
-                    </span>
-                  )}
-                  {inspectedNode.anomalies?.map((anom) => (
-                    <span key={anom} className="badge badge-xs badge-error">
-                      {anom}
-                    </span>
-                  ))}
+                )}
+                {inspectedNode.anomalies?.map((anom) => (
+                  <span key={anom} className="badge badge-xs badge-error">
+                    {anom}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* InvGate & KB */}
+            <div className="p-3.5 bg-base-200/50 rounded-box border border-base-300 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-secondary uppercase tracking-wider">
+                  <Icon icon="boxicons:network-chart" width={16} height={16} />
+                  <span>Catálogo InvGate</span>
                 </div>
+                {invgateStatus ? (
+                  <span
+                    className={`badge badge-xs ${
+                      invgateStatus.existsInCatalog
+                        ? "badge-success text-success-content"
+                        : "badge-ghost"
+                    }`}
+                  >
+                    {invgateStatus.existsInCatalog
+                      ? `ID: ${invgateStatus.catalogId ?? inspectedNode.id}`
+                      : "Fuera de catálogo"}
+                  </span>
+                ) : (
+                  <span className="badge badge-xs badge-ghost text-base-content/60">
+                    Consultando...
+                  </span>
+                )}
               </div>
 
-              {/* InvGate & KB */}
-              <div className="p-3.5 bg-base-200/50 rounded-box border border-base-300 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-secondary uppercase tracking-wider">
-                    <Icon icon="boxicons:network-chart" width={16} height={16} />
-                    <span>Catálogo InvGate</span>
+              <div className="pt-1 border-t border-base-300/60">
+                <span className="text-[11px] font-semibold text-base-content/60 block mb-1">
+                  Artículos KB Vinculados:
+                </span>
+                {kbLoading ? (
+                  <div className="flex items-center gap-2 text-xs text-base-content/60">
+                    <span className="loading loading-spinner loading-xs text-secondary" />
+                    <span>Buscando artículos...</span>
                   </div>
-                  {invgateStatus ? (
-                    <span
-                      className={`badge badge-xs ${
-                        invgateStatus.existsInCatalog
-                          ? "badge-success text-success-content"
-                          : "badge-ghost"
-                      }`}
-                    >
-                      {invgateStatus.existsInCatalog
-                        ? `ID: ${invgateStatus.catalogId ?? inspectedNode.id}`
-                        : "Fuera de catálogo"}
-                    </span>
-                  ) : (
-                    <span className="badge badge-xs badge-ghost text-base-content/60">
-                      Consultando...
-                    </span>
-                  )}
-                </div>
-
-                <div className="pt-1 border-t border-base-300/60">
-                  <span className="text-[11px] font-semibold text-base-content/60 block mb-1">
-                    Artículos KB Vinculados:
-                  </span>
-                  {kbLoading ? (
-                    <div className="flex items-center gap-2 text-xs text-base-content/60">
-                      <span className="loading loading-spinner loading-xs text-secondary" />
-                      <span>Buscando artículos...</span>
-                    </div>
-                  ) : kbArticles.length > 0 ? (
-                    <ul className="space-y-1 text-xs">
-                      {kbArticles.map((art) => (
-                        <li key={art.id}>
-                          <a
-                            href={art.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-secondary hover:underline line-clamp-1"
-                          >
-                            <Icon icon="boxicons:link-external" width={12} height={12} />
-                            <span>{art.title}</span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-base-content/60 italic">Sin guías vinculadas</p>
-                  )}
-                </div>
+                ) : kbArticles.length > 0 ? (
+                  <ul className="space-y-1 text-xs">
+                    {kbArticles.map((art) => (
+                      <li key={art.id}>
+                        <a
+                          href={art.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-secondary hover:underline line-clamp-1"
+                        >
+                          <Icon icon="boxicons:link-alt" width={12} height={12} />
+                          <span>{art.title}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-base-content/60 italic">Sin guías vinculadas</p>
+                )}
               </div>
             </div>
-
-            {/* Footer drawer */}
-            <div className="border-t border-base-200 pt-4 mt-4">
-              <button
-                type="button"
-                onClick={() => setInspectedNode(null)}
-                className="btn btn-block btn-secondary btn-sm"
-              >
-                Cerrar Inspector
-              </button>
-            </div>
-          </aside>
-        </>
-      )}
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

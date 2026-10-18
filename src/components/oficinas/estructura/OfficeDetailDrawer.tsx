@@ -69,7 +69,7 @@ export default function OfficeDetailDrawer({
               </span>
             )}
             {node.isHeadquarter && (
-              <span className="badge badge-primary badge-sm font-bold">
+              <span className="badge badge-secondary badge-sm font-bold">
                 CABECERA
               </span>
             )}
@@ -102,7 +102,7 @@ export default function OfficeDetailDrawer({
           <div className="flex items-center justify-between gap-3">
             <a
               href={`/oficinas/estadisticas/${node.code}`}
-              className="btn btn-primary btn-sm flex-1 gap-2"
+              className="btn btn-secondary btn-sm flex-1 gap-2"
               target="_blank"
               rel="noreferrer"
             >
@@ -122,7 +122,7 @@ export default function OfficeDetailDrawer({
             </div>
             <div
               className={`mt-1 font-mono text-xl font-bold ${
-                node.totalTickets > 0 ? "text-warning" : "text-base-content/70"
+                node.totalTickets > 0 ? "text-base-content font-bold" : "text-base-content/70"
               }`}
             >
               {node.totalTickets}
@@ -143,7 +143,7 @@ export default function OfficeDetailDrawer({
               <div className="text-base-content/60 text-xs font-medium uppercase tracking-wider">
                 Oficinas
               </div>
-              <div className="text-primary mt-1 font-mono text-xl font-bold">
+              <div className="text-secondary mt-1 font-mono text-xl font-bold">
                 {node.totalOffices}
               </div>
             </div>
@@ -178,14 +178,14 @@ export default function OfficeDetailDrawer({
         <div className="bg-base-200/40 border-base-300 space-y-3 rounded-xl border p-4">
           <div className="flex items-center justify-between">
             <div className="text-base-content/80 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-              <Icon icon="boxicons:location-pin-filled" width={16} height={16} className="text-primary" />
+              <Icon icon="boxicons:location-pin-filled" width={16} height={16} className="text-secondary" />
               <span>Ubicación geográfica</span>
             </div>
             <a
               href={googleMapsUrl}
               target="_blank"
               rel="noreferrer"
-              className="link link-primary flex items-center gap-1 text-xs font-semibold"
+              className="link link-secondary flex items-center gap-1 text-xs font-semibold"
               title="Abrir en Google Maps externo"
             >
               <span>Abrir en Maps</span>
@@ -243,7 +243,7 @@ export default function OfficeDetailDrawer({
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-primary">
+                      <span className="font-mono text-xs font-bold text-secondary">
                         {child.code}
                       </span>
                       <span className="text-xs font-medium text-base-content">
@@ -255,7 +255,7 @@ export default function OfficeDetailDrawer({
                     </div>
                   </div>
                   <div className="text-right font-mono text-xs">
-                    <span className="text-warning font-semibold">
+                    <span className="text-base-content/80 font-semibold">
                       {child.totalTickets} tkt
                     </span>
                     <span className="text-base-content/40 mx-1">·</span>

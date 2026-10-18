@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import rawData from "@lib/categories/fixtures/mda-ti-canonical.json";
 
@@ -22,83 +23,98 @@ const rawTreeData = {
   <div class="sticky top-0 z-30 flex flex-col gap-2.5 p-3.5 bg-base-200/90 backdrop-blur-md border-b border-base-300">
     <div class="flex flex-wrap items-center justify-between gap-2.5">
       <div class="join overflow-x-auto max-w-full" role="group" aria-label="Selector de vistas del catálogo">
-        <button
+        <ActionButton
           id="vC"
           type="button"
-          class="btn btn-sm join-item btn-primary btn-active on"
+          size="sm"
+          color="btn-secondary"
+          active
+          class="join-item on"
           data-view="c"
-        >
-          3. Propuesta C - híbrida
-        </button>
-        <button
+          label="3. Propuesta C - híbrida"
+        />
+        <ActionButton
           id="vCur"
           type="button"
-          class="btn btn-sm join-item"
+          size="sm"
+          color=""
+          class="join-item"
           data-view="cur"
-        >
-          4. Árbol actual
-        </button>
-        <button
+          label="4. Árbol actual"
+        />
+        <ActionButton
           id="vA"
           type="button"
-          class="btn btn-sm join-item"
+          size="sm"
+          color=""
+          class="join-item"
           data-view="a"
-        >
-          1. Propuesta A
-        </button>
-        <button
+          label="1. Propuesta A"
+        />
+        <ActionButton
           id="vB"
           type="button"
-          class="btn btn-sm join-item"
+          size="sm"
+          color=""
+          class="join-item"
           data-view="b"
-        >
-          2. Propuesta B
-        </button>
-        <button
+          label="2. Propuesta B"
+        />
+        <ActionButton
           id="vCmp"
           type="button"
-          class="btn btn-sm join-item"
+          size="sm"
+          color=""
+          class="join-item"
           data-view="cmp"
-        >
-          5. Comparativa
-        </button>
+          label="5. Comparativa"
+        />
       </div>
 
       <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
-        <button
+        <ActionButton
           id="btn-toggle-fullscreen"
           type="button"
-          class="btn btn-sm btn-outline gap-1.5"
+          variant="outline"
+          color=""
+          size="sm"
+          class="gap-1.5"
           title="Alternar pantalla completa"
-          aria-label="Alternar pantalla completa"
+          ariaLabel="Alternar pantalla completa"
         >
           <Icon name="boxicons:fullscreen" size={18} class="icon-expand" />
           <Icon name="boxicons:fullscreen-exit" size={18} class="icon-compress hidden" />
           <span class="fs-text text-xs">Pantalla completa</span>
-        </button>
+        </ActionButton>
       </div>
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-base-300/60">
       <div class="join">
-        <button
+        <ActionButton
           id="btn-expand-all"
           type="button"
-          class="btn btn-sm btn-outline join-item gap-1 text-xs"
+          variant="outline"
+          color=""
+          size="sm"
+          icon="boxicons:chevron-down"
+          iconSize={16}
+          label="Expandir todo"
+          class="join-item gap-1 text-xs"
           title="Expandir todas las ramas del árbol"
-        >
-          <Icon name="boxicons:chevron-down" size={16} />
-          <span>Expandir todo</span>
-        </button>
-        <button
+        />
+        <ActionButton
           id="btn-collapse-all"
           type="button"
-          class="btn btn-sm btn-outline join-item gap-1 text-xs"
+          variant="outline"
+          color=""
+          size="sm"
+          icon="boxicons:chevron-up"
+          iconSize={16}
+          label="Colapsar todo"
+          class="join-item gap-1 text-xs"
           title="Colapsar todo el árbol"
-        >
-          <Icon name="boxicons:chevron-up" size={16} />
-          <span>Colapsar todo</span>
-        </button>
+        />
       </div>
 
       <div class="w-60 sm:w-80">
@@ -121,7 +137,7 @@ const rawTreeData = {
     </div>
     <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-base-content/70">
       <span class="inline-flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full bg-warning"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
         <span>nivel 1</span>
       </span>
       <span class="inline-flex items-center gap-1.5">
@@ -188,7 +204,7 @@ const rawTreeData = {
     margin: 0 !important;
   }
   #tree-explorer-container .c1 > .row .nm {
-    color: var(--color-warning);
+    color: var(--color-secondary);
     font-size: 1.05rem;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -609,7 +625,7 @@ const rawTreeData = {
       let tw: HTMLElement;
       if (has) {
         const toggleIcon = document.createElement("span");
-        toggleIcon.className = "tw inline-flex items-center justify-center w-5 h-5 text-base-content/60 hover:text-primary cursor-pointer select-none transition-transform duration-150 shrink-0";
+        toggleIcon.className = "tw inline-flex items-center justify-center w-5 h-5 text-base-content/60 hover:text-secondary cursor-pointer select-none transition-transform duration-150 shrink-0";
         toggleIcon.setAttribute("role", "button");
         toggleIcon.setAttribute("aria-label", "Alternar rama");
         toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"/></svg>`;
@@ -627,7 +643,7 @@ const rawTreeData = {
       nm.textContent = lb;
       nm.setAttribute("data-label", lb);
       if (lb !== name) nm.title = name;
-      if (has) nm.classList.add("clk", "cursor-pointer", "hover:text-primary");
+      if (has) nm.classList.add("clk", "cursor-pointer", "hover:text-secondary");
 
       row.appendChild(tw);
       row.appendChild(nm);
@@ -830,9 +846,9 @@ const rawTreeData = {
       const btn = document.getElementById(id);
       if (!btn) return;
       if (btnView === v) {
-        btn.classList.add("btn-primary", "btn-active", "on");
+        btn.classList.add("btn-secondary", "btn-active", "on");
       } else {
-        btn.classList.remove("btn-primary", "btn-active", "on");
+        btn.classList.remove("btn-secondary", "btn-active", "on");
       }
     });
 
