@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "./ActionButton.astro";
 import SearchEmptyState from "./SearchEmptyState.astro";
 
 interface Props {
@@ -90,12 +91,13 @@ const HEADER_VARIANT = {
   {
     fullscreen && (
       <div class="flex justify-end px-1 pb-2">
-        <button
+        <ActionButton
           type="button"
-          class="btn btn-ghost btn-xs gap-1"
+          variant="ghost"
+          size="xs"
           data-fullscreen-toggle
           title="Ver en pantalla completa"
-          aria-label={`Ver ${ariaLabel} en pantalla completa`}
+          ariaLabel={`Ver ${ariaLabel} en pantalla completa`}
         >
           <Icon name="boxicons:fullscreen" size={16} data-fs-enter is:inline />
           <Icon
@@ -105,7 +107,7 @@ const HEADER_VARIANT = {
             data-fs-exit
             is:inline
           />
-        </button>
+        </ActionButton>
       </div>
     )
   }

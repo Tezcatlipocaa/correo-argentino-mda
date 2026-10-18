@@ -1,5 +1,5 @@
 ---
-import { Icon } from "astro-icon/components";
+import ActionButton from "./ActionButton.astro";
 
 interface ChartSeries {
   label: string;
@@ -102,26 +102,38 @@ const chartProps = JSON.stringify({
     <div class="flex items-center justify-end gap-1">
       {exportable && (
         <div class="items-center gap-1" data-export-buttons style="display: none">
-          <button type="button" class="btn btn-ghost btn-sm" data-export-png>
-            <Icon name="boxicons:image" size={16} is:inline />
-            <span>PNG</span>
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" data-export-csv>
-            <Icon name="boxicons:file" size={16} is:inline />
-            <span>CSV</span>
-          </button>
+          <ActionButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon="boxicons:image"
+            iconSize={16}
+            label="PNG"
+            data-export-png
+          />
+          <ActionButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon="boxicons:file"
+            iconSize={16}
+            label="CSV"
+            data-export-csv
+          />
         </div>
       )}
-      <button
+      <ActionButton
         type="button"
-        class="btn btn-ghost btn-sm"
+        variant="ghost"
+        size="sm"
+        icon="boxicons:table"
+        iconSize={16}
         data-table-toggle
         aria-expanded="false"
         aria-controls={tableId}
       >
-        <Icon name="boxicons:table" size={16} is:inline />
         <span data-table-toggle-label>Ver tabla</span>
-      </button>
+      </ActionButton>
     </div>
   </div>
 </div>

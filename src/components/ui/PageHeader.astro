@@ -1,5 +1,5 @@
 ---
-import { Icon } from "astro-icon/components";
+import ActionButton from "./ActionButton.astro";
 import { getSectionTitle, getResolvedPathname } from "@lib/navigation";
 
 interface Props {
@@ -35,13 +35,16 @@ const HeadingTag = headingLevel;
 <header class:list={["space-y-2", className]}>
   <div class="flex items-center gap-2">
     {backHref && (
-      <a
+      <ActionButton
         href={backHref}
-        class="btn btn-ghost btn-sm btn-square"
-        aria-label={backLabel ?? "Volver"}
-      >
-        <Icon name="boxicons:chevron-left" size={24} />
-      </a>
+        variant="ghost"
+        size="sm"
+        square
+        icon="boxicons:chevron-left"
+        iconSize={24}
+        ariaLabel={backLabel ?? "Volver"}
+        title={backLabel ?? "Volver"}
+      />
     )}
     <HeadingTag
       class:list={[

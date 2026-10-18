@@ -739,7 +739,10 @@ const isSupervisorRole = (role: string): boolean =>
                           value="deactivate-user"
                         />
                         <input type="hidden" name="userId" value={u.id} />
-                        <ActionButton onclick="this.closest('dialog').close()" />
+                        <ActionButton
+                          label="Cancelar"
+                          onclick="this.closest('dialog').close()"
+                        />
                         <ActionButton
                           type="submit"
                           label="Desactivar"

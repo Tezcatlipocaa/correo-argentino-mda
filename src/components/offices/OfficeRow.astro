@@ -279,8 +279,10 @@ const officeDirectoryRowGridClass = showActionsColumn
                 icon="boxicons:alert-triangle-filled"
                 color="btn-success"
                 tooltip="Reportar agentes caídos"
-                officeName={office.name}
-                officeCode={office.code}
+                ariaLabel={`Crear ticket por agentes caídos en ${office.name} (${office.code})`}
+                data-agents-ticket-trigger
+                data-office-name={office.name}
+                data-office-code={office.code}
               />
             )}
         </div>

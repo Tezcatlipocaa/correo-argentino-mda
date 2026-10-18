@@ -2,6 +2,7 @@
 interface Props {
   /** Columnas en pantallas chicas. */
   base?: 1 | 2;
+  sm?: 1 | 2 | 3 | 4 | 5 | 6;
   /** Columnas desde 768px. Si se omite, no se fuerza breakpoint. */
   md?: 2 | 3 | 4 | 5 | 6;
   /** Columnas desde 1024px. */
@@ -10,10 +11,18 @@ interface Props {
   ariaLabel?: string;
 }
 
-const { base = 2, md, lg = 5, class: className = "", ariaLabel } = Astro.props;
+const { base = 2, sm, md, lg = 5, class: className = "", ariaLabel } = Astro.props;
 
 // Mapas con clases literales: Tailwind no detecta nombres de clase dinámicos.
 const BASE = { 1: "grid-cols-1", 2: "grid-cols-2" } as const;
+const SM = {
+  1: "sm:grid-cols-1",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-4",
+  5: "sm:grid-cols-5",
+  6: "sm:grid-cols-6",
+} as const;
 const MD = {
   2: "md:grid-cols-2",
   3: "md:grid-cols-3",
@@ -30,7 +39,7 @@ const LG = {
 ---
 
 <div
-  class:list={["grid gap-4", BASE[base], md && MD[md], lg && LG[lg], className]}
+  class:list={["grid gap-4", BASE[base], sm && SM[sm], md && MD[md], lg && LG[lg], className]}
   aria-label={ariaLabel}
 >
   <slot />

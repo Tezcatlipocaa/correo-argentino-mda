@@ -1,5 +1,5 @@
 ---
-import { Icon } from "astro-icon/components";
+import ActionButton from "./ActionButton.astro";
 
 interface Props {
   id: string;
@@ -10,6 +10,9 @@ interface Props {
   successMsg?: string;
   errorMsg?: string;
   class?: string;
+  size?: "xs" | "sm" | "md" | "default";
+  variant?: "solid" | "soft" | "outline" | "ghost";
+  color?: string;
 }
 
 const {
@@ -19,23 +22,29 @@ const {
   title = "Actualizar datos",
   successMsg = "Datos actualizados con éxito",
   errorMsg = "Error al actualizar los datos",
-  class: className = "btn btn-soft gap-2",
+  class: className = "",
+  size = "default",
+  variant = "soft",
+  color = "btn-secondary",
 } = Astro.props;
 ---
 
-<button
+<ActionButton
   id={id}
   type="button"
-  class={className}
+  variant={variant}
+  color={color}
+  size={size}
+  icon="boxicons:refresh-cw"
+  iconSize={18}
+  label={label}
   title={title}
+  class={className}
   data-report-refresh
   data-refresh-endpoint={endpoint}
   data-refresh-success={successMsg}
   data-refresh-error={errorMsg}
->
-  <Icon name="boxicons:refresh-cw" size={18} />
-  <span>{label}</span>
-</button>
+/>
 
 <script>
   import { initReportRefresh } from "@lib/reportRefresh";
