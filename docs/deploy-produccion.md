@@ -315,25 +315,22 @@ Si ves la página de login, el deploy está completo.
 
 ---
 
-## Auto-deploy (actualizar el servidor)
+## Auto-deploy blindado (actualizar el servidor)
 
-El proyecto incluye `scripts\auto-deploy.bat` con los pasos para actualizar desde Git:
+El proyecto cuenta con una arquitectura de despliegue transaccional a prueba de fallos orquestada por `scripts/safe-deploy.mts` y envuelta por `scripts/auto-deploy.bat`:
 
-```batch
-@echo off
-cd C:\Projects\correo-argentino-mda
-git pull origin master
-call pm2 kill
-call npm install
-call npx tsx scripts/align-db-to-schema.mts
-call npx tsx scripts/backfill-asistencia.mts --apply
-call npm run build
-call pm2 start ecosystem.config.cjs
-```
+1. **Gate Pre-Push local (`scripts/git-hooks/pre-push`):** Se instala con `npm run prepare` (`core.hooksPath`). Impide pushear a `master` si fallan los tests de dominio o si se introducen cambios destructivos de schema en `src/db/schema.ts` (drops de columnas con datos, tipos incompatibles o filas huérfanas). Se puede omitir en emergencias con `MDA_SKIP_PRE_PUSH=1` o `git push --no-verify`.
+2. **Lockfile de proceso (`.deploy.lock`):** Evita dos ejecuciones simultáneas y limpia locks huérfanos si el proceso anterior murió.
+3. **No-op inteligente:** Hace `git fetch origin master` y compara `HEAD` con el remoto. Si no hay cambios nuevos, finaliza en segundos **sin detener PM2 ni recompilar** (a menos que se pase `--force`).
+4. **Snapshot de Rollback previo (`.deploy-rollback/`):** Antes de tocar nada, crea un backup WAL-safe de `database/mda.db`, copia la carpeta `dist/` funcional y registra el commit `HEAD` previo.
+5. **Pre-flight con PM2 activo:** Si `package.json`/`package-lock.json` no cambiaron, avanza con `git merge --ff-only origin/master` y ejecuta `verify-env.mts`, `npm run test:domain` y la simulación de migraciones en modo estricto sobre una copia temporal `mda.preflight.db` **mientras PM2 sigue atendiendo usuarios**. Si algo falla, revierte el código a `HEAD` previo sin tocar PM2 ni la DB real.
+6. **Ventana de corte segura:** Detiene PM2 (`pm2 kill`), ejecuta `npm install` (si cambiaron dependencias), aplica `align-db-to-schema.mts --strict` y backfills sobre la DB real, limpia `dist/` y ejecuta `npm run build` (con `verify-build.mjs`).
+7. **Smoke Test HTTP post-deploy:** Inicia PM2 y verifica durante 20s que `http://127.0.0.1:4321/login` responda HTTP 200 y que los assets referenciados `/_astro/*.css` devuelvan `200 text/css`.
+8. **Rollback automático integral:** Si cualquier paso de corte, build o smoke test falla, `safe-deploy` detiene PM2, ejecuta `git reset --hard <prevSha>`, restaura la base de datos desde el backup WAL-safe (limpiando `-wal`/`-shm`), restaura la carpeta `dist/` previa, inicia PM2 y verifica que `/login` responda correctamente, dejando el incidente registrado en `logs/auto-deploy-YYYY-MM-DD.log`.
 
-`pm2 kill` corre ANTES de `npm install`: con procesos Node/PM2 vivos, Windows no permite reemplazar binarios nativos (`.node`) y deja `node_modules` inconsistente → el build genera un manifest SSR sin `rootDir` → crash loop en runtime. `npm run build` incluye el guard `scripts/verify-build.mjs` que aborta si `rootDir` falta. Ver `docs/lessons.md` (2026-09-07).
-
-Entre `npm install` y el build el auto-deploy alinea la DB host (`align-db-to-schema.mts`, idempotente, con backup) y corre el backfill one-time de `agents.en_asistencia` (`backfill-asistencia.mts --apply`, dry-run revisable a mano). Si cualquiera falla, aborta sin reiniciar PM2.
+Flags de ejecución:
+- `--force`: Fuerza el despliegue aunque `HEAD` coincida con `origin/master`.
+- `--allow-destructive`: Pasa `--allow-destructive` a `align-db-to-schema.mts` para permitir drops de columnas o resoluciones manuales en migraciones planificadas.
 
 ### Tarea programada (Windows)
 

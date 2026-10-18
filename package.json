@@ -6,6 +6,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "prepare": "tsx scripts/install-git-hooks.mts",
     "dev": "astro dev",
     "build": "astro build && node scripts/verify-build.mjs",
     "preview": "astro preview",
@@ -27,7 +28,7 @@
     "db:prune-kb-images": "tsx scripts/prune-kb-images.mts",
     "test:unit": "vitest run",
     "test": "npm run test:domain && npm run test:unit",
-    "test:domain": "tsx --test src/lib/officeAddress.test.ts src/lib/officeAddressSuggestions.test.ts src/lib/officeBuildingKey.test.ts src/lib/officeBuildingReconcile.test.ts src/lib/officeLayout.test.ts src/lib/officeSiblings.test.ts src/lib/officeStats.test.ts src/lib/supportGuides.test.ts src/lib/terminalStats.test.ts src/lib/categories/fixtures/mda-ti-canonical.test.ts src/lib/helpdesks/service.test.ts src/lib/categories/service.test.ts src/lib/apiResponse.test.ts src/lib/sessionCache.test.ts src/lib/queryCache.test.ts",
+    "test:domain": "tsx --test src/lib/officeAddress.test.ts src/lib/officeAddressSuggestions.test.ts src/lib/officeBuildingKey.test.ts src/lib/officeBuildingReconcile.test.ts src/lib/officeLayout.test.ts src/lib/officeSiblings.test.ts src/lib/officeStats.test.ts src/lib/supportGuides.test.ts src/lib/terminalStats.test.ts src/lib/categories/fixtures/mda-ti-canonical.test.ts src/lib/helpdesks/service.test.ts src/lib/categories/service.test.ts src/lib/apiResponse.test.ts src/lib/sessionCache.test.ts src/lib/queryCache.test.ts src/lib/deploy/schemaGuard.test.ts src/lib/deploy/prePushCheck.test.ts src/lib/deploy/safeDeploy.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:reconcile": "playwright test tests/admin/reconcile-buildings.spec.ts"
   },
