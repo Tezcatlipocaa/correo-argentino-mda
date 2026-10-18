@@ -37,6 +37,10 @@ const ALPHA_PATTERNS = [
   /correccion_prioridad$|_prioridad$/,
   /sondeo$/,
   /procedimiento$/,
+  /control_conversacion$/,
+  /interes_resolver$/,
+  /interpretacion$/,
+  /resolucion$/,
 ];
 
 const BETA_PATTERNS = [
@@ -47,6 +51,14 @@ const BETA_PATTERNS = [
   /documentacion$/,
   /info_complementaria$/,
   /descripcion$/,
+  /saludo_estandar$/,
+  /cordialidad$/,
+  /despedida_cordial$/,
+  /lenguaje_apropiado$/,
+  /escucha_activa$/,
+  /contencion_espera$/,
+  /redaccion$/,
+  /claridad$/,
 ];
 
 export function isAlphaCriterion(code: string): boolean {
@@ -111,7 +123,7 @@ export function mergeCouncil(
       if (soleVote) {
         resolved.push({
           ...soleVote,
-          consenso: "sin_oposicion",
+          consenso: "agente_especialista",
           motivo: "agente_unico",
         });
       }
@@ -211,8 +223,11 @@ export async function evaluateWithCouncil(
   meta: ExtractedQualityMetadata,
   rawIncident?: any,
   preloadedTimeline?: InvgateTimelineEntry[],
+  audioTranscript?: string,
 ): Promise<CouncilEvaluationResult> {
-  const criteria = getAiCriteria(channel);
+  const hasAudio = Boolean(audioTranscript?.trim());
+  const hasEmailThread = Boolean(meta.emailThread?.hasOperatorReply);
+  const criteria = getAiCriteria(channel, { hasAudio, hasEmailThread });
   if (criteria.length === 0) {
     return {
       model: "council",
@@ -234,28 +249,34 @@ export async function evaluateWithCouncil(
           })
         : []);
 
-    const ticketContext = buildTicketContext(meta, rawIncident, timeline);
+    const ticketContext = buildTicketContext(meta, rawIncident, timeline, audioTranscript);
     const { alpha: alphaCriteria, beta: betaCriteria } = splitCriteriaByAgent(criteria);
 
     const alphaProvider = new OpenCodeProvider(ALPHA_MODEL);
     const betaProvider = new OpenCodeProvider(BETA_MODEL);
 
+    const includeReclamo = channel === "wise_call" || channel === "wise_email";
+    const includeCoaching = channel !== "invgate_ticket";
     // Ejecución paralela protegida
     const [alphaTask, betaTask] = await Promise.allSettled([
       alphaCriteria.length > 0
-        ? alphaProvider.evaluate(buildPrompt(alphaCriteria, ticketContext))
+        ? alphaProvider.evaluate(buildPrompt(alphaCriteria, ticketContext, undefined, includeReclamo, includeCoaching))
         : Promise.resolve(null),
       betaCriteria.length > 0
-        ? betaProvider.evaluate(buildPrompt(betaCriteria, ticketContext))
+        ? betaProvider.evaluate(buildPrompt(betaCriteria, ticketContext, undefined, false, false))
         : Promise.resolve(null),
     ]);
 
     const alphaMap: AgentVerdictMap = {};
     let alphaSummary = "";
+    let alphaReclamoSignal = undefined;
+    let alphaCoaching = undefined;
     if (alphaTask.status === "fulfilled" && alphaTask.value) {
       try {
         const parsed = parseVerdicts(alphaTask.value, new Set(alphaCriteria.map((c) => c.code)));
         alphaSummary = parsed.resumen;
+        alphaReclamoSignal = parsed.reclamoSignal;
+        alphaCoaching = parsed.coaching;
         for (const v of parsed.verdicts) alphaMap[v.codigo] = v;
       } catch (err) {
         console.warn("[councilEvaluator] Error parseando veredictos de Alpha:", err);
@@ -285,6 +306,10 @@ export async function evaluateWithCouncil(
         name: c.name,
         rubrica: getRubricsForCriteria([c.code]),
       };
+    }
+
+    if (Object.keys(alphaMap).length === 0 && Object.keys(betaMap).length === 0) {
+      throw new Error("Ambos agentes del Council fallaron al evaluar el caso.");
     }
 
     const allCodes = criteria.map((c) => c.code);
@@ -393,6 +418,8 @@ export async function evaluateWithCouncil(
       resumen: finalSummary,
       verdicts: orderedVerdicts,
       debate,
+      reclamoSignal: alphaReclamoSignal,
+      coaching: alphaCoaching,
     };
   } finally {
     releaseAiSlot();

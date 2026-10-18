@@ -84,12 +84,26 @@ test("buildTicketContext inyecta la Línea de Tiempo e Historial de Cambios unif
     },
   ];
 
-  const ctx = buildTicketContext(meta, { type_id: 1, comments: [] }, timeline);
+  const ctx = buildTicketContext(
+    meta,
+    { type_id: 1, custom_fields: { "22945": "11111" }, comments: [] },
+    [
+      ...timeline,
+      {
+        kind: "log" as const,
+        timestamp: 1791993146,
+        dateStr: "14 oct. 2026, 12:52",
+        text: "C. Cuello cambió el estado de espera a Esperando confirmación de solución",
+      },
+    ],
+  );
 
+  assert.match(ctx, /Campos personalizados \(API custom_fields\): campo_22945: "11111"/);
   assert.match(ctx, /Línea de Tiempo e Historial de Cambios \(4 eventos\):/);
   assert.match(ctx, /\[CAMBIO\] C\. Cuello cambió la categoría de Solicitudes rechazadas a Netterm- Consulta/);
-  assert.match(ctx, /\[NOTA INTERNA\] Camila Cuello: Ping a b0044w103 exitoso/);
+  assert.match(ctx, /\[INTERNO\] Camila Cuello: Ping a b0044w103 exitoso/);
   assert.match(ctx, /\[SOLUCIÓN\] Camila Cuello: Se le indica aguardar por exceso de usuarios\./);
+  assert.doesNotMatch(ctx, /Esperando confirmación de solución/, "Debe descartar logs ruidosos de estado de espera");
   assert.doesNotMatch(ctx, /Comentarios \(0\):/, "No debe duplicar ni mostrar la sección vieja de comentarios si hay timeline");
 });
 
@@ -108,3 +122,90 @@ test("buildTicketContext hace fallback a los comentarios de la API REST si no ha
   assert.match(ctx, /Comentarios \(1\):/);
   assert.match(ctx, /Camila: Respuesta por API/);
 });
+
+test("getAiCriteria con hasAudio=true incluye criterios de atención telefónica para wise_call", async () => {
+  const { getAiCriteria } = await import("./qualityAiEvaluator.js");
+  const defaultCriteria = getAiCriteria("wise_call");
+  const audioCriteria = getAiCriteria("wise_call", { hasAudio: true });
+
+  assert.ok(audioCriteria.length > defaultCriteria.length);
+  const audioCodes = new Set(audioCriteria.map((c) => c.code));
+
+  assert.ok(audioCodes.has("call_saludo_estandar"));
+  assert.ok(audioCodes.has("call_cordialidad"));
+  assert.ok(audioCodes.has("call_contencion_espera"));
+  assert.ok(audioCodes.has("call_despedida_cordial"));
+  assert.ok(audioCodes.has("call_ticket_tipo"));
+});
+
+test("buildTicketContext incluye bloque de transcripción telefónica cuando está presente", () => {
+  const meta = {
+    caseNumber: "90688",
+    operator: "Martín Pérez",
+    date: "2026-10-16",
+  };
+  const transcript = "Operador: Buenos días Correo Argentino, habla Martín.\nUsuario: Hola, no me anda el sistema.";
+
+  const ctx = buildTicketContext(meta, {}, [], transcript);
+  assert.match(ctx, /TRANSCRIPCIÓN DE LA LLAMADA TELEFÓNICA \(Audio Wise CX \/ Whisper\):/);
+  assert.match(ctx, /Buenos días Correo Argentino, habla Martín/);
+});
+
+test("getAiCriteria con hasEmailThread=true incluye únicamente los 4 ítems permitidos de correo para wise_email", async () => {
+  const { getAiCriteria } = await import("./qualityAiEvaluator.js");
+  const defaultCriteria = getAiCriteria("wise_email");
+  const emailCriteria = getAiCriteria("wise_email", { hasEmailThread: true });
+
+  assert.ok(emailCriteria.length > defaultCriteria.length);
+  const emailCodes = new Set(emailCriteria.map((c) => c.code));
+
+  // 4 ítems permitidos en allowlist
+  assert.ok(emailCodes.has("email_interpretacion"));
+  assert.ok(emailCodes.has("email_redaccion"));
+  assert.ok(emailCodes.has("email_claridad"));
+  assert.ok(emailCodes.has("email_resolucion"));
+
+  // Ítems de correo excluidos (manuales o deterministas)
+  assert.ok(!emailCodes.has("email_procedimientos"));
+  assert.ok(!emailCodes.has("email_gestion_herramientas"));
+  assert.ok(!emailCodes.has("email_seguimiento"));
+  assert.ok(!emailCodes.has("email_solicitud"));
+  assert.ok(!emailCodes.has("email_sla_90min"));
+
+  // Criterios de sección MDA siguen presentes
+  assert.ok(emailCodes.has("email_mda_categorizacion"));
+  assert.ok(emailCodes.has("email_mda_ortografia"));
+});
+
+test("buildTicketContext incluye bloque de hilo de correo electrónico cuando meta.emailThread está presente", () => {
+  const meta = {
+    caseNumber: "544637",
+    operator: "Juan Perez",
+    date: "2026-10-17",
+    emailThread: {
+      messages: [
+        {
+          type: "customer" as const,
+          createdAt: "2026-10-17 10:00:00",
+          content: "Consulta sobre paquete de encomienda.",
+        },
+        {
+          type: "operator" as const,
+          createdAt: "2026-10-17 10:15:00",
+          content: "Estimado, el paquete fue entregado hoy a las 09:30.",
+        },
+      ],
+      hasCustomerMessage: true,
+      hasOperatorReply: true,
+    },
+  };
+
+  const ctx = buildTicketContext(meta as any, {}, []);
+  assert.match(ctx, /HILO DE CORREO ELECTRÓNICO \(Wise CX \/ emailThread\):/);
+  assert.match(ctx, /CLIENTE\/SOLICITANTE \[2026-10-17 10:00:00\]:/);
+  assert.match(ctx, /Consulta sobre paquete de encomienda\./);
+  assert.match(ctx, /OPERADOR \[2026-10-17 10:15:00\]:/);
+  assert.match(ctx, /Estimado, el paquete fue entregado hoy a las 09:30\./);
+});
+
+

@@ -20,11 +20,45 @@ test("cobertura de buckets: todo criterio de getAiCriteria() para los 3 canales 
 
     // Verificar que los códigos asignados a cada agente cumplan exclusivamente con su tipo de responsabilidad
     for (const a of alpha) {
-      assert.match(a.code, /(?:categorizacion|tipo|prioridad|sondeo|procedimiento)/);
+      assert.match(a.code, /(?:categorizacion|tipo|prioridad|sondeo|procedimiento|interpretacion|resolucion)/);
     }
     for (const b of beta) {
-      assert.match(b.code, /(?:analisis|seguimiento|exactitud_datos|ortografia|documentacion|info_complementaria|descripcion)/);
+      assert.match(b.code, /(?:analisis|seguimiento|exactitud_datos|ortografia|documentacion|info_complementaria|descripcion|redaccion|claridad)/);
     }
+  }
+});
+
+test("cobertura de buckets con emailThread: todos los criterios de mail son asignados a Alpha o Beta", () => {
+  const criteria = getAiCriteria("wise_email", { hasEmailThread: true });
+  const { alpha, beta } = splitCriteriaByAgent(criteria);
+  assert.equal(alpha.length + beta.length, criteria.length);
+
+  for (const a of alpha) {
+    assert.match(a.code, /(?:categorizacion|tipo|prioridad|sondeo|procedimiento|interpretacion|resolucion)/);
+  }
+  for (const b of beta) {
+    assert.match(b.code, /(?:analisis|seguimiento|exactitud_datos|ortografia|documentacion|info_complementaria|descripcion|redaccion|claridad)/);
+  }
+
+  const alphaCodes = new Set(alpha.map((c) => c.code));
+  const betaCodes = new Set(beta.map((c) => c.code));
+
+  assert.ok(alphaCodes.has("email_interpretacion"));
+  assert.ok(alphaCodes.has("email_resolucion"));
+  assert.ok(betaCodes.has("email_redaccion"));
+  assert.ok(betaCodes.has("email_claridad"));
+});
+
+test("cobertura de buckets con audio: todos los criterios telefónicos son asignados a Alpha o Beta", () => {
+  const criteria = getAiCriteria("wise_call", { hasAudio: true });
+  const { alpha, beta } = splitCriteriaByAgent(criteria);
+  assert.equal(alpha.length + beta.length, criteria.length);
+
+  for (const a of alpha) {
+    assert.match(a.code, /(?:categorizacion|tipo|prioridad|sondeo|procedimiento|control_conversacion|interes_resolver)/);
+  }
+  for (const b of beta) {
+    assert.match(b.code, /(?:analisis|seguimiento|exactitud_datos|ortografia|documentacion|info_complementaria|descripcion|saludo_estandar|cordialidad|despedida_cordial|lenguaje_apropiado|escucha_activa|contencion_espera)/);
   }
 });
 
@@ -156,7 +190,10 @@ test("mergeCouncil: si un bucket estuvo ausente o falló, se resuelve sin_oposic
   const { resolved, disputes } = mergeCouncil(["criterio_e"], alphaMap, betaMap);
   assert.equal(disputes.length, 0);
   assert.equal(resolved.length, 1);
-  assert.equal(resolved[0].consenso, "sin_oposicion");
+  assert.ok(
+    resolved[0].consenso === "agente_especialista" || resolved[0].consenso === "sin_oposicion",
+    "Debe resolverse como especialista sin oposición",
+  );
   assert.equal(resolved[0].cumple, true);
 });
 

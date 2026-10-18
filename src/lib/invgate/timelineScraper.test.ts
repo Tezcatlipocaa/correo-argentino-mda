@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseInvgateTimelineHtml, isInvgateLoginPage } from "./timelineScraper";
+import { parseInvgateTimelineHtml, isInvgateLoginPage, isRelevantTimelineLog } from "./timelineScraper";
 
 const SAMPLE_INVGATE_HTML = `
 <!DOCTYPE html>
@@ -83,10 +83,10 @@ const SAMPLE_INVGATE_HTML = `
 </html>
 `;
 
-test("parseInvgateTimelineHtml extrae comentarios, notas internas, soluciones y logs en orden cronológico ascendente", () => {
+test("parseInvgateTimelineHtml extrae comentarios, notas internas, soluciones y logs relevantes en orden cronológico ascendente", () => {
   const entries = parseInvgateTimelineHtml(SAMPLE_INVGATE_HTML);
 
-  assert.equal(entries.length, 5, "Debe ignorar activity-message--form y extraer los 5 eventos reales");
+  assert.equal(entries.length, 4, "Debe ignorar activity-message--form y descartar cambios de estado de espera");
 
   // Deben quedar ordenados del más antiguo (abajo en el DOM: categoría, luego tipo) al más reciente (12:52)
   assert.equal(entries[0].timestamp, 1791990689);
@@ -106,6 +106,23 @@ test("parseInvgateTimelineHtml extrae comentarios, notas internas, soluciones y 
   assert.equal(solEntry.author, "Camila Cuello");
   assert.match(solEntry.text, /@L\. L\. Castillo se le indica que no hay problemas/);
   assert.doesNotMatch(solEntry.text, /evil\(\)/, "Debe eliminar tags <script> embebidos");
+});
+
+test("isRelevantTimelineLog descarta ruido operativo y preserva cambios de categoría, tipo, mesa y campos personalizados", () => {
+  // Ruido descartado
+  assert.equal(isRelevantTimelineLog("C. Cuello cambió el estado de espera a Esperando confirmación de solución"), false);
+  assert.equal(isRelevantTimelineLog("C. Cuello cambió el estado de En espera a Solucionado"), false);
+  assert.equal(isRelevantTimelineLog("Sistema cambió el estado de Abierto a En espera"), false);
+  assert.equal(isRelevantTimelineLog("C. Cuello solicitó la Confirmación de Solución"), false);
+  assert.equal(isRelevantTimelineLog("C. Cuello marcó Respuesta #3 como solución"), false);
+  assert.equal(isRelevantTimelineLog("A. Graneros asignó a C. Cuello como agente"), false);
+  assert.equal(isRelevantTimelineLog("Sistema agregó SLA Resolución por cambios en la solicitud"), false);
+
+  // Datos críticos preservados
+  assert.equal(isRelevantTimelineLog("C. Cuello cambió la categoría de Solicitudes rechazadas a Netterm- Consulta"), true);
+  assert.equal(isRelevantTimelineLog("M. Dominguez cambió el tipo de Incidente a Pedido de servicio"), true);
+  assert.equal(isRelevantTimelineLog("C. Cuello agregó Contacto telefónico 11111"), true);
+  assert.equal(isRelevantTimelineLog("Sistema asignó a Soporte Técnico TI Nivel 1 como mesa de ayuda"), true);
 });
 
 test("isInvgateLoginPage detecta si el HTML devuelto corresponde a la pantalla de login / SAML", () => {

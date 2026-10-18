@@ -44,8 +44,30 @@ export function isInvgateLoginPage(html: string): boolean {
   );
 }
 
+export function isRelevantTimelineLog(text: string): boolean {
+  const t = text.toLowerCase();
+
+  // Descartar ruido operativo que no aporta evidencia a las rúbricas de calidad:
+  if (
+    t.includes("cambió el estado de espera") ||
+    t.includes("cambió el estado de ") ||
+    t.includes("solicitó la confirmación de solución") ||
+    t.includes("marcó respuesta") ||
+    t.includes("agregó sla") ||
+    t.includes("agregó el acuerdo de nivel de servicio") ||
+    t.includes("asignó a ") && t.includes("como agente") ||
+    t.includes("desasignó a ") && t.includes("como agente") ||
+    t.includes("marcó como leído") ||
+    t.includes("vio la solicitud")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 /**
- * Extrae todos los comentarios, notas privadas, soluciones y eventos del historial de cambios
+ * Extrae todos los comentarios, notas privadas, soluciones y eventos relevantes del historial de cambios
  * de la sección #history del HTML de InvGate Service Management, ordenados cronológicamente (del más antiguo al más nuevo).
  */
 export function parseInvgateTimelineHtml(html: string): InvgateTimelineEntry[] {
@@ -78,7 +100,7 @@ export function parseInvgateTimelineHtml(html: string): InvgateTimelineEntry[] {
         /<div class="activity-log__content">([\s\S]*?)<\/div>\s*<div class="activity-log__expander">/,
       );
       const text = contentMatch ? cleanHtmlFragment(contentMatch[1]) : cleanHtmlFragment(part);
-      if (text) {
+      if (text && isRelevantTimelineLog(text)) {
         entries.push({
           kind: "log",
           timestamp,
