@@ -1,8 +1,8 @@
 ---
-import { Icon } from "astro-icon/components";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import AutomationBackLink from "./AutomationBackLink.astro";
 import AutomationLink from "./AutomationLink.astro";
 import AutomationEmptyState from "./AutomationEmptyState.astro";
@@ -148,30 +148,22 @@ const backlogMax = metrics
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <a
+            <ActionButton
               href={csvHref}
-              class="btn btn-ghost btn-sm gap-1"
               download
-            >
-              <Icon
-                name="boxicons:file-detail-filled"
-                size={16}
-                aria-hidden="true"
-              />
-              CSV
-            </a>
-            <a
+              variant="ghost"
+              size="sm"
+              icon="boxicons:file-detail-filled"
+              label="CSV"
+            />
+            <ActionButton
               href={pngHref}
-              class="btn btn-ghost btn-sm gap-1"
               download
-            >
-              <Icon
-                name="boxicons:image-alt-filled"
-                size={16}
-                aria-hidden="true"
-              />
-              PNG
-            </a>
+              variant="ghost"
+              size="sm"
+              icon="boxicons:image-alt-filled"
+              label="PNG"
+            />
           </div>
         </div>
 

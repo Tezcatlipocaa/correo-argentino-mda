@@ -87,33 +87,25 @@ const canEditManualData = canClose && detail !== null;
           {(canShowCloseButton || canReopen) && (
             <div class="ml-auto flex items-center gap-2">
               {canShowCloseButton && (
-                <button
+                <ActionButton
                   type="button"
-                  class="btn btn-secondary btn-sm gap-1"
+                  color="btn-secondary"
+                  size="sm"
+                  icon="boxicons:check-circle"
+                  label="Cerrar caso"
                   data-open-close-automation
-                >
-                  <Icon
-                    name="boxicons:check-circle"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  Cerrar caso
-                </button>
+                />
               )}
               {canReopen && (
-                <button
+                <ActionButton
                   type="button"
-                  class="btn btn-ghost btn-sm gap-1"
+                  variant="ghost"
+                  size="sm"
+                  icon="boxicons:refresh-cw"
+                  label="Reabrir"
                   data-reopen-automation
                   data-automation-id={detail.id}
-                >
-                  <Icon
-                    name="boxicons:refresh-cw"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  Reabrir
-                </button>
+                />
               )}
             </div>
           )}
@@ -225,14 +217,14 @@ const canEditManualData = canClose && detail !== null;
               </div>
               <div class="flex items-center gap-2">
                 {canEditManualData && (
-                  <button
+                  <ActionButton
                     type="button"
-                    class="btn btn-ghost btn-sm gap-1"
+                    variant="ghost"
+                    size="sm"
+                    icon="boxicons:edit"
+                    label="Editar datos"
                     data-open-edit-automation
-                  >
-                    <Icon name="boxicons:edit" size={16} aria-hidden="true" />
-                    Editar datos
-                  </button>
+                  />
                 )}
                 {invgateUrl && (
                   <ActionButton

@@ -1,10 +1,10 @@
 ---
-import { Icon } from "astro-icon/components";
 import type { AutomationSummary } from "@lib/workflow/discovery";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
-import AutomationLink from "./AutomationLink.astro";
 import AutomationEmptyState from "./AutomationEmptyState.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
+import { resolveUrl } from "@lib/url";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 
@@ -102,13 +102,14 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
             {formatEpochDateTime(item.createdAt)}
           </div>
           <div class="flex justify-end" data-label="Acciones">
-            <AutomationLink
-              automationId={item.id}
-              class="btn btn-ghost btn-xs gap-1"
-            >
-              Ver
-              <Icon name="boxicons:chevron-right" size={12} is:inline aria-hidden="true" />
-            </AutomationLink>
+            <ActionButton
+              href={resolveUrl(`/automatizaciones/${item.id}`)}
+              data-astro-prefetch="hover"
+              variant="ghost"
+              size="xs"
+              icon="boxicons:chevron-right"
+              label="Ver"
+            />
           </div>
         </div>
       ))}
