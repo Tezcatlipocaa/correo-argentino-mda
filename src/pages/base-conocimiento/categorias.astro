@@ -288,9 +288,7 @@ const canViewReportesCategorias = hasPermission(
             placeholder="Ej: Redes"
             class="flex-1"
           />
-          <button type="submit" class="btn btn-primary"
-            >Agregar categoría</button
-          >
+          <ActionButton type="submit" color="btn-primary" label="Agregar categoría" />
         </form>
 
         <ul data-kb-categories-list class="divide-base-300 divide-y">
@@ -351,9 +349,12 @@ const canViewReportesCategorias = hasPermission(
                         maxlength={60}
                         size="sm"
                       />
-                      <button type="submit" class="btn btn-sm btn-primary">
-                        Guardar {categoria.name}
-                      </button>
+                      <ActionButton
+                        type="submit"
+                        color="btn-primary"
+                        size="sm"
+                        label={`Guardar ${categoria.name}`}
+                      />
                       <a class="btn btn-sm" href={categoriasHref}>
                         Cancelar
                       </a>

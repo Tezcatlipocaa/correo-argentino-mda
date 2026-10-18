@@ -40,13 +40,13 @@ const hasMoreInitial = unassignedCount > limit;
         title="Usuarios sin Ubicación Asignada"
         description="Listado de personal registrado que no posee sucursal asignada en el sistema."
       />
-      <a
+      <ActionButton
         href={`${import.meta.env.BASE_URL}admin`}
-        class="btn btn-ghost btn-sm gap-2"
-      >
-        <Icon name="boxicons:arrow-left-stroke-filled" size={18} />
-        Volver a Administración
-      </a>
+        icon="boxicons:arrow-left-stroke-filled"
+        label="Volver a Administración"
+        variant="ghost"
+        size="sm"
+      />
     </div>
 
     {

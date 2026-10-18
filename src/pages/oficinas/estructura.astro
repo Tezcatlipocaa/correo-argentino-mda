@@ -5,7 +5,7 @@ import MetricsHeader from "@components/ui/MetricsHeader.astro";
 import OfficeTreeCanvas from "@components/oficinas/estructura/OfficeTreeCanvas";
 import { getOfficeStructureTree } from "@lib/offices/structure-tree";
 import { getCleanBase } from "@lib/baseUrl";
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 const cleanBase = getCleanBase();
 const tree = await getOfficeStructureTree();
@@ -20,14 +20,14 @@ const tree = await getOfficeStructureTree();
       description="Visualización jerárquica de regiones, provincias, complejos edilicios y unidades operativas de Correo Argentino."
     >
       <Fragment slot="actions">
-        <a
+        <ActionButton
           href={`${cleanBase}oficinas/estadisticas`}
-          class="btn btn-outline btn-sm gap-2"
+          icon="boxicons:bar-chart-big"
+          label="Estadísticas"
+          variant="outline"
+          size="sm"
           title="Ver estadísticas consolidadas de la red"
-        >
-          <Icon name="boxicons:bar-chart-big" size={18} />
-          <span>Estadísticas</span>
-        </a>
+        />
       </Fragment>
     </MetricsHeader>
 
