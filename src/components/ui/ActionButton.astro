@@ -15,8 +15,12 @@ interface Props {
   color?: string;
   variant?: "solid" | "soft" | "outline" | "ghost";
   ghost?: boolean;
+  circle?: boolean;
+  square?: boolean;
+  block?: boolean;
+  active?: boolean;
   iconClass?: string;
-  type?: "button" | "submit";
+  type?: "button" | "submit" | "reset";
   formId?: string;
   grow?: boolean;
   newTab?: boolean;
@@ -24,6 +28,7 @@ interface Props {
   disabled?: boolean;
   tooltip?: string;
   tooltipPosition?: "top" | "right" | "bottom" | "left";
+  buttonProps?: Record<string, any>;
   class?: string;
   [key: string]: any;
 }
@@ -42,6 +47,10 @@ const {
   color = "btn-secondary",
   variant,
   ghost = false,
+  circle = false,
+  square = false,
+  block = false,
+  active = false,
   iconClass,
   type = "button",
   formId,
@@ -52,6 +61,7 @@ const {
   tooltip,
   tooltipPosition = "top",
   class: className = "",
+  buttonProps,
   ...attrs
 } = Astro.props;
 
@@ -83,6 +93,10 @@ const btnClasses = [
   "btn group",
   sizeMap[size] || sizeMap.default,
   variantClass,
+  circle && "btn-circle",
+  square && "btn-square",
+  block && "btn-block",
+  active && "btn-active",
   grow && "grow",
   "gap-2",
   disabled && "btn-disabled",
@@ -109,7 +123,7 @@ const canRenderAnchor = Boolean(href) && !disabled;
       title={title}
       {...attrs}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} />}
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} aria-hidden="true" is:inline />}
       {shortLabel && (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
@@ -119,6 +133,7 @@ const canRenderAnchor = Boolean(href) && !disabled;
         </>
       )}
       {!shortLabel && label && <span id={labelId}>{label}</span>}
+      <slot />
     </a>
   ) : (
     <button
@@ -131,8 +146,9 @@ const canRenderAnchor = Boolean(href) && !disabled;
       aria-label={ariaLabel}
       title={title}
       {...attrs}
+      {...buttonProps}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} />}
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} aria-hidden="true" is:inline />}
       {shortLabel && (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
@@ -142,6 +158,7 @@ const canRenderAnchor = Boolean(href) && !disabled;
         </>
       )}
       {!shortLabel && label && <span id={labelId}>{label}</span>}
+      <slot />
     </button>
   )
 }
