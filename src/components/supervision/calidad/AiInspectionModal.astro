@@ -12,8 +12,9 @@ const { id = "modal-ai-inspection" } = Astro.props;
 <Modal
   id={id}
   size="2xl"
+  variant="side"
   fixedFooter
-  class="border-base-200 border shadow-xl"
+  class="border-base-300 border-l shadow-2xl"
 >
   <div slot="content" class="space-y-5">
     <!-- Encabezado con gradiente sutil azul institucional y blanco -->
@@ -25,7 +26,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
           <div
             class="bg-secondary text-secondary-content flex size-10 shrink-0 items-center justify-center rounded-xl shadow-xs"
           >
-            <Icon name="boxicons:magic-wand" size={20} aria-hidden="true" />
+            <Icon name="boxicons:sparkles" size={20} aria-hidden="true" />
           </div>
           <div class="min-w-0">
             <h2
@@ -202,6 +203,54 @@ const { id = "modal-ai-inspection" } = Astro.props;
         >
           —
         </p>
+      </div>
+
+      <!-- Sugerencia Destacada de Reclamo / Novedad -->
+      <div
+        id="ai-modal-reclamo-banner"
+        class="hidden flex-col gap-2.5 rounded-xl border border-warning/30 bg-warning/10 p-4 text-xs sm:text-sm"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start gap-2.5">
+            <Icon
+              name="boxicons:badge-check"
+              size={20}
+              class="text-warning mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            <div class="space-y-1">
+              <strong class="text-base-content font-bold">
+                Atención identificada como Reclamo o Novedad
+              </strong>
+              <p
+                id="ai-modal-reclamo-evidence"
+                class="text-base-content/80 text-xs italic"
+              ></p>
+              <p class="text-base-content/70 text-xxs sm:text-xs">
+                La conmutación asigna el 100% directo a la Sección 2 (Gestión del Ticket MDA) sin penalizaciones.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            id="ai-modal-btn-switch-reclamo"
+            class="btn btn-xs sm:btn-sm btn-warning shrink-0 gap-1.5 rounded-lg font-bold shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/60"
+          >
+            <Icon name="boxicons:checks" size={15} aria-hidden="true" />
+            <span>Conmutar a Reclamo (+100%)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tickets InvGate Detectados en la Interacción -->
+      <div
+        id="ai-modal-tickets-container"
+        class="hidden flex-col gap-2 rounded-xl border border-base-200 bg-base-200/30 p-3 text-xs"
+      >
+        <span class="text-base-content/75 font-semibold">
+          Tickets InvGate mencionados en el audio o correo:
+        </span>
+        <div id="ai-modal-tickets-list" class="flex flex-wrap items-center gap-2"></div>
       </div>
 
       <!-- Barra de control de lista de criterios -->

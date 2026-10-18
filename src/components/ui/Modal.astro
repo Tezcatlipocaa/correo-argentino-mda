@@ -6,6 +6,7 @@ interface Props {
   title?: string;
   icon?: string;
   size?: "sm" | "md" | "lg" | "xl" | "full" | "2xl" | "3xl";
+  variant?: "center" | "side";
   zIndex?: string;
   titleClass?: string;
   class?: string;
@@ -27,12 +28,15 @@ const {
   title,
   icon,
   size = "md",
+  variant = "center",
   zIndex,
   titleClass,
   class: className,
   actionsFooter = false,
   fixedFooter = false,
 } = Astro.props;
+
+const isSide = variant === "side";
 
 const sizeClasses: Record<string, string> = {
   sm: "max-w-sm",
@@ -46,10 +50,21 @@ const sizeClasses: Record<string, string> = {
 };
 ---
 
-<dialog {id} class:list={["modal modal-bottom sm:modal-middle", zIndex]}>
+<dialog
+  {id}
+  class:list={[
+    "modal",
+    isSide
+      ? "modal-end items-stretch justify-end p-0 overflow-hidden"
+      : "modal-bottom sm:modal-middle",
+    zIndex,
+  ]}
+>
   <div
     class:list={[
-      "modal-box w-11/12 sm:w-full",
+      isSide
+        ? "modal-box h-full max-h-none rounded-none sm:rounded-l-2xl sm:h-full w-full m-0"
+        : "modal-box w-11/12 sm:w-full",
       fixedFooter ? "flex flex-col overflow-hidden p-0" : "scrollbar-hide",
       sizeClasses[size],
       className,

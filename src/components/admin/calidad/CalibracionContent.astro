@@ -1,0 +1,1699 @@
+---
+import { db } from "@db/index";
+import { qualityAudits, auditScores, auditParameters, agents } from "@db/schema";
+import { eq, desc } from "drizzle-orm";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import { Icon } from "astro-icon/components";
+import {
+  evaluateGroundTruth,
+  calculateCalibrationMetrics,
+  type AuditEvaluationInput,
+  type AuditScoreRow,
+  type AuditParameterRow,
+} from "@lib/calidad/groundTruthComparator";
+import { getResolvedSearchParams } from "@lib/navigation";
+import { getCleanBase } from "@lib/baseUrl";
+import { summarizeCalibration } from "@lib/calidad/calibrationSummary";
+import type { QualityAiSnapshot } from "@/types/quality";
+import { parseRubricsMap } from "@lib/ai/rubricsLoader";
+import { extractCalibrationMetadata } from "@lib/calidad/rubricValidator";
+import { cleanModelName } from "@lib/calidad/coachingFormatter";
+
+const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
+const currentMonthParam = searchParams.get("month");
+const channelFilter = searchParams.get("channel") || "all";
+const cleanBase = getCleanBase();
+
+// 1. Obtener meses disponibles
+const allMonthsQuery = await db
+  .selectDistinct({ month: qualityAudits.month })
+  .from(qualityAudits)
+  .orderBy(desc(qualityAudits.month));
+
+const availableMonths = allMonthsQuery.map((m) => m.month).filter(Boolean);
+const selectedMonth = currentMonthParam || availableMonths[0] || "10-2026";
+
+// 2. Cargar parámetros activos de la DB (Fuente de verdad)
+const rawParameters = await db.select().from(auditParameters);
+const parameters: AuditParameterRow[] = rawParameters.map((p) => ({
+  id: p.id,
+  code: p.code,
+  name: p.name,
+  section: p.section,
+  channel: p.channel,
+}));
+
+// 3. Consultar auditorías con snapshot del mes
+const rawAudits = await db
+  .select({
+    id: qualityAudits.id,
+    date: qualityAudits.date,
+    channelType: qualityAudits.channelType,
+    ticketId: qualityAudits.ticketId,
+    callId: qualityAudits.callId,
+    isReclamoNovedad: qualityAudits.isReclamoNovedad,
+    appliesMda: qualityAudits.appliesMda,
+    aiSnapshot: qualityAudits.aiSnapshot,
+    operatorName: agents.name,
+  })
+  .from(qualityAudits)
+  .leftJoin(agents, eq(qualityAudits.agentId, agents.id))
+  .where(eq(qualityAudits.month, selectedMonth));
+
+// Filtrar canal si aplica
+const filteredAudits = channelFilter === "all"
+  ? rawAudits
+  : rawAudits.filter((a) => a.channelType === channelFilter);
+
+const auditInputs: AuditEvaluationInput[] = filteredAudits.map((a) => {
+  let parsedSnap: QualityAiSnapshot | null = null;
+  if (a.aiSnapshot) {
+    try {
+      parsedSnap = JSON.parse(a.aiSnapshot);
+    } catch {}
+  }
+  return {
+    id: a.id,
+    date: a.date,
+    channelType: a.channelType,
+    ticketId: a.ticketId,
+    callId: a.callId,
+    operatorName: a.operatorName || `ID ${a.id}`,
+    isReclamoNovedad: Boolean(a.isReclamoNovedad),
+    appliesMda: Boolean(a.appliesMda),
+    aiSnapshot: parsedSnap,
+  };
+});
+
+// 4. Cargar scores para las auditorías recuperadas
+const auditIds = auditInputs.map((a) => a.id);
+let rawScores: AuditScoreRow[] = [];
+if (auditIds.length > 0) {
+  const scoresDb = await db.select().from(auditScores);
+  const auditIdSet = new Set(auditIds);
+  rawScores = scoresDb
+    .filter((s) => auditIdSet.has(s.auditId))
+    .map((s) => ({
+      auditId: s.auditId,
+      parameterId: s.parameterId,
+      score: Boolean(s.score),
+      comment: s.comment,
+    }));
+}
+
+// 5. Ejecutar comparador determinista
+const discrepancies = evaluateGroundTruth(auditInputs, rawScores, parameters);
+const metrics = calculateCalibrationMetrics(discrepancies);
+
+const totalAuditsWithAi = auditInputs.filter((a) => a.aiSnapshot).length;
+const totalDiscrepancies = discrepancies.filter(
+  (d) => d.classification === "falso_positivo" || d.classification === "falso_negativo",
+).length;
+
+// 6. Cargar mapa canónico de rúbricas server-side (Fuente única en rubricas-calidad.md) (Z4)
+const rubricsMap = parseRubricsMap();
+const rubricsCache: Record<string, { block: string; lastCalibrated?: string; calibrationInfo?: string }> = {};
+
+for (const [code, block] of rubricsMap.entries()) {
+  const meta = extractCalibrationMetadata(block);
+  rubricsCache[code] = {
+    block,
+    lastCalibrated: meta?.date,
+    calibrationInfo: meta?.info,
+  };
+}
+
+const calibratedCriteriaCount = Object.values(rubricsCache).filter((r) => r.lastCalibrated).length;
+
+// Resumen estadístico puro Macro vs Micro (Q1, Q2, Q5, Q6)
+const summary = summarizeCalibration(metrics, totalAuditsWithAi, calibratedCriteriaCount);
+
+// Cache de métricas por código para contexto de desvío FP/FN en modal (Q3)
+const metricsByCode: Record<string, { fp: number; fn: number; total: number; rate: number | null }> = {};
+for (const m of metrics) {
+  metricsByCode[m.criterionCode] = {
+    fp: m.falsePositiveCount,
+    fn: m.falseNegativeCount,
+    total: m.totalEvaluated,
+    rate: m.agreementRate,
+  };
+}
+// Mapeo de canal y sección por código de parámetro
+const paramMetaMap = new Map<string, { channel: string; section: string }>();
+for (const p of parameters) {
+  paramMetaMap.set(p.code, { channel: p.channel, section: p.section });
+}
+
+// Grupos jerárquicos de canales y secciones para la matriz
+const channelDisplayOrder = [
+  {
+    key: "wise_call",
+    label: "Llamadas Wise",
+    icon: "boxicons:phone",
+    sections: [
+      { key: "items", label: "1. Interacción en llamada", badge: "Sección 1" },
+      { key: "ticket", label: "2. Gestión del Ticket", badge: "Sección 2" },
+    ],
+  },
+  {
+    key: "wise_email",
+    label: "Mails Wise",
+    icon: "boxicons:envelope",
+    sections: [
+      { key: "items", label: "1. Gestión del correo y respuesta", badge: "Sección 1" },
+      { key: "mda", label: "2. Registro del ticket en MDA", badge: "Sección 2" },
+    ],
+  },
+  {
+    key: "invgate_ticket",
+    label: "Autogestiones",
+    icon: "boxicons:ticket",
+    sections: [
+      { key: "items", label: "1. Gestión de la solicitud", badge: "Sección 1" },
+      { key: "mda", label: "2. Ítems de categoría MDA", badge: "Sección 2" },
+    ],
+  },
+];
+
+// Indexar métricas por canal y sección
+const metricsByChannelAndSection: Record<string, Record<string, typeof metrics>> = {};
+for (const ch of channelDisplayOrder) {
+  metricsByChannelAndSection[ch.key] = {};
+  for (const sec of ch.sections) {
+    metricsByChannelAndSection[ch.key][sec.key] = [];
+  }
+}
+
+for (const m of metrics) {
+  const meta = paramMetaMap.get(m.criterionCode);
+  const ch = meta?.channel || "wise_call";
+  const sec = meta?.section || "items";
+
+  if (!metricsByChannelAndSection[ch]) {
+    metricsByChannelAndSection[ch] = {};
+  }
+  if (!metricsByChannelAndSection[ch][sec]) {
+    metricsByChannelAndSection[ch][sec] = [];
+  }
+  metricsByChannelAndSection[ch][sec].push(m);
+}
+
+// Cache de métricas y rúbricas serializado para cliente
+const safeMetricsJson = JSON.stringify(metricsByCode).replace(/</g, "\\u003c");
+const safeRubricsJson = JSON.stringify(rubricsCache).replace(/</g, "\\u003c");
+---
+
+<PageContainer width="xxl">
+  <div class="mb-1">
+    <a
+      href={`${cleanBase}supervision/calidad-operadores?month=${selectedMonth}`}
+      class="btn btn-ghost btn-xs text-base-content/70 hover:text-base-content gap-1.5 -ml-2"
+    >
+      <Icon name="boxicons:arrow-left" size={16} />
+      <span>Volver a Calidad de Operadores</span>
+    </a>
+  </div>
+
+  <PageHeader
+    title="Calibración de Calidad IA (Ground Truth)"
+    description="Cotejo empírico entre veredictos generados por IA y las decisiones convalidadas por supervisores humanos para calibrar rúbricas y detectar desvíos."
+  />
+
+  <!-- Tarjetas KPI de Resumen Ejecutivo (Q1, Q2, Q6) -->
+  <div class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <!-- Card 1: Macro-Promedio (Por Rúbrica) -->
+    <div class="rounded-2xl border border-base-200 bg-base-100 p-4 shadow-xs">
+      <div class="flex items-center justify-between text-base-content/80 text-xs font-bold">
+        <span>Acuerdo Macro</span>
+        <span class="badge badge-xs badge-ghost font-medium">Por Rúbrica</span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-2">
+        <span class:list={[
+          "text-2xl font-bold font-mono tabular-nums",
+          summary.macroHealthStatus === "healthy" ? "text-success" :
+          summary.macroHealthStatus === "warning" ? "text-warning" :
+          summary.macroHealthStatus === "critical" ? "text-error" : "text-base-content/50",
+        ]}>
+          {summary.macroAgreementRate !== null ? `${summary.macroAgreementRate} %` : "—"}
+        </span>
+      </div>
+      <p class="mt-1 text-xs text-base-content/75 font-medium">
+        {summary.macroAgreementRate !== null ? "Promedio no ponderado de criterios" : "Sin evaluaciones en scope"}
+      </p>
+    </div>
+
+    <!-- Card 2: Micro-Promedio (Ponderado por Casos) -->
+    <div class="rounded-2xl border border-base-200 bg-base-100 p-4 shadow-xs">
+      <div class="flex items-center justify-between text-base-content/80 text-xs font-bold">
+        <span>Acuerdo Micro</span>
+        <span class="badge badge-xs badge-ghost font-medium">Ponderado</span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-2">
+        <span class:list={[
+          "text-2xl font-bold font-mono tabular-nums",
+          summary.microHealthStatus === "healthy" ? "text-success" :
+          summary.microHealthStatus === "warning" ? "text-warning" :
+          summary.microHealthStatus === "critical" ? "text-error" : "text-base-content/50",
+        ]}>
+          {summary.microAgreementRate !== null ? `${summary.microAgreementRate} %` : "—"}
+        </span>
+      </div>
+      <p class="mt-1 text-xs text-base-content/75 font-medium">
+        {summary.totalEvaluatedCases > 0 ? `${summary.totalAgreements} de ${summary.totalEvaluatedCases} casos coincidentes` : "Sin casos evaluables"}
+      </p>
+    </div>
+
+    <!-- Card 3: Desvíos Detectados (FP y FN) -->
+    <div class="rounded-2xl border border-base-200 bg-base-100 p-4 shadow-xs">
+      <div class="flex items-center justify-between text-base-content/80 text-xs font-bold">
+        <span>Desvíos Totales</span>
+        <span class="badge badge-xs badge-ghost font-medium">Riesgo IA</span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-3">
+        <div class="flex items-baseline gap-1" title="Falsos Positivos (IA aprobó erróneamente)">
+          <span class="text-2xl font-bold font-mono tabular-nums text-error">{summary.totalFalsePositives}</span>
+          <span class="text-xs font-bold text-error">FP</span>
+        </div>
+        <span class="text-base-content/50 font-mono">/</span>
+        <div class="flex items-baseline gap-1" title="Falsos Negativos (IA penalizó indebidamente)">
+          <span class="text-2xl font-bold font-mono tabular-nums text-warning">{summary.totalFalseNegatives}</span>
+          <span class="text-xs font-bold text-warning">FN</span>
+        </div>
+      </div>
+      <p class="mt-1 text-xs text-base-content/75 font-medium">
+        Discrepancias activas en el período
+      </p>
+    </div>
+
+    <!-- Card 4: Criterios Calibrados (Q6) -->
+    <div class="rounded-2xl border border-base-200 bg-base-100 p-4 shadow-xs">
+      <div class="flex items-center justify-between text-base-content/80 text-xs font-bold">
+        <span>Criterios Calibrados</span>
+        <span class="badge badge-xs badge-ghost font-medium">Canónico</span>
+      </div>
+      <div class="mt-2 flex items-baseline gap-1.5">
+        <span class="text-2xl font-bold font-mono tabular-nums text-secondary">
+          {summary.calibratedCriteriaCount}
+        </span>
+        <span class="text-base-content/70 font-mono text-sm font-semibold">/ {summary.totalCriteriaCount}</span>
+      </div>
+      <p class="mt-1 text-xs text-base-content/75 font-medium">
+        Con marcador canónico vigente
+      </p>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros de Período y Canal -->
+  <div class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-base-200 bg-base-100 p-4 shadow-xs">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2">
+        <label for="filter-month" class="text-xs font-bold text-base-content/70">Período:</label>
+        <select
+          id="filter-month"
+          class="select select-sm select-bordered rounded-xl font-mono font-medium text-xs"
+        >
+          {availableMonths.map((m) => (
+            <option value={m} selected={m === selectedMonth}>{m}</option>
+          ))}
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label for="filter-channel" class="text-xs font-bold text-base-content/70">Canal:</label>
+        <select
+          id="filter-channel"
+          class="select select-sm select-bordered rounded-xl text-xs"
+        >
+          <option value="all" selected={channelFilter === "all"}>Todos los canales</option>
+          <option value="wise_call" selected={channelFilter === "wise_call"}>Llamadas Wise CX</option>
+          <option value="wise_email" selected={channelFilter === "wise_email"}>Mails Wise CX</option>
+          <option value="invgate_ticket" selected={channelFilter === "invgate_ticket"}>Autogestiones InvGate</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 text-xs">
+      <span class="badge badge-secondary/15 font-semibold text-secondary border-0">
+        {totalAuditsWithAi} auditorías con IA
+      </span>
+      <span class="badge badge-warning/15 font-semibold text-warning border-0">
+        {totalDiscrepancies} discrepancias registradas
+      </span>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: DRILL-DOWN DE DISCREPANCIAS (Valor Clave para Gobernanza) -->
+  <section class="mt-8 space-y-4">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-lg font-bold text-base-content">Drill-Down de Discrepancias</h2>
+        <p class="text-xs text-base-content/60">
+          Casos donde la IA y el supervisor discreparon. Usá estos registros como evidencia para justificar cambios en <code>rubricas-calidad.md</code>.
+        </p>
+      </div>
+
+      <!-- Buscador en Vivo -->
+      <div class="w-full sm:w-72 shrink-0">
+        <input
+          id="search-discrepancies"
+          type="search"
+          placeholder="Buscar ticket, criterio u operador..."
+          class="input input-sm input-bordered w-full rounded-xl text-xs"
+        />
+      </div>
+    </div>
+
+    <!-- Barra de Filtros por Clasificación -->
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
+      <div class="flex flex-wrap items-center gap-1.5" id="discrepancy-filter-pills">
+        <button
+          type="button"
+          class="filter-pill-btn btn btn-xs btn-secondary btn-active rounded-lg font-semibold"
+          data-filter="discrepancias"
+        >
+          <span>Solo Discrepancias</span>
+          <span class="badge badge-xs bg-base-100 text-secondary border-0 font-bold tabular-nums ml-1">
+            {totalDiscrepancies}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="filter-pill-btn btn btn-xs btn-ghost text-error hover:bg-error/15 rounded-lg font-semibold"
+          data-filter="falso_positivo"
+        >
+          <span>Falsos Positivos ({summary.totalFalsePositives})</span>
+        </button>
+        <button
+          type="button"
+          class="filter-pill-btn btn btn-xs btn-ghost text-warning hover:bg-warning/15 rounded-lg font-semibold"
+          data-filter="falso_negativo"
+        >
+          <span>Falsos Negativos ({summary.totalFalseNegatives})</span>
+        </button>
+        <button
+          type="button"
+          class="filter-pill-btn btn btn-xs btn-ghost text-base-content/70 hover:bg-base-200 rounded-lg font-semibold"
+          data-filter="acuerdo"
+        >
+          <span>Acuerdos ({summary.totalAgreements})</span>
+        </button>
+        <button
+          type="button"
+          class="filter-pill-btn btn btn-xs btn-ghost text-base-content/70 hover:bg-base-200 rounded-lg font-semibold"
+          data-filter="all"
+        >
+          <span>Todos ({discrepancies.length})</span>
+        </button>
+      </div>
+
+      <span id="discrepancies-visible-count" class="text-xs font-mono font-medium text-base-content/75">
+        Mostrando discrepancias
+      </span>
+    </div>
+
+    {discrepancies.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-base-300 bg-base-100 p-8 text-center text-base-content/75">
+        <Icon name="boxicons:info-circle" size={32} class="mx-auto text-base-content/50 mb-2" />
+        <p class="text-sm font-semibold">No se encontraron auditorías con snapshot IA para el período seleccionado.</p>
+        <p class="text-xs mt-1">Asegurate de haber evaluado y guardado auditorías utilizando el Asistente IA.</p>
+      </div>
+    ) : (
+      <div class="overflow-x-auto rounded-2xl border border-base-200 bg-base-100 shadow-xs">
+        <table class="table table-sm">
+          <thead>
+            <tr class="border-b border-base-200 text-xs font-bold uppercase tracking-wider text-base-content/75">
+              <th>Fecha / Caso</th>
+              <th>Operador</th>
+              <th>Criterio</th>
+              <th>Veredicto IA</th>
+              <th>Decisión Supervisor</th>
+              <th>Clasificación</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-base-200 text-xs">
+            {discrepancies.map((d) => {
+              const isFp = d.classification === "falso_positivo";
+              const isFn = d.classification === "falso_negativo";
+              const isAcuerdo = d.classification === "acuerdo";
+              const isSinEv = d.classification === "sin_evidencia";
+              const isScope = d.classification === "fuera_de_scope";
+
+              let badgeClass = "badge-neutral";
+              let label = "Acuerdo";
+              if (isFp) {
+                badgeClass = "badge-error";
+                label = "Falso Positivo (FP)";
+              } else if (isFn) {
+                badgeClass = "badge-warning";
+                label = "Falso Negativo (FN)";
+              } else if (isSinEv) {
+                badgeClass = "badge-ghost";
+                label = "Sin Evidencia";
+              } else if (isScope) {
+                badgeClass = "badge-ghost opacity-60";
+                label = "Fuera de Scope";
+              }
+
+              return (
+                <tr
+                  class={`discrepancy-row ${isFp ? "bg-error/5" : isFn ? "bg-warning/5" : ""}`}
+                  data-classification={d.classification}
+                  data-search-text={`${d.date} ${d.ticketId || ""} ${d.callId || ""} ${d.operatorName} ${d.criterionName} ${d.criterionCode}`.toLowerCase()}
+                >
+                  <td class="font-mono whitespace-nowrap">
+                    <div class="font-semibold text-base-content">{d.date}</div>
+                    <div class="text-xs text-base-content/80 font-medium">
+                      {d.ticketId ? `Ticket #${d.ticketId}` : `Call ${d.callId}`}
+                    </div>
+                  </td>
+                  <td class="font-medium whitespace-nowrap text-base-content">{d.operatorName}</td>
+                  <td>
+                    <div class="font-semibold text-base-content">{d.criterionName}</div>
+                  </td>
+                  <td class="max-w-xs">
+                    <div class="flex items-center gap-1.5 font-bold">
+                      <span class={d.aiVerdict === true ? "text-success" : d.aiVerdict === false ? "text-error" : "text-base-content/70"}>
+                        {d.aiVerdict === true ? "Cumple" : d.aiVerdict === false ? "No cumple" : "Sin evidencia"}
+                      </span>
+                      <span class="font-mono text-xs opacity-80">({Math.round(d.aiConfidence * 100)}%)</span>
+                    </div>
+                    {d.aiEvidence && (
+                      <p class="mt-1 text-xs italic text-base-content/85 line-clamp-2">
+                        “{d.aiEvidence}”
+                      </p>
+                    )}
+                  </td>
+                  <td class="max-w-xs">
+                    {d.humanScore === null ? (
+                      <span class="text-base-content/50 italic font-medium">No aplicó</span>
+                    ) : (
+                      <div>
+                        <span class={`font-bold ${d.humanScore ? "text-success" : "text-error"}`}>
+                          {d.humanScore ? "Cumple" : "No cumple"}
+                        </span>
+                        {d.humanComment && (
+                          <p class="mt-1 text-xs text-base-content/85 line-clamp-2">
+                            {d.humanComment}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td class="whitespace-nowrap">
+                    <span class={`badge badge-sm font-semibold whitespace-nowrap leading-none h-auto min-h-5 py-1 px-2.5 ${badgeClass}`}>
+                      {label}
+                    </span>
+                  </td>
+                  <td class="text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        class="btn-copy-case btn btn-ghost btn-xs text-secondary hover:bg-secondary/10"
+                        data-case={JSON.stringify({
+                          criterio: d.criterionCode,
+                          nombre: d.criterionName,
+                          ia: d.aiVerdict ? "Cumple" : d.aiVerdict === false ? "No cumple" : "Sin evidencia",
+                          evidenciaIa: d.aiEvidence,
+                          humano: d.humanScore ? "Cumple" : "No cumple",
+                          comentarioHumano: d.humanComment || "Sin comentario",
+                          clasificacion: label,
+                          ticket: d.ticketId,
+                        })}
+                        title="Copiar evidencia para portapapeles rápido"
+                      >
+                        <Icon name="boxicons:copy" size={15} aria-hidden="true" />
+                        <span>Copiar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="btn-calibrate-criterio btn btn-outline btn-secondary btn-xs font-medium"
+                        data-criterion={d.criterionCode}
+                        data-criterion-name={d.criterionName}
+                        data-ticket={d.ticketId || ""}
+                        data-classification={label}
+                        data-ai-verdict={d.aiVerdict ? "Cumple" : d.aiVerdict === false ? "No cumple" : "Sin evidencia"}
+                        data-ai-evidence={d.aiEvidence || ""}
+                        data-human-verdict={d.humanScore ? "Cumple" : "No cumple"}
+                        data-human-comment={d.humanComment || ""}
+                        disabled={!rubricsCache[d.criterionCode]?.block}
+                        title={rubricsCache[d.criterionCode]?.block ? "Calibrar rúbrica de este criterio y ver diff" : "Rúbrica no registrada en rubricas-calidad.md"}
+                      >
+                        <Icon name="boxicons:slider-alt" size={15} aria-hidden="true" />
+                        <span>Calibrar</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <!-- SECCIÓN 2: MATRIZ DE CONFUSIÓN Y ACUERDO RESUMIDA -->
+  <section class="mt-10 space-y-4 mb-12">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-bold text-base-content">Matriz de Resumen y Acuerdo por Criterio</h2>
+          <span class="badge badge-ghost text-xs font-semibold">Tendencia indicativa</span>
+        </div>
+        <p class="text-xs text-base-content/75 font-medium">
+          Ordenado por mayor necesidad de calibración (más discrepancias primero).
+        </p>
+      </div>
+
+      <!-- Buscador en vivo de la matriz -->
+      <div class="w-full sm:w-64 shrink-0">
+        <input
+          id="search-matrix"
+          type="search"
+          placeholder="Buscar criterio o modelo..."
+          class="input input-sm input-bordered w-full rounded-xl text-xs"
+        />
+      </div>
+    </div>
+
+    {metrics.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-base-300 bg-base-100 p-6 text-center text-xs text-base-content/70">
+        Sin métricas disponibles.
+      </div>
+    ) : (
+      <div class="overflow-x-auto rounded-2xl border border-base-200 bg-base-100 shadow-xs" data-table-sort-root id="matrix-sort-root">
+        <table class="table table-sm">
+          <thead>
+            <tr class="border-b border-base-200 text-xs font-bold uppercase tracking-wider text-base-content/75">
+              <th>
+                <DataTableHeaderCell sortKey="criterion">Criterio</DataTableHeaderCell>
+              </th>
+              <th>
+                <DataTableHeaderCell sortKey="model">Modelo</DataTableHeaderCell>
+              </th>
+              <th class="text-center">
+                <DataTableHeaderCell sortKey="evaluated" align="right">N Evaluados</DataTableHeaderCell>
+              </th>
+              <th class="text-center">
+                <DataTableHeaderCell sortKey="agreement" align="right">% Acuerdo</DataTableHeaderCell>
+              </th>
+              <th class="text-center">
+                <DataTableHeaderCell sortKey="discrepancies" align="right">Discrepancias</DataTableHeaderCell>
+              </th>
+              <th class="text-center text-error font-bold">FP</th>
+              <th class="text-center text-warning font-bold">FN</th>
+              <th class="text-center text-base-content/70">Sin Evidencia</th>
+              <th class="text-center text-base-content/60">Fuera Scope</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-base-200 text-xs" data-table-sort-body>
+            {channelDisplayOrder.map((group) => {
+              const channelSections = group.sections.filter(
+                (sec) => (metricsByChannelAndSection[group.key]?.[sec.key] || []).length > 0,
+              );
+              if (channelSections.length === 0) return null;
+
+              return (
+                <>
+                  {channelSections.map((sec) => {
+                    const secMetrics = metricsByChannelAndSection[group.key]?.[sec.key] || [];
+
+                    return (
+                      <>
+                        <!-- Separador Plano de Sección -->
+                        <tr class="bg-base-200/50 border-y border-base-300 font-semibold text-xs text-base-content/90 select-none matrix-section-header">
+                          <td colspan="10" class="py-2.5 px-4">
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <Icon name={group.icon} size={16} class="text-secondary shrink-0" />
+                                <span class="font-bold">{group.label} &middot; {sec.label}</span>
+                              </div>
+                              <span class="text-xs font-mono text-base-content/70">
+                                {secMetrics.length === 1 ? "1 criterio" : `${secMetrics.length} criterios`}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+
+                        <!-- Filas de Criterios (Atenuadas si totalEvaluated < 5) -->
+                        {secMetrics.map((m) => {
+                          const discrepanciesCount = m.falsePositiveCount + m.falseNegativeCount;
+                          const isLowVolume = m.totalEvaluated < 5;
+
+                          return (
+                            <tr
+                              class:list={[
+                                "matrix-row hover:bg-base-200/40 transition-colors",
+                                isLowVolume && "opacity-75 hover:opacity-100",
+                              ]}
+                              data-table-row
+                              data-sort-criterion={m.criterionName}
+                              data-sort-model={m.model}
+                              data-sort-evaluated={String(m.totalEvaluated)}
+                              data-sort-agreement={String(m.agreementRate)}
+                              data-sort-discrepancies={String(discrepanciesCount)}
+                              data-search-text={`${m.criterionName} ${m.criterionCode} ${m.model}`.toLowerCase()}
+                            >
+                              <td>
+                                <div class="flex items-center gap-2">
+                                  <span class="font-semibold text-base-content">{m.criterionName}</span>
+                                  {rubricsCache[m.criterionCode]?.lastCalibrated && (
+                                    <span
+                                      class="badge badge-secondary/15 text-secondary border-0 font-mono text-xs font-medium"
+                                      title={`Última calibración: ${rubricsCache[m.criterionCode].lastCalibrated}. ${rubricsCache[m.criterionCode].calibrationInfo || ""}`}
+                                    >
+                                      Calibrado {rubricsCache[m.criterionCode].lastCalibrated}
+                                    </span>
+                                  )}
+                                  {isLowVolume && (
+                                    <span class="badge badge-ghost badge-sm text-xs font-mono text-base-content/70" title="Muestra reducida: menos de 5 casos evaluados">
+                                      N &lt; 5
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td class="font-mono text-xs text-base-content/80 font-medium">{cleanModelName(m.model) || m.model}</td>
+                              <td class="text-center font-bold tabular-nums">{m.totalEvaluated}</td>
+                              <td class="text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                  <progress
+                                    class:list={[
+                                      "progress w-14",
+                                      m.agreementRate >= 85 ? "progress-success" : m.agreementRate >= 70 ? "progress-warning" : "progress-error",
+                                    ]}
+                                    value={m.agreementRate}
+                                    max="100"
+                                  ></progress>
+                                  <span class="font-bold tabular-nums">{m.agreementRate}&nbsp;%</span>
+                                </div>
+                              </td>
+                              <td class="text-center font-bold tabular-nums">
+                                <span class:list={[
+                                  "badge badge-sm font-mono font-bold",
+                                  discrepanciesCount > 0 ? "badge-warning/20 text-warning" : "badge-ghost text-base-content/50",
+                                ]}>
+                                  {discrepanciesCount}
+                                </span>
+                              </td>
+                              <td class="text-center font-bold text-error tabular-nums">{m.falsePositiveCount}</td>
+                              <td class="text-center font-bold text-warning tabular-nums">{m.falseNegativeCount}</td>
+                              <td class="text-center font-medium text-base-content/75 tabular-nums">{m.sinEvidenciaCount}</td>
+                              <td class="text-center font-medium text-base-content/60 tabular-nums">{m.outOfScopeCount}</td>
+                              <td class="text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  class="btn-calibrate-from-summary btn btn-outline btn-secondary btn-xs font-medium"
+                                  data-criterion={m.criterionCode}
+                                  data-criterion-name={m.criterionName}
+                                  data-fp-count={m.falsePositiveCount}
+                                  data-fn-count={m.falseNegativeCount}
+                                  disabled={!rubricsCache[m.criterionCode]?.block}
+                                  title={rubricsCache[m.criterionCode]?.block ? "Calibrar rúbrica canónica de este criterio" : "Rúbrica no registrada en rubricas-calidad.md"}
+                                >
+                                  <Icon name="boxicons:slider-alt" size={15} aria-hidden="true" />
+                                  <span>Calibrar</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    );
+                  })}
+                </>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+</PageContainer>
+
+<!-- Cache de Rúbricas Canónicas serializado Server-Side (Z4, W4) -->
+<script id="rubrics-canonical-cache" type="application/json" set:html={safeRubricsJson}></script>
+<!-- Cache de Métricas de Criterio serializado Server-Side para Contexto Neutral (Q3) -->
+<script id="metrics-by-code-cache" type="application/json" set:html={safeMetricsJson}></script>
+
+<!-- MODAL DE CALIBRACIÓN Y DIFF CANÓNICO (Z1, Z3, Z6, Z7, W1) -->
+<dialog id="modal-calibrar-criterio" class="modal">
+  <div class="modal-box w-11/12 max-w-5xl rounded-2xl border border-base-200 bg-base-100 p-6 shadow-2xl">
+    <!-- Encabezado Modal -->
+    <div class="flex items-start justify-between border-b border-base-200 pb-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <Icon name="boxicons:slider-alt" size={20} class="text-secondary" />
+          <h3 class="text-base font-bold text-base-content">
+            Calibración Canónica de Rúbrica
+          </h3>
+          <span id="calib-badge-classification" class="badge badge-sm font-semibold whitespace-nowrap shrink-0 leading-none h-auto min-h-5 py-1 px-2.5"></span>
+        </div>
+        <p class="mt-1 text-xs text-base-content/70">
+          <span id="calib-meta-criterion-name" class="font-semibold"></span>
+          <span id="calib-meta-criterion-code" class="hidden"></span>
+          <span id="calib-meta-ticket-wrap" class="font-mono opacity-80"></span>
+        </p>
+      </div>
+      <button
+        type="button"
+        id="btn-close-calib-modal"
+        class="btn btn-sm btn-circle btn-ghost text-base-content/70"
+        aria-label="Cerrar modal"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Cuerpo del Modal: Split View (Asistente de Preguntas + Editor / Diff) -->
+    <div class="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- Panel Izquierdo: Preguntas Estructuradas de Gobernanza (5 cols) -->
+      <div class="lg:col-span-5 space-y-4 rounded-xl border border-base-300 bg-base-200/40 p-4 text-sm">
+        <div>
+          <h4 class="font-bold text-base-content text-sm flex items-center gap-1.5">
+            <Icon name="boxicons:slider" size={18} class="text-secondary" />
+            <span>Asistente de Gobernanza</span>
+          </h4>
+          <p class="text-xs text-base-content/80 mt-0.5">
+            Refina la regla y genera contraejemplos válidos para insertar en el bloque canónico.
+          </p>
+        </div>
+
+        <!-- Resumen Contextual del Caso -->
+        <div class="rounded-lg border border-base-300 bg-base-100 p-3 space-y-2 text-xs">
+          <div>
+            <strong class="text-base-content">Veredicto IA:</strong>
+            <span id="calib-context-ai-verdict" class="font-bold ml-1 text-xs"></span>
+            <p id="calib-context-ai-evidence" class="italic text-base-content/85 mt-0.5 line-clamp-2 text-xs"></p>
+          </div>
+          <div class="border-t border-base-200 pt-1.5">
+            <strong class="text-base-content">Decisión Supervisor:</strong>
+            <span id="calib-context-human-verdict" class="font-bold ml-1 text-xs"></span>
+            <p id="calib-context-human-comment" class="text-base-content/85 mt-0.5 line-clamp-2 text-xs"></p>
+          </div>
+        </div>
+
+        <!-- Pregunta 1: Diagnóstico (Q3: Neutral, no precargado, con contexto FP/FN) -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <label for="calib-input-diagnosis" class="font-bold text-base-content text-xs">
+              1. Diagnóstico del desvío:
+            </label>
+            <span id="calib-meta-trend-context" class="badge badge-xs badge-ghost font-mono hidden"></span>
+          </div>
+          <select
+            id="calib-input-diagnosis"
+            class="select select-bordered select-sm w-full rounded-lg text-xs font-medium"
+          >
+            <option value="" selected disabled>Seleccionar diagnóstico...</option>
+            <option value="falso_positivo">Falso Positivo (La IA aprobó cuando correspondía rechazar)</option>
+            <option value="falso_negativo">Falso Negativo (La IA rechazó cuando correspondía aprobar)</option>
+            <option value="malinterpretacion">Malinterpretación léxica / ambigüedad en regla actual</option>
+          </select>
+        </div>
+
+        <!-- Pregunta 2: Regla Refinada SI/PERO/ENTONCES -->
+        <div class="space-y-1">
+          <label for="calib-input-rule" class="font-bold text-base-content text-xs flex items-center justify-between">
+            <span>2. Regla causal (SI / PERO / ENTONCES):</span>
+          </label>
+          <textarea
+            id="calib-input-rule"
+            rows="3"
+            class="textarea textarea-bordered textarea-sm w-full rounded-lg font-mono text-xs leading-relaxed"
+            placeholder="SI ocurre [patrón] PERO [condición de negocio], ENTONCES el veredicto es [true/false]."
+          ></textarea>
+          <!-- Selector explícito de destino (Cumple vs No Cumple) -->
+          <div class="flex items-center gap-3 text-xs text-base-content/90 pt-1">
+            <span class="font-bold text-base-content/80">Destino:</span>
+            <label class="flex items-center gap-1.5 cursor-pointer font-medium">
+              <input type="radio" name="calib-rule-target" value="no_cumple" class="radio radio-xs radio-error" checked />
+              <span>Regla No Cumple</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer font-medium">
+              <input type="radio" name="calib-rule-target" value="cumple" class="radio radio-xs radio-success" />
+              <span>Regla Cumple / Excepción</span>
+            </label>
+          </div>
+          <div id="calib-rule-hint" class="text-xs text-base-content/75 italic hidden pt-0.5"></div>
+          <div id="calib-rule-error" class="text-xs text-error font-medium hidden pt-0.5"></div>
+        </div>
+
+        <!-- Pregunta 3: Contraejemplo Few-Shot con contadores reactivos (Z6) -->
+        <div class="space-y-2 border-t border-base-200 pt-3">
+          <div class="font-bold text-base-content text-xs flex items-center justify-between">
+            <span>3. Contraejemplo Few-Shot:</span>
+            <span class="text-xs text-base-content/70">Cotas canónicas</span>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label for="calib-input-evidence" class="text-base-content/80 font-medium">Evidencia textual (máx 160):</label>
+              <span id="calib-counter-evidence" class="font-mono tabular-nums text-base-content/75">0/160</span>
+            </div>
+            <textarea
+              id="calib-input-evidence"
+              rows="2"
+              maxlength="200"
+              class="textarea textarea-bordered textarea-sm w-full rounded-lg text-xs"
+              placeholder='Ej: "Cliente informa corte de fibra y ticket se cerró sin visita."'
+            ></textarea>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label for="calib-input-reasoning" class="text-base-content/80 font-medium">Razonamiento causal (máx 180):</label>
+              <span id="calib-counter-reasoning" class="font-mono tabular-nums text-base-content/75">0/180</span>
+            </div>
+            <textarea
+              id="calib-input-reasoning"
+              rows="2"
+              maxlength="220"
+              class="textarea textarea-bordered textarea-sm w-full rounded-lg text-xs"
+              placeholder='Ej: "Corte de enlace categorizado erróneamente sin justificación técnica."'
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Botón de Inserción asistida en el Textarea -->
+        <button
+          type="button"
+          id="btn-insert-suggestion"
+          class="btn btn-secondary btn-outline btn-sm w-full mt-2 font-medium"
+        >
+          <Icon name="boxicons:plus-circle" size={16} />
+          <span>Inyectar regla y contraejemplo en el bloque</span>
+        </button>
+      </div>
+
+      <!-- Panel Derecho: Textarea Canónico + Pestañas de Diff y Salida (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col space-y-3">
+        <!-- Pestañas de Vista -->
+        <div class="flex items-center justify-between border-b border-base-200 pb-2">
+          <div class="tabs tabs-boxed bg-base-200/50 p-1 rounded-xl">
+            <button
+              type="button"
+              id="tab-btn-block"
+              class="tab tab-sm tab-active font-semibold"
+            >
+              Bloque Canónico (§3)
+            </button>
+            <button
+              type="button"
+              id="tab-btn-diff"
+              class="tab tab-sm font-semibold"
+            >
+              Vista Diff
+            </button>
+            <button
+              type="button"
+              id="tab-btn-protocol"
+              class="tab tab-sm font-semibold"
+            >
+              Solicitud PR (§1)
+            </button>
+          </div>
+
+          <!-- Badge de Validación en Vivo -->
+          <div id="calib-validation-badge-wrap">
+            <span id="calib-validation-badge" class="badge badge-sm font-semibold badge-success">
+              Válido (7 claves OK)
+            </span>
+          </div>
+        </div>
+
+        <!-- Alerta de Errores de Validación -->
+        <div id="calib-validation-alert" class="hidden rounded-xl border border-error/30 bg-error/10 p-2.5 text-xs text-error">
+          <ul id="calib-validation-errors-list" class="list-disc list-inside space-y-0.5 text-xs"></ul>
+        </div>
+
+        <!-- Vista 1: Textarea del Bloque Canónico (Byte a Byte) (Z1, W1) -->
+        <div id="view-pane-block" class="flex-1 flex flex-col space-y-2">
+          <textarea
+            id="calib-block-textarea"
+            class="textarea textarea-bordered font-mono text-xs w-full h-80 rounded-xl leading-relaxed resize-none focus:outline-none focus:border-secondary"
+            spellcheck="false"
+          ></textarea>
+          <div class="flex items-center justify-between text-xs text-base-content/80">
+            <span>Editá directamente conservando la estructura de 7 claves.</span>
+            <button
+              type="button"
+              id="btn-copy-block"
+              class="btn btn-secondary btn-sm"
+            >
+              <Icon name="boxicons:copy" size={16} />
+              <span>Copiar Bloque Validado</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Vista 2: Diff Unificado Línea a Línea (W3, Z7) -->
+        <div id="view-pane-diff" class="hidden flex-1 flex flex-col space-y-2">
+          <div
+            id="calib-diff-container"
+            class="h-80 overflow-y-auto rounded-xl border border-base-200 bg-base-300/30 p-3 font-mono text-xs leading-relaxed select-text"
+          ></div>
+          <div class="flex items-center justify-between text-xs text-base-content/80">
+            <span id="calib-diff-summary" class="font-medium"></span>
+            <button
+              type="button"
+              id="btn-copy-diff"
+              class="btn btn-outline btn-secondary btn-sm"
+            >
+              <Icon name="boxicons:copy" size={16} />
+              <span>Copiar Diff Unificado</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Vista 3: Solicitud de Modificación §1 -->
+        <div id="view-pane-protocol" class="hidden flex-1 flex flex-col space-y-2">
+          <textarea
+            id="calib-protocol-textarea"
+            readonly
+            class="textarea textarea-bordered font-mono text-xs w-full h-80 rounded-xl leading-relaxed resize-none bg-base-200/40"
+            spellcheck="false"
+          ></textarea>
+          <div class="flex items-center justify-end text-xs text-base-content/80">
+            <button
+              type="button"
+              id="btn-copy-protocol"
+              class="btn btn-outline btn-secondary btn-sm"
+            >
+              <Icon name="boxicons:copy" size={16} />
+              <span>Copiar Solicitud para PR</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import {
+    validateRubricBlock,
+    computeSimpleDiff,
+    formatCalibrationComment,
+    checkCausalHint,
+    insertRuleIntoBlock,
+  } from "@lib/calidad/rubricValidator";
+
+  // Sincronización de Filtros
+  const selectMonth = document.getElementById("filter-month") as HTMLSelectElement | null;
+  const selectChannel = document.getElementById("filter-channel") as HTMLSelectElement | null;
+
+  function updateQuery() {
+    const url = new URL(window.location.href);
+    if (selectMonth?.value) url.searchParams.set("month", selectMonth.value);
+    if (selectChannel?.value) url.searchParams.set("channel", selectChannel.value);
+    window.location.href = url.toString();
+  }
+
+  selectMonth?.addEventListener("change", updateQuery);
+  selectChannel?.addEventListener("change", updateQuery);
+
+  // Copiado rápido de caso en formato Markdown
+  document.querySelectorAll<HTMLButtonElement>(".btn-copy-case").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const rawData = btn.getAttribute("data-case");
+      if (!rawData) return;
+      try {
+        const d = JSON.parse(rawData);
+        const md = [
+          `### Caso de Discrepancia: ${d.nombre} (\`${d.criterio}\`)`,
+          `- **Ticket / Caso:** #${d.ticket || "N/A"}`,
+          `- **Clasificación:** ${d.clasificacion}`,
+          `- **IA (${d.ia}):** "${d.evidenciaIa}"`,
+          `- **Supervisor (${d.humano}):** "${d.comentarioHumano}"`,
+          "",
+          `*Propuesta de ajuste de rúbrica:*`,
+        ].join("\n");
+
+        await navigator.clipboard.writeText(md);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span>¡Copiado!</span>`;
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 2000);
+      } catch (err) {
+        console.error("Error al copiar caso:", err);
+      }
+    });
+  });
+
+  // --- FILTRADO DE TABLA DE DISCREPANCIAS (Live Search + Pills) ---
+  const searchDiscrepancies = document.getElementById("search-discrepancies") as HTMLInputElement | null;
+  const filterPillBtns = document.querySelectorAll<HTMLButtonElement>(".filter-pill-btn");
+  const visibleCountBadge = document.getElementById("discrepancies-visible-count");
+  const discrepancyRows = document.querySelectorAll<HTMLTableRowElement>(".discrepancy-row");
+
+  let currentFilter = "discrepancias";
+  let currentSearchQuery = "";
+
+  function applyDiscrepancyFilters() {
+    let visibleCount = 0;
+    const totalCount = discrepancyRows.length;
+
+    discrepancyRows.forEach((row) => {
+      const classification = row.getAttribute("data-classification") || "";
+      const searchText = row.getAttribute("data-search-text") || "";
+
+      // Filtro de píldora
+      let matchesPill = false;
+      if (currentFilter === "all") {
+        matchesPill = true;
+      } else if (currentFilter === "discrepancias") {
+        matchesPill = classification === "falso_positivo" || classification === "falso_negativo";
+      } else {
+        matchesPill = classification === currentFilter;
+      }
+
+      // Filtro de búsqueda
+      const matchesSearch = !currentSearchQuery || searchText.includes(currentSearchQuery);
+
+      if (matchesPill && matchesSearch) {
+        row.classList.remove("hidden");
+        visibleCount++;
+      } else {
+        row.classList.add("hidden");
+      }
+    });
+
+    if (visibleCountBadge) {
+      if (currentFilter === "all" && !currentSearchQuery) {
+        visibleCountBadge.textContent = `Mostrando todos (${visibleCount} casos)`;
+      } else {
+        visibleCountBadge.textContent = `Mostrando ${visibleCount} de ${totalCount} casos`;
+      }
+    }
+  }
+
+  filterPillBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterPillBtns.forEach((b) => {
+        b.classList.remove("btn-secondary", "btn-active", "bg-error/15", "border-error/30", "bg-warning/15", "border-warning/30", "bg-base-200", "border-base-300");
+        b.classList.add("btn-ghost");
+      });
+      btn.classList.remove("btn-ghost");
+      btn.classList.add("btn-active");
+
+      const filter = btn.getAttribute("data-filter") || "discrepancias";
+      if (filter === "falso_positivo") {
+        btn.classList.add("bg-error/15", "border-error/30");
+      } else if (filter === "falso_negativo") {
+        btn.classList.add("bg-warning/15", "border-warning/30");
+      } else if (filter === "acuerdo" || filter === "all") {
+        btn.classList.add("bg-base-200", "border-base-300");
+      } else {
+        btn.classList.add("btn-secondary");
+      }
+
+      currentFilter = filter;
+      applyDiscrepancyFilters();
+    });
+  });
+
+  searchDiscrepancies?.addEventListener("input", () => {
+    currentSearchQuery = (searchDiscrepancies.value || "").trim().toLowerCase();
+    applyDiscrepancyFilters();
+  });
+
+  // Ejecutar filtro inicial
+  applyDiscrepancyFilters();
+
+  // --- INICIALIZAR ORDENAMIENTO DE TABLA (clientTableSort) ---
+  const matrixSortRoot = document.getElementById("matrix-sort-root");
+  if (matrixSortRoot) {
+    import("@lib/clientTableSort").then(({ bindClientTableSort }) => {
+      bindClientTableSort(document);
+    });
+  }
+
+  // --- BUSCADOR EN VIVO DE LA MATRIZ DE RESUMEN ---
+  const searchMatrix = document.getElementById("search-matrix") as HTMLInputElement | null;
+  const matrixRows = document.querySelectorAll<HTMLTableRowElement>(".matrix-row");
+  const matrixSectionHeaders = document.querySelectorAll<HTMLTableRowElement>(".matrix-section-header");
+
+  searchMatrix?.addEventListener("input", () => {
+    const q = (searchMatrix.value || "").trim().toLowerCase();
+
+    matrixRows.forEach((row) => {
+      const text = row.getAttribute("data-search-text") || "";
+      const matches = !q || text.includes(q);
+      row.classList.toggle("hidden", !matches);
+    });
+
+    // Ocultar cabeceras de sección si todas sus filas quedaron filtradas
+    matrixSectionHeaders.forEach((header) => {
+      let next = header.nextElementSibling;
+      let hasVisibleChild = false;
+      while (next && !next.classList.contains("matrix-section-header")) {
+        if (!next.classList.contains("hidden")) {
+          hasVisibleChild = true;
+          break;
+        }
+        next = next.nextElementSibling;
+      }
+      header.classList.toggle("hidden", !hasVisibleChild);
+    });
+  });
+
+  // --- LÓGICA DE CALIBRACIÓN CANÓNICA DE RÚBRICAS (Z1, Z3, Z6, Z7, W1) ---
+  const rawCacheScript = document.getElementById("rubrics-canonical-cache")?.textContent;
+  let rubricsCanonicalCache: Record<string, { block: string; lastCalibrated?: string; calibrationInfo?: string }> = {};
+  if (rawCacheScript) {
+    try {
+      rubricsCanonicalCache = JSON.parse(rawCacheScript);
+    } catch (e) {
+      console.error("[CalibracionContent] Error al parsear cache de rúbricas:", e);
+    }
+  }
+
+  const rawMetricsScript = document.getElementById("metrics-by-code-cache")?.textContent;
+  let metricsByCodeCache: Record<string, { fp: number; fn: number; total: number; rate: number | null }> = {};
+  if (rawMetricsScript) {
+    try {
+      metricsByCodeCache = JSON.parse(rawMetricsScript);
+    } catch (e) {
+      console.error("[CalibracionContent] Error al parsear cache de métricas:", e);
+    }
+  }
+
+  const modalCalib = document.getElementById("modal-calibrar-criterio") as HTMLDialogElement | null;
+  const btnCloseModal = document.getElementById("btn-close-calib-modal");
+
+  // Metadatos y contexto modal
+  const badgeClassification = document.getElementById("calib-badge-classification");
+  const metaCriterionName = document.getElementById("calib-meta-criterion-name");
+  const metaCriterionCode = document.getElementById("calib-meta-criterion-code");
+  const metaTicketWrap = document.getElementById("calib-meta-ticket-wrap");
+
+  const contextAiVerdict = document.getElementById("calib-context-ai-verdict");
+  const contextAiEvidence = document.getElementById("calib-context-ai-evidence");
+  const contextHumanVerdict = document.getElementById("calib-context-human-verdict");
+  const contextHumanComment = document.getElementById("calib-context-human-comment");
+
+  // Formulario asistente
+  const inputDiagnosis = document.getElementById("calib-input-diagnosis") as HTMLSelectElement | null;
+  const inputRule = document.getElementById("calib-input-rule") as HTMLTextAreaElement | null;
+  const inputEvidence = document.getElementById("calib-input-evidence") as HTMLTextAreaElement | null;
+  const inputReasoning = document.getElementById("calib-input-reasoning") as HTMLTextAreaElement | null;
+  const counterEvidence = document.getElementById("calib-counter-evidence");
+  const counterReasoning = document.getElementById("calib-counter-reasoning");
+  const btnInsertSuggestion = document.getElementById("btn-insert-suggestion");
+
+  // Textarea canónico y diff
+  const blockTextarea = document.getElementById("calib-block-textarea") as HTMLTextAreaElement | null;
+  const validationBadge = document.getElementById("calib-validation-badge");
+  const validationAlert = document.getElementById("calib-validation-alert");
+  const validationErrorsList = document.getElementById("calib-validation-errors-list");
+  const diffContainer = document.getElementById("calib-diff-container");
+  const diffSummary = document.getElementById("calib-diff-summary");
+  const protocolTextarea = document.getElementById("calib-protocol-textarea") as HTMLTextAreaElement | null;
+
+  // Botones de copiado y tabs
+  const tabBtnBlock = document.getElementById("tab-btn-block");
+  const tabBtnDiff = document.getElementById("tab-btn-diff");
+  const tabBtnProtocol = document.getElementById("tab-btn-protocol");
+
+  const viewPaneBlock = document.getElementById("view-pane-block");
+  const viewPaneDiff = document.getElementById("view-pane-diff");
+  const viewPaneProtocol = document.getElementById("view-pane-protocol");
+
+  const btnCopyBlock = document.getElementById("btn-copy-block");
+  const btnCopyDiff = document.getElementById("btn-copy-diff");
+  const btnCopyProtocol = document.getElementById("btn-copy-protocol");
+
+  let currentCriterion = "";
+  let currentOriginalBlock = "";
+  let currentCaseData: any = null;
+
+  // Contadores reactivos Few-Shot (Z6)
+  function updateCounters() {
+    if (inputEvidence && counterEvidence) {
+      const len = inputEvidence.value.length;
+      counterEvidence.textContent = `${len}/160`;
+      if (len > 160) {
+        counterEvidence.className = "font-mono tabular-nums text-error font-bold";
+      } else {
+        counterEvidence.className = "font-mono tabular-nums text-base-content/60";
+      }
+    }
+
+    if (inputReasoning && counterReasoning) {
+      const len = inputReasoning.value.length;
+      counterReasoning.textContent = `${len}/180`;
+      if (len > 180) {
+        counterReasoning.className = "font-mono tabular-nums text-error font-bold";
+      } else {
+        counterReasoning.className = "font-mono tabular-nums text-base-content/60";
+      }
+    }
+  }
+
+  inputEvidence?.addEventListener("input", updateCounters);
+  inputReasoning?.addEventListener("input", updateCounters);
+
+  // Validación y recálculo de Diff en vivo (W1, W3)
+  function refreshValidationAndDiff() {
+    if (!blockTextarea || !currentCriterion) return;
+    const content = blockTextarea.value;
+    const res = validateRubricBlock(content, currentCriterion);
+
+    // 1. Badge y alerta de validación
+    if (validationBadge) {
+      if (res.valid) {
+        validationBadge.className = "badge badge-sm font-semibold badge-success";
+        validationBadge.textContent = "Válido (7 claves OK)";
+        validationAlert?.classList.add("hidden");
+      } else {
+        validationBadge.className = "badge badge-sm font-semibold badge-error";
+        validationBadge.textContent = `${res.errors.length} error(es)`;
+        if (validationAlert && validationErrorsList) {
+          validationAlert.classList.remove("hidden");
+          validationErrorsList.innerHTML = res.errors.map((e) => `<li>${e}</li>`).join("");
+        }
+      }
+    }
+
+    // 2. Diff contra el original precargado
+    const diff = computeSimpleDiff(currentOriginalBlock, content);
+    if (diffContainer) {
+      if (!diff.hasChanges) {
+        diffContainer.innerHTML = `<p class="text-base-content/50 italic py-4 text-center">Sin cambios respecto al bloque vigente en rubricas-calidad.md.</p>`;
+        if (diffSummary) diffSummary.textContent = "Sin modificaciones.";
+      } else {
+        const escapeHtml = (s: string) =>
+          s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        const html = diff.diffLines
+          .map((dl) => {
+            if (dl.type === "same") {
+              return `<div class="text-base-content/70 whitespace-pre">  ${escapeHtml(dl.line)}</div>`;
+            } else if (dl.type === "del") {
+              return `<div class="bg-error/15 text-error px-1 rounded whitespace-pre">- ${escapeHtml(dl.line)}</div>`;
+            } else {
+              return `<div class="bg-success/15 text-success px-1 rounded whitespace-pre">+ ${escapeHtml(dl.line)}</div>`;
+            }
+          })
+          .join("");
+
+        diffContainer.innerHTML = html;
+        const adds = diff.diffLines.filter((l) => l.type === "add").length;
+        const dels = diff.diffLines.filter((l) => l.type === "del").length;
+        if (diffSummary) diffSummary.textContent = `${adds} línea(s) agregada(s), ${dels} línea(s) eliminada(s).`;
+      }
+    }
+
+    // 3. Generar Solicitud de Modificación §1
+    if (protocolTextarea && currentCaseData) {
+      const d = currentCaseData;
+      protocolTextarea.value = [
+        `### Solicitud de Modificación de Rúbrica — Protocolo §1`,
+        `- **Parámetro afectado (\`codigo\`):** \`${d.criterio}\` (${d.nombre || d.criterio})`,
+        `- **Input evaluado (Contexto del caso):** ${d.ticket ? `Ticket #${d.ticket}` : "Auditorías consolidadas"}`,
+        `- **Resultado arrojado por la IA:**`,
+        `  - Veredicto: ${d.aiVerdict || "—"}`,
+        `  - Evidencia citada: "${d.aiEvidence || "Sin evidencia"}"`,
+        `- **Resultado esperado (Ground Truth Humano):**`,
+        `  - Veredicto esperado: ${d.humanVerdict || "—"}`,
+        `  - Evidencia real determinante: "${d.humanComment || "Convalidado por supervisor"}"`,
+        `- **Justificación de la discrepancia (Causa Raíz):** ${d.classification || "A determinar"}. Se calibra regla canónica para evitar reincidencia.`,
+      ].join("\n");
+    }
+  }
+
+  const ruleHint = document.getElementById("calib-rule-hint");
+  const ruleError = document.getElementById("calib-rule-error");
+
+  // Hint orientativo no bloqueante y sugerencia de destino automática
+  inputRule?.addEventListener("input", () => {
+    const text = inputRule.value.trim();
+    if (ruleError) {
+      ruleError.classList.add("hidden");
+      ruleError.textContent = "";
+    }
+
+    if (!text) {
+      if (ruleHint) {
+        ruleHint.classList.add("hidden");
+        ruleHint.textContent = "";
+      }
+      return;
+    }
+
+    // Evaluar hint pedagógico (no bloquea)
+    const hintRes = checkCausalHint(text);
+    if (ruleHint) {
+      if (hintRes.isCausal) {
+        ruleHint.classList.remove("hidden");
+        ruleHint.className = "text-3xs text-success/80 font-medium italic pt-0.5";
+        ruleHint.textContent = "✓ Estructura causal detectada (SI / PERO / ENTONCES).";
+      } else if (hintRes.hint) {
+        ruleHint.classList.remove("hidden");
+        ruleHint.className = "text-3xs text-base-content/60 italic pt-0.5";
+        ruleHint.textContent = hintRes.hint;
+      } else {
+        ruleHint.classList.add("hidden");
+      }
+    }
+
+    // Preseleccionar sugerencia de destino (sin forzar, permitiendo override del supervisor)
+    if (/\b(?:NO\s+penalizar|cumple:\s*true|aprobar|excepción|excepcion)\b/i.test(text)) {
+      const radioCumple = document.querySelector<HTMLInputElement>(
+        'input[name="calib-rule-target"][value="cumple"]',
+      );
+      if (radioCumple && !radioCumple.dataset.userOverridden) {
+        radioCumple.checked = true;
+      }
+    } else if (/\b(?:cumple:\s*false|penalizar|rechazar|descuento)\b/i.test(text)) {
+      const radioNoCumple = document.querySelector<HTMLInputElement>(
+        'input[name="calib-rule-target"][value="no_cumple"]',
+      );
+      if (radioNoCumple && !radioNoCumple.dataset.userOverridden) {
+        radioNoCumple.checked = true;
+      }
+    }
+  });
+
+  // Marcar si el usuario seleccionó manualmente el radio de destino
+  document.querySelectorAll<HTMLInputElement>('input[name="calib-rule-target"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      radio.dataset.userOverridden = "true";
+    });
+  });
+
+  // Inyección no destructiva de sugerencia estructurada en el textarea (W1)
+  btnInsertSuggestion?.addEventListener("click", () => {
+    if (!blockTextarea) return;
+    let text = blockTextarea.value;
+    const ruleText = inputRule?.value.trim() || "";
+    const evidenceText = (inputEvidence?.value.trim() || "").slice(0, 160);
+    const reasoningText = (inputReasoning?.value.trim() || "").slice(0, 180);
+
+    if (!ruleText && (!evidenceText || !reasoningText)) {
+      if (ruleError) {
+        ruleError.classList.remove("hidden");
+        ruleError.textContent = "Completá al menos una regla o un contraejemplo antes de inyectar.";
+      }
+      return;
+    }
+
+    // 1. Inyectar regla de forma no destructiva si se proveyó
+    if (ruleText) {
+      const selectedTarget = (
+        document.querySelector<HTMLInputElement>('input[name="calib-rule-target"]:checked')?.value ||
+        "no_cumple"
+      ) as "cumple" | "no_cumple";
+
+      const insertRes = insertRuleIntoBlock(text, ruleText, selectedTarget, currentCriterion);
+      if (!insertRes.success) {
+        if (ruleError) {
+          ruleError.classList.remove("hidden");
+          ruleError.textContent = insertRes.errors.join(" ");
+        }
+        return;
+      }
+
+      text = insertRes.newBlock;
+    }
+
+    // 2. Si hay contraejemplo Few-Shot, actualizar o agregar bajo Ejemplo No Cumple
+    if (evidenceText && reasoningText) {
+      const targetExampleHeader = `- **Ejemplo No Cumple:**`;
+      if (text.includes(targetExampleHeader)) {
+        const newExampleBlock = [
+          `- **Ejemplo No Cumple:**`,
+          `  - Evidencia: "${evidenceText}"`,
+          `  - Razonamiento: "${reasoningText}"`,
+        ].join("\n");
+
+        text = text.replace(
+          /- \*\*Ejemplo No Cumple:\*\*\n(?:\s+- Evidencia:[^\n]+\n\s+- Razonamiento:[^\n]+)/,
+          newExampleBlock,
+        );
+      }
+    }
+
+    // 3. Validar el bloque resultante completo
+    const finalVal = validateRubricBlock(text, currentCriterion);
+    if (!finalVal.valid) {
+      if (ruleError) {
+        ruleError.classList.remove("hidden");
+        ruleError.textContent = `La inyección rompería el bloque canónico: ${finalVal.errors.join("; ")}`;
+      }
+      return;
+    }
+
+    if (ruleError) {
+      ruleError.classList.add("hidden");
+      ruleError.textContent = "";
+    }
+
+    blockTextarea.value = text;
+    refreshValidationAndDiff();
+
+    // Feedback visual en el botón
+    if (btnInsertSuggestion) {
+      const originalHtml = btnInsertSuggestion.innerHTML;
+      btnInsertSuggestion.innerHTML = `<span>✓ Inyectado en bloque</span>`;
+      setTimeout(() => {
+        btnInsertSuggestion.innerHTML = originalHtml;
+      }, 1500);
+    }
+  });
+
+  // Switch de Tabs
+  function setTab(tab: "block" | "diff" | "protocol") {
+    tabBtnBlock?.classList.toggle("tab-active", tab === "block");
+    tabBtnDiff?.classList.toggle("tab-active", tab === "diff");
+    tabBtnProtocol?.classList.toggle("tab-active", tab === "protocol");
+
+    viewPaneBlock?.classList.toggle("hidden", tab !== "block");
+    viewPaneDiff?.classList.toggle("hidden", tab !== "diff");
+    viewPaneProtocol?.classList.toggle("hidden", tab !== "protocol");
+  }
+
+  tabBtnBlock?.addEventListener("click", () => setTab("block"));
+  tabBtnDiff?.addEventListener("click", () => setTab("diff"));
+  tabBtnProtocol?.addEventListener("click", () => setTab("protocol"));
+
+  interface OpenModalParams {
+    criterion: string;
+    criterionName?: string;
+    ticket?: string;
+    classification?: string;
+    aiVerdict?: string;
+    aiEvidence?: string;
+    humanVerdict?: string;
+    humanComment?: string;
+  }
+
+  function openModalForCriterion(params: OpenModalParams) {
+    const criterion = params.criterion;
+    const cachedItem = rubricsCanonicalCache[criterion];
+    if (!cachedItem?.block) {
+      alert("El criterio seleccionado no cuenta con rúbrica canónica en rubricas-calidad.md.");
+      return;
+    }
+
+    currentCriterion = criterion;
+    currentOriginalBlock = cachedItem.block;
+    currentCaseData = {
+      criterio: criterion,
+      nombre: params.criterionName,
+      ticket: params.ticket,
+      classification: params.classification,
+      aiVerdict: params.aiVerdict,
+      aiEvidence: params.aiEvidence,
+      humanVerdict: params.humanVerdict,
+      humanComment: params.humanComment,
+    };
+
+    // Metadatos y contexto modal
+    if (metaCriterionName) metaCriterionName.textContent = params.criterionName || criterion;
+    if (metaCriterionCode) metaCriterionCode.textContent = criterion;
+    if (metaTicketWrap) metaTicketWrap.textContent = params.ticket ? `(Ticket #${params.ticket})` : "";
+
+    if (badgeClassification) {
+      badgeClassification.textContent = params.classification || "Calibración";
+      badgeClassification.className = `badge badge-sm font-semibold whitespace-nowrap shrink-0 leading-none h-auto min-h-5 py-1 px-2.5 ${
+        params.classification?.includes("Positivo")
+          ? "badge-error"
+          : params.classification?.includes("Negativo")
+          ? "badge-warning"
+          : "badge-secondary"
+      }`;
+    }
+
+    if (contextAiVerdict) contextAiVerdict.textContent = params.aiVerdict || "—";
+    if (contextAiEvidence) {
+      contextAiEvidence.textContent = params.aiEvidence
+        ? `"${params.aiEvidence}"`
+        : params.ticket
+        ? "Sin evidencia textual"
+        : "Consolidado de auditorías del período";
+    }
+    if (contextHumanVerdict) contextHumanVerdict.textContent = params.humanVerdict || "—";
+    if (contextHumanComment) {
+      contextHumanComment.textContent = params.humanComment
+        ? `"${params.humanComment}"`
+        : params.ticket
+        ? "Sin comentario registrado"
+        : "Ajuste preventivo/correctivo de rúbrica";
+    }
+
+    // Contexto de tendencia (Q3: Desvío acumulado FP/FN al lado del selector neutral)
+    const trendBadge = document.getElementById("calib-meta-trend-context");
+    const trend = metricsByCodeCache[criterion];
+    if (trendBadge) {
+      if (trend && trend.total > 0) {
+        trendBadge.textContent = `Tendencia: ${trend.fp} FP / ${trend.fn} FN (N=${trend.total})`;
+        trendBadge.classList.remove("hidden");
+      } else {
+        trendBadge.textContent = "Sin desvíos acumulados";
+        trendBadge.classList.remove("hidden");
+      }
+    }
+
+    // Q3: Diagnóstico neutral, sin pre-asignar
+    if (inputDiagnosis) {
+      inputDiagnosis.value = "";
+    }
+
+    // Formatear e insertar marcador de calibración (W2)
+    const todayIso = new Date().toISOString().substring(0, 10);
+    const calibComment = formatCalibrationComment(
+      todayIso,
+      params.classification || "Calibración",
+      params.ticket,
+    );
+
+    let initialBlockWithComment = currentOriginalBlock;
+    if (initialBlockWithComment.includes("<!-- calibrado:")) {
+      initialBlockWithComment = initialBlockWithComment.replace(
+        /<!--\s*calibrado:[^->]*-->/,
+        calibComment,
+      );
+    } else {
+      initialBlockWithComment = initialBlockWithComment.replace(
+        new RegExp(`(## criterio:\\s*${criterion}\\s*\n)`),
+        `$1${calibComment}\n`,
+      );
+    }
+
+    if (blockTextarea) blockTextarea.value = initialBlockWithComment;
+
+    // Asistente con regla y contraejemplo sugeridos si hay evidencia
+    if (inputRule) {
+      inputRule.value = params.aiEvidence
+        ? `SI se detecta "${params.aiEvidence.slice(0, 80)}" PERO ${params.humanComment || "corresponde excepción operativa"}, ENTONCES cumple: false.`
+        : "";
+    }
+    if (inputEvidence) {
+      inputEvidence.value = (params.aiEvidence || "").slice(0, 160);
+    }
+    if (inputReasoning) {
+      inputReasoning.value = (params.humanComment || "").slice(0, 180);
+    }
+    updateCounters();
+
+    setTab("block");
+    refreshValidationAndDiff();
+    modalCalib?.showModal();
+  }
+
+  // Cambio de diagnóstico (Q3: Actualiza justificación y comentario canónico reactivamente)
+  inputDiagnosis?.addEventListener("change", () => {
+    if (!currentCaseData) return;
+    const val = inputDiagnosis.value;
+    const label =
+      val === "falso_positivo"
+        ? "Falso Positivo"
+        : val === "falso_negativo"
+        ? "Falso Negativo"
+        : "Malinterpretación léxica / ambigüedad";
+    currentCaseData.classification = label;
+
+    if (blockTextarea) {
+      const todayIso = new Date().toISOString().substring(0, 10);
+      const updatedComment = formatCalibrationComment(todayIso, label, currentCaseData.ticket);
+      blockTextarea.value = blockTextarea.value.replace(/<!--\s*calibrado:[^->]*-->/, updatedComment);
+    }
+    refreshValidationAndDiff();
+  });
+
+  // Apertura desde Sección 1 (Discrepancias caso por caso)
+  document.querySelectorAll<HTMLButtonElement>(".btn-calibrate-criterio").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ds = btn.dataset;
+      const criterion = ds.criterion;
+      if (!criterion) return;
+
+      openModalForCriterion({
+        criterion,
+        criterionName: ds.criterionName,
+        ticket: ds.ticket,
+        classification: ds.classification,
+        aiVerdict: ds.aiVerdict,
+        aiEvidence: ds.aiEvidence,
+        humanVerdict: ds.humanVerdict,
+        humanComment: ds.humanComment,
+      });
+    });
+  });
+
+  // Apertura desde Sección 2 (Matriz de Resumen y Acuerdo por Criterio)
+  document.querySelectorAll<HTMLButtonElement>(".btn-calibrate-from-summary").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ds = btn.dataset;
+      const criterion = ds.criterion;
+      if (!criterion) return;
+
+      openModalForCriterion({
+        criterion,
+        criterionName: ds.criterionName,
+        classification: "Calibración de Criterio",
+        aiVerdict: "Consolidado",
+        aiEvidence: `Evaluación consolidada del período. Acumulado: ${ds.fpCount || 0} FP, ${ds.fnCount || 0} FN.`,
+        humanVerdict: "Revisión Canónica",
+        humanComment: "Ajuste preventivo o correctivo de la rúbrica",
+      });
+    });
+  });
+
+  btnCloseModal?.addEventListener("click", () => {
+    modalCalib?.close();
+  });
+
+  // Copiado con feedback en botones del modal
+  function wireCopyButton(button: HTMLElement | null, getText: () => string) {
+    button?.addEventListener("click", async () => {
+      const text = getText();
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        const originalHtml = button.innerHTML;
+        button.innerHTML = `<span>✓ ¡Copiado!</span>`;
+        setTimeout(() => {
+          button.innerHTML = originalHtml;
+        }, 2000);
+      } catch (err) {
+        console.error("Error al copiar:", err);
+      }
+    });
+  }
+
+  wireCopyButton(btnCopyBlock, () => blockTextarea?.value || "");
+  wireCopyButton(btnCopyDiff, () => {
+    if (!blockTextarea || !currentOriginalBlock) return "";
+    const diff = computeSimpleDiff(currentOriginalBlock, blockTextarea.value);
+    return diff.unifiedText;
+  });
+  wireCopyButton(btnCopyProtocol, () => protocolTextarea?.value || "");
+</script>

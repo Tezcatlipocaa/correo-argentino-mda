@@ -2,10 +2,12 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import CalidadContent from "@components/supervision/calidad/CalidadContent.astro";
 import CalidadSkeleton from "@components/supervision/calidad/CalidadSkeleton.astro";
+
+const month = Astro.url.searchParams.get("month") ?? undefined;
 ---
 
 <BaseLayout>
-  <CalidadContent server:defer>
+  <CalidadContent server:defer month={month}>
     <CalidadSkeleton slot="fallback" />
   </CalidadContent>
 </BaseLayout>

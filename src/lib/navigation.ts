@@ -177,6 +177,11 @@ export const navSections: NavSection[] = [
             label: "Sugerencias y Reportes",
             icon: "boxicons:mail-open-filled",
           },
+          {
+            href: "/admin/calidad/calibracion",
+            label: "Calibración de Calidad IA",
+            icon: "boxicons:slider-alt-filled",
+          },
         ],
       },
     ],
