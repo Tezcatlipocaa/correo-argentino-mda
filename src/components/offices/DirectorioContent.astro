@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import MasterDetailTable from "@components/ui/MasterDetailTable.astro";
@@ -8,7 +9,6 @@ import SearchBar from "@components/ui/SearchBar.astro";
 import ViewSwitcher from "@components/ui/ViewSwitcher.astro";
 import FilterTabsBox from "@components/ui/FilterTabsBox.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
-import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
 import {
   getOffices,
   hasClosedOffices,
@@ -412,7 +412,9 @@ const mainTabs = [
         </div>
         {
           canExport && (
-            <ExportCsvButton
+            <ActionButton
+              icon="boxicons:file-detail-filled"
+              color="btn-primary"
               id="export-csv-btn"
               href={import.meta.env.BASE_URL + "api/export/offices"}
               ariaLabel="Exportar directorio a CSV"
@@ -501,13 +503,14 @@ const mainTabs = [
                 —
               </span>
             </div>
-            <a
+            <ActionButton
               href={`${import.meta.env.BASE_URL}admin/invgate/ubicaciones?sync=true`}
-              class="btn btn-primary btn-sm ml-auto shrink-0 gap-1.5"
-            >
-              <Icon name="boxicons:pie-chart-filled" size={16} />
-              Ver comparativa
-            </a>
+              color="btn-primary"
+              size="sm"
+              class="ml-auto shrink-0"
+              icon="boxicons:pie-chart-filled"
+              label="Ver comparativa"
+            />
           </div>
         </div>
       )
@@ -670,8 +673,7 @@ const mainTabs = [
                         Tecnológicos
                       </span>
                     </div>
-                    <div class="referents-list-container mt-2 flex flex-col gap-1.5">
-                    </div>
+                    <div class="referents-list-container mt-2 flex flex-col gap-1.5"></div>
                   </div>
                 </div>
               ))

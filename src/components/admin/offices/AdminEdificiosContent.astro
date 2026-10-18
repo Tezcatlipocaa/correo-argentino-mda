@@ -6,6 +6,7 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase, getBaseNoSlash } from "@lib/baseUrl";
 import { groupOfficesByBuilding } from "@lib/officeBuildingReconcile";
 
@@ -145,12 +146,12 @@ const baseNoSlash = getBaseNoSlash();
               )}
             </ul>
             <div class="text-right">
-              <a
+              <ActionButton
                 href={`${baseNoSlash}/oficinas?search=${encodeURIComponent(group.canonical)}`}
-                class="btn btn-ghost btn-xs"
-              >
-                Ver oficinas
-              </a>
+                variant="ghost"
+                size="xs"
+                label="Ver oficinas"
+              />
             </div>
           </div>
         );

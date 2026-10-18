@@ -10,7 +10,7 @@ import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import EntityBadge from "@components/admin/papelera/EntityBadge.astro";
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 const cleanBase = getCleanBase();
 
@@ -140,15 +140,16 @@ const rowGridClass =
                 class="inline"
                 onsubmit="return confirm('¿Restaurar este registro?')"
               >
-                <button
+                <ActionButton
                   type="submit"
-                  class="btn btn-xs btn-soft btn-secondary gap-2"
+                  variant="soft"
+                  color="btn-secondary"
+                  size="xs"
                   disabled={!!r.restoredAt}
-                  aria-label={`Restaurar ${r.label}`}
-                >
-                  <Icon name="boxicons:undo-stroke" size={14} />
-                  Restaurar
-                </button>
+                  ariaLabel={`Restaurar ${r.label}`}
+                  icon="boxicons:undo-stroke"
+                  label="Restaurar"
+                />
               </form>
             </div>
           </div>

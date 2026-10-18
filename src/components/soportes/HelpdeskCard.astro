@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import { getCsrfTokenForSession } from "@lib/csrf";
 import Modal from "@components/ui/Modal.astro";
@@ -298,42 +299,44 @@ const searchableText = [
       </button>
       {
         adminOnly && !isHidden && (
-          <button
+          <ActionButton
             data-hide-helpdesk={helpdesk.id}
-            class="btn btn-sm btn-soft btn-error gap-1"
+            variant="soft"
+            color="btn-error"
+            size="sm"
+            icon="boxicons:low-vision-filled"
             title="Ocultar esta mesa de ayuda del listado"
           >
-            <Icon
-              name="boxicons:low-vision-filled"
-              size={16}
-              aria-hidden="true"
-            />
             <span class="hidden xl:inline">Ocultar</span>
-          </button>
+          </ActionButton>
         )
       }
       {
         adminOnly && isHidden && (
-          <button
+          <ActionButton
             data-show-helpdesk={helpdesk.id}
-            class="btn btn-sm btn-soft btn-success gap-1"
+            variant="soft"
+            color="btn-success"
+            size="sm"
+            icon="boxicons:eye-filled"
             title="Mostrar esta mesa de ayuda en el listado"
           >
-            <Icon name="boxicons:eye-filled" size={16} aria-hidden="true" />
             <span class="hidden xl:inline">Mostrar</span>
-          </button>
+          </ActionButton>
         )
       }
       {
         isAdmin && (
-          <a
+          <ActionButton
             href={`${cleanBase}mesas-de-ayuda/edit?invgate_id=${helpdesk.id}`}
-            class="btn btn-sm btn-accent btn-soft gap-1"
+            variant="soft"
+            color="btn-accent"
+            size="sm"
+            icon="boxicons:pencil-filled"
             title="Editar información"
           >
-            <Icon name="boxicons:pencil-filled" size={16} aria-hidden="true" />
             <span class="hidden xl:inline">Editar</span>
-          </a>
+          </ActionButton>
         )
       }
     </div>
@@ -419,7 +422,7 @@ const searchableText = [
   </div>
   <div slot="actions" class="modal-action">
     <form method="dialog">
-      <button class="btn btn-sm btn-ghost">Cerrar</button>
+      <ActionButton type="submit" variant="ghost" size="sm" label="Cerrar" />
     </form>
   </div>
 </Modal>

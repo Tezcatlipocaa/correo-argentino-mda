@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 
 interface Props {
@@ -32,9 +33,11 @@ const cleanBase = getCleanBase();
       InvGate.
     </p>
   </div>
-  <a href={`${cleanBase}mesas-de-ayuda/asignar`} class="btn btn-sm btn-warning">
-    <Icon name="boxicons:link-filled" size={16} 
-            is:inline />
-    Asignar
-  </a>
+  <ActionButton
+    href={`${cleanBase}mesas-de-ayuda/asignar`}
+    color="btn-warning"
+    size="sm"
+    icon="boxicons:link-filled"
+    label="Asignar"
+  />
 </div>
