@@ -1,3 +1,5 @@
+import type { CoachingFeedback } from "@/lib/ai/types";
+
 export const CHANNEL_TYPES = ["wise_call", "wise_email", "invgate_ticket"] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
@@ -21,6 +23,7 @@ export interface QualityCall {
   date: string;
   month: string;
   notes: string;
+  operatorCoaching?: string | null;
   // Specific multi-channel metadata
   ringTime?: string;
   creationTime?: string;
@@ -46,6 +49,7 @@ export interface QualityCall {
     comments?: Record<string, string>;
   };
   totalScore: number;
+  aiSnapshot?: QualityAiSnapshot | null;
 }
 
 export interface QualityAuditRecord {
@@ -58,6 +62,7 @@ export interface QualityAuditRecord {
   date: string;
   month: string;
   notes: string | null;
+  operatorCoaching?: string | null;
   ringTime: string | null;
   creationTime: string | null;
   takeTime: string | null;
@@ -70,6 +75,29 @@ export interface QualityAuditRecord {
   section1Score: number;
   section2Score: number;
   totalScore: number;
+  aiSnapshot?: QualityAiSnapshot | null;
+}
+
+export interface QualityAiSnapshot {
+  model: string;
+  resumen: string;
+  verdicts: Array<{
+    codigo: string;
+    cumple: boolean | null;
+    confianza: number;
+    evidencia: string;
+    razonamiento?: string;
+  }>;
+  debate?: Record<
+    string,
+    {
+      consenso: string;
+      motivo?: string;
+    }
+  >;
+  coachingRaw?: CoachingFeedback | null;
+  appliedCodes: string[];
+  createdAt: string;
 }
 
 export interface OperatorQuality {
