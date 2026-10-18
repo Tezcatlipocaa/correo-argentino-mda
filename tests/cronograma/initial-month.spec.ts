@@ -11,6 +11,7 @@ import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../../src/db/index";
 import { users, sessions } from "../../src/db/schema";
+import { ignoreSsrInitialData } from "../helpers/cronograma";
 
 const SECRET =
   process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-prod";
@@ -50,6 +51,7 @@ async function stubCronogramaGet(
   page: Page,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  await ignoreSsrInitialData(page);
   await page.route("**/api/cronograma", async (route) => {
     if (route.request().method() !== "GET") return route.continue();
     await route.fulfill({ json: payload });

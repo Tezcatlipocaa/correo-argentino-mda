@@ -1,0 +1,151 @@
+---
+/**
+ * Gráfico de líneas server-side (SVG, sin JS). Colores por clase Tailwind
+ * (`stroke-secondary`, etc.) para respetar el tema claro/oscuro.
+ */
+interface Series {
+  name: string;
+  /** Clase de color del trazo, p.ej. "stroke-secondary". */
+  colorClass: string;
+  values: number[];
+}
+
+interface Props {
+  labels: string[];
+  series: Series[];
+  height?: number;
+  ariaLabel?: string;
+  /** Redondeo a mostrar en el tooltip/etiqueta (no usado por ahora). */
+  valueSuffix?: string;
+}
+
+const { labels, series, height = 220, ariaLabel = "Gráfico de líneas" } =
+  Astro.props;
+
+const W = 640;
+const H = height;
+const padLeft = 38;
+const padRight = 10;
+const padTop = 12;
+const padBottom = 24;
+const plotW = W - padLeft - padRight;
+const plotH = H - padTop - padBottom;
+
+const max = Math.max(1, ...series.flatMap((s) => s.values));
+const n = labels.length;
+
+function px(i: number): number {
+  return padLeft + (n > 1 ? (i * plotW) / (n - 1) : plotW / 2);
+}
+function py(value: number): number {
+  return padTop + plotH - (value / max) * plotH;
+}
+
+const gridLines = [0, 0.25, 0.5, 0.75, 1];
+
+/** Mapas literales para que Tailwind genere las clases (no dinámicas). */
+const SWATCH_BG: Record<string, string> = {
+  "stroke-secondary": "bg-secondary",
+  "stroke-success": "bg-success",
+  "stroke-accent": "bg-accent",
+  "stroke-info": "bg-info",
+  "stroke-warning": "bg-warning",
+  "stroke-error": "bg-error",
+  "stroke-primary": "bg-primary",
+};
+const DOT_FILL: Record<string, string> = {
+  "stroke-secondary": "fill-secondary",
+  "stroke-success": "fill-success",
+  "stroke-accent": "fill-accent",
+  "stroke-info": "fill-info",
+  "stroke-warning": "fill-warning",
+  "stroke-error": "fill-error",
+  "stroke-primary": "fill-primary",
+};
+---
+
+<svg
+  viewBox={`0 0 ${W} ${H}`}
+  class="h-auto w-full"
+  role="img"
+  aria-label={ariaLabel}
+>
+  {
+    gridLines.map((fraction) => (
+      <line
+        x1={padLeft}
+        y1={padTop + plotH * (1 - fraction)}
+        x2={W - padRight}
+        y2={padTop + plotH * (1 - fraction)}
+        class="stroke-base-300"
+        stroke-width="1"
+        stroke-dasharray={fraction === 0 ? "0" : "3 4"}
+      />
+    ))
+  }
+  <text x={padLeft - 6} y={padTop + 4} text-anchor="end" class="fill-base-content/50" font-size="10">
+    {max}
+  </text>
+  <text
+    x={padLeft - 6}
+    y={padTop + plotH}
+    text-anchor="end"
+    class="fill-base-content/50"
+    font-size="10"
+  >
+    0
+  </text>
+
+  {
+    series.map((s) => (
+      <polyline
+        points={s.values.map((v, i) => `${px(i)},${py(v)}`).join(" ")}
+        fill="none"
+        class={s.colorClass}
+        stroke-width="2"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      />
+    ))
+  }
+
+  {
+    series.map((s) =>
+      s.values.map((v, i) => (
+        <circle
+          cx={px(i)}
+          cy={py(v)}
+          r="2.6"
+          class={`${s.colorClass} ${DOT_FILL[s.colorClass] ?? ""}`}
+        />
+      )),
+    )
+  }
+
+  {
+    labels.map((label, i) => (
+      <text
+        x={px(i)}
+        y={H - 8}
+        text-anchor="middle"
+        class="fill-base-content/50"
+        font-size="10"
+      >
+        {label}
+      </text>
+    ))
+  }
+</svg>
+
+<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+  {
+    series.map((s) => (
+      <span class="text-base-content/70 flex items-center gap-1.5">
+        <span
+          class={`inline-block size-2.5 rounded-sm ${SWATCH_BG[s.colorClass] ?? "bg-current"}`}
+        />
+        {s.name}
+      </span>
+    ))
+  }
+</div>

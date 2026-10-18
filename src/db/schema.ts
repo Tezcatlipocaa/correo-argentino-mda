@@ -1353,6 +1353,28 @@ export const automationMetricsMonthly = sqliteTable(
   },
 );
 
+/**
+ * Días con actividad de una automatización: una fila por (automatización, día)
+ * en que hubo movimiento (cambio de estado/updated_at, comentario, tarea o
+ * nodo). Alimenta "tiempo trabajado" (días activos) y "días sin actividad".
+ * `day` = "YYYY-MM-DD" (hora local). Lo puebla el scan de discovery y el
+ * backfill histórico; nunca poda.
+ */
+export const automationActivityDays = sqliteTable(
+  "automation_activity_days",
+  {
+    automationId: integer("automation_id").notNull(),
+    day: text("day").notNull(),
+    /** "scan" (movimiento detectado en vivo) | "backfill" (histórico). */
+    source: text("source").notNull().default("scan"),
+    firstSeenAt: integer("first_seen_at").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.automationId, table.day] }),
+    dayIdx: index("automation_activity_days_day_idx").on(table.day),
+  }),
+);
+
 // 19. ADMIN MESAS Y PAPELERA
 export const mesas = sqliteTable("mesas", {
   id: integer("id").primaryKey({ autoIncrement: true }),

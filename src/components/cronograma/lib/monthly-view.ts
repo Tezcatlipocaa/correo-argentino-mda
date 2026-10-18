@@ -30,6 +30,7 @@ import {
   showGroupsView,
   updateViewSwitcherUI,
   resolveOperatorStatusAndHorario,
+  buildMonthlyCellHtml,
 } from "./dashboard-client";
 
 let _dailyDateFormatter: Intl.DateTimeFormat | null = null;
@@ -1111,6 +1112,213 @@ export function clearParsedDatesCache(): void {
   _parsedDatesCache = null;
 }
 
+export function computeMonthlyStats(
+  op: OperatorData,
+  dates: string[],
+): { P: number; HO: number; L: number } {
+  const stats = { P: 0, HO: 0, L: 0 };
+  dates.forEach((d) => {
+    const s = op.asistencia[d];
+    if (
+      s === OperatorStatus.PresencialMonteGrande ||
+      s === OperatorStatus.PresencialParquePatricios
+    )
+      stats.P++;
+    else if (s === OperatorStatus.HomeOffice) stats.HO++;
+    else if (s === OperatorStatus.Licencia || s === OperatorStatus.Vacaciones)
+      stats.L++;
+  });
+  return stats;
+}
+
+export function buildMonthlyStatsCellsHtml(stats: {
+  P: number;
+  HO: number;
+  L: number;
+}): string {
+  if (state.isTotalsCollapsed) return "";
+  return `
+          <td data-op-stats="P" class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-secondary group-hover:!bg-base-200 transition-colors" style="left: var(--op-w, 200px)">${stats.P}</td>
+          <td data-op-stats="HO" class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-amber-700 dark:text-amber-400 group-hover:!bg-base-200 transition-colors" style="left: calc(var(--op-w, 200px) + 40px)">${stats.HO}</td>
+          <td data-op-stats="L" class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-error group-hover:!bg-base-200 transition-colors shadow-table-edge" style="left: calc(var(--op-w, 200px) + 80px)">${stats.L}</td>
+        `;
+}
+
+export function computeMonthlyViolations(
+  op: OperatorData,
+  dates: string[],
+): {
+  maxConsecutiveHO: number;
+  hoViolation: boolean;
+  pWeekViolation: boolean;
+} {
+  const opMaxHO =
+    op.maxConsecutiveHO !== undefined && op.maxConsecutiveHO !== null
+      ? op.maxConsecutiveHO
+      : state.maxConsecutiveHOLimit;
+  const opMinPWeek =
+    op.minPWeek !== undefined && op.minPWeek !== null
+      ? op.minPWeek
+      : state.minPWeekLimit;
+
+  let maxConsecutiveHO = 0;
+  let currentHO = 0;
+  let pWeekViolation = false;
+  let currentWeekP = 0;
+  let currentWeekDays = 0;
+
+  dates.forEach((d, i) => {
+    const status = op.asistencia[d];
+    if (status === OperatorStatus.HomeOffice) {
+      currentHO++;
+      maxConsecutiveHO = Math.max(maxConsecutiveHO, currentHO);
+    } else if (status !== OperatorStatus.Franco && status) {
+      currentHO = 0;
+    }
+
+    if (
+      status === OperatorStatus.PresencialMonteGrande ||
+      status === OperatorStatus.PresencialParquePatricios
+    )
+      currentWeekP++;
+    if (
+      status !== OperatorStatus.Franco &&
+      status !== OperatorStatus.Licencia &&
+      status !== OperatorStatus.Vacaciones &&
+      status
+    ) {
+      currentWeekDays++;
+    }
+    if (new Date(d + "T12:00:00").getDay() === 0 || i === dates.length - 1) {
+      if (currentWeekDays >= 5 && currentWeekP < opMinPWeek) {
+        pWeekViolation = true;
+      }
+      currentWeekP = 0;
+      currentWeekDays = 0;
+    }
+  });
+
+  return {
+    maxConsecutiveHO,
+    hoViolation: maxConsecutiveHO > opMaxHO,
+    pWeekViolation,
+  };
+}
+
+/**
+ * Arranque de una fila mensual: primer `<td>` (nombre, badges de violación,
+ * botones de edición/borrado) + celdas de stats. Compartido entre
+ * `renderMonthly()` y el patcheo dirigido (#265) para que no diverjan.
+ */
+export function buildMonthlyRowStartHtml(
+  op: OperatorData,
+  opts: { isReadOnly: boolean; isCurrentUser: boolean; dates: string[] },
+): { html: string; showViolation: boolean; hasViolation: boolean } {
+  const stats = computeMonthlyStats(op, opts.dates);
+  const { maxConsecutiveHO, hoViolation, pWeekViolation } =
+    computeMonthlyViolations(op, opts.dates);
+
+  const showViolation = !opts.isReadOnly && (hoViolation || pWeekViolation);
+  const showHOViolation = !opts.isReadOnly && hoViolation;
+  const showPWeekViolation = !opts.isReadOnly && pWeekViolation;
+
+  const opShadowClass = state.isTotalsCollapsed ? "shadow-table-edge" : "";
+  const username = op.username || "";
+
+  const html = `<td class="sticky left-0 bg-base-100 z-40 w-[200px] min-w-[200px] font-bold py-3 px-6 text-xs border-r border-b border-base-200/70 group-hover:!bg-base-200 transition-colors ${opShadowClass}">
+          <div class="flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full ${showViolation ? "bg-error animate-pulse" : "bg-base-300 group-hover:bg-amber-500"} transition-transform shadow-sm cursor-pointer hover:scale-125 hover:ring-2 hover:ring-secondary/50 op-row-dot ${state.isEditMode ? "op-row-header" : ""}" title="${state.isEditMode ? "Pintar toda la fila" : "Destacar fila"}"></span>
+            <div class="flex flex-col min-w-0 flex-1">
+              <div class="flex items-center justify-between w-full">
+                <button class="hover:text-secondary hover:underline underline-offset-2 transition-colors text-left truncate font-bold text-xs" data-op-profile="${op.nombre}">
+                  ${op.nombre}
+                </button>
+                <div class="flex items-center gap-1 shrink-0 ml-1.5 no-print ${state.isEditMode ? "" : "invisible"}">
+                  ${actionEditButtonHtml({
+                    ariaLabel: "Editar operador",
+                    actionClass: "edit-op-btn",
+                    attrs: `data-edit-op-name="${escapeHtml(op.nombre)}" data-edit-op-username="${escapeHtml(username)}" data-edit-op-location="${escapeHtml(op.location || "Monte Grande")}" data-edit-op-schedule="${escapeHtml(op.horario || "")}" title="Editar operador"`,
+                  })}
+                  ${actionDeleteButtonHtml({
+                    ariaLabel: "Eliminar operador",
+                    actionClass: "delete-op-btn",
+                    attrs: `data-delete-op-name="${escapeHtml(op.nombre)}" title="Eliminar operador"`,
+                  })}
+                </div>
+              </div>
+              ${showHOViolation ? `<span class="inline-flex items-center gap-1 text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 w-fit shadow-sm" title="Exceso de HO: ${maxConsecutiveHO} días consecutivos"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.87 2.51c-.35-.63-1.4-.63-1.75 0l-9.99 18c-.17.31-.17.69.01.99c.18.31.51.49.86.49h20c.35 0 .68-.19.86-.49a1 1 0 0 0 .01-.99zM13 19h-2v-2h2zm0-4h-2V9h2z"/></svg>Exceso de HO (${maxConsecutiveHO}d)</span>` : ""}
+              ${showPWeekViolation ? `<span class="inline-flex items-center gap-1 text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 w-fit shadow-sm" title="Faltan días presenciales esta semana"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.87 2.51c-.35-.63-1.4-.63-1.75 0l-9.99 18c-.17.31-.17.69.01.99c.18.31.51.49.86.49h20c.35 0 .68-.19.86-.49a1 1 0 0 0 .01-.99zM13 19h-2v-2h2zm0-4h-2V9h2z"/></svg>Faltan días P.</span>` : ""}
+            </div>
+          </div>
+        </td>${buildMonthlyStatsCellsHtml(stats)}`;
+
+  return {
+    html,
+    showViolation,
+    hasViolation: hoViolation || pWeekViolation,
+  };
+}
+
+export function buildMonthlyCoverageCellHtml(c: {
+  date: string;
+  pmg: number;
+  ppp: number;
+  ho: number;
+}): string {
+  const teamSize = state.cronoData.length;
+  const hoPercent = teamSize > 0 ? (c.ho / teamSize) * 100 : 0;
+  const pmgPercent = teamSize > 0 ? (c.pmg / teamSize) * 100 : 0;
+  const pppPercent = teamSize > 0 ? (c.ppp / teamSize) * 100 : 0;
+  const totalPercent =
+    teamSize > 0 ? ((c.pmg + c.ppp + c.ho) / teamSize) * 100 : 0;
+  const isLowCoverage = totalPercent < 40;
+  const cellPyClass = state.isCoverageMinimized ? "py-1 px-1" : "py-2 px-1";
+
+  return `
+      <td data-coverage-date="${c.date}" class="${cellPyClass} border-r border-base-200/50 min-w-16 ${isLowCoverage ? "bg-error/5" : ""}">
+        <div class="flex flex-col items-center gap-1.5">
+           ${
+             state.isCoverageMinimized
+               ? ""
+               : `
+           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgb(0_0_0_/_0.1)]">
+               <div class="bg-purple-500 w-full transition-[height] duration-500" style="height: ${pppPercent}%" title="P. Parque Patricios: ${c.ppp}"></div>
+               <div class="bg-amber-500 w-full transition-[height] duration-500" style="height: ${pmgPercent}%" title="P. Monte Grande: ${c.pmg}"></div>
+               <div class="bg-secondary w-full transition-[height] duration-500" style="height: ${hoPercent}%" title="HO: ${c.ho}"></div>
+           </div>
+           `
+           }
+           <div class="flex flex-col items-center">
+              <span class="text-xxs font-black ${isLowCoverage ? "text-error" : "text-base-content/60"}">${c.pmg + c.ppp + c.ho}</span>
+              <span class="text-micro font-black uppercase opacity-30">Activos</span>
+           </div>
+        </div>
+      </td>
+    `;
+}
+
+/**
+ * Predicado único de membresía al filtro de estado activo. Lo usan el filtro de
+ * `renderMonthly()` y el guard del patcheo dirigido (#265) para que no diverjan:
+ * si una edición saca al operador del filtro, la fila no puede quedar stale.
+ */
+export function matchesStatusFilter(
+  op: OperatorData,
+  dates: string[],
+): boolean {
+  if (state.activeFilter === "all") return true;
+  return dates.some((d) => {
+    const status = op.asistencia[d];
+    if (state.activeFilter === "Licencia") {
+      return (
+        status === OperatorStatus.Licencia ||
+        status === OperatorStatus.Vacaciones
+      );
+    }
+    return status === state.activeFilter;
+  });
+}
+
 export function renderMonthly(): void {
   // Remove container skeleton -- persists only until first render
   document.getElementById("monthly-view-skeleton")?.remove();
@@ -1261,18 +1469,7 @@ export function renderMonthly(): void {
       return false;
     }
 
-    if (state.activeFilter === "all") return true;
-
-    return dates.some((d) => {
-      const status = op.asistencia[d];
-      if (state.activeFilter === "Licencia") {
-        return (
-          status === OperatorStatus.Licencia ||
-          status === OperatorStatus.Vacaciones
-        );
-      }
-      return status === state.activeFilter;
-    });
+    return matchesStatusFilter(op, dates);
   });
 
   const sortedOps = sortOperators(filteredOps, selectedDateStr);
@@ -1296,84 +1493,6 @@ export function renderMonthly(): void {
     </tr>`;
   } else {
     sortedOps.forEach((op, opIdx) => {
-      const stats = { P: 0, HO: 0, L: 0 };
-      const username = op.username || "";
-      dates.forEach((d) => {
-        const s = op.asistencia[d];
-        if (
-          s === OperatorStatus.PresencialMonteGrande ||
-          s === OperatorStatus.PresencialParquePatricios
-        )
-          stats.P++;
-        else if (s === OperatorStatus.HomeOffice) stats.HO++;
-        else if (
-          s === OperatorStatus.Licencia ||
-          s === OperatorStatus.Vacaciones
-        )
-          stats.L++;
-      });
-
-      // NOTE: keep in sync with hasRuleViolations() in dashboard-client.ts (targeted cell update path)
-      // --- RULE: Consecutive HO Check & Min Presencial Check ---
-      const opMaxHO =
-        op.maxConsecutiveHO !== undefined && op.maxConsecutiveHO !== null
-          ? op.maxConsecutiveHO
-          : state.maxConsecutiveHOLimit;
-      const opMinPWeek =
-        op.minPWeek !== undefined && op.minPWeek !== null
-          ? op.minPWeek
-          : state.minPWeekLimit;
-
-      let maxConsecutiveHO = 0;
-      let currentHO = 0;
-
-      let pWeekViolation = false;
-      let currentWeekP = 0;
-      let currentWeekDays = 0;
-
-      parsedDates.forEach((pd) => {
-        const d = pd.str;
-        const status = op.asistencia[d];
-        if (status === OperatorStatus.HomeOffice) {
-          currentHO++;
-          maxConsecutiveHO = Math.max(maxConsecutiveHO, currentHO);
-        } else if (status !== OperatorStatus.Franco && status) {
-          currentHO = 0;
-        }
-
-        if (
-          status === OperatorStatus.PresencialMonteGrande ||
-          status === OperatorStatus.PresencialParquePatricios
-        )
-          currentWeekP++;
-        if (
-          status !== OperatorStatus.Franco &&
-          status !== OperatorStatus.Licencia &&
-          status !== OperatorStatus.Vacaciones &&
-          status
-        ) {
-          currentWeekDays++;
-        }
-        if (pd.day === 0 || d === dates[dates.length - 1]) {
-          if (currentWeekDays >= 5 && currentWeekP < opMinPWeek) {
-            pWeekViolation = true;
-          }
-          currentWeekP = 0;
-          currentWeekDays = 0;
-        }
-      });
-
-      const hoViolation = maxConsecutiveHO > opMaxHO;
-      if (hoViolation || pWeekViolation) totalInconsistencies++;
-
-      const showViolation = !isReadOnly && (hoViolation || pWeekViolation);
-      const showHOViolation = !isReadOnly && hoViolation;
-      const showPWeekViolation = !isReadOnly && pWeekViolation;
-
-      const opShadowClass = state.isTotalsCollapsed
-        ? "shadow-table-edge"
-        : "";
-
       const opUsername = (op.username || "").trim().toLowerCase();
       const opNameLower = (op.nombre || "").trim().toLowerCase();
       const isCurrentUser = !!(
@@ -1381,216 +1500,28 @@ export function renderMonthly(): void {
         (opUsername === currentUsername || opNameLower === currentUsername)
       );
 
-      const trClass = `group ${showViolation ? "bg-error/2" : ""} ${isCurrentUser ? "highlighted-row" : ""}`;
+      const rowStart = buildMonthlyRowStartHtml(op, {
+        isReadOnly,
+        isCurrentUser,
+        dates,
+      });
+      if (rowStart.hasViolation) totalInconsistencies++;
+
+      const trClass = `group ${rowStart.showViolation ? "bg-error/2" : ""} ${isCurrentUser ? "highlighted-row" : ""}`;
 
       tbodyHtml += `<tr class="${trClass}" data-op-name="${op.nombre.toLowerCase()}">
-        <td class="sticky left-0 bg-base-100 z-40 w-[200px] min-w-[200px] font-bold py-3 px-6 text-xs border-r border-b border-base-200/70 group-hover:!bg-base-200 transition-colors ${opShadowClass}">
-          <div class="flex items-center gap-3">
-            <span class="w-2 h-2 rounded-full ${showViolation ? "bg-error animate-pulse" : "bg-base-300 group-hover:bg-amber-500"} transition-transform shadow-sm cursor-pointer hover:scale-125 hover:ring-2 hover:ring-secondary/50 op-row-dot ${state.isEditMode ? "op-row-header" : ""}" title="${state.isEditMode ? "Pintar toda la fila" : "Destacar fila"}"></span>
-            <div class="flex flex-col min-w-0 flex-1">
-              <div class="flex items-center justify-between w-full">
-                <button class="hover:text-secondary hover:underline underline-offset-2 transition-colors text-left truncate font-bold text-xs" data-op-profile="${op.nombre}">
-                  ${op.nombre}
-                </button>
-                <div class="flex items-center gap-1 shrink-0 ml-1.5 no-print ${state.isEditMode ? "" : "invisible"}">
-                  ${actionEditButtonHtml({
-                    ariaLabel: "Editar operador",
-                    actionClass: "edit-op-btn",
-                    attrs: `data-edit-op-name="${escapeHtml(op.nombre)}" data-edit-op-username="${escapeHtml(username)}" data-edit-op-location="${escapeHtml(op.location || "Monte Grande")}" data-edit-op-schedule="${escapeHtml(op.horario || "")}" title="Editar operador"`,
-                  })}
-                  ${actionDeleteButtonHtml({
-                    ariaLabel: "Eliminar operador",
-                    actionClass: "delete-op-btn",
-                    attrs: `data-delete-op-name="${escapeHtml(op.nombre)}" title="Eliminar operador"`,
-                  })}
-                </div>
-              </div>
-              ${showHOViolation ? `<span class="inline-flex items-center gap-1 text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 w-fit shadow-sm" title="Exceso de HO: ${maxConsecutiveHO} días consecutivos"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.87 2.51c-.35-.63-1.4-.63-1.75 0l-9.99 18c-.17.31-.17.69.01.99c.18.31.51.49.86.49h20c.35 0 .68-.19.86-.49a1 1 0 0 0 .01-.99zM13 19h-2v-2h2zm0-4h-2V9h2z"/></svg>Exceso de HO (${maxConsecutiveHO}d)</span>` : ""}
-              ${showPWeekViolation ? `<span class="inline-flex items-center gap-1 text-tiny bg-error/10 border border-error/20 px-2 py-0.5 rounded-md font-black text-error uppercase tracking-wider mt-1 w-fit shadow-sm" title="Faltan días presenciales esta semana"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.87 2.51c-.35-.63-1.4-.63-1.75 0l-9.99 18c-.17.31-.17.69.01.99c.18.31.51.49.86.49h20c.35 0 .68-.19.86-.49a1 1 0 0 0 .01-.99zM13 19h-2v-2h2zm0-4h-2V9h2z"/></svg>Faltan días P.</span>` : ""}
-            </div>
-          </div>
-        </td>
+        ${rowStart.html}
       `;
 
-      if (!state.isTotalsCollapsed) {
-        tbodyHtml += `
-          <td class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-secondary group-hover:!bg-base-200 transition-colors" style="left: var(--op-w, 200px)">${stats.P}</td>
-          <td class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-amber-700 dark:text-amber-400 group-hover:!bg-base-200 transition-colors" style="left: calc(var(--op-w, 200px) + 40px)">${stats.HO}</td>
-          <td class="sticky bg-base-100 z-40 w-[40px] min-w-[40px] py-3 px-1 text-center text-xxs font-black border-r border-b border-base-200/70 text-error group-hover:!bg-base-200 transition-colors shadow-table-edge" style="left: calc(var(--op-w, 200px) + 80px)">${stats.L}</td>
-        `;
-      }
-
-      // NOTE: keep in sync with buildMonthlyCellHtml() in dashboard-client.ts (targeted cell update path)
       parsedDates.forEach((pd) => {
-        const date = pd.str;
-        const { status, horario: dailyHorario } =
-          resolveOperatorStatusAndHorario(op, date, pd.day, pd.activeGroup);
-        const styles = getStatusStyles(status);
-        const isTodayCell = pd.isToday;
-        const safeName = escapeHtml(op.nombre);
-        const safeDate = escapeHtml(date);
-        const safeStatus = escapeHtml(status || "Franco");
-        const safeHorario = escapeHtml(dailyHorario);
-        const username = op.username || "";
-
-        const breakInicio = (op.breaks_inicio && op.breaks_inicio[date]) || "";
-        const breakFin = (op.breaks_fin && op.breaks_fin[date]) || "";
-
-        // --- RULE: License Overlap Check ---
-        const isLicenseOverlap =
-          (status === OperatorStatus.Licencia ||
-            status === OperatorStatus.Vacaciones) &&
-          coveragePerDay[date].licenses > state.maxLicenseOverlapLimit;
-        if (isLicenseOverlap) totalInconsistencies++;
-
-        const isFrancoCell = status === OperatorStatus.Franco || !status;
-        let cellClass = `p-1 border-r border-b border-base-200/50 text-center transition-colors duration-300`;
-        if (isTodayCell) {
-          cellClass += isFrancoCell
-            ? " bg-base-200/80 dark:bg-base-300/20"
-            : " bg-secondary/10";
-        }
-        if (isLicenseOverlap)
-          cellClass += " ring-1 ring-inset ring-error/30 bg-error/[0.03]";
-
-        const isHoliday = pd.isHoliday;
-        if (isHoliday) cellClass += " bg-orange-100 dark:bg-orange-950";
-
-        const hasComment =
-          !hideComments && !!(op.comentarios && op.comentarios[date]);
-        const dayOvertime = (op.weekendOvertimes || []).find(
-          (s) => s.date === date,
+        const cell = buildMonthlyCellHtml(
+          op,
+          pd.str,
+          opIdx,
+          coveragePerDay[pd.str].licenses,
         );
-        const otAttr = dayOvertime
-          ? `data-overtime="${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`
-          : "";
-
-        if (isFrancoCell) {
-          let francoBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center relative hover:z-20 ${isTodayCell ? "bg-base-300/40 border border-base-content/25" : "bg-base-200/20 border border-base-300/20"}`;
-          if (isHoliday) {
-            francoBtnClass +=
-              " line-through !bg-orange-200/60 dark:!bg-orange-600/60 !border-orange-300 dark:!border-orange-500";
-          }
-          let tooltipAttrs = "";
-          if (dayOvertime) {
-            const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
-            francoBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
-            tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
-          }
-          let francoAria = `Ver detalle de ${safeName} el ${safeDate}: Franco`;
-          if (isHoliday && pd.feriadoName) {
-            francoAria += ` (Feriado: ${pd.feriadoName})`;
-          }
-
-          tbodyHtml += `<td class="${cellClass}">
-            <button
-              type="button"
-              class="${francoBtnClass}"
-              data-monthly-detail
-              data-operator="${safeName}"
-              data-date="${safeDate}"
-              data-status="Franco"
-              data-horario="${safeHorario}"
-              data-username="${escapeHtml(username)}"
-              data-comment="${hideComments ? "" : escapeHtml(op.comentarios?.[date] || "")}"
-              data-break-inicio="${escapeHtml(breakInicio)}"
-              data-break-fin="${escapeHtml(breakFin)}"
-              aria-label="${francoAria}"
-              ${otAttr}
-              ${isHoliday && pd.feriadoName && !dayOvertime ? `title="Franco (Feriado: ${pd.feriadoName})"` : ""}
-              ${tooltipAttrs}
-            >
-              ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight">HE: ${dayOvertime.startTime}</span>` : ""}
-              ${hasComment ? `<div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse ${dayOvertime ? "mt-0.5" : ""}" title="Tiene comentario"></div>` : ""}
-            </button>
-          </td>`;
-          return;
-        }
-
-        let initials = "";
-        if (status === OperatorStatus.PresencialMonteGrande) initials = "MG";
-        else if (status === OperatorStatus.PresencialParquePatricios)
-          initials = "PP";
-        else if (status === OperatorStatus.HomeOffice) initials = "HO";
-        else if (status === OperatorStatus.Licencia) initials = "L";
-        else if (status === OperatorStatus.Vacaciones) initials = "V";
-
-        let statusBtnClass = `monthly-cell-button h-10 flex flex-col items-center justify-center transition-colors duration-300 cursor-pointer relative border ${isTodayCell ? "border-secondary/40 ring-1 ring-secondary/30" : "border-base-300/30"} ${styles.bgClass} ${isLicenseOverlap ? "border-error/40" : ""}`;
-
-        let tooltipAttrs = "";
-        const tooltipDir = opIdx === 0 ? "tooltip-bottom" : "tooltip-top";
-
-        if (
-          status === OperatorStatus.PresencialMonteGrande ||
-          status === OperatorStatus.PresencialParquePatricios ||
-          status === OperatorStatus.HomeOffice
-        ) {
-          statusBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
-          let tipText = safeHorario;
-          if (dayOvertime) {
-            tipText += `\nHE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}`;
-          }
-          tooltipAttrs = `data-tip="${tipText}"`;
-        } else if (dayOvertime) {
-          statusBtnClass += ` tooltip ${tooltipDir} ${isHoliday ? "tooltip-holiday" : "tooltip-neutral"}`;
-          tooltipAttrs = `data-tip="HE: ${escapeHtml(dayOvertime.startTime + " - " + dayOvertime.endTime)}"`;
-        }
-
-        const isSaturday = pd.day === 6;
-        const isRotationCell = !!(
-          isSaturday &&
-          op.saturdayGroup &&
-          op.saturdayGroup === pd.activeGroup &&
-          !(op.overrides && op.overrides[date])
-        );
-
-        if (isRotationCell) {
-          statusBtnClass +=
-            " ring-1 ring-inset ring-secondary/35 border-secondary/40 hover:ring-secondary/50";
-        }
-
-        if (isHoliday) {
-          statusBtnClass +=
-            " line-through !bg-orange-200 dark:!bg-orange-600 !text-orange-800 dark:!text-orange-100 !border-orange-300 dark:!border-orange-500 !shadow-none";
-        }
-
-        let statusTitle = `${op.nombre} - ${date}: ${status} ${isLicenseOverlap ? "(Solapamiento Crítico)" : ""}`;
-        if (isRotationCell) {
-          statusTitle += ` (Rotación Sábado Grupo ${op.saturdayGroup})`;
-        }
-        let statusAria = `Ver detalle de ${safeName} el ${safeDate}: ${safeStatus}`;
-        if (isHoliday && pd.feriadoName) {
-          statusTitle += ` (Feriado: ${pd.feriadoName})`;
-          statusAria += ` (Feriado: ${pd.feriadoName})`;
-        }
-
-        tbodyHtml += `
-          <td class="${cellClass}">
-            <button
-              type="button"
-              class="${statusBtnClass}"
-              ${tooltipAttrs ? "" : `title="${statusTitle}"`}
-              data-monthly-detail
-              data-operator="${safeName}"
-              data-date="${safeDate}"
-              data-status="${safeStatus}"
-              data-horario="${safeHorario}"
-              data-username="${escapeHtml(username)}"
-              data-comment="${hideComments ? "" : escapeHtml(op.comentarios?.[date] || "")}"
-              data-break-inicio="${escapeHtml(breakInicio)}"
-              data-break-fin="${escapeHtml(breakFin)}"
-              aria-label="${statusAria}"
-              ${otAttr}
-              ${isRotationCell ? `data-saturday-rotation="true" data-rotation-horario="${escapeHtml(op.saturdayHorario || "07:00 - 13:00")}"` : ""}
-              ${tooltipAttrs}
-            >
-              <span class="font-black text-xs tracking-tight">${initials}</span>
-              ${dayOvertime ? `<span class="text-micro font-black text-base-content bg-warning/25 border border-warning/40 px-1 py-0.5 rounded tracking-tight mt-0.5 scale-90">HE: ${dayOvertime.startTime}</span>` : ""}
-              ${isLicenseOverlap ? '<div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-error border border-base-100"></div>' : ""}
-              ${hasComment ? `<div class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 border border-base-100" title="Tiene comentario"></div>` : ""}
-            </button>
-          </td>
-        `;
+        if (cell.isLicenseOverlap) totalInconsistencies++;
+        tbodyHtml += cell.html;
       });
       tbodyHtml += `</tr>`;
     });
@@ -1609,7 +1540,7 @@ export function renderMonthly(): void {
       else if (s === OperatorStatus.PresencialParquePatricios) ppp++;
       else if (s === OperatorStatus.HomeOffice) ho++;
     });
-    return { pmg, ppp, ho, total: pmg + ppp + ho };
+    return { date, pmg, ppp, ho, total: pmg + ppp + ho };
   });
 
   const pyClass = state.isCoverageMinimized ? "py-1.5" : "py-3.5";
@@ -1653,36 +1584,7 @@ export function renderMonthly(): void {
   }
 
   dailyCoverage.forEach((c) => {
-    const hoPercent = teamSize > 0 ? (c.ho / teamSize) * 100 : 0;
-    const pmgPercent = teamSize > 0 ? (c.pmg / teamSize) * 100 : 0;
-    const pppPercent = teamSize > 0 ? (c.ppp / teamSize) * 100 : 0;
-    const totalPercent =
-      teamSize > 0 ? ((c.pmg + c.ppp + c.ho) / teamSize) * 100 : 0;
-    const isLowCoverage = totalPercent < 40;
-
-    const cellPyClass = state.isCoverageMinimized ? "py-1 px-1" : "py-2 px-1";
-
-    tfootHtml += `
-      <td class="${cellPyClass} border-r border-base-200/50 min-w-16 ${isLowCoverage ? "bg-error/5" : ""}">
-        <div class="flex flex-col items-center gap-1.5">
-           ${
-             state.isCoverageMinimized
-               ? ""
-               : `
-           <div class="flex flex-col w-2.5 h-10 bg-base-300/30 rounded-full overflow-hidden justify-end shadow-[inset_0_1px_2px_rgb(0_0_0_/_0.1)]">
-               <div class="bg-purple-500 w-full transition-[height] duration-500" style="height: ${pppPercent}%" title="P. Parque Patricios: ${c.ppp}"></div>
-               <div class="bg-amber-500 w-full transition-[height] duration-500" style="height: ${pmgPercent}%" title="P. Monte Grande: ${c.pmg}"></div>
-               <div class="bg-secondary w-full transition-[height] duration-500" style="height: ${hoPercent}%" title="HO: ${c.ho}"></div>
-           </div>
-           `
-           }
-           <div class="flex flex-col items-center">
-              <span class="text-xxs font-black ${isLowCoverage ? "text-error" : "text-base-content/60"}">${c.pmg + c.ppp + c.ho}</span>
-              <span class="text-micro font-black uppercase opacity-30">Activos</span>
-           </div>
-        </div>
-      </td>
-    `;
+    tfootHtml += buildMonthlyCoverageCellHtml(c);
   });
   tfootHtml += `</tr>`;
 

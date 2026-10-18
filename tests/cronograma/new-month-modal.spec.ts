@@ -16,6 +16,7 @@ import {
   setSessionCookie,
   type TestUser,
 } from "../helpers/auth";
+import { ignoreSsrInitialData } from "../helpers/cronograma";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -40,6 +41,7 @@ async function stubCronogramaGet(
   page: Page,
   payload: Record<string, unknown>,
 ): Promise<void> {
+  await ignoreSsrInitialData(page);
   await page.route("**/api/cronograma", async (route) => {
     if (route.request().method() !== "GET") return route.continue();
     await route.fulfill({ json: payload });

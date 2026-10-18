@@ -1,7 +1,7 @@
 ---
 ---
 
-<div class="skeleton-debounced flex flex-col gap-6">
+<div class="flex flex-col gap-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div class="skeleton h-10 w-full max-w-md rounded-box"></div>
     <div class="flex items-center gap-4">
@@ -11,16 +11,19 @@
     </div>
   </div>
 
-
-  <!-- Masonry Grid Skeleton -->
-  <div class="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+  <!-- Masonry Grid Skeleton: misma fuente de columnas que el grid real
+       (--columns-effective), para que el fallback no muestre columnas desalineadas. -->
+  <div
+    class="mt-4 grid gap-2"
+    style="grid-template-columns: repeat(var(--columns-effective, 3), minmax(0, 1fr));"
+  >
     {
       Array.from({ length: 6 }).map((_, i) => (
         <div
-          class={`card bg-base-100 border-base-300 rounded-box border p-5 shadow-xs ${i % 3 === 0 ? "h-64" : i % 3 === 1 ? "h-48" : "h-56"}`}
+          class={`card bg-base-100 border-base-300 rounded-2xl border p-5 shadow-xs ${i % 3 === 0 ? "h-64" : i % 3 === 1 ? "h-48" : "h-56"}`}
         >
           <div class="mb-4 flex items-center gap-3">
-            <div class="skeleton size-8 rounded-box" />
+            <div class="skeleton size-8 rounded-lg" />
             <div class="skeleton h-5 w-36 rounded" />
           </div>
           <div class="space-y-4">

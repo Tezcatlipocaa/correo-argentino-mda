@@ -153,7 +153,7 @@ function applyRateLimit(
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
-        : `ip:${clientAddress}`;
+        : `ip:${clientAddress ?? "unknown"}`;
     const result = checkRateLimit(
       `kb-article-write:${identifier}`,
       RATE_LIMITS.kbArticleWrite,
