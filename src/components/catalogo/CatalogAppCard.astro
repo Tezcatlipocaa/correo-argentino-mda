@@ -6,7 +6,7 @@ import { decryptData } from "@lib/encryption";
 import CopyButton from "@components/ui/CopyButton.astro";
 import { resolveUrl } from "@lib/url";
 import { iconExists } from "@lib/storage";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 interface Props {
   id: number;
@@ -32,19 +32,42 @@ const {
   instructionPdfPath,
 } = Astro.props;
 
+import { canUserAccessCredentials } from "@lib/credentialAccess";
+
 const user = Astro.locals.user;
 const isAuthenticated = user && user.id !== 0;
 
-let decryptedMetaList: Array<{ label: string; value: string }> = [];
+interface AppMetaItem {
+  label: string;
+  value: string;
+  minRole?: string;
+  helpdesk?: string | null;
+}
+
+let visibleMetaItems: Array<{ label: string; metaIndex: number }> = [];
 let hasSensitiveData = false;
 
 if (isAuthenticated && metadata) {
   try {
     const jsonStr = decryptData(metadata);
-    decryptedMetaList = JSON.parse(jsonStr);
-    hasSensitiveData = decryptedMetaList.length > 0;
+    const parsed: AppMetaItem[] = JSON.parse(jsonStr);
+    if (Array.isArray(parsed)) {
+      visibleMetaItems = parsed
+        .map((meta, idx) => ({ ...meta, originalIndex: idx }))
+        .filter((meta) =>
+          canUserAccessCredentials(user, {
+            credentialMinRole: meta.minRole,
+            credentialHelpdesk: meta.helpdesk,
+          }),
+        )
+        .map((meta) => ({
+          label: meta.label,
+          metaIndex: meta.originalIndex,
+        }));
+      hasSensitiveData = visibleMetaItems.length > 0;
+    }
   } catch (err) {
-    console.error("Error al desencriptar metadatos en la tarjeta:", err);
+    console.error("Error al procesar metadatos en la tarjeta:", err);
   }
 }
 
@@ -130,9 +153,15 @@ const searchText = [
                 </span>
               </summary>
               <div class="bg-base-200 mt-2 w-full space-y-1.5 rounded p-2 text-xs">
-                {decryptedMetaList.map((meta, idx) => {
+                {visibleMetaItems.map((meta) => {
                   return (
-                    <div class="flex items-center justify-between gap-3">
+                    <div
+                      class="flex items-center justify-between gap-3"
+                      data-credential-row
+                      data-entity-type="application"
+                      data-entity-id={id}
+                      data-meta-index={meta.metaIndex}
+                    >
                       <span
                         class="text-base-content/50 flex shrink-0 items-center gap-1 font-semibold"
                         title={meta.label}
@@ -142,14 +171,14 @@ const searchText = [
                           size={14}
                           aria-hidden="true"
                         />
-                        <span class="max-w-[80px] truncate sm:max-w-[120px]">
+                        <span class="max-w-20 truncate sm:max-w-30">
                           {meta.label}
                         </span>
                       </span>
                       <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                         <input
                           type="password"
-                          value={meta.value}
+                          placeholder="••••••••"
                           readonly
                           aria-label={`Contraseña para ${meta.label}`}
                           class="input input-xs bg-base-300 text-base-content min-w-0 flex-1 border-none pr-1 text-right font-mono font-bold"
@@ -174,15 +203,27 @@ const searchText = [
                             data-hide-icon
                           />
                         </button>
-                        <CopyButton
-                          value={meta.value}
-                          variant="icon"
-                          appearance="ghost"
-                          size="xs"
-                          tooltipText="Copiar contraseña"
-                          showTooltip={true}
-                          ariaLabel={`Copiar credencial para ${meta.label}`}
-                        />
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-ghost btn-square min-h-8 min-w-8 text-base-content/60 shrink-0"
+                          data-copy-credential
+                          title={`Copiar credencial para ${meta.label}`}
+                          aria-label={`Copiar credencial para ${meta.label}`}
+                        >
+                          <Icon
+                            name="boxicons:clipboard-filled"
+                            size={16}
+                            data-copy-icon-default
+                            aria-hidden="true"
+                          />
+                          <Icon
+                            name="boxicons:check-filled"
+                            size={16}
+                            class="text-success hidden"
+                            data-copy-icon-success
+                            aria-hidden="true"
+                          />
+                        </button>
                       </div>
                     </div>
                   );
@@ -196,60 +237,47 @@ const searchText = [
       <div class="card-actions mt-auto justify-end pt-1">
         {
           isAuthenticated && instructionPdfPath && (
-            <a
+            <ActionButton
               href={`${cleanBase}api/aplicativos/pdf/${id}`}
-              class="btn btn-outline btn-info btn-sm gap-2"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon
-                name="boxicons:file-detail-filled"
-                size={18}
-                aria-hidden="true"
-              />
-              <span>Instructivo</span>
-            </a>
+              variant="outline"
+              color="btn-info"
+              size="sm"
+              icon="boxicons:file-detail-filled"
+              label="Instructivo"
+              newTab
+            />
           )
         }
         {
           hasItemUrl ? (
             isExternal ? (
-              <OpenExternalUrlButton
+              <ActionButton
                 href={itemUrl}
+                icon="boxicons:arrow-up-right-square-filled"
                 ariaLabel={`Acceder a enlace de ${title}`}
-                variant="text"
                 label="Acceder"
                 size="sm"
+                newTab
               />
             ) : (
-              <a
+              <ActionButton
                 href={itemUrl}
-                class="btn btn-secondary btn-sm gap-2"
-                download=""
-              >
-                <Icon
-                  name="boxicons:arrow-to-bottom-stroke"
-                  size={18}
-                  aria-hidden="true"
-                />
-                <span>Descargar</span>
-              </a>
+                color="btn-secondary"
+                size="sm"
+                icon="boxicons:arrow-to-bottom-stroke"
+                label="Descargar"
+                download
+              />
             )
           ) : (
-            <button
-              type="button"
-              class="btn btn-ghost btn-disabled btn-sm gap-2"
+            <ActionButton
+              variant="ghost"
+              size="sm"
+              icon="boxicons:calendar-filled"
+              label="Pendiente"
               disabled
               tabindex="-1"
-            >
-              <Icon
-                name="boxicons:calendar-filled"
-                size={18}
-                aria-hidden="true"
-              
-            is:inline />
-              <span>Pendiente</span>
-            </button>
+            />
           )
         }
       </div>
@@ -258,39 +286,89 @@ const searchText = [
 </article>
 
 <script>
-  const initPasswordToggles = () => {
+  import { fetchRevealedCredential, copySecretToClipboard } from "@lib/credentialRevealClient";
+  import { showToast } from "@lib/toastClient";
+
+  const initAppPasswordHandlers = () => {
+    // 1. Toggle visibility con carga bajo demanda
     document.querySelectorAll("[data-toggle-password]").forEach((btn) => {
       if (btn.getAttribute("data-listener-added") === "true") return;
       btn.setAttribute("data-listener-added", "true");
 
-      btn.addEventListener("click", () => {
-        const parent = btn.closest("div");
-        if (!parent) return;
-        const input = parent.querySelector(
-          "[data-password-input]",
-        ) as HTMLInputElement | null;
-        const showIcon = parent.querySelector(
-          "[data-show-icon]",
-        ) as HTMLElement | null;
-        const hideIcon = parent.querySelector(
-          "[data-hide-icon]",
-        ) as HTMLElement | null;
+      btn.addEventListener("click", async () => {
+        const row = btn.closest<HTMLElement>("[data-credential-row]");
+        if (!row) return;
 
-        if (input) {
-          if (input.type === "password") {
-            input.type = "text";
-            showIcon?.classList.add("hidden");
-            hideIcon?.classList.remove("hidden");
-          } else {
-            input.type = "password";
-            showIcon?.classList.remove("hidden");
-            hideIcon?.classList.add("hidden");
-          }
+        const input = row.querySelector<HTMLInputElement>("[data-password-input]");
+        const showIcon = row.querySelector<HTMLElement>("[data-show-icon]");
+        const hideIcon = row.querySelector<HTMLElement>("[data-hide-icon]");
+        if (!input) return;
+
+        if (input.type === "text") {
+          input.type = "password";
+          showIcon?.classList.remove("hidden");
+          hideIcon?.classList.add("hidden");
+          return;
+        }
+
+        if (!input.value) {
+          const entityType = row.dataset.entityType as "resource_link" | "application";
+          const entityId = Number(row.dataset.entityId);
+          const metaIndex = row.dataset.metaIndex !== undefined ? Number(row.dataset.metaIndex) : undefined;
+          btn.setAttribute("disabled", "true");
+          const secret = await fetchRevealedCredential({ entityType, entityId, metaIndex });
+          btn.removeAttribute("disabled");
+          if (secret === null) return;
+          input.value = secret;
+        }
+
+        input.type = "text";
+        showIcon?.classList.add("hidden");
+        hideIcon?.classList.remove("hidden");
+      });
+    });
+
+    // 2. Copiar credencial con carga bajo demanda
+    document.querySelectorAll("[data-copy-credential]").forEach((btn) => {
+      if (btn.getAttribute("data-copy-listener-added") === "true") return;
+      btn.setAttribute("data-copy-listener-added", "true");
+
+      btn.addEventListener("click", async () => {
+        const row = btn.closest<HTMLElement>("[data-credential-row]");
+        if (!row) return;
+
+        const input = row.querySelector<HTMLInputElement>("[data-password-input]");
+        const defaultIcon = btn.querySelector<HTMLElement>("[data-copy-icon-default]");
+        const successIcon = btn.querySelector<HTMLElement>("[data-copy-icon-success]");
+        if (!input) return;
+
+        let secret = input.value;
+        if (!secret) {
+          const entityType = row.dataset.entityType as "resource_link" | "application";
+          const entityId = Number(row.dataset.entityId);
+          const metaIndex = row.dataset.metaIndex !== undefined ? Number(row.dataset.metaIndex) : undefined;
+          btn.setAttribute("disabled", "true");
+          const fetched = await fetchRevealedCredential({ entityType, entityId, metaIndex });
+          btn.removeAttribute("disabled");
+          if (fetched === null) return;
+          secret = fetched;
+          input.value = fetched;
+        }
+
+        const copied = await copySecretToClipboard(secret);
+        if (copied) {
+          defaultIcon?.classList.add("hidden");
+          successIcon?.classList.remove("hidden");
+          showToast("Credencial copiada al portapapeles", "alert-success");
+          setTimeout(() => {
+            defaultIcon?.classList.remove("hidden");
+            successIcon?.classList.add("hidden");
+          }, 1800);
         }
       });
     });
   };
 
-  initPasswordToggles();
-  document.addEventListener("astro:page-load", initPasswordToggles);
+  initAppPasswordHandlers();
+  document.addEventListener("astro:page-load", initAppPasswordHandlers);
 </script>

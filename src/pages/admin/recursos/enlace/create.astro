@@ -56,6 +56,9 @@ if (Astro.request.method === "POST") {
     const rawPassword =
       formData.get("credentialPassword")?.toString().trim() || "";
     const credentialPassword = rawPassword ? encrypt(rawPassword) : null;
+    const rawMinRole = formData.get("credentialMinRole")?.toString().trim() || null;
+    const credentialMinRole = rawMinRole && ["agent", "referent", "team_leader", "supervisor", "admin"].includes(rawMinRole) ? rawMinRole as any : null;
+    const credentialHelpdesk = formData.get("credentialHelpdesk")?.toString().trim() || null;
 
     let iconPath = link.iconPath || null;
 
@@ -80,6 +83,8 @@ if (Astro.request.method === "POST") {
       deprecated,
       credentialUsername,
       credentialPassword,
+      credentialMinRole,
+      credentialHelpdesk,
     });
     await logAdminFromAstro(Astro.locals, `Creó el enlace "${title}"`);
 
@@ -203,6 +208,28 @@ const hasSavedIcon = iconExists(link.iconPath);
           label="Contraseña (Credenciales)"
           placeholder="••••••••"
           helpText="(Opcional)"
+        />
+
+        <SelectField
+          id="select-credentialMinRole"
+          name="credentialMinRole"
+          label="Rol Mínimo para Revelar"
+          helpText="Solo usuarios con este rol o superior podrán ver y copiar las credenciales."
+        >
+          <option value="">Cualquier rol autenticado</option>
+          <option value="agent">Agente (y superior)</option>
+          <option value="referent">Referente (y superior)</option>
+          <option value="team_leader">Team Leader (y superior)</option>
+          <option value="supervisor">Supervisor (y superior)</option>
+          <option value="admin">Solo Administradores</option>
+        </SelectField>
+
+        <FormField
+          id="input-credentialHelpdesk"
+          name="credentialHelpdesk"
+          label="Mesa de Ayuda Permitida"
+          placeholder="Ej: MDA TI (Opcional, vacío = todas)"
+          helpText="Restringir revelado solo a miembros de esta mesa (los administradores siempre tienen acceso)."
         />
 
         <div class="flex items-center gap-3 sm:col-span-2">

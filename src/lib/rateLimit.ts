@@ -31,6 +31,7 @@ export const RATE_LIMITS = {
   upload: { limit: 10, windowMs: 60 * 60_000 },
   kbCategoryWrite: { limit: 20, windowMs: 60_000 },
   kbArticleWrite: { limit: 20, windowMs: 60_000 },
+  credentialReveal: { limit: 30, windowMs: 60_000 },
 } as const satisfies Record<string, RateLimitProfile>;
 
 const slidingWindows = new Map<

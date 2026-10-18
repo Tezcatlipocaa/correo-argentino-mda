@@ -50,20 +50,14 @@ if (existingLink) {
     deprecated: existingLink.deprecated || false,
     credentialUsername: existingLink.credentialUsername || "",
     credentialPassword: existingLink.credentialPassword || "",
+    credentialMinRole: existingLink.credentialMinRole || "",
+    credentialHelpdesk: existingLink.credentialHelpdesk || "",
   };
 } else {
   return Astro.redirect(resolveUrl("/admin/recursos"));
 }
 
 let formSnapshot = null;
-
-// Valor descifrado solo para mostrar en el formulario. La persistencia usa
-// siempre `link.credentialPassword` (cifrado) como fallback.
-let credentialPasswordValue = "";
-
-if (existingLink.credentialPassword) {
-  credentialPasswordValue = decrypt(existingLink.credentialPassword);
-}
 
 if (Astro.request.method === "POST") {
   const isAjax = Astro.request.headers
@@ -86,6 +80,8 @@ if (Astro.request.method === "POST") {
 
     let credentialUsername = null;
     let credentialPassword = null;
+    let credentialMinRole = null;
+    let credentialHelpdesk = null;
 
     if (!deleteCredentials) {
       credentialUsername =
@@ -94,7 +90,10 @@ if (Astro.request.method === "POST") {
         formData.get("credentialPassword")?.toString().trim() || "";
       credentialPassword = rawPassword
         ? encrypt(rawPassword)
-        : link.credentialPassword || null;
+        : existingLink.credentialPassword || null;
+      const rawMinRole = formData.get("credentialMinRole")?.toString().trim() || null;
+      credentialMinRole = rawMinRole && ["agent", "referent", "team_leader", "supervisor", "admin"].includes(rawMinRole) ? rawMinRole as any : null;
+      credentialHelpdesk = formData.get("credentialHelpdesk")?.toString().trim() || null;
     }
 
     let iconPath = link.iconPath || null;
@@ -124,6 +123,8 @@ if (Astro.request.method === "POST") {
           deprecated,
           credentialUsername,
           credentialPassword,
+          credentialMinRole,
+          credentialHelpdesk,
         })
         .where(eq(resourceLinks.id, numericId));
       if (oldTitle && oldTitle !== title) {
@@ -248,15 +249,59 @@ if (Astro.request.method === "POST") {
           helpText="(Opcional)"
         />
 
+        <div class="form-control w-full">
+          <label class="label py-1" for="input-credentialPassword">
+            <span class="label-text font-medium">Contraseña (Credenciales)</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              id="input-credentialPassword"
+              type="password"
+              name="credentialPassword"
+              placeholder="•••••••• (Dejar vacío para conservar la actual)"
+              class="input input-bordered w-full font-mono text-sm"
+              autocomplete="new-password"
+            />
+            {
+              link.credentialPassword && (
+                <button
+                  type="button"
+                  id="btn-reveal-edit-pwd"
+                  class="btn btn-outline btn-sm shrink-0 gap-1.5"
+                  title="Revelar contraseña actual guardada"
+                >
+                  <Icon name="boxicons:eye-filled" size={16} />
+                  <span>Revelar</span>
+                </button>
+              )
+            }
+          </div>
+          <span class="label-text-alt text-base-content/60 mt-1">
+            (Opcional, dejar vacío para no modificar)
+          </span>
+        </div>
+
+        <SelectField
+          id="select-credentialMinRole"
+          name="credentialMinRole"
+          label="Rol Mínimo para Revelar"
+          helpText="Solo usuarios con este rol o superior podrán ver y copiar las credenciales."
+        >
+          <option value="" selected={!link.credentialMinRole}>Cualquier rol autenticado</option>
+          <option value="agent" selected={link.credentialMinRole === "agent"}>Agente (y superior)</option>
+          <option value="referent" selected={link.credentialMinRole === "referent"}>Referente (y superior)</option>
+          <option value="team_leader" selected={link.credentialMinRole === "team_leader"}>Team Leader (y superior)</option>
+          <option value="supervisor" selected={link.credentialMinRole === "supervisor"}>Supervisor (y superior)</option>
+          <option value="admin" selected={link.credentialMinRole === "admin"}>Solo Administradores</option>
+        </SelectField>
+
         <FormField
-          id="input-credentialPassword"
-          type="password"
-          name="credentialPassword"
-          label="Contraseña (Credenciales)"
-          value={credentialPasswordValue}
-          reveal
-          placeholder="••••••••"
-          helpText="(Opcional, dejar vacío para no modificar)"
+          id="input-credentialHelpdesk"
+          name="credentialHelpdesk"
+          label="Mesa de Ayuda Permitida"
+          value={link.credentialHelpdesk}
+          placeholder="Ej: MDA TI (Opcional, vacío = todas)"
+          helpText="Restringir revelado solo a miembros de esta mesa (los administradores siempre tienen acceso)."
         />
 
         {
@@ -334,3 +379,42 @@ if (Astro.request.method === "POST") {
   </SectionCard>
 </FormShell>
 <AsyncFormScript />
+
+<script>
+  import { fetchRevealedCredential } from "@lib/credentialRevealClient";
+
+  const btnReveal = document.getElementById("btn-reveal-edit-pwd");
+  const pwdInput = document.getElementById("input-credentialPassword") as HTMLInputElement | null;
+
+  if (btnReveal && pwdInput) {
+    btnReveal.addEventListener("click", async () => {
+      if (pwdInput.type === "text") {
+        pwdInput.type = "password";
+        btnReveal.querySelector("span")!.textContent = "Revelar";
+        return;
+      }
+
+      if (!pwdInput.value) {
+        const urlParts = window.location.pathname.split("/");
+        const linkId = Number(urlParts[urlParts.length - 1]);
+        if (!linkId) return;
+
+        btnReveal.setAttribute("disabled", "true");
+        const secret = await fetchRevealedCredential({
+          entityType: "resource_link",
+          entityId: linkId,
+        });
+        btnReveal.removeAttribute("disabled");
+
+        if (secret !== null) {
+          pwdInput.value = secret;
+          pwdInput.type = "text";
+          btnReveal.querySelector("span")!.textContent = "Ocultar";
+        }
+      } else {
+        pwdInput.type = "text";
+        btnReveal.querySelector("span")!.textContent = "Ocultar";
+      }
+    });
+  }
+</script>

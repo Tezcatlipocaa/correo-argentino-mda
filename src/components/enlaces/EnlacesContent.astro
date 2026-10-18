@@ -11,10 +11,11 @@ import type {
   CategoryTone,
   CategoryViewModel,
 } from "./types";
-import { decrypt } from "@lib/encryption";
+import { canUserAccessCredentials } from "@lib/credentialAccess";
 import { getHideDescriptions } from "@/lib/viewMode";
 
-const isAuthenticated = Astro.locals.user && Astro.locals.user.id !== 0;
+const user = Astro.locals.user;
+const isAuthenticated = user && user.id !== 0;
 
 const rawCategories = await db.query.resourceCategories.findMany({
   orderBy: [asc(resourceCategories.sortOrder), asc(resourceCategories.title)],
@@ -38,23 +39,29 @@ const importantCategories = rawCategories.map(
         }
         return a.title.localeCompare(b.title);
       })
-      .map((link) => ({
-        ...link,
-        id: String(link.id),
-        subtitle: link.subtitle ?? undefined,
-        iconPath: link.iconPath ?? undefined,
-        deprecated: link.deprecated ?? false,
-        credentials:
+      .map((link) => {
+        const hasAccess =
           isAuthenticated &&
-          (link.credentialUsername || link.credentialPassword)
-            ? {
-                username: link.credentialUsername || "",
-                password: link.credentialPassword
-                  ? decrypt(link.credentialPassword)
-                  : undefined,
-              }
-            : undefined,
-      })),
+          canUserAccessCredentials(user, {
+            credentialMinRole: link.credentialMinRole,
+            credentialHelpdesk: link.credentialHelpdesk,
+          });
+
+        return {
+          ...link,
+          id: String(link.id),
+          subtitle: link.subtitle ?? undefined,
+          iconPath: link.iconPath ?? undefined,
+          deprecated: link.deprecated ?? false,
+          credentials:
+            hasAccess && (link.credentialUsername || link.credentialPassword)
+              ? {
+                  username: link.credentialUsername || "",
+                  hasPassword: Boolean(link.credentialPassword),
+                }
+              : undefined,
+        };
+      }),
   }),
 );
 

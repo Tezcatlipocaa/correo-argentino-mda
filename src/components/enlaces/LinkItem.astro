@@ -168,8 +168,13 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
                     </div>
                   </div>
                 )}
-                {link.credentials.password && (
-                  <div class="flex items-center justify-between gap-3">
+                {link.credentials.hasPassword && (
+                  <div
+                    class="flex items-center justify-between gap-3"
+                    data-credential-row
+                    data-entity-type="resource_link"
+                    data-entity-id={link.id}
+                  >
                     <span
                       class="text-base-content/50 flex shrink-0 items-center gap-1"
                       title="Contraseña"
@@ -183,7 +188,7 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
                     <div class="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                       <input
                         type="password"
-                        value={link.credentials.password}
+                        placeholder="••••••••"
                         readonly
                         aria-label={`Contraseña de ${link.title}`}
                         class="input input-xs bg-base-300 text-base-content min-w-0 flex-1 border-none pr-1 text-right font-mono font-bold"
@@ -208,15 +213,27 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
                           data-hide-icon
                         />
                       </button>
-                      <CopyButton
-                        value={link.credentials.password}
-                        variant="icon"
-                        appearance="ghost"
-                        size="xs"
-                        tooltipText="Copiar contraseña"
-                        showTooltip={true}
-                        ariaLabel="Copiar contraseña de credencial"
-                      />
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-ghost btn-square min-h-8 min-w-8 text-base-content/60 shrink-0"
+                        data-copy-credential
+                        title="Copiar contraseña"
+                        aria-label="Copiar contraseña de credencial"
+                      >
+                        <Icon
+                          name="boxicons:clipboard-filled"
+                          size={16}
+                          data-copy-icon-default
+                          aria-hidden="true"
+                        />
+                        <Icon
+                          name="boxicons:check-filled"
+                          size={16}
+                          class="text-success hidden"
+                          data-copy-icon-success
+                          aria-hidden="true"
+                        />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -258,41 +275,91 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
 </li>
 
 <script>
-  const initPasswordToggles = () => {
+  import { fetchRevealedCredential, copySecretToClipboard } from "@lib/credentialRevealClient";
+  import { showToast } from "@lib/toastClient";
+
+  const initPasswordHandlers = () => {
+    // 1. Toggle visibility con carga bajo demanda
     document.querySelectorAll("[data-toggle-password]").forEach((btn) => {
       if (btn.getAttribute("data-listener-added") === "true") return;
       btn.setAttribute("data-listener-added", "true");
 
-      btn.addEventListener("click", () => {
-        const parent = btn.closest("div");
-        if (!parent) return;
-        const input = parent.querySelector(
-          "[data-password-input]",
-        ) as HTMLInputElement | null;
-        const showIcon = parent.querySelector(
-          "[data-show-icon]",
-        ) as HTMLElement | null;
-        const hideIcon = parent.querySelector(
-          "[data-hide-icon]",
-        ) as HTMLElement | null;
+      btn.addEventListener("click", async () => {
+        const row = btn.closest<HTMLElement>("[data-credential-row]");
+        if (!row) return;
 
-        if (input) {
-          if (input.type === "password") {
-            input.type = "text";
-            showIcon?.classList.add("hidden");
-            hideIcon?.classList.remove("hidden");
-          } else {
-            input.type = "password";
-            showIcon?.classList.remove("hidden");
-            hideIcon?.classList.add("hidden");
-          }
+        const input = row.querySelector<HTMLInputElement>("[data-password-input]");
+        const showIcon = row.querySelector<HTMLElement>("[data-show-icon]");
+        const hideIcon = row.querySelector<HTMLElement>("[data-hide-icon]");
+        if (!input) return;
+
+        // Si ya está revelado como texto, ocultarlo
+        if (input.type === "text") {
+          input.type = "password";
+          showIcon?.classList.remove("hidden");
+          hideIcon?.classList.add("hidden");
+          return;
+        }
+
+        // Si no tiene valor en memoria, buscarlo vía API
+        if (!input.value) {
+          const entityType = row.dataset.entityType as "resource_link" | "application";
+          const entityId = Number(row.dataset.entityId);
+          btn.setAttribute("disabled", "true");
+          const secret = await fetchRevealedCredential({ entityType, entityId });
+          btn.removeAttribute("disabled");
+          if (secret === null) return;
+          input.value = secret;
+        }
+
+        input.type = "text";
+        showIcon?.classList.add("hidden");
+        hideIcon?.classList.remove("hidden");
+      });
+    });
+
+    // 2. Copiar con carga bajo demanda si no está revelado
+    document.querySelectorAll("[data-copy-credential]").forEach((btn) => {
+      if (btn.getAttribute("data-copy-listener-added") === "true") return;
+      btn.setAttribute("data-copy-listener-added", "true");
+
+      btn.addEventListener("click", async () => {
+        const row = btn.closest<HTMLElement>("[data-credential-row]");
+        if (!row) return;
+
+        const input = row.querySelector<HTMLInputElement>("[data-password-input]");
+        const defaultIcon = btn.querySelector<HTMLElement>("[data-copy-icon-default]");
+        const successIcon = btn.querySelector<HTMLElement>("[data-copy-icon-success]");
+        if (!input) return;
+
+        let secret = input.value;
+        if (!secret) {
+          const entityType = row.dataset.entityType as "resource_link" | "application";
+          const entityId = Number(row.dataset.entityId);
+          btn.setAttribute("disabled", "true");
+          const fetched = await fetchRevealedCredential({ entityType, entityId });
+          btn.removeAttribute("disabled");
+          if (fetched === null) return;
+          secret = fetched;
+          input.value = fetched;
+        }
+
+        const copied = await copySecretToClipboard(secret);
+        if (copied) {
+          defaultIcon?.classList.add("hidden");
+          successIcon?.classList.remove("hidden");
+          showToast("Contraseña copiada al portapapeles", "alert-success");
+          setTimeout(() => {
+            defaultIcon?.classList.remove("hidden");
+            successIcon?.classList.add("hidden");
+          }, 1800);
         }
       });
     });
   };
 
-  initPasswordToggles();
-  document.addEventListener("astro:page-load", initPasswordToggles);
+  initPasswordHandlers();
+  document.addEventListener("astro:page-load", initPasswordHandlers);
 </script>
 
 <style is:global>
