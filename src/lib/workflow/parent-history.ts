@@ -22,6 +22,7 @@ import type { AutomationClosure } from "./closures";
 import type { AutomationSummary } from "./discovery";
 import { normalizeForCompare } from "./labels";
 import { nowSeconds } from "./time";
+import { markActivityDay } from "./activity-days";
 
 /**
  * Historial persistente de padres de automatización. Alimenta el listado
@@ -45,6 +46,29 @@ export function upsertAutomationParents(
   }
 
   const now = nowSeconds();
+
+  // Estado previo (para detectar movimiento y marcar el día de actividad).
+  const previous = new Map<number, { updatedAt: number; statusId: number }>();
+  try {
+    const ids = items.map((item) => item.id);
+    const rows = db
+      .select({
+        automationId: automationParents.automationId,
+        updatedAt: automationParents.updatedAt,
+        statusId: automationParents.statusId,
+      })
+      .from(automationParents)
+      .where(inArray(automationParents.automationId, ids))
+      .all();
+    for (const row of rows) {
+      previous.set(row.automationId, {
+        updatedAt: row.updatedAt,
+        statusId: row.statusId,
+      });
+    }
+  } catch {
+    // Sin estado previo: se asume todo nuevo (marca el día de creación).
+  }
 
   try {
     db.transaction((tx) => {
@@ -93,6 +117,19 @@ export function upsertAutomationParents(
     });
   } catch {
     return;
+  }
+
+  // Día de actividad: creación (caso nuevo) o el día del último movimiento.
+  for (const item of items) {
+    const before = previous.get(item.id);
+    if (before === undefined) {
+      markActivityDay(item.id, item.createdAt);
+    } else if (
+      before.updatedAt !== item.updatedAt ||
+      before.statusId !== item.statusId
+    ) {
+      markActivityDay(item.id, item.updatedAt);
+    }
   }
 }
 
@@ -505,6 +542,7 @@ export function upsertAutomationParentStatus(
       })
       .where(eq(automationParents.automationId, automationId))
       .run();
+    markActivityDay(automationId, status.updatedAt);
   } catch {
     return;
   }
@@ -541,6 +579,7 @@ export function updateAutomationParentProgress(
       })
       .where(eq(automationParents.automationId, automationId))
       .run();
+    markActivityDay(automationId, nowSeconds());
   } catch {
     return;
   }
