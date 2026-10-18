@@ -5,7 +5,7 @@ import MetricsHeader from "@components/ui/MetricsHeader.astro";
 import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
 import OficinasEstadisticasContent from "@components/offices/stats/OficinasEstadisticasContent.astro";
 import { getCleanBase } from "@lib/baseUrl";
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 const cleanBase = getCleanBase();
 ---
@@ -20,14 +20,15 @@ const cleanBase = getCleanBase();
       badge="Últimos 30 días"
     >
       <Fragment slot="actions">
-        <a
+        <ActionButton
           href={`${cleanBase}oficinas/estructura`}
-          class="btn btn-outline btn-sm gap-2"
+          size="sm"
+          variant="outline"
+          icon="boxicons:network-chart-filled"
           title="Ver estructura jerárquica de la red"
         >
-          <Icon name="boxicons:network-chart-filled" size={18} />
-          <span>Estructura</span>
-        </a>
+          Estructura
+        </ActionButton>
       </Fragment>
     </MetricsHeader>
 

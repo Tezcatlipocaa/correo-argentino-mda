@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 ---
 
@@ -31,14 +32,17 @@ import { Icon } from "astro-icon/components";
           -
         </h2>
       </div>
-      <button
+      <ActionButton
         id="drawer-close"
         type="button"
-        class="btn btn-ghost btn-circle btn-sm shrink-0"
-        aria-label="Cerrar panel"
-      >
-        <Icon name="boxicons:x" size={20} />
-      </button>
+        variant="ghost"
+        circle
+        size="sm"
+        icon="boxicons:x"
+        iconSize={20}
+        ariaLabel="Cerrar panel"
+        class="shrink-0"
+      />
     </div>
 
     <div class="space-y-2 p-4 bg-base-200/50 rounded-box border border-base-200">

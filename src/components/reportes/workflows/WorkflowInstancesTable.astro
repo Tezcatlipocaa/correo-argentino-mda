@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import type { WorkflowProcessInstance, WorkflowStatus } from "@/types/workflows";
@@ -137,14 +138,15 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
             </span>
           </div>
           <div class="flex justify-end" data-label="Acción">
-            <button
+            <ActionButton
               type="button"
-              class="btn btn-ghost btn-xs gap-1 btn-inspect-workflow"
+              variant="ghost"
+              size="xs"
+              icon="boxicons:eye"
+              label="Inspeccionar"
               title={`Inspeccionar proceso ${instance.prettyId}`}
-            >
-              <Icon name="boxicons:eye" size={16} />
-              <span>Inspeccionar</span>
-            </button>
+              class="btn-inspect-workflow"
+            />
           </div>
         </div>
       );

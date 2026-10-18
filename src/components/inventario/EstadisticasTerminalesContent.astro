@@ -1,5 +1,5 @@
 ---
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import StatsCard from "@components/ui/StatsCard.astro";
 import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
@@ -108,10 +108,16 @@ const CHARTS: {
       options={osOptions}
       class="w-full md:w-44"
     />
-    <a class="btn btn-secondary btn-sm md:ml-auto" href={inventarioHref}>
-      <Icon name="boxicons:desktop-filled" size={16} is:inline />
+    <ActionButton
+      href={inventarioHref}
+      size="sm"
+      color="btn-secondary"
+      icon="boxicons:desktop-filled"
+      iconSize={16}
+      class="md:ml-auto"
+    >
       Ver inventario completo
-    </a>
+    </ActionButton>
   </div>
 
   <StatsGrid base={1} lg={4} class="w-full">

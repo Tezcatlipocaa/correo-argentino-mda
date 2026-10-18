@@ -9,6 +9,7 @@ import HelpdeskBentoGrid from "@components/reportes/mesas/HelpdeskBentoGrid.astr
 import HelpdeskTable from "@components/reportes/mesas/HelpdeskTable.astro";
 import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
 import { getHelpdesksReport } from "@lib/helpdesks/service";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { resolveUrl } from "@lib/url";
 import { Icon } from "astro-icon/components";
 
@@ -50,14 +51,15 @@ const legendItems = [
       description="Tablero consolidado de colas operativas, volumen mensual, cumplimiento de SLA y satisfacción de usuarios."
     >
       <Fragment slot="actions">
-        <a
+        <ActionButton
           href={resolveUrl("/reportes/categorias")}
-          class="btn btn-outline btn-sm gap-2"
+          variant="outline"
+          color=""
+          size="sm"
+          icon="boxicons:network-chart"
+          label="Árbol de Categorías"
           title="Ver árbol de categorías"
-        >
-          <Icon name="boxicons:network-chart" size={18} />
-          <span>Árbol de Categorías</span>
-        </a>
+        />
         <RefreshReportButton
           id="btn-refresh-helpdesks"
           endpoint="api/reportes/mesas/refresh"

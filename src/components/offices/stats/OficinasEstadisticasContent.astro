@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import StatsCard from "@components/ui/StatsCard.astro";
 import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
@@ -187,23 +188,25 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
     <div class="flex flex-wrap items-center justify-between gap-2">
       <span class="text-base-content/60 text-sm font-medium" data-ranking-total></span>
       <div class="join border border-base-300 rounded-lg overflow-hidden bg-base-100">
-        <button
-          type="button"
-          class="btn btn-ghost join-item btn-sm px-2.5"
+        <ActionButton
+          size="sm"
+          variant="ghost"
+          icon="boxicons:chevron-left"
+          ariaLabel="Página anterior"
+          class="join-item px-2.5"
+          buttonProps={{ "data-page-prev": "" }}
           data-page-prev
-          aria-label="Página anterior"
-        >
-          <Icon name="boxicons:chevron-left" size={18} />
-        </button>
+        />
         <span class="btn btn-ghost join-item btn-sm pointer-events-none no-animation font-mono text-xs px-3" data-page-label>1</span>
-        <button
-          type="button"
-          class="btn btn-ghost join-item btn-sm px-2.5"
+        <ActionButton
+          size="sm"
+          variant="ghost"
+          icon="boxicons:chevron-right"
+          ariaLabel="Página siguiente"
+          class="join-item px-2.5"
+          buttonProps={{ "data-page-next": "" }}
           data-page-next
-          aria-label="Página siguiente"
-        >
-          <Icon name="boxicons:chevron-right" size={18} />
-        </button>
+        />
       </div>
     </div>
   </section>

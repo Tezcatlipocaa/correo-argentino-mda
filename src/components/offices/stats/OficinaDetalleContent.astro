@@ -1,5 +1,6 @@
 ---
 import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
 import ChartCard from "@components/ui/ChartCard.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
@@ -57,7 +58,7 @@ const incidentesRowGridClass = `grid ${incidentesGridClass} items-center`;
 <div class="flex w-full flex-col gap-6 pb-24">
   {!invgateOk && <span class="badge badge-warning badge-outline self-start">Sin datos en vivo de InvGate</span>}
 
-  <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <StatsGrid base={1} sm={2} lg={4} class="w-full">
     <div data-kpi="usuarios">
       <StatsCard
         icon="group"
@@ -93,7 +94,7 @@ const incidentesRowGridClass = `grid ${incidentesGridClass} items-center`;
         color="warning"
       />
     </div>
-  </div>
+  </StatsGrid>
 
   <div class="flex flex-wrap gap-2">
     <span class:list={["badge badge-outline", oficina.active ? "badge-success" : "badge-error"]}>
