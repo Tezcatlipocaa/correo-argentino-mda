@@ -86,3 +86,17 @@
 ---
 - [x] **Track: Council de Calidad MDA (Orquestación Multi-Agente & Fallback Resiliente)**
   *Link: [./tracks/calidad_council_orquestacion_20261016/index.md](./tracks/calidad_council_orquestacion_20261016/index.md)*
+---
+- [x] **Track: Evaluación Asistida de Reclamo/Novedad y Detección de Tickets InvGate**
+  *Link: [./tracks/calidad_reclamo_novedad_ai_20261017/index.md](./tracks/calidad_reclamo_novedad_ai_20261017/index.md)*
+---
+- [x] **Track: Ciclo de Aprendizaje y Calibración (Ground Truth)**
+  *Link: [./tracks/calidad_ground_truth_calibracion_20261017/index.md](./tracks/calidad_ground_truth_calibracion_20261017/index.md)*
+---
+- [x] **Track: Devolución y Coaching Estructurado para el Operador**
+  *Link: [./tracks/calidad_coaching_operador_20261017/index.md](./tracks/calidad_coaching_operador_20261017/index.md)*
+---
+- [x] **Track: Generador de Calibración de Rúbricas y Diff Canónico para Cierre de Ground Truth**
+  *Link: [./tracks/calidad_calibracion_feedback_rubricas_20261017/index.md](./tracks/calidad_calibracion_feedback_rubricas_20261017/index.md)*
+
+
