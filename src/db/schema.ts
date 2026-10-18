@@ -11,22 +11,31 @@ import {
 
 import { relations, sql } from "drizzle-orm";
 
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("agent"),
-  helpdeskId: integer("helpdesk_id").references(() => mesas.invgateId, {
-    onDelete: "set null",
+export const users = sqliteTable(
+  "users",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    username: text("username").notNull().unique(),
+    password: text("password"),
+    authProvider: text("auth_provider").notNull().default("local"),
+    externalId: text("external_id"),
+    email: text("email"),
+    role: text("role").notNull().default("agent"),
+    helpdeskId: integer("helpdesk_id").references(() => mesas.invgateId, {
+      onDelete: "set null",
+    }),
+    helpdeskName: text("helpdesk_name"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    disabledAt: integer("disabled_at", { mode: "timestamp" }),
+    disabledBy: integer("disabled_by").references(
+      (): AnySQLiteColumn => users.id,
+      { onDelete: "set null" },
+    ),
+  },
+  (table) => ({
+    externalIdIdx: uniqueIndex("users_external_id_idx").on(table.externalId),
   }),
-  helpdeskName: text("helpdesk_name"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  disabledAt: integer("disabled_at", { mode: "timestamp" }),
-  disabledBy: integer("disabled_by").references(
-    (): AnySQLiteColumn => users.id,
-    { onDelete: "set null" },
-  ),
-});
+);
 
 export const employees = sqliteTable(
   "employees",
@@ -486,6 +495,8 @@ export const resourceLinks = sqliteTable("resource_links", {
   deprecated: integer("deprecated", { mode: "boolean" }).default(false),
   credentialUsername: text("credential_username"),
   credentialPassword: text("credential_password"),
+  credentialMinRole: text("credential_min_role").notNull().default("agent"),
+  credentialHelpdesk: text("credential_helpdesk"),
 });
 
 export const resourceCategoriesRelations = relations(

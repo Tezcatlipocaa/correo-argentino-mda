@@ -7,7 +7,7 @@ import { z } from "zod";
  */
 const criticalSchema = z.object({
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET debe tener al menos 32 caracteres"),
-  ENCRYPTION_KEY: z.string().min(16, "ENCRYPTION_KEY debe tener al menos 16 caracteres"),
+  ENCRYPTION_KEY: z.string().min(32, "ENCRYPTION_KEY debe tener al menos 32 caracteres"),
 });
 
 const optionalKeys = [
@@ -41,11 +41,18 @@ const optionalKeys = [
   "LDAP_BASE_DN",
   "LDAP_USER",
   "LDAP_PASS",
+  "LDAP_TLS_CA_PATH",
+  "LDAP_TLS_REJECT_UNAUTHORIZED",
   "MIDPOINT_USER",
   "MIDPOINT_PASS",
   "WISE_CX_API_KEY",
   "WISE_CX_API_USER",
   "WISE_CX_BASE_URL",
+  "ENTRA_ENABLED",
+  "ENTRA_TENANT_ID",
+  "ENTRA_CLIENT_ID",
+  "ENTRA_CLIENT_SECRET",
+  "ENTRA_REDIRECT_URI",
 ] as const;
 
 /**
