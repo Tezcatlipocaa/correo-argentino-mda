@@ -92,5 +92,17 @@
 ---
 - [x] **Track: Rediseño UI/UX, Filtros Flotantes y Rendimiento de Árboles Interactivos**
   *Link: [./tracks/trees_ui_ux_perf_20261016/index.md](./tracks/trees_ui_ux_perf_20261016/index.md)*
-
-
+---
+- [x] **Track: Auto-Deploy Transaccional, Guardia de Schema y Gate Pre-Push**
+  *Link: [./tracks/safe_deploy_20261017/index.md](./tracks/safe_deploy_20261017/index.md)*
+---
+- [x] **Track: Seguridad 1 — Credenciales, Sesiones, Tránsito Seguro (LDAPS) y Preparación Azure AD**
+  *Link: [./tracks/sec_auth_credentials_20261017/index.md](./tracks/sec_auth_credentials_20261017/index.md)*
+---
+- [ ] **Track (Backlog): Seguridad 2 — Control de Acceso (RBAC), CSRF Centralizado y Rate Limiting (`sec_rbac_csrf_ratelimit`)**
+---
+- [ ] **Track (Backlog): Seguridad 3 — Blindaje contra Inyecciones (SSRF, Subprocesos, SQL) y Sanitización XSS/Archivos (`sec_xss_ssrf_files`)**
+---
+- [ ] **Track (Backlog): Seguridad 4 — Guardrails de IA y Prevención de Prompt Injection para LLM Local (`sec_ai_llm_guardrails`)**
+---
+- [ ] **Track (Backlog): Sistema Dinámico de Gestión de Usuarios, Roles, Mesas y Visibilidad en UI — Individual y Masivo, Desacoplado de Azure AD (`dynamic_rbac_ui_manager`)**
