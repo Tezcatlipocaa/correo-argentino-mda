@@ -1,6 +1,6 @@
 ---
 // MonthNavigator.astro — navegador de mes único (select + flechas).
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import type { HTMLAttributes } from "astro/types";
 // Un solo componente para los selectores de mes de Mensual/Grupos/Pasiva: el
 // select y las flechas comparten altura (select-sm / btn-sm btn-square),
@@ -18,25 +18,25 @@ const nextId = `${id}-next`;
 ---
 
 <div class:list={["inline-flex items-center gap-1", className]}>
-  <button
-    type="button"
+  <ActionButton
     id={prevId}
-    class="btn btn-sm btn-ghost btn-square"
+    variant="ghost"
+    size="sm"
+    square
+    icon="boxicons:chevron-left-filled"
     title="Mes anterior"
-    aria-label="Mes anterior"
-  >
-    <Icon name="boxicons:chevron-left-filled" size={18} />
-  </button>
+    ariaLabel="Mes anterior"
+  />
   <select id={id} class="select select-sm gap-2 bg-base-100" {...rest}></select>
-  <button
-    type="button"
+  <ActionButton
     id={nextId}
-    class="btn btn-sm btn-ghost btn-square"
+    variant="ghost"
+    size="sm"
+    square
+    icon="boxicons:chevron-right-filled"
     title="Mes siguiente"
-    aria-label="Mes siguiente"
-  >
-    <Icon name="boxicons:chevron-right-filled" size={18} />
-  </button>
+    ariaLabel="Mes siguiente"
+  />
 </div>
 
 <style>

@@ -1,6 +1,6 @@
 ---
 import type { HTMLAttributes } from "astro/types";
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
 
 interface Option {
@@ -55,14 +55,14 @@ const selectedSet = new Set(selected);
             data-value={o.value}
           >
             <span data-multiselect-chip-label>{o.label}</span>
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs btn-circle"
+            <ActionButton
+              variant="ghost"
+              size="xs"
+              circle
               data-multiselect-remove={o.value}
-              aria-label={`Quitar ${o.label}`}
-            >
-              <Icon name="boxicons:x-filled" size={12} is:inline />
-            </button>
+              ariaLabel={`Quitar ${o.label}`}
+              icon="boxicons:x-filled"
+            />
             <input type="hidden" name={name} value={o.value} />
           </span>
         ))
@@ -118,25 +118,14 @@ const selectedSet = new Set(selected);
 <template data-multiselect-chip-tpl>
   <span class="badge badge-neutral gap-1" data-multiselect-chip>
     <span data-multiselect-chip-label></span>
-    <button
-      type="button"
-      class="btn btn-ghost btn-xs btn-circle"
+    <ActionButton
+      variant="ghost"
+      size="xs"
+      circle
       data-multiselect-remove
-      aria-label="Quitar"
-    >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-        data-icon="boxicons:x-filled"
-      >
-        <path
-          fill="currentColor"
-          d="m9.88 12.71l-4.95 4.95l1.41 1.41l2.83-2.83L12 13.41l2.12 2.13l3.54 3.53l1.41-1.41l-4.95-4.95l-.71-.71l5.66-5.66l-1.41-1.41L12 10.59L6.34 4.93L4.93 6.34L10.59 12z"
-        ></path>
-      </svg>
-    </button>
+      ariaLabel="Quitar"
+      icon="boxicons:x-filled"
+    />
     <input type="hidden" data-multiselect-hidden />
   </span>
 </template>
