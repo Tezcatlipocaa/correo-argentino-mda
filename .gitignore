@@ -119,6 +119,10 @@ scripts/backups
 # align-db-to-schema workdir (regenerada en cada corrida)
 .drizzle-canonical/
 
+# Safe deploy artifacts
+.deploy.lock
+.deploy-rollback/
+
 # Certificados (nunca versionar)
 *.cer
 *.crt
