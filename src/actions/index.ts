@@ -268,6 +268,8 @@ export const server = {
               v === "on" || v === true || v === "true" || v === 1 || v === "1",
           )
           .default(true),
+        aiSnapshot: z.string().optional().nullable(),
+        operatorCoaching: z.string().optional().nullable(),
       })
       .passthrough(),
     handler: async (input, context) => {
@@ -383,6 +385,16 @@ export const server = {
           isReclamoNovedad,
         );
 
+      const incomingSnapshot =
+        typeof input.aiSnapshot === "string" && input.aiSnapshot.trim().length > 0
+          ? input.aiSnapshot.trim()
+          : null;
+
+      const incomingCoaching =
+        typeof input.operatorCoaching === "string" && input.operatorCoaching.trim().length > 0
+          ? input.operatorCoaching.trim()
+          : null;
+
       const auditData = {
         agentId: input.agentId,
         channelType: input.channelType,
@@ -420,9 +432,15 @@ export const server = {
       try {
         if (input.id) {
           await db.transaction((tx) => {
-            // Actualizar auditoría principal
+            // Actualizar auditoría principal (preserva aiSnapshot si no vino uno nuevo)
+            const updatePayload = {
+              ...auditData,
+              ...(incomingSnapshot ? { aiSnapshot: incomingSnapshot } : {}),
+              ...(input.operatorCoaching !== undefined ? { operatorCoaching: incomingCoaching } : {}),
+            };
+
             tx.update(qualityAudits)
-              .set(auditData)
+              .set(updatePayload)
               .where(eq(qualityAudits.id, input.id!))
               .run();
 
@@ -446,10 +464,16 @@ export const server = {
         } else {
           let insertedId: number;
           await db.transaction((tx) => {
-            // Insertar nueva auditoría
+            // Insertar nueva auditoría con aiSnapshot y operatorCoaching (o null)
+            const insertPayload = {
+              ...auditData,
+              aiSnapshot: incomingSnapshot,
+              operatorCoaching: incomingCoaching,
+            };
+
             const [inserted] = tx
               .insert(qualityAudits)
-              .values(auditData)
+              .values(insertPayload)
               .returning({ id: qualityAudits.id })
               .all();
 
