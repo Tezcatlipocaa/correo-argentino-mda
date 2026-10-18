@@ -4,6 +4,7 @@ import { getServerEnv } from "@lib/invgate/automation/env";
 import { isActiveStatus } from "./automation-status";
 import { listClosures } from "./closures";
 import type { AutomationClosure } from "./closures";
+import { countActiveDaysByAutomation } from "./activity-days";
 import type { AutomationParentAge } from "./parent-history";
 
 /**
@@ -38,6 +39,40 @@ export interface MonthlyThroughput {
   month: string;
   created: number;
   finalized: number;
+}
+
+export interface MonthlyLeadTime {
+  /** Clave `YYYY-MM`. */
+  month: string;
+  /** Casos resueltos en el mes con tiempo de ciclo válido. */
+  sample: number;
+  medianDays: number | null;
+  p90Days: number | null;
+}
+
+export interface ExecutiveSummary {
+  total: number;
+  finalized: number;
+  active: number;
+  medianLeadDays: number | null;
+  onTimeRate: number | null;
+}
+
+export interface PaceMetrics {
+  /** Finalizaciones por semana (según la ventana o el histórico). */
+  finalizedPerWeek: number | null;
+  /** Semanas estimadas para vaciar el WIP al ritmo actual. */
+  etaWeeks: number | null;
+}
+
+export interface TimeMetrics {
+  /** Casos con días activos registrados. */
+  sampleActive: number;
+  medianActiveDays: number | null;
+  /** Mediana de días de calendario sin actividad (calendario − activos). */
+  medianIdleDays: number | null;
+  /** Distribución del WIP por días sin actividad. */
+  idleBuckets: { label: string; count: number }[];
 }
 
 export interface BacklogBucket {
@@ -84,8 +119,6 @@ export interface AutomationMetrics {
     total: number;
     active: number;
     finalized: number;
-    finalizedByPortal: number;
-    finalizedInInvGate: number;
   };
   leadTime: {
     sample: number;
@@ -108,8 +141,12 @@ export interface AutomationMetrics {
     critical: number;
     ageThresholdDays: number;
   };
-  /** Proporción de finalizadas cerradas localmente desde el portal. */
-  portalShare: number | null;
+  /** Números headline para el resumen ejecutivo. */
+  executive: ExecutiveSummary;
+  /** Ritmo de cierre y proyección del backlog. */
+  pace: PaceMetrics;
+  /** Tiempo trabajado (días activos) y días sin actividad. */
+  time: TimeMetrics;
   dataQuality: {
     total: number;
     missingBranchCode: number;
@@ -117,8 +154,9 @@ export interface AutomationMetrics {
     missingRegion: number;
   };
   byRegion: GroupStat[];
-  byMesa: GroupStat[];
   throughput: MonthlyThroughput[];
+  /** Mediana/p90 de tiempo de ciclo por mes (casos resueltos en el mes). */
+  leadTimeByMonth: MonthlyLeadTime[];
   backlog: BacklogBucket[];
   oldestActive: {
     automationId: number;
@@ -133,10 +171,15 @@ export interface AutomationMetrics {
 export interface AutomationMetricsOptions {
   /** Días de la ventana (createdAt). null/undefined = histórico completo. */
   windowDays?: number | null;
+  /**
+   * Días activos por automatización (`automation_activity_days`). Si no se pasa,
+   * las métricas de tiempo salen vacías (la página las lee de la DB).
+   */
+  activeDaysByAutomation?: ReadonlyMap<number, number>;
 }
 
 const SECONDS_PER_DAY = 86_400;
-const THROUGHPUT_MONTHS = 12;
+const MAX_MONTHS = 12;
 const TOP_N = 8;
 
 const DEFAULT_STALLED_THRESHOLD_DAYS = 15;
@@ -198,9 +241,56 @@ function monthKey(epochSeconds: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function shiftMonth(now: Date, delta: number): string {
-  const date = new Date(now.getFullYear(), now.getMonth() + delta, 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+/** Lista de meses `YYYY-MM` entre dos claves, inclusive. */
+function iterateMonths(start: string, end: string): string[] {
+  const [startYear, startMonth] = start.split("-").map(Number);
+  const [endYear, endMonth] = end.split("-").map(Number);
+  const months: string[] = [];
+  let year = startYear;
+  let month = startMonth;
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    months.push(`${year}-${String(month).padStart(2, "0")}`);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return months;
+}
+
+/**
+ * Rango de meses a graficar: desde el primer mes con datos (creación o cierre)
+ * hasta el mes actual, con tope de `maxMonths`. Evita los "meses fantasma"
+ * previos a la implantación.
+ */
+function buildMonthRange(
+  rows: readonly MetricsParentRow[],
+  closures: ReadonlyMap<number, AutomationClosure>,
+  nowSeconds: number,
+  maxMonths: number,
+): string[] {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    seen.add(monthKey(row.createdAt));
+    const closedAt = resolveClosedAt(row, closures.get(row.automationId));
+    if (closedAt !== null) seen.add(monthKey(closedAt));
+  }
+  if (seen.size === 0) return [monthKey(nowSeconds)];
+
+  const sorted = [...seen].sort();
+  const range = iterateMonths(sorted[0], monthKey(nowSeconds));
+  return range.length > maxMonths ? range.slice(range.length - maxMonths) : range;
+}
+
+/** Días de calendario desde el caso más viejo hasta ahora (para el ritmo). */
+function historicalSpanDays(
+  rows: readonly MetricsParentRow[],
+  nowSeconds: number,
+): number | null {
+  if (rows.length === 0) return null;
+  const earliest = Math.min(...rows.map((row) => row.createdAt));
+  return Math.max(1, daysBetweenSeconds(earliest, nowSeconds));
 }
 
 function median(sorted: readonly number[]): number | null {
@@ -443,26 +533,73 @@ export function computeAutomationMetrics(
 
   const active = classified.filter((item) => item.active);
   const finalized = classified.filter((item) => !item.active);
-  const finalizedByPortal = finalized.filter((item) =>
-    closures.has(item.row.automationId),
-  ).length;
 
   const leadDays = collectLeadDays(finalized);
   const sla = buildSla(finalized);
 
-  const now = new Date(nowSeconds * 1000);
-  const throughput: MonthlyThroughput[] = [];
-  for (let delta = -(THROUGHPUT_MONTHS - 1); delta <= 0; delta += 1) {
-    const key = shiftMonth(now, delta);
-    throughput.push({
+  const monthRange = buildMonthRange(rows, closures, nowSeconds, MAX_MONTHS);
+  const throughput: MonthlyThroughput[] = monthRange.map((key) => ({
+    month: key,
+    created: rows.filter((row) => monthKey(row.createdAt) === key).length,
+    finalized: rows.filter((row) => {
+      const closedAt = resolveClosedAt(row, closures.get(row.automationId));
+      return closedAt !== null && monthKey(closedAt) === key;
+    }).length,
+  }));
+
+  const leadTimeByMonth: MonthlyLeadTime[] = monthRange.map((key) => {
+    const closedInMonth = classified.filter(
+      (item) => item.closedAt !== null && monthKey(item.closedAt) === key,
+    );
+    const days = collectLeadDays(closedInMonth);
+    return {
       month: key,
-      created: rows.filter((row) => monthKey(row.createdAt) === key).length,
-      finalized: rows.filter(
-        (row) => resolveClosedAt(row, closures.get(row.automationId)) !== null &&
-          monthKey(resolveClosedAt(row, closures.get(row.automationId)) as number) === key,
-      ).length,
-    });
+      sample: days.length,
+      medianDays: round1(median(days)),
+      p90Days: round1(percentile(days, 90)),
+    };
+  });
+
+  // Tiempo trabajado (días activos) y días sin actividad.
+  const activeDaysByAutomation = options.activeDaysByAutomation ?? new Map();
+  const activitySamples: number[] = [];
+  const idleSamples: number[] = [];
+  for (const item of classified) {
+    const activeDays = activeDaysByAutomation.get(item.row.automationId);
+    if (typeof activeDays !== "number") continue;
+    activitySamples.push(activeDays);
+    const end = item.closedAt ?? nowSeconds;
+    const calendarDays = Math.max(
+      0,
+      daysBetweenSeconds(item.row.createdAt, end),
+    );
+    idleSamples.push(Math.max(0, calendarDays - activeDays));
   }
+  const idleDefs = [
+    { label: "0 días", max: 0 },
+    { label: "1 a 3 días", max: 3 },
+    { label: "4 a 7 días", max: 7 },
+    { label: "Más de 7 días", max: Infinity },
+  ];
+  const idleBuckets = idleDefs.map((bucket) => ({
+    label: bucket.label,
+    count: 0,
+  }));
+  for (const idle of idleSamples) {
+    const index = idleDefs.findIndex((bucket) => idle <= bucket.max);
+    idleBuckets[index === -1 ? idleBuckets.length - 1 : index].count += 1;
+  }
+
+  // Ritmo de cierre y ETA del backlog.
+  const paceWindowDays = windowDays ?? historicalSpanDays(rows, nowSeconds);
+  const finalizedPerWeek =
+    paceWindowDays && paceWindowDays > 0
+      ? round1((finalized.length / paceWindowDays) * 7)
+      : null;
+  const etaWeeks =
+    finalizedPerWeek && finalizedPerWeek > 0
+      ? round1(active.length / finalizedPerWeek)
+      : null;
 
   const bucketDefs: {
     label: string;
@@ -523,11 +660,6 @@ export function computeAutomationMetrics(
   ).length;
   const missingRegion = cohort.filter((row) => !row.region).length;
 
-  const portalShare =
-    finalized.length === 0
-      ? null
-      : round1((finalizedByPortal / finalized.length) * 100);
-
   const seenTimes = rows
     .map((row) => row.lastSeenAt)
     .filter((value): value is number => typeof value === "number");
@@ -535,11 +667,6 @@ export function computeAutomationMetrics(
 
   const byRegion = buildGroupStats(classified, (row) =>
     row.region ? { key: row.region, label: row.region } : null,
-  );
-  const byMesa = buildGroupStats(classified, (row) =>
-    row.assignedGroupName
-      ? { key: row.assignedGroupName, label: row.assignedGroupName }
-      : null,
   );
 
   const current = {
@@ -559,8 +686,6 @@ export function computeAutomationMetrics(
       total: cohort.length,
       active: active.length,
       finalized: finalized.length,
-      finalizedByPortal,
-      finalizedInInvGate: finalized.length - finalizedByPortal,
     },
     leadTime: {
       sample: leadDays.length,
@@ -599,7 +724,22 @@ export function computeAutomationMetrics(
       critical,
       ageThresholdDays,
     },
-    portalShare,
+    executive: {
+      total: cohort.length,
+      finalized: finalized.length,
+      active: active.length,
+      medianLeadDays: round1(median(leadDays)),
+      onTimeRate: sla.rate,
+    },
+    pace: { finalizedPerWeek, etaWeeks },
+    time: {
+      sampleActive: activitySamples.length,
+      medianActiveDays: round1(
+        median([...activitySamples].sort((a, b) => a - b)),
+      ),
+      medianIdleDays: round1(median([...idleSamples].sort((a, b) => a - b))),
+      idleBuckets,
+    },
     dataQuality: {
       total: cohort.length,
       missingBranchCode,
@@ -607,8 +747,8 @@ export function computeAutomationMetrics(
       missingRegion,
     },
     byRegion,
-    byMesa,
     throughput,
+    leadTimeByMonth,
     backlog,
     oldestActive:
       oldestActiveItem === null
@@ -722,7 +862,11 @@ export function getAutomationMetrics(
     rows = [];
   }
 
-  return computeAutomationMetrics(rows, listClosures(), nowSeconds, options);
+  return computeAutomationMetrics(rows, listClosures(), nowSeconds, {
+    ...options,
+    activeDaysByAutomation:
+      options.activeDaysByAutomation ?? countActiveDaysByAutomation(),
+  });
 }
 
 export interface MetricDefinition {
@@ -769,13 +913,6 @@ export const METRIC_DEFINITIONS: readonly MetricDefinition[] = [
     formula: "on-time = cierre ≤ fecha estimada + fin del día",
   },
   {
-    key: "portalShare",
-    label: "Cierre por el portal",
-    description:
-      "Proporción de finalizadas cerradas localmente desde el portal (no en InvGate).",
-    formula: "cierres locales / finalizadas",
-  },
-  {
     key: "oldestActive",
     label: "Activo más antiguo",
     description:
@@ -785,7 +922,7 @@ export const METRIC_DEFINITIONS: readonly MetricDefinition[] = [
     key: "throughput",
     label: "Casos por mes",
     description:
-      "Casos creados y finalizados por mes (últimos 12). Sirve para ver tendencia y si el alta supera al cierre.",
+      "Casos creados y finalizados por mes, desde el inicio del historial (máx. 12 meses). Sirve para ver tendencia y si el alta supera al cierre.",
   },
   {
     key: "backlog",
@@ -818,10 +955,25 @@ export const METRIC_DEFINITIONS: readonly MetricDefinition[] = [
       "Volumen, casos en curso y tiempo de ciclo agrupados por región de la sucursal.",
   },
   {
-    key: "mesa",
-    label: "Por mesa",
+    key: "leadTimeByMonth",
+    label: "Tiempo de ciclo por mes",
     description:
-      "Volumen, casos en curso y tiempo de ciclo agrupados por la mesa asignada en InvGate.",
+      "Mediana y p90 del tiempo de ciclo de los casos resueltos en cada mes. Muestra la tendencia de mejora.",
+    formula: "mediana/p90 de (cierre − creación) por mes de cierre",
+  },
+  {
+    key: "time",
+    label: "Tiempo trabajado",
+    description:
+      "Días con actividad (movimiento en InvGate) por caso y días de calendario sin actividad. Se alimenta del log de actividad del portal.",
+    formula: "días activos = días con movimiento; sin actividad = calendario − activos",
+  },
+  {
+    key: "pace",
+    label: "Ritmo y proyección",
+    description:
+      "Finalizaciones por semana en la ventana y semanas estimadas para vaciar el WIP al ritmo actual.",
+    formula: "ETA = WIP ÷ (finalizadas por semana)",
   },
   {
     key: "dataQuality",

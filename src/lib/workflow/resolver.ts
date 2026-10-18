@@ -151,6 +151,8 @@ export interface AutomationDetail {
   statusId: number;
   processId: number;
   createdAt: number;
+  /** Epoch del último movimiento en InvGate (`last_update`). */
+  updatedAt: number;
   closedAt: number | null;
   initialForm: AutomationInitialForm | null;
   nodes: AutomationNode[];
@@ -163,6 +165,8 @@ export interface AutomationDetail {
   workflowKind: WorkflowKind;
   /** Nombre de la sucursal del título (fallback de presentación). */
   branchName: string | null;
+  /** Código de sucursal (B####) parseado del título; null si no aplica. */
+  branchCode: string | null;
   progress: { completed: number; applicableTotal: number; percent: number };
   /** Región/localidad: jerarquía del formulario o DB de oficinas por código. */
   location: { region: string | null; locality: string | null } | null;
@@ -1129,6 +1133,7 @@ async function resolveAutomationDetailUncached(
       statusId: parentIncident.status_id,
       processId: parentIncident.process_id ?? 0,
       createdAt: parentIncident.created_at,
+      updatedAt: parentIncident.last_update ?? parentIncident.created_at,
       closedAt: parentIncident.closed_at,
       initialForm: formSource
         ? {
@@ -1142,6 +1147,7 @@ async function resolveAutomationDetailUncached(
       stages,
       workflowKind,
       branchName,
+      branchCode,
       progress,
       location,
       estimatedEnd,

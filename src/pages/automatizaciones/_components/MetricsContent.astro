@@ -8,8 +8,9 @@ import AutomationLink from "./AutomationLink.astro";
 import AutomationEmptyState from "./AutomationEmptyState.astro";
 import StatsCard from "@components/ui/StatsCard.astro";
 import MetricInfo from "@components/ui/MetricInfo.astro";
+import LineChart from "@components/ui/charts/LineChart.astro";
+import DonutChart from "@components/ui/charts/DonutChart.astro";
 import MetricsGlossary from "./MetricsGlossary.astro";
-import MetricsGroupList from "./MetricsGroupList.astro";
 import {
   getAutomationMetrics,
   METRIC_DEFINITIONS,
@@ -19,6 +20,15 @@ import {
   formatPct as pctText,
 } from "@lib/workflow/metricsFormat";
 import { parseWindowParam, windowLabel } from "@lib/workflow/metricsExport";
+import {
+  findPostAutomationErrors,
+  listRecentlyFinalizedAutomations,
+  postAutomationCandidateDays,
+  postAutomationConfigured,
+  postAutomationWindowDays,
+  summarizeByKind,
+} from "@lib/workflow/post-automation";
+import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import { getCleanBase } from "@lib/baseUrl";
 import { resolveUrl } from "@lib/url";
@@ -50,7 +60,7 @@ const MONTHS_SHORT = [
 function monthLabel(key: string): string {
   const [year, month] = key.split("-");
   const index = Number(month) - 1;
-  return `${MONTHS_SHORT[index] ?? month} ${year}`;
+  return `${MONTHS_SHORT[index] ?? month} ${year.slice(2)}`;
 }
 
 const path = Astro.url.pathname;
@@ -91,17 +101,72 @@ const windowTabs = [
 ] as const;
 const activeWindow = windowDays === null ? "all" : String(windowDays);
 
-const throughputMax = metrics
-  ? Math.max(
-      1,
-      ...metrics.throughput.flatMap((month) => [month.created, month.finalized]),
-    )
+const DONUT_CLASSES = [
+  "stroke-secondary",
+  "stroke-info",
+  "stroke-success",
+  "stroke-accent",
+  "stroke-warning",
+  "stroke-error",
+  "stroke-primary",
+  "stroke-neutral",
+] as const;
+
+const regionSlices = metrics
+  ? metrics.byRegion
+      .slice(0, 6)
+      .map((group, index) => ({
+        label: group.label,
+        value: group.total,
+        colorClass: DONUT_CLASSES[index % DONUT_CLASSES.length],
+      }))
+  : [];
+
+const slaSlices = metrics
+  ? [
+      {
+        label: "En fecha",
+        value: metrics.sla.onTime,
+        colorClass: "stroke-success",
+      },
+      {
+        label: "Fuera de fecha",
+        value: Math.max(0, metrics.sla.sample - metrics.sla.onTime),
+        colorClass: "stroke-error",
+      },
+    ]
+  : [];
+
+const idleMax = metrics
+  ? Math.max(1, ...metrics.time.idleBuckets.map((bucket) => bucket.count))
   : 1;
 
 const backlogMax = metrics
   ? Math.max(1, ...metrics.backlog.map((bucket) => bucket.count))
   : 1;
 
+// Monitoreo post-automatización: errores Mosaic tras el cierre.
+const postConfigured = postAutomationConfigured();
+const postWindowDays = postAutomationWindowDays();
+const postCandidateDays = postAutomationCandidateDays();
+const postMatches =
+  canQuery && postConfigured
+    ? await findPostAutomationErrors(
+        listRecentlyFinalizedAutomations(postCandidateDays),
+        postWindowDays,
+      )
+    : [];
+const postErrorTotal = postMatches.reduce(
+  (sum, match) => sum + match.errors.length,
+  0,
+);
+const postKindTotals = summarizeByKind(postMatches);
+
+const KIND_META = {
+  mosaic: { label: "Mosaic", badge: "badge-info" },
+  hardware: { label: "Hardware", badge: "badge-warning" },
+  otro: { label: "Otro", badge: "badge-ghost" },
+} as const;
 ---
 
 <PageContainer width="xl" class="acc">
@@ -148,28 +213,12 @@ const backlogMax = metrics
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <a
-              href={csvHref}
-              class="btn btn-ghost btn-sm gap-1"
-              download
-            >
-              <Icon
-                name="boxicons:file-detail-filled"
-                size={16}
-                aria-hidden="true"
-              />
+            <a href={csvHref} class="btn btn-ghost btn-sm gap-1" download>
+              <Icon name="boxicons:file-detail-filled" size={16} aria-hidden="true" />
               CSV
             </a>
-            <a
-              href={pngHref}
-              class="btn btn-ghost btn-sm gap-1"
-              download
-            >
-              <Icon
-                name="boxicons:image-alt-filled"
-                size={16}
-                aria-hidden="true"
-              />
+            <a href={pngHref} class="btn btn-ghost btn-sm gap-1" download>
+              <Icon name="boxicons:image-alt-filled" size={16} aria-hidden="true" />
               PNG
             </a>
           </div>
@@ -182,46 +231,75 @@ const backlogMax = metrics
             : ""}
         </p>
 
+        <SectionCard
+          title="Resumen ejecutivo"
+          description="Los números clave del flujo de automatización."
+          icon="boxicons:bar-chart-big-filled"
+        >
+          <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              icon="bar-chart-big-filled"
+              label="Total histórico"
+              value={metrics.executive.total}
+              subtitle="casos en la ventana"
+              color="auto"
+              hint={def.total.description}
+              delta={{ value: metrics.delta.createdPct }}
+            />
+            <StatsCard
+              icon="check-filled"
+              label="Finalizadas"
+              value={metrics.executive.finalized}
+              subtitle="casos resueltos"
+              color="success"
+              hint={def.finalized.description}
+              delta={{ value: metrics.delta.finalizedPct }}
+            />
+            <StatsCard
+              icon="calendar-filled"
+              label="En curso (WIP)"
+              value={metrics.executive.active}
+              subtitle="activos sin cierre local"
+              color="info"
+              hint={def.active.description}
+            />
+            <StatsCard
+              icon="clock-filled"
+              label="Tiempo de ciclo (mediana)"
+              value={daysText(metrics.executive.medianLeadDays)}
+              subtitle={`sobre ${metrics.leadTime.sample} finalizadas`}
+              color="primary"
+              hint={def.leadTime.description}
+              formula={def.leadTime.formula}
+              delta={{
+                value: metrics.delta.medianLeadDaysPct,
+                goodWhenUp: false,
+              }}
+            />
+          </section>
+          <p class="text-base-content/70 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span>
+              Ritmo de cierre:{" "}
+              <strong>
+                {metrics.pace.finalizedPerWeek === null
+                  ? "—"
+                  : `${metrics.pace.finalizedPerWeek}/semana`}
+              </strong>
+            </span>
+            {metrics.pace.etaWeeks !== null && (
+              <span class="text-base-content/60">
+                · al ritmo actual el WIP se vacía en ~{metrics.pace.etaWeeks}{" "}
+                semanas
+              </span>
+            )}
+            <MetricInfo
+              label={def.pace.label}
+              description={def.pace.description}
+            />
+          </p>
+        </SectionCard>
+
         <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            icon="bar-chart-big-filled"
-            label="Total histórico"
-            value={metrics.totals.total}
-            subtitle="casos en la ventana"
-            color="auto"
-            hint={def.total.description}
-            delta={{ value: metrics.delta.createdPct }}
-          />
-          <StatsCard
-            icon="calendar-filled"
-            label="En curso (WIP)"
-            value={metrics.totals.active}
-            subtitle="activos sin cierre local"
-            color="info"
-            hint={def.active.description}
-          />
-          <StatsCard
-            icon="check-filled"
-            label="Finalizadas"
-            value={metrics.totals.finalized}
-            subtitle={`${metrics.totals.finalizedByPortal} por portal · ${metrics.totals.finalizedInInvGate} en InvGate`}
-            color="success"
-            hint={def.finalized.description}
-            delta={{ value: metrics.delta.finalizedPct }}
-          />
-          <StatsCard
-            icon="clock-filled"
-            label="Tiempo de ciclo (mediana)"
-            value={daysText(metrics.leadTime.medianDays)}
-            subtitle={`sobre ${metrics.leadTime.sample} finalizadas`}
-            color="primary"
-            hint={def.leadTime.description}
-            formula={def.leadTime.formula}
-            delta={{
-              value: metrics.delta.medianLeadDaysPct,
-              goodWhenUp: false,
-            }}
-          />
           <StatsCard
             icon="clock-filled"
             label="Tiempo de ciclo (p90)"
@@ -244,12 +322,13 @@ const backlogMax = metrics
             }}
           />
           <StatsCard
-            icon="calendar-filled"
-            label="Cierre por el portal"
-            value={pctText(metrics.portalShare)}
-            subtitle="del total finalizado"
-            color="auto"
-            hint={def.portalShare.description}
+            icon="timer"
+            label="Tiempo trabajado (mediana)"
+            value={daysText(metrics.time.medianActiveDays)}
+            subtitle={`${metrics.time.sampleActive} con días activos`}
+            color="primary"
+            hint={def.time.description}
+            formula={def.time.formula}
           />
           <StatsCard
             icon="alert-circle"
@@ -260,6 +339,115 @@ const backlogMax = metrics
             hint={def.oldestActive.description}
           />
         </section>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <SectionCard
+            title="Casos por mes"
+            description="Casos creados y finalizados desde el inicio del historial."
+            icon="boxicons:calendar-filled"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Casos creados y finalizados por mes
+              <MetricInfo
+                label={def.throughput.label}
+                description={def.throughput.description}
+              />
+            </div>
+            <LineChart
+              labels={metrics.throughput.map((m) => monthLabel(m.month))}
+              series={[
+                {
+                  name: "Creadas",
+                  colorClass: "stroke-secondary",
+                  values: metrics.throughput.map((m) => m.created),
+                },
+                {
+                  name: "Finalizadas",
+                  colorClass: "stroke-success",
+                  values: metrics.throughput.map((m) => m.finalized),
+                },
+              ]}
+              ariaLabel="Casos creados y finalizados por mes"
+            />
+          </SectionCard>
+
+          <SectionCard
+            title="Tiempo de ciclo por mes"
+            description="Mediana de días entre creación y resolución, por mes de cierre."
+            icon="boxicons:timeline"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Mediana de tiempo de ciclo por mes
+              <MetricInfo
+                label={def.leadTimeByMonth.label}
+                description={def.leadTimeByMonth.description}
+              />
+            </div>
+            <LineChart
+              labels={metrics.leadTimeByMonth.map((m) => monthLabel(m.month))}
+              series={[
+                {
+                  name: "Mediana (días)",
+                  colorClass: "stroke-accent",
+                  values: metrics.leadTimeByMonth.map((m) => m.medianDays ?? 0),
+                },
+              ]}
+              ariaLabel="Tiempo de ciclo mediano por mes"
+            />
+          </SectionCard>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <SectionCard
+            title="Por región"
+            description="Reparto de casos por región de la sucursal."
+            icon="boxicons:map-filled"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Reparto de casos por región
+              <MetricInfo
+                label={def.region.label}
+                description={def.region.description}
+              />
+            </div>
+            {metrics.byRegion.length === 0 ? (
+              <p class="text-base-content/50 text-sm italic">
+                Sin regiones resueltas.
+              </p>
+            ) : (
+              <DonutChart
+                slices={regionSlices}
+                centerLabel="casos"
+                ariaLabel="Casos por región"
+              />
+            )}
+          </SectionCard>
+
+          <SectionCard
+            title="Cumplimiento de fecha estimada"
+            description="Casos resueltos dentro de la fecha estimada del título."
+            icon="boxicons:check-shield"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Cumplimiento de la fecha estimada
+              <MetricInfo
+                label={def.sla.label}
+                description={def.sla.description}
+              />
+            </div>
+            {metrics.sla.sample === 0 ? (
+              <p class="text-base-content/50 text-sm italic">
+                Todavía no hay casos con fecha estimada resueltos.
+              </p>
+            ) : (
+              <DonutChart
+                slices={slaSlices}
+                centerLabel="con fecha"
+                ariaLabel="Cumplimiento de fecha estimada"
+              />
+            )}
+          </SectionCard>
+        </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <SectionCard
@@ -304,6 +492,161 @@ const backlogMax = metrics
             </ul>
           </SectionCard>
 
+          <SectionCard
+            title="Tiempo trabajado y sin actividad"
+            description="Días con actividad vs. días de calendario sin movimiento."
+            icon="boxicons:timer"
+          >
+            <div slot="description" class="flex items-center gap-1">
+              Días activos y sin actividad
+              <MetricInfo
+                label={def.time.label}
+                description={def.time.description}
+              />
+            </div>
+            {metrics.time.sampleActive === 0 ? (
+              <p class="text-base-content/50 text-sm italic">
+                Todavía no hay días activos registrados.
+              </p>
+            ) : (
+              <div class="flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="flex flex-col rounded-lg bg-primary/10 p-3">
+                    <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                      Días activos (mediana)
+                    </span>
+                    <span class="text-base-content text-xl font-bold tabular-nums">
+                      {daysText(metrics.time.medianActiveDays)}
+                    </span>
+                  </div>
+                  <div class="flex flex-col rounded-lg bg-warning/10 p-3">
+                    <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                      Sin actividad (mediana)
+                    </span>
+                    <span class="text-base-content text-xl font-bold tabular-nums">
+                      {daysText(metrics.time.medianIdleDays)}
+                    </span>
+                  </div>
+                </div>
+                <ul class="flex flex-col gap-2">
+                  {metrics.time.idleBuckets.map((bucket) => (
+                    <li class="flex items-center gap-3">
+                      <span class="text-base-content/70 w-24 shrink-0 text-xs">
+                        {bucket.label}
+                      </span>
+                      <div class="bg-base-200 h-2.5 flex-1 overflow-hidden rounded-sm">
+                        <div
+                          class="bg-warning h-full rounded-sm"
+                          style={`width:${Math.round((bucket.count / idleMax) * 100)}%`}
+                        />
+                      </div>
+                      <span class="text-base-content/60 w-6 text-right text-xs tabular-nums">
+                        {bucket.count}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </SectionCard>
+        </div>
+
+        <SectionCard
+          title="Sucursales con errores post-automatización"
+          description={`Automatizaciones cerradas en los últimos ${postCandidateDays} días con tickets de error de la sucursal en los ${postWindowDays} días posteriores al cierre.`}
+          icon="boxicons:bug"
+        >
+          {
+            !postConfigured ? (
+              <p class="text-base-content/50 text-sm italic">
+                Configurá <code class="font-mono">INVGATE_MOSAIC_VIEW_ID</code>{" "}
+                (vista de tickets de error) para activar este monitoreo.
+              </p>
+            ) : postMatches.length === 0 ? (
+              <p class="text-base-content/50 text-sm italic">
+                Sin tickets de error (Mosaic/hardware) detectados en las
+                automatizaciones cerradas recientemente.
+              </p>
+            ) : (
+              <div class="flex flex-col gap-4">
+                <p class="text-base-content/70 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                  <span>
+                    <strong>{postMatches.length}</strong>{" "}
+                    {postMatches.length === 1 ? "sucursal" : "sucursales"} con{" "}
+                    <strong>{postErrorTotal}</strong>{" "}
+                    {postErrorTotal === 1 ? "ticket" : "tickets"} de error.
+                  </span>
+                  <span class="flex flex-wrap items-center gap-1.5">
+                    {(["mosaic", "hardware", "otro"] as const).map((kind) =>
+                      postKindTotals[kind] > 0 ? (
+                        <span class:list={["badge badge-sm", KIND_META[kind].badge]}>
+                          {KIND_META[kind].label}: {postKindTotals[kind]}
+                        </span>
+                      ) : null,
+                    )}
+                  </span>
+                </p>
+                <ul class="flex flex-col gap-4">
+                  {postMatches.map((match) => (
+                    <li class="border-base-300 rounded-lg border p-3">
+                      <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <AutomationLink
+                          automationId={match.automationId}
+                          class="text-base-content/90 hover:acc-text min-w-0 truncate text-sm font-medium"
+                        >
+                          {match.displayName}
+                        </AutomationLink>
+                        <span class="text-base-content/50 shrink-0 text-xs">
+                          cerrada el {formatEpochDateTime(match.closedAt)}
+                        </span>
+                      </div>
+                      <ul class="flex flex-col divide-y divide-base-300">
+                        {match.errors.map((error) => (
+                          <li>
+                            <a
+                              href={deriveInvGateUiUrl(error.id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="group hover:bg-base-200 flex items-center gap-3 rounded-sm px-1 py-2.5 transition-colors"
+                              title={`Abrir ${error.prettyId} en InvGate`}
+                            >
+                              <span class="bg-base-200 text-base-content/70 group-hover:bg-secondary group-hover:text-secondary-content shrink-0 rounded-sm px-1.5 py-0.5 font-mono text-xs transition-colors">
+                                {error.prettyId}
+                              </span>
+                              <span
+                                class="text-base-content/80 min-w-0 flex-1 truncate text-sm"
+                                title={
+                                  error.canonicalTitle
+                                    ? `Original: ${error.title}`
+                                    : error.title
+                                }
+                              >
+                                {error.canonicalTitle ?? error.title}
+                              </span>
+                              {error.helpdeskName && (
+                                <span class="badge badge-ghost shrink-0 text-xs">
+                                  {error.helpdeskName}
+                                </span>
+                              )}
+                              <Icon
+                                name="boxicons:arrow-up-right-square-filled"
+                                size={16}
+                                class="text-base-content/40 group-hover:text-secondary shrink-0 transition-colors"
+                                aria-hidden="true"
+                              />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          }
+        </SectionCard>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <SectionCard
             title="Progreso del WIP"
             description="Avance y casos estancados/críticos."
@@ -370,109 +713,35 @@ const backlogMax = metrics
               </a>
             </div>
           </SectionCard>
-        </div>
 
-        <SectionCard
-          title="Casos por mes"
-          description="Casos creados y finalizados en los últimos 12 meses."
-          icon="boxicons:calendar-filled"
-        >
-          <div class="text-base-content/60 mb-4 flex flex-wrap items-center gap-4 text-xs">
-            <span class="flex items-center gap-1.5">
-              <span class="acc-surface inline-block size-2.5 rounded-sm" />
-              Creadas
-            </span>
-            <span class="flex items-center gap-1.5">
-              <span class="bg-success inline-block size-2.5 rounded-sm" />
-              Finalizadas
-            </span>
-            <MetricInfo
-              label={def.throughput.label}
-              description={def.throughput.description}
-            />
-          </div>
-          <ul class="flex flex-col gap-3">
-            {metrics.throughput.map((month) => (
-              <li class="grid grid-cols-[4.5rem_1fr] items-center gap-3">
-                <span class="text-base-content/70 font-mono text-xs">
-                  {monthLabel(month.month)}
-                </span>
-                <div class="flex flex-col gap-1.5">
-                  <div class="flex items-center gap-2">
-                    <div class="bg-base-200 h-2.5 flex-1 overflow-hidden rounded-sm">
-                      <div
-                        class="acc-surface h-full rounded-sm"
-                        style={`width:${Math.round((month.created / throughputMax) * 100)}%`}
-                      />
-                    </div>
-                    <span class="text-base-content/70 w-6 text-right text-xs tabular-nums">
-                      {month.created}
+          <SectionCard
+            title="Sucursales con casos más antiguos"
+            description="Casos en curso ordenados por antigüedad."
+            icon="boxicons:buildings"
+          >
+            {metrics.topBranchesByActive.length === 0 ? (
+              <p class="text-base-content/50 text-sm italic">
+                No hay casos en curso.
+              </p>
+            ) : (
+              <ul class="flex flex-col divide-y divide-base-300">
+                {metrics.topBranchesByActive.map((branch) => (
+                  <li class="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                    <a
+                      href={listHref({ status: "active", q: branch.key })}
+                      class="text-base-content/80 hover:acc-text min-w-0 truncate text-sm"
+                    >
+                      {branch.label}
+                    </a>
+                    <span class="text-base-content/50 shrink-0 text-xs tabular-nums">
+                      {daysText(branch.oldestActiveDays)}
                     </span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <div class="bg-base-200 h-2.5 flex-1 overflow-hidden rounded-sm">
-                      <div
-                        class="bg-success h-full rounded-sm"
-                        style={`width:${Math.round((month.finalized / throughputMax) * 100)}%`}
-                      />
-                    </div>
-                    <span class="text-base-content/70 w-6 text-right text-xs tabular-nums">
-                      {month.finalized}
-                    </span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <MetricsGroupList
-            title="Por región"
-            description="Volumen, WIP y tiempo de ciclo por región."
-            icon="boxicons:map-filled"
-            groups={metrics.byRegion}
-            emptyMessage="Sin regiones resueltas."
-            hint={def.region}
-            hrefFor={(group) => listHref({ region: group.key })}
-          />
-          <MetricsGroupList
-            title="Por mesa"
-            description="Volumen, WIP y tiempo de ciclo por mesa asignada."
-            icon="boxicons:grid-filled"
-            groups={metrics.byMesa}
-            emptyMessage="Sin mesas resueltas."
-            hint={def.mesa}
-          />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
         </div>
-
-        <SectionCard
-          title="Sucursales con casos más antiguos"
-          description="Casos en curso ordenados por antigüedad."
-          icon="boxicons:clock-filled"
-        >
-          {metrics.topBranchesByActive.length === 0 ? (
-            <p class="text-base-content/50 text-sm italic">
-              No hay casos en curso.
-            </p>
-          ) : (
-            <ul class="flex flex-col divide-y divide-base-300">
-              {metrics.topBranchesByActive.map((branch) => (
-                <li class="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
-                  <a
-                    href={listHref({ status: "active", q: branch.key })}
-                    class="text-base-content/80 hover:acc-text min-w-0 truncate text-sm"
-                  >
-                    {branch.label}
-                  </a>
-                  <span class="text-base-content/50 shrink-0 text-xs tabular-nums">
-                    {daysText(branch.oldestActiveDays)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
 
         <SectionCard
           title="Calidad del dato"

@@ -108,11 +108,6 @@ check(
     metrics.totals.finalized === 3,
 );
 check(
-  "finalización por origen: 1 portal / 2 InvGate",
-  metrics.totals.finalizedByPortal === 1 &&
-    metrics.totals.finalizedInInvGate === 2,
-);
-check(
   "lead time: mediana 10, promedio 12, p90 19 sobre 3",
   metrics.leadTime.sample === 3 &&
     metrics.leadTime.medianDays === 10 &&
@@ -137,9 +132,25 @@ check(
     metrics.topBranchesByActive[1].oldestActiveDays === 40,
 );
 check(
-  "throughput: 12 meses y cierra en 2026-10",
-  metrics.throughput.length === 12 &&
+  "throughput: rango real 2026-07 → 2026-10 (sin meses fantasma)",
+  metrics.throughput.length === 4 &&
+    metrics.throughput[0].month === "2026-07" &&
     metrics.throughput[metrics.throughput.length - 1].month === "2026-10",
+);
+check(
+  "lead time por mes: 2026-10 tiene muestra 2 y mediana 13",
+  metrics.leadTimeByMonth.length === 4 &&
+    metrics.leadTimeByMonth[3].month === "2026-10" &&
+    metrics.leadTimeByMonth[3].sample === 2 &&
+    metrics.leadTimeByMonth[3].medianDays === 13,
+);
+check(
+  "resumen ejecutivo y ritmo (histórico)",
+  metrics.executive.total === 6 &&
+    metrics.executive.finalized === 3 &&
+    metrics.executive.active === 3 &&
+    metrics.pace.finalizedPerWeek !== null &&
+    metrics.pace.etaWeeks !== null,
 );
 
 // --- Fase 0/1: SLA, región, mesa, progreso, reaperturas, calidad, ventana ---
@@ -209,7 +220,15 @@ check(
   ];
 
   const emptyClosures = new Map();
-  const metrics2 = computeAutomationMetrics(rows2, emptyClosures, now);
+  const activeDays = new Map([
+    [101, 3],
+    [102, 6],
+    [103, 2],
+    [104, 10],
+  ]);
+  const metrics2 = computeAutomationMetrics(rows2, emptyClosures, now, {
+    activeDaysByAutomation: activeDays,
+  });
 
   check(
     "SLA: 1 de 2 on-time (50%), desvío promedio 1 día",
@@ -227,11 +246,14 @@ check(
       metrics2.byRegion[1].active === 1,
   );
   check(
-    "por mesa: Mesa A 2, Mesa B 1",
-    metrics2.byMesa.length === 2 &&
-      metrics2.byMesa[0].label === "Mesa A" &&
-      metrics2.byMesa[0].total === 2 &&
-      metrics2.byMesa[1].label === "Mesa B",
+    "tiempo trabajado: mediana 4.5 días activos, sin actividad mediana 9",
+    metrics2.time.sampleActive === 4 &&
+      metrics2.time.medianActiveDays === 4.5 &&
+      metrics2.time.medianIdleDays === 9,
+  );
+  check(
+    "distribución sin actividad: 0/1/1/2 en los buckets",
+    metrics2.time.idleBuckets.map((b) => b.count).join(",") === "0,1,1,2",
   );
   check(
     "progreso: promedio 35, 1 estancado, 1 crítico",

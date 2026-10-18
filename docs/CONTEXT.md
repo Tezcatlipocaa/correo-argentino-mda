@@ -300,7 +300,7 @@ BaseLayout (flex flex-col min-h-screen)
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
 | 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Lectura (listado y detalle) para todos los usuarios con sesion iniciada. Cierre/reapertura local (portal, no InvGate) y edicion de datos manuales para `supervisor`+ desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes. Listado con busqueda y filtros (estado/region/antiguedad), orden (nuevas/antiguas/actualizadas), vista tarjetas/tabla y export CSV (`/api/automatizaciones/export.csv`) |
-| 11b | `/automatizaciones/metricas` | KPIs del flujo (total, WIP, finalizadas, lead time, % cierre por portal), throughput mensual, backlog por antiguedad, ranking de sucursales y desglose de cierres. Se calculan sobre el historial local (`automation_parents` + `automation_closures`), sin consultar InvGate. Lectura para todos los logueados |
+| 11b | `/automatizaciones/metricas` | KPIs del flujo (total, WIP, finalizadas, lead time, SLA, tiempo trabajado), resumen ejecutivo, gráficos (líneas de casos/tiempo de ciclo por mes, donuts de región y SLA), ritmo de cierre + ETA del backlog, backlog por antiguedad, ranking de sucursales y monitoreo post-automatización (errores Mosaic por sucursal). Se calculan sobre el historial local (`automation_parents` + `automation_closures` + `automation_activity_days`), sin consultar InvGate salvo la vista Mosaic. Lectura para todos los logueados |
 
 ### Supervision (sub-rutas)
 
@@ -408,6 +408,7 @@ BaseLayout (flex flex-col min-h-screen)
 | `warm-automations.ts`      | Pre-warm del cache de /automatizaciones (scan InvGate + snapshot persistido + reconciliacion de padres) |
 | `reconcile-automation-parents.ts` | Recupera padres de /automatizaciones reasignados a otras mesas (barrido por estado + categoría) |
 | `snapshot-automation-metrics.ts` | Snapshot mensual de KPIs de /automatizaciones (dry-run por defecto; `--apply` escribe) |
+| `backfill-automation-activity.ts` | Backfill de días con actividad por automatización (`automation_activity_days`; dry-run por defecto; `--apply` escribe) |
 
 ### Base de datos
 

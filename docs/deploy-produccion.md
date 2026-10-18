@@ -367,6 +367,36 @@ npx tsx scripts/snapshot-automation-metrics.ts   # dry-run
 
 ---
 
+## Actualización: métricas v2 + monitoreo post-automatización (2026-10)
+
+- **Métricas**: gráficos (líneas y donuts), tiempo trabajado (días activos),
+  resumen ejecutivo, ritmo/ETA y lead time por mes; se quitaron "Por mesa" y
+  "cierre por el portal".
+- **Monitoreo post-automatización**: errores (Mosaic/hardware) de la sucursal en
+  los días posteriores al cierre, con título canónico del catálogo del portal.
+
+Checklist:
+
+```powershell
+git pull
+npx tsx scripts/align-db-to-schema.mts                    # crea automation_activity_days (idempotente, con backup)
+npx tsx scripts/backfill-automation-activity.ts           # dry-run
+npx tsx scripts/backfill-automation-activity.ts --apply   # una vez
+npm run build
+pm2 restart correo-argentino-mda
+```
+
+Env del server (opcional; sin `INVGATE_MOSAIC_VIEW_ID` la sección de monitoreo
+muestra el aviso de configuración):
+`INVGATE_MOSAIC_VIEW_ID=<vista de errores, acotada a ~30 días>`,
+`AUTOMATION_POST_WINDOW_DAYS=3`, `AUTOMATION_POST_CANDIDATE_DAYS=30`.
+
+> No agrega worker nuevo ni dependencias. El backfill es **one-time** (no va en
+> `auto-deploy.bat`): re-ejecutarlo sólo agrega días ya existentes (idempotente).
+> Detalle en `docs/automatizaciones/metricas.md`.
+
+---
+
 ## Migración B2: vínculo de horarios por ID (drop de `agent_name`)
 
 Correr **una única vez** al deployar B2, **antes** de que `align-db-to-schema.mts`/`db:push` dropee `schedules.agent_name`. El auto-deploy no incluye migraciones. Todo el flujo está en **un solo script** (`bootstrap-plan-a-b2.mts`), idempotente, dry-run por defecto, backup WAL-safe.
