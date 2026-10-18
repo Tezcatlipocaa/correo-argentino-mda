@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, type ReactNode } from "react";
-import { Icon } from "@iconify/react";
+import ActionButton from "./ActionButton";
 
 export interface DrawerProps {
   open: boolean;
@@ -9,15 +9,17 @@ export interface DrawerProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
   isFullscreen?: boolean;
 }
 
-const sizeClasses: Record<NonNullable<DrawerProps["size"]>, string> = {
+const sizeClasses: Record<"sm" | "md" | "lg" | "xl" | "2xl", string> = {
   sm: "max-w-xs",
   md: "max-w-md",
   lg: "max-w-xl",
   xl: "max-w-2xl",
+  "2xl": "max-w-2xl",
 };
 
 export default function Drawer({
@@ -27,7 +29,8 @@ export default function Drawer({
   subtitle,
   children,
   footer,
-  size = "md",
+  size,
+  maxWidth,
   className = "",
   isFullscreen,
 }: DrawerProps) {
@@ -64,7 +67,8 @@ export default function Drawer({
     };
   }, [open, handleKeyDown]);
 
-  const maxWidthClass = sizeClasses[size] || sizeClasses.md;
+  const resolvedSize = (maxWidth ?? size ?? "md") as "sm" | "md" | "lg" | "xl" | "2xl";
+  const maxWidthClass = sizeClasses[resolvedSize] || sizeClasses.md;
 
   return (
     <>
@@ -109,14 +113,17 @@ export default function Drawer({
               <div className="text-base-content/60 text-xs">{subtitle}</div>
             )}
           </div>
-          <button
-            type="button"
+          <ActionButton
+            variant="ghost"
+            size="sm"
+            circle
+            icon="boxicons:x"
+            iconSize={20}
+            ariaLabel="Cerrar panel"
+            title="Cerrar panel"
             onClick={onClose}
-            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-base-content"
-            aria-label="Cerrar panel"
-          >
-            <Icon icon="boxicons:x" width={20} height={20} />
-          </button>
+            className="text-base-content/70 hover:text-base-content"
+          />
         </header>
 
         {/* Drawer Scrollable Content */}

@@ -15,8 +15,12 @@ export interface ActionButtonProps {
   size?: "xs" | "sm" | "md" | "default";
   iconSize?: number;
   color?: string;
+  variant?: "solid" | "soft" | "outline" | "ghost";
   ghost?: boolean;
   outline?: boolean;
+  circle?: boolean;
+  square?: boolean;
+  block?: boolean;
   active?: boolean;
   disabled?: boolean;
   iconClass?: string;
@@ -49,8 +53,12 @@ export default function ActionButton({
   size = "default",
   iconSize,
   color = "btn-secondary",
+  variant,
   ghost = false,
   outline = false,
+  circle = false,
+  square = false,
+  block = false,
   active = false,
   disabled = false,
   iconClass = "",
@@ -64,16 +72,24 @@ export default function ActionButton({
   const isXs = size === "xs";
   const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
 
-  let variantClass = `btn-soft ${color}`;
-  if (ghost) {
+  const resolvedVariant = ghost ? "ghost" : (variant ?? (outline ? "outline" : "solid"));
+  let variantClass = color;
+  if (resolvedVariant === "ghost") {
     variantClass = "btn-ghost";
-  } else if (outline) {
-    variantClass = `btn-outline ${color}`;
+  } else if (resolvedVariant === "soft") {
+    variantClass = `btn-soft ${color}`.trim();
+  } else if (resolvedVariant === "outline") {
+    variantClass = `btn-outline ${color}`.trim();
   }
 
+  const circleClass = circle ? "btn-circle" : "";
+  const squareClass = square ? "btn-square" : "";
+  const blockClass = block ? "btn-block" : "";
   const activeClass = active ? "btn-active" : "";
   const sizeClass = sizeMap[size] || sizeMap.default;
-  const combinedClasses = `btn group ${sizeClass} ${variantClass} ${activeClass} gap-2 ${className}`.trim();
+  const combinedClasses = `btn group ${sizeClass} ${variantClass} ${circleClass} ${squareClass} ${blockClass} ${activeClass} gap-2 ${className}`
+    .replace(/\s+/g, " ")
+    .trim();
 
   const content = (
     <>
