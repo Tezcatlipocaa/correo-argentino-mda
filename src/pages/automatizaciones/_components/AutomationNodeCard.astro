@@ -4,7 +4,7 @@ import type { PlannedCard, PlannedCardKind } from "@lib/workflow/timeline-plan";
 import { NODE_LIFECYCLE_LABELS } from "@lib/workflow/node-status";
 import { NODE_LIFECYCLE_DOT_CLASSES } from "@lib/workflow/node-styles";
 import { formatEpochDateTime } from "@lib/format/datetime";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import WorkflowNodeBadge from "./WorkflowNodeBadge.astro";
 import AutomationSubNode from "./AutomationSubNode.astro";
 
@@ -274,12 +274,13 @@ const blockedLabel =
     {
       isTicket && node.invgateUrl && (
         <div class="mt-3 flex justify-end">
-          <OpenExternalUrlButton
+          <ActionButton
             href={node.invgateUrl}
+            icon="boxicons:arrow-up-right-square-filled"
             ariaLabel={`Abrir ticket ${node.prettyId ?? `T${node.refId}`} en InvGate`}
-            variant="text"
             label="Abrir en InvGate"
             size="xs"
+            newTab
           />
         </div>
       )

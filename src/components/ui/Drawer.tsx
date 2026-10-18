@@ -10,6 +10,7 @@ export interface DrawerProps {
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  isFullscreen?: boolean;
 }
 
 const sizeClasses: Record<NonNullable<DrawerProps["size"]>, string> = {
@@ -28,7 +29,12 @@ export default function Drawer({
   footer,
   size = "md",
   className = "",
+  isFullscreen,
 }: DrawerProps) {
+  const isFs =
+    isFullscreen ??
+    (typeof document !== "undefined" && Boolean(document.fullscreenElement));
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && open) {
@@ -41,14 +47,20 @@ export default function Drawer({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const mainEl = document.querySelector("main");
+    const prevMainOverflow = mainEl ? mainEl.style.overflow : "";
+    const prevBodyOverflow = document.body.style.overflow;
+
     if (open) {
       window.addEventListener("keydown", handleKeyDown);
+      if (mainEl) mainEl.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
     }
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      if (mainEl) mainEl.style.overflow = prevMainOverflow;
+      document.body.style.overflow = prevBodyOverflow;
     };
   }, [open, handleKeyDown]);
 
@@ -58,7 +70,9 @@ export default function Drawer({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-200 ${
+        className={`fixed z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-200 ${
+          isFs ? "top-0 inset-0" : "top-20 inset-0"
+        } ${
           open
             ? "visible opacity-100"
             : "invisible opacity-0 pointer-events-none"
@@ -72,7 +86,14 @@ export default function Drawer({
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? title : "Detalles"}
-        className={`bg-base-100 border-base-300 fixed inset-y-0 right-0 z-50 flex w-full flex-col justify-between border-l shadow-2xl transition-transform duration-300 ease-in-out ${maxWidthClass} ${
+        data-drawer-root
+        onWheel={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        className={`bg-base-100 border-base-300 fixed right-0 z-50 flex w-full flex-col justify-between border-l shadow-2xl transition-transform duration-300 ease-in-out ${
+          isFs ? "top-0 h-dvh" : "top-20 h-[calc(100dvh-5rem)]"
+        } ${maxWidthClass} ${
           open ? "translate-x-0" : "translate-x-full pointer-events-none"
         } ${className}`}
       >

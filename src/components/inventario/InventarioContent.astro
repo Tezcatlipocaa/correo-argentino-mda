@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 import DataTable from "@components/ui/DataTable.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
@@ -7,7 +8,6 @@ import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import CopyButton from "@components/ui/CopyButton.astro";
-import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
 import ViewSwitcher from "@components/ui/ViewSwitcher.astro";
 import TerminalList from "@components/inventario/TerminalList.astro";
 import { getActiveMachineCount, type CubicStatus } from "@lib/cubics";
@@ -31,15 +31,14 @@ import { getShiftType } from "@lib/cubics";
 import OperatorAvatar from "@components/cubics/OperatorAvatar.astro";
 import { isAllowed } from "@lib/rolesMatrix";
 import { hasPermission } from "@lib/rbac";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { getCleanBase, getBaseNoSlash } from "@lib/baseUrl";
 import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
 
 const user = Astro.locals.user;
 const showCubicsTab =
-  user?.id !== 0 && (user?.role === "admin" || user?.helpdeskName === MDA_TI_HELPDESK);
+  user?.id !== 0 &&
+  (user?.role === "admin" || user?.helpdeskName === MDA_TI_HELPDESK);
 const isAllowedAdmin = user
   ? isAllowed("Administrar Contenido", user.role)
   : false;
@@ -59,8 +58,7 @@ const resolvedParams = getResolvedSearchParams(Astro.request, Astro.url);
 const sortBy = (resolvedParams.get("sortBy") || undefined) as
   TerminalSortKey | undefined;
 const sortOrder = (resolvedParams.get("sortOrder") || undefined) as
-  | SortOrder
-  | undefined;
+  SortOrder | undefined;
 const requestedTab = resolvedParams.get("inventory_tabs") || "terminales";
 const activeTab =
   requestedTab === "cubics" && !showCubicsTab ? "terminales" : requestedTab;
@@ -203,11 +201,9 @@ const inventoryTabs = [
       activeValue={activeTab}
       name="inventory_tabs"
       id="inventory-view-switcher"
-      class={
-        showCubicsTab
-          ? "grid w-full grid-cols-4"
-          : "grid w-full grid-cols-3"
-      }
+      class={showCubicsTab
+        ? "grid w-full grid-cols-4"
+        : "grid w-full grid-cols-3"}
       containerClass="w-full"
     />
   </div>
@@ -486,7 +482,9 @@ const inventoryTabs = [
           }
           {
             canExport && (
-              <ExportCsvButton
+              <ActionButton
+                icon="boxicons:file-detail-filled"
+                color="btn-primary"
                 id="export-csv-cubics-btn"
                 href={getCleanBase() + "api/export/cubics"}
                 ariaLabel="Exportar cúbics a CSV"
@@ -711,7 +709,9 @@ const inventoryTabs = [
           </div>
           {
             canExport && (
-              <ExportCsvButton
+              <ActionButton
+                icon="boxicons:file-detail-filled"
+                color="btn-primary"
                 id="export-csv-terminales-btn"
                 href={import.meta.env.BASE_URL + "api/export/terminals"}
                 ariaLabel="Exportar terminales a CSV"
@@ -770,7 +770,9 @@ const inventoryTabs = [
           </div>
           {
             canExport && (
-              <ExportCsvButton
+              <ActionButton
+                icon="boxicons:file-detail-filled"
+                color="btn-primary"
                 id="export-csv-medi-btn"
                 href={
                   getCleanBase() + "api/export/terminals?isMediterranea=true"
@@ -805,7 +807,9 @@ const inventoryTabs = [
           </div>
           {
             canExport && (
-              <ExportCsvButton
+              <ActionButton
+                icon="boxicons:file-detail-filled"
+                color="btn-primary"
                 id="export-csv-tt-btn"
                 href={getCleanBase() + "api/export/terminals?isTT=true"}
                 ariaLabel="Exportar T&T & STS a CSV"
@@ -968,8 +972,11 @@ const inventoryTabs = [
                   <div class={hostSpan + " min-w-0"}>
                     <div class="flex items-center gap-3">
                       <span class="inline-flex size-8 shrink-0 items-center justify-center self-center rounded-lg border border-sky-500/30 bg-sky-500/15 text-sky-500 dark:text-sky-400">
-                        <Icon name="boxicons:desktop-filled" size={16} 
-            is:inline />
+                        <Icon
+                          name="boxicons:desktop-filled"
+                          size={16}
+                          is:inline
+                        />
                       </span>
                       <div class="min-w-0 flex-1">
                         <CopyButton
@@ -1073,7 +1080,9 @@ const inventoryTabs = [
                         " flex min-w-0 items-center justify-end gap-2"
                       }
                     >
-                      <ActionEditButton
+                      <ActionButton
+                        icon="boxicons:pencil-filled"
+                        color="btn-secondary"
                         href={`${import.meta.env.BASE_URL}inventario-terminales/cubics/edit/${machine.id}`}
                         ariaLabel={`Editar cubic ${machine.name}`}
                       />
@@ -1083,7 +1092,10 @@ const inventoryTabs = [
                         class="inline"
                         onsubmit={`return confirm('¿Estás seguro de que deseas dar de baja el ordenador "${machine.name}"?');`}
                       >
-                        <ActionDeleteButton
+                        <ActionButton
+                          type="submit"
+                          icon="boxicons:trash-filled"
+                          color="btn-error"
                           ariaLabel={`Eliminar cubic ${machine.name}`}
                         />
                       </form>

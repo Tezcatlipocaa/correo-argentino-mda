@@ -3,7 +3,7 @@ import { getCleanBase } from "@lib/baseUrl";
 import { Icon } from "astro-icon/components";
 import { Image } from "astro:assets";
 import CopyButton from "@components/ui/CopyButton.astro";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import type { ImportantLink } from "./types";
 import { iconExists } from "@lib/storage";
 
@@ -241,16 +241,17 @@ const iconUrl = hasIcon ? `${cleanBase}api/icons/${link.iconPath}` : null;
         ariaLabel={`Copiar URL de ${mainAction.title}`}
       />
 
-      <OpenExternalUrlButton
+      <ActionButton
         href={isWebUrl(mainAction.url) ? mainAction.url : undefined}
-        variant="icon"
-        appearance="solid"
-        tone="secondary"
+        icon="boxicons:arrow-up-right-square-filled"
+        color="btn-secondary"
         size="sm"
+        class="btn-square min-h-8 min-w-8"
         disabled={!isWebUrl(mainAction.url)}
         ariaLabel={isWebUrl(mainAction.url)
           ? `Abrir en una nueva pestaña`
           : `No se puede abrir; copiá la ruta`}
+        newTab
       />
     </div>
   </div>

@@ -1,10 +1,9 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import PasswordField from "@components/ui/forms/PasswordField.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 interface Props {
   helpdeskOptions: { id: number; name: string }[];
@@ -116,15 +115,29 @@ const { helpdeskOptions } = Astro.props;
           <span class="text-base-content text-sm">Asistencia</span>
         </label>
         <label class="label cursor-pointer justify-start gap-3 py-1">
-          <input type="checkbox" name="asignableCubic" class="toggle toggle-sm toggle-secondary" />
-          <span class="text-base-content text-sm">Asignación de PCs (cubics)</span>
+          <input
+            type="checkbox"
+            name="asignableCubic"
+            class="toggle toggle-sm toggle-secondary"
+          />
+          <span class="text-base-content text-sm"
+            >Asignación de PCs (cubics)</span
+          >
         </label>
         <label class="label cursor-pointer justify-start gap-3 py-1">
-          <input type="checkbox" name="incluidoCalidad" class="toggle toggle-sm toggle-secondary" />
+          <input
+            type="checkbox"
+            name="incluidoCalidad"
+            class="toggle toggle-sm toggle-secondary"
+          />
           <span class="text-base-content text-sm">Auditorías de calidad</span>
         </label>
         <label class="label cursor-pointer justify-start gap-3 py-1">
-          <input type="checkbox" name="asignableAgs" class="toggle toggle-sm toggle-secondary" />
+          <input
+            type="checkbox"
+            name="asignableAgs"
+            class="toggle toggle-sm toggle-secondary"
+          />
           <span class="text-base-content text-sm">Asignación AGS</span>
         </label>
         <p class="text-base-content/50 text-xs">
@@ -134,14 +147,15 @@ const { helpdeskOptions } = Astro.props;
 
       <input type="hidden" name="action" value="create" />
 
-      <div class="border-base-200 flex items-center justify-end gap-2 border-t pt-3 sm:col-span-2">
-        <ActionCancelButton
+      <div
+        class="border-base-200 flex items-center justify-end gap-2 border-t pt-3 sm:col-span-2"
+      >
+        <ActionButton
           type="button"
           label="Cancelar"
-          variant="error"
           onclick="this.closest('dialog').close()"
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           color="btn-secondary"
           label="Dar de alta"

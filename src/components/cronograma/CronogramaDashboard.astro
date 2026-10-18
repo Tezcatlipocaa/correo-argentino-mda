@@ -4,7 +4,6 @@ import { Icon } from "astro-icon/components";
 import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 import FilterButtonBar from "@components/ui/FilterButtonBar.astro";
 import SortDropdown from "@components/ui/SortDropdown.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
@@ -1194,10 +1193,10 @@ const currentUserId = currentUser?.id ? String(currentUser.id) : "";
       </div>
     </Fragment>
     <Fragment slot="actions">
-      <ActionCancelButton
+      <ActionButton
         type="button"
         label="Cancelar"
-        variant="error"
+        color="btn-secondary"
         onclick="document.getElementById('edit-saturday-schedule-modal')?.close()"
       />
       <button

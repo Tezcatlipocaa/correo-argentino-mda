@@ -9,7 +9,7 @@ import WorkflowTimelineDrawer from "@components/reportes/workflows/WorkflowTimel
 import { getWorkflowReport } from "@lib/workflows/service";
 import { getWorkflowConfig } from "@lib/workflows/registry";
 import { getCleanBase } from "@lib/baseUrl";
-import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import RefreshReportButton from "@components/ui/RefreshReportButton.astro";
 
 const { slug } = Astro.params;
@@ -30,9 +30,13 @@ const report = await getWorkflowReport(currentSlug);
       description={report.config.description}
     >
       <Fragment slot="actions">
-        <ExportCsvButton
+        <ActionButton
           href={`${getCleanBase()}api/reportes/workflows/${currentSlug}/export`}
-          class="btn btn-outline btn-sm gap-2"
+          icon="boxicons:file-detail-filled"
+          variant="outline"
+          color="btn-secondary"
+          label="Exportar CSV"
+          shortLabel="CSV"
           title="Exportar a CSV"
           iconSize={18}
         />

@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import { db } from "@db/index";
 import { cubics, agents, operatorAttendance } from "@db/schema";
@@ -8,8 +9,6 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { Icon } from "astro-icon/components";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { getShiftType } from "@lib/cubics";
 import OperatorAvatar from "@components/cubics/OperatorAvatar.astro";
 
@@ -226,7 +225,9 @@ const rowGridClass =
 
               {/* Acciones */}
               <div class="flex items-center justify-end gap-2">
-                <ActionEditButton
+                <ActionButton
+                  icon="boxicons:pencil-filled"
+                  color="btn-secondary"
                   href={`${cleanBase}admin/inventario-terminales/${cubic.id}`}
                   ariaLabel={`Editar ${cubic.name}`}
                 />
@@ -238,7 +239,12 @@ const rowGridClass =
                 >
                   <input type="hidden" name="action" value="delete_cubic" />
                   <input type="hidden" name="cubicId" value={cubic.id} />
-                  <ActionDeleteButton ariaLabel={`Eliminar ${cubic.name}`} />
+                  <ActionButton
+                    type="submit"
+                    icon="boxicons:trash-filled"
+                    color="btn-error"
+                    ariaLabel={`Eliminar ${cubic.name}`}
+                  />
                 </form>
               </div>
             </article>

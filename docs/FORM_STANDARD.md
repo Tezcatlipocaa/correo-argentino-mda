@@ -19,9 +19,9 @@ Todo formulario de edición/creación de esta rama debe usar el componente
    un `<symbol>` que desaparece al borrar la primera fila).
 5. **Barra de acciones** (parte de `FormShell`, al final del formulario, flujo
    normal — no sticky ni flotante):
-   - Botón **Cancelar / Volver**: `ActionCancelButton` con `variant="error"`
-     (estilo `btn-soft btn-error`), `href` = listado.
-   - Botón **Guardar cambios** (o "Crear …"): `ActionConfirmButton`,
+   - Botón **Cancelar / Volver**: `ActionButton` con `color="btn-secondary"` y
+     `href` = listado.
+   - Botón **Guardar cambios** (o "Crear …"): `ActionButton` con
      `type="submit"`.
    - Ambos alineados a la derecha (`justify-end`), al pie del formulario.
 6. **Submit asíncrono (editores admin)**: los editores que responden JSON
@@ -33,9 +33,9 @@ Todo formulario de edición/creación de esta rama debe usar el componente
 7. **Formularios dentro de modal**: los modales no usan `FormShell` (es layout
    de página completa). Dentro del modal la barra de acciones va al pie
    (`justify-end`, separada con borde superior) con el mismo orden del estándar:
-   **Cancelar primero** — `ActionCancelButton` con `variant="error"` e
-   `icon="boxicons:x-filled"`, `type="button"` y
-   `onclick="this.closest('dialog').close()"` — y luego `ActionConfirmButton`
+   **Cancelar primero** — `ActionButton` con
+   `icon="boxicons:x-filled"`, `color="btn-secondary"`, `type="button"` y
+   `onclick="this.closest('dialog').close()"` — y luego `ActionButton`
    `type="submit"` con ícono filled. **Sin `size="sm"`**: los botones usan el
    tamaño por defecto (`btn-sm md:btn-md`), igual que la barra de `FormShell`,
    para que todas las barras de acciones tengan la misma altura. Si el modal
@@ -43,7 +43,7 @@ Todo formulario de edición/creación de esta rama debe usar el componente
 
    **Excepciones:** los botones de confirmación cuyo JavaScript reemplaza su
    `innerHTML` (spinners de carga, toggles de clase como `btn-warning`) se
-   mantienen como `<button>` crudos — un `ActionConfirmButton` perdería el
+   mantienen como `<button>` crudos — un `ActionButton` perdería el
    ícono en el primer submit. Ejemplos: `#save-edit-btn` (EditUserModal),
    `#confirm-agents-ticket-btn` / `#skip-verify-agents-ticket-btn` /
    `#confirm-create-ticket-btn` (AgentsTicketModal).

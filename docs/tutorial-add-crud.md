@@ -79,8 +79,7 @@ import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import { Icon } from "astro-icon/components";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 const cleanBase = getCleanBase();
 
@@ -215,8 +214,10 @@ const rowGridClass = "grid grid-cols-[80px_1fr_1.5fr_100px] items-center gap-4";
               </div>
 
               <div class="flex items-center justify-end gap-2">
-                <ActionEditButton
+                <ActionButton
                   href={`${cleanBase}admin/feriados/edit/${h.id}`}
+                  icon="boxicons:pencil-filled"
+                  color="btn-secondary"
                   ariaLabel={`Editar ${h.name}`}
                 />
 
@@ -226,7 +227,12 @@ const rowGridClass = "grid grid-cols-[80px_1fr_1.5fr_100px] items-center gap-4";
                   class="inline"
                   onsubmit="return confirm('¿Estás seguro de que querés eliminar este feriado?')"
                 >
-                  <ActionDeleteButton ariaLabel={`Eliminar ${h.name}`} />
+                  <ActionButton
+                    type="submit"
+                    icon="boxicons:trash-filled"
+                    color="btn-error"
+                    ariaLabel={`Eliminar ${h.name}`}
+                  />
                 </form>
               </div>
             </article>
@@ -400,8 +406,7 @@ import SectionCard from "@components/ui/SectionCard.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { toastResponse } from "@lib/api/toastResponse";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 let errorMsg = "";
 
@@ -508,12 +513,13 @@ if (Astro.request.method === "POST") {
       </SectionCard>
 
       <div class="flex items-center justify-between gap-3 pt-1">
-        <ActionCancelButton
+        <ActionButton
           href={resolveUrl("/admin/feriados")}
           label="Volver al listado"
           icon="boxicons:arrow-left-filled"
+          color="btn-secondary"
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           color="btn-secondary"
           label="Crear feriado"
@@ -553,8 +559,7 @@ import SectionCard from "@components/ui/SectionCard.astro";
 import { resolveUrl } from "@lib/url";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
 import { toastResponse } from "@lib/api/toastResponse";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 const { id } = Astro.params;
 let errorMsg = "";
@@ -683,12 +688,13 @@ if (Astro.request.method === "POST") {
       </SectionCard>
 
       <div class="flex items-center justify-between gap-3 pt-1">
-        <ActionCancelButton
+        <ActionButton
           href={resolveUrl("/admin/feriados")}
           label="Volver al listado"
           icon="boxicons:arrow-left-filled"
+          color="btn-secondary"
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           color="btn-primary"
           label="Guardar cambios"

@@ -2,7 +2,7 @@
 import { Icon } from "astro-icon/components";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import AutomationProgress from "./AutomationProgress.astro";
 import AutomationTimeline from "./AutomationTimeline.astro";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
@@ -235,12 +235,13 @@ const canEditManualData = canClose && detail !== null;
                   </button>
                 )}
                 {invgateUrl && (
-                  <OpenExternalUrlButton
+                  <ActionButton
                     href={invgateUrl}
+                    icon="boxicons:arrow-up-right-square-filled"
                     ariaLabel={`Abrir ticket ${detail.prettyId} en InvGate`}
-                    variant="text"
                     label="Abrir en InvGate"
                     size="sm"
+                    newTab
                   />
                 )}
               </div>

@@ -5,7 +5,7 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import CopyButton from "@components/ui/CopyButton.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 import { isAllowed } from "@lib/rolesMatrix";
 import {
@@ -112,12 +112,14 @@ const hasMoreInitial = unassignedCount > limit;
                 {emp.position || "—"}
               </div>
               <div class="place-self-center">
-                <OpenExternalUrlButton
+                <ActionButton
                   href={`https://correoargentino.sd.cloud.invgate.net/user/profile/public/id/${emp.invgateId}`}
-                  variant="icon"
-                  appearance="ghost"
+                  icon="boxicons:arrow-up-right-square-filled"
+                  variant="ghost"
                   size="sm"
+                  class="btn-square min-h-8 min-w-8"
                   ariaLabel={`Ver en InvGate a ${emp.fullname}`}
+                  newTab
                 />
               </div>
             </div>

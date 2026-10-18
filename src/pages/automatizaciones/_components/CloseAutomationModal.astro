@@ -1,8 +1,7 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 import { DEFAULT_CLOSE_REASON } from "@lib/workflow/closures";
 
 interface Props {
@@ -35,13 +34,12 @@ const { automationId, prettyId } = Astro.props;
   </Fragment>
   <Fragment slot="actions">
     <div class="modal-action mt-6 flex justify-end gap-2">
-      <ActionCancelButton
+      <ActionButton
         type="button"
-        variant="error"
         label="Cancelar"
         data-close-close-automation
       />
-      <ActionConfirmButton
+      <ActionButton
         type="button"
         id="btn-confirm-close-automation"
         color="btn-secondary"

@@ -170,6 +170,40 @@ Resolucion aplicada en codigo:
 4. `accent` se usa para apoyo visual y enfasis secundario (links destacados, iconografia o fondos de apoyo), nunca para reemplazar `primary` ni para estados.
 5. En componentes, se consumen tokens semanticos DaisyUI o variables de `@theme`; no se hardcodean HEX dentro del markup.
 
+## Doctrina de composicion de UI (component-first)
+
+Regla transversal: **si el proyecto ya tiene un componente para lo que necesitas, usalo; si no lo tiene, proponelo antes de escribir HTML suelto.** Nunca reimplementar un patron existente con clases sueltas de Tailwind/DaisyUI, ni escribir markup crudo para algo que deberia ser componente.
+
+Escalera de decision (parar en el primer escalon que resuelva):
+
+1. **Existe un componente del proyecto?** Usalo con sus props. Buscar en `src/components/ui/` y `src/components/<modulo>/` antes de escribir markup.
+2. **Es un elemento DaisyUI cubierto por un componente del proyecto?** Usar ese componente; si el patron se repite y no existe, crear el componente dentro del proyecto (no markup ad-hoc).
+3. **DaisyUI nativo sin componente propio** (`badge badge-success`, `alert`, etc.): usar las clases DaisyUI directas + utilidades Tailwind para disposicion. Nunca inventar estilos propios para emular algo que DaisyUI ya da.
+4. **No existe componente ni patron DaisyUI claro:** proponer el componente nuevo (nombre, props, ubicacion) **antes** de avanzar; recien implementar cuando se apruebe.
+
+Mapeo elemento -> componente canonico:
+
+| Necesidad                          | Componente canonico                                        |
+| ---------------------------------- | ---------------------------------------------------------- |
+| Boton (accion, link, submit, icono) | `ActionButton` (`@components/ui/ActionButton.astro`)      |
+| Cancelar / volver / confirmar      | `ActionButton` (`color="btn-secondary"` / `btn-primary" type="submit"`), o la barra automatica de `FormShell` |
+| Eliminar / editar / ver en filas   | `ActionButton` con `icon` + `color` (+ `tooltip`)          |
+| Exportar CSV / abrir recurso externo | `ActionButton` (`download` / `newTab`)                   |
+| Copiar al portapapeles             | `CopyButton`                                               |
+| Refrescar reporte                  | `RefreshReportButton`                                      |
+| Barra de filtros                   | `FilterButtonBar` / `FilterTabsBox`                        |
+| Inputs de formulario               | `FormField`, `SelectField`, `FormTextarea`, `PasswordField` (`@components/ui/forms/`) |
+| Formulario completo (edit/create)  | `FormShell`                                                |
+| Tabla de listado                   | `DataTable` + `DataTableHeaderCell`                        |
+| Tabla master-detail                | `MasterDetailTable`                                        |
+| Grafico                            | `ChartCard`                                                |
+| Tarjeta de KPI                     | `StatsCard`                                                |
+| Modal                              | `Modal`                                                    |
+| Estado vacio                       | `SearchEmptyState`                                         |
+| Skeleton de carga                  | `@components/ui/skeletons/*`                               |
+
+Regla de parada: si el unico motivo para escribir markup crudo es "es mas rapido", no lo hagas: usar o proponer el componente.
+
 ## Mini guia de implementacion de tokens (DaisyUI)
 
 ### Regla rapida para elegir token
@@ -182,26 +216,34 @@ Resolucion aplicada en codigo:
 
 ### 1) Boton (`btn`)
 
-Uso recomendado:
+Los botones se renderizan con el componente unico **`ActionButton`** (`@components/ui/ActionButton.astro`), que envuelve `btn` de DaisyUI y expone `variant`, `color`, `icon`, `size`, etc. No escribir `<button class="btn btn-*">` inline salvo un caso muy puntual sin componente.
 
-- Usar `btn btn-primary` para la accion principal: guardar, confirmar, crear.
-- Usar `btn btn-secondary` para acciones alternativas: volver, cancelar, cerrar.
-- Usar `btn btn-accent` para acciones de apoyo: ver detalle, abrir ayuda, acciones no prioritarias.
-- Reservar `btn-info`, `btn-success`, `btn-warning`, `btn-error` para acciones estrictamente ligadas a estado del sistema (casos puntuales).
+Eleccion de color (prop `color`):
+
+- `color="btn-primary"` para la accion principal: guardar, confirmar, crear.
+- `color="btn-secondary"` para acciones alternativas: volver, cancelar, cerrar.
+- `color="btn-accent"` para acciones de apoyo: ver detalle, abrir ayuda, acciones no prioritarias.
+- `color="btn-info|btn-success|btn-warning|btn-error"` solo para acciones estrictamente ligadas a estado del sistema (casos puntuales).
+
+Variantes (`variant`): `solid` (default del componente), `soft`, `outline`, `ghost`. El default es **solid**, alineado con esta guia.
 
 Snippet listo para copiar:
 
-```html
+```astro
+---
+import ActionButton from "@components/ui/ActionButton.astro";
+---
 <div class="flex flex-wrap gap-2">
-  <button class="btn btn-primary">Guardar cambios</button>
-  <button class="btn btn-secondary">Volver</button>
-  <button class="btn btn-accent">Ver ayuda</button>
+  <ActionButton color="btn-primary" label="Guardar cambios" type="submit" />
+  <ActionButton color="btn-secondary" label="Volver" href={volverHref} />
+  <ActionButton color="btn-accent" label="Ver ayuda" icon="boxicons:help-circle-filled" />
 </div>
 ```
 
 Anti-patron:
 
 - No usar `btn-error` o `btn-warning` como CTA principal de una pantalla sin relacion directa con un estado semantico.
+- No escribir markup de boton crudo cuando `ActionButton` cubre el caso.
 
 ### 2) Badge (`badge`)
 
@@ -537,17 +579,13 @@ Todas las zonas del Header estan implementadas y cerradas:
 
 ### Action buttons
 
-Familia de botones de accion para CRUDs, todas con icono y tooltip:
-
-- `ActionButton` — generico
-- `ActionCancelButton` — cancelar/volver
-- `ActionConfirmButton` — confirmar/aceptar
-- `ActionDeleteButton` — eliminar
-- `ActionEditButton` — editar
-- `ActionNetUserButton` — consultar usuario de red
-- `ActionPasswordButton` — cambio de contrasena
-- `AddCategoryButton` — agregar categoria
-- `AddEntityButton` — agregar entidad generico
+- `ActionButton` (`@components/ui/ActionButton.astro`) — **unico boton de accion del portal**. Cubre todos los casos (accion primaria/secundaria, link, submit, boton-icono, tooltip, copiar/exportar/abrir externo) via props:
+  - `variant`: `solid` (default) | `soft` | `outline` | `ghost`
+  - `color`: clase DaisyUI `btn-primary` | `btn-secondary` | `btn-accent` | `btn-neutral` | `btn-info|success|warning|error`
+  - `icon`, `iconSize`, `label`, `shortLabel`, `ariaLabel`, `title`, `tooltip` + `tooltipPosition`
+  - `size` (`xs`|`sm`|`md`|`default`), `grow`, `newTab`, `download`, `disabled`
+  - `href` (renderiza `<a>`) o `type`/`formId` (renderiza `<button>`)
+- Se eliminaron los wrappers semanticos previos (`ActionCancelButton`, `ActionConfirmButton`, `ActionDeleteButton`, `ActionEditButton`, `ActionNetUserButton`, `ActionPasswordButton`, `AddCategoryButton`, `AddEntityButton`, `ActionInvGateButton`, `ActionAgentsTicketButton`, `ExportCsvButton`, `OpenExternalUrlButton`, `ActionExternalButton`, `OpenModalButton`). Su comportamiento se expresa ahora con `icon` + `color` (+ `tooltip`) en el call-site.
 
 ### Modals
 
@@ -563,9 +601,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
   - `value`: boton con texto visible que se copia, label estable para busquedas con highlight
   - `link`: icono + `Copiar`, con tooltip truncado para previsualizar el enlace
   - `icon`: solo icono de clipboard, sin tooltip, para tablas densas
-- `OpenExternalUrlButton` — abre recurso externo. **2 variantes:**
-  - `text`: "Abrir" + icono
-  - `icon`: solo icono (para tablas densas)
+- Abrir recurso externo: `ActionButton` con `icon="boxicons:arrow-up-right-square-filled"` + `newTab`. En tablas densas usar solo icono (`class="btn-square min-h-8 min-w-8"`, sin `label`).
 - `QuickAccessCard` — tarjeta de acceso rapido en dashboard
 - `SectionCard` — tarjeta de seccion agrupada
 - `AnnouncementBanner` — banner de anuncios
@@ -697,6 +733,7 @@ Siempre `size` numerico. NUNCA `w-5 h-5 size-5`.
 - Chart.js por CDN o `new Chart(...)` fuera de `ChartCard.astro`
 - Animaciones lentas o decorativas que afecten la velocidad de uso
 - Secciones no justificadas por el briefing funcional
+- Markup crudo de boton/input/tabla/modal/tarjeta cuando existe un componente del proyecto (`ActionButton`, `DataTable`, `Modal`, `FormField`, `StatsCard`, etc.). Ante la duda, usar o proponer el componente (ver "Doctrina de composicion de UI").
 
 ## Reglas de intervencion de UI
 
@@ -709,6 +746,7 @@ Siempre `size` numerico. NUNCA `w-5 h-5 size-5`.
 7. Todo grafico se renderiza con `ChartCard` (tokens DaisyUI via `readChartTokens`, fuente
    Geist Variable, textos en 12, alto `h-55`) y lleva tabla alternativa accesible. Nada de
    Chart.js por CDN ni instancias sueltas.
+8. Component-first: antes de escribir markup, buscar el componente del proyecto (`src/components/ui/` y `src/components/<modulo>/`); si no existe, **proponerlo antes de continuar**. No reimplementar patrones con clases sueltas (ver "Doctrina de composicion de UI").
 
 ## Decisiones documentadas
 

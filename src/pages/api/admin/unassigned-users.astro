@@ -6,7 +6,7 @@ import {
   getUnassignedEmployeesCount,
 } from "@lib/employeeQueries";
 import CopyButton from "@components/ui/CopyButton.astro";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 
 const user = Astro.locals.user;
@@ -47,12 +47,14 @@ Astro.response.headers.set("X-Has-More", hasMore.toString());
       <div class="text-base-content/70 font-mono text-xs">{emp.dni}</div>
       <div class="text-base-content/80 text-xs">{emp.position || "—"}</div>
       <div class="place-self-center">
-        <OpenExternalUrlButton
+        <ActionButton
           href={`https://correoargentino.sd.cloud.invgate.net/user/profile/public/id/${emp.invgateId}`}
-          variant="icon"
-          appearance="ghost"
+          icon="boxicons:arrow-up-right-square-filled"
+          variant="ghost"
           size="sm"
+          class="btn-square min-h-8 min-w-8"
           ariaLabel={`Ver en InvGate a ${emp.fullname}`}
+          newTab
         />
       </div>
     </div>

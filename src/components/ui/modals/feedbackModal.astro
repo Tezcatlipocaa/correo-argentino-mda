@@ -1,11 +1,10 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import Modal from "@components/ui/Modal.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 const user = Astro.locals.user || { username: "Invitado" };
 ---
@@ -15,15 +14,17 @@ const user = Astro.locals.user || { username: "Invitado" };
     <h3
       class="text-base-content mb-4 flex items-center gap-2 text-lg font-bold"
     >
-      <Icon name="boxicons:mail-open-filled" size={24} class="text-primary" 
-            is:inline />
+      <Icon
+        name="boxicons:mail-open-filled"
+        size={24}
+        class="text-primary"
+        is:inline
+      />
       <span>Enviar Comentarios o Reportes</span>
     </h3>
 
     {/* Pestañas de Navegación del Modal */}
-    <div
-      class="tabs bg-base-200 mb-6 grid grid-cols-2 rounded-md p-1"
-    >
+    <div class="tabs bg-base-200 mb-6 grid grid-cols-2 rounded-md p-1">
       <button
         type="button"
         id="tab-sugerencia"
@@ -95,7 +96,12 @@ const user = Astro.locals.user || { username: "Invitado" };
         required
       />
 
-      <SelectField id="bug-categoria" name="bug-categoria" label="Área o Categoría" required>
+      <SelectField
+        id="bug-categoria"
+        name="bug-categoria"
+        label="Área o Categoría"
+        required
+      >
         <option value="" disabled selected>Selecciona una opción</option>
         <option value="cronograma">Cronograma</option>
         <option value="asistencia">Asistencia</option>
@@ -160,14 +166,13 @@ const user = Astro.locals.user || { username: "Invitado" };
       <div
         class="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row"
       >
-        <ActionCancelButton
+        <ActionButton
           type="button"
-          variant="error"
           label="Cancelar"
           class="w-full sm:w-auto"
           data-close-feedback-modal
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           id="btn-submit-sugerencia"
           color="btn-primary"
@@ -176,7 +181,7 @@ const user = Astro.locals.user || { username: "Invitado" };
           icon="boxicons:send-filled"
           class="w-full sm:w-auto"
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           id="btn-submit-bug"
           color="btn-primary"

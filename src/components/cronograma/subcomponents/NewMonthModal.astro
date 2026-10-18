@@ -1,9 +1,8 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 // NewMonthModal.astro
 import Modal from "@components/ui/Modal.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 const MONTHS = [
   "Enero",
@@ -46,25 +45,24 @@ const MONTHS = [
         label="Seleccionar Mes"
         size="sm"
       >
-        {MONTHS.map((label, i) => (
-          <option value={String(i)} data-month={String(i)} data-label={label}>{label}</option>
-        ))}
+        {
+          MONTHS.map((label, i) => (
+            <option value={String(i)} data-month={String(i)} data-label={label}>
+              {label}
+            </option>
+          ))
+        }
       </SelectField>
       <p class="text-base-content/60 text-xs">
         Este flujo solo crea meses nuevos. Los meses ya cargados aparecen
-        deshabilitados: para regenerar uno existente, primero eliminálo desde
-        el cronograma.
+        deshabilitados: para regenerar uno existente, primero eliminálo desde el
+        cronograma.
       </p>
     </div>
   </Fragment>
   <Fragment slot="actions">
-    <ActionCancelButton
-      type="button"
-      id="cancel-new-month"
-      label="Cancelar"
-      variant="error"
-    />
-    <ActionConfirmButton
+    <ActionButton type="button" id="cancel-new-month" label="Cancelar" />
+    <ActionButton
       type="button"
       id="confirm-new-month"
       color="btn-secondary"
@@ -153,9 +151,7 @@ const MONTHS = [
         .map((y) => `<option value="${y}">${y}</option>`)
         .join("");
       yearSelect.value =
-        prev && years.includes(parseInt(prev, 10))
-          ? prev
-          : String(years[0]);
+        prev && years.includes(parseInt(prev, 10)) ? prev : String(years[0]);
       refreshMonths();
     }
 

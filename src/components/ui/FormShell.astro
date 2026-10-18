@@ -2,8 +2,7 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 interface Props {
   backHref: string;
@@ -50,12 +49,12 @@ const {
       <slot />
 
       <div class="flex items-center justify-end gap-3 pt-4">
-        <ActionCancelButton
+        <ActionButton
           href={backHref}
           label={cancelLabel}
-          variant="error"
+          color="btn-secondary"
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           color={saveColor}
           label={saveLabel}

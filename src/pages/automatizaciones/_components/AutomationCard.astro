@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import type { AutomationSummary } from "@lib/workflow/discovery";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
 import AutomationLink from "./AutomationLink.astro";
 import AutomationProgress from "./AutomationProgress.astro";
@@ -109,14 +109,15 @@ const resolveStatusName = (statusId: number) =>
     </dl>
 
     <div class="flex items-center justify-end gap-x-2">
-      <OpenExternalUrlButton
+      <ActionButton
         href={deriveInvGateUiUrl(item.id)}
-        appearance="ghost"
+        icon="boxicons:arrow-up-right-square-filled"
+        variant="ghost"
         class="rounded-sm shadow-none"
         ariaLabel={`Abrir ticket ${item.prettyId} en InvGate`}
-        variant="text"
         label="Abrir en InvGate"
         size="sm"
+        newTab
       />
 
       <AutomationLink
