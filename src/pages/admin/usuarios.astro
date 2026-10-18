@@ -1,6 +1,6 @@
 ---
 import { db } from "@db/index";
-import { users, agents, mesas } from "@db/schema";
+import { users, agents, mesas, sessions } from "@db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { passwordSchema, hashPassword } from "@lib/security";
 import BaseLayout from "@layouts/BaseLayout.astro";
@@ -22,11 +22,11 @@ if (Astro.request.method === "POST") {
   const action = formData.get("action")?.toString() ?? "create";
 
   // Politica: nadie edita su propio usuario (rol, mesa, nombre, username,
-  // participaciones). La única auto-modificación permitida es la contraseña,
+  // participaciones, ni blanqueo de contraseña). La única auto-modificación permitida es la contraseña,
   // que se hace desde /profile. El rol admin además no es editable por nadie
   // en el sistema de permisos (whitelist hardcoded, short-circuit en
   // isSectionVisibleSync).
-  const SELF_EDIT_BLOCKED_ACTIONS = new Set(["update-user"]);
+  const SELF_EDIT_BLOCKED_ACTIONS = new Set(["update-user", "reset-password"]);
   const selfEditBlocked =
     SELF_EDIT_BLOCKED_ACTIONS.has(action) &&
     Number(formData.get("userId")) === Astro.locals.user.id;
@@ -513,6 +513,11 @@ if (Astro.request.method === "POST") {
             .where(eq(users.id, userId))
             .run();
 
+          // Revocar todas las sesiones activas en DB
+          tx.delete(sessions)
+            .where(eq(sessions.userId, userId))
+            .run();
+
           audit = `Desactivó al usuario "${target.username}"`;
         });
 
@@ -586,10 +591,18 @@ if (Astro.request.method === "POST") {
           const targetUsername = targetUser?.username || "desconocido";
 
           const hashedPassword = await hashPassword(newPassword);
-          await db
-            .update(users)
-            .set({ password: hashedPassword })
-            .where(eq(users.id, userId));
+          db.transaction((tx) => {
+            tx.update(users)
+              .set({ password: hashedPassword })
+              .where(eq(users.id, userId))
+              .run();
+
+            tx.delete(sessions)
+              .where(eq(sessions.userId, userId))
+              .run();
+          });
+
+          invalidateUserSessionsCache(userId);
           successMsg = "Contraseña actualizada con éxito.";
           await logAdminFromAstro(
             Astro.locals,

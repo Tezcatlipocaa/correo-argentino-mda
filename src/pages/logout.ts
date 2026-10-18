@@ -5,8 +5,14 @@ import { eq } from "drizzle-orm";
 import { verifySessionId, deleteSessionCookie } from "@lib/session";
 import { invalidateSessionCache } from "@lib/sessionCache";
 import { redirectWithToast } from "@lib/api/redirectWithToast";
+import { validateRequestCsrf } from "@lib/csrf";
 
-export const ALL: APIRoute = async ({ cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  const isCsrfValid = await validateRequestCsrf(request, locals);
+  if (!isCsrfValid) {
+    return new Response("CSRF validation failed", { status: 403 });
+  }
+
   const signedSessionId = cookies.get("session_id")?.value;
 
   if (signedSessionId) {
@@ -19,4 +25,11 @@ export const ALL: APIRoute = async ({ cookies }) => {
   deleteSessionCookie(cookies);
 
   return redirectWithToast("/login", "Sesión cerrada con éxito");
+};
+
+export const GET: APIRoute = async () => {
+  return new Response("Method Not Allowed. Use POST to logout.", {
+    status: 405,
+    headers: { Allow: "POST" },
+  });
 };

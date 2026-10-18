@@ -19,6 +19,9 @@ import FormLegend from "@components/ui/forms/FormLegend.astro";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { getBaseNoSlash } from "@lib/baseUrl";
 import { getCsrfTokenForSession } from "@lib/csrf";
+import { db } from "@db/index";
+import { users } from "@db/schema";
+import { eq } from "drizzle-orm";
 
 const user = Astro.locals.user;
 if (!user || user.id === 0) {
@@ -69,6 +72,13 @@ const { employee, agent, sessionExpiresAt } = await getProfileDetails({
   username: user.username,
   sessionId: Astro.locals.sessionId,
 });
+
+const [currentUser] = await db
+  .select({ authProvider: users.authProvider, hasPassword: users.password })
+  .from(users)
+  .where(eq(users.id, user.id));
+
+const canChangePassword = currentUser?.authProvider === "local" && Boolean(currentUser.hasPassword);
 
 const displayName =
   employee?.fullname?.trim() || agent?.name?.trim() || user.username;
@@ -213,14 +223,22 @@ const participations = agent
                 {user.username}
               </p>
               <div class="mt-1">
-                <ActionButton
-                  icon="boxicons:lock-open-filled"
-                  color="btn-neutral"
-                  ariaLabel="Blanqueo de contraseña"
-                  label="Blanqueo de contraseña"
-                  aria-haspopup="dialog"
-                  onclick="document.getElementById('modal-self-password').showModal()"
-                />
+                {
+                  canChangePassword ? (
+                    <ActionButton
+                      icon="boxicons:lock-open-filled"
+                      color="btn-neutral"
+                      ariaLabel="Blanqueo de contraseña"
+                      label="Blanqueo de contraseña"
+                      aria-haspopup="dialog"
+                      onclick="document.getElementById('modal-self-password').showModal()"
+                    />
+                  ) : (
+                    <span class="badge badge-outline border-base-300 text-base-content/60 text-xs">
+                      Autenticación administrada por Azure AD
+                    </span>
+                  )
+                }
               </div>
             </div>
           </div>
@@ -396,6 +414,7 @@ const participations = agent
           >
             <ActionButton
               type="button"
+              label="Cancelar"
               onclick="this.closest('dialog').close()"
             />
             <ActionButton

@@ -3,6 +3,7 @@ import { Icon } from "astro-icon/components";
 import { resolveUrl } from "@/lib/url";
 import { getResolvedPathname } from "@/lib/navigation";
 import { getBaseNoSlash } from "@/lib/baseUrl";
+import { getCsrfTokenForSession } from "@/lib/csrf";
 
 const roleAvatarClasses: Record<string, string> = {
   admin: "bg-error text-error-content",
@@ -33,6 +34,7 @@ const userInitials = user.username.slice(0, 2).toUpperCase();
 
 const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
 const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
+const csrfToken = Astro.locals.sessionId ? getCsrfTokenForSession(Astro.locals.sessionId) : "";
 ---
 
 <header class="border-base-300 bg-base-100/95 z-150 min-h-20 border-b">
@@ -195,17 +197,20 @@ const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
               </li>
 
               <li>
-                <a
-                  href={resolveUrl("/logout")}
-                  class="text-error hover:bg-error/10 gap-2 py-2 text-xs focus:bg-transparent"
-                >
-                  <Icon
-                    name="boxicons:door-open-alt-filled"
-                    size={16}
-                    is:inline
-                  />
-                  Cerrar sesión
-                </a>
+                <form method="POST" action={resolveUrl("/logout")} class="w-full p-0">
+                  <input type="hidden" name="csrf_token" value={csrfToken} />
+                  <button
+                    type="submit"
+                    class="text-error hover:bg-error/10 flex w-full items-center gap-2 px-4 py-2 text-xs focus:bg-transparent cursor-pointer"
+                  >
+                    <Icon
+                      name="boxicons:door-open-alt-filled"
+                      size={16}
+                      is:inline
+                    />
+                    Cerrar sesión
+                  </button>
+                </form>
               </li>
             </ul>
           </div>

@@ -37,7 +37,17 @@ if (Astro.request.method === "POST") {
     .from(users)
     .where(eq(users.username, usernameInput));
 
+  // Dummy bcrypt hash para tiempo constante (~200ms) cuando el usuario no existe o no tiene pass local
+  const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345";
+
   if (userFound) {
+    if (userFound.authProvider === "entra_id" || !userFound.password) {
+      await bcrypt.compare(passwordInput, DUMMY_HASH).catch(() => false);
+      return Astro.redirect(
+        `${cleanBase}login?toast_msg=${encodeURIComponent("Esta cuenta requiere inicio de sesión corporativo (Azure AD / Entra ID)")}&toast_type=info`,
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(
       passwordInput,
       userFound.password,
@@ -70,6 +80,9 @@ if (Astro.request.method === "POST") {
 
       return Astro.redirect(cleanBase);
     }
+  } else {
+    // Mitigación de timing attack para usuarios inexistentes
+    await bcrypt.compare(passwordInput, DUMMY_HASH).catch(() => false);
   }
 
   return Astro.redirect(

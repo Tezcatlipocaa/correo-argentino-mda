@@ -1,14 +1,6 @@
 import type { APIRoute } from "astro";
 import { jsonResponse } from "@lib/apiResponse";
-import ldap from "ldapjs";
-
-const LDAP_SERVER =
-  import.meta.env.LDAP_SERVER || process.env.LDAP_SERVER || "ldap://correo.local";
-const LDAP_PORT = import.meta.env.LDAP_PORT || process.env.LDAP_PORT || 389;
-const LDAP_BASE_DN =
-  import.meta.env.LDAP_BASE_DN || process.env.LDAP_BASE_DN || "DC=correo,DC=local";
-const LDAP_USER = import.meta.env.LDAP_USER || process.env.LDAP_USER;
-const LDAP_PASS = import.meta.env.LDAP_PASS || process.env.LDAP_PASS;
+import { withLdapClient, getLdapConfig } from "@lib/ldap";
 
 export type ErrorCategory =
   | "config"
@@ -30,7 +22,8 @@ function parseLdapDiagnostic(err: any): DiagnosticResult {
   const code = String(err?.code || "");
   const name = String(err?.name || "");
 
-  if (/LDAP_USER.*LDAP_PASS|credenciales.*requerid/i.test(msg) || !LDAP_USER || !LDAP_PASS) {
+  const config = getLdapConfig();
+  if (/LDAP_USER.*LDAP_PASS|credenciales.*requerid/i.test(msg) || !config.user || !config.pass) {
     return {
       category: "config",
       hint: "Falta configurar LDAP_USER y/o LDAP_PASS en variables de entorno (.env)",
@@ -164,8 +157,9 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 
   const start = Date.now();
+  const config = getLdapConfig();
 
-  if (!LDAP_USER || !LDAP_PASS) {
+  if (!config.user || !config.pass) {
     const diag = parseLdapDiagnostic(new Error("LDAP_USER y LDAP_PASS requeridos en el entorno"));
     return jsonResponse({
       ok: false,
@@ -176,45 +170,23 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const client = ldap.createClient({
-    url: `${LDAP_SERVER}:${LDAP_PORT}`,
-    reconnect: false,
-    connectTimeout: 10000,
-    timeout: 10000,
-  });
-
-  client.on("error", (err) => {
-    console.error("[LdapStatus] LDAP Client Error:", err?.message || err);
-  });
-
   try {
-    await new Promise<void>((resolve, reject) => {
-      client.bind(LDAP_USER, LDAP_PASS, (err) => {
-        if (err) reject(err);
-        else resolve();
+    await withLdapClient(async (client, cfg) => {
+      await new Promise<void>((resolve, reject) => {
+        client.search(
+          cfg.baseDn,
+          { filter: "(objectClass=*)", scope: "base", attributes: ["dn"] },
+          (err, res) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            res.on("error", reject);
+            res.on("end", () => resolve());
+          },
+        );
       });
     });
-
-    await new Promise<void>((resolve, reject) => {
-      client.search(
-        LDAP_BASE_DN,
-        { filter: "(objectClass=*)", scope: "base", attributes: ["dn"] },
-        (err, res) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          res.on("error", reject);
-          res.on("end", () => resolve());
-        },
-      );
-    });
-
-    try {
-      client.unbind();
-    } catch {
-      // noop
-    }
 
     return jsonResponse({
       ok: true,
@@ -224,12 +196,6 @@ export const GET: APIRoute = async ({ locals }) => {
       detail: null,
     });
   } catch (error: any) {
-    try {
-      client.destroy();
-    } catch {
-      // noop
-    }
-
     const diag = parseLdapDiagnostic(error);
 
     return jsonResponse({
