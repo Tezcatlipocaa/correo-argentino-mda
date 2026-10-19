@@ -28,10 +28,16 @@ export function initReportRefresh(): void {
             );
             setTimeout(() => window.location.reload(), 600);
           } else {
-            showToast(
-              btn.dataset.refreshError ?? "Error al actualizar los datos",
-              "alert-error",
-            );
+            let errorDetail = "";
+            try {
+              const body = await res.json();
+              errorDetail = body.error || body.message || "";
+            } catch {
+              // ignore
+            }
+            const fallback = btn.dataset.refreshError ?? "Error al actualizar los datos";
+            const message = errorDetail ? `${fallback}: ${errorDetail}` : `${fallback} (HTTP ${res.status})`;
+            showToast(message, "alert-error");
           }
         } catch (e) {
           console.error(e);

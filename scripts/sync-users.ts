@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { db } from "../src/db/index";
 import { employees } from "../src/db/schema";
@@ -21,8 +21,19 @@ async function writeSyncStatus(
   status: "success" | "error",
   errorDetail: string | null = null,
 ): Promise<void> {
+  let prevSuccessAt: string | null = null;
+  try {
+    const raw = await readFile(STATUS_PATH, "utf-8");
+    const parsed = JSON.parse(raw);
+    prevSuccessAt = parsed.lastSuccessAt || (parsed.status === "success" ? parsed.lastExecution : null);
+  } catch {
+    // ignore
+  }
+
+  const now = new Date().toISOString();
   const data = {
-    lastExecution: new Date().toISOString(),
+    lastExecution: now,
+    lastSuccessAt: status === "success" ? now : prevSuccessAt,
     status,
     error: errorDetail,
   };

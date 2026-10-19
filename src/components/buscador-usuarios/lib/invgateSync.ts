@@ -34,19 +34,33 @@ export async function fetchSyncStatus(): Promise<void> {
     if (!res.ok) throw new Error("API error");
     const data = await res.json();
     if (data.lastSync) {
-      const date = new Date(data.lastSync.lastExecution);
-      const formatted = date.toLocaleDateString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const isError = data.lastSync.status === "error";
+      const successDate = data.lastSync.lastSuccessAt
+        ? new Date(data.lastSync.lastSuccessAt)
+        : data.lastSync.status === "success"
+          ? new Date(data.lastSync.lastExecution)
+          : null;
+
+      const formatted = successDate
+        ? successDate.toLocaleDateString("es-AR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "Sin sincronización exitosa";
+
+      const hasRecentError = data.lastSync.status === "error";
+      const errorMsg = data.lastSync.error || "Fallo en la última ejecución";
+
       syncStatus.innerHTML = `
-        ${svgIcon("clock", `size-4 ${isError ? "text-error" : "text-base-content/30"}`)}
+        ${svgIcon("clock", "size-4 text-base-content/30")}
         <span>Última sinc.: ${formatted}</span>
-        ${isError ? '<span class="text-error font-semibold">(error)</span>' : ""}
+        ${
+          hasRecentError
+            ? `<span class="badge badge-warning badge-xs font-mono ml-1" title="${errorMsg}">aviso: última corrida falló</span>`
+            : ""
+        }
       `;
     } else {
       syncStatus.innerHTML = `

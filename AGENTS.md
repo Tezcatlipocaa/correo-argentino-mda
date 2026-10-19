@@ -133,7 +133,7 @@
 - **Estándar de formularios (edit/create)**: ver `docs/FORM_STANDARD.md`.
   Usar siempre `src/components/ui/FormShell.astro` (`PageHeader` título +
   subtítulo, íconos `-filled`, barra de acciones al pie: Cancelar
-  `variant="error"` + Guardar, alineados a la derecha). Sin breadcrumb.
+  `variant="soft" color="btn-error"` + Guardar, alineados a la derecha). Sin breadcrumb.
   No duplicar el shell en cada página.
 
 ## PM2 production
