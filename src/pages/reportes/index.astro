@@ -24,7 +24,9 @@ let categoryMetrics = {
 };
 try {
   const catReport = await getCategoryCatalogReport(2);
-  const depths = Object.keys(catReport.metrics.depthDistribution || {}).map(Number);
+  const depths = Object.keys(catReport.metrics.depthDistribution || {}).map(
+    Number,
+  );
   const maxDepth = depths.length > 0 ? Math.max(...depths) : 6;
   categoryMetrics = {
     totalNodes: catReport.metrics.totalNodes,
@@ -111,7 +113,7 @@ try {
   // Fallback seguro
 }
 
-// 5. Parque de Terminales
+// 5. Inventario de Terminales
 let terminalMetrics = { total: 0, winCount: 0, brandsCount: 0 };
 try {
   const [totalTermRes] = await db
@@ -181,7 +183,7 @@ const quickShortcuts = [
     tone: "bg-success/10 text-success",
   },
   {
-    title: "Parque de Terminales",
+    title: "Inventario de Terminales",
     href: "inventario-terminales/estadisticas",
     icon: "boxicons:desktop-filled",
     tone: "bg-accent/10 text-accent",
@@ -209,7 +211,7 @@ const quickShortcuts = [
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <!-- Widget 1: Taxonomía de Categorías -->
           <MetricBentoWidget
-            title="Taxonomía de Categorías"
+            title="Categorías"
             category="Catálogo"
             href="reportes/categorias"
             icon="boxicons:network-chart-filled"
@@ -270,7 +272,7 @@ const quickShortcuts = [
 
           <!-- Widget 2: Flujo de Mesas de Ayuda -->
           <MetricBentoWidget
-            title="Flujo de Mesas de Ayuda"
+            title="Mesas de Ayuda"
             category="Soporte"
             href="reportes/mesas"
             icon="boxicons:dashboard-filled"
@@ -434,17 +436,20 @@ const quickShortcuts = [
                 </div>
                 <progress
                   class="progress progress-success w-full"
-                  value={officeMetrics.total > 0 ? Math.round((officeMetrics.active / officeMetrics.total) * 100) : 0}
+                  value={officeMetrics.total > 0
+                    ? Math.round(
+                        (officeMetrics.active / officeMetrics.total) * 100,
+                      )
+                    : 0}
                   max="100"
-                  aria-label="Porcentaje de oficinas activas en red"
-                ></progress>
+                  aria-label="Porcentaje de oficinas activas en red"></progress>
               </div>
             </div>
           </MetricBentoWidget>
 
-          <!-- Widget 5: Parque de Terminales -->
+          <!-- Widget 5: Inventario de Terminales -->
           <MetricBentoWidget
-            title="Parque de Terminales"
+            title="Inventario de Terminales"
             category="Hardware"
             href="inventario-terminales/estadisticas"
             icon="boxicons:desktop-filled"
@@ -494,10 +499,14 @@ const quickShortcuts = [
                 </div>
                 <progress
                   class="progress progress-accent w-full"
-                  value={terminalMetrics.total > 0 ? Math.round((terminalMetrics.winCount / terminalMetrics.total) * 100) : 0}
+                  value={terminalMetrics.total > 0
+                    ? Math.round(
+                        (terminalMetrics.winCount / terminalMetrics.total) *
+                          100,
+                      )
+                    : 0}
                   max="100"
-                  aria-label="Equipos bajo estándar Windows"
-                ></progress>
+                  aria-label="Equipos bajo estándar Windows"></progress>
               </div>
             </div>
           </MetricBentoWidget>
@@ -555,7 +564,13 @@ const quickShortcuts = [
                 </div>
                 <progress
                   class="progress progress-secondary w-full"
-                  value={automationMetrics.totalParents > 0 ? Math.round((automationMetrics.totalClosed / automationMetrics.totalParents) * 100) : 0}
+                  value={automationMetrics.totalParents > 0
+                    ? Math.round(
+                        (automationMetrics.totalClosed /
+                          automationMetrics.totalParents) *
+                          100,
+                      )
+                    : 0}
                   max="100"
                   aria-label="Porcentaje de procesos de automatización completados"
                 ></progress>

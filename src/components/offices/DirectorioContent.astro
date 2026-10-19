@@ -396,8 +396,8 @@ const mainTabs = [
               href={import.meta.env.BASE_URL + "api/export/offices"}
               ariaLabel="Exportar directorio a CSV"
               label="Exportar CSV"
-              download="oficinas.csv"
-              class="font-semibold shadow-sm shrink-0"
+              download
+              class="shrink-0 font-semibold shadow-sm"
             />
           )
         }
@@ -436,9 +436,14 @@ const mainTabs = [
       (canViewOfficeStats || isAllowedAdmin) && (
         <div class="rounded-box border-base-300 bg-base-100 flex flex-wrap items-center justify-between gap-3 border p-3.5 shadow-sm">
           <div class="flex items-center gap-2">
-            <Icon name="boxicons:info-circle" size={18} class="text-secondary shrink-0" />
-            <span class="text-xs text-base-content/70">
-              Accesos rápidos a la red postal, visualizaciones y comparativas de infraestructura.
+            <Icon
+              name="boxicons:info-circle"
+              size={18}
+              class="text-secondary shrink-0"
+            />
+            <span class="text-base-content/70 text-xs">
+              Accesos rápidos a la red postal, visualizaciones y comparativas de
+              infraestructura.
             </span>
           </div>
           <div class="flex flex-wrap items-center gap-2">
@@ -468,7 +473,7 @@ const mainTabs = [
               <ActionButton
                 href={`${import.meta.env.BASE_URL}admin/invgate/ubicaciones?sync=true`}
                 variant="soft"
-                color="btn-primary"
+                color="btn-secondary"
                 size="sm"
                 icon="boxicons:pie-chart-filled"
                 label="Ver comparativa"
@@ -637,7 +642,7 @@ const mainTabs = [
                         Tecnológicos
                       </span>
                     </div>
-                    <div class="referents-list-container mt-2 flex flex-col gap-1.5"></div>
+                    <div class="referents-list-container mt-2 flex flex-col gap-1.5" />
                   </div>
                 </div>
               ))

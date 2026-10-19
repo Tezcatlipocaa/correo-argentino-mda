@@ -41,9 +41,7 @@ export function normalizeRole(role: string): Role {
  * Sesión iniciada: el middleware asigna `id: 0` al usuario anónimo, así que
  * `id !== 0` es el marcador de sesión activa.
  */
-export function isLoggedIn(
-  user: { id: number } | null | undefined,
-): boolean {
+export function isLoggedIn(user: { id: number } | null | undefined): boolean {
   return Boolean(user && user.id !== 0);
 }
 
@@ -133,7 +131,7 @@ export const routePermissions: RoutePermission[] = [
     path: "/inventario-terminales/cubics/edit",
     roles: ["admin", "supervisor"],
   },
-  // Estadísticas del parque de terminales: por ahora solo admin (el endpoint
+  // Estadísticas del Inventario de Terminales: por ahora solo admin (el endpoint
   // bajo /api/terminals queda en la whitelist y devuelve 403 JSON vía
   // requireReadAccess("inventario"), mismo patrón que /api/oficinas).
   { path: "/inventario-terminales/estadisticas", roles: ["admin"] },
@@ -308,7 +306,7 @@ export function getModulePermissions(
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
   } else if (moduleName === "inventario") {
-    // Estadísticas del parque de terminales: por ahora solo admin (lectura).
+    // Estadísticas del Inventario de Terminales: por ahora solo admin (lectura).
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
   } else if (moduleName === "oficinas") {
     // Reportería de oficinas: lectura supervisor+ (gerencia). La escritura del
