@@ -98,6 +98,41 @@ describe("validateRequestCsrf", () => {
     expect(await validateRequestCsrf(request, locals as any)).toBe(true);
   });
 
+  it("accepts valid token in application/x-www-form-urlencoded body (native HTML form like /logout)", async () => {
+    const token = generateCsrfToken(SESSION);
+    const params = new URLSearchParams({ csrf_token: token });
+    const request = new Request("http://x/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    expect(await validateRequestCsrf(request, locals as any)).toBe(true);
+  });
+
+  it("accepts valid token in multipart/form-data body without consuming original request body", async () => {
+    const token = generateCsrfToken(SESSION);
+    const formData = new FormData();
+    formData.append("csrf_token", token);
+    formData.append("extra", "value");
+    const request = new Request("http://x/api/form", {
+      method: "POST",
+      body: formData,
+    });
+    expect(await validateRequestCsrf(request, locals as any)).toBe(true);
+    const consumedForm = await request.formData();
+    expect(consumedForm.get("extra")).toBe("value");
+  });
+
+  it("rejects invalid token in application/x-www-form-urlencoded body", async () => {
+    const params = new URLSearchParams({ csrf_token: "invalid.token.sig" });
+    const request = new Request("http://x/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    expect(await validateRequestCsrf(request, locals as any)).toBe(false);
+  });
+
   it("rejects missing token", async () => {
     const request = new Request("http://x/api/test", {
       method: "POST",

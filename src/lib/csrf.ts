@@ -55,6 +55,30 @@ export async function validateRequestCsrf(
     return validateCsrfToken(headerToken, sessionId);
   }
 
+  let contentType = "";
+  try {
+    contentType = (request.headers.get("content-type") || "").toLowerCase();
+  } catch {
+    // request without headers (test doubles)
+  }
+
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
+    try {
+      const source =
+        typeof request.clone === "function" ? request.clone() : request;
+      const formData = await source.formData();
+      const formToken = formData.get("csrf_token");
+      if (typeof formToken === "string") {
+        return validateCsrfToken(formToken, sessionId);
+      }
+    } catch {
+    }
+    return false;
+  }
+
   try {
     const source =
       typeof request.clone === "function" ? request.clone() : request;
@@ -65,6 +89,19 @@ export async function validateRequestCsrf(
     }
   } catch {
     // not JSON or body already consumed
+  }
+
+  try {
+    const source =
+      typeof request.clone === "function" ? request.clone() : request;
+    if (typeof source.formData === "function") {
+      const formData = await source.formData();
+      const formToken = formData.get("csrf_token");
+      if (typeof formToken === "string") {
+        return validateCsrfToken(formToken, sessionId);
+      }
+    }
+  } catch {
   }
   return false;
 }
