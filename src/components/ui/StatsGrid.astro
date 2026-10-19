@@ -11,7 +11,14 @@ interface Props {
   ariaLabel?: string;
 }
 
-const { base = 2, sm, md, lg = 5, class: className = "", ariaLabel } = Astro.props;
+const {
+  base = 2,
+  sm,
+  md,
+  lg = 5,
+  class: className = "",
+  ariaLabel,
+} = Astro.props;
 
 // Mapas con clases literales: Tailwind no detecta nombres de clase dinámicos.
 const BASE = { 1: "grid-cols-1", 2: "grid-cols-2" } as const;
@@ -39,7 +46,14 @@ const LG = {
 ---
 
 <div
-  class:list={["grid gap-4", BASE[base], sm && SM[sm], md && MD[md], lg && LG[lg], className]}
+  class:list={[
+    "grid w-full gap-4",
+    BASE[base],
+    sm && SM[sm],
+    md && MD[md],
+    lg && LG[lg],
+    className,
+  ]}
   aria-label={ariaLabel}
 >
   <slot />
