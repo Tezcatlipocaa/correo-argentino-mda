@@ -40,9 +40,36 @@ test.describe("Listado de /automatizaciones", () => {
     await setSessionCookie(context, agentUser.signedSessionId);
     await page.goto("/automatizaciones?view=table");
 
-    const table = page.locator("table");
     const empty = page.getByText(/No hay automatizaciones/);
-    await expect(table.or(empty).first()).toBeVisible();
+    const shell = page.locator(".table-shell");
+    await expect(shell.or(empty).first()).toBeVisible();
+
+    if ((await shell.count()) > 0) {
+      // La vista de tabla usa el shell estándar con una tabla real.
+      await expect(shell.locator("table thead th").first()).toBeVisible();
+      await expect(
+        shell.locator("tbody tr[data-table-row]").first(),
+      ).toBeVisible();
+      // Las celdas declaran data-label para el apilado en mobile.
+      await expect(
+        shell.locator("tbody tr[data-table-row] td[data-label]").first(),
+      ).toBeVisible();
+
+      // El ordenamiento client-side queda cableado: click en una cabecera
+      // ordenable y el control refleja la dirección aplicada.
+      const sortControl = shell.locator("[data-table-sort-key='sucursal']");
+      await sortControl.click();
+      await expect(sortControl).toHaveAttribute("aria-sort", "ascending");
+
+      const rowCountBefore = await shell
+        .locator("tbody tr[data-table-row]")
+        .count();
+      await sortControl.click();
+      await expect(sortControl).toHaveAttribute("aria-sort", "descending");
+      await expect(shell.locator("tbody tr[data-table-row]")).toHaveCount(
+        rowCountBefore,
+      );
+    }
 
     await expect(page.getByRole("link", { name: "Tarjetas" })).toBeVisible();
   });

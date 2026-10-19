@@ -4,9 +4,9 @@ import { formatEpochDateTime } from "@lib/format/datetime";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
 import AutomationEmptyState from "./AutomationEmptyState.astro";
 import ActionButton from "@components/ui/ActionButton.astro";
-import { resolveUrl } from "@lib/url";
-import DataTable from "@components/ui/DataTable.astro";
+import TableShell from "@components/ui/TableShell.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import { resolveUrl } from "@lib/url";
 
 interface Props {
   items: readonly AutomationSummary[];
@@ -14,105 +14,124 @@ interface Props {
 }
 
 const { items, emptyMessage } = Astro.props;
-
-const headerGridClass =
-  "grid-cols-[130px_minmax(180px,1.5fr)_120px_130px_100px_minmax(140px,1fr)_150px_90px] gap-3";
-const rowGridClass = `grid ${headerGridClass} items-center`;
 ---
 
 {
   items.length === 0 ? (
     <AutomationEmptyState message={emptyMessage} />
   ) : (
-    <DataTable
-      ariaLabel="Automatizaciones"
-      headerGridClass={headerGridClass}
-      rowGridClass={rowGridClass}
-      minWidthClass="min-w-0 md:min-w-max"
-      headerVariant="subtle"
-      fullscreen
-      stackOnMobile
+    <section
+      data-table-sort-root
+      data-table-sort-default-key="iniciada"
+      data-table-sort-default-direction="descending"
+      aria-label="Automatizaciones"
     >
-      <div slot="header">
-        <DataTableHeaderCell sortKey="codigo">Código</DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell sortKey="sucursal">Sucursal</DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell sortKey="region">Región</DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell align="right" sortKey="progreso">
-          Progreso
-        </DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell sortKey="mesa">Mesa</DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell sortKey="iniciada">Iniciada</DataTableHeaderCell>
-      </div>
-      <div slot="header">
-        <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
-      </div>
-
-      {items.map((item) => (
-        <div
-          data-table-row
-          class={`${rowGridClass} border-b border-base-200 px-4 py-3 last:border-b-0 hover:bg-base-200/50 transition-colors duration-200`}
-          data-sort-codigo={item.prettyId}
-          data-sort-sucursal={item.displayName}
-          data-sort-region={item.region ?? ""}
-          data-sort-estado={item.statusId}
-          data-sort-progreso={typeof item.progressPercent === "number" ? item.progressPercent : -1}
-          data-sort-mesa={item.assignedGroupName ?? ""}
-          data-sort-iniciada={item.createdAt}
-        >
-          <div class="min-w-0" data-label="Código">
-            <code class="bg-base-200 text-base-content/80 rounded px-1.5 py-0.5 font-mono text-xs">
-              {item.prettyId}
-            </code>
-          </div>
-          <div class="min-w-0 truncate" title={item.displayName} data-label="Sucursal">
-            {item.displayName}
-          </div>
-          <div class="min-w-0 text-base-content/70" data-label="Región">
-            {item.region ?? "—"}
-          </div>
-          <div class="min-w-0" data-label="Estado">
-            <AutomationLifecycleLabel
-              statusId={item.statusId}
-              active={item.isActive && !item.localClosure}
-              hasClosure={item.localClosure != null}
-            />
-          </div>
-          <div class="text-right font-mono tabular-nums" data-label="Progreso">
-            {typeof item.progressPercent === "number"
-              ? `${item.progressPercent}%`
-              : "—"}
-          </div>
-          <div class="min-w-0 truncate text-base-content/70" data-label="Mesa">
-            {item.assignedGroupName ?? "—"}
-          </div>
-          <div class="text-base-content/70 text-xs whitespace-nowrap" data-label="Iniciada">
-            {formatEpochDateTime(item.createdAt)}
-          </div>
-          <div class="flex justify-end" data-label="Acciones">
-            <ActionButton
-              href={resolveUrl(`/automatizaciones/${item.id}`)}
-              data-astro-prefetch="hover"
-              variant="ghost"
-              size="xs"
-              icon="boxicons:chevron-right"
-              label="Ver"
-            />
-          </div>
-        </div>
-      ))}
-    </DataTable>
+      <TableShell label="Automatizaciones">
+        <table class="table table-sm table-zebra w-full min-w-0 text-left text-xs md:min-w-[1040px]">
+          <thead data-table-header>
+            <tr>
+              <th class="w-[130px]">
+                <DataTableHeaderCell sortKey="codigo">Código</DataTableHeaderCell>
+              </th>
+              <th>
+                <DataTableHeaderCell sortKey="sucursal">Sucursal</DataTableHeaderCell>
+              </th>
+              <th class="w-[120px]">
+                <DataTableHeaderCell sortKey="region">Región</DataTableHeaderCell>
+              </th>
+              <th class="w-[130px]">
+                <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
+              </th>
+              <th class="w-[100px]">
+                <DataTableHeaderCell align="right" sortKey="progreso">
+                  Progreso
+                </DataTableHeaderCell>
+              </th>
+              <th>
+                <DataTableHeaderCell sortKey="mesa">Mesa</DataTableHeaderCell>
+              </th>
+              <th class="w-[150px]">
+                <DataTableHeaderCell sortKey="iniciada">Iniciada</DataTableHeaderCell>
+              </th>
+              <th class="w-[90px]">
+                <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
+              </th>
+            </tr>
+          </thead>
+          <tbody data-table-sort-body>
+            {items.map((item) => (
+              <tr
+                data-table-row
+                class="hover:bg-base-200/50 transition-colors duration-200"
+                data-sort-codigo={item.prettyId}
+                data-sort-sucursal={item.displayName}
+                data-sort-region={item.region ?? ""}
+                data-sort-estado={item.statusId}
+                data-sort-progreso={
+                  typeof item.progressPercent === "number"
+                    ? item.progressPercent
+                    : -1
+                }
+                data-sort-mesa={item.assignedGroupName ?? ""}
+                data-sort-iniciada={item.createdAt}
+              >
+                <td data-label="Código">
+                  <code class="bg-base-200 text-base-content/80 rounded px-1.5 py-0.5 font-mono text-xs">
+                    {item.prettyId}
+                  </code>
+                </td>
+                <td data-label="Sucursal" class="max-w-[22rem] truncate" title={item.displayName}>
+                  {item.displayName}
+                </td>
+                <td data-label="Región" class="text-base-content/70">
+                  {item.region ?? "—"}
+                </td>
+                <td data-label="Estado">
+                  <AutomationLifecycleLabel
+                    statusId={item.statusId}
+                    active={item.isActive && !item.localClosure}
+                    hasClosure={item.localClosure != null}
+                  />
+                </td>
+                <td
+                  data-label="Progreso"
+                  class="text-right font-mono tabular-nums"
+                >
+                  {typeof item.progressPercent === "number"
+                    ? `${item.progressPercent}%`
+                    : "—"}
+                </td>
+                <td data-label="Mesa" class="max-w-[18rem] truncate text-base-content/70">
+                  {item.assignedGroupName ?? "—"}
+                </td>
+                <td data-label="Iniciada" class="text-base-content/70 whitespace-nowrap text-xs">
+                  {formatEpochDateTime(item.createdAt)}
+                </td>
+                <td data-label="Acciones" class="text-right">
+                  <ActionButton
+                    href={resolveUrl(`/automatizaciones/${item.id}`)}
+                    data-astro-prefetch="hover"
+                    variant="ghost"
+                    size="xs"
+                    icon="boxicons:chevron-right"
+                    label="Ver"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableShell>
+    </section>
   )
 }
+
+<script>
+  import { initTableSortObserver } from "@lib/clientTableSort";
+
+  initTableSortObserver();
+
+  document.addEventListener("astro:page-load", () => {
+    initTableSortObserver();
+  });
+</script>
