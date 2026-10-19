@@ -42,17 +42,17 @@ test.describe("Dashboard General de Métricas (/reportes)", () => {
     await expect(shortcutsSection.getByText("Flujo de Mesas")).toBeVisible();
     await expect(shortcutsSection.getByText("Workflows de Proceso")).toBeVisible();
     await expect(shortcutsSection.getByText("Red de Oficinas")).toBeVisible();
-    await expect(shortcutsSection.getByText("Parque de Terminales")).toBeVisible();
+    await expect(shortcutsSection.getByText("Inventario de Terminales")).toBeVisible();
     await expect(shortcutsSection.getByText("Automatizaciones")).toBeVisible();
 
     // Sección de widgets Bento
     const bentoSection = page.locator('section[aria-label="Widgets de resumen y analítica"]');
     await expect(bentoSection).toBeVisible();
-    await expect(bentoSection.getByText("Taxonomía de Categorías")).toBeVisible();
-    await expect(bentoSection.getByText("Flujo de Mesas de Ayuda")).toBeVisible();
+    await expect(bentoSection.getByText("Categorías")).toBeVisible();
+    await expect(bentoSection.getByText("Mesas de Ayuda")).toBeVisible();
     await expect(bentoSection.getByText("Workflows de Proceso")).toBeVisible();
     await expect(bentoSection.getByText("Red de Oficinas")).toBeVisible();
-    await expect(bentoSection.getByText("Parque de Terminales")).toBeVisible();
+    await expect(bentoSection.getByText("Inventario de Terminales")).toBeVisible();
     await expect(bentoSection.getByText("Centro de Automatizaciones")).toBeVisible();
 
     // Botones "Ver más"
