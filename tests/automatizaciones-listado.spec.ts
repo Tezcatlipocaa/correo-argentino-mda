@@ -99,6 +99,16 @@ test.describe("Listado de /automatizaciones", () => {
     await expect(
       page.getByRole("heading", { name: "Automatizaciones", level: 1 }),
     ).toBeVisible();
+
+    // La barra de acciones (donde vivía el CTA) solo se renderiza con listado
+    // cargado: sin datos el test pasaría vacuo, así que se salta.
+    const exportBtn = page.getByRole("link", { name: "Exportar CSV" });
+    test.skip(
+      (await exportBtn.count()) === 0,
+      "Sin listado cargado: no hay barra de acciones.",
+    );
+    await expect(exportBtn).toBeVisible();
+
     await expect(page.locator("[data-cta-reportes-workflows]")).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Reportes", exact: true }),
