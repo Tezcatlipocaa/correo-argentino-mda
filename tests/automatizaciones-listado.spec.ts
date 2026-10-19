@@ -85,4 +85,17 @@ test.describe("Listado de /automatizaciones", () => {
       expect(response.status()).toBe(200);
     }
   });
+
+  test("la cabecera no ofrece el CTA de Reportes de workflows", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, agentUser.signedSessionId);
+    await page.goto("/automatizaciones");
+
+    await expect(page.locator("[data-cta-reportes-workflows]")).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Reportes", exact: true }),
+    ).toHaveCount(0);
+  });
 });
