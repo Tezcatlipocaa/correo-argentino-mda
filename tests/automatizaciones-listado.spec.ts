@@ -43,33 +43,43 @@ test.describe("Listado de /automatizaciones", () => {
     const empty = page.getByText(/No hay automatizaciones/);
     const shell = page.locator(".table-shell");
     await expect(shell.or(empty).first()).toBeVisible();
+    test.skip(
+      (await shell.count()) === 0,
+      "Sin automatizaciones cargadas: no hay tabla que verificar.",
+    );
 
-    if ((await shell.count()) > 0) {
-      // La vista de tabla usa el shell estándar con una tabla real.
-      await expect(shell.locator("table thead th").first()).toBeVisible();
-      await expect(
-        shell.locator("tbody tr[data-table-row]").first(),
-      ).toBeVisible();
-      // Las celdas declaran data-label para el apilado en mobile.
-      await expect(
-        shell.locator("tbody tr[data-table-row] td[data-label]").first(),
-      ).toBeVisible();
+    // La vista de tabla usa el shell estándar con una tabla real.
+    await expect(shell.locator("table thead th").first()).toBeVisible();
+    await expect(shell.locator("tbody tr[data-table-row]").first()).toBeVisible();
+    // Las celdas declaran data-label para el apilado en mobile.
+    await expect(
+      shell.locator("tbody tr[data-table-row] td[data-label]").first(),
+    ).toBeVisible();
 
-      // El ordenamiento client-side queda cableado: click en una cabecera
-      // ordenable y el control refleja la dirección aplicada.
-      const sortControl = shell.locator("[data-table-sort-key='sucursal']");
-      await sortControl.click();
-      await expect(sortControl).toHaveAttribute("aria-sort", "ascending");
+    // El ordenamiento client-side queda cableado: click en una cabecera
+    // ordenable y el control refleja la dirección aplicada.
+    const sortControl = shell.locator("[data-table-sort-key='sucursal']");
+    await sortControl.click();
+    await expect(sortControl).toHaveAttribute("aria-sort", "ascending");
+    const rowCountBefore = await shell
+      .locator("tbody tr[data-table-row]")
+      .count();
+    await sortControl.click();
+    await expect(sortControl).toHaveAttribute("aria-sort", "descending");
+    await expect(shell.locator("tbody tr[data-table-row]")).toHaveCount(
+      rowCountBefore,
+    );
 
-      const rowCountBefore = await shell
-        .locator("tbody tr[data-table-row]")
-        .count();
-      await sortControl.click();
-      await expect(sortControl).toHaveAttribute("aria-sort", "descending");
-      await expect(shell.locator("tbody tr[data-table-row]")).toHaveCount(
-        rowCountBefore,
+    // El orden que devuelve el server (order=oldest) no debe ser pisado por
+    // el cliente mientras el usuario no toca una cabecera.
+    await page.goto("/automatizaciones?view=table&order=oldest");
+    const startedAt = await shell
+      .locator("tbody tr[data-table-row]")
+      .evaluateAll((rows) =>
+        rows.map((row) => Number(row.getAttribute("data-sort-iniciada"))),
       );
-    }
+    expect(startedAt.length).toBeGreaterThan(1);
+    expect([...startedAt].sort((a, b) => a - b)).toEqual(startedAt);
 
     await expect(page.getByRole("link", { name: "Tarjetas" })).toBeVisible();
   });

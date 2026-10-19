@@ -20,12 +20,7 @@ const { items, emptyMessage } = Astro.props;
   items.length === 0 ? (
     <AutomationEmptyState message={emptyMessage} />
   ) : (
-    <section
-      data-table-sort-root
-      data-table-sort-default-key="iniciada"
-      data-table-sort-default-direction="descending"
-      aria-label="Automatizaciones"
-    >
+    <section data-table-sort-root aria-label="Automatizaciones">
       <TableShell label="Automatizaciones">
         <table class="table table-sm table-zebra w-full min-w-0 text-left text-xs md:min-w-[1040px]">
           <thead data-table-header>
