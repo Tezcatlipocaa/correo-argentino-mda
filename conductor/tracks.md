@@ -126,6 +126,9 @@
 - [x] **Track: Corrección Integral de Inconsistencias UI/UX, Tablas, Árboles y Métricas (14 Issues)**
   *Link: [./tracks/ui_metrics_fixes_20261018/index.md](./tracks/ui_metrics_fixes_20261018/index.md)*
 ---
+- [x] **Track: Corrección de Carga y Renderizado en Control de Asistencia**
+  *Link: [./tracks/asistencia_loading_fix_20261019/index.md](./tracks/asistencia_loading_fix_20261019/index.md)*
+---
 - [ ] **Track (Backlog): Seguridad 2 — Control de Acceso (RBAC), CSRF Centralizado y Rate Limiting (`sec_rbac_csrf_ratelimit`)**
 ---
 - [ ] **Track (Backlog): Seguridad 3 — Blindaje contra Inyecciones (SSRF, Subprocesos, SQL) y Sanitización XSS/Archivos (`sec_xss_ssrf_files`)**

@@ -1,5 +1,6 @@
 ---
 import { getCleanBase } from "@lib/baseUrl";
+import { getResolvedSearchParams } from "@lib/navigation";
 import { Icon } from "astro-icon/components";
 import SearchBar from "@components/ui/SearchBar.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
@@ -14,7 +15,8 @@ const todayStr = new Date().toLocaleDateString("en-CA", {
 });
 const [y, m, d] = todayStr.split("-");
 
-const urlDate = Astro.url.searchParams.get("date");
+const resolvedParams = getResolvedSearchParams(Astro.request, Astro.url);
+const urlDate = resolvedParams.get("date");
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const defaultDate =
   urlDate && dateRegex.test(urlDate) ? urlDate : `${y}-${m}-${d}`;
@@ -658,7 +660,6 @@ const initialData = await getAttendanceData(defaultDate, defaultDate);
         title="Sin resultados"
         description="No hay operadores que coincidan con la búsqueda. Probá con otro nombre."
       />
-    </div>
   </div>
 </div>
 

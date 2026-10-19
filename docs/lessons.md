@@ -24,6 +24,16 @@ Cada entrada sigue este formato:
 
 ---
 
+### 2026-10-19 — Etiquetas de cierre huérfanas al envolver tablas en TableShell descartan scripts cliente
+
+**Problema:** En `/supervision/asistencia`, la tabla de operadores permanecía indefinidamente en el estado de loading ("Cargando registros..."), sin arrojar errores en consola del navegador ni en el dev server.
+**Causa:** Al migrar el contenedor `<div class="min-h-75 overflow-x-auto">` a `<TableShell>` y cerrar con `</TableShell>`, no se eliminó el `</div>` original que cerraba el div anterior. Esto provocó que el siguiente `</div>` cerrara el root container del componente de manera prematura. El compilador de Astro descartó silenciosamente todo el markup posterior (incluyendo el bloque `<script>` de lógica cliente), impidiendo que la tabla se hidrate.
+**Solución:** Se removió la etiqueta `</div>` huérfana redundante y se adoptó `getResolvedSearchParams` para la lectura de query params en componentes diferidos (`server:defer`).
+**Regla:** Al reemplazar wrappers HTML nativos por componentes contenedores de Astro (como `TableShell`), verificar estrictamente el balanceo de etiquetas de apertura y cierre. El cierre prematuro de un componente provoca que Astro descarte los bloques `<script>` e hijos posteriores sin emitir advertencias de compilación ni errores de runtime.
+**Archivos afectados:** src/components/supervision/asistencia/AsistenciaContent.astro
+
+---
+
 ### 2026-05-08 — Corrupcion accidental por sustitucion incorrecta en JSON
 
 **Problema:** Al intentar agregar un enlace al archivo `enlaces_importantes.json`, se introdujeron cadenas incorrectas ("Paquete Argentino") en campos no relacionados, corrompiendo la integridad de otros registros.
