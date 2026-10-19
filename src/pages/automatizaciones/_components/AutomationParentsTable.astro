@@ -23,6 +23,7 @@ const { items, emptyMessage } = Astro.props;
     <section data-table-sort-root aria-label="Automatizaciones">
       <TableShell label="Automatizaciones">
         <table class="table table-sm table-zebra w-full min-w-0 text-left text-xs md:min-w-[1040px]">
+          <caption class="sr-only">Automatizaciones</caption>
           <thead data-table-header>
             <tr>
               <th class="w-[130px]">
@@ -75,8 +76,8 @@ const { items, emptyMessage } = Astro.props;
                     {item.prettyId}
                   </code>
                 </td>
-                <td data-label="Sucursal" class="max-w-[22rem] truncate" title={item.displayName}>
-                  {item.displayName}
+                <td data-label="Sucursal" class="max-w-[22rem]" title={item.displayName}>
+                  <span class="block truncate">{item.displayName}</span>
                 </td>
                 <td data-label="Región" class="text-base-content/70">
                   {item.region ?? "—"}
@@ -96,8 +97,8 @@ const { items, emptyMessage } = Astro.props;
                     ? `${item.progressPercent}%`
                     : "—"}
                 </td>
-                <td data-label="Mesa" class="max-w-[18rem] truncate text-base-content/70">
-                  {item.assignedGroupName ?? "—"}
+                <td data-label="Mesa" class="max-w-[18rem] text-base-content/70">
+                  <span class="block truncate">{item.assignedGroupName ?? "—"}</span>
                 </td>
                 <td data-label="Iniciada" class="text-base-content/70 whitespace-nowrap text-xs">
                   {formatEpochDateTime(item.createdAt)}

@@ -289,7 +289,10 @@ const quickShortcuts = [
                 <span class="text-base-content/70 text-sm"
                   >Tickets ingresados</span
                 >
-                <span class="text-base-content font-mono text-sm font-bold">
+                <span
+                  data-helpdesk-incoming
+                  class="text-base-content font-mono text-sm font-bold"
+                >
                   {helpdeskMetrics.totalIncoming.toLocaleString("es-AR")}
                 </span>
               </div>
@@ -299,7 +302,10 @@ const quickShortcuts = [
                 <span class="text-base-content/70 text-sm"
                   >Tickets resueltos</span
                 >
-                <span class="text-base-content font-mono text-sm font-bold">
+                <span
+                  data-helpdesk-resolved
+                  class="text-base-content font-mono text-sm font-bold"
+                >
                   {helpdeskMetrics.totalResolved.toLocaleString("es-AR")}
                 </span>
               </div>
@@ -310,6 +316,7 @@ const quickShortcuts = [
                   Balance del período (resueltos − ingresados)
                 </span>
                 <span
+                  data-helpdesk-balance
                   class:list={[
                     "font-mono text-sm font-bold",
                     helpdeskBalance >= 0 ? "text-success" : "text-error",

@@ -62,6 +62,28 @@ test.describe("Dashboard General de Métricas (/reportes)", () => {
       bentoSection.getByText("Capacidad de absorción"),
     ).toHaveCount(0);
 
+    const parseEsAr = (raw: string | null): number =>
+      Number((raw ?? "").trim().replace(/\+/g, "").replace(/\./g, "").replace(",", "."));
+
+    const incoming = parseEsAr(
+      await bentoSection.locator("[data-helpdesk-incoming]").textContent(),
+    );
+    const resolved = parseEsAr(
+      await bentoSection.locator("[data-helpdesk-resolved]").textContent(),
+    );
+    const balanceText = (
+      (await bentoSection.locator("[data-helpdesk-balance]").textContent()) ?? ""
+    ).trim();
+    const balance = parseEsAr(balanceText);
+
+    // El número mostrado es la resta resueltos − ingresados.
+    expect(balance).toBe(resolved - incoming);
+    // Signo y tono coherentes con el valor.
+    if (balance > 0) expect(balanceText.startsWith("+")).toBe(true);
+    await expect(bentoSection.locator("[data-helpdesk-balance]")).toHaveClass(
+      balance >= 0 ? /text-success/ : /text-error/,
+    );
+
     // Botones "Ver más"
     const moreButtons = bentoSection.getByRole("link", { name: /Ver más/i });
     await expect(moreButtons).toHaveCount(6);
