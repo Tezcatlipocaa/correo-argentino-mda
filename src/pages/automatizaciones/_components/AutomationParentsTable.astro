@@ -63,7 +63,7 @@ const rowGridClass = `grid ${headerGridClass} items-center`;
       {items.map((item) => (
         <div
           data-table-row
-          class={`${rowGridClass} hover:bg-base-200/50 transition-colors duration-200`}
+          class={`${rowGridClass} border-b border-base-200 px-4 py-3 last:border-b-0 hover:bg-base-200/50 transition-colors duration-200`}
           data-sort-codigo={item.prettyId}
           data-sort-sucursal={item.displayName}
           data-sort-region={item.region ?? ""}

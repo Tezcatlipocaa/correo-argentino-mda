@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import ActionButton from "./ActionButton.astro";
+import FullscreenButton from "./FullscreenButton.astro";
 import SearchEmptyState from "./SearchEmptyState.astro";
 
 interface Props {
@@ -46,7 +47,7 @@ const {
   rowGridClass,
   class: className = "",
   bodyClass = "",
-  wrapperClass = "rounded-box border border-base-300 bg-base-200/70 shadow-md overflow-x-auto",
+  wrapperClass = "table-shell rounded-box border border-base-200 bg-base-100 shadow-sm overflow-x-auto",
   id,
   fullscreen = false,
   stackOnMobile = false,
@@ -66,7 +67,7 @@ const {
 const HEADER_VARIANT = {
   primary:
     "border-secondary/40 bg-secondary text-secondary-content border-b shadow-sm",
-  subtle: "border-base-300 bg-base-200 text-base-content/70 border-b",
+  subtle: "border-base-300 bg-base-200 text-base-content border-b",
 } as const;
 ---
 
@@ -91,23 +92,7 @@ const HEADER_VARIANT = {
   {
     fullscreen && (
       <div class="flex justify-end px-1 pb-2">
-        <ActionButton
-          type="button"
-          variant="ghost"
-          size="xs"
-          data-fullscreen-toggle
-          title="Ver en pantalla completa"
-          ariaLabel={`Ver ${ariaLabel} en pantalla completa`}
-        >
-          <Icon name="boxicons:fullscreen" size={16} data-fs-enter is:inline />
-          <Icon
-            name="boxicons:fullscreen-exit"
-            size={16}
-            class="hidden"
-            data-fs-exit
-            is:inline
-          />
-        </ActionButton>
+        <FullscreenButton targetLabel={ariaLabel} size="xs" variant="ghost" />
       </div>
     )
   }

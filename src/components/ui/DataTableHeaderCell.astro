@@ -10,7 +10,7 @@ interface Props {
 const { sortKey, align = "left", class: className = "" } = Astro.props;
 
 const contentClasses = [
-  "min-w-0 text-xs font-mono font-semibold uppercase tracking-wide text-secondary-content px-0 py-1.5",
+  "min-w-0 text-xs font-mono font-semibold uppercase tracking-wide px-0 py-1.5",
   align === "right" ? "text-right" : "text-left",
   className,
 ];
@@ -26,7 +26,7 @@ const innerClasses = [
     <button
       type="button"
       class:list={[
-        "focus-visible:outline-secondary-content w-full cursor-pointer rounded-md transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2",
+        "focus-visible:outline-current w-full cursor-pointer rounded-md transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2",
         contentClasses,
       ]}
       data-table-sort-key={sortKey}

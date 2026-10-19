@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import ActionButton from "./ActionButton.astro";
+import FullscreenButton from "./FullscreenButton.astro";
 
 interface Props {
   /** Clase de alto máximo del área con scroll interno vertical. */
@@ -38,28 +39,7 @@ const {
   {
     fullscreen && (
       <div class="flex justify-end px-2 pt-2">
-        <ActionButton
-          type="button"
-          variant="ghost"
-          size="xs"
-          data-fullscreen-toggle
-          title="Ver en pantalla completa"
-          ariaLabel={`Ver ${label} en pantalla completa`}
-        >
-          <Icon
-            name="boxicons:fullscreen"
-            size={16}
-            data-fs-enter
-            is:inline
-          />
-          <Icon
-            name="boxicons:fullscreen-exit"
-            size={16}
-            class="hidden"
-            data-fs-exit
-            is:inline
-          />
-        </ActionButton>
+        <FullscreenButton targetLabel={label} size="xs" variant="ghost" />
       </div>
     )
   }
