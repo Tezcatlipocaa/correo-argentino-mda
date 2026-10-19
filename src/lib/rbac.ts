@@ -79,6 +79,10 @@ export const routePermissions: RoutePermission[] = [
   { path: "/admin/papelera", roles: ["admin"] },
   { path: "/admin/oficinas/edificios", roles: ["admin"] },
   {
+    path: "/admin/calidad/calibracion",
+    roles: ["admin", "supervisor"],
+  },
+  {
     path: "/admin/invgate/ubicaciones",
     roles: ["admin", "supervisor", "team_leader"],
   },
@@ -177,6 +181,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/autogestion", roles: ALL_ROLES },
   // El gate real de cada endpoint de calidad vive en requireRead/WriteAccess.
   { path: "/api/calidad", roles: ALL_ROLES },
+  { path: "/api/credentials", roles: ALL_ROLES },
   { path: "/api/cronograma", roles: ALL_ROLES },
   { path: "/api/disponibilidad", roles: ALL_ROLES },
   { path: "/api/download", roles: ALL_ROLES },

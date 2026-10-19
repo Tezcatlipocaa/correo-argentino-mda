@@ -66,9 +66,11 @@ export function getAuditExportHeaders(
   });
 
   headers.push("Observaciones");
+  headers.push("Devolución al Operador");
   return headers;
 }
 import { XLSX_STYLE_INDEX, type XlsxCellData, type XlsxColWidth } from "./xlsx";
+import { getChannelParameters } from "../config/qualityParams";
 
 /**
  * Resuelve la celda "Cumple" de un ítem a partir de su score.
@@ -98,6 +100,7 @@ export interface QualityAuditExportData {
   date?: string | null;
   callId?: string | null;
   ticketId?: string | null;
+  priority?: string | null;
   duration?: string | null;
   ringTime?: string | null;
   creationTime?: string | null;
@@ -107,6 +110,7 @@ export interface QualityAuditExportData {
   isPas?: boolean | null;
   isReclamoNovedad?: boolean | null;
   notes?: string | null;
+  operatorCoaching?: string | null;
   section1Score?: number | null;
   section2Score?: number | null;
   totalScore?: number | null;
@@ -142,76 +146,39 @@ export function buildOperatorFullEvaluationSheet(
     rowMap.get(row)!.set(col, { val, styleId });
   };
 
-  // Static templates per channel
-  const callS1Items: { name: string; ref: number; code: string }[] = [
-    { name: "Cordialidad y cortesia", ref: 0.03, code: "call_cordialidad" },
-    { name: "Uso del saludo estándar", ref: 0.03, code: "call_saludo_estandar" },
-    { name: "Demuestra interes en resolver el problema", ref: 0.03, code: "call_interes_resolver" },
-    { name: "Sondeo", ref: 0.06, code: "call_sondeo" },
-    { name: "Escucha en forma activa y atenta", ref: 0.06, code: "call_escucha_activa" },
-    { name: "Control de la conversacion", ref: 0.03, code: "call_control_conversacion" },
-    { name: "Contencion en la espera", ref: 0.03, code: "call_contencion_espera" },
-    { name: "Se despide cordialmente", ref: 0.03, code: "call_despedida_cordial" },
-    { name: "Lenguaje apropiado", ref: 0.05, code: "call_lenguaje_apropiado" },
-    { name: "Cumplimiento de procedimiento", ref: 0.1, code: "call_procedimiento" },
-  ];
+  // Dynamic templates per channel derived from Single Source of Truth (qualityParams)
+  const wiseCallParams = getChannelParameters("wise_call");
+  const callS1Items: { name: string; ref: number; code: string }[] = wiseCallParams
+    .filter((p) => p.section === "items")
+    .map((p) => ({ name: p.name, ref: (p.weight ?? 0) / 100, code: p.code }));
 
   const callS2Items: { name: string; ref: number; code: string }[] = [
-    { name: "Origen de la solicitud", ref: 0.06, code: "call_ticket_origen" },
-    { name: "Tipo de solicitud", ref: 0.05, code: "call_ticket_tipo" },
-    { name: "Categorización", ref: 0.1, code: "call_ticket_categorizacion" },
-    { name: "Ortografía", ref: 0.08, code: "call_ticket_ortografia" },
-    { name: "Prioridad", ref: 0.06, code: "call_ticket_prioridad" },
-    { name: "Titulo", ref: 0.07, code: "call_ticket_titulo" },
-    { name: "Descripcion/ Evidencia", ref: 0.07, code: "call_ticket_descripcion" },
-    { name: "Exactitud en el ingreso de datos", ref: 0.06, code: "call_ticket_exactitud_datos" },
+    ...wiseCallParams
+      .filter((p) => p.section === "ticket" || p.section === "mda")
+      .map((p) => ({ name: p.name, ref: (p.weight ?? 0) / 100, code: p.code })),
     { name: "Reclamo/Novedad", ref: 0.55, code: "call_ticket_reclamo_novedad" },
   ];
 
-  const emailS1Items: { name: string; ref: number; code: string }[] = [
-    { name: "Interpretación de la solicitud (A)", ref: 0.1, code: "email_interpretacion" },
-    { name: "Aplicación de procedimientos (B)", ref: 0.1, code: "email_procedimientos" },
-    { name: "Gestión Outlook/Invgate (C)", ref: 0.1, code: "email_gestion_herramientas" },
-    { name: "Redacción y comunicación (D)", ref: 0.1, code: "email_redaccion" },
-    { name: "Comunicación y claridad (E)", ref: 0.1, code: "email_claridad" },
-    { name: "Resolución brindada (F)", ref: 0.1, code: "email_resolucion" },
-    { name: "Seguimiento al cliente (G)", ref: 0.2, code: "email_seguimiento" },
-  ];
+  const wiseEmailParams = getChannelParameters("wise_email");
+  const emailS1Items: { name: string; ref: number; code: string }[] = wiseEmailParams
+    .filter((p) => p.section === "items" && p.code !== "email_solicitud" && p.code !== "email_sla_90min")
+    .map((p) => ({ name: p.name, ref: (p.weight ?? 0) / 100, code: p.code }));
 
   const emailS2Items: { name: string; ref: number; code: string }[] = [
-    { name: "SLA de Resolución", ref: 0.1, code: "email_mda_sla_resolucion" },
-    { name: "Seguimiento ", ref: 0.1, code: "email_mda_seguimiento" },
-    { name: "Categorización final", ref: 0.1, code: "email_mda_categorizacion_final" },
-    { name: "Origen de la solicitud", ref: 0.07, code: "email_mda_origen" },
-    { name: "Tipo de solicitud", ref: 0.05, code: "email_mda_tipo" },
-    { name: "Categorización", ref: 0.1, code: "email_mda_categorizacion" },
-    { name: "Ortografía", ref: 0.1, code: "email_mda_ortografia" },
-    { name: "Prioridad", ref: 0.1, code: "email_mda_prioridad" },
-    { name: "Titulo", ref: 0.08, code: "email_mda_titulo" },
-    { name: "Descripcion/ Evidencia", ref: 0.1, code: "email_mda_descripcion" },
-    { name: "Exactitud en el ingreso de datos", ref: 0.1, code: "email_mda_exactitud_datos" },
+    ...wiseEmailParams
+      .filter((p) => p.section === "mda")
+      .map((p) => ({ name: p.name, ref: (p.weight ?? 0) / 100, code: p.code })),
     { name: "Reclamo/Novedad", ref: 1, code: "email_mda_reclamo_novedad" },
   ];
 
-  const agS1Items: { name: string; ref: number; code: string }[] = [
-    { name: "Corrección del título de la solicitud (A)", ref: 0.1, code: "ag_titulo" },
-    { name: "Análisis de la solicitud (B)", ref: 0.1, code: "ag_analisis" },
-    { name: "Sondeo, pruebas realizadas (C)", ref: 0.1, code: "ag_sondeo" },
-    { name: "Cumplimiento del procedimiento (D)", ref: 0.2, code: "ag_procedimiento" },
-    { name: "Documentación de la gestión (E)", ref: 0.1, code: "ag_documentacion" },
-    { name: "Corrección de prioridad", ref: 0.1, code: "ag_correccion_prioridad" },
-    { name: "Corrección de Tipo de solicitud", ref: 0.1, code: "ag_correccion_tipo" },
-    { name: "Categorización (F)", ref: 0.2, code: "ag_categorizacion" },
-  ];
+  const invgateAgParams = getChannelParameters("invgate_ticket");
+  const agS1Items: { name: string; ref: number; code: string }[] = invgateAgParams
+    .filter((p) => p.section === "items")
+    .map((p) => ({ name: p.name, ref: (p.weight ?? 0) / 100, code: p.code }));
 
-  const agS2Items: { name: string; ref: number; code: string }[] = [
-    { name: "SLA de Primera respuesta", ref: 0.2, code: "ag_mda_sla_primera_respuesta" },
-    { name: "SLA de Resolución", ref: 0.2, code: "ag_mda_sla_resolucion" },
-    { name: "Seguimiento ", ref: 0.2, code: "ag_mda_seguimiento" },
-    { name: "Categorización final", ref: 0.2, code: "ag_mda_categorizacion_final" },
-    { name: "Información complementaria", ref: 0.1, code: "ag_mda_info_complementaria" },
-    { name: "Ortografía", ref: 0.1, code: "ag_mda_ortografia" },
-  ];
+  const agS2Items: { name: string; ref: number; code: string }[] = invgateAgParams
+    .filter((p) => p.section === "mda")
+    .map((p) => ({ name: p.name, ref: (p.weight ?? 0) / 100, code: p.code }));
 
   // Group audits by channel
   const callAudits = audits.filter((a) => a.channelType === "wise_call");
@@ -315,7 +282,7 @@ export function buildOperatorFullEvaluationSheet(
       setCell(callB + 12, 7, "Ticket", XLSX_STYLE_INDEX.DATA_CENTER);
       const solMeets = callAudit.appliesMda !== false;
       setCell(callB + 12, 8, solMeets ? "CUMPLE" : "NO CUMPLE", solMeets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
-      setCell(callB + 12, 9, callAudit.ticketId || callAudit.notes || "", XLSX_STYLE_INDEX.DATA_TEXT);
+      setCell(callB + 12, 9, callAudit.ticketId || (callAudit.appliesMda === false ? "Sin ticket" : ""), XLSX_STYLE_INDEX.DATA_TEXT);
 
       // S2 Ticket Items (Rows 2 to 10)
       let s2TotalEval = 0;
@@ -342,12 +309,14 @@ export function buildOperatorFullEvaluationSheet(
       });
 
       // Row 15: Totals
-      const totalScore = callAudit.totalScore ?? Math.round(s1TotalEval * 100 + s2TotalEval * 100);
+      const hasSection2 = callAudit.appliesMda !== false;
+      const s1Display = hasSection2 ? Math.round(s1TotalEval * 100) / 100 : Math.round((s1TotalEval / 0.45) * 100) / 100;
+      const totalScore = callAudit.totalScore ?? (hasSection2 ? Math.round(s1TotalEval * 100 + s2TotalEval * 100) : Math.round(s1Display * 100));
       callScores[sIdx] = totalScore;
       const isApproved = totalScore >= 75;
       setCell(callB + 15, 5, "Cumplimientos ", XLSX_STYLE_INDEX.SUMMARY_LABEL);
       setCell(callB + 15, 6, 1, XLSX_STYLE_INDEX.DATA_PERCENT);
-      setCell(callB + 15, 7, Math.round(s1TotalEval * 100) / 100, XLSX_STYLE_INDEX.DATA_PERCENT);
+      setCell(callB + 15, 7, s1Display, XLSX_STYLE_INDEX.DATA_PERCENT);
       setCell(callB + 15, 8, 1, XLSX_STYLE_INDEX.DATA_PERCENT);
       setCell(callB + 15, 9, Math.round(s2TotalEval * 100) / 100, XLSX_STYLE_INDEX.DATA_PERCENT);
       setCell(callB + 15, 12, "Total", XLSX_STYLE_INDEX.SUMMARY_LABEL);
@@ -403,10 +372,11 @@ export function buildOperatorFullEvaluationSheet(
       setCell(mailB + 10, 20, "Responde dentro del tiempo establecido 90min", XLSX_STYLE_INDEX.DATA_TEXT);
       setCell(mailB + 10, 21, 0.2, XLSX_STYLE_INDEX.DATA_PERCENT);
       const slaSc = scoreMap.get("email_sla_90min");
-      const slaMeets = slaSc ? slaSc.score : true;
-      if (slaMeets) s1TotalEval += 0.2;
-      setCell(mailB + 10, 22, slaMeets ? 0.2 : 0, XLSX_STYLE_INDEX.DATA_PERCENT);
-      setCell(mailB + 10, 23, slaMeets ? "CUMPLE" : "NO CUMPLE", slaMeets ? XLSX_STYLE_INDEX.CUMPLE_TRUE : XLSX_STYLE_INDEX.CUMPLE_FALSE);
+      const { label: slaLabel, styleId: slaStyleId, meets: slaMeets } = cumpleCell(slaSc);
+      const slaScore = slaMeets ? 0.2 : 0;
+      s1TotalEval += slaScore;
+      setCell(mailB + 10, 22, slaScore, XLSX_STYLE_INDEX.DATA_PERCENT);
+      setCell(mailB + 10, 23, slaLabel, slaStyleId);
       if (slaSc?.comment) setCell(mailB + 10, 24, slaSc.comment, XLSX_STYLE_INDEX.DATA_TEXT);
 
       // Aplica MDA (Row 11)
@@ -471,7 +441,7 @@ export function buildOperatorFullEvaluationSheet(
 
       setCell(agB + 2, 31, operatorName, XLSX_STYLE_INDEX.DATA_CENTER);
       setCell(agB + 2, 32, agAudit.date ? agAudit.date.substring(0, 10) : "", XLSX_STYLE_INDEX.DATA_CENTER);
-      setCell(agB + 2, 33, "Baja", XLSX_STYLE_INDEX.DATA_CENTER);
+      setCell(agB + 2, 33, agAudit.priority || "-", XLSX_STYLE_INDEX.DATA_CENTER);
       setCell(agB + 2, 34, agAudit.takeTime || "00:00:00", XLSX_STYLE_INDEX.DATA_CENTER);
 
       setCell(agB + 3, 31, "Número de caso AG", XLSX_STYLE_INDEX.SUMMARY_LABEL);

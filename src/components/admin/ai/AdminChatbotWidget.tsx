@@ -303,7 +303,7 @@ export default function AdminChatbotWidget() {
         className={`border-base-300 bg-base-100 fixed right-6 bottom-24 z-50 flex h-125 w-96 origin-bottom-right flex-col overflow-hidden rounded-2xl border shadow-2xl transition-all duration-200 ease-out ${
           isOpen
             ? "pointer-events-auto scale-100 opacity-100"
-            : "pointer-events-none scale-95 opacity-0"
+            : "pointer-events-none scale-95 opacity-0 invisible"
         }`}
       >
         <div className="border-base-300 bg-base-200/50 flex items-center justify-between border-b p-4">
@@ -315,9 +315,9 @@ export default function AdminChatbotWidget() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base-content text-sm font-semibold">
+                <p className="text-base-content text-sm font-semibold">
                   Referente
-                </h3>
+                </p>
               </div>
               <p className="text-base-content/60 text-small">
                 Asistente virtual MDA
@@ -328,7 +328,7 @@ export default function AdminChatbotWidget() {
             <button
               type="button"
               onClick={handleReset}
-              className="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:text-base-content"
+              className="btn btn-ghost btn-circle btn-xs min-h-8 min-w-8 text-base-content/70 hover:text-base-content"
               aria-label="Reiniciar conversación"
               title="Reiniciar conversación"
             >
@@ -337,7 +337,7 @@ export default function AdminChatbotWidget() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:text-base-content"
+              className="btn btn-ghost btn-circle btn-xs min-h-8 min-w-8 text-base-content/70 hover:text-base-content"
               aria-label="Cerrar asistente de IA"
               title="Cerrar"
             >
@@ -386,7 +386,9 @@ export default function AdminChatbotWidget() {
                   msg.sender === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <time>{formatTime(new Date(msg.timestamp))}</time>
+                <time suppressHydrationWarning>
+                  {formatTime(new Date(msg.timestamp))}
+                </time>
               </div>
             </div>
           ))}
@@ -450,7 +452,7 @@ export default function AdminChatbotWidget() {
                 ? "Referente está respondiendo..."
                 : "Escribe tu consulta... (Enter para enviar)"
             }
-            className="textarea textarea-bordered textarea-sm scrollbar-hide max-h-20 min-h-9.5 flex-1 resize-none py-2 text-xs leading-tight"
+            className="textarea textarea-sm scrollbar-hide max-h-20 min-h-9.5 flex-1 resize-none py-2 text-xs leading-tight"
             disabled={isTyping || isStreaming}
           />
           {isStreaming ? (

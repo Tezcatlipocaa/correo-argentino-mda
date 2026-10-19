@@ -1,0 +1,11 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CalibracionContent from "@components/admin/calidad/CalibracionContent.astro";
+import CalibracionSkeleton from "@components/admin/calidad/CalibracionSkeleton.astro";
+---
+
+<BaseLayout>
+  <CalibracionContent server:defer>
+    <CalibracionSkeleton slot="fallback" />
+  </CalibracionContent>
+</BaseLayout>

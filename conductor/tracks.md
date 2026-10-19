@@ -87,11 +87,35 @@
 - [x] **Track: Persistencia de Sesión del Chatbot IA en sessionStorage**
   *Link: [./tracks/admin_chatbot_session_storage_20261015/index.md](./tracks/admin_chatbot_session_storage_20261015/index.md)*
 ---
+- [x] **Track: Asistente IA Espectacular para Auditorías de Calidad (Modelos Free & Gemini)**
+  *Link: [./tracks/calidad_ia_asistente_20261015/index.md](./tracks/calidad_ia_asistente_20261015/index.md)*
+---
+- [x] **Track: Rúbricas Estandarizadas de Calidad en Markdown para Homogeneización de Modelos IA**
+  *Link: [./tracks/calidad_ia_rubricas_md_20261015/index.md](./tracks/calidad_ia_rubricas_md_20261015/index.md)*
+---
+- [x] **Track: Scraping Unificado de Línea de Tiempo e Historial de Cambios InvGate (vía Azure SSO) para Evaluación IA**
+  *Link: [./tracks/calidad_invgate_timeline_scraping_20261015/index.md](./tracks/calidad_invgate_timeline_scraping_20261015/index.md)*
+---
 - [x] **Track: Optimización Integral de Rendimiento y Benchmarks (Inicio, Pantallas, Scroll e Historial)**
   *Link: [./tracks/perf_optimization_20261016/index.md](./tracks/perf_optimization_20261016/index.md)*
 ---
 - [x] **Track: Rediseño UI/UX, Filtros Flotantes y Rendimiento de Árboles Interactivos**
   *Link: [./tracks/trees_ui_ux_perf_20261016/index.md](./tracks/trees_ui_ux_perf_20261016/index.md)*
+---
+- [x] **Track: Council de Calidad MDA (Orquestación Multi-Agente & Fallback Resiliente)**
+  *Link: [./tracks/calidad_council_orquestacion_20261016/index.md](./tracks/calidad_council_orquestacion_20261016/index.md)*
+---
+- [x] **Track: Evaluación Asistida de Reclamo/Novedad y Detección de Tickets InvGate**
+  *Link: [./tracks/calidad_reclamo_novedad_ai_20261017/index.md](./tracks/calidad_reclamo_novedad_ai_20261017/index.md)*
+---
+- [x] **Track: Ciclo de Aprendizaje y Calibración (Ground Truth)**
+  *Link: [./tracks/calidad_ground_truth_calibracion_20261017/index.md](./tracks/calidad_ground_truth_calibracion_20261017/index.md)*
+---
+- [x] **Track: Devolución y Coaching Estructurado para el Operador**
+  *Link: [./tracks/calidad_coaching_operador_20261017/index.md](./tracks/calidad_coaching_operador_20261017/index.md)*
+---
+- [x] **Track: Generador de Calibración de Rúbricas y Diff Canónico para Cierre de Ground Truth**
+  *Link: [./tracks/calidad_calibracion_feedback_rubricas_20261017/index.md](./tracks/calidad_calibracion_feedback_rubricas_20261017/index.md)*
 ---
 - [x] **Track: Auto-Deploy Transaccional, Guardia de Schema y Gate Pre-Push**
   *Link: [./tracks/safe_deploy_20261017/index.md](./tracks/safe_deploy_20261017/index.md)*

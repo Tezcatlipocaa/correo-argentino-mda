@@ -4,6 +4,18 @@ import { invgateGet } from "@/lib/invgateClient";
 import { cleanHtmlText } from "@/lib/titleNormalizer";
 import { getCategories } from "@lib/invgate/automation/categories";
 
+export interface EmailThreadMessage {
+  type: "customer" | "operator";
+  createdAt?: string;
+  content: string;
+}
+
+export interface EmailThreadData {
+  messages: EmailThreadMessage[];
+  hasCustomerMessage: boolean;
+  hasOperatorReply: boolean;
+}
+
 export interface ExtractedQualityMetadata {
   caseNumber: string;
   operator: string;
@@ -27,6 +39,7 @@ export interface ExtractedQualityMetadata {
   recordingUrl?: string;
   recordingId?: string;
   detectedChannel?: ChannelType;
+  emailThread?: EmailThreadData;
   rawDetails?: Record<string, any>;
   raw?: any;
 }
@@ -415,10 +428,80 @@ export function parseWiseCallMetadata(caseData: any, activities: any[] = []): Ex
   };
 }
 
+/**
+ * Remueve encabezados de respuesta y texto citado de correos electrónicos.
+ */
+export function stripQuotedEmailText(text: string): string {
+  if (!text) return "";
+  const lines = text.split("\n");
+  const keptLines: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^_{5,}/.test(trimmed) || /^-{3,}.*(Mensaje original|Original Message).*-{3,}/i.test(trimmed)) {
+      break;
+    }
+    if (/^(De|From):\s*[^@\s]+@/i.test(trimmed)) {
+      break;
+    }
+    if (/^El\s+.+\s+escribi[oó]:/i.test(trimmed)) {
+      break;
+    }
+    if (trimmed.startsWith(">")) {
+      continue;
+    }
+    keptLines.push(line);
+  }
+  return keptLines.join("\n").trim();
+}
+
+/**
+ * Extrae y formatea el hilo de correos electrónicos de las actividades de Wise CX.
+ * Limpia HTML, remueve citas de mails respondidos y acota a 2500 caracteres por mensaje.
+ */
+export function emailThreadFromActivities(activities: any[]): EmailThreadData | undefined {
+  if (!Array.isArray(activities) || activities.length === 0) return undefined;
+
+  const validActivities = activities.filter(
+    (a) => a && (a.type === "contact_message" || a.type === "user_reply") && typeof a.content === "string",
+  );
+
+  if (validActivities.length === 0) return undefined;
+
+  const sorted = [...validActivities].sort((a, b) => {
+    if (a.created_at && b.created_at) {
+      return a.created_at.localeCompare(b.created_at);
+    }
+    return (a.id || 0) - (b.id || 0);
+  });
+
+  const messages: EmailThreadMessage[] = [];
+  for (const act of sorted) {
+    const cleaned = cleanHtmlText(act.content || "");
+    const stripped = stripQuotedEmailText(cleaned);
+    const content = stripped.slice(0, 2500).trim();
+    if (content) {
+      messages.push({
+        type: act.type === "user_reply" ? "operator" : "customer",
+        createdAt: act.created_at || undefined,
+        content,
+      });
+    }
+  }
+
+  if (messages.length === 0) return undefined;
+
+  return {
+    messages,
+    hasCustomerMessage: messages.some((m) => m.type === "customer"),
+    hasOperatorReply: messages.some((m) => m.type === "operator"),
+  };
+}
+
 export function parseWiseEmailMetadata(
   caseData: any,
   operatorName = "",
   firstReplyAt?: string | null,
+  emailThread?: EmailThreadData,
 ): ExtractedQualityMetadata {
   const caseNumber = (caseData?.number ?? caseData?.id ?? "").toString();
   const createdAt = caseData?.created_at || "";
@@ -448,6 +531,7 @@ export function parseWiseEmailMetadata(
     creationTime: createdAt,
     takeTime,
     detectedChannel: "wise_email",
+    emailThread,
     rawDetails: {
       caseId: caseData?.id,
       subject: caseData?.subject,
@@ -1029,6 +1113,7 @@ export async function fetchInvgateTicketMetadata(
       targetOperatorUsername: options?.targetOperatorUsername,
       targetOperatorName: options?.targetOperatorName,
     });
+    metadata.raw = incident;
     return { ok: true, data: metadata };
 
   } catch (err) {
@@ -1148,6 +1233,7 @@ export async function fetchQualityCaseMetadata(
 
       if (realChannel === "wise_email") {
         let operatorNick = "";
+        let operatorName = "";
         if (caseData.user_id && !options?.includeRaw) {
           const uRes = await wiseCxGet<any>(`/core/v1/users/${caseData.user_id}`);
           if (uRes.ok) {
@@ -1158,12 +1244,13 @@ export async function fetchQualityCaseMetadata(
           }
         }
 
-        // Obtener actividades para detectar la primera respuesta del operador (user_reply)
+        // Obtener actividades para detectar la primera respuesta del operador (user_reply) y el hilo
         let firstReplyAt: string | undefined;
         let emailActivities: any[] = [];
+        let emailThread: EmailThreadData | undefined;
         try {
           const actRes = await wiseCxGet<any>(
-            `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,created_at`,
+            `/core/v1/cases/${caseData.id}/activities?fields=id,case_id,type,user_id,channel,content,created_at`,
           );
           if (actRes.ok) {
             emailActivities = Array.isArray(actRes.data)
@@ -1175,12 +1262,19 @@ export async function fetchQualityCaseMetadata(
             if (replyAct?.created_at) {
               firstReplyAt = replyAct.created_at;
             }
+            emailThread = emailThreadFromActivities(emailActivities);
           }
-        } catch {
-          // Fallback silencioso a solved_at/closed_at
+        } catch (actErr) {
+          console.warn(`[qualityMetadataFetcher] Error obteniendo actividades para caso Wise ${caseData.id}:`, actErr);
         }
 
-        const metadata = parseWiseEmailMetadata(caseData, operatorName, firstReplyAt);
+        if (!emailThread || !emailThread.hasOperatorReply) {
+          console.warn(
+            `[qualityMetadataFetcher] Fallback: caso Wise ${caseData.id} sin hilo de correo completo (hasThread=${Boolean(emailThread)}, hasReply=${Boolean(emailThread?.hasOperatorReply)})`,
+          );
+        }
+
+        const metadata = parseWiseEmailMetadata(caseData, operatorName, firstReplyAt, emailThread);
         if (metadata.rawDetails) {
           metadata.rawDetails.operatorNick = operatorNick;
         }

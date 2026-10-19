@@ -49,10 +49,17 @@ const { isAgent = false } = Astro.props;
             </span>
           </div>
           <div class="text-base-content/60 mt-0.5 flex items-center gap-2 text-xs font-medium">
-            <span class="flex items-center gap-1">
-              <Icon name="boxicons:calendar" size={14} class="text-secondary shrink-0" />
-              <span id="detail-month" class="font-semibold text-base-content/80">--</span>
-            </span>
+            <label for="detail-month-selector" class="flex items-center gap-1.5 bg-base-200/50 pl-2 pr-1 py-0.5 rounded-lg border border-base-200/80 cursor-pointer">
+              <Icon name="boxicons:calendar" size={14} class="text-secondary shrink-0" aria-hidden="true" />
+              <select
+                id="detail-month-selector"
+                class="select select-xs select-ghost font-semibold text-xs text-base-content/90 h-6 min-h-0 pl-1 pr-8 py-0 w-36 focus:outline-none cursor-pointer border-none bg-transparent"
+                title="Cambiar mes de evaluación"
+                aria-label="Cambiar mes de evaluación"
+              >
+              </select>
+              <span id="detail-month" class="hidden">--</span>
+            </label>
           </div>
         </div>
       </div>
@@ -258,7 +265,7 @@ const { isAgent = false } = Astro.props;
   </div>
 
   <!-- Tabs de separación por Canal / Filtro -->
-  <div class="tabs tabs-boxed bg-base-200/60 p-1 w-fit flex flex-wrap gap-1" id="operator-channel-tabs">
+  <div class="tabs tabs-box bg-base-200/60 p-1 w-fit flex flex-wrap gap-1" id="operator-channel-tabs">
     <button
       type="button"
       class="tab tab-active operator-channel-tab text-xs font-bold gap-1.5 rounded-lg"

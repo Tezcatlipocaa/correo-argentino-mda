@@ -5,6 +5,7 @@ import FormField from "@components/ui/forms/FormField.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
 import MonthSelect from "@components/ui/MonthSelect.astro";
 import CriterionRow from "@components/supervision/calidad/CriterionRow.astro";
+import AiInspectionModal from "@components/supervision/calidad/AiInspectionModal.astro";
 import type { AuditParameter, QualityCall } from "@/types/quality";
 import { getCleanBase } from "@lib/baseUrl";
 
@@ -134,6 +135,12 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       name="recordingUrl"
       id="form-recording-url"
       value={initialAudit?.recordingUrl || ""}
+    />
+    <input
+      type="hidden"
+      name="aiSnapshot"
+      id="form-ai-snapshot"
+      value={initialAudit?.aiSnapshot ? (typeof initialAudit.aiSnapshot === "string" ? initialAudit.aiSnapshot : JSON.stringify(initialAudit.aiSnapshot)) : ""}
     />
 
     <!-- 
@@ -406,17 +413,28 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
         </div>
       </div>
 
-      <!-- Resumen + leyenda de los 3 estados -->
+      <!-- Resumen + acción IA + leyenda de los 3 estados -->
       <div
         class="mt-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-base-200/70 pt-2.5"
       >
-        <p
-          id="config-summary-text"
-          class="flex items-center gap-1.5 text-xs font-medium text-base-content/60"
-        >
-          <Icon name="boxicons:info-circle" size={14} class="shrink-0 text-secondary" aria-hidden="true" />
-          Configuración aplicada: {wiseCallParams.length} criterios
-        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <p
+            id="config-summary-text"
+            class="flex items-center gap-1.5 text-xs font-medium text-base-content/60"
+          >
+            <Icon name="boxicons:info-circle" size={14} class="shrink-0 text-secondary" aria-hidden="true" />
+            Configuración aplicada: {wiseCallParams.length} criterios
+          </p>
+          <button
+            type="button"
+            id="btn-ai-evaluate"
+            class="btn btn-xs border-secondary/30 from-secondary/15 to-base-100 text-secondary hover:border-secondary/60 hover:from-secondary/25 hover:to-base-100 focus-visible:ring-secondary/50 gap-1.5 rounded-lg border bg-gradient-to-r px-2.5 font-semibold shadow-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:outline-none"
+            title="Analizar ticket con el Asistente IA"
+          >
+            <Icon name="boxicons:magic-wand" size={14} class="text-secondary shrink-0" aria-hidden="true" />
+            <span>Asistente IA</span>
+          </button>
+        </div>
         <ul
           class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xxs font-medium text-base-content/60"
           aria-label="Estados posibles de un criterio"
@@ -1473,7 +1491,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
                       name="isPas"
                       id="form-is-pas"
                       checked={initialAudit?.isPas ?? false}
-                      class="checkbox checkbox-secondary checkbox-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60"
+                      class="checkbox checkbox-secondary checkbox-xs rounded-sm border-base-300 shadow-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-secondary/60"
                     />
                     <span class="text-xs font-bold">Es caso PAS</span>
                   </label>
@@ -1509,15 +1527,32 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
               for="form-notes"
               class="mb-1 block text-xs font-semibold text-base-content/70"
             >
-              Feedback general al operador
+              Notas de la auditoría (Uso interno del supervisor)
             </label>
             <textarea
               id="form-notes"
               name="notes"
               rows="3"
-              placeholder="Escribí la devolución de coaching o el contexto de la auditoría…"
+              placeholder="Observaciones y contexto interno del caso…"
               class="textarea w-full resize-y rounded-xl border-base-200 bg-base-100 text-sm leading-relaxed focus:outline-none focus-visible:border-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
             >{initialAudit?.notes || ""}</textarea>
+          </div>
+
+          <div class="mt-3">
+            <label
+              for="form-operator-coaching"
+              class="mb-1 flex items-center justify-between text-xs font-semibold text-base-content/70"
+            >
+              <span>Devolución al Operador (Coaching)</span>
+              <span class="text-[10px] font-normal text-base-content/50">Entrega manual al agente</span>
+            </label>
+            <textarea
+              id="form-operator-coaching"
+              name="operatorCoaching"
+              rows="5"
+              placeholder="Puntos fuertes, oportunidades de mejora y sugerencias de redacción/atención para el operador…"
+              class="textarea w-full resize-y rounded-xl border-base-200 bg-base-100 text-sm leading-relaxed focus:outline-none focus-visible:border-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+            >{initialAudit?.operatorCoaching || ""}</textarea>
           </div>
         </div>
       </aside>
@@ -1639,6 +1674,9 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       </form>
     </div>
   </Modal>
+
+  <!-- Modal Espectacular de Inspección Asistida por IA -->
+  <AiInspectionModal id="modal-ai-inspection" />
 </div>
 
 <style is:global>
@@ -1659,6 +1697,7 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
   import type { EvaluationParameter } from "@/types/quality";
   import { matchApprovedTitle, cleanHtmlText } from "@/lib/titleNormalizer";
   import { evaluateOrthography } from "@/lib/orthography";
+  import { formatCoachingText, cleanModelName } from "@/lib/calidad/coachingFormatter";
 
   const STATE_LABEL: Record<string, string> = {
     cumple: "Cumple",
@@ -2104,6 +2143,80 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
       clearAllRuleBadges();
     }
 
+    // Snapshot IA de solo lectura para badges en modo edición (T2)
+    const initialAiVerdictsMap = new Map<string, { codigo: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }>();
+
+    let currentAiResults: {
+      model: string;
+      resumen: string;
+      verdicts: Array<{ codigo: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }>;
+      isCouncil?: boolean;
+      debate?: Record<string, {
+        codigo: string;
+        criterioNombre: string;
+        consenso: "directo" | "arbitrado" | "sin_oposicion" | "agente_especialista" | "arbitraje_fallido";
+        motivo?: string;
+        alphaVote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        betaVote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+        judgeVote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string };
+      }>;
+      reclamoSignal?: {
+        detected: boolean;
+        type?: string;
+        confidence: number;
+        evidence: string;
+        suggestedMode: "reclamo" | "nuevo";
+        rationale: string;
+      };
+      detectedTickets?: Array<{
+        ticketId: string;
+        context: string;
+        type: "nuevo" | "previo" | "ambiguo";
+        confidence: number;
+      }>;
+      coaching?: {
+        fortalezas: string[];
+        oportunidades: string[];
+        respuestaModelo: string;
+      } | null;
+    } | null = null;
+
+    function getAiVerdictForCode(code: string) {
+      if (currentAiResults && Array.isArray(currentAiResults.verdicts)) {
+        const live = currentAiResults.verdicts.find((item) => item.codigo === code);
+        if (live) return live;
+      }
+      return initialAiVerdictsMap.get(code) || null;
+    }
+
+    function syncAiBadge(code: string, currentScore: boolean) {
+      const badge = document.querySelector(`[data-ai-badge="${code}"]`) as HTMLElement | null;
+      if (!badge) return;
+
+      const v = getAiVerdictForCode(code);
+      if (!v || v.cumple === null) {
+        badge.classList.add("hidden");
+        return;
+      }
+
+      const isDiscrepancy = v.cumple !== currentScore;
+      const pct = Math.round((v.confianza || 0) * 100);
+      const aiText = v.cumple ? "Cumple" : "No cumple";
+      const humanText = currentScore ? "Cumple" : "No cumple";
+
+      if (isDiscrepancy) {
+        badge.textContent = `Discrepancia IA`;
+        badge.className = "ai-verdict-badge badge badge-xs font-bold border border-warning/40 bg-warning/15 text-warning tabular-nums cursor-pointer whitespace-nowrap leading-none h-auto min-h-4.5 py-0.5 px-2 transition-transform hover:scale-105 active:scale-95";
+        badge.title = `Discrepancia con IA:\n• Veredicto IA: ${aiText} (${pct}% certeza)\n• Supervisor: ${humanText}\n• Evidencia IA: "${v.evidencia || "Sin evidencia"}"${v.razonamiento ? `\n• Razonamiento: "${v.razonamiento}"` : ""}\n\nHacé clic para añadir o editar una nota de coaching.`;
+        badge.classList.remove("hidden");
+      } else {
+        badge.textContent = `IA ${pct}\u00A0%`;
+        badge.className = "ai-verdict-badge badge badge-xs font-semibold border border-secondary/30 bg-secondary/10 text-secondary tabular-nums cursor-pointer whitespace-nowrap leading-none h-auto min-h-4.5 py-0.5 px-2 transition-transform hover:scale-105 active:scale-95";
+        badge.title = `Coincidencia con IA (${pct}% certeza):\n• Evidencia IA: "${v.evidencia || "Sin evidencia"}"${v.razonamiento ? `\n• Razonamiento: "${v.razonamiento}"` : ""}`;
+        badge.classList.remove("hidden");
+      }
+    }
+
     function setParamRuleBadge(checkboxName: string, active: boolean, text: string = "Regla") {
       const badge = document.querySelector(`[data-rule-badge="${checkboxName}"]`);
       if (!badge) return;
@@ -2130,9 +2243,13 @@ const returnUrl = `${cleanBase}supervision/calidad-operadores?month=${encodeURIC
 
       item.dataset.criterionState = state;
 
-      // Si el supervisor decide el estado a mano, el badge de regla deja de aplicar:
-      // decir "desactivado por regla" sobre un criterio en Cumple se contradice.
+      // Si el supervisor decide el estado a mano, el badge de regla determinista (ej. título)
+      // deja de aplicar. Los badges de IA/discrepancia se sincronizan reactivamente con el nuevo estado (T5).
       item.querySelector(".rule-auto-badge")?.classList.add("hidden");
+
+      if (checkbox?.name) {
+        syncAiBadge(checkbox.name, state === "cumple");
+      }
 
       item.querySelectorAll<HTMLButtonElement>(".state-btn").forEach((btn) => {
         btn.setAttribute("aria-pressed", String(btn.dataset.state === state));
@@ -2693,6 +2810,529 @@ function evaluateOrthographyRule(title: string, description: string) {
     btnInspectInvgate?.addEventListener("click", () => openTechnicalDetail("invgate"));
     btnInspectWise?.addEventListener("click", () => openTechnicalDetail("wise"));
 
+    // MODO IA: Asistente con modal interactivo, selección de modelo,
+    // indicador de progreso por etapas, resumen ejecutivo y aplicación selectiva.
+    const AI_MIN_CONFIDENCE = 0.6;
+    const btnAiEvaluate = document.getElementById("btn-ai-evaluate") as HTMLButtonElement | null;
+    const modalAi = document.getElementById("modal-ai-inspection") as HTMLDialogElement | null;
+    const aiModelSelect = document.getElementById("ai-modal-model-select") as HTMLSelectElement | null;
+    const aiIdleState = document.getElementById("ai-modal-idle-state");
+    const aiLoadingState = document.getElementById("ai-modal-loading-state");
+    const aiErrorState = document.getElementById("ai-modal-error-state");
+    const aiErrorMsg = document.getElementById("ai-modal-error-msg");
+    const aiResultsState = document.getElementById("ai-modal-results-state");
+    const aiSummaryText = document.getElementById("ai-modal-summary-text");
+    const aiVerdictsList = document.getElementById("ai-modal-verdicts-list");
+    const aiCountBadge = document.getElementById("ai-modal-count-badge");
+    const aiBtnStart = document.getElementById("ai-modal-btn-start") as HTMLButtonElement | null;
+    const aiBtnApply = document.getElementById("ai-modal-btn-apply") as HTMLButtonElement | null;
+    const aiBtnCancel = document.getElementById("ai-modal-btn-cancel") as HTMLButtonElement | null;
+    const aiToggleAllBtn = document.getElementById("ai-modal-toggle-all-btn") as HTMLButtonElement | null;
+    const formNotes = document.getElementById("form-notes") as HTMLTextAreaElement | null;
+    const formOperatorCoaching = document.getElementById("form-operator-coaching") as HTMLTextAreaElement | null;
+    formOperatorCoaching?.addEventListener("input", () => {
+      delete formOperatorCoaching.dataset.aiCoaching;
+      markAsInProgress();
+    });
+
+    const aiStep1 = document.getElementById("ai-step-1");
+    const aiStep2 = document.getElementById("ai-step-2");
+    const aiStep3 = document.getElementById("ai-step-3");
+    const aiStep4 = document.getElementById("ai-step-4");
+    const aiStepsContainer = document.getElementById("ai-modal-steps-container");
+    const aiStageTitle = document.getElementById("ai-modal-stage-title");
+    const aiStageDesc = document.getElementById("ai-modal-stage-desc");
+
+    let selectedVerdicts = new Set<string>();
+
+    function getCriterionLabel(code: string): string {
+      const cb = document.querySelector(`input.audit-checkbox[name="${CSS.escape(code)}"]`);
+      const labelSpan = cb?.closest(".checklist-item")?.querySelector("span.text-sm");
+      return labelSpan?.textContent?.trim() || code;
+    }
+
+    function updateAiStage(stage: 1 | 2 | 3 | 4, isCouncil: boolean = false) {
+      if (aiStep1) aiStep1.dataset.active = stage >= 1 ? "true" : "false";
+      if (aiStep2) aiStep2.dataset.active = stage >= 2 ? "true" : "false";
+      if (aiStep3) aiStep3.dataset.active = stage >= 3 ? "true" : "false";
+      if (aiStep4) aiStep4.dataset.active = stage >= 4 ? "true" : "false";
+
+      if (stage === 1) {
+        if (aiStageTitle) aiStageTitle.textContent = "Extrayendo metadatos e historial…";
+        if (aiStageDesc) aiStageDesc.textContent = "Obteniendo campos, comentarios y cambios del ticket en InvGate.";
+      } else if (stage === 2) {
+        if (aiStageTitle) aiStageTitle.textContent = isCouncil ? "Evaluando con Agentes Alpha y Beta…" : "Evaluando criterios con IA…";
+        if (aiStageDesc) aiStageDesc.textContent = isCouncil ? "Alpha evalúa procesos y Beta evalúa atención/datos en paralelo." : "Contrastando la evidencia del caso contra las rúbricas de calidad.";
+      } else if (stage === 3) {
+        if (aiStageTitle) aiStageTitle.textContent = isCouncil ? "Consolidando evaluaciones especializadas…" : "Sintetizando veredictos…";
+        if (aiStageDesc) aiStageDesc.textContent = isCouncil ? "Integrando veredictos de procesos (Alpha) y comunicación (Beta)." : "Estructurando evidencias, nivel de confianza y resumen de atención.";
+      } else if (stage === 4) {
+        if (aiStageTitle) aiStageTitle.textContent = "Consolidando veredictos del Council…";
+        if (aiStageDesc) aiStageDesc.textContent = "Alpha: procesos · Beta: comunicación";
+      }
+    }
+
+    btnAiEvaluate?.addEventListener("click", () => {
+      const ticketId = invgateSearchInput?.value.trim();
+      if (!ticketId) {
+        showNotification("Cargá primero el número de ticket InvGate para analizarlo con IA.", "warning");
+        invgateSearchInput?.focus();
+        return;
+      }
+
+      // Resetear estado visual del modal
+      aiIdleState?.classList.remove("hidden");
+      aiLoadingState?.classList.add("hidden");
+      aiErrorState?.classList.add("hidden");
+      aiResultsState?.classList.add("hidden");
+      aiBtnApply?.classList.add("hidden");
+      if (aiBtnStart) {
+        aiBtnStart.classList.remove("hidden");
+        aiBtnStart.disabled = false;
+      }
+      modalAi?.showModal();
+    });
+
+    aiBtnCancel?.addEventListener("click", () => {
+      modalAi?.close();
+    });
+
+    async function executeAiAnalysis() {
+      const ticketId = invgateSearchInput?.value.trim();
+      if (!ticketId) return;
+
+      const selectedModel = aiModelSelect?.value || "council";
+      const isCouncil = selectedModel === "council";
+
+      if (aiStepsContainer) {
+        if (isCouncil) {
+          aiStepsContainer.classList.remove("grid-cols-3");
+          aiStepsContainer.classList.add("grid-cols-4");
+          aiStep4?.classList.remove("hidden");
+        } else {
+          aiStepsContainer.classList.remove("grid-cols-4");
+          aiStepsContainer.classList.add("grid-cols-3");
+          aiStep4?.classList.add("hidden");
+        }
+      }
+
+      if (aiBtnStart) aiBtnStart.disabled = true;
+      aiIdleState?.classList.add("hidden");
+      aiErrorState?.classList.add("hidden");
+      aiResultsState?.classList.add("hidden");
+      aiLoadingState?.classList.remove("hidden");
+      updateAiStage(1, isCouncil);
+
+      const stageTimer1 = setTimeout(() => updateAiStage(2, isCouncil), 2000);
+      const stageTimer2 = setTimeout(() => updateAiStage(3, isCouncil), 6000);
+      const stageTimer3 = isCouncil ? setTimeout(() => updateAiStage(4, isCouncil), 12000) : null;
+
+      try {
+        const res = await fetch(`${cleanBase}api/calidad/ai-evaluate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channel: formChannelType?.value || "wise_call",
+            ticketId,
+            model: selectedModel,
+            recordingUrl: formRecordingUrl?.value?.trim() || undefined,
+            wiseCaseId: wiseSearchInput?.value?.trim() || undefined,
+          }),
+        });
+
+        clearTimeout(stageTimer1);
+        clearTimeout(stageTimer2);
+        if (stageTimer3) clearTimeout(stageTimer3);
+
+        const ct = res.headers.get("content-type") || "";
+        const json = ct.includes("application/json") ? await res.json() : null;
+
+        if (!res.ok || !json?.verdicts) {
+          aiLoadingState?.classList.add("hidden");
+          if (aiErrorMsg) aiErrorMsg.textContent = json?.error || `El servicio IA no respondió correctamente (HTTP ${res.status}).`;
+          aiErrorState?.classList.remove("hidden");
+          if (aiBtnStart) aiBtnStart.disabled = false;
+          return;
+        }
+
+        currentAiResults = json;
+        selectedVerdicts.clear();
+
+        // Serializar snapshot inicial (con appliedCodes vacío hasta que se apliquen)
+        const formAiSnapshotInput = document.getElementById("form-ai-snapshot") as HTMLInputElement | null;
+        if (formAiSnapshotInput) {
+          const snapshotPayload = {
+            model: cleanModelName(json.model) || json.model || "",
+            resumen: json.resumen || "",
+            verdicts: json.verdicts || [],
+            debate: json.debate
+              ? Object.fromEntries(
+                  Object.entries(json.debate).map(([k, d]: [string, any]) => [
+                    k,
+                    { consenso: d.consenso, motivo: d.motivo },
+                  ]),
+                )
+              : undefined,
+            coachingRaw: json.coaching ?? null,
+            appliedCodes: [],
+            createdAt: new Date().toISOString(),
+          };
+          formAiSnapshotInput.value = JSON.stringify(snapshotPayload);
+        }
+
+        // Formatear y setear propuesta de Coaching para el Operador (si está vacío o fue inyectado por IA previa)
+        if (formOperatorCoaching && json.coaching) {
+          const isCurrentlyEmpty = !formOperatorCoaching.value.trim();
+          const isAiInjected = formOperatorCoaching.dataset.aiCoaching === "true";
+          if (isCurrentlyEmpty || isAiInjected) {
+            const formattedCoaching = formatCoachingText(json.coaching, json.model);
+            if (formattedCoaching) {
+              formOperatorCoaching.value = formattedCoaching;
+              formOperatorCoaching.dataset.aiCoaching = "true";
+              markAsInProgress();
+              showNotification("Se generó la propuesta de devolución al operador", "info", 5000);
+            }
+          }
+        }
+
+        if (aiSummaryText) aiSummaryText.textContent = json.resumen || "Sin resumen disponible.";
+        if (aiCountBadge) aiCountBadge.textContent = `${json.verdicts.length} seleccionadas`;
+
+        const escapeHtml = (str: string) =>
+          str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+        // 1. Sugerencia de Reclamo / Novedad
+        const aiReclamoBanner = document.getElementById("ai-modal-reclamo-banner");
+        const aiReclamoEvidence = document.getElementById("ai-modal-reclamo-evidence");
+        const aiBtnSwitchReclamo = document.getElementById("ai-modal-btn-switch-reclamo");
+
+        if (json.reclamoSignal?.detected && json.reclamoSignal.suggestedMode === "reclamo") {
+          if (aiReclamoEvidence) {
+            aiReclamoEvidence.textContent = json.reclamoSignal.evidence
+              ? `“${json.reclamoSignal.evidence}” — ${json.reclamoSignal.rationale || ""}`
+              : json.reclamoSignal.rationale || "";
+          }
+          aiReclamoBanner?.classList.remove("hidden");
+          aiReclamoBanner?.classList.add("flex");
+        } else {
+          aiReclamoBanner?.classList.add("hidden");
+          aiReclamoBanner?.classList.remove("flex");
+        }
+
+        aiBtnSwitchReclamo?.replaceWith(aiBtnSwitchReclamo.cloneNode(true));
+        const aiBtnSwitchReclamoFresh = document.getElementById("ai-modal-btn-switch-reclamo");
+        aiBtnSwitchReclamoFresh?.addEventListener("click", () => {
+          const currentCh = formChannelType?.value || "wise_call";
+          if (currentCh === "wise_call") {
+            setCallTicketMode("reclamo");
+          } else if (currentCh === "wise_email") {
+            setEmailTicketMode("reclamo");
+          }
+          showToast("Conmutado a Reclamo / Novedad (+Sección 2 al 100%)", "success");
+          aiReclamoBanner?.classList.add("hidden");
+          aiReclamoBanner?.classList.remove("flex");
+
+          // Deseleccionar y marcar veredictos de sección 2 como moot
+          document.querySelectorAll<HTMLInputElement>(".ai-verdict-toggle").forEach((t) => {
+            const code = t.dataset.code || "";
+            const cb = document.querySelector(`input.audit-checkbox[name="${CSS.escape(code)}"]`);
+            if (cb?.closest("#wise-call-ticket-block") || cb?.closest("#wise-email-ticket-block")) {
+              t.checked = false;
+              selectedVerdicts.delete(code);
+            }
+          });
+          if (aiCountBadge) aiCountBadge.textContent = `${selectedVerdicts.size} seleccionadas`;
+        });
+
+        // 2. Pills de Tickets Detectados
+        const aiTicketsContainer = document.getElementById("ai-modal-tickets-container");
+        const aiTicketsList = document.getElementById("ai-modal-tickets-list");
+        if (aiTicketsContainer && aiTicketsList) {
+          aiTicketsList.innerHTML = "";
+          if (Array.isArray(json.detectedTickets) && json.detectedTickets.length > 0) {
+            aiTicketsContainer.classList.remove("hidden");
+            aiTicketsContainer.classList.add("flex");
+            json.detectedTickets.forEach((dt: any) => {
+              const pill = document.createElement("div");
+              pill.className = "inline-flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/10 px-2.5 py-1 text-xs";
+              const typeLabel = dt.type === "previo" ? "Previo" : dt.type === "nuevo" ? "Nuevo" : "Mencionado";
+              pill.innerHTML = `
+                <span class="font-mono font-bold text-secondary">#${escapeHtml(dt.ticketId)}</span>
+                <span class="badge badge-xs border-0 bg-base-200 text-base-content/70">${typeLabel}</span>
+                <button type="button" class="btn btn-xs btn-ghost text-secondary hover:bg-secondary/20 font-bold px-1.5 h-6 min-h-0" data-ticket-id="${escapeHtml(dt.ticketId)}" title="${escapeHtml(dt.context || '')}">
+                  Cargar
+                </button>
+              `;
+              const btn = pill.querySelector("button");
+              btn?.addEventListener("click", () => {
+                const targetId = btn.getAttribute("data-ticket-id");
+                if (targetId && invgateSearchInput) {
+                  invgateSearchInput.value = targetId;
+                  btnFetchInvgate?.click();
+                  showToast(`Cargando ticket #${targetId} en la auditoría…`, "info");
+                }
+              });
+              aiTicketsList.appendChild(pill);
+            });
+          } else {
+            aiTicketsContainer.classList.add("hidden");
+            aiTicketsContainer.classList.remove("flex");
+          }
+        }
+
+        if (aiVerdictsList) {
+          aiVerdictsList.innerHTML = "";
+          json.verdicts.forEach((v: any) => {
+            selectedVerdicts.add(v.codigo);
+            const isCompliant = v.cumple === true;
+            const isNull = v.cumple === null;
+            const pct = Math.round((v.confianza || 0) * 100);
+
+            const codeStr = String(v.codigo || "");
+            const safeCode = escapeHtml(codeStr);
+            const safeLabel = escapeHtml(getCriterionLabel(codeStr));
+            const safeEvidencia = v.evidencia ? escapeHtml(String(v.evidencia)) : "";
+            const safeRazonamiento = v.razonamiento ? escapeHtml(String(v.razonamiento)) : "";
+
+            const statusBadgeClass = isNull
+              ? "border-base-300 bg-base-200 text-base-content/70"
+              : isCompliant
+                ? "border-success/30 bg-success/15 text-success"
+                : "border-error/30 bg-error/15 text-error";
+            const statusText = isNull ? "Sin evidencia" : isCompliant ? "Cumple" : "No cumple";
+
+            // Metadata de debate / consenso si está presente
+            const deb = json.debate?.[v.codigo];
+            let consensusBadgeHtml = "";
+            let debateAccordionHtml = "";
+
+            if (deb) {
+              if (deb.consenso === "directo") {
+                consensusBadgeHtml = deb.motivo === "sin_evidencia"
+                  ? `<span class="badge badge-sm border border-base-300 bg-base-200 text-base-content/70 font-medium">Sin evidencia mutua</span>`
+                  : `<span class="badge badge-sm border border-success/40 bg-success/15 text-success font-medium">Consenso Directo</span>`;
+              } else if (deb.consenso === "arbitrado") {
+                consensusBadgeHtml = `<span class="badge badge-sm border border-secondary/40 bg-secondary/15 text-secondary font-medium">Laudo Juez Nemotron</span>`;
+              } else if (deb.consenso === "arbitraje_fallido") {
+                consensusBadgeHtml = `<span class="badge badge-sm border border-warning/40 bg-warning/15 text-warning font-medium">Arbitraje Fallido</span>`;
+              } else if (deb.consenso === "agente_especialista" || deb.consenso === "sin_oposicion") {
+                const label = deb.alphaVote ? "Alpha (Procesos)" : deb.betaVote ? "Beta (Comunicación)" : "Especialista";
+                consensusBadgeHtml = `<span class="badge badge-sm border border-base-300 bg-base-200 text-base-content/80 font-medium">${label}</span>`;
+              }
+
+              // Solo renderizar el acordeón de debate si hubo contraste entre modelos o intervención arbitral.
+              // Si fue evaluado por un único agente sin oposición, el veredicto principal ya contiene toda la información.
+              const hasDebateOrArbitration = deb.consenso === "arbitrado" ||
+                deb.consenso === "arbitraje_fallido" ||
+                (deb.alphaVote && deb.betaVote);
+
+              if (hasDebateOrArbitration) {
+                // Posturas de los modelos
+                const formatVote = (agentRole: string, modelName: string, iconBg: string, vote?: { model: string; cumple: boolean | null; confianza: number; evidencia: string; razonamiento?: string }) => {
+                  if (!vote) return "";
+                  const cText = vote.cumple === null ? "Sin evidencia suficiente" : vote.cumple ? "Cumple" : "No cumple";
+                  const cBadgeClass = vote.cumple === null
+                    ? "border-base-300 bg-base-200 text-base-content/70"
+                    : vote.cumple
+                      ? "border-success/30 bg-success/15 text-success font-semibold"
+                      : "border-error/30 bg-error/15 text-error font-semibold";
+                  const safeVotedEv = vote.evidencia ? escapeHtml(vote.evidencia) : "";
+                  const safeVotedRaz = vote.razonamiento ? escapeHtml(vote.razonamiento) : "";
+                  const pct = Math.round((vote.confianza || 0) * 100);
+
+                  return `
+                    <div class="rounded-xl border border-base-300/80 bg-base-100 p-3 shadow-xs space-y-2">
+                      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="inline-flex size-2 rounded-full ${iconBg}" aria-hidden="true"></span>
+                          <div class="flex flex-col">
+                            <span class="text-xs font-bold text-base-content">${agentRole}</span>
+                            <span class="font-mono text-xxs text-base-content/50">${modelName}</span>
+                          </div>
+                        </div>
+                        <span class="badge badge-sm border tabular-nums ${cBadgeClass}">
+                          ${cText} · ${pct}&nbsp;%
+                        </span>
+                      </div>
+                      ${safeVotedRaz ? `<p class="text-xs leading-relaxed text-base-content/90 break-words">${safeVotedRaz}</p>` : ""}
+                      ${safeVotedEv ? `
+                        <div class="mt-1.5 rounded-lg border-l-2 border-accent bg-base-200/40 px-2.5 py-1.5 text-xs text-base-content/75 break-words">
+                          <span class="font-semibold text-accent mr-1">Cita textual:</span>“${safeVotedEv}”
+                        </div>
+                      ` : ""}
+                    </div>
+                  `;
+                };
+
+                const alphaHtml = formatVote("Agente Alpha (Procesos & Procedimiento)", "DeepSeek v4.1 Flash", "bg-primary", deb.alphaVote);
+                const betaHtml = formatVote("Agente Beta (Atención al Cliente & Datos)", "MiMo v2.6 Flash", "bg-accent", deb.betaVote);
+                const juezHtml = formatVote("Juez Arbitral (Desempate & Laudo Final)", "Nemotron 3.5 Lightning", "bg-secondary", deb.judgeVote);
+
+                debateAccordionHtml = `
+                  <details class="group mt-3 rounded-xl border border-base-200 bg-base-200/30 p-2.5 transition-colors">
+                    <summary class="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold text-base-content/85 hover:text-secondary select-none px-1 py-0.5">
+                      <span class="flex items-center gap-2">
+                        <span class="badge badge-xs bg-secondary/15 text-secondary border-0 font-bold">Council</span>
+                        <span>Ver debate y posturas contrapuestas</span>
+                      </span>
+                      <span class="text-xs font-bold transition-transform duration-200 group-open:rotate-180 text-base-content/50">▾</span>
+                    </summary>
+                    <div class="mt-2.5 space-y-2 pt-2 border-t border-base-200">
+                      ${alphaHtml}
+                      ${betaHtml}
+                      ${juezHtml}
+                    </div>
+                  </details>
+                `;
+              }
+            }
+
+            const row = document.createElement("label");
+            row.className = `flex cursor-pointer items-start justify-between gap-4 p-4 sm:p-5 transition-colors motion-reduce:transition-none hover:bg-base-200/40 ${!isNull && !isCompliant ? "bg-error/5" : ""}`;
+
+            row.innerHTML = `
+              <div class="min-w-0 flex-1 space-y-2.5">
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <span class="text-sm sm:text-base font-bold text-base-content">${safeLabel}</span>
+                  <span class="badge badge-sm sm:badge-md border font-bold tabular-nums ${statusBadgeClass}" title="Nivel de certeza de la IA basado en la evidencia del ticket">
+                    ${statusText} · ${pct}&nbsp;%
+                  </span>
+                  ${consensusBadgeHtml}
+                </div>
+                ${safeRazonamiento ? `<p class="text-xs sm:text-sm leading-relaxed text-base-content/85 break-words">${safeRazonamiento}</p>` : ""}
+                ${safeEvidencia ? `<blockquote class="rounded-lg border-l-2 border-accent bg-base-200/40 py-2 pr-3 pl-3.5 text-xs sm:text-sm text-base-content/75 break-words">“${safeEvidencia}”</blockquote>` : ""}
+                ${debateAccordionHtml}
+              </div>
+              <input
+                type="checkbox"
+                class="ai-verdict-toggle checkbox checkbox-sm checkbox-secondary rounded-sm border-base-300 shadow-none mt-1 shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-secondary/40"
+                data-code="${safeCode}"
+                checked
+              />
+            `;
+            aiVerdictsList.appendChild(row);
+          });
+
+          aiVerdictsList.querySelectorAll(".ai-verdict-toggle").forEach((cb) => {
+            cb.addEventListener("change", (e) => {
+              const target = e.target as HTMLInputElement;
+              const code = target.dataset.code;
+              if (!code) return;
+              if (target.checked) selectedVerdicts.add(code);
+              else selectedVerdicts.delete(code);
+              if (aiCountBadge) aiCountBadge.textContent = `${selectedVerdicts.size} seleccionadas`;
+            });
+          });
+        }
+
+        aiLoadingState?.classList.add("hidden");
+        aiResultsState?.classList.remove("hidden");
+        aiBtnStart?.classList.add("hidden");
+        aiBtnApply?.classList.remove("hidden");
+      } catch (err) {
+        clearTimeout(stageTimer1);
+        clearTimeout(stageTimer2);
+        if (stageTimer3) clearTimeout(stageTimer3);
+        console.error("[IA] Error:", err);
+        aiLoadingState?.classList.add("hidden");
+        if (aiErrorMsg) aiErrorMsg.textContent = "Error de conexión al consultar el asistente IA.";
+        aiErrorState?.classList.remove("hidden");
+        if (aiBtnStart) aiBtnStart.disabled = false;
+      }
+    }
+
+    aiBtnStart?.addEventListener("click", executeAiAnalysis);
+
+    aiToggleAllBtn?.addEventListener("click", () => {
+      const toggles = document.querySelectorAll<HTMLInputElement>(".ai-verdict-toggle");
+      const shouldSelectAll = selectedVerdicts.size < toggles.length;
+      toggles.forEach((t) => {
+        t.checked = shouldSelectAll;
+        const code = t.dataset.code;
+        if (code) {
+          if (shouldSelectAll) selectedVerdicts.add(code);
+          else selectedVerdicts.delete(code);
+        }
+      });
+      if (aiToggleAllBtn) aiToggleAllBtn.textContent = shouldSelectAll ? "Deseleccionar todas" : "Seleccionar todas";
+      if (aiCountBadge) aiCountBadge.textContent = `${selectedVerdicts.size} seleccionadas`;
+    });
+
+    aiBtnApply?.addEventListener("click", () => {
+      if (!currentAiResults) return;
+
+      let applied = 0;
+      for (const v of currentAiResults.verdicts) {
+        if (!selectedVerdicts.has(v.codigo)) continue;
+
+        const checkbox = document.querySelector(`input[name="${v.codigo}"]`) as HTMLInputElement | null;
+        // Si el checkbox está dentro de un bloque de sección 2 oculto por modo Reclamo/Novedad, se omite
+        if (checkbox?.closest("#wise-call-ticket-block.hidden") || checkbox?.closest("#wise-email-ticket-block.hidden")) {
+          continue;
+        }
+
+        const item = checkbox?.closest(".checklist-item") as HTMLElement | null;
+        if (!item || item.offsetParent === null) continue;
+        if (v.cumple === null || v.confianza < AI_MIN_CONFIDENCE) continue;
+
+        setItemState(item, v.cumple ? "cumple" : "nocumple");
+        syncAiBadge(v.codigo, Boolean(v.cumple));
+        applied++;
+      }
+
+      const cleanModel = cleanModelName(currentAiResults.model);
+
+      if (currentAiResults.resumen && formNotes) {
+        const prefix = `[Asistente IA${cleanModel ? ` - ${cleanModel}` : ""}]:\n${currentAiResults.resumen}\n\n`;
+        if (!formNotes.value.includes(currentAiResults.resumen)) {
+          formNotes.value = `${prefix}${formNotes.value}`.trim();
+        }
+      }
+
+      // Actualizar appliedCodes en el snapshot persistible
+      const formAiSnapshotInput = document.getElementById("form-ai-snapshot") as HTMLInputElement | null;
+      if (formAiSnapshotInput && formAiSnapshotInput.value) {
+        try {
+          const parsedSnap = JSON.parse(formAiSnapshotInput.value);
+          parsedSnap.appliedCodes = Array.from(selectedVerdicts);
+          formAiSnapshotInput.value = JSON.stringify(parsedSnap);
+        } catch {}
+      }
+
+      recalculateScores();
+      modalAi?.close();
+      showNotification(
+        `Asistente IA (${cleanModel || "análisis"}): ${applied} sugerencias aplicadas. Revisá los criterios antes de guardar.`,
+        "success",
+        6000,
+      );
+    });
+
+    // Atajo seguro: Ctrl+Enter aplica sugerencias IA únicamente fuera de campos de texto editables (U7)
+    document.addEventListener("keydown", (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        const active = document.activeElement;
+        const isEditable =
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          active instanceof HTMLSelectElement ||
+          active?.hasAttribute("contenteditable");
+        if (isEditable) return;
+
+        if (modalAi?.open) {
+          if (aiBtnApply && !aiBtnApply.disabled && !aiBtnApply.classList.contains("hidden")) {
+            e.preventDefault();
+            aiBtnApply.click();
+          }
+        }
+      }
+    });
+
     modalCopyBtn?.addEventListener("click", async () => {
       if (!modalJson?.textContent) return;
       try {
@@ -2943,6 +3583,18 @@ function evaluateOrthographyRule(title: string, description: string) {
       });
     });
 
+    // Delegar click en el badge de IA/discrepancia para abrir la nota de coaching (T3, T6)
+    document.querySelectorAll(".ai-verdict-badge").forEach((badge) => {
+      badge.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const item = badge.closest(".checklist-item");
+        if (!item) return;
+        const obsBtn = item.querySelector<HTMLButtonElement>('[data-action="toggle-obs"]');
+        obsBtn?.click();
+      });
+    });
+
     // CÁLCULO DE SCORE EN TIEMPO REAL
     function recalculateScores() {
       const channel = formChannelType?.value || "wise_call";
@@ -3181,6 +3833,23 @@ function evaluateOrthographyRule(title: string, description: string) {
     }
 
     if (initialAuditData) {
+      if (initialAuditData.aiSnapshot) {
+        try {
+          const snap = typeof initialAuditData.aiSnapshot === "string"
+            ? JSON.parse(initialAuditData.aiSnapshot)
+            : initialAuditData.aiSnapshot;
+          if (snap && Array.isArray(snap.verdicts)) {
+            for (const v of snap.verdicts) {
+              if (v?.codigo) {
+                initialAiVerdictsMap.set(v.codigo, v);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[IA] Error parsing initial audit snapshot:", e);
+        }
+      }
+
       isHydrating = true;
       try {
       // 1. Activar canal correspondiente
@@ -3227,6 +3896,8 @@ function evaluateOrthographyRule(title: string, description: string) {
         if (s1Details.hasOwnProperty(code) || s2Details.hasOwnProperty(code)) {
           const isPassed = s1Details.hasOwnProperty(code) ? !!s1Details[code] : !!s2Details[code];
           setItemState(htmlItem, isPassed ? "cumple" : "nocumple");
+        } else {
+          syncAiBadge(code, true);
         }
 
         // Observación individual de coaching
