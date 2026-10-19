@@ -383,6 +383,15 @@ test.describe("Vista de estadísticas de usuarios (#183)", () => {
     ).toBeVisible();
   });
 
+  test("el listado de usuarios muestra la franja de KPIs al inicio", async ({
+    page,
+  }) => {
+    await page.goto("/admin/usuarios");
+    const dash = page.locator("[data-section-dashboard]");
+    await expect(dash).toBeVisible();
+    await expect(dash.locator(".stat-value")).toHaveCount(4);
+  });
+
   test("el botón volver del header regresa a la gestión de usuarios", async ({
     page,
   }) => {

@@ -25,6 +25,9 @@ import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import Modal from "@components/ui/Modal.astro";
 import UserCreateModal from "@components/admin/users/UserCreateModal.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import StatsCard from "@components/ui/StatsCard.astro";
+import { loadUsuariosEstadisticas } from "@lib/usuariosEstadisticas";
 
 const currentUserId = Astro.locals.user?.id ?? 0;
 
@@ -61,6 +64,9 @@ const allUsers = await db
 
 const activeUsers = allUsers.filter((u) => u.active);
 const inactiveUsers = allUsers.filter((u) => !u.active);
+
+const usuariosStatsRes = await loadUsuariosEstadisticas(null, null, null);
+const usuariosStats = usuariosStatsRes.ok ? usuariosStatsRes.data.kpis : null;
 
 const usersConMesaInactiva = await db
   .select({ username: users.username, mesaName: mesas.name })
@@ -165,6 +171,43 @@ const isSupervisorRole = (role: string): boolean =>
     </div>
   </div>
 
+  {
+    usuariosStats && (
+      <section data-section-dashboard aria-label="Resumen de usuarios">
+        <StatsGrid base={2} md={4} lg={4}>
+          <StatsCard
+            icon="group"
+            label="Usuarios totales"
+            value={usuariosStats.total}
+            color="primary"
+            size="lg"
+          />
+          <StatsCard
+            icon="user-check"
+            label="Activos"
+            value={usuariosStats.activos}
+            color="success"
+            size="lg"
+          />
+          <StatsCard
+            icon="user-x"
+            label="Inactivos"
+            value={usuariosStats.inactivos}
+            color="error"
+            size="lg"
+          />
+          <StatsCard
+            icon="calendar-check"
+            label="En asistencia"
+            value={usuariosStats.enAsistencia}
+            color="info"
+            size="lg"
+          />
+        </StatsGrid>
+      </section>
+    )
+  }
+
   <div>
     <!-- ─── Table: Usuarios registrados ─── -->
     <section aria-labelledby="tabla-usuarios">
@@ -231,7 +274,9 @@ const isSupervisorRole = (role: string): boolean =>
                     name="boxicons:group-filled"
                     size={32}
                     class="opacity-30"
-                    aria-hidden="true" is:inline />
+                    aria-hidden="true"
+                    is:inline
+                  />
                 </div>
                 <div class="space-y-1 text-center">
                   <p class="text-sm font-semibold">
@@ -363,8 +408,11 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="cronograma"
                             data-tip="Figura en cronograma"
                           >
-                            <Icon name="boxicons:calendar-filled" size={14} 
-            is:inline />
+                            <Icon
+                              name="boxicons:calendar-filled"
+                              size={14}
+                              is:inline
+                            />
                             <span class="sr-only">Cronograma</span>
                           </span>
                         )}
@@ -384,8 +432,11 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="cubics"
                             data-tip="Asignable a cubics"
                           >
-                            <Icon name="boxicons:desktop-filled" size={14} 
-            is:inline />
+                            <Icon
+                              name="boxicons:desktop-filled"
+                              size={14}
+                              is:inline
+                            />
                             <span class="sr-only">Cubics</span>
                           </span>
                         )}
@@ -398,8 +449,8 @@ const isSupervisorRole = (role: string): boolean =>
                             <Icon
                               name="boxicons:bar-chart-big-filled"
                               size={14}
-                            
-            is:inline />
+                              is:inline
+                            />
                             <span class="sr-only">Calidad</span>
                           </span>
                         )}
@@ -409,8 +460,11 @@ const isSupervisorRole = (role: string): boolean =>
                             data-chip="ags"
                             data-tip="Asignable AGS"
                           >
-                            <Icon name="boxicons:git-branch-filled" size={14} 
-            is:inline />
+                            <Icon
+                              name="boxicons:git-branch-filled"
+                              size={14}
+                              is:inline
+                            />
                             <span class="sr-only">AGS</span>
                           </span>
                         )}
@@ -429,8 +483,8 @@ const isSupervisorRole = (role: string): boolean =>
 
                   <div class="flex items-center justify-end gap-3">
                     <ActionButton
-        icon="boxicons:pencil-filled"
-        color="btn-secondary"
+                      icon="boxicons:pencil-filled"
+                      color="btn-secondary"
                       data-edit-user-btn
                       data-user-id={u.id}
                       data-user-role={normalizeRole(u.role)}
@@ -459,8 +513,8 @@ const isSupervisorRole = (role: string): boolean =>
                     />
 
                     <ActionButton
-        icon="boxicons:lock-open-filled"
-        color="btn-neutral"
+                      icon="boxicons:lock-open-filled"
+                      color="btn-neutral"
                       class={
                         u.id === currentUserId ? "btn-disabled" : undefined
                       }
@@ -862,7 +916,9 @@ const isSupervisorRole = (role: string): boolean =>
                   <Icon
                     name={row.icon}
                     size={16}
-                    class="text-base-content/65 shrink-0" is:inline />
+                    class="text-base-content/65 shrink-0"
+                    is:inline
+                  />
                   <span>{row.feature}</span>
                 </td>
                 <td class="bg-base-200/5 text-center">
@@ -876,7 +932,9 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24} is:inline />
+                      size={24}
+                      is:inline
+                    />
                   )}
                 </td>
                 <td class="bg-warning/5 text-center">
@@ -890,7 +948,9 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24} is:inline />
+                      size={24}
+                      is:inline
+                    />
                   )}
                 </td>
                 <td class="bg-accent/5 text-center">
@@ -904,7 +964,9 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24} is:inline />
+                      size={24}
+                      is:inline
+                    />
                   )}
                 </td>
                 <td class="bg-info/5 text-center">
@@ -918,7 +980,9 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24} is:inline />
+                      size={24}
+                      is:inline
+                    />
                   )}
                 </td>
                 <td class="bg-error/5 text-center">
@@ -932,7 +996,9 @@ const isSupervisorRole = (role: string): boolean =>
                     <Icon
                       name="boxicons:x-filled"
                       class="text-error inline-block"
-                      size={24} is:inline />
+                      size={24}
+                      is:inline
+                    />
                   )}
                 </td>
               </tr>

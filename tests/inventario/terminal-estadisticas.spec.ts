@@ -403,6 +403,15 @@ test.describe("Vista de estadísticas de terminales", () => {
       page.getByRole("link", { name: "Ver estadísticas" }),
     ).toBeVisible();
   });
+
+  test("el listado de terminales muestra la franja de KPIs", async ({
+    page,
+  }) => {
+    await page.goto("/inventario-terminales");
+    const dash = page.locator("[data-section-dashboard]");
+    await expect(dash).toBeVisible();
+    await expect(dash.locator(".stat-value")).toHaveCount(3);
+  });
 });
 
 test.describe("Acceso restringido a admin", () => {

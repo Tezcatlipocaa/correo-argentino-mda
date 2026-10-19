@@ -10,6 +10,9 @@ import SearchBar from "@components/ui/SearchBar.astro";
 import CopyButton from "@components/ui/CopyButton.astro";
 import ViewSwitcher from "@components/ui/ViewSwitcher.astro";
 import TerminalList from "@components/inventario/TerminalList.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import StatsCard from "@components/ui/StatsCard.astro";
+import { computeTerminalStats } from "@lib/terminalStats";
 import { getActiveMachineCount, type CubicStatus } from "@lib/cubics";
 import { db } from "@db/index";
 import {
@@ -24,6 +27,7 @@ import {
   getTTStatusCounts,
   getMediterraneaStatusCounts,
   getCachedUniqueOperatingSystems,
+  getTerminalStatsRows,
 } from "@lib/terminalQueries";
 import type { TerminalSortKey, SortOrder } from "@lib/terminalQueries";
 import { and, eq } from "drizzle-orm";
@@ -109,6 +113,8 @@ const {
   count: totalTerminals,
   hasMore,
 } = terminalDisplay;
+
+const terminalesStats = computeTerminalStats(await getTerminalStatsRows(), {});
 
 const osVariations = rawUniqueOs.map((r) => r.os).filter(Boolean);
 
