@@ -47,6 +47,14 @@ const weight = p.weight ?? 0;
     >
       Regla
     </span>
+    <button
+      type="button"
+      class="ai-verdict-badge badge badge-xs hidden font-semibold border tabular-nums cursor-pointer whitespace-nowrap leading-none h-auto min-h-4.5 py-0.5 px-2 transition-transform hover:scale-105 active:scale-95"
+      data-ai-badge={p.code}
+      tabindex="-1"
+      aria-label={`Veredicto IA para ${p.name}`}
+    >
+    </button>
   </div>
 
   {/* En xl el envoltorio se disuelve: sus hijos pasan a ser columnas del grid. */}

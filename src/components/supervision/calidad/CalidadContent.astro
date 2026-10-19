@@ -29,6 +29,11 @@ import { getOperatorNumber } from "@lib/operatorNumbers";
 import type { ChannelType } from "@/types/quality";
 
 
+interface Props {
+  month?: string;
+}
+
+const { month: propMonth } = Astro.props;
 const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 
 const currentActualMonth = (() => {
@@ -38,7 +43,7 @@ const currentActualMonth = (() => {
   return `${mm}-${yyyy}`;
 })();
 
-const selectedMonth = searchParams.get("month") || currentActualMonth;
+const selectedMonth = propMonth || searchParams.get("month") || currentActualMonth;
 
 // Generate the last 6 months based on the selected month
 const getDynamicMonths = (baseMonthStr: string) => {
@@ -224,6 +229,7 @@ const operatorsQuality = finalAgents.map((agent) => {
       date: audit.date,
       month: audit.month,
       notes: audit.notes || "",
+      operatorCoaching: audit.operatorCoaching || "",
       ringTime: audit.ringTime,
       creationTime: audit.creationTime,
       takeTime: audit.takeTime,
@@ -322,7 +328,7 @@ const cleanBase = getCleanBase();
 >
 </div>
 <PageContainer
-  class="mx-auto max-w-7xl"
+  width="xl"
   data-is-agent={isAgent}
   data-agent-not-found={agentNotFound}
 >
@@ -332,18 +338,19 @@ const cleanBase = getCleanBase();
 
   <!-- Barra Superior Unificada Compacta -->
   <div
-    class="bg-base-100 border-base-200/80 mt-2 mb-4 flex flex-col gap-3 rounded-2xl border p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between"
+    class="bg-base-100 border-base-200/80 mt-2 mb-4 flex flex-col gap-3 rounded-2xl border p-2.5 sm:p-3 shadow-xs lg:flex-row lg:items-center lg:justify-between"
   >
     {/* Extremo Izquierdo: Buscador */}
-    <div class="w-full sm:w-80 md:w-96">
+    <div class="w-full lg:max-w-xs xl:max-w-sm shrink-0">
       {
         !isAgent ? (
           <SearchBar
             id="operator-search"
+            size="sm"
             placeholder="Buscar por nombre o legajo..."
           />
         ) : (
-          <div class="text-base-content/80 flex items-center gap-2">
+          <div class="text-base-content/80 flex items-center gap-2 h-8">
             <Icon name="boxicons:calendar" size={20} class="text-secondary" />
             <span class="font-semibold text-xs uppercase tracking-wider">Período de evaluación:</span>
           </div>
@@ -351,8 +358,8 @@ const cleanBase = getCleanBase();
       }
     </div>
     {/* Extremo Derecho: Selector de mes + Botones */}
-    <div class="flex flex-wrap items-center justify-end gap-2">
-      <div class="flex items-center gap-1 bg-base-200/40 p-1 rounded-xl border border-base-200/60">
+    <div class="flex flex-wrap items-center justify-between sm:justify-end gap-1.5 sm:gap-2">
+      <div class="flex items-center gap-1 bg-base-200/40 p-1 rounded-xl border border-base-200/60 shrink-0">
         <ActionButton
           id="btn-prev-month"
           variant="ghost"
@@ -364,7 +371,7 @@ const cleanBase = getCleanBase();
         />
         <select
           id="month-selector"
-          class="select select-xs bg-base-100 text-base-content border-0 text-center font-bold sm:w-40 focus:outline-hidden"
+          class="select select-xs bg-base-100 text-base-content border-0 text-center font-bold w-36 sm:w-40 focus:outline-hidden"
         >
           {
             selectorMonthsList.map((m) => (
@@ -387,33 +394,45 @@ const cleanBase = getCleanBase();
 
       {
         !isAgent && (
-          <>
+          <div class="flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               id="btn-export-excel"
               class="btn btn-sm btn-outline btn-secondary gap-1.5 text-xs font-bold uppercase"
               title="Exportar Reporte a Excel (.xlsx)"
             >
               <Icon name="boxicons:file" size={18} />
-              <span>Exportar Excel</span>
+              <span class="hidden xl:inline">Exportar Excel</span>
+              <span class="hidden sm:inline xl:hidden">Excel</span>
             </button>
-            <div class="divider divider-horizontal mx-0.5 hidden sm:flex"></div>
+            <div class="divider divider-horizontal mx-0 hidden sm:flex"></div>
             <button
               id="btn-configure-parameters"
               class="btn btn-sm btn-ghost text-base-content/70 hover:text-base-content gap-1.5 text-xs font-semibold"
               title="Configurar Parámetros de Calidad"
             >
               <Icon name="boxicons:cog" size={18} />
-              <span class="hidden md:inline">Parámetros</span>
+              <span class="hidden 2xl:inline">Parámetros</span>
             </button>
+            <a
+              id="btn-calibracion-ia"
+              href={`${cleanBase}admin/calidad/calibracion?month=${selectedMonth}`}
+              class="btn btn-sm btn-ghost text-base-content/70 hover:text-base-content gap-1.5 text-xs font-semibold"
+              title="Calibración y Aprendizaje de Rúbricas IA"
+            >
+              <Icon name="boxicons:slider-alt" size={18} />
+              <span class="hidden 2xl:inline">Calibración IA</span>
+            </a>
             <a
               id="btn-top-new-audit"
               href={`${cleanBase}supervision/calidad-operadores/nueva?month=${selectedMonth}`}
               class="btn btn-sm btn-secondary gap-1.5 text-xs font-bold uppercase tracking-wider shadow-xs hover:shadow-sm"
+              title="Nueva Auditoría de Calidad"
             >
               <Icon name="boxicons:plus" size={18} />
-              <span>Nueva Auditoría</span>
+              <span class="hidden sm:inline">Nueva Auditoría</span>
+              <span class="sm:hidden">Nueva</span>
             </a>
-          </>
+          </div>
         )
       }
     </div>
@@ -1110,9 +1129,24 @@ const cleanBase = getCleanBase();
 
     const notesSection = call.notes
       ? `
-        <div class="col-span-full">
-          <div class="text-3xs font-bold uppercase tracking-wider text-base-content/40 mb-1">Notas / Observaciones de la evaluación</div>
-          <p class="text-xs text-base-content/80 whitespace-pre-line bg-base-100 p-2.5 rounded-xl border border-base-200/80">${escapeHtml(call.notes)}</p>
+        <div class="rounded-xl border border-base-200/80 bg-base-100 p-3 sm:p-3.5 shadow-2xs">
+          <div class="flex items-center gap-1.5 text-base-content/60 mb-1.5">
+            <svg class="size-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8c.13 0 .26-.03.38-.08s.23-.12.33-.22l7-7c.09-.09.15-.19.2-.29l.03-.09c.03-.08.05-.17.05-.26c0-.02.01-.04.01-.06V5c0-1.1-.9-2-2-2M5 5h14v7h-6c-.55 0-1 .45-1 1v6H5z"/></svg>
+            <h6 class="text-3xs font-bold uppercase tracking-wider text-base-content/60">Notas / Observaciones del Auditor</h6>
+          </div>
+          <p class="text-xs text-base-content/80 whitespace-pre-line leading-relaxed">${escapeHtml(call.notes)}</p>
+        </div>
+      `
+      : "";
+
+    const coachingSection = call.operatorCoaching
+      ? `
+        <div class="rounded-xl border border-secondary/20 bg-secondary/5 p-3 sm:p-3.5 shadow-2xs">
+          <div class="flex items-center gap-1.5 text-secondary mb-1.5">
+            <svg class="size-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19h3v2c0 .36.19.69.51.87a1 1 0 0 0 1-.01L13.27 19h6.72c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2M4 5h16v12h-7c-.18 0-.36.05-.51.14L9 19.23V18c0-.55-.45-1-1-1H4z"/><path d="M7 8h10v2H7zm0 4h7v2H7z"/></svg>
+            <h6 class="text-3xs font-bold uppercase tracking-wider text-secondary">Devolución al Operador (Coaching)</h6>
+          </div>
+          <p class="text-xs text-base-content/90 whitespace-pre-line leading-relaxed">${escapeHtml(call.operatorCoaching)}</p>
         </div>
       `
       : "";
@@ -1296,11 +1330,17 @@ const formatTicketRef = (ticketId?: string | null, callId?: string | null) => {
             </ul>
           </div>
 
-          <!-- Notes / Observaciones -->
-          <div class="col-span-full p-4 sm:p-5 border-t border-base-200/80 bg-base-200/40">
+          ${
+            call.notes || call.operatorCoaching
+              ? `
+          <!-- Notes / Observaciones / Coaching -->
+          <div class="col-span-full p-4 sm:p-5 border-t border-base-200/80 bg-base-200/40 flex flex-col gap-3">
+            ${coachingSection}
             ${notesSection}
-            ${!call.notes ? '<p class="text-3xs text-base-content/40 italic">Sin observaciones o notas registradas para esta evaluación.</p>' : ""}
           </div>
+          `
+              : ""
+          }
 
         </div>
       </div>
@@ -1399,6 +1439,23 @@ const formatTicketRef = (ticketId?: string | null, callId?: string | null) => {
     const dName = document.getElementById("detail-name");
     const dId = document.getElementById("detail-id");
     const dMonth = document.getElementById("detail-month");
+    const dMonthSelector = document.getElementById("detail-month-selector") as HTMLSelectElement | null;
+
+    if (monthSelector && dMonthSelector) {
+      dMonthSelector.innerHTML = monthSelector.innerHTML;
+      dMonthSelector.value = monthSelector.value;
+      dMonthSelector.addEventListener("change", () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("month", dMonthSelector.value);
+        if (activeAgentId) {
+          url.searchParams.set("agentId", activeAgentId);
+        } else {
+          url.searchParams.delete("agentId");
+        }
+        window.location.href = url.toString();
+      });
+    }
+
     const dScore = document.getElementById("detail-score");
     const dStatDiff = document.getElementById("detail-stat-diff");
     const dStatAht = document.getElementById("detail-stat-aht");
@@ -1684,6 +1741,7 @@ const formatTicketRef = (ticketId?: string | null, callId?: string | null) => {
       if (dName) dName.textContent = operator.name;
       if (dId) dId.textContent = `@${operator.username || operator.id}`;
       if (dMonth) dMonth.textContent = formatMonthLabel(operator.month);
+      if (dMonthSelector && operator.month) dMonthSelector.value = operator.month;
 
       if (dScore) {
         dScore.textContent = `${operator.averageScore}%`;

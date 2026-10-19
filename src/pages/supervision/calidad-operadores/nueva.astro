@@ -129,6 +129,12 @@ if (auditIdParam) {
           comments: s2Comments,
         },
         totalScore: auditRecord.totalScore,
+        operatorCoaching: auditRecord.operatorCoaching || null,
+        aiSnapshot: auditRecord.aiSnapshot
+          ? typeof auditRecord.aiSnapshot === "string"
+            ? JSON.parse(auditRecord.aiSnapshot)
+            : auditRecord.aiSnapshot
+          : null,
       };
     }
   }

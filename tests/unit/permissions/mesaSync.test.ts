@@ -5,7 +5,10 @@ import { diffMesas, fetchInvGateMesas, syncMesas } from "../../../src/lib/permis
 import { db } from "../../../src/db";
 import { invgateGet } from "../../../src/lib/invgateClient";
 
-vi.mock("../../../src/db", () => ({ db: { select: vi.fn(), transaction: vi.fn() } }));
+vi.mock("../../../src/db", () => ({
+  db: { select: vi.fn(), transaction: vi.fn() },
+  getSqliteDataVersion: vi.fn(() => 0),
+}));
 vi.mock("../../../src/lib/invgateClient", () => ({
   invgateGet: vi.fn(),
 }));

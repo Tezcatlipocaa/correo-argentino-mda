@@ -190,6 +190,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         isPas: a.isPas,
         isReclamoNovedad: a.isReclamoNovedad,
         notes: a.notes,
+        operatorCoaching: a.operatorCoaching,
         section1Score: a.section1Score,
         section2Score: a.section2Score,
         totalScore: a.totalScore,
@@ -264,6 +265,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     row.push(audit.notes || "");
+    row.push(audit.operatorCoaching || "");
     return row;
   });
 
