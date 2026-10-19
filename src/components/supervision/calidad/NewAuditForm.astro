@@ -2858,8 +2858,17 @@ function evaluateOrthographyRule(title: string, description: string) {
       if (aiStep4) aiStep4.dataset.active = stage >= 4 ? "true" : "false";
 
       if (stage === 1) {
-        if (aiStageTitle) aiStageTitle.textContent = "Extrayendo metadatos e historial…";
-        if (aiStageDesc) aiStageDesc.textContent = "Obteniendo campos, comentarios y cambios del ticket en InvGate.";
+        const hasTicket = Boolean(invgateSearchInput?.value.trim());
+        if (aiStageTitle) {
+          aiStageTitle.textContent = hasTicket
+            ? "Extrayendo metadatos e historial…"
+            : "Obteniendo datos y transcribiendo audio…";
+        }
+        if (aiStageDesc) {
+          aiStageDesc.textContent = hasTicket
+            ? "Obteniendo campos, comentarios y cambios del ticket en InvGate."
+            : "Procesando llamada con Groq Whisper y extrayendo evidencia de la interacción.";
+        }
       } else if (stage === 2) {
         if (aiStageTitle) aiStageTitle.textContent = isCouncil ? "Evaluando con Agentes Alpha y Beta…" : "Evaluando criterios con IA…";
         if (aiStageDesc) aiStageDesc.textContent = isCouncil ? "Alpha evalúa procesos y Beta evalúa atención/datos en paralelo." : "Contrastando la evidencia del caso contra las rúbricas de calidad.";
@@ -2872,12 +2881,39 @@ function evaluateOrthographyRule(title: string, description: string) {
       }
     }
 
+    const aiModalSubtitle = document.getElementById("ai-modal-subtitle");
+    const aiModalIdleDesc = document.getElementById("ai-modal-idle-desc");
+
     btnAiEvaluate?.addEventListener("click", () => {
+      const currentChannel = formChannelType?.value || "wise_call";
       const ticketId = invgateSearchInput?.value.trim();
-      if (!ticketId) {
-        showNotification("Cargá primero el número de ticket InvGate para analizarlo con IA.", "warning");
-        invgateSearchInput?.focus();
+      const recordingUrl = formRecordingUrl?.value?.trim();
+      const wiseCaseId = wiseSearchInput?.value?.trim();
+
+      const hasTicket = Boolean(ticketId);
+      const hasCall = currentChannel === "wise_call" && Boolean(recordingUrl || wiseCaseId);
+
+      if (!hasTicket && !hasCall) {
+        if (currentChannel === "wise_call") {
+          showNotification("Cargá primero la llamada de Wise CX o el ticket InvGate para analizarlo con IA.", "warning");
+          wiseSearchInput?.focus();
+        } else {
+          showNotification("Cargá primero el número de ticket InvGate para analizarlo con IA.", "warning");
+          invgateSearchInput?.focus();
+        }
         return;
+      }
+
+      // Adaptar textos del modal según lo que se va a evaluar
+      if (aiModalSubtitle) {
+        aiModalSubtitle.textContent = hasTicket
+          ? "Evaluación asistida del ticket e historial de cambios en InvGate"
+          : "Evaluación asistida de la llamada y transcripción de audio";
+      }
+      if (aiModalIdleDesc) {
+        aiModalIdleDesc.textContent = hasTicket
+          ? "Extrae metadatos, campos personalizados, notas internas, solución e historial de cambios del ticket en InvGate, y contrasta cada ítem contra las rúbricas oficiales de calidad."
+          : "Procesa el audio de la llamada con transcripción de alta fidelidad (Whisper) y evalúa los criterios de atención telefónica, sondeo, cortesía y procedimientos contra las rúbricas oficiales.";
       }
 
       // Resetear estado visual del modal
@@ -2898,8 +2934,14 @@ function evaluateOrthographyRule(title: string, description: string) {
     });
 
     async function executeAiAnalysis() {
+      const currentChannel = formChannelType?.value || "wise_call";
       const ticketId = invgateSearchInput?.value.trim();
-      if (!ticketId) return;
+      const recordingUrl = formRecordingUrl?.value?.trim();
+      const wiseCaseId = wiseSearchInput?.value?.trim();
+
+      const hasTicket = Boolean(ticketId);
+      const hasCall = currentChannel === "wise_call" && Boolean(recordingUrl || wiseCaseId);
+      if (!hasTicket && !hasCall) return;
 
       const selectedModel = aiModelSelect?.value || "council";
       const isCouncil = selectedModel === "council";
@@ -2932,11 +2974,11 @@ function evaluateOrthographyRule(title: string, description: string) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            channel: formChannelType?.value || "wise_call",
-            ticketId,
+            channel: currentChannel,
+            ticketId: ticketId || undefined,
             model: selectedModel,
-            recordingUrl: formRecordingUrl?.value?.trim() || undefined,
-            wiseCaseId: wiseSearchInput?.value?.trim() || undefined,
+            recordingUrl: recordingUrl || undefined,
+            wiseCaseId: wiseCaseId || undefined,
           }),
         });
 

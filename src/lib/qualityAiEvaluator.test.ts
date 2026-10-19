@@ -208,4 +208,59 @@ test("buildTicketContext incluye bloque de hilo de correo electrónico cuando me
   assert.match(ctx, /Estimado, el paquete fue entregado hoy a las 09:30\./);
 });
 
+test("getAiCriteria con hasAudio=true y hasTicket=false incluye ÚNICAMENTE los 10 criterios de atención y omite sección ticket", async () => {
+  const { getAiCriteria } = await import("./qualityAiEvaluator.js");
+  const callOnlyCriteria = getAiCriteria("wise_call", { hasAudio: true, hasTicket: false });
+
+  assert.equal(callOnlyCriteria.length, 10, "Debe tener exactamente 10 criterios de llamada");
+  const codes = new Set(callOnlyCriteria.map((c) => c.code));
+
+  // Todos los 10 de interacción en llamada deben estar presentes
+  const expectedCallCodes = [
+    "call_cordialidad",
+    "call_saludo_estandar",
+    "call_interes_resolver",
+    "call_sondeo",
+    "call_escucha_activa",
+    "call_control_conversacion",
+    "call_contencion_espera",
+    "call_despedida_cordial",
+    "call_lenguaje_apropiado",
+    "call_procedimiento",
+  ];
+  for (const c of expectedCallCodes) {
+    assert.ok(codes.has(c), `Debe contener ${c}`);
+  }
+
+  // Ninguno de sección ticket debe estar presente
+  assert.ok(!codes.has("call_ticket_tipo"));
+  assert.ok(!codes.has("call_ticket_categorizacion"));
+  assert.ok(!codes.has("call_ticket_ortografia"));
+  assert.ok(!codes.has("call_ticket_prioridad"));
+  assert.ok(!codes.has("call_ticket_descripcion"));
+  assert.ok(!codes.has("call_ticket_exactitud_datos"));
+});
+
+test("buildTicketContext con llamada standalone (sin ticket) formatea contexto enfocado en llamada y omite campos vacíos de ticket", () => {
+  const meta = {
+    caseNumber: "544637",
+    operator: "Martín Pérez",
+    date: "2026-10-19",
+    duration: "03:45",
+    ringTime: "00:12",
+    detectedChannel: "wise_call" as const,
+  };
+  const transcript = "Operador: Correo Argentino, buenos días Martín.\nUsuario: Hola tengo un problema con una sucursal.";
+
+  const ctx = buildTicketContext(meta, undefined, [], transcript);
+  assert.match(ctx, /Llamada Wise CX: 544637/);
+  assert.match(ctx, /Operador: Martín Pérez/);
+  assert.match(ctx, /Duración: 03:45/);
+  assert.match(ctx, /Tiempo de espera \(ring\): 00:12/);
+  assert.match(ctx, /TRANSCRIPCIÓN DE LA LLAMADA TELEFÓNICA \(Audio Wise CX \/ Whisper\):/);
+  assert.match(ctx, /Correo Argentino, buenos días Martín/);
+  assert.doesNotMatch(ctx, /Prioridad: -/);
+  assert.doesNotMatch(ctx, /Categoría: -/);
+});
+
 

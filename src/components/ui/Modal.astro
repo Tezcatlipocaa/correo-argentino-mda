@@ -55,7 +55,7 @@ const sizeClasses: Record<string, string> = {
   class:list={[
     "modal",
     isSide
-      ? "modal-end items-stretch justify-end p-0 overflow-hidden"
+      ? "modal-side modal-end items-stretch justify-end p-0 overflow-hidden"
       : "modal-bottom sm:modal-middle",
     zIndex,
   ]}
@@ -63,7 +63,7 @@ const sizeClasses: Record<string, string> = {
   <div
     class:list={[
       isSide
-        ? "modal-box h-full max-h-none rounded-none sm:rounded-l-2xl sm:h-full w-full m-0"
+        ? "modal-box modal-side-box h-full max-h-none rounded-none sm:rounded-l-2xl sm:h-full w-full m-0"
         : "modal-box w-11/12 sm:w-full",
       fixedFooter ? "flex flex-col overflow-hidden p-0" : "scrollbar-hide",
       sizeClasses[size],
@@ -127,3 +127,44 @@ const sizeClasses: Record<string, string> = {
     </button>
   </form>
 </dialog>
+
+<style is:global>
+  /* Animación optimizada para modales laterales (variant="side"):
+     Desactiva el scale de DaisyUI para evitar vibraciones o rebotes contra el margen derecho */
+  dialog.modal.modal-side {
+    overflow-x: hidden;
+  }
+
+  dialog.modal.modal-side > .modal-box.modal-side-box {
+    transform-origin: right center;
+    scale: 1 !important;
+    translate: 100% 0 !important;
+    opacity: 0;
+    transition:
+      translate 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 180ms ease-out,
+      box-shadow 260ms ease-out !important;
+    will-change: translate, opacity;
+    backface-visibility: hidden;
+  }
+
+  dialog.modal.modal-side[open] > .modal-box.modal-side-box {
+    translate: 0 0 !important;
+    scale: 1 !important;
+    opacity: 1 !important;
+  }
+
+  @starting-style {
+    dialog.modal.modal-side[open] > .modal-box.modal-side-box {
+      translate: 100% 0 !important;
+      scale: 1 !important;
+      opacity: 0 !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    dialog.modal.modal-side > .modal-box.modal-side-box {
+      transition: none !important;
+    }
+  }
+</style>
