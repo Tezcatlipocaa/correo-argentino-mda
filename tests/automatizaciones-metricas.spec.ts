@@ -77,6 +77,27 @@ test.describe("Métricas de /automatizaciones", () => {
     ).toBeVisible();
   });
 
+  // El módulo está bajo <ClientRouter /> (BaseLayout inyecta view transitions
+  // en /automatizaciones/**), así que la navegación real es client-side: el
+  // router hace fetch del destino y, si esa página falla al renderizar, aborta
+  // la navegación sin mostrar error. Un `page.goto` no cubre ese camino.
+  test("el botón Métricas navega a la página y la renderiza", async ({
+    context,
+    page,
+  }) => {
+    await setSessionCookie(context, agentUser.signedSessionId);
+    await page.goto("/automatizaciones");
+
+    const metricsLink = page.locator('a[href$="/automatizaciones/metricas"]');
+    await expect(metricsLink).toHaveCount(1);
+    await metricsLink.click();
+
+    await expect(page).toHaveURL(/\/automatizaciones\/metricas$/);
+    await expect(
+      page.getByRole("heading", { name: "Métricas de automatizaciones" }),
+    ).toBeVisible();
+  });
+
   test("sin sesión redirige a login", async ({ request }) => {
     const response = await request.get("/automatizaciones/metricas", {
       maxRedirects: 0,
