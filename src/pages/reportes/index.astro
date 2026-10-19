@@ -43,7 +43,6 @@ let helpdeskMetrics = {
   totalIncoming: 0,
   totalResolved: 0,
   totalActive: 0,
-  ratio: "1.00",
   desksCount: 0,
 };
 try {
@@ -62,7 +61,6 @@ try {
     totalIncoming: incoming,
     totalResolved: resolved,
     totalActive: active,
-    ratio: incoming > 0 ? (resolved / incoming).toFixed(2) : "1.00",
     desksCount: items.length,
   };
 } catch {
