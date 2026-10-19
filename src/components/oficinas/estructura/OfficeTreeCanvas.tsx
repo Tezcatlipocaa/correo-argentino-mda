@@ -26,6 +26,7 @@ import {
 } from "./treeLayout";
 import OfficeDetailDrawer from "./OfficeDetailDrawer";
 import ActionButton from "@/components/ui/ActionButton";
+import FullscreenButton from "@/components/ui/FullscreenButton";
 import { officeTypeChipClassByType, officeTypeLabelByType } from "@/lib/officeHelpers";
 
 interface Props {
@@ -271,12 +272,13 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
       const target = e.target as HTMLElement | null;
       if (
         target?.closest(
-          "[data-floating-control], [data-drawer-root], aside, [role='dialog'], .overflow-y-auto"
+          "[data-floating-control], [data-drawer-root], aside, [role='dialog'], select, input, textarea"
         )
       ) {
         return;
       }
       e.preventDefault();
+      e.stopPropagation();
       const rect = container.getBoundingClientRect();
       const cursorX = e.clientX - rect.left;
       const cursorY = e.clientY - rect.top;
@@ -297,8 +299,8 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
       });
     };
 
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
+    container.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+    return () => container.removeEventListener("wheel", handleWheel, { capture: true });
   }, []);
 
   // Handlers de Pan sin lag de transición
@@ -515,20 +517,15 @@ export default function OfficeTreeCanvas({ rootNode }: Props) {
           <div className="divider divider-horizontal my-1 mx-0.5" />
 
           {/* Fullscreen Button */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="btn btn-xs btn-outline btn-secondary gap-1.5 font-medium rounded-lg"
-            title={isFullscreen ? "Salir de pantalla completa (Esc)" : "Pantalla completa"}
-            aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-          >
-            <Icon
-              icon={isFullscreen ? "boxicons:fullscreen-exit" : "boxicons:fullscreen"}
-              width={14}
-              height={14}
-            />
-            <span>{isFullscreen ? "Salir" : "Pantalla completa"}</span>
-          </button>
+          <FullscreenButton
+            isFullscreen={isFullscreen}
+            onToggle={toggleFullscreen}
+            targetLabel="árbol de oficinas"
+            size="xs"
+            variant="outline"
+            className="btn-secondary"
+            label={<span>{isFullscreen ? "Salir" : "Pantalla completa"}</span>}
+          />
         </div>
       </div>
 

@@ -104,16 +104,28 @@ const propuestaCTree: CategoryNode = {
           <span>Informe de Dirección</span>
         </button>
         <button
-          id="tab-explorer"
+          id="tab-explorer-list"
           role="tab"
           type="button"
           class="tab gap-2 font-semibold transition-all"
-          data-tab="explorer"
+          data-tab="explorer-list"
           aria-selected="false"
-          aria-controls="panel-explorer"
+          aria-controls="panel-explorer-list"
         >
-          <Icon name="boxicons:git-repo-forked" size={16} />
+          <Icon name="boxicons:list-ul" size={16} />
           <span>Explorador de Árbol</span>
+        </button>
+        <button
+          id="tab-explorer-canvas"
+          role="tab"
+          type="button"
+          class="tab gap-2 font-semibold transition-all"
+          data-tab="explorer-canvas"
+          aria-selected="false"
+          aria-controls="panel-explorer-canvas"
+        >
+          <Icon name="boxicons:network-chart" size={16} />
+          <span>Mapa del Árbol</span>
         </button>
         <button
           id="tab-metrics"
@@ -153,43 +165,40 @@ const propuestaCTree: CategoryNode = {
       </section>
     </div>
 
-    <!-- Panel 2: Explorador de Árbol -->
+    <!-- Panel 2: Explorador de Árbol (Listado y Detalle) -->
     <div
-      id="panel-explorer"
+      id="panel-explorer-list"
       role="tabpanel"
-      data-tab-panel="explorer"
-      aria-labelledby="tab-explorer"
-      class="mt-6 hidden space-y-10"
+      data-tab-panel="explorer-list"
+      aria-labelledby="tab-explorer-list"
+      class="mt-6 hidden space-y-4"
     >
-      <section
-        aria-label="Explorador del Árbol de Categorías"
-        class="space-y-4"
-      >
-        <SectionHeader
-          title="Explorador Jerárquico Interactivo"
-          description="Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas."
+      <SectionHeader
+        title="Listado y detalle de taxonomía"
+        description="Vista tabular interactiva con buscador rápido, selector de modelos y modo pantalla completa."
+      />
+      <CategoryTreeExplorer />
+    </div>
+
+    <!-- Panel 3: Mapa del Árbol (Lienzo Interactivo) -->
+    <div
+      id="panel-explorer-canvas"
+      role="tabpanel"
+      data-tab-panel="explorer-canvas"
+      aria-labelledby="tab-explorer-canvas"
+      class="mt-6 hidden space-y-4"
+    >
+      <SectionHeader
+        title="Mapa del árbol interactivo"
+        description="Arrastre para desplazarse, use la rueda para hacer zoom y haga clic en un nodo para inspeccionar sus métricas."
+      />
+      <div class="relative w-full">
+        <CategoryTreeCanvas
+          client:load
+          rootNode={tree}
+          propuestaCNode={propuestaCTree}
         />
-
-        <div class="relative w-full">
-          <CategoryTreeCanvas
-            client:load
-            rootNode={tree}
-            propuestaCNode={propuestaCTree}
-          />
-        </div>
-      </section>
-
-      <section
-        aria-label="Explorador de Taxonomía y Propuestas"
-        class="space-y-4"
-      >
-        <SectionHeader
-          title="Explorador de Taxonomía y Propuestas Estructurales"
-          description="Vista tabular interactiva con buscador rápido, selector de modelos y modo pantalla completa."
-        />
-
-        <CategoryTreeExplorer />
-      </section>
+      </div>
     </div>
 
     <!-- Panel 3: Métricas y Concentración -->
@@ -223,7 +232,9 @@ const propuestaCTree: CategoryNode = {
   function switchTab(tabKey: string, updateHash = true) {
     let target = tabKey;
     if (target === "informe-ejecutivo") target = "report";
-    if (!["report", "explorer", "metrics"].includes(target)) {
+    if (target === "explorer") target = "explorer-list";
+    if (target === "map") target = "explorer-canvas";
+    if (!["report", "explorer-list", "explorer-canvas", "metrics"].includes(target)) {
       target = "report";
     }
 

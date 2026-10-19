@@ -9,6 +9,7 @@ import React, {
 import { Icon } from "@iconify/react";
 import type { CategoryNode } from "@/types/categories";
 import ActionButton from "@/components/ui/ActionButton";
+import FullscreenButton from "@/components/ui/FullscreenButton";
 import Drawer from "@/components/ui/Drawer";
 import {
   computeCategoryTreeLayout,
@@ -88,26 +89,8 @@ const CategoryCanvasNodeCard = React.memo(function CategoryCanvasNodeCard({
         height: `${height}px`,
       }}
     >
-      {/* Header: Nivel, Badges y Tickets */}
-      <div className="flex items-center justify-between gap-1.5">
-        <div className="flex items-center gap-1 min-w-0">
-          <span className="badge badge-xs badge-outline font-mono text-[10px] shrink-0">
-            N{node.depth}
-          </span>
-          {node.status && node.status !== "normal" && (
-            <span
-              className={`shrink-0 truncate max-w-[90px] ${getAnomalyBadgeClass(node.status)}`}
-              title={node.status}
-            >
-              {node.status === "duplicate_parent"
-                ? "Duplicado"
-                : node.status === "zero_volume"
-                ? "Sin tickets"
-                : node.status}
-            </span>
-          )}
-        </div>
-
+      {/* Header: Tickets */}
+      <div className="flex items-center justify-end gap-1.5">
         <span
           className={`shrink-0 ${getTicketBadgeClass(tickets)}`}
           title={`${tickets.toLocaleString("es-AR")} tickets en este nivel`}
@@ -366,7 +349,7 @@ export default function CategoryTreeCanvas({
       const target = e.target as HTMLElement | null;
       if (
         target?.closest(
-          "[data-floating-control], [data-drawer-root], aside, [role='dialog'], .overflow-y-auto"
+          "[data-floating-control], [data-drawer-root], aside, [role='dialog'], select, input, textarea"
         )
       ) {
         return;
@@ -389,8 +372,8 @@ export default function CategoryTreeCanvas({
       });
     };
 
-    container.addEventListener("wheel", handleWheelNative, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheelNative);
+    container.addEventListener("wheel", handleWheelNative, { passive: false, capture: true });
+    return () => container.removeEventListener("wheel", handleWheelNative, { capture: true });
   }, []);
 
   // Navegación de búsqueda
@@ -823,15 +806,14 @@ export default function CategoryTreeCanvas({
           <div className="divider divider-horizontal my-1 mx-0.5" />
 
           {/* Pantalla Completa */}
-          <ActionButton
+          <FullscreenButton
             size="xs"
             variant={isFullscreen ? "solid" : "ghost"}
-            icon={isFullscreen ? "boxicons:fullscreen-exit" : "boxicons:fullscreen"}
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Salir de pantalla completa (Esc)" : "Pantalla completa"}
-          >
-            <span>{isFullscreen ? "Salir" : "Pantalla"}</span>
-          </ActionButton>
+            isFullscreen={isFullscreen}
+            onToggle={toggleFullscreen}
+            targetLabel="árbol de categorías"
+            label={<span>{isFullscreen ? "Salir" : "Pantalla"}</span>}
+          />
         </div>
       </div>
 
