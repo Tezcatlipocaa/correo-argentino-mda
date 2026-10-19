@@ -59,6 +59,15 @@ test.describe("Módulo de Métricas de Mesas de Ayuda (/reportes/mesas)", () => 
     expect(Array.isArray(body.items)).toBe(true);
   });
 
+  test("la vista de mesas rotula explícitamente que los datos son de ejemplo", async ({ context, page }) => {
+    await setSessionCookie(context, adminUser.signedSessionId);
+    await page.goto("/reportes/mesas");
+
+    const badge = page.locator("[data-demo-badge]");
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText("Datos de ejemplo");
+  });
+
   test("filas de la tabla reflejan mesas reales de InvGate y evento segment-click resalta la fila", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId);
     await page.goto("/reportes/mesas");

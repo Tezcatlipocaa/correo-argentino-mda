@@ -32,6 +32,11 @@ export interface TreeMetricsResult {
   pareto: ParetoMetrics;
   depthDistribution: Record<number, number>;
   closureDistribution: ClosureDistributionMetrics;
+  /**
+   * Nombres de campos cuyo valor NO proviene del árbol real (son de ejemplo).
+   * La UI los rotula; se retiran cuando exista la fuente real.
+   */
+  demoFields: string[];
   anomalies: AnomaliesMetrics;
 }
 
@@ -40,6 +45,8 @@ function roundTo(num: number, decimals: number): number {
   return Math.round((num + Number.EPSILON) * factor) / factor;
 }
 
+// Distribución de tiempos de cierre de ejemplo (no calculada del volumen real
+// de tickets). Se expone en `demoFields` para que la UI la rotule.
 const STATIC_CLOSURE_DISTRIBUTION: ClosureDistributionMetrics = {
   under1min: 37.4,
   from1to5min: 5.4,
@@ -146,6 +153,7 @@ export function computeTreeMetrics(root: CategoryNode): TreeMetricsResult {
     pareto,
     depthDistribution,
     closureDistribution: { ...STATIC_CLOSURE_DISTRIBUTION },
+    demoFields: ["closureDistribution"],
     anomalies: {
       singleChildCount,
       wildcardCount,

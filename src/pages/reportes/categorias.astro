@@ -234,7 +234,11 @@ const propuestaCTree: CategoryNode = {
     if (target === "informe-ejecutivo") target = "report";
     if (target === "explorer") target = "explorer-list";
     if (target === "map") target = "explorer-canvas";
-    if (!["report", "explorer-list", "explorer-canvas", "metrics"].includes(target)) {
+    if (
+      !["report", "explorer-list", "explorer-canvas", "metrics"].includes(
+        target,
+      )
+    ) {
       target = "report";
     }
 

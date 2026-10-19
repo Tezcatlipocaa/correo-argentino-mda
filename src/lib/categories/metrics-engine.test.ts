@@ -51,6 +51,18 @@ test("computeTreeMetrics correctly calculates metrics on a controlled fixture tr
   assert.equal(metrics.anomalies.homonymGroupCount, 1);
 });
 
+test("marca la distribución de cierre como dato de ejemplo", () => {
+  const items: RawCategoryItem[] = [
+    { id: 1, parentId: null, name: "TI", totalTickets: 0 },
+    { id: 2, parentId: 1, name: "Hardware", totalTickets: 10 },
+  ];
+
+  const root = buildCategoryTree(items, 1);
+  const metrics = computeTreeMetrics(root);
+
+  assert.ok(metrics.demoFields.includes("closureDistribution"));
+});
+
 test("computeTreeMetrics handles single child anomaly and zero tickets edge case", () => {
   const items: RawCategoryItem[] = [
     { id: 1, parentId: null, name: "Root", totalTickets: 0 },

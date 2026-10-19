@@ -31,17 +31,9 @@ const closureValues = [
 const depthEntries = Object.entries(metrics.depthDistribution || {}).sort(
   ([a], [b]) => Number(a) - Number(b),
 );
-const depthLabels = depthEntries.length > 0
-  ? depthEntries.map(([d]) => `Nivel ${d}`)
-  : ["Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5", "Nivel 6-7"];
-const depthValues = depthEntries.length > 0
-  ? depthEntries.map(([, v]) => v)
-  : [5400, 4200, 1800, 600, 76]; // ponytail: fallback fixture (no live InvGate); wire real depth data when the metrics engine emits it
-
-// ponytail: hardcoded comparison fixture, not computed from InvGate. Replace with real model runs when available.
-const modelComparisonLabels = ["Actual", "Propuesta A", "Propuesta B", "Propuesta C"];
-const modelNodesSeries = [719, 455, 394, 404];
-const modelMaxClicksSeries = [7, 3, 2, 3];
+const hasDepth = depthEntries.length > 0;
+const depthLabels = depthEntries.map(([d]) => `Nivel ${d}`);
+const depthValues = depthEntries.map(([, v]) => v);
 ---
 
 <div class="space-y-6" aria-label="Métricas y estadísticas del catálogo de categorías">
@@ -105,23 +97,14 @@ const modelMaxClicksSeries = [7, 3, 2, 3];
       series={[{ label: "% Tickets", data: closureValues }]}
     />
 
-    <ChartCard
-      type="bar"
-      title="Distribución por Profundidad"
-      subtitle="Volumen de tickets según nivel de profundidad en el árbol"
-      labels={depthLabels}
-      series={[{ label: "Tickets", data: depthValues }]}
-    />
-
-    <ChartCard
-      type="bar"
-      title="Comparativa de Modelos de Taxonomía"
-      subtitle="Reducción de nodos totales frente a propuestas de optimización"
-      labels={modelComparisonLabels}
-      series={[
-        { label: "Nodos Totales", data: modelNodesSeries },
-        { label: "Máx Clics", data: modelMaxClicksSeries },
-      ]}
-    />
+    {hasDepth && (
+      <ChartCard
+        type="bar"
+        title="Distribución por Profundidad"
+        subtitle="Volumen de tickets según nivel de profundidad en el árbol"
+        labels={depthLabels}
+        series={[{ label: "Tickets", data: depthValues }]}
+      />
+    )}
   </div>
 </div>

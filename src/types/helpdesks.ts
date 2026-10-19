@@ -48,4 +48,9 @@ export interface HelpdesksReportData {
   overview: HelpdesksOverviewMetrics;
   items: HelpdeskMetricsItem[];
   cachedAt: string;
+  /**
+   * `demo`: los números ticket/CSAT/SLA son sintéticos (seed por mesa) hasta que
+   * exista el endpoint GET de métricas reales de InvGate.
+   */
+  dataSource: "demo" | "live";
 }

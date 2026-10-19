@@ -16,7 +16,10 @@ import { Icon } from "astro-icon/components";
 const report = await getHelpdesksReport();
 
 const legendItems = [
-  { label: "Operadores", description: "Miembros asignados a la mesa de ayuda." },
+  {
+    label: "Operadores",
+    description: "Miembros asignados a la mesa de ayuda.",
+  },
   { label: "Ingresos", description: "Tickets recibidos en el mes." },
   { label: "Resueltos", description: "Tickets resueltos en el mes." },
   {
@@ -51,11 +54,22 @@ const legendItems = [
       description="Tablero consolidado de colas operativas, volumen mensual, cumplimiento de SLA y satisfacción de usuarios."
     >
       <Fragment slot="actions">
+        {
+          report.dataSource === "demo" && (
+            <span
+              data-demo-badge
+              class="badge badge-error"
+              title="Los indicadores de tickets, SLA y CSAT son de ejemplo hasta que se conecte la fuente real de InvGate."
+            >
+              Datos de ejemplo
+            </span>
+          )
+        }
         <ActionButton
           href={resolveUrl("/reportes/categorias")}
-          variant="outline"
+          variant="soft"
           color=""
-          size="sm"
+          size="md"
           icon="boxicons:network-chart"
           label="Árbol de Categorías"
           title="Ver árbol de categorías"
@@ -72,7 +86,10 @@ const legendItems = [
 
     <section aria-label="Métricas de resumen de mesas de ayuda" class="mt-6">
       <HelpdeskBentoGrid data={report} server:defer>
-        <div slot="fallback" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div
+          slot="fallback"
+          class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+        >
           <ChartCardSkeleton count={4} />
         </div>
       </HelpdeskBentoGrid>
@@ -129,13 +146,17 @@ const legendItems = [
 
     const row =
       table.querySelector<HTMLElement>(`[data-helpdesk-name="${label}"]`) ||
-      table.querySelector<HTMLElement>(`[data-helpdesk-display-name="${label}"]`) ||
-      Array.from(table.querySelectorAll<HTMLElement>("[data-table-row]")).find((r) => {
-        const name = r.dataset.helpdeskName?.trim().toLowerCase();
-        const disp = r.dataset.helpdeskDisplayName?.trim().toLowerCase();
-        const target = label.trim().toLowerCase();
-        return name === target || disp === target;
-      });
+      table.querySelector<HTMLElement>(
+        `[data-helpdesk-display-name="${label}"]`,
+      ) ||
+      Array.from(table.querySelectorAll<HTMLElement>("[data-table-row]")).find(
+        (r) => {
+          const name = r.dataset.helpdeskName?.trim().toLowerCase();
+          const disp = r.dataset.helpdeskDisplayName?.trim().toLowerCase();
+          const target = label.trim().toLowerCase();
+          return name === target || disp === target;
+        },
+      );
 
     if (row) {
       row.classList.add("bg-primary/20");

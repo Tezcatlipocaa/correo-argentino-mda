@@ -39,6 +39,24 @@ test.describe("Módulo de Auditoría de Categorías (/reportes/categorias)", () 
     await expect(page.locator("svg").first()).toBeVisible();
   });
 
+  test("la vista de categorías rotula los datos de ejemplo", async ({ context, page }) => {
+    await setSessionCookie(context, adminUser.signedSessionId);
+    await page.goto("/reportes/categorias");
+
+    const badge = page.locator("[data-demo-badge]");
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText("Datos de ejemplo");
+  });
+
+  test("la comparativa de modelos ficticia ya no se renderiza", async ({ context, page }) => {
+    await setSessionCookie(context, adminUser.signedSessionId);
+    await page.goto("/reportes/categorias");
+
+    await expect(
+      page.getByText("Comparativa de Modelos de Taxonomía"),
+    ).toHaveCount(0);
+  });
+
   test("admin acciona botones de cambio de vista y refresco de categorías", async ({ context, page }) => {
     await setSessionCookie(context, adminUser.signedSessionId);
     await page.goto("/reportes/categorias");

@@ -7,7 +7,9 @@ import { eq, isNotNull, count } from "drizzle-orm";
 
 export const CACHE_TTL_MS = 30 * 60 * 1000;
 
-// ponytail: ticket/CSAT/SLA metrics are synthetic (seeded per-mesa) except MDA TI. Wire real InvGate GET metrics (prod key) when the reporting endpoint lands.
+// Datos de ticket/CSAT/SLA sintéticos (seed por mesa). El reporte se marca
+// `dataSource: "demo"` y la UI lo rotula; se reemplaza cuando exista el GET
+// de métricas reales de InvGate.
 let cachedReport: HelpdesksReportData | null = null;
 let cacheExpiresAt = 0;
 
@@ -171,6 +173,7 @@ export async function getHelpdesksReport(): Promise<HelpdesksReportData> {
     overview,
     items,
     cachedAt: new Date(now).toISOString(),
+    dataSource: "demo",
   };
 
   cachedReport = data;
