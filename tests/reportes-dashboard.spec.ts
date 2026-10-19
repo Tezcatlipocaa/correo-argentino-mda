@@ -55,6 +55,13 @@ test.describe("Dashboard General de Métricas (/reportes)", () => {
     await expect(bentoSection.getByText("Inventario de Terminales")).toBeVisible();
     await expect(bentoSection.getByText("Centro de Automatizaciones")).toBeVisible();
 
+    // El widget de mesas de ayuda reemplazó el indicador de absorción por un
+    // dato legible: balance del período (resueltos − ingresados).
+    await expect(bentoSection.getByText("Balance del período")).toBeVisible();
+    await expect(
+      bentoSection.getByText("Capacidad de absorción"),
+    ).toHaveCount(0);
+
     // Botones "Ver más"
     const moreButtons = bentoSection.getByRole("link", { name: /Ver más/i });
     await expect(moreButtons).toHaveCount(6);
