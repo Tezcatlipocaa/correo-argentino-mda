@@ -197,11 +197,15 @@ const csrfToken = Astro.locals.sessionId ? getCsrfTokenForSession(Astro.locals.s
               </li>
 
               <li>
-                <form method="POST" action={resolveUrl("/logout")} class="w-full p-0">
+                <form
+                  method="POST"
+                  action={resolveUrl("/logout")}
+                  class="text-error block py-2"
+                >
                   <input type="hidden" name="csrf_token" value={csrfToken} />
                   <button
                     type="submit"
-                    class="text-error hover:bg-error/10 flex w-full items-center gap-2 px-4 py-2 text-xs focus:bg-transparent cursor-pointer"
+                    class="flex w-full cursor-pointer items-center gap-2 text-left text-xs"
                   >
                     <Icon
                       name="boxicons:door-open-alt-filled"
