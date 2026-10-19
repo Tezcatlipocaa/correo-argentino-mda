@@ -82,11 +82,13 @@ const config = {
       </div>
       <div class="modal-action mt-6 flex-col gap-3 sm:flex-row">
         <ActionButton
-      type="button"
-      label="Cancelar"
-      class="w-full sm:w-auto"
-      onclick="document.getElementById('delete-category-modal').close()"
-    />
+          type="button"
+          variant="soft"
+          color="btn-error"
+          label="Cancelar"
+          class="w-full sm:w-auto"
+          onclick="document.getElementById('delete-category-modal').close()"
+        />
         <ActionButton
           type="submit"
           color="btn-error"

@@ -19,7 +19,7 @@ Todo formulario de edición/creación de esta rama debe usar el componente
    un `<symbol>` que desaparece al borrar la primera fila).
 5. **Barra de acciones** (parte de `FormShell`, al final del formulario, flujo
    normal — no sticky ni flotante):
-   - Botón **Cancelar / Volver**: `ActionButton` con `color="btn-secondary"` y
+   - Botón **Cancelar / Volver**: `ActionButton` con `variant="soft"`, `color="btn-error"` y
      `href` = listado.
    - Botón **Guardar cambios** (o "Crear …"): `ActionButton` con
      `type="submit"`.
@@ -34,7 +34,7 @@ Todo formulario de edición/creación de esta rama debe usar el componente
    de página completa). Dentro del modal la barra de acciones va al pie
    (`justify-end`, separada con borde superior) con el mismo orden del estándar:
    **Cancelar primero** — `ActionButton` con
-   `icon="boxicons:x-filled"`, `color="btn-secondary"`, `type="button"` y
+   `icon="boxicons:x-filled"`, `variant="soft"`, `color="btn-error"`, `type="button"` y
    `onclick="this.closest('dialog').close()"` — y luego `ActionButton`
    `type="submit"` con ícono filled. **Sin `size="sm"`**: los botones usan el
    tamaño por defecto (`btn-sm md:btn-md`), igual que la barra de `FormShell`,

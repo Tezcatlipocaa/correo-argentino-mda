@@ -185,6 +185,7 @@ const isAuthenticated = Boolean(
         class="card-actions border-base-200 mt-2 flex w-full items-center justify-end gap-2 border-t pt-3"
       >
         <ActionButton
+          variant="soft"
           icon="boxicons:terminal-filled"
           color="btn-accent"
           grow
@@ -194,6 +195,7 @@ const isAuthenticated = Boolean(
         {
           isAuthenticated && (
             <ActionButton
+              variant="soft"
               icon="boxicons:pencil-filled"
               color="btn-secondary"
               data-edit-user-btn
@@ -204,6 +206,7 @@ const isAuthenticated = Boolean(
         {
           isAdmin && (
             <ActionButton
+              variant="soft"
               icon="boxicons:user-plus-filled"
               color="btn-success"
               tooltip="Agregar a InvGate"

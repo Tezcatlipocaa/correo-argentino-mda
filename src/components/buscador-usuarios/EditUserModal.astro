@@ -59,7 +59,13 @@ import FormField from "@components/ui/forms/FormField.astro";
   </Fragment>
   <Fragment slot="actions">
     <div class="modal-action mt-6 flex items-center justify-end gap-3">
-      <ActionButton type="button" id="close-edit-modal-btn" label="Cancelar" />
+      <ActionButton
+        type="button"
+        id="close-edit-modal-btn"
+        label="Cancelar"
+        variant="soft"
+        color="btn-error"
+      />
       <ActionButton
         type="submit"
         id="save-edit-btn"

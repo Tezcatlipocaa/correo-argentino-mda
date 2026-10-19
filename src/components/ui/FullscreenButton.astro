@@ -1,0 +1,37 @@
+---
+import { Icon } from "astro-icon/components";
+import ActionButton from "./ActionButton.astro";
+
+interface Props {
+  targetLabel?: string;
+  size?: "xs" | "sm" | "md" | "default";
+  variant?: "solid" | "soft" | "outline" | "ghost";
+  class?: string;
+}
+
+const {
+  targetLabel = "pantalla completa",
+  size = "xs",
+  variant = "ghost",
+  class: className = "",
+} = Astro.props;
+---
+
+<ActionButton
+  type="button"
+  variant={variant}
+  size={size}
+  data-fullscreen-toggle
+  title="Ver en pantalla completa"
+  ariaLabel={`Ver ${targetLabel} en pantalla completa`}
+  class={className}
+>
+  <Icon name="boxicons:fullscreen" size={16} data-fs-enter is:inline />
+  <Icon
+    name="boxicons:fullscreen-exit"
+    size={16}
+    class="hidden"
+    data-fs-exit
+    is:inline
+  />
+</ActionButton>
