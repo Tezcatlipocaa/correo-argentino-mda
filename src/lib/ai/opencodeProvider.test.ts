@@ -27,3 +27,31 @@ test("getFallbackModels no incluye el modelo activo en los fallbacks", async () 
   assert.ok(list.includes("opencode/mimo-v2.6-flash-free"));
 });
 
+test("extractModelError extrae el mensaje de error del payload JSON en stdout", async () => {
+  const { extractModelError } = await import("./opencodeProvider.js");
+  const stdout = JSON.stringify({
+    type: "error",
+    error: {
+      type: "provider.auth",
+      message: "This API key has expired.",
+    },
+  });
+  const err = extractModelError(stdout, "");
+  assert.equal(err, "This API key has expired.");
+});
+
+test("extractModelError fallback a stderr o stdout si no hay evento JSON error", async () => {
+  const { extractModelError } = await import("./opencodeProvider.js");
+  assert.equal(extractModelError("", "Fatal error: segmentation fault"), "Fatal error: segmentation fault");
+  assert.equal(extractModelError("Some random stdout error", ""), "Some random stdout error");
+  assert.equal(extractModelError("", ""), "Error desconocido de OpenCode");
+});
+
+test("resolveOpenCodeBin devuelve shell false y comando ejecutable", async () => {
+  const { resolveOpenCodeBin } = await import("./opencodeProvider.js");
+  const binInfo = resolveOpenCodeBin();
+  assert.equal(typeof binInfo.command, "string");
+  assert.ok(binInfo.command.length > 0);
+  assert.equal(binInfo.shell, false);
+});
+
