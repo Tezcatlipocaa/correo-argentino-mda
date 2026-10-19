@@ -165,7 +165,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         usuariosLinked.length > 0
           ? usuariosLinked.reduce((sum, r) => sum + (r.usuarios ?? 0), 0)
           : null,
-      terminales: activeRows.reduce((sum, r) => sum + (terminalCounts.get(r.code) ?? 0), 0),
+      terminales: officeRows.reduce((sum, r) => sum + (terminalCounts.get(r.code) ?? 0), 0),
       incidentesAbiertos: invgateOk
         ? [...openIncidentsByCode.values()].reduce((sum, n) => sum + n, 0)
         : null,

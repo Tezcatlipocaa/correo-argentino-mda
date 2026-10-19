@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { test, expect } from "@playwright/test";
 import { createHmac } from "crypto";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "../src/db/index";
 import {
   employeeOffices,
@@ -26,6 +26,8 @@ const officeCode = `T${String(stamp).slice(-4)}`;
 let agentId = 0;
 let supervisorId = 0;
 let officeId = 0;
+const closedOfficeCode = `C${String(stamp).slice(-4)}`;
+let closedOfficeId = 0;
 
 function panelFixture(overrides: Record<string, unknown> = {}) {
   return {
@@ -182,6 +184,24 @@ test.beforeAll(async () => {
   });
   await db.insert(terminals).values({ hostname: `E2E-${stamp}`, nis: officeCode });
   await db.insert(employeeOffices).values({ username: `e2e_of_${stamp}`, sucursal: officeCode });
+
+  const [closedOffice] = await db
+    .insert(offices)
+    .values({
+      code: closedOfficeCode,
+      name: "Sucursal Cerrada E2E",
+      type: "sucursal",
+      provinceCode: province.code,
+      officeType: "Sucursal",
+      locality: "La Plata",
+      active: false,
+    })
+    .returning({ id: offices.id });
+  closedOfficeId = closedOffice.id;
+  await db.insert(terminals).values([
+    { hostname: `E2E-C1-${stamp}`, nis: closedOfficeCode },
+    { hostname: `E2E-C2-${stamp}`, nis: closedOfficeCode },
+  ]);
 });
 
 test.afterAll(async () => {
@@ -189,6 +209,8 @@ test.afterAll(async () => {
   await db.delete(terminals).where(eq(terminals.nis, officeCode));
   await db.delete(officeInvgateLinks).where(eq(officeInvgateLinks.officeId, officeId));
   await db.delete(offices).where(eq(offices.id, officeId));
+  await db.delete(terminals).where(eq(terminals.nis, closedOfficeCode));
+  await db.delete(offices).where(eq(offices.id, closedOfficeId));
   await db.delete(sessions).where(inArray(sessions.userId, [agentId, supervisorId]));
   await db.delete(users).where(inArray(users.id, [agentId, supervisorId]));
 });
@@ -238,6 +260,31 @@ test.describe("API de estadísticas de oficinas", () => {
       const response = await request.get(`/api/oficinas/estadisticas?${query}`, { headers });
       expect(response.status(), query).toBe(400);
     }
+  });
+
+  test("el KPI de terminales comparte semántica con el ranking (parque total)", async ({
+    request,
+  }) => {
+    const response = await request.get("/api/oficinas/estadisticas?pageSize=100", {
+      headers: { cookie: `session_id=${sign(supervisorSessionId)}` },
+    });
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    const counted = await db
+      .select({ nis: terminals.nis, total: sql<number>`count(*)` })
+      .from(terminals)
+      .groupBy(terminals.nis);
+    const terminalByCode = new Map(counted.map((r) => [r.nis, Number(r.total)]));
+    expect(terminalByCode.get(closedOfficeCode)).toBe(2);
+
+    const allOffices = await db.select({ code: offices.code }).from(offices);
+    const expected = allOffices.reduce(
+      (sum, o) => sum + (terminalByCode.get(o.code) ?? 0),
+      0,
+    );
+
+    expect(body.kpis.terminales).toBe(expected);
   });
 
   test("un agente no puede ver la página (redirige al inicio)", async ({ page }) => {
@@ -418,6 +465,18 @@ test.describe("Acceso a estadísticas desde el directorio", () => {
     await expect(
       page.getByRole("heading", { name: "Estadísticas de oficinas" }),
     ).toBeVisible();
+  });
+
+  test("el listado de oficinas muestra la franja de KPIs", async ({ page }) => {
+    await page.context().addCookies([
+      { name: "session_id", value: sign(supervisorSessionId), domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/oficinas");
+    await expect(page.locator("#office-filters-form")).toBeVisible({ timeout: 20000 });
+
+    const dash = page.locator("[data-section-dashboard]");
+    await expect(dash).toBeVisible();
+    await expect(dash.locator(".stat-value")).toHaveCount(3);
   });
 
   test("un agente no ve el CTA", async ({ page }) => {
