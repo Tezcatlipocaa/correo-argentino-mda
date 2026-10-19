@@ -26,7 +26,7 @@
 - Usar la skill global **`managing-github-issues`** (`skill` tool, nombre `managing-github-issues`) para redactar/decomponer/actualizar/cerrar issues. Nunca improvisar formato.
 - Crear/actualizar la issue **con el MCP `github`** (`github_issue_write`, `github_search_issues`, `github_issue_read`), nunca con `gh` CLI ni web. Buscar duplicados antes de crear.
 - Las issues funcionan como **registro acumulado del proyecto**: contexto, evidencia (paths, líneas), impacto y criterio de aceptación. Se resuelven **cuando se planifique**, no por enganche.
-- Labels de referencia: `hallazgo`, `deuda-tecnica`, `mejora`, `bug`. Severidad explícita en el título o label cuando aplique.
+- **Labels: conjunto cerrado, siempre en inglés.** Catálogo completo: `bug`, `enhancement`, `refactor`, `test`, `style`, `performance`, `documentation`, `chore`, `ui/ux`, `database`, `architecture`, `security`, `high-priority`, `epic`, `tech-debt`, `finding`. **No crear labels nuevas**; si el trabajo no encaja, proponé nombre + color + descripción y esperá OK. Equivalencias de nombres ya fuera de circulación: `hallazgo` → `finding`, `deuda-tecnica` → `tech-debt`, `mejora` → `enhancement` (eliminada por redundante). Severidad explícita en el título o label cuando aplique.
 - **Nunca commitear** código para "dejar el fix de paso" si no fue pedido — issue primero, fix después planificado.
 
 ## Quick start
@@ -53,9 +53,15 @@
 
 ### Puertos de la suite E2E
 
-- `playwright.config.ts` resuelve `baseURL` desde `PLAYWRIGHT_BASE_URL`, con default `http://localhost:4321`.
-- **Verificar el puerto antes de arrancar**: `Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4321,4322,4323 }`. En esta máquina varios puertos los ocupa a veces otro proyecto local.
-- Arrancar el dev server en su **propio comando**, con el destino del redirect entre comillas (`%TEMP%` tiene espacios): ver `docs/lessons.md`.
+- `playwright.config.ts` resuelve `baseURL` **y** `webServer.url` desde `PLAYWRIGHT_BASE_URL` (default `http://localhost:4321`); el puerto se deriva de esa URL.
+- **Playwright arranca el dev server solo** (`webServer` en `playwright.config.ts`): `command: npm run dev -- --port <port>`, `url: baseURL`, `reuseExistingServer: !process.env.CI`, `env: { ASTRO_DEV_BACKGROUND: "0" }`, `timeout: 120000`. Correr solo `npx playwright test ... --timeout=30000` — Playwright levanta, espera readiness real y mata el server al final.
+- **`ASTRO_DEV_BACKGROUND: "0"` es obligatorio en `webServer`**: Astro 7 auto-backgroundea el dev server cuando detecta agente → el proceso padre sale inmediato y Playwright falla con `Process from config.webServer exited early`.
+- **Nunca manejar el server a mano**: nada de `Get-CimInstance Win32_Process`, `Start-Process -WindowStyle Hidden`, `Start-Sleep -Seconds N`, kill por `Get-NetTCPConnection | Stop-Process`, `while` sin deadline, `Select-Object -Last/-First N`, ni `2>&1`. Son las causas de los cuelgues; Playwright ya cubre el ciclo de vida del server.
+- **Proyectos/worktrees en simultáneo**: cada workspace DEBE usar un puerto único vía `PLAYWRIGHT_BASE_URL` (ej. 4321/4322/4323). Peligro: si dos comparten el default 4321 y `reuseExistingServer: true`, Playwright **reusa el server del otro proyecto** (la URL responde) y corre los tests contra la app equivocada → falsos positivos. Pinear puerto distinto por workspace es la única mitigación confiable.
+- **Si el puerto lo tomó otro proceso**: con `reuseExistingServer: true` Playwright lo reusa (mal, ver arriba); con `false` Astro puede elegir el siguiente puerto libre y Playwright espera `webServer.url` fijo → falla con timeout (claro, no falso positivo). Preferible fallar claro que testear la app equivocada.
+- **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
+- Arrancar el dev server a mano (solo para debug) en su **propio comando terminal visible**; ver `docs/lessons.md`.
+- **Agente puede levantar dev server** para tests: `Start-Process -FilePath "npm" -ArgumentList "run","dev","--port","<PORT>"` — sin `-WindowStyle Hidden`. Poll readiness con deadline 30s. Si no arranca → throw + reportar.
 - **Nunca** comparar una URL contra `http://localhost:4321` literal en un spec: usar `test.info().project.use.baseURL`. Hay un guard en `tests/unit/specs-base-url.test.ts`.
 
 ## DB & Drizzle
@@ -91,6 +97,7 @@
 - **Toasts**: server redirects pass `?toast_msg=&toast_type=success|error|warning|info`; client `showToast()` from `@lib/toastClient.ts`
 - **DataTable sorting**: wrap in `data-table-sort-root`, rows `data-table-row` + `data-sort-*` (master-detail uses `data-master-detail-sort-item`)
 - **API routes**: usar `jsonResponse`/`jsonError` (`@lib/apiResponse`), `requireWriteAccess`/`requireReadAccess` (`@lib/rbac-middleware`), `logAdminFromAstro`; ver sección "API routes" en `docs/CONTEXT.md`
+- **`requireSession`** (`@lib/rbac-middleware`): exige solo sesión iniciada (cualquier rol), 401 si no la hay. Usarlo cuando el endpoint alimenta una página `ALL_ROLES` y no hay módulo RBAC propio (p.ej. `search`/`status`/`net-user`/`invgate-user` que sirven `/buscador-usuarios`). Si existe un módulo en `getModulePermissions`, preferir `requireReadAccess`/`requireWriteAccess`.
 
 ## Auth & RBAC
 

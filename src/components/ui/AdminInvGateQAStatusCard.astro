@@ -65,6 +65,16 @@ import { Icon } from "astro-icon/components";
     "invgate-qa-refresh-icon",
   );
 
+  const CATEGORY_LABELS: Record<string, string> = {
+    config: "Configuración incompleta",
+    credentials: "Credenciales inválidas",
+    permissions: "Permisos insuficientes",
+    network: "Error de red",
+    timeout: "Tiempo de espera agotado",
+    not_found: "Recurso no encontrado",
+    other: "Error de InvGate QA",
+  };
+
   async function updateInvgateQaStatus() {
     if (!invgateQaStatusEl) return;
 
@@ -82,7 +92,17 @@ import { Icon } from "astro-icon/components";
       const res = await fetch("/api/admin/invgate-qa-status", {
         signal: ac.signal,
       });
-      if (!res.ok) throw new Error("Error en la respuesta de la API");
+
+      if (!res.ok) {
+        let errorMsg = `Error HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.error) errorMsg += `: ${errData.error}`;
+        } catch {
+          // noop
+        }
+        throw new Error(errorMsg);
+      }
 
       const data = await res.json();
 
@@ -96,28 +116,43 @@ import { Icon } from "astro-icon/components";
         statusClass = "text-success";
         iconContainerClass =
           "bg-success/15 text-success p-3 rounded-xl shrink-0 ml-4";
+      } else if (data.category) {
+        statusText =
+          CATEGORY_LABELS[data.category] || "Error de InvGate QA";
+        statusClass = "text-warning";
+        iconContainerClass =
+          "bg-warning/15 text-warning p-3 rounded-xl shrink-0 ml-4";
       }
 
       invgateQaStatusEl.textContent = statusText;
       invgateQaStatusEl.className = `text-lg md:text-xl font-bold mt-0.5 ${statusClass}`;
 
       if (invgateQaDescEl) {
-        const descText = data.message || `HTTP ${data.status}`;
+        const descText = data.message || (data.status ? `HTTP ${data.status}` : "");
+        const titleText = data.detail ? `${data.message} (${data.detail})` : descText;
         invgateQaDescEl.textContent = descText;
-        invgateQaDescEl.title = descText;
+        invgateQaDescEl.title = titleText;
       }
 
       if (invgateQaIconContainer) {
         invgateQaIconContainer.className = iconContainerClass;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(
         "[AdminInvGateQAStatusCard] Error al verificar InvGate QA:",
         err,
       );
-      invgateQaStatusEl.textContent = "Error de Conexión";
+      const isAbort = err?.name === "AbortError";
+      invgateQaStatusEl.textContent = isAbort ? "Tiempo de espera agotado" : "Error de Conexión";
       invgateQaStatusEl.className =
         "text-lg md:text-xl font-bold mt-0.5 text-warning";
+      if (invgateQaDescEl) {
+        const errorDesc = isAbort
+          ? "La solicitud a la API tardó más de 15 segundos"
+          : (err?.message || "No se pudo consultar el estado del servicio");
+        invgateQaDescEl.textContent = errorDesc;
+        invgateQaDescEl.title = errorDesc;
+      }
       if (invgateQaIconContainer) {
         invgateQaIconContainer.className =
           "bg-warning/15 text-warning p-3 rounded-xl shrink-0 ml-4";

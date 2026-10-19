@@ -1,8 +1,6 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import CopyButton from "@components/ui/CopyButton.astro";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionInvGateButton from "@components/ui/ActionInvGateButton.astro";
-import ActionNetUserButton from "@components/ui/ActionNetUserButton.astro";
 
 const userRole = Astro.locals.user?.role || "";
 const isAdmin = userRole === "admin";
@@ -121,13 +119,18 @@ const isAuthenticated = Boolean(
               class="text-xxs text-base-content/40 font-bold tracking-wider uppercase"
               >Licencia</span
             >
-            <div class="user-card-licencia-tooltip tooltip tooltip-top z-30 w-full">
+            <div
+              class="user-card-licencia-tooltip tooltip tooltip-top z-30 w-full"
+            >
               <div
-                class="user-card-licencia-tooltip-content tooltip-content text-left p-3 w-72 max-w-xs shadow-overlay border border-neutral-content/15 bg-neutral text-neutral-content rounded-box text-xs"
+                class="user-card-licencia-tooltip-content tooltip-content shadow-overlay border-neutral-content/15 bg-neutral text-neutral-content rounded-box w-72 max-w-xs border p-3 text-left text-xs"
               >
                 <div class="flex items-center gap-2">
-                  <span class="loading loading-spinner loading-xs text-primary"></span>
-                  <span class="text-xs font-medium">Consultando Active Directory...</span>
+                  <span class="loading loading-spinner loading-xs text-primary"
+                  ></span>
+                  <span class="text-xs font-medium"
+                    >Consultando Active Directory...</span
+                  >
                 </div>
               </div>
               <CopyButton
@@ -181,15 +184,29 @@ const isAuthenticated = Boolean(
       <div
         class="card-actions border-base-200 mt-2 flex w-full items-center justify-end gap-2 border-t pt-3"
       >
-        <ActionNetUserButton data-net-user-btn ariaLabel="Ver grupos de red" />
+        <ActionButton
+          icon="boxicons:terminal-filled"
+          color="btn-accent"
+          grow
+          data-net-user-btn
+          ariaLabel="Ver grupos de red"
+        />
         {
           isAuthenticated && (
-            <ActionEditButton data-edit-user-btn ariaLabel="Editar contacto" />
+            <ActionButton
+              icon="boxicons:pencil-filled"
+              color="btn-secondary"
+              data-edit-user-btn
+              ariaLabel="Editar contacto"
+            />
           )
         }
         {
           isAdmin && (
-            <ActionInvGateButton
+            <ActionButton
+              icon="boxicons:user-plus-filled"
+              color="btn-success"
+              tooltip="Agregar a InvGate"
               data-invgate-create-ticket-btn
               ariaLabel="Crear solicitud en InvGate"
             />

@@ -1,0 +1,25 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import UsuariosEstadisticasContent from "@components/admin/users/UsuariosEstadisticasContent.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const cleanBase = getCleanBase();
+---
+
+<BaseLayout>
+  <PageContainer width="xl">
+    <MetricsHeader
+      backHref={`${cleanBase}admin/usuarios`}
+      backLabel="Volver a Gestión de usuarios"
+      title="Estadísticas de usuarios"
+      description="Distribución de usuarios por estado, rol y mesa de ayuda."
+    />
+
+    <UsuariosEstadisticasContent server:defer>
+      <ChartCardSkeleton slot="fallback" count={3} />
+    </UsuariosEstadisticasContent>
+  </PageContainer>
+</BaseLayout>

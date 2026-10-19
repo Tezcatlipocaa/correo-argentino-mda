@@ -1,11 +1,9 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 import CopyButton from "@components/ui/CopyButton.astro";
 import OfficeContactsSection from "@components/offices/OfficeContactsSection.astro";
 import OfficeEquipmentCard from "@components/offices/OfficeEquipmentCard.astro";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
-import ActionAgentsTicketButton from "@components/ui/ActionAgentsTicketButton.astro";
 import { isAllowed } from "@lib/rolesMatrix";
 import { resolveUrl } from "@lib/url";
 import type { OfficeDirectoryItem } from "@/types/offices";
@@ -85,7 +83,10 @@ const officeDirectoryRowGridClass = showActionsColumn
   data-sort-parent-nis={office.parentNis ?? ""}
   data-sort-address={`${office.address} ${office.location} ${office.region} ${office.postalCode}`}
   data-sort-group={office.location}
-  class:list={["block transition-all", !isVisibleByDefault && "hidden"]}
+  class:list={[
+    "cv-auto-row block transition-all",
+    !isVisibleByDefault && "hidden",
+  ]}
 >
   <div
     data-office-master-row={hasDetails ? "" : undefined}
@@ -206,7 +207,9 @@ const officeDirectoryRowGridClass = showActionsColumn
             name="boxicons:location-alt-filled"
             class="text-secondary shrink-0"
             size={16}
-            aria-hidden="true" is:inline />
+            aria-hidden="true"
+            is:inline
+          />
           <span class="truncate" title={office.address} data-highlight-target>
             {office.address}
           </span>
@@ -248,7 +251,9 @@ const officeDirectoryRowGridClass = showActionsColumn
         <div class="action-buttons flex min-w-0 items-center justify-end gap-2">
           {isAllowedAdmin && (
             <>
-              <ActionEditButton
+              <ActionButton
+                icon="boxicons:pencil-filled"
+                color="btn-secondary"
                 href={`${import.meta.env.BASE_URL}oficinas/edit/${office.dbId}`}
                 ariaLabel={`Editar oficina ${office.name}`}
               />
@@ -258,7 +263,10 @@ const officeDirectoryRowGridClass = showActionsColumn
                 class="inline"
                 onsubmit={`return confirm('¿Estás seguro de que deseas eliminar la oficina \`${office.name}\` (${office.code})?');`}
               >
-                <ActionDeleteButton
+                <ActionButton
+                  type="submit"
+                  icon="boxicons:trash-filled"
+                  color="btn-error"
                   ariaLabel={`Eliminar oficina ${office.name}`}
                 />
               </form>
@@ -267,9 +275,14 @@ const officeDirectoryRowGridClass = showActionsColumn
           {isStrictAdmin &&
             office.type === "TELEGRAFIA" &&
             office.invgateLinked === true && (
-              <ActionAgentsTicketButton
-                officeName={office.name}
-                officeCode={office.code}
+              <ActionButton
+                icon="boxicons:alert-triangle-filled"
+                color="btn-success"
+                tooltip="Reportar agentes caídos"
+                ariaLabel={`Crear ticket por agentes caídos en ${office.name} (${office.code})`}
+                data-agents-ticket-trigger
+                data-office-name={office.name}
+                data-office-code={office.code}
               />
             )}
         </div>
@@ -442,7 +455,9 @@ const officeDirectoryRowGridClass = showActionsColumn
                       name="boxicons:group-filled"
                       size={16}
                       class="text-secondary"
-                      aria-hidden="true" is:inline />
+                      aria-hidden="true"
+                      is:inline
+                    />
                     Referentes del sitio
                   </h2>
                   <div
@@ -533,8 +548,8 @@ const officeDirectoryRowGridClass = showActionsColumn
                     size={16}
                     class="text-secondary"
                     aria-hidden="true"
-                  
-            is:inline />
+                    is:inline
+                  />
                   Equipos ({totalAssets})
                 </h2>
                 <div class="relative min-h-0 flex-1 lg:max-h-120">

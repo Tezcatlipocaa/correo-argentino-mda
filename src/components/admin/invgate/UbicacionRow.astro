@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 export interface Props {
   row: any;
@@ -67,9 +68,12 @@ const { invgateLocation, officeCode, mdaOffice, matched } = row;
         </span>
       ) : (
         <div class="flex items-center gap-2" data-create-btn-container>
-          <button
-            type="button"
-            class="btn btn-xs btn-primary btn-outline"
+          <ActionButton
+            variant="outline"
+            color="btn-primary"
+            size="xs"
+            icon="boxicons:plus"
+            label="Crear"
             onclick="window.openCreateOfficeModal(this)"
             data-nis={invgateLocation.nis || ""}
             data-name={invgateLocation.displayName || ""}
@@ -80,10 +84,7 @@ const { invgateLocation, officeCode, mdaOffice, matched } = row;
             data-invgate-cp={invgateLocation.cp || ""}
             data-invgate-address={invgateLocation.address || ""}
             title="Agregar oficina a DB"
-          >
-            <Icon name="boxicons:plus" class="size-4" />
-            Crear
-          </button>
+          />
           <button
             type="button"
             class="btn btn-xs btn-ghost text-base-content/50 hover:text-primary"

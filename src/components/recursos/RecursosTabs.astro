@@ -1,0 +1,73 @@
+---
+import { Icon } from "astro-icon/components";
+import { getCleanBase } from "@lib/baseUrl";
+
+export type TabKey = "enlaces" | "aplicativos" | "contactos";
+
+interface Props {
+  activeTab: TabKey;
+  class?: string;
+}
+
+const { activeTab, class: className } = Astro.props;
+const cleanBase = getCleanBase();
+
+interface TabItem {
+  key: TabKey;
+  label: string;
+  href: string;
+  icon: string;
+}
+
+const tabs: TabItem[] = [
+  {
+    key: "enlaces",
+    label: "Enlaces",
+    href: `${cleanBase}recursos`,
+    icon: "boxicons:link-filled",
+  },
+  {
+    key: "aplicativos",
+    label: "Aplicativos",
+    href: `${cleanBase}recursos/aplicativos`,
+    icon: "boxicons:grid-filled",
+  },
+  {
+    key: "contactos",
+    label: "Contactos",
+    href: `${cleanBase}recursos/contactos`,
+    icon: "boxicons:phone-filled",
+  },
+];
+---
+
+<nav
+  role="tablist"
+  aria-label="Secciones de Recursos"
+  class:list={[
+    "tabs tabs-box bg-base-200/60 p-1 rounded-xl gap-1 border border-base-300/40 shadow-xs",
+    className,
+  ]}
+>
+  {
+    tabs.map((tab) => {
+      const isActive = tab.key === activeTab;
+      return (
+        <a
+          href={tab.href}
+          role="tab"
+          aria-selected={isActive ? "true" : "false"}
+          class:list={[
+            "tab flex items-center gap-2 transition-all duration-200",
+            isActive
+              ? "tab-active bg-primary text-primary-content shadow-xs font-semibold"
+              : "text-base-content/70 hover:text-base-content hover:bg-base-200",
+          ]}
+        >
+          <Icon name={tab.icon} size={18} class="shrink-0" />
+          <span>{tab.label}</span>
+        </a>
+      );
+    })
+  }
+</nav>

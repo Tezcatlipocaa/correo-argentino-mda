@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { Icon } from "astro-icon/components";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import MasterDetailTable from "@components/ui/MasterDetailTable.astro";
@@ -8,22 +9,27 @@ import SearchBar from "@components/ui/SearchBar.astro";
 import ViewSwitcher from "@components/ui/ViewSwitcher.astro";
 import FilterTabsBox from "@components/ui/FilterTabsBox.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
-import ExportCsvButton from "@components/ui/ExportCsvButton.astro";
-import { getOffices, hasClosedOffices } from "@lib/officeQueries";
+import {
+  getOffices,
+  hasClosedOffices,
+  getCachedProvincesWithRegion,
+  getOfficeTypeCounts,
+} from "@lib/officeQueries";
 import OfficeRow from "@components/offices/OfficeRow.astro";
 import AgentsTicketModal from "@components/offices/AgentsTicketModal.astro";
 import {
   officeTypeLabelByType,
   officeTypeTabActiveClassByType,
   formatTypeLabel,
-  isSucursalAutomatizada,
 } from "@lib/officeHelpers";
 import { db } from "@db/index";
-import { provinces, regions, offices, officeInvgateLinks } from "@db/schema";
-import { eq, or, sql } from "drizzle-orm";
+import { regions, offices } from "@db/schema";
+import { sql, or } from "drizzle-orm";
 import { getResolvedSearchParams } from "@lib/navigation";
 import { isAllowed } from "@lib/rolesMatrix";
 import { can } from "@lib/roleConfig";
+import { hasPermission } from "@lib/rbac";
+import { resolveUrl } from "@lib/url";
 import "leaflet/dist/leaflet.css";
 
 const user = Astro.locals.user;
@@ -32,6 +38,11 @@ const isAllowedAdmin = user
   : false;
 const canViewInvgateStats = user ? can(user.role, "team_leader") : false;
 const canExport = user ? can(user.role, "team_leader") : false;
+// Misma fuente que el middleware y el sidebar: el CTA aparece solo donde la
+// ruta está permitida (supervisor + admin).
+const canViewOfficeStats = user
+  ? hasPermission("/oficinas/estadisticas", user.role)
+  : false;
 
 const searchParams = getResolvedSearchParams(Astro.request, Astro.url);
 
@@ -46,16 +57,7 @@ const noAddressFilter = searchParams.get("noAddress") === "true";
 const statusFilter = searchParams.get("status") || "all";
 const searchFilter = searchParams.get("search") || "";
 
-const allProvincesWithRegion = await db
-  .select({
-    code: provinces.code,
-    name: provinces.name,
-    regionId: provinces.regionId,
-    regionName: regions.name,
-  })
-  .from(provinces)
-  .leftJoin(regions, eq(provinces.regionId, regions.id))
-  .orderBy(regions.name, provinces.name);
+const allProvincesWithRegion = await getCachedProvincesWithRegion();
 
 const provincesByRegion: Record<string, { code: string; name: string }[]> = {};
 for (const p of allProvincesWithRegion) {
@@ -101,61 +103,7 @@ const {
   sortOrder,
 });
 
-const rawCounts = await db
-  .select({
-    type: offices.type,
-    officeType: offices.officeType,
-    name: offices.name,
-    invgateDisplayName: officeInvgateLinks.invgateDisplayName,
-  })
-  .from(offices)
-  .leftJoin(officeInvgateLinks, eq(offices.id, officeInvgateLinks.officeId));
-
-const processedCounts: { type: string; count: number }[] = [];
-let sucursalAutoCount = 0;
-let sucursalNoAutoCount = 0;
-
-for (const row of rawCounts) {
-  if (!row.type) continue;
-  if (row.type === "SUCURSAL") {
-    if (isSucursalAutomatizada(row)) {
-      sucursalAutoCount += 1;
-    } else {
-      sucursalNoAutoCount += 1;
-    }
-  } else {
-    const existing = processedCounts.find((p) => p.type === row.type);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      processedCounts.push({ type: row.type, count: 1 });
-    }
-  }
-}
-
-if (sucursalAutoCount > 0 || sucursalNoAutoCount > 0) {
-  if (sucursalAutoCount > 0) {
-    processedCounts.push({
-      type: "SUCURSAL_AUTOMATIZADA",
-      count: sucursalAutoCount,
-    });
-  }
-  if (sucursalNoAutoCount > 0) {
-    processedCounts.push({
-      type: "SUCURSAL_NO_AUTOMATIZADA",
-      count: sucursalNoAutoCount,
-    });
-  }
-}
-
-const officeCountByType = processedCounts.reduce(
-  (acc, row) => {
-    acc.all += row.count;
-    acc[row.type] = row.count;
-    return acc;
-  },
-  { all: 0 } as Record<string, number>,
-);
+const { processedCounts, officeCountByType } = await getOfficeTypeCounts();
 
 processedCounts.forEach((row) => {
   if (row.type && !officeTypeLabelByType[row.type]) {
@@ -217,6 +165,29 @@ const mainTabs = [
   <PageHeader
     description="Visualización centralizada de la infraestructura, buscador de oficinas y mapa interactivo de cobertura nacional."
   />
+
+  {
+    canViewOfficeStats && (
+      <div class="mb-4 flex justify-end gap-2">
+        <a
+          href={resolveUrl("/oficinas/estructura")}
+          class="btn btn-soft btn-sm md:btn-md gap-2"
+          data-cta-estructura-oficinas
+        >
+          <Icon name="boxicons:network-chart-filled" size={18} />
+          Estructura
+        </a>
+        <a
+          href={resolveUrl("/oficinas/estadisticas")}
+          class="btn btn-soft btn-sm md:btn-md gap-2"
+          data-cta-estadisticas-oficinas
+        >
+          <Icon name="boxicons:bar-chart-big-filled" size={18} />
+          Estadísticas
+        </a>
+      </div>
+    )
+  }
 
   <ViewSwitcher
     tabs={mainTabs}
@@ -441,7 +412,9 @@ const mainTabs = [
         </div>
         {
           canExport && (
-            <ExportCsvButton
+            <ActionButton
+              icon="boxicons:file-detail-filled"
+              color="btn-primary"
               id="export-csv-btn"
               href={import.meta.env.BASE_URL + "api/export/offices"}
               ariaLabel="Exportar directorio a CSV"
@@ -530,13 +503,14 @@ const mainTabs = [
                 —
               </span>
             </div>
-            <a
+            <ActionButton
               href={`${import.meta.env.BASE_URL}admin/invgate/ubicaciones?sync=true`}
-              class="btn btn-primary btn-sm ml-auto shrink-0 gap-1.5"
-            >
-              <Icon name="boxicons:pie-chart-filled" size={16} />
-              Ver comparativa
-            </a>
+              color="btn-primary"
+              size="sm"
+              class="ml-auto shrink-0"
+              icon="boxicons:pie-chart-filled"
+              label="Ver comparativa"
+            />
           </div>
         </div>
       )
@@ -699,8 +673,7 @@ const mainTabs = [
                         Tecnológicos
                       </span>
                     </div>
-                    <div class="referents-list-container mt-2 flex flex-col gap-1.5">
-                    </div>
+                    <div class="referents-list-container mt-2 flex flex-col gap-1.5"></div>
                   </div>
                 </div>
               ))

@@ -5,6 +5,7 @@ import { db } from "@db/index";
 import { applications } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { decryptData } from "@lib/encryption";
+import { canUserAccessCredentials } from "@lib/credentialAccess";
 
 const FALLBACK_API_URL = "https://mda.correo.local/api/usuarios";
 const MDA_FIND_TITLE = "Extensión MDA FIND";
@@ -18,13 +19,13 @@ const mdaFindApp = await db.query.applications.findFirst({
 const user = Astro.locals.user;
 const isAuthenticated = user && user.id !== 0;
 
-let entries: Array<{ label: string; value: string }> = [];
+let rawEntries: Array<{ label: string; value: string; minRole?: any; helpdesk?: string | null }> = [];
 
 if (isAuthenticated && mdaFindApp?.metadata) {
   try {
     const parsed = JSON.parse(decryptData(mdaFindApp.metadata));
     if (Array.isArray(parsed)) {
-      entries = parsed.filter(
+      rawEntries = parsed.filter(
         (meta) => meta && typeof meta === "object" && meta.label,
       );
     }
@@ -33,9 +34,11 @@ if (isAuthenticated && mdaFindApp?.metadata) {
   }
 }
 
-if (entries.length === 0) {
-  entries = [{ label: "URL de la API", value: FALLBACK_API_URL }];
-}
+const entries = rawEntries
+  .map((meta, originalIndex) => ({ ...meta, originalIndex }))
+  .filter((meta) => canUserAccessCredentials(user, { minRole: meta.minRole, helpdesk: meta.helpdesk }));
+
+const displayEntries = entries.length > 0 ? entries : (isAuthenticated ? [] : [{ label: "URL de la API", value: FALLBACK_API_URL, originalIndex: -1 }]);
 ---
 
 <div
@@ -74,8 +77,12 @@ if (entries.length === 0) {
     class="border-accent/10 relative z-10 mt-4 space-y-3 border-t pt-4"
   >
     {
-      entries.map((meta) => (
-        <div>
+      displayEntries.map((meta) => (
+        <div
+          data-extension-credential-row
+          data-app-id={mdaFindApp?.id}
+          data-meta-index={meta.originalIndex}
+        >
           <div
             class="text-xxs text-base-content/40 mb-1.5 font-bold tracking-widest uppercase"
           >
@@ -103,7 +110,7 @@ if (entries.length === 0) {
             <div class="flex items-center gap-2">
               <input
                 type="password"
-                value={meta.value}
+                placeholder="••••••••"
                 readonly
                 aria-label={`Valor de ${meta.label}`}
                 class="input input-sm bg-base-300/50 border-base-300 text-base-content/70 min-w-0 flex-1 font-mono text-xs"
@@ -124,16 +131,27 @@ if (entries.length === 0) {
                   data-hide-icon
                 />
               </button>
-              <CopyButton
-                variant="icon"
-                value={meta.value}
-                label={`Copiar ${meta.label}`}
-                copiedLabel="Copiado"
-                ariaLabel={`Copiar ${meta.label}`}
-                size="xs"
-                showTooltip={false}
-                class="shrink-0"
-              />
+              <button
+                type="button"
+                class="btn btn-sm btn-ghost btn-square text-base-content/60 shrink-0"
+                data-copy-credential
+                title={`Copiar ${meta.label}`}
+                aria-label={`Copiar ${meta.label}`}
+              >
+                <Icon
+                  name="boxicons:clipboard-filled"
+                  size={16}
+                  data-copy-icon-default
+                  aria-hidden="true"
+                />
+                <Icon
+                  name="boxicons:check-filled"
+                  size={16}
+                  class="text-success hidden"
+                  data-copy-icon-success
+                  aria-hidden="true"
+                />
+              </button>
             </div>
           )}
         </div>
@@ -160,36 +178,83 @@ if (entries.length === 0) {
 </div>
 
 <script>
+  import { fetchRevealedCredential, copySecretToClipboard } from "@lib/credentialRevealClient";
+  import { showToast } from "@lib/toastClient";
+
   const initExtensionReveal = () => {
-    document.querySelectorAll("[data-toggle-password]").forEach((btn) => {
-      if (btn.getAttribute("data-listener-added") === "true") return;
-      btn.setAttribute("data-listener-added", "true");
+    document.querySelectorAll("[data-extension-credential-row]").forEach((row) => {
+      const toggleBtn = row.querySelector("[data-toggle-password]");
+      const copyBtn = row.querySelector("[data-copy-credential]");
+      const input = row.querySelector<HTMLInputElement>("[data-password-input]");
+      const showIcon = row.querySelector<HTMLElement>("[data-show-icon]");
+      const hideIcon = row.querySelector<HTMLElement>("[data-hide-icon]");
 
-      btn.addEventListener("click", () => {
-        const parent = btn.closest("div");
-        if (!parent) return;
-        const input = parent.querySelector(
-          "[data-password-input]",
-        ) as HTMLInputElement | null;
-        const showIcon = parent.querySelector(
-          "[data-show-icon]",
-        ) as HTMLElement | null;
-        const hideIcon = parent.querySelector(
-          "[data-hide-icon]",
-        ) as HTMLElement | null;
+      const appId = Number(row.getAttribute("data-app-id"));
+      const metaIndex = Number(row.getAttribute("data-meta-index"));
 
-        if (input) {
-          if (input.type === "password") {
-            input.type = "text";
-            showIcon?.classList.add("hidden");
-            hideIcon?.classList.remove("hidden");
-          } else {
+      if (toggleBtn && !toggleBtn.getAttribute("data-listener-added")) {
+        toggleBtn.setAttribute("data-listener-added", "true");
+        toggleBtn.addEventListener("click", async () => {
+          if (!input) return;
+
+          if (input.type === "text") {
             input.type = "password";
             showIcon?.classList.remove("hidden");
             hideIcon?.classList.add("hidden");
+            return;
           }
-        }
-      });
+
+          if (!input.value) {
+            toggleBtn.setAttribute("disabled", "true");
+            const secret = await fetchRevealedCredential({
+              entityType: "application",
+              entityId: appId,
+              metaIndex,
+            });
+            toggleBtn.removeAttribute("disabled");
+            if (secret === null) return;
+            input.value = secret;
+          }
+
+          input.type = "text";
+          showIcon?.classList.add("hidden");
+          hideIcon?.classList.remove("hidden");
+        });
+      }
+
+      if (copyBtn && !copyBtn.getAttribute("data-listener-added")) {
+        copyBtn.setAttribute("data-listener-added", "true");
+        copyBtn.addEventListener("click", async () => {
+          if (!input) return;
+          const defaultIcon = copyBtn.querySelector<HTMLElement>("[data-copy-icon-default]");
+          const successIcon = copyBtn.querySelector<HTMLElement>("[data-copy-icon-success]");
+
+          let secret = input.value;
+          if (!secret) {
+            copyBtn.setAttribute("disabled", "true");
+            const fetched = await fetchRevealedCredential({
+              entityType: "application",
+              entityId: appId,
+              metaIndex,
+            });
+            copyBtn.removeAttribute("disabled");
+            if (fetched === null) return;
+            secret = fetched;
+            input.value = fetched;
+          }
+
+          const ok = await copySecretToClipboard(secret);
+          if (ok) {
+            defaultIcon?.classList.add("hidden");
+            successIcon?.classList.remove("hidden");
+            showToast("Copiado al portapapeles", "alert-success");
+            setTimeout(() => {
+              defaultIcon?.classList.remove("hidden");
+              successIcon?.classList.add("hidden");
+            }, 1800);
+          }
+        });
+      }
     });
   };
 

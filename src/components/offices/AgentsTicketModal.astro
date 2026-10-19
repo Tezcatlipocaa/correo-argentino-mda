@@ -1,7 +1,7 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import { Icon } from "astro-icon/components";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
 
 interface Props {
   id?: string;
@@ -107,10 +107,9 @@ const { id = "agents-ticket-modal" } = Astro.props;
   </Fragment>
   <Fragment slot="actions">
     <div class="mt-6 flex flex-wrap justify-end gap-2">
-      <ActionCancelButton
+      <ActionButton
         type="button"
         label="Cancelar"
-        variant="error"
         onclick="this.closest('dialog')?.close()"
       />
       <button
@@ -140,8 +139,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
           <span
             data-btn-spinner
             class="loading loading-spinner loading-sm col-start-1 row-start-1 opacity-0 transition-opacity duration-150 motion-reduce:transition-none"
-            aria-hidden="true"
-          ></span>
+            aria-hidden="true"></span>
         </span>
       </button>
     </div>
@@ -258,10 +256,9 @@ const { id = "agents-ticket-modal" } = Astro.props;
   </Fragment>
   <Fragment slot="actions">
     <div class="mt-6 flex justify-end gap-2">
-      <ActionCancelButton
+      <ActionButton
         type="button"
         label="Cancelar"
-        variant="error"
         onclick="this.closest('dialog')?.close()"
       />
       <button
@@ -282,8 +279,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
           <span
             data-btn-spinner
             class="loading loading-spinner loading-sm col-start-1 row-start-1 opacity-0 transition-opacity duration-150 motion-reduce:transition-none"
-            aria-hidden="true"
-          ></span>
+            aria-hidden="true"></span>
         </span>
       </button>
     </div>
@@ -556,9 +552,7 @@ const { id = "agents-ticket-modal" } = Astro.props;
     btn
       .querySelector("[data-btn-spinner]")
       ?.classList.toggle("opacity-0", !busy);
-    btn
-      .querySelector("[data-btn-label]")
-      ?.classList.toggle("opacity-0", busy);
+    btn.querySelector("[data-btn-label]")?.classList.toggle("opacity-0", busy);
     btn.setAttribute("aria-busy", busy ? "true" : "false");
   }
 

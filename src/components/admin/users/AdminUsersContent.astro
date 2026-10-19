@@ -8,8 +8,6 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { Icon } from "astro-icon/components";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionPasswordButton from "@components/ui/ActionPasswordButton.astro";
 import ActionButton from "@components/ui/ActionButton.astro";
 import {
   PARTICIPATION_HELPDESK_NAMES,
@@ -26,8 +24,6 @@ import PasswordField from "@components/ui/forms/PasswordField.astro";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import Modal from "@components/ui/Modal.astro";
 import UserCreateModal from "@components/admin/users/UserCreateModal.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 
 const currentUserId = Astro.locals.user?.id ?? 0;
@@ -140,6 +136,14 @@ const isSupervisorRole = (role: string): boolean =>
         <Icon name="boxicons:universal-access-filled" size={18} />
         Ver tabla comparativa de permisos por rol
       </button>
+      <a
+        href={`${getCleanBase()}admin/usuarios/estadisticas`}
+        class="btn btn-soft btn-sm md:btn-md gap-2"
+        data-cta-estadisticas
+      >
+        <Icon name="boxicons:pie-chart-alt-filled" size={18} />
+        Estadísticas
+      </a>
     </div>
     <div class="flex flex-wrap items-center gap-3">
       <a
@@ -424,7 +428,9 @@ const isSupervisorRole = (role: string): boolean =>
                   </div>
 
                   <div class="flex items-center justify-end gap-3">
-                    <ActionEditButton
+                    <ActionButton
+        icon="boxicons:pencil-filled"
+        color="btn-secondary"
                       data-edit-user-btn
                       data-user-id={u.id}
                       data-user-role={normalizeRole(u.role)}
@@ -452,7 +458,9 @@ const isSupervisorRole = (role: string): boolean =>
                       ariaLabel={`Editar usuario ${u.username}`}
                     />
 
-                    <ActionPasswordButton
+                    <ActionButton
+        icon="boxicons:lock-open-filled"
+        color="btn-neutral"
                       class={
                         u.id === currentUserId ? "btn-disabled" : undefined
                       }
@@ -644,13 +652,12 @@ const isSupervisorRole = (role: string): boolean =>
                           </div>
                         )}
                         <div class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3">
-                          <ActionCancelButton
+                          <ActionButton
                             type="button"
                             label="Cancelar"
-                            variant="error"
                             onclick="this.closest('dialog').close()"
                           />
-                          <ActionConfirmButton
+                          <ActionButton
                             type="submit"
                             color="btn-primary"
                             label="Guardar"
@@ -691,13 +698,12 @@ const isSupervisorRole = (role: string): boolean =>
                           inputClass="input-sm"
                         />
                         <div class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3">
-                          <ActionCancelButton
+                          <ActionButton
                             type="button"
                             label="Cancelar"
-                            variant="error"
                             onclick="this.closest('dialog').close()"
                           />
-                          <ActionConfirmButton
+                          <ActionButton
                             type="submit"
                             color="btn-warning"
                             label="Blanquear"
@@ -733,8 +739,12 @@ const isSupervisorRole = (role: string): boolean =>
                           value="deactivate-user"
                         />
                         <input type="hidden" name="userId" value={u.id} />
-                        <ActionCancelButton onclick="this.closest('dialog').close()" />
-                        <ActionConfirmButton
+                        <ActionButton
+                          label="Cancelar"
+                          onclick="this.closest('dialog').close()"
+                        />
+                        <ActionButton
+                          type="submit"
                           label="Desactivar"
                           color="btn-error"
                         />
@@ -785,7 +795,8 @@ const isSupervisorRole = (role: string): boolean =>
                 <form method="POST" data-async-form>
                   <input type="hidden" name="action" value="reactivate-user" />
                   <input type="hidden" name="userId" value={u.id} />
-                  <ActionConfirmButton
+                  <ActionButton
+                    type="submit"
                     label="Reactivar"
                     color="btn-success"
                     icon="boxicons:user-plus-filled"

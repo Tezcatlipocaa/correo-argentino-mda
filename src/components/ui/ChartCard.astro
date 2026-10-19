@@ -1,0 +1,679 @@
+---
+import ActionButton from "./ActionButton.astro";
+
+interface ChartSeries {
+  label: string;
+  data: number[];
+}
+
+interface Props {
+  type: "bar" | "line" | "doughnut";
+  title: string;
+  subtitle?: string;
+  indexAxis?: "x" | "y";
+  labels?: string[];
+  series?: ChartSeries[];
+  fetchUrl?: string;
+  chartKey?: string;
+  chartName?: string;
+  variant?: "card" | "bare";
+  emptyMessage?: string;
+  exportable?: boolean;
+  class?: string;
+}
+
+const {
+  type,
+  title,
+  subtitle,
+  indexAxis = "x",
+  labels = [],
+  series = [],
+  fetchUrl,
+  chartKey,
+  chartName,
+  variant = "card",
+  emptyMessage = "Sin datos para los filtros seleccionados",
+  exportable = false,
+  class: className = "",
+} = Astro.props;
+
+const chartId = `chart-${Math.random().toString(36).slice(2, 10)}`;
+const tableId = `${chartId}-table`;
+const ariaLabel = `Gráfico de ${type}: ${title}`;
+const chartProps = JSON.stringify({
+  chartId,
+  chartName,
+  type,
+  title,
+  indexAxis,
+  labels,
+  series,
+  fetchUrl,
+  chartKey,
+  exportable,
+});
+---
+
+<div
+  data-chart-card={chartId}
+  data-chart-name={chartName}
+  data-chart-props={chartProps}
+  class:list={[
+    variant === "bare" ? "flex w-full flex-col gap-2" : "card card-border bg-base-100 border-base-200 shadow-sm",
+    className,
+  ]}
+>
+  <div
+    class:list={[
+      variant === "bare" ? "" : "card-body gap-3",
+      "flex flex-col gap-2",
+    ]}
+  >
+    {variant === "card" && (
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div class="min-w-0">
+          <h3 class="font-semibold">{title}</h3>
+          {subtitle && <p class="text-base-content/60 text-sm">{subtitle}</p>}
+        </div>
+      </div>
+    )}
+
+    <div class="relative min-h-[13.75rem] w-full" data-chart-body>
+      <canvas
+        data-chart-canvas
+        role="img"
+        aria-label={ariaLabel}
+        class="hidden h-55 w-full"
+      />
+      <div
+        class="text-base-content/50 absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-medium"
+        data-chart-empty
+      >
+        {emptyMessage}
+      </div>
+      <div
+        id={tableId}
+        data-chart-table
+        class="hidden w-full overflow-x-auto p-1"
+      />
+    </div>
+
+    <div class="flex items-center justify-end gap-1">
+      {exportable && (
+        <div class="items-center gap-1" data-export-buttons style="display: none">
+          <ActionButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon="boxicons:image"
+            iconSize={16}
+            label="PNG"
+            data-export-png
+          />
+          <ActionButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon="boxicons:file"
+            iconSize={16}
+            label="CSV"
+            data-export-csv
+          />
+        </div>
+      )}
+      <ActionButton
+        type="button"
+        variant="ghost"
+        size="sm"
+        icon="boxicons:table"
+        iconSize={16}
+        data-table-toggle
+        aria-expanded="false"
+        aria-controls={tableId}
+      >
+        <span data-table-toggle-label>Ver tabla</span>
+      </ActionButton>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { Chart } from "chart.js/auto";
+  import { readChartTokens } from "@lib/chartTokens";
+
+interface ChartCardProps {
+  chartId: string;
+  chartName?: string;
+  type: "bar" | "line" | "doughnut";
+  title: string;
+  indexAxis?: "x" | "y";
+  labels: string[];
+  series: { label: string; data: number[] }[];
+  fetchUrl?: string;
+  chartKey?: string;
+  exportable?: boolean;
+}
+
+interface ChartWindow extends Window {
+  __chartCards?: Record<string, { setData: typeof setData }>;
+  __pendingChartUpdates?: Record<
+    string,
+    { labels: string[]; series: { label: string; data: number[] }[] }
+  >;
+}
+
+const win = window as ChartWindow;
+
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function dateStamp(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}${mm}${dd}`;
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportPng(canvas: HTMLCanvasElement, title: string): void {
+  const source = document.createElement("canvas");
+  source.width = canvas.width;
+  source.height = canvas.height;
+  const ctx = source.getContext("2d");
+  if (!ctx) return;
+  // El canvas de Chart.js es transparente: recomponer sobre base-100.
+  const style = getComputedStyle(document.documentElement);
+  ctx.fillStyle = style.getPropertyValue("--color-base-100").trim() || "#ffffff";
+  ctx.fillRect(0, 0, source.width, source.height);
+  ctx.drawImage(canvas, 0, 0);
+  source.toBlob((blob) => {
+    if (blob) triggerDownload(blob, `${slugify(title)}-${dateStamp()}.png`);
+  }, "image/png");
+}
+
+function csvEscape(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function exportCsv(
+  currentLabels: string[],
+  currentSeries: { label: string; data: number[] }[],
+  title: string,
+): void {
+  const lines = [["Serie", ...currentLabels].map(csvEscape).join(";")];
+  for (const s of currentSeries) {
+    lines.push(
+      [s.label, ...currentLabels.map((_, i) => String(s.data[i] ?? 0))]
+        .map(csvEscape)
+        .join(";"),
+    );
+  }
+  // BOM + ';' para que Excel es-AR lo abra en columnas.
+  const blob = new Blob([`\uFEFF${lines.join("\r\n")}`], {
+    type: "text/csv;charset=utf-8",
+  });
+  triggerDownload(blob, `${slugify(title)}-${dateStamp()}.csv`);
+}
+
+function initChartCard(card: HTMLElement): void {
+  let props: ChartCardProps;
+  try {
+    props = JSON.parse(card.dataset.chartProps ?? "{}") as ChartCardProps;
+  } catch (error) {
+    console.warn("[ChartCard] props inválidas, card ignorada:", error);
+    return;
+  }
+
+  card.dataset.chartInitialized = "";
+
+  const {
+    chartId,
+    chartName,
+    type,
+    title,
+    indexAxis = "x",
+    labels,
+    series,
+    fetchUrl,
+    chartKey,
+    exportable = false,
+  } = props;
+
+  const style = getComputedStyle(document.documentElement);
+  const readTokens = () =>
+    readChartTokens((name) => style.getPropertyValue(name));
+
+  const canvas =
+    card.querySelector<HTMLCanvasElement>("[data-chart-canvas]");
+  const emptyEl = card.querySelector<HTMLElement>("[data-chart-empty]");
+  const tableWrap = card.querySelector<HTMLElement>("[data-chart-table]");
+  const toggleBtn = card.querySelector<HTMLButtonElement>("[data-table-toggle]");
+  const exportWrap = card.querySelector<HTMLElement>("[data-export-buttons]");
+
+  let chart: Chart | null = null;
+  let currentLabels: string[] = [...labels];
+  let currentSeries: { label: string; data: number[] }[] = series.map((s) => ({
+    ...s,
+  }));
+  let highlightedIndex: number | null = null;
+  let showingTable = false;
+
+  function renderTableVisibility() {
+    const canvasEl = card.querySelector("[data-chart-canvas]");
+    const tableWrap = card.querySelector("[data-chart-table]");
+    const toggle = card.querySelector("[data-table-toggle]");
+    const label = card.querySelector("[data-table-toggle-label]");
+    // Sin datos el canvas queda oculto: showEmpty() ya maneja el mensaje, y
+    // re-mostrar el canvas acá dejaba "Sin datos" y un canvas vacío a la vez.
+    const hideCanvas = showingTable || !hasData();
+    canvasEl?.classList.toggle("hidden", hideCanvas);
+    if (canvasEl) {
+      canvasEl.style.display = hideCanvas ? "none" : "";
+    }
+    tableWrap?.classList.toggle("hidden", !showingTable);
+    if (toggle) {
+      if (label) label.textContent = showingTable ? "Ver gráfico" : "Ver tabla";
+      toggle.setAttribute("aria-expanded", String(showingTable));
+    }
+    if (exportWrap) {
+      exportWrap.style.display = hasData() ? "flex" : "none";
+    }
+  }
+
+  const hasData = () =>
+    currentLabels.length > 0 && currentSeries.some((s) => s.data.length > 0);
+
+  function showEmpty() {
+    chart?.destroy();
+    chart = null;
+    showingTable = false;
+    renderTableVisibility();
+    emptyEl?.classList.remove("hidden");
+    canvas?.classList.add("hidden");
+  }
+
+  function buildChart() {
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
+    chart?.destroy();
+    const tokens = readTokens();
+    Chart.defaults.font.family = "'Geist Variable', system-ui, sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = tokens.text;
+    Chart.defaults.plugins.tooltip.bodyFont = { size: 12 };
+    Chart.defaults.plugins.tooltip.titleFont = { size: 12, weight: "bold" };
+    Chart.defaults.plugins.tooltip.footerFont = { size: 12 };
+    const paletteLen = tokens.palette.length;
+    const isDoughnut = type === "doughnut";
+    const isHorizontal = type === "bar" && indexAxis === "y";
+    chart = new Chart(ctx, {
+      type,
+      data: {
+        labels: currentLabels,
+        datasets: currentSeries.map((s, i) => {
+          const color = tokens.palette[i % tokens.palette.length];
+          return isDoughnut
+            ? {
+                label: s.label,
+                data: s.data,
+                backgroundColor: currentLabels.map(
+                  (_, j) =>
+                    tokens.palette[(j + i * paletteLen) % tokens.palette.length],
+                ),
+                borderColor: tokens.grid,
+                borderWidth: 1.5,
+              }
+            : {
+                label: s.label,
+                data: s.data,
+                backgroundColor: color,
+                borderColor: color,
+                borderWidth: 1,
+                borderRadius: type === "bar" ? 6 : 0,
+              };
+        }),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: (_event, elements) => {
+          if (!elements.length) return;
+          const index = elements[0].index;
+          const background = chart?.data.datasets[0]?.backgroundColor;
+          const color = Array.isArray(background)
+            ? background[index]
+            : background;
+          card.dispatchEvent(
+            new CustomEvent("chart-card:segment-click", {
+              bubbles: true,
+              detail: {
+                chartId,
+                chartName,
+                index,
+                label: chart?.data.labels?.[index],
+                color,
+              },
+            }),
+          );
+        },
+        plugins: {
+          legend: {
+            display: type === "doughnut" || currentSeries.length > 1,
+            position: "bottom",
+            labels: {
+              color: tokens.text,
+              font: { size: 12 },
+            },
+          },
+        },
+        ...(isDoughnut
+          ? {}
+          : isHorizontal
+            ? {
+                indexAxis: "y",
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    ticks: { color: tokens.text, font: { size: 12 } },
+                    grid: { color: tokens.grid },
+                  },
+                  y: {
+                    ticks: { color: tokens.text, font: { size: 12 } },
+                    grid: { display: false },
+                  },
+                },
+              }
+            : {
+                scales: {
+                  x: {
+                    ticks: {
+                      color: tokens.text,
+                      font: { size: 12 },
+                    },
+                    grid: { display: false },
+                  },
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      color: tokens.text,
+                      font: { size: 12 },
+                    },
+                    grid: { color: tokens.grid },
+                  },
+                },
+              }),
+      },
+    });
+    canvas?.classList.remove("hidden");
+    emptyEl?.classList.add("hidden");
+    renderTableVisibility();
+    applyHighlight();
+  }
+
+  function renderTable() {
+    if (!tableWrap) return;
+    tableWrap.innerHTML = "";
+    if (!hasData()) return;
+    const table = document.createElement("table");
+    table.className = "table table-sm table-zebra w-full text-xs";
+    const caption = document.createElement("caption");
+    caption.className = "sr-only";
+    caption.textContent = `Datos del gráfico: ${title}`;
+    table.appendChild(caption);
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const catTh = document.createElement("th");
+    catTh.scope = "col";
+    catTh.textContent = "Categoría / Segmento";
+    headRow.appendChild(catTh);
+    currentSeries.forEach((s) => {
+      const th = document.createElement("th");
+      th.scope = "col";
+      th.className = "text-right";
+      th.textContent = s.label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    currentLabels.forEach((label, i) => {
+      const row = document.createElement("tr");
+      const rowTh = document.createElement("th");
+      rowTh.scope = "row";
+      rowTh.className = "font-medium";
+      rowTh.textContent = label;
+      row.appendChild(rowTh);
+      currentSeries.forEach((s) => {
+        const td = document.createElement("td");
+        td.className = "text-right font-mono";
+        td.dataset.label = s.label;
+        const val = s.data[i] ?? 0;
+        td.textContent = typeof val === "number" ? val.toLocaleString("es-AR") : String(val);
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+  }
+
+  function applyHighlight() {
+    if (!chart) return;
+    if (highlightedIndex === null) {
+      const tokens = readTokens();
+      chart.data.datasets.forEach((ds) => {
+        ds.borderColor = tokens.grid;
+        ds.borderWidth =
+          type === "line" ? 2 : type === "doughnut" ? 1.5 : 1;
+      });
+      chart.update();
+      return;
+    }
+    const index = highlightedIndex;
+    const tokens = readTokens();
+    const isDoughnut = type === "doughnut";
+    chart.data.datasets.forEach((ds) => {
+      const base = ds.backgroundColor;
+      ds.borderColor = currentLabels.map((_: string, i: number) => {
+        if (i !== index) return tokens.grid;
+        return String(Array.isArray(base) ? base[i] : base ?? tokens.grid);
+      });
+      if (type === "line") {
+        ds.borderWidth = 3;
+      } else {
+        ds.borderWidth = currentLabels.map((_: string, i: number) =>
+          i === index ? 4 : isDoughnut ? 1.5 : 1,
+        );
+      }
+    });
+    chart.update();
+  }
+
+  function setData(
+    nextLabels: string[],
+    nextSeries: { label: string; data: number[] }[],
+  ) {
+    currentLabels = [...nextLabels];
+    currentSeries = nextSeries.map((s) => ({ ...s }));
+    renderTable();
+    if (hasData()) buildChart();
+    else showEmpty();
+    renderTableVisibility();
+  }
+
+  if (chartName) {
+    (win.__chartCards ??= {})[chartName] = { setData };
+    const queued = (win.__pendingChartUpdates ??= {})[chartName];
+    if (queued) {
+      delete win.__pendingChartUpdates[chartName];
+      setData(queued.labels, queued.series);
+    }
+  }
+
+  function onChartUpdate(event: Event) {
+    const detail = (event as CustomEvent).detail;
+    if (!chartName || detail?.chartName !== chartName) return;
+    setData(detail.labels, detail.series);
+  }
+
+  function onChartHighlight(event: Event) {
+    const detail = (event as CustomEvent).detail;
+    if (!chartName || detail?.chartName !== chartName || !chart) return;
+    highlightedIndex = detail.index as number | null;
+    applyHighlight();
+  }
+
+  let fetchSeq = 0;
+  // Dedup por query: `lastQuery` se registra solo cuando el fetch resuelve OK
+  // (una carga exitosa no se repite), y `inFlightQuery` coalesce los triggers
+  // idénticos que llegan mientras hay un request en vuelo (init +
+  // stats:filters-changed en el primer render). Si ese request falla, el trigger
+  // coalescido reintenta en vez de quedar skipeado.
+  let lastQuery: string | null = null;
+  let inFlightQuery: string | null = null;
+  let retryPending = false;
+
+  function fetchData(query: string) {
+    // Solo skipear cuando nada está en vuelo; si no, una respuesta ya
+    // superada podría ganar cuando el usuario vuelve a una query ya cargada.
+    if (query === lastQuery && inFlightQuery === null) return;
+    if (query === inFlightQuery) {
+      retryPending = true;
+      return;
+    }
+    inFlightQuery = query;
+    retryPending = false;
+    const separator = fetchUrl?.includes("?") ? "&" : "?";
+    const seq = ++fetchSeq;
+    return fetch(`${fetchUrl}${separator}${query}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((body) => {
+        if (seq !== fetchSeq) return;
+        inFlightQuery = null;
+        lastQuery = query;
+        retryPending = false;
+        const slice = body.charts[chartKey as string];
+        setData(slice.labels, slice.series);
+      })
+      .catch((error) => {
+        if (seq === fetchSeq) inFlightQuery = null;
+        console.error("[ChartCard] fetch falló:", error);
+        if (retryPending) {
+          retryPending = false;
+          fetchData(query);
+        }
+      });
+  }
+
+  function onFiltersChanged(event: Event) {
+    fetchData((event as CustomEvent).detail?.query ?? "");
+  }
+
+  window.addEventListener("chart-card:update", onChartUpdate);
+  window.addEventListener("chart-card:highlight", onChartHighlight);
+
+  if (fetchUrl && chartKey) {
+    window.addEventListener("stats:filters-changed", onFiltersChanged);
+  }
+
+  toggleBtn?.addEventListener("click", () => {
+    showingTable = !showingTable;
+    renderTableVisibility();
+  });
+
+  if (exportable) {
+    card
+      .querySelector("[data-export-png]")
+      ?.addEventListener("click", () => {
+        if (canvas) exportPng(canvas, title);
+      });
+    card
+      .querySelector("[data-export-csv]")
+      ?.addEventListener("click", () => {
+        exportCsv(currentLabels, currentSeries, title);
+      });
+  }
+
+  const observer = new MutationObserver(() => {
+    if (chart) buildChart();
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+
+  function onBeforeSwap() {
+    document.removeEventListener("astro:before-swap", onBeforeSwap);
+    observer.disconnect();
+    window.removeEventListener("chart-card:update", onChartUpdate);
+    window.removeEventListener("chart-card:highlight", onChartHighlight);
+    window.removeEventListener("stats:filters-changed", onFiltersChanged);
+    chart?.destroy();
+    chart = null;
+    if (chartName) delete win.__chartCards?.[chartName];
+  }
+
+  document.addEventListener("astro:before-swap", onBeforeSwap);
+
+  renderTable();
+  if (hasData()) buildChart();
+
+  // Las cards en modo vivo no tienen data inicial: si el evento
+  // stats:filters-changed ya pasó (carrera de hidratación / server islands)
+  // la card quedaría vacía para siempre, así que se trae el estado actual.
+  if (fetchUrl && chartKey) {
+    fetchData(window.location.search.slice(1));
+  }
+}
+
+const initPendingChartCards = () => {
+  document
+    .querySelectorAll<HTMLElement>("[data-chart-card]:not([data-chart-initialized])")
+    .forEach(initChartCard);
+};
+
+initPendingChartCards();
+
+// Los scripts de un server island viajan en el HTML inyectado y el browser no
+// los ejecuta, así que las cards pueden llegar después de esta corrida.
+// ClientRouter, igual: tras astro:after-swap hay cards nuevas sin init.
+document.addEventListener("astro:after-swap", initPendingChartCards);
+
+const injectedCardsObserver = new MutationObserver((records) => {
+  if (records.some((record) => record.addedNodes.length)) {
+    initPendingChartCards();
+  }
+});
+injectedCardsObserver.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+});
+
+function onModuleBeforeSwap() {
+  injectedCardsObserver.disconnect();
+  document.removeEventListener("astro:after-swap", initPendingChartCards);
+  document.removeEventListener("astro:before-swap", onModuleBeforeSwap);
+}
+
+document.addEventListener("astro:before-swap", onModuleBeforeSwap);
+</script>

@@ -25,15 +25,19 @@ async function invgateQaRequest<T>(
   const rawUsername = getEnv("INVGATE_QA_API_USERNAME");
 
   if (!apiKey) {
-    throw new Error(
-      "[InvGate QA] Variable de entorno INVGATE_QA_API_KEY no definida.",
-    );
+    return {
+      ok: false,
+      status: 0,
+      message: "[InvGate QA] Variable de entorno INVGATE_QA_API_KEY no definida.",
+    };
   }
 
   if (!baseUrl) {
-    throw new Error(
-      "[InvGate QA] Variable de entorno INVGATE_QA_BASE_URL no definida.",
-    );
+    return {
+      ok: false,
+      status: 0,
+      message: "[InvGate QA] Variable de entorno INVGATE_QA_BASE_URL no definida.",
+    };
   }
 
   const apiUsername = rawUsername || "portalmda";

@@ -1,0 +1,39 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import OficinasEstadisticasContent from "@components/offices/stats/OficinasEstadisticasContent.astro";
+import { getCleanBase } from "@lib/baseUrl";
+import ActionButton from "@components/ui/ActionButton.astro";
+
+const cleanBase = getCleanBase();
+---
+
+<BaseLayout>
+  <PageContainer width="xxl">
+    <MetricsHeader
+      backHref={`${cleanBase}oficinas`}
+      backLabel="Volver al directorio"
+      title="Estadísticas de oficinas"
+      description="Usuarios, incidentes, parque y modernización de la red."
+      badge="Últimos 30 días"
+    >
+      <Fragment slot="actions">
+        <ActionButton
+          href={`${cleanBase}oficinas/estructura`}
+          size="sm"
+          variant="outline"
+          icon="boxicons:network-chart-filled"
+          title="Ver estructura jerárquica de la red"
+        >
+          Estructura
+        </ActionButton>
+      </Fragment>
+    </MetricsHeader>
+
+    <OficinasEstadisticasContent server:defer>
+      <ChartCardSkeleton slot="fallback" count={3} />
+    </OficinasEstadisticasContent>
+  </PageContainer>
+</BaseLayout>

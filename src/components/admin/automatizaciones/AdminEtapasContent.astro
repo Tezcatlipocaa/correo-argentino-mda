@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { db } from "@db/index";
 import { workflowStages, workflowStageTickets } from "@db/schema";
 import { asc } from "drizzle-orm";
@@ -8,8 +9,6 @@ import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import { Icon } from "astro-icon/components";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { resolveUrl } from "@lib/url";
 
 const stages = await db
@@ -185,7 +184,9 @@ const basePath = resolveUrl("/admin/automatizaciones/etapas");
                   />
                 </button>
               </form>
-              <ActionEditButton
+              <ActionButton
+        icon="boxicons:pencil-filled"
+        color="btn-secondary"
                 href={`${basePath}/edit/${stage.id}`}
                 ariaLabel={`Editar etapa ${stage.name}`}
               />
@@ -195,7 +196,10 @@ const basePath = resolveUrl("/admin/automatizaciones/etapas");
                 class="inline"
                 onsubmit={`return confirm("¿Eliminar la etapa '${stage.name}' y sus tickets?")`}
               >
-                <ActionDeleteButton ariaLabel={`Eliminar etapa ${stage.name}`} />
+                <ActionButton
+        type="submit"
+        icon="boxicons:trash-filled"
+        color="btn-error" ariaLabel={`Eliminar etapa ${stage.name}`} />
               </form>
             </div>
           </article>

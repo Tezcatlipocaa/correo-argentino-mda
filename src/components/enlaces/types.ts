@@ -27,7 +27,10 @@ export interface ImportantLink {
   alternatives?: LinkAlternative[];
   iconPath?: string;
   deprecated?: boolean;
-  credentials?: { username: string; password?: string };
+  credentials?: {
+    username?: string;
+    hasPassword?: boolean;
+  };
 }
 
 export interface RawLinkCategory {

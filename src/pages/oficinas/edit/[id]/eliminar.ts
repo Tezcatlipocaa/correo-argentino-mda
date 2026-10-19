@@ -6,14 +6,15 @@ import {
   officeInvgateLinks,
 } from "@db/schema";
 import { createDeleteHandler } from "@lib/api/deleteHandler";
+import { invalidateOfficeCaches } from "@lib/officeQueries";
 
 export const POST = createDeleteHandler({
   entityName: "oficina",
   redirectPath: "oficinas",
   requiredFeature: "Administrar Contenido",
   genericSnapshot: false,
-  performDelete: async (id, { username }) =>
-    deleteWithSnapshot({
+  performDelete: async (id, { username }) => {
+    const res = await deleteWithSnapshot({
       entity: "oficina",
       recordId: id,
       username,
@@ -25,7 +26,10 @@ export const POST = createDeleteHandler({
         { key: "officeAssets", table: officeAssets, fkColumn: officeAssets.officeId, fkProperty: "officeId" },
         { key: "officeInvgateLinks", table: officeInvgateLinks, fkColumn: officeInvgateLinks.officeId, fkProperty: "officeId" },
       ],
-    }),
+    });
+    invalidateOfficeCaches();
+    return res;
+  },
   successMessage: (d) =>
     d
       ? `Oficina "${(d as any).name}" (${(d as any).code}) eliminada con éxito.`

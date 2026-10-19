@@ -75,6 +75,18 @@
 - [x] **Track: Rediseño de Pantalla Completa: Nueva Auditoría de Calidad**
   *Link: [./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md](./tracks/calidad_nueva_auditoria_pantalla_completa_20261008/index.md)*
 ---
+- [x] **Track: Árbol Interactivo de Estructura de Oficinas**
+  *Link: [./tracks/oficinas_estructura_arbol_20261013/index.md](./tracks/oficinas_estructura_arbol_20261013/index.md)*
+---
+- [x] **Track: Refactor y Estandarización UI/UX del Módulo de Recursos (Enlaces, Aplicativos y Contactos)**
+  *Link: [./tracks/recursos_ui_refactor_20261015/index.md](./tracks/recursos_ui_refactor_20261015/index.md)*
+---
+- [x] **Track: Mejoras UI/UX del Chatbot IA para Administradores**
+  *Link: [./tracks/admin_chatbot_ui_ux_20261015/index.md](./tracks/admin_chatbot_ui_ux_20261015/index.md)*
+---
+- [x] **Track: Persistencia de Sesión del Chatbot IA en sessionStorage**
+  *Link: [./tracks/admin_chatbot_session_storage_20261015/index.md](./tracks/admin_chatbot_session_storage_20261015/index.md)*
+---
 - [x] **Track: Asistente IA Espectacular para Auditorías de Calidad (Modelos Free & Gemini)**
   *Link: [./tracks/calidad_ia_asistente_20261015/index.md](./tracks/calidad_ia_asistente_20261015/index.md)*
 ---
@@ -83,6 +95,12 @@
 ---
 - [x] **Track: Scraping Unificado de Línea de Tiempo e Historial de Cambios InvGate (vía Azure SSO) para Evaluación IA**
   *Link: [./tracks/calidad_invgate_timeline_scraping_20261015/index.md](./tracks/calidad_invgate_timeline_scraping_20261015/index.md)*
+---
+- [x] **Track: Optimización Integral de Rendimiento y Benchmarks (Inicio, Pantallas, Scroll e Historial)**
+  *Link: [./tracks/perf_optimization_20261016/index.md](./tracks/perf_optimization_20261016/index.md)*
+---
+- [x] **Track: Rediseño UI/UX, Filtros Flotantes y Rendimiento de Árboles Interactivos**
+  *Link: [./tracks/trees_ui_ux_perf_20261016/index.md](./tracks/trees_ui_ux_perf_20261016/index.md)*
 ---
 - [x] **Track: Council de Calidad MDA (Orquestación Multi-Agente & Fallback Resiliente)**
   *Link: [./tracks/calidad_council_orquestacion_20261016/index.md](./tracks/calidad_council_orquestacion_20261016/index.md)*
@@ -98,5 +116,17 @@
 ---
 - [x] **Track: Generador de Calibración de Rúbricas y Diff Canónico para Cierre de Ground Truth**
   *Link: [./tracks/calidad_calibracion_feedback_rubricas_20261017/index.md](./tracks/calidad_calibracion_feedback_rubricas_20261017/index.md)*
-
-
+---
+- [x] **Track: Auto-Deploy Transaccional, Guardia de Schema y Gate Pre-Push**
+  *Link: [./tracks/safe_deploy_20261017/index.md](./tracks/safe_deploy_20261017/index.md)*
+---
+- [x] **Track: Seguridad 1 — Credenciales, Sesiones, Tránsito Seguro (LDAPS) y Preparación Azure AD**
+  *Link: [./tracks/sec_auth_credentials_20261017/index.md](./tracks/sec_auth_credentials_20261017/index.md)*
+---
+- [ ] **Track (Backlog): Seguridad 2 — Control de Acceso (RBAC), CSRF Centralizado y Rate Limiting (`sec_rbac_csrf_ratelimit`)**
+---
+- [ ] **Track (Backlog): Seguridad 3 — Blindaje contra Inyecciones (SSRF, Subprocesos, SQL) y Sanitización XSS/Archivos (`sec_xss_ssrf_files`)**
+---
+- [ ] **Track (Backlog): Seguridad 4 — Guardrails de IA y Prevención de Prompt Injection para LLM Local (`sec_ai_llm_guardrails`)**
+---
+- [ ] **Track (Backlog): Sistema Dinámico de Gestión de Usuarios, Roles, Mesas y Visibilidad en UI — Individual y Masivo, Desacoplado de Azure AD (`dynamic_rbac_ui_manager`)**

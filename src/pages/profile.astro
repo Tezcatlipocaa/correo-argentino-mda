@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
@@ -15,12 +16,12 @@ import { normalizeRole } from "@lib/rbac";
 import Modal from "@components/ui/Modal.astro";
 import PasswordField from "@components/ui/forms/PasswordField.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
-import ActionPasswordButton from "@components/ui/ActionPasswordButton.astro";
 import AsyncFormScript from "@components/admin/ui/AsyncFormScript.astro";
 import { getBaseNoSlash } from "@lib/baseUrl";
 import { getCsrfTokenForSession } from "@lib/csrf";
+import { db } from "@db/index";
+import { users } from "@db/schema";
+import { eq } from "drizzle-orm";
 
 const user = Astro.locals.user;
 if (!user || user.id === 0) {
@@ -71,6 +72,13 @@ const { employee, agent, sessionExpiresAt } = await getProfileDetails({
   username: user.username,
   sessionId: Astro.locals.sessionId,
 });
+
+const [currentUser] = await db
+  .select({ authProvider: users.authProvider, hasPassword: users.password })
+  .from(users)
+  .where(eq(users.id, user.id));
+
+const canChangePassword = currentUser?.authProvider === "local" && Boolean(currentUser.hasPassword);
 
 const displayName =
   employee?.fullname?.trim() || agent?.name?.trim() || user.username;
@@ -215,12 +223,22 @@ const participations = agent
                 {user.username}
               </p>
               <div class="mt-1">
-                <ActionPasswordButton
-                  ariaLabel="Blanqueo de contraseña"
-                  label="Blanqueo de contraseña"
-                  aria-haspopup="dialog"
-                  onclick="document.getElementById('modal-self-password').showModal()"
-                />
+                {
+                  canChangePassword ? (
+                    <ActionButton
+                      icon="boxicons:lock-open-filled"
+                      color="btn-neutral"
+                      ariaLabel="Blanqueo de contraseña"
+                      label="Blanqueo de contraseña"
+                      aria-haspopup="dialog"
+                      onclick="document.getElementById('modal-self-password').showModal()"
+                    />
+                  ) : (
+                    <span class="badge badge-outline border-base-300 text-base-content/60 text-xs">
+                      Autenticación administrada por Azure AD
+                    </span>
+                  )
+                }
               </div>
             </div>
           </div>
@@ -357,8 +375,8 @@ const participations = agent
           Blanquear contraseña
         </h3>
         <p class="text-base-content/60 mb-4 text-xs">
-          Cambiá la contraseña de tu cuenta. Por seguridad, se cerrarán las demás
-          sesiones activas.
+          Cambiá la contraseña de tu cuenta. Por seguridad, se cerrarán las
+          demás sesiones activas.
         </p>
         <form
           method="POST"
@@ -394,12 +412,12 @@ const participations = agent
           <div
             class="border-base-200 mt-4 flex items-center justify-end gap-2 border-t pt-3"
           >
-            <ActionCancelButton
+            <ActionButton
               type="button"
-              variant="error"
+              label="Cancelar"
               onclick="this.closest('dialog').close()"
             />
-            <ActionConfirmButton
+            <ActionButton
               type="submit"
               color="btn-warning"
               label="Guardar"

@@ -12,19 +12,19 @@ import { eq } from "drizzle-orm";
 const user = Astro.locals.user;
 const userRole = normalizeRole(user?.role || "agent");
 
-let displayName = user?.username || "Usuario";
+let displayName = user?.username ? user.username.trim() : "Usuario";
 if (user && user.id !== 0) {
   const matchedAgent = await db
     .select({ name: agents.name })
     .from(agents)
     .where(eq(agents.username, user.username))
     .limit(1);
-  if (matchedAgent.length > 0) {
-    displayName = matchedAgent[0].name;
+  if (matchedAgent.length > 0 && matchedAgent[0].name) {
+    displayName = matchedAgent[0].name.trim();
   }
 }
 
-if (displayName === user?.username) {
+if (displayName === user?.username?.trim()) {
   displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
 }
 
@@ -122,7 +122,7 @@ const quickAccessItems: QuickAccessItem[] = [
     iconTone: "bg-info/10 text-info",
   },
   {
-    href: "/contactos",
+    href: "/recursos/contactos",
     title: "Contactos",
     description:
       "Consulta teléfonos, correos y enlaces de servicios y proveedores.",
@@ -191,7 +191,8 @@ const visibleQuickAccessItems =
         {
           user?.id !== 0 ? (
             <>
-              ¡Hola, <span class="text-secondary dark:text-primary">{displayName}</span>!
+              ¡Hola,{" "}
+              <span class="text-secondary dark:text-primary">{displayName}</span>!
             </>
           ) : (
             "¡Hola!"
@@ -212,9 +213,7 @@ const visibleQuickAccessItems =
       <!-- Módulos Principales -->
       {
         visibleMainModules.length > 0 && (
-          <div
-            class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
-          >
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-6">
             {visibleMainModules.map((mod) => (
               <QuickAccessCard
                 href={mod.href}
@@ -230,9 +229,7 @@ const visibleQuickAccessItems =
       }
 
       <!-- Enlaces de acceso rápido -->
-      <div
-        class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))]"
-      >
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-6">
         {
           visibleQuickAccessItems.map((item) => (
             <QuickAccessCard

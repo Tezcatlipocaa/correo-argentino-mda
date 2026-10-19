@@ -1,0 +1,312 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
+import WorkflowBentoGrid from "@components/reportes/workflows/WorkflowBentoGrid.astro";
+import WorkflowInstancesTable from "@components/reportes/workflows/WorkflowInstancesTable.astro";
+import WorkflowTimelineDrawer from "@components/reportes/workflows/WorkflowTimelineDrawer.astro";
+import { getWorkflowReport } from "@lib/workflows/service";
+import { getWorkflowConfig } from "@lib/workflows/registry";
+import { getCleanBase } from "@lib/baseUrl";
+import ActionButton from "@components/ui/ActionButton.astro";
+import RefreshReportButton from "@components/ui/RefreshReportButton.astro";
+
+const { slug } = Astro.params;
+const currentSlug = slug || "implementacion";
+const config = getWorkflowConfig(currentSlug);
+
+if (!config) {
+  return Astro.redirect("/reportes/workflows/implementacion", 302);
+}
+
+const report = await getWorkflowReport(currentSlug);
+---
+
+<BaseLayout title={`${report.config.name} | Reportes de Workflows`}>
+  <PageContainer>
+    <MetricsHeader
+      title={report.config.name}
+      description={report.config.description}
+    >
+      <Fragment slot="actions">
+        <ActionButton
+          href={`${getCleanBase()}api/reportes/workflows/${currentSlug}/export`}
+          icon="boxicons:file-detail-filled"
+          variant="outline"
+          color="btn-secondary"
+          label="Exportar CSV"
+          shortLabel="CSV"
+          title="Exportar a CSV"
+          iconSize={18}
+        />
+        <RefreshReportButton
+          id="btn-refresh-workflows"
+          endpoint={`api/reportes/workflows/${currentSlug}/refresh`}
+          title="Refrescar métricas del workflow"
+          successMsg="Métricas del workflow actualizadas con éxito"
+          errorMsg="Error al refrescar métricas del workflow"
+        />
+      </Fragment>
+    </MetricsHeader>
+
+    <section aria-label="Métricas de resumen del workflow" class="mt-6">
+      <WorkflowBentoGrid data={report} />
+    </section>
+
+    <section aria-label="Instancias del proceso de workflow" class="mt-10 space-y-4">
+      <SectionHeader
+        title="Instancias Monitoreadas del Proceso"
+        description="Detalle cronológico de tickets orquestados, avance de etapas, aprobaciones y cumplimiento de acuerdos de nivel de servicio."
+      />
+      <WorkflowInstancesTable instances={report.instances} />
+    </section>
+
+    <WorkflowTimelineDrawer />
+  </PageContainer>
+</BaseLayout>
+
+<script>
+  import type {
+    WorkflowProcessInstance,
+    WorkflowStageItem,
+    WorkflowApprovalItem,
+    WorkflowChildTicket,
+  } from "@/types/workflows";
+
+  const drawer = document.getElementById("workflow-timeline-drawer");
+  const backdrop = document.getElementById("drawer-backdrop");
+  const closeBtn = document.getElementById("drawer-close");
+
+  function openDrawer(): void {
+    if (!drawer) return;
+    drawer.classList.remove("translate-x-full");
+    if (backdrop) {
+      backdrop.classList.remove("hidden");
+      requestAnimationFrame(() => {
+        backdrop.classList.remove("opacity-0");
+      });
+    }
+  }
+
+  function closeDrawer(): void {
+    if (!drawer) return;
+    drawer.classList.add("translate-x-full");
+    if (backdrop) {
+      backdrop.classList.add("opacity-0");
+      setTimeout(() => {
+        backdrop.classList.add("hidden");
+      }, 300);
+    }
+  }
+
+  closeBtn?.addEventListener("click", closeDrawer);
+  backdrop?.addEventListener("click", closeDrawer);
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDrawer();
+  });
+
+  function getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case "completed":
+      case "closed":
+      case "solved":
+      case "approved":
+        return "badge-success";
+      case "in_progress":
+        return "badge-warning";
+      case "waiting_approval":
+        return "badge-secondary";
+      case "open":
+        return "badge-info";
+      case "rejected":
+        return "badge-error";
+      case "cancelled":
+      default:
+        return "badge-neutral";
+    }
+  }
+
+  function renderSteps(stages: WorkflowStageItem[]): void {
+    const list = document.getElementById("drawer-steps-list");
+    if (!list) return;
+    list.innerHTML = "";
+
+    if (!stages || stages.length === 0) {
+      const emptyLi = document.createElement("li");
+      emptyLi.className = "text-xs text-base-content/50 italic py-2";
+      emptyLi.textContent = "Sin etapas registradas";
+      list.appendChild(emptyLi);
+      return;
+    }
+
+    stages.forEach((stage) => {
+      const li = document.createElement("li");
+      const isCompleted = stage.status === "completed";
+      const isCurrent = stage.status === "current";
+      li.className = `step ${isCompleted ? "step-primary" : isCurrent ? "step-warning" : ""}`;
+      li.textContent = stage.name;
+      list.appendChild(li);
+    });
+  }
+
+  function escapeHtml(text: string | null | undefined): string {
+    if (text == null) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function renderApprovals(approvals: WorkflowApprovalItem[]): void {
+    const timeline = document.getElementById("drawer-approvals-timeline");
+    if (!timeline) return;
+    timeline.innerHTML = "";
+
+    if (!approvals || approvals.length === 0) {
+      const emptyLi = document.createElement("li");
+      emptyLi.className = "text-xs text-base-content/50 italic py-2";
+      emptyLi.textContent = "Sin compuertas de aprobación registradas";
+      timeline.appendChild(emptyLi);
+      return;
+    }
+
+    approvals.forEach((app) => {
+      const li = document.createElement("li");
+      const dateStr = app.decidedAt || app.requestedAt;
+      const formattedDate = dateStr
+        ? new Date(dateStr).toLocaleDateString("es-AR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "-";
+
+      const badgeClass = getStatusBadgeClass(app.status);
+      const statusLabel =
+        app.status === "approved"
+          ? "Aprobado"
+          : app.status === "rejected"
+            ? "Rechazado"
+            : "Pendiente";
+
+      const safeTitle = escapeHtml(app.title);
+      const safeApproverName = escapeHtml(app.approverName);
+      const safeApproverRole = app.approverRole ? ` · ${escapeHtml(app.approverRole)}` : "";
+      const safeComments = app.comments ? escapeHtml(app.comments) : "";
+
+      li.innerHTML = `
+        <div class="timeline-start text-xs font-mono text-base-content/60">${formattedDate}</div>
+        <div class="timeline-middle">
+          <span class="w-2.5 h-2.5 rounded-full ${app.status === "approved" ? "bg-success" : app.status === "rejected" ? "bg-error" : "bg-warning"} inline-block"></span>
+        </div>
+        <div class="timeline-end timeline-box text-xs space-y-1">
+          <div class="font-semibold text-base-content">${safeTitle}</div>
+          <div class="text-base-content/70">${safeApproverName}${safeApproverRole}</div>
+          <div class="flex items-center gap-2 pt-0.5">
+            <span class="badge badge-xs font-semibold ${badgeClass}">${statusLabel}</span>
+            ${safeComments ? `<span class="text-base-content/60 italic text-xs truncate max-w-[200px]" title="${safeComments}">${safeComments}</span>` : ""}
+          </div>
+        </div>
+        <hr class="bg-base-300" />
+      `;
+      timeline.appendChild(li);
+    });
+  }
+
+  function renderChildTickets(tickets: WorkflowChildTicket[]): void {
+    const container = document.getElementById("drawer-child-tickets");
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!tickets || tickets.length === 0) {
+      const emptyP = document.createElement("p");
+      emptyP.className = "text-xs text-base-content/50 italic py-2";
+      emptyP.textContent = "Sin subtickets vinculados";
+      container.appendChild(emptyP);
+      return;
+    }
+
+    tickets.forEach((ticket) => {
+      const card = document.createElement("div");
+      card.className =
+        "p-2.5 bg-base-200/60 rounded-box border border-base-200 flex items-center justify-between text-xs";
+      const badgeClass = getStatusBadgeClass(ticket.status);
+      const safePrettyId = escapeHtml(ticket.prettyId);
+      const safeTitle = escapeHtml(ticket.title);
+      const safeGroup = escapeHtml(ticket.assignedGroup);
+      const safeStatus = escapeHtml(ticket.status);
+
+      card.innerHTML = `
+        <div class="space-y-0.5 min-w-0 pr-2">
+          <div class="font-semibold flex items-center gap-1.5">
+            <span class="font-mono text-primary font-bold">${safePrettyId}</span>
+            <span class="text-base-content truncate" title="${safeTitle}">${safeTitle}</span>
+          </div>
+          <div class="text-base-content/60 text-xs">${safeGroup}</div>
+        </div>
+        <span class="badge badge-sm font-semibold shrink-0 ${badgeClass}">${safeStatus}</span>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function populateDrawer(instance: WorkflowProcessInstance): void {
+    const prettyIdEl = document.getElementById("drawer-pretty-id");
+    const titleEl = document.getElementById("drawer-title");
+    const statusBadgeEl = document.getElementById("drawer-status-badge");
+    const progressTextEl = document.getElementById("drawer-progress-text");
+    const progressBarEl = document.getElementById("drawer-progress-bar") as HTMLProgressElement | null;
+    const assignedGroupEl = document.getElementById("drawer-assigned-group");
+    const slaStatusEl = document.getElementById("drawer-sla-status");
+
+    if (prettyIdEl) prettyIdEl.textContent = instance.prettyId;
+    if (titleEl) titleEl.textContent = instance.title;
+
+    if (statusBadgeEl) {
+      statusBadgeEl.textContent = instance.statusLabel || instance.status;
+      statusBadgeEl.className = `badge badge-sm font-semibold ${getStatusBadgeClass(instance.status)}`;
+    }
+
+    if (progressTextEl) {
+      progressTextEl.textContent = `${instance.progressPercent}%`;
+    }
+
+    if (progressBarEl) {
+      progressBarEl.value = instance.progressPercent;
+    }
+
+    if (assignedGroupEl) {
+      assignedGroupEl.textContent = instance.assignedGroup;
+    }
+
+    if (slaStatusEl) {
+      slaStatusEl.textContent = instance.slaBreached ? "SLA Incumplido" : "SLA En Término";
+      slaStatusEl.className = instance.slaBreached ? "text-error font-semibold" : "text-success font-semibold";
+    }
+
+    renderSteps(instance.stages);
+    renderApprovals(instance.approvals);
+    renderChildTickets(instance.childTickets);
+  }
+
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement | null;
+    const btn = target?.closest(".btn-inspect-workflow");
+    if (!btn) return;
+
+    const row = btn.closest("tr[data-workflow-row]") as HTMLElement | null;
+    if (!row?.dataset.workflowRow) return;
+
+    try {
+      const instance: WorkflowProcessInstance = JSON.parse(row.dataset.workflowRow);
+      populateDrawer(instance);
+      openDrawer();
+    } catch (err) {
+      console.error("Error deserializando datos del workflow:", err);
+    }
+  });
+</script>

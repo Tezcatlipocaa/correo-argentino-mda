@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import InfoCard from "@components/ui/InfoCard.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
@@ -584,13 +585,12 @@ import TerminalSectionTitle from "@components/buscador-usuarios/TerminalSectionT
             showTooltip={false}
             class="gap-1 font-sans"
           />
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs"
+          <ActionButton
             id="close-terminal-footer-btn"
-          >
-            Cerrar
-          </button>
+            variant="ghost"
+            size="xs"
+            label="Cerrar"
+          />
         </div>
       </div>
     </div>

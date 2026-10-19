@@ -14,7 +14,10 @@ import {
 import { normalizeRole, hasPermission } from "@lib/rbac";
 import { isSectionVisibleSync } from "@lib/helpdeskAccess";
 import { getUnassignedFeedbackCount } from "@lib/getUnassignedFeedbackCount";
+import { COLUMN_CAP_SM, COLUMN_CAP_LG } from "@lib/enlacesColumns";
+import { DEFAULT_VIEW_COLUMNS } from "@lib/viewMode";
 import { ClientRouter } from "astro:transitions";
+import { getCsrfTokenForSession } from "@lib/csrf";
 
 // Components
 import { Navbar, DrawerContent } from "./_components";
@@ -24,6 +27,7 @@ import {
   CommandPaletteModal,
 } from "@/components/ui/modals";
 import ToastContainer from "@components/ui/ToastContainer.astro";
+import AdminChatbotWidget from "@/components/admin/ai/AdminChatbotWidget";
 
 interface Props {
   title?: string;
@@ -56,6 +60,7 @@ const flattenQuickAccessItems = (items: NavItem[]): NavItem[] =>
   });
 
 const cleanBase = getCleanBase();
+const csrfToken = getCsrfTokenForSession(Astro.locals.sessionId);
 
 const getRelativePath = (path: string) => {
   if (path.startsWith(cleanBase)) {
@@ -145,11 +150,16 @@ const globalFontFaceCss = `
     <meta charset="utf-8" />
     {isAutomationModule && <ClientRouter />}
 
-    <script is:inline>
+    <script
+      is:inline
+      define:vars={{ capSm: COLUMN_CAP_SM, capLg: COLUMN_CAP_LG, defaultColumns: DEFAULT_VIEW_COLUMNS }}
+    >
       const applyTheme = () => {
         const savedTheme = localStorage.getItem("theme");
         const theme =
-          savedTheme === "light" || savedTheme === "dark" ? savedTheme : "light";
+          savedTheme === "light" || savedTheme === "dark"
+            ? savedTheme
+            : "light";
         document.documentElement.setAttribute("data-theme", theme);
 
         const root = document.documentElement;
@@ -158,9 +168,19 @@ const globalFontFaceCss = `
           root.setAttribute("data-view-mode", mode);
         }
         const cols = localStorage.getItem("enlacesViewColumns");
-        if (cols === "1" || cols === "2" || cols === "3" || cols === "4") {
-          root.setAttribute("data-view-columns", cols);
-        }
+        // 767/1280: umbrales de @lib/enlacesColumns (fuente única, inyectada).
+        const cap = window.innerWidth < capSm ? 1 : window.innerWidth < capLg ? 2 : 4;
+        const pref =
+          cols === "1" || cols === "2" || cols === "3" || cols === "4"
+            ? Number(cols)
+            : defaultColumns;
+        // Se aplica SIEMPRE (no solo con valor guardado): cubre al usuario
+        // default (sin localStorage), que si no pintaria el :root 3 y el
+        // island lo bajaria al cap -> flash. Mismo ancho (viewport) y mismo
+        // calculo que applyEffectiveColumns() del island, sobre <html>.
+        const effective = String(Math.min(pref, cap));
+        root.setAttribute("data-view-columns", effective);
+        root.style.setProperty("--columns-effective", effective);
 
         const toggle = document.getElementById("theme-toggle");
         if (toggle instanceof HTMLInputElement) {
@@ -206,6 +226,7 @@ const globalFontFaceCss = `
     <meta name="apple-mobile-web-app-title" content="MDA" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
+    {csrfToken && <meta name="csrf-token" content={csrfToken} />}
     <link rel="manifest" href={`${cleanBase}site.webmanifest`} />
 
     <title>{inferredTitle}</title>
@@ -250,6 +271,11 @@ const globalFontFaceCss = `
   <AboutProjectModal />
   <FeedbackModal />
   <ToastContainer />
+  {normalizedUserRole === "admin" && (
+    <div class="hidden md:block">
+      <AdminChatbotWidget client:idle />
+    </div>
+  )}
 
   <script src="../../scripts/toggle-mode.ts"></script>
 </html>

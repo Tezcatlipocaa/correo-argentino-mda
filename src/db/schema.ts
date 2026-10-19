@@ -11,35 +11,54 @@ import {
 
 import { relations, sql } from "drizzle-orm";
 
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("agent"),
-  helpdeskId: integer("helpdesk_id").references(() => mesas.invgateId, {
-    onDelete: "set null",
+export const users = sqliteTable(
+  "users",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    username: text("username").notNull().unique(),
+    password: text("password"),
+    authProvider: text("auth_provider").notNull().default("local"),
+    externalId: text("external_id"),
+    email: text("email"),
+    role: text("role").notNull().default("agent"),
+    helpdeskId: integer("helpdesk_id").references(() => mesas.invgateId, {
+      onDelete: "set null",
+    }),
+    helpdeskName: text("helpdesk_name"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    disabledAt: integer("disabled_at", { mode: "timestamp" }),
+    disabledBy: integer("disabled_by").references(
+      (): AnySQLiteColumn => users.id,
+      { onDelete: "set null" },
+    ),
+  },
+  (table) => ({
+    externalIdIdx: uniqueIndex("users_external_id_idx").on(table.externalId),
   }),
-  helpdeskName: text("helpdesk_name"),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
-  disabledAt: integer("disabled_at", { mode: "timestamp" }),
-  disabledBy: integer("disabled_by").references(
-    (): AnySQLiteColumn => users.id,
-    { onDelete: "set null" },
-  ),
-});
+);
 
-export const employees = sqliteTable("employees", {
-  dni: text("dni").primaryKey(),
-  username: text("username").notNull(),
-  fullname: text("fullname").notNull(),
-  interno: text("interno"),
-  telefono: text("telefono"),
-  sucursal: text("sucursal"),
-  invgateExists: integer("invgate_exists", { mode: "boolean" }).default(false),
-  invgateId: integer("invgate_id"),
-  position: text("position"),
-  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const employees = sqliteTable(
+  "employees",
+  {
+    dni: text("dni").primaryKey(),
+    username: text("username").notNull(),
+    fullname: text("fullname").notNull(),
+    interno: text("interno"),
+    telefono: text("telefono"),
+    sucursal: text("sucursal"),
+    invgateExists: integer("invgate_exists", { mode: "boolean" }).default(
+      false,
+    ),
+    invgateId: integer("invgate_id"),
+    position: text("position"),
+    updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => ({
+    usernameIdx: index("employees_username_idx").on(table.username),
+    fullnameIdx: index("employees_fullname_idx").on(table.fullname),
+    sucursalIdx: index("employees_sucursal_idx").on(table.sucursal),
+  }),
+);
 
 export const employeeOffices = sqliteTable(
   "employee_offices",
@@ -187,15 +206,23 @@ export const officeContacts = sqliteTable(
   }),
 );
 
-export const officeAssets = sqliteTable("office_assets", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  officeId: integer("office_id")
-    .notNull()
-    .references(() => offices.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  hostname: text("hostname"),
-  ip: text("ip"),
-});
+export const officeAssets = sqliteTable(
+  "office_assets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    officeId: integer("office_id")
+      .notNull()
+      .references(() => offices.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    hostname: text("hostname"),
+    ip: text("ip"),
+  },
+  (table) => ({
+    officeIdIdx: index("office_assets_office_id_idx").on(table.officeId),
+    hostnameIdx: index("office_assets_hostname_idx").on(table.hostname),
+    ipIdx: index("office_assets_ip_idx").on(table.ip),
+  }),
+);
 
 export const officesRelations = relations(offices, ({ one, many }) => ({
   province: one(provinces, {
@@ -362,13 +389,17 @@ export const agents = sqliteTable("agents", {
   asignableCubic: integer("asignable_cubic", { mode: "boolean" })
     .notNull()
     .default(false),
-  incluidoCalidad: integer("incluido_calidad", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  asignableAgs: integer("asignable_ags", { mode: "boolean" })
-    .notNull()
-    .default(false),
-});
+    incluidoCalidad: integer("incluido_calidad", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    asignableAgs: integer("asignable_ags", { mode: "boolean" })
+      .notNull()
+      .default(false),
+  },
+  (table) => ({
+    usernameIdx: index("agents_username_idx").on(table.username),
+  }),
+);
 
 export const cubicAssignments = sqliteTable(
   "cubic_assignments",
@@ -435,6 +466,10 @@ export const schedules = sqliteTable(
   (table) => ({
     agentIdIdx: index("schedules_agent_id_idx").on(table.agentId),
     dateIdx: index("schedules_date_idx").on(table.date),
+    agentDateIdx: index("schedules_agent_date_idx").on(
+      table.agentId,
+      table.date,
+    ),
   }),
 );
 
@@ -460,6 +495,8 @@ export const resourceLinks = sqliteTable("resource_links", {
   deprecated: integer("deprecated", { mode: "boolean" }).default(false),
   credentialUsername: text("credential_username"),
   credentialPassword: text("credential_password"),
+  credentialMinRole: text("credential_min_role").notNull().default("agent"),
+  credentialHelpdesk: text("credential_helpdesk"),
 });
 
 export const resourceCategoriesRelations = relations(
@@ -520,6 +557,10 @@ export const qualityAudits = sqliteTable(
   (table) => ({
     monthIdx: index("quality_audits_month_idx").on(table.month),
     channelIdx: index("quality_audits_channel_idx").on(table.channelType),
+    agentMonthIdx: index("quality_audits_agent_month_idx").on(
+      table.agentId,
+      table.month,
+    ),
   }),
 );
 
@@ -622,6 +663,7 @@ export const applications = sqliteTable("applications", {
   sortOrder: integer("sortOrder").default(0),
   metadata: text("metadata"),
   instructionPdfPath: text("instruction_pdf_path"),
+  inPackBase: integer("in_pack_base", { mode: "boolean" }).default(false),
 });
 
 export const applicationCategoriesRelations = relations(
@@ -660,6 +702,8 @@ export const terminals = sqliteTable(
   },
   (table) => ({
     nisIdx: index("terminals_nis_idx").on(table.nis),
+    ipAddressIdx: index("terminals_ip_address_idx").on(table.ipAddress),
+    lastContactIdx: index("terminals_last_contact_idx").on(table.lastContact),
   }),
 );
 
@@ -693,16 +737,23 @@ export const hiddenHelpdesks = sqliteTable("hidden_helpdesks", {
   hiddenAt: text("hidden_at").notNull(),
 });
 
-export const auditLogs = sqliteTable("audit_logs", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  username: text("username").notNull(),
-  action: text("action").notNull(),
-  timestamp: text("timestamp").notNull(),
-  entityType: text("entity_type"),
-  entityId: integer("entity_id"),
-  beforeState: text("before_state", { mode: "json" }),
-  afterState: text("after_state", { mode: "json" }),
-});
+export const auditLogs = sqliteTable(
+  "audit_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    username: text("username").notNull(),
+    action: text("action").notNull(),
+    timestamp: text("timestamp").notNull(),
+    entityType: text("entity_type"),
+    entityId: integer("entity_id"),
+    beforeState: text("before_state", { mode: "json" }),
+    afterState: text("after_state", { mode: "json" }),
+  },
+  (table) => ({
+    timestampIdx: index("audit_logs_timestamp_idx").on(table.timestamp),
+    entityTypeIdx: index("audit_logs_entity_type_idx").on(table.entityType),
+  }),
+);
 
 // 15. CONTROL DE ASISTENCIA (Horarios reales y eventualidades)
 export const operatorAttendance = sqliteTable(
@@ -1302,6 +1353,28 @@ export const automationMetricsMonthly = sqliteTable(
     onTimeRate: real("on_time_rate"),
     snapshotAt: integer("snapshot_at").notNull(),
   },
+);
+
+/**
+ * Días con actividad de una automatización: una fila por (automatización, día)
+ * en que hubo movimiento (cambio de estado/updated_at, comentario, tarea o
+ * nodo). Alimenta "tiempo trabajado" (días activos) y "días sin actividad".
+ * `day` = "YYYY-MM-DD" (hora local). Lo puebla el scan de discovery y el
+ * backfill histórico; nunca poda.
+ */
+export const automationActivityDays = sqliteTable(
+  "automation_activity_days",
+  {
+    automationId: integer("automation_id").notNull(),
+    day: text("day").notNull(),
+    /** "scan" (movimiento detectado en vivo) | "backfill" (histórico). */
+    source: text("source").notNull().default("scan"),
+    firstSeenAt: integer("first_seen_at").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.automationId, table.day] }),
+    dayIdx: index("automation_activity_days_day_idx").on(table.day),
+  }),
 );
 
 // 19. ADMIN MESAS Y PAPELERA

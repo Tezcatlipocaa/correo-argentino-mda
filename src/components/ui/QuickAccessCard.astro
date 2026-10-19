@@ -77,12 +77,12 @@ const titleClass = isMini
           <Icon
             name={icon}
             size={iconGlyphSize}
+            is:inline
             class={
               locked || comingSoon
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
             }
-            is:inline
           />
         </div>
         <div class="min-w-0 flex-1">
@@ -94,12 +94,14 @@ const titleClass = isMini
           <Icon
             name="boxicons:lock-filled"
             size={24}
+            is:inline
             class="text-base-content/40"
           />
         ) : (
           <Icon
             name="boxicons:chevron-right"
             size={24}
+            is:inline
             class="text-base-content/30 transition-transform duration-300 group-hover:translate-x-1"
           />
         )}
@@ -125,13 +127,13 @@ const titleClass = isMini
           <Icon
             name={icon}
             size={iconGlyphSize}
+            is:inline
             class={
               locked || comingSoon
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
             }
             aria-hidden="true"
-            is:inline
           />
         </div>
         <div>
@@ -144,12 +146,14 @@ const titleClass = isMini
           <Icon
             name="boxicons:lock-filled"
             size={24}
+            is:inline
             class="text-base-content/40"
           />
         ) : (
           <Icon
             name="boxicons:chevron-right"
             size={24}
+            is:inline
             class="text-base-content/30 transition-transform duration-300 group-hover:translate-x-1"
           />
         )}
@@ -175,12 +179,12 @@ const titleClass = isMini
           <Icon
             name={icon}
             size={iconGlyphSize}
+            is:inline
             class={
               locked || comingSoon
                 ? ""
                 : "transition-transform duration-300 group-hover:scale-110"
             }
-            is:inline
           />
         </div>
         <h3 class={titleClass}>{title}</h3>
@@ -192,6 +196,7 @@ const titleClass = isMini
             <Icon
               name="boxicons:lock-filled"
               size={24}
+              is:inline
               class="text-base-content/40"
               aria-hidden="true"
             />
@@ -201,6 +206,7 @@ const titleClass = isMini
               <Icon
                 name="boxicons:chevron-right"
                 size={24}
+                is:inline
                 class="transition-transform duration-300 group-hover:translate-x-1"
                 aria-hidden="true"
               />

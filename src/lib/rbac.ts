@@ -108,6 +108,10 @@ export const routePermissions: RoutePermission[] = [
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
   {
+    path: "/supervision/autogestiones-metricas",
+    roles: ["admin", "supervisor", "team_leader"],
+  },
+  {
     path: "/supervision/asignacion-autogestiones",
     roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
   },
@@ -120,6 +124,8 @@ export const routePermissions: RoutePermission[] = [
   { path: "/mesas-de-ayuda/asignar", roles: ["admin", "supervisor"] },
   { path: "/oficinas/create", roles: ["admin", "supervisor"] },
   { path: "/oficinas/edit", roles: ["admin", "supervisor"] },
+  { path: "/oficinas/estadisticas", roles: ["admin", "supervisor"] },
+  { path: "/oficinas/estructura", roles: ["admin", "supervisor"] },
   { path: "/base-conocimiento/categorias", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/create", roles: [...KB_ACCESS_ROLES] },
   { path: "/base-conocimiento/edit", roles: [...KB_ACCESS_ROLES] },
@@ -130,6 +136,14 @@ export const routePermissions: RoutePermission[] = [
   {
     path: "/inventario-terminales/cubics/edit",
     roles: ["admin", "supervisor"],
+  },
+  // Estadísticas del parque de terminales: por ahora solo admin (el endpoint
+  // bajo /api/terminals queda en la whitelist y devuelve 403 JSON vía
+  // requireReadAccess("inventario"), mismo patrón que /api/oficinas).
+  { path: "/inventario-terminales/estadisticas", roles: ["admin"] },
+  {
+    path: "/reportes",
+    roles: ["admin"],
   },
 
   // Default-deny whitelist: every route group that exists under src/pages
@@ -167,6 +181,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/autogestion", roles: ALL_ROLES },
   // El gate real de cada endpoint de calidad vive en requireRead/WriteAccess.
   { path: "/api/calidad", roles: ALL_ROLES },
+  { path: "/api/credentials", roles: ALL_ROLES },
   { path: "/api/cronograma", roles: ALL_ROLES },
   { path: "/api/disponibilidad", roles: ALL_ROLES },
   { path: "/api/download", roles: ALL_ROLES },
@@ -176,7 +191,12 @@ export const routePermissions: RoutePermission[] = [
   { path: "/api/kb/upload", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/kb/images", roles: [...KB_ACCESS_ROLES] },
   { path: "/api/offices", roles: ALL_ROLES },
+  // Reportería de oficinas: la whitelist deja pasar la request y el handler
+  // aplica requireReadAccess("oficinas") -> supervisor+ (mismo patrón que
+  // /api/admin/usuarios). Así el agente recibe 403 JSON, no un redirect.
+  { path: "/api/oficinas", roles: ALL_ROLES },
   { path: "/api/profile", roles: ALL_ROLES },
+  { path: "/api/reportes", roles: ALL_ROLES },
   { path: "/api/soportes", roles: ALL_ROLES },
   { path: "/api/support-guides", roles: ALL_ROLES },
   { path: "/api/terminals", roles: ALL_ROLES },
@@ -277,7 +297,10 @@ export function getModulePermissions(
     perm.canRead = canAccessKb;
     perm.canWrite = canAccessKb;
   } else if (moduleName === "usuarios") {
-    // Solo admin lee/escribe (los endpoints de lectura de AD exponen datos sensibles)
+    // Solo admin lee/escribe: `ad-groups-licenses` usa este módulo y expone
+    // datos de AD. Los endpoints que alimentan `/buscador-usuarios` (ALL_ROLES)
+    // — search/status/net-user/invgate-user — NO usan este módulo: exigen solo
+    // sesión vía `requireSession`, porque la página es para todo rol logueado.
     perm.canRead = rank >= ROLE_HIERARCHY.admin;
     perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   } else if (moduleName === "permisos") {
@@ -289,6 +312,17 @@ export function getModulePermissions(
     // para supervisor+, que es la política de cierre desde el portal.
     perm.canRead = true;
     perm.canWrite = rank >= ROLE_HIERARCHY.supervisor;
+  } else if (moduleName === "inventario") {
+    // Estadísticas del parque de terminales: por ahora solo admin (lectura).
+    perm.canRead = rank >= ROLE_HIERARCHY.admin;
+  } else if (moduleName === "oficinas") {
+    // Reportería de oficinas: lectura supervisor+ (gerencia). La escritura del
+    // CRUD de oficinas se decide por routePermissions, no por este módulo.
+    perm.canRead = rank >= ROLE_HIERARCHY.supervisor;
+    perm.canWrite = false;
+  } else if (moduleName === "reportes") {
+    perm.canRead = rank >= ROLE_HIERARCHY.admin;
+    perm.canWrite = rank >= ROLE_HIERARCHY.admin;
   }
 
   return perm;

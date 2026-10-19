@@ -68,7 +68,9 @@ test("El tag input agrega un tópico con Enter", async ({ page }) => {
   await tagInput.fill("VPN");
   await tagInput.press("Enter");
 
-  await expect(
-    page.locator("[data-taginput-chip]", { hasText: "VPN" }),
-  ).toHaveCount(1);
+  const chip = page.locator("[data-taginput-chip]", { hasText: "VPN" });
+  await expect(chip).toHaveCount(1);
+  // Guard de regresión: el chip clonado debe embeber su propio <path> (is:inline).
+  // Con astro-icon en modo symbol queda <use>-only y el ícono sale en blanco.
+  await expect(chip.locator("button svg path")).toHaveCount(1);
 });

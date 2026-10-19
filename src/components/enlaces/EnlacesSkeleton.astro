@@ -1,44 +1,43 @@
 ---
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 ---
 
-<PageContainer width="xl">
-  <div class="skeleton-debounced">
-    <PageHeader
-      description="Accesos clave para resolver tareas operativas de soporte con menos fricción."
-      class="max-w-3xl"
-    />
-
-    <div class="skeleton mb-4 h-12 w-full max-w-md rounded-lg"></div>
-
-    <!-- Announcement Banner Skeleton -->
-    <div class="skeleton mb-6 h-28 w-full rounded-xl"></div>
-
-    <!-- Masonry Grid Skeleton -->
-    <div class="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-      {
-        Array.from({ length: 6 }).map((_, i) => (
-          <div
-            class={`card bg-base-100 border-base-300 rounded-2xl border p-5 shadow-sm ${i % 3 === 0 ? "h-64" : i % 3 === 1 ? "h-48" : "h-56"}`}
-          >
-            <div class="mb-4 flex items-center gap-3">
-              <div class="skeleton size-8 rounded-lg" />
-              <div class="skeleton h-5 w-36 rounded" />
-            </div>
-            <div class="space-y-4">
-              {Array.from({
-                length: i % 3 === 0 ? 3 : i % 3 === 1 ? 2 : 3,
-              }).map(() => (
-                <div class="flex flex-col gap-1">
-                  <div class="skeleton h-4 w-44 rounded" />
-                  <div class="skeleton h-3 w-64 rounded" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
-      }
+<div class="flex flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="skeleton h-10 w-full max-w-md rounded-box"></div>
+    <div class="flex items-center gap-4">
+      <div class="skeleton h-10 w-28 rounded-box"></div>
+      <div class="skeleton h-10 w-36 rounded-box"></div>
+      <div class="skeleton h-5 w-40 rounded"></div>
     </div>
   </div>
-</PageContainer>
+
+  <!-- Masonry Grid Skeleton: misma fuente de columnas que el grid real
+       (--columns-effective), para que el fallback no muestre columnas desalineadas. -->
+  <div
+    class="mt-4 grid gap-2"
+    style="grid-template-columns: repeat(var(--columns-effective, 3), minmax(0, 1fr));"
+  >
+    {
+      Array.from({ length: 6 }).map((_, i) => (
+        <div
+          class={`card bg-base-100 border-base-300 rounded-2xl border p-5 shadow-xs ${i % 3 === 0 ? "h-64" : i % 3 === 1 ? "h-48" : "h-56"}`}
+        >
+          <div class="mb-4 flex items-center gap-3">
+            <div class="skeleton size-8 rounded-lg" />
+            <div class="skeleton h-5 w-36 rounded" />
+          </div>
+          <div class="space-y-4">
+            {Array.from({
+              length: i % 3 === 0 ? 3 : i % 3 === 1 ? 2 : 3,
+            }).map(() => (
+              <div class="flex flex-col gap-1">
+                <div class="skeleton h-4 w-44 rounded" />
+                <div class="skeleton h-3 w-64 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</div>

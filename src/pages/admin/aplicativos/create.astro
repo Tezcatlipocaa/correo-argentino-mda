@@ -29,6 +29,7 @@ let app = {
   iconPath: "",
   metadata: [] as Array<{ label: string; value: string }>,
   instructionPdfPath: "",
+  inPackBase: false,
 };
 
 const categories = await db.select().from(applicationCategories);
@@ -55,6 +56,11 @@ if (Astro.request.method === "POST") {
     const version = formData.get("version")?.toString().trim() || null;
     const uploadType = formData.get("uploadType")?.toString() as
       "local" | "external" | null;
+    const inPackBase =
+      uploadType === "external"
+        ? false
+        : formData.get("inPackBase") === "true" ||
+          formData.get("inPackBase") === "on";
 
     if (!title) {
       throw new Error("El título es obligatorio.");
@@ -152,6 +158,7 @@ if (Astro.request.method === "POST") {
       iconPath,
       metadata: metadataEncrypted,
       instructionPdfPath,
+      inPackBase,
     });
     await logAdminFromAstro(Astro.locals, `Creó el aplicativo "${title}"`);
 
@@ -182,6 +189,9 @@ if (Astro.request.method === "POST") {
       app.version = formSnapshot.get("version")?.toString() || "";
       formUploadType = formSnapshot.get("uploadType")?.toString() || "";
       formExternalUrl = formSnapshot.get("externalUrl")?.toString() || "";
+      app.inPackBase =
+        formSnapshot.get("inPackBase") === "true" ||
+        formSnapshot.get("inPackBase") === "on";
 
       const formMeta = formSnapshot.get("metadata")?.toString() || "[]";
       try {
@@ -331,6 +341,27 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
             accept=".zip,.exe,.msi,.rar"
             helpText="Formatos: .zip, .exe, .msi, .rar"
           />
+
+          <div class="fieldset border-base-300 rounded-box bg-base-200/30 mt-3 border p-4">
+            <label class="flex cursor-pointer items-start gap-3 select-none">
+              <input
+                type="checkbox"
+                name="inPackBase"
+                value="true"
+                checked={app.inPackBase}
+                class="checkbox checkbox-primary mt-0.5"
+                id="checkbox-inPackBase"
+              />
+              <div class="space-y-0.5">
+                <span class="text-base-content text-sm font-medium">
+                  Incluir en el Pack base de operatoria (.zip)
+                </span>
+                <p class="text-base-content/60 text-xs">
+                  Se empaquetará automáticamente dentro del archivo descargable del catálogo.
+                </p>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div id="externalUrlGroup" class:list={[!isExternal && "hidden"]}>
@@ -453,25 +484,43 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
       "input-metadata-json",
     ) as HTMLInputElement | null;
 
-    function createMetaRow(label = "", value = "") {
+    function createMetaRow(label = "", value = "", minRole = "", helpdesk = "") {
       const row = document.createElement("div");
-      row.className = "flex items-center gap-2 app-meta-row";
+      row.className = "flex flex-wrap sm:flex-nowrap items-center gap-2 app-meta-row bg-base-100/50 p-2 rounded-lg border border-base-300";
       row.innerHTML = `
       <input
         type="text"
         placeholder="Entorno / Clave (ej: Debian, MySQL)"
-        class="input input-sm flex-1 font-semibold"
+        class="input input-sm flex-1 font-semibold min-w-32"
         value="${label.replace(/"/g, "&quot;")}"
+        data-meta-key
         required
       />
       <input
         type="text"
         placeholder="Valor / Contraseña"
-        class="input input-sm flex-1 font-mono"
+        class="input input-sm flex-1 font-mono min-w-32"
         value="${value.replace(/"/g, "&quot;")}"
+        data-meta-val
         required
       />
-      <button type="button" class="btn btn-sm btn-circle btn-ghost text-error btn-remove-meta" title="Eliminar">
+      <select class="select select-sm max-w-36 text-xs" data-meta-role title="Rol mínimo para revelar">
+        <option value="" ${!minRole ? "selected" : ""}>Todos</option>
+        <option value="agent" ${minRole === "agent" ? "selected" : ""}>Agente</option>
+        <option value="referent" ${minRole === "referent" ? "selected" : ""}>Referente</option>
+        <option value="team_leader" ${minRole === "team_leader" ? "selected" : ""}>Team Leader</option>
+        <option value="supervisor" ${minRole === "supervisor" ? "selected" : ""}>Supervisor</option>
+        <option value="admin" ${minRole === "admin" ? "selected" : ""}>Admin</option>
+      </select>
+      <input
+        type="text"
+        placeholder="Mesa (opc.)"
+        class="input input-sm w-24 text-xs"
+        value="${helpdesk ? helpdesk.replace(/"/g, "&quot;") : ""}"
+        data-meta-helpdesk
+        title="Restringir a mesa de ayuda específica"
+      />
+      <button type="button" class="btn btn-sm btn-circle btn-ghost text-error btn-remove-meta shrink-0" title="Eliminar">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M5 20a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8H5v12zM18 9v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h12zM9 5h6V4H9v1zM8 3h8v3H8V3z"/></svg>
       </button>
     `;
@@ -494,7 +543,7 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
         if (Array.isArray(initialMetadata)) {
           initialMetadata.forEach((meta: any) => {
             if (meta && typeof meta === "object" && meta.label) {
-              createMetaRow(meta.label, meta.value || "");
+              createMetaRow(meta.label, meta.value || "", meta.minRole || "", meta.helpdesk || "");
             }
           });
         }
@@ -503,24 +552,25 @@ const isExternal = formUploadType ? formUploadType === "external" : false;
       }
     }
 
-    // Serializar credenciales en el evento nativo `formdata`, que se dispara
-    // cada vez que se construye `new FormData(form)` (p. ej. desde
-    // AsyncFormScript). Es independiente del orden de listeners `submit`.
+    // Serializar credenciales en el evento nativo `formdata`
     form?.addEventListener("formdata", (event) => {
       const formData = (event as FormDataEvent).formData;
       const rows = document.querySelectorAll(".app-meta-row");
-      const metaArray: Array<{ label: string; value: string }> = [];
+      const metaArray: Array<{ label: string; value: string; minRole?: string; helpdesk?: string | null }> = [];
 
       rows.forEach((row) => {
-        const inputs = row.querySelectorAll("input");
-        const keyInput = inputs[0];
-        const valInput = inputs[1];
+        const keyInput = row.querySelector<HTMLInputElement>("[data-meta-key]");
+        const valInput = row.querySelector<HTMLInputElement>("[data-meta-val]");
+        const roleSelect = row.querySelector<HTMLSelectElement>("[data-meta-role]");
+        const helpdeskInput = row.querySelector<HTMLInputElement>("[data-meta-helpdesk]");
 
         if (keyInput && valInput) {
           const label = keyInput.value.trim();
           const value = valInput.value.trim();
+          const minRole = roleSelect?.value || undefined;
+          const helpdesk = helpdeskInput?.value.trim() || null;
           if (label || value) {
-            metaArray.push({ label, value });
+            metaArray.push({ label, value, minRole, helpdesk });
           }
         }
       });

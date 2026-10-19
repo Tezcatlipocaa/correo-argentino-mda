@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
@@ -6,15 +7,11 @@ import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import { Icon } from "astro-icon/components";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { db } from "@db/index";
 import { applications, applicationCategories } from "@db/schema";
 import { eq, asc } from "drizzle-orm";
 import DeleteCategoryModal from "@components/ui/DeleteCategoryModal.astro";
 import { resolveUrl } from "@lib/url";
-import AddCategoryButton from "@components/ui/AddCategoryButton.astro";
-import AddEntityButton from "@components/ui/AddEntityButton.astro";
 import { iconExists } from "@lib/storage";
 
 const cleanBase = getCleanBase();
@@ -71,6 +68,7 @@ try {
       categoryTitle: applicationCategories.title,
       iconPath: applications.iconPath,
       sortOrder: applications.sortOrder,
+      inPackBase: applications.inPackBase,
     })
     .from(applications)
     .leftJoin(
@@ -120,10 +118,16 @@ const truncatePath = (filePath: string | null) => {
       description="Gestión de los aplicativos disponibles para descarga y distribución interna."
     />
     <div class="flex shrink-0 gap-2">
-      <AddCategoryButton
+      <ActionButton
+        icon="boxicons:folder-plus-filled"
+        variant="outline"
+        color="btn-neutral"
+        label="Nueva categoría"
         href={resolveUrl("/admin/aplicativos/categorias/create")}
       />
-      <AddEntityButton
+      <ActionButton
+        icon="boxicons:plus-filled"
+        color="btn-primary"
         id="btn-add-app"
         href={resolveUrl("/admin/aplicativos/create")}
         label="Nuevo aplicativo"
@@ -211,7 +215,9 @@ const truncatePath = (filePath: string | null) => {
                     {cat.title.toLowerCase() !== "sin categoría" &&
                       cat.title.toLowerCase() !== "sin categoria" && (
                         <div class="hidden items-center gap-0.5 group-hover:flex">
-                          <ActionEditButton
+                          <ActionButton
+                            icon="boxicons:pencil-filled"
+                            color="btn-secondary"
                             href={resolveUrl(
                               `/admin/aplicativos/categorias/edit/${cat.id}`,
                             )}
@@ -220,7 +226,9 @@ const truncatePath = (filePath: string | null) => {
                             title="Editar"
                             onclick="event.stopPropagation();"
                           />
-                          <ActionDeleteButton
+                          <ActionButton
+                            icon="boxicons:trash-filled"
+                            color="btn-error"
                             type="button"
                             size="xs"
                             ariaLabel="Eliminar"
@@ -330,77 +338,90 @@ const truncatePath = (filePath: string | null) => {
           <div id="apps-container" class="divide-base-200 divide-y">
             {
               allApps.map((app) => (
-                  <div
-                    class:list={[
-                      "group hover:bg-base-200/30 app-row grid items-center px-4 py-3 transition-colors",
-                      appsGridCols,
-                    ]}
-                    data-table-row
-                    data-app-row
-                    data-app-id={app.id}
-                    data-app-category={
-                      !app.categoryId || app.categoryId === uncategorizedDbId
-                        ? "uncategorized"
-                        : app.categoryId
-                    }
-                    data-app-search={`${app.title} ${app.filePath || ""}`.toLowerCase()}
-                    draggable="true"
-                  >
-                    <div class="text-base-content/30 hover:text-base-content/70 drag-handle flex cursor-grab items-center justify-center transition-colors active:cursor-grabbing">
-                      <Icon name="boxicons:menu" size={20} />
-                    </div>
-
-                    <div class="border-base-300 bg-base-200 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5">
-                      {iconExists(app.iconPath) ? (
-                        <img
-                          src={`${cleanBase}api/icons/${app.iconPath}`}
-                          alt={`Ícono de ${app.title}`}
-                          class="h-full w-full object-contain"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <Icon
-                          name="boxicons:cube"
-                          class="text-base-content/40 h-5 w-5"
-                        />
-                      )}
-                    </div>
-
-                    <div
-                      class="min-w-0 truncate font-semibold"
-                      title={app.title}
-                    >
-                      <span class="truncate" data-highlight-target>
-                        {app.title}
-                      </span>
-                      {app.version && (
-                        <span class="text-base-content/50 ml-1 font-mono text-xs">
-                          v{app.version}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div class="flex items-center justify-end gap-2">
-                      <ActionEditButton
-                        href={resolveUrl(`/admin/aplicativos/edit/${app.id}`)}
-                        ariaLabel={`Editar aplicativo ${app.title}`}
-                      />
-                      <form
-                        method="POST"
-                        action={resolveUrl(
-                          `/admin/aplicativos/edit/${app.id}/eliminar`,
-                        )}
-                        class="inline"
-                        onsubmit="return confirm('¿Estás seguro de que deseas eliminar este aplicativo?');"
-                      >
-                        <ActionDeleteButton
-                          ariaLabel={`Eliminar aplicativo ${app.title}`}
-                        />
-                      </form>
-                    </div>
+                <div
+                  class:list={[
+                    "group hover:bg-base-200/30 app-row grid items-center px-4 py-3 transition-colors",
+                    appsGridCols,
+                  ]}
+                  data-table-row
+                  data-app-row
+                  data-app-id={app.id}
+                  data-app-category={
+                    !app.categoryId || app.categoryId === uncategorizedDbId
+                      ? "uncategorized"
+                      : app.categoryId
+                  }
+                  data-app-search={`${app.title} ${app.filePath || ""}`.toLowerCase()}
+                  draggable="true"
+                >
+                  <div class="text-base-content/30 hover:text-base-content/70 drag-handle flex cursor-grab items-center justify-center transition-colors active:cursor-grabbing">
+                    <Icon name="boxicons:menu" size={20} />
                   </div>
+
+                  <div class="border-base-300 bg-base-200 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5">
+                    {iconExists(app.iconPath) ? (
+                      <img
+                        src={`${cleanBase}api/icons/${app.iconPath}`}
+                        alt={`Ícono de ${app.title}`}
+                        class="h-full w-full object-contain"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <Icon
+                        name="boxicons:cube"
+                        class="text-base-content/40 h-5 w-5"
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    class="flex min-w-0 items-center gap-1.5 truncate font-semibold"
+                    title={app.title}
+                  >
+                    <span class="truncate" data-highlight-target>
+                      {app.title}
+                    </span>
+                    {app.version && (
+                      <span class="text-base-content/50 font-mono text-xs">
+                        v{app.version}
+                      </span>
+                    )}
+                    {app.inPackBase && (
+                      <span
+                        class="badge badge-primary badge-xs shrink-0 font-medium"
+                        title="Incluido en el Pack base (.zip)"
+                      >
+                        Pack base
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div class="flex items-center justify-end gap-2">
+                    <ActionButton
+                      icon="boxicons:pencil-filled"
+                      color="btn-secondary"
+                      href={resolveUrl(`/admin/aplicativos/edit/${app.id}`)}
+                      ariaLabel={`Editar aplicativo ${app.title}`}
+                    />
+                    <form
+                      method="POST"
+                      action={resolveUrl(
+                        `/admin/aplicativos/edit/${app.id}/eliminar`,
+                      )}
+                      class="inline"
+                      onsubmit="return confirm('¿Estás seguro de que deseas eliminar este aplicativo?');"
+                    >
+                      <ActionButton
+                        type="submit"
+                        icon="boxicons:trash-filled"
+                        color="btn-error"
+                        ariaLabel={`Eliminar aplicativo ${app.title}`}
+                      />
+                    </form>
+                  </div>
+                </div>
               ))
             }
           </div>
@@ -422,10 +443,13 @@ const truncatePath = (filePath: string | null) => {
       </div>
 
       <div class="flex justify-start pt-2">
-        <a href={resolveUrl("/admin")} class="btn btn-ghost btn-sm gap-2">
-          <Icon name="boxicons:arrow-left-stroke-filled" size={16} />
-          Volver a administración
-        </a>
+        <ActionButton
+          href={resolveUrl("/admin")}
+          variant="ghost"
+          size="sm"
+          icon="boxicons:arrow-left-stroke-filled"
+          label="Volver a administración"
+        />
       </div>
     </main>
   </div>
@@ -460,7 +484,7 @@ const truncatePath = (filePath: string | null) => {
   const btnAddApp = document.getElementById(
     "btn-add-app",
   ) as HTMLAnchorElement | null;
-    const categoryEmptyState = document.getElementById("category-empty-state");
+  const categoryEmptyState = document.getElementById("category-empty-state");
 
   // Selection Handler
   const selectCategory = (categoryId: string) => {
@@ -850,15 +874,4 @@ const truncatePath = (filePath: string | null) => {
       showToast("Error al guardar el nuevo orden de categorías", "alert-error");
     }
   };
-
-  // Toast from URL query param
-  const urlParams = new URLSearchParams(window.location.search);
-  const toastMsg = urlParams.get("toast_msg");
-  const toastType = urlParams.get("toast_type") || "alert-success";
-  if (toastMsg) {
-    showToast(decodeURIComponent(toastMsg), toastType);
-    // clean search params without reloading
-    const newUrl = window.location.pathname;
-    window.history.replaceState({}, document.title, newUrl);
-  }
 </script>

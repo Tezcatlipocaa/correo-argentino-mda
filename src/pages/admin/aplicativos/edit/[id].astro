@@ -18,6 +18,7 @@ import { toastResponse } from "@lib/api/toastResponse";
 import SectionCard from "@components/ui/SectionCard.astro";
 import FormLegend from "@components/ui/forms/FormLegend.astro";
 import FormShell from "@components/ui/FormShell.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 const { id } = Astro.params;
 
@@ -32,6 +33,7 @@ let app = {
   iconPath: "",
   metadata: [] as Array<{ label: string; value: string }>,
   instructionPdfPath: "",
+  inPackBase: false,
 };
 
 const categories = await db.select().from(applicationCategories);
@@ -56,6 +58,14 @@ if (existing && existing.metadata) {
   }
 }
 
+const maskedMetadata = decryptedMetadata.map((meta, index) => ({
+  label: meta.label,
+  value: "••••••••",
+  minRole: (meta as any).minRole || "",
+  helpdesk: (meta as any).helpdesk || "",
+  originalIndex: index,
+}));
+
 if (existing) {
   app = {
     id: existing.id,
@@ -65,8 +75,9 @@ if (existing) {
     version: existing.version || "",
     filePath: existing.filePath || "",
     iconPath: existing.iconPath || "",
-    metadata: decryptedMetadata,
+    metadata: maskedMetadata as any,
     instructionPdfPath: existing.instructionPdfPath || "",
+    inPackBase: existing.inPackBase ?? false,
   };
 } else {
   return Astro.redirect(resolveUrl("/admin/aplicativos"));
@@ -94,6 +105,11 @@ if (Astro.request.method === "POST") {
     const version = formData.get("version")?.toString().trim() || null;
     const uploadType = formData.get("uploadType")?.toString() as
       "local" | "external" | null;
+    const inPackBase =
+      uploadType === "external"
+        ? false
+        : formData.get("inPackBase") === "true" ||
+          formData.get("inPackBase") === "on";
 
     if (!title) {
       throw new Error("El título es obligatorio.");
@@ -135,9 +151,24 @@ if (Astro.request.method === "POST") {
     let metadataEncrypted = null;
     if (metadataRaw) {
       try {
-        const parsed = JSON.parse(metadataRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          metadataEncrypted = encryptData(metadataRaw);
+        const submittedMeta: Array<{ label: string; value: string; minRole?: string; helpdesk?: string | null; metaIndex?: number }> = JSON.parse(metadataRaw);
+        if (Array.isArray(submittedMeta) && submittedMeta.length > 0) {
+          // Merge: si value está vacío o es el placeholder de máscara ("••••••••"), conservar el valor original de decryptedMetadata
+          const merged = submittedMeta.map((item, idx) => {
+            const originalIndex = item.metaIndex !== undefined ? item.metaIndex : idx;
+            const original = decryptedMetadata[originalIndex];
+            const finalValue =
+              item.value === "" || item.value === "••••••••"
+                ? (original ? original.value : "")
+                : item.value;
+            return {
+              label: item.label,
+              value: finalValue,
+              ...(item.minRole ? { minRole: item.minRole } : {}),
+              ...(item.helpdesk ? { helpdesk: item.helpdesk } : {}),
+            };
+          });
+          metadataEncrypted = encryptData(JSON.stringify(merged));
         }
       } catch (e) {
         console.error("Error al parsear o encriptar metadatos:", e);
@@ -203,6 +234,7 @@ if (Astro.request.method === "POST") {
         iconPath,
         metadata: metadataEncrypted,
         instructionPdfPath,
+        inPackBase,
       })
       .where(eq(applications.id, app.id));
     if (oldTitle && oldTitle !== title) {
@@ -244,6 +276,9 @@ if (Astro.request.method === "POST") {
       app.version = formSnapshot.get("version")?.toString() || "";
       formUploadType = formSnapshot.get("uploadType")?.toString() || "";
       formExternalUrl = formSnapshot.get("externalUrl")?.toString() || "";
+      app.inPackBase =
+        formSnapshot.get("inPackBase") === "true" ||
+        formSnapshot.get("inPackBase") === "on";
 
       const formMeta = formSnapshot.get("metadata")?.toString() || "[]";
       try {
@@ -410,6 +445,27 @@ const isExternal = formUploadType
             accept=".zip,.exe,.msi,.rar"
             helpText="Formatos: .zip, .exe, .msi, .rar"
           />
+
+          <div class="fieldset border-base-300 rounded-box bg-base-200/30 mt-3 border p-4">
+            <label class="flex cursor-pointer items-start gap-3 select-none">
+              <input
+                type="checkbox"
+                name="inPackBase"
+                value="true"
+                checked={app.inPackBase}
+                class="checkbox checkbox-primary mt-0.5"
+                id="checkbox-inPackBase"
+              />
+              <div class="space-y-0.5">
+                <span class="text-base-content text-sm font-medium">
+                  Incluir en el Pack base de operatoria (.zip)
+                </span>
+                <p class="text-base-content/60 text-xs">
+                  Se empaquetará automáticamente dentro del archivo descargable del catálogo.
+                </p>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div id="externalUrlGroup" class:list={[!isExternal && "hidden"]}>
@@ -444,21 +500,18 @@ const isExternal = formUploadType
                   {app.filePath}
                 </p>
               </div>
-              <a
+              <ActionButton
                 href={app.filePath}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn btn-ghost btn-xs gap-1"
-              >
-                <Icon
-                  name={
-                    isExternal
-                      ? "boxicons:arrow-to-right"
-                      : "boxicons:arrow-in-down-square-half-filled"
-                  }
-                  size={14} is:inline />
-                {isExternal ? "Abrir" : "Descargar"}
-              </a>
+                icon={
+                  isExternal
+                    ? "boxicons:arrow-to-right"
+                    : "boxicons:arrow-in-down-square-half-filled"
+                }
+                label={isExternal ? "Abrir" : "Descargar"}
+                variant="ghost"
+                size="xs"
+                newTab
+              />
             </div>
           )
         }
@@ -490,18 +543,14 @@ const isExternal = formUploadType
                   {app.instructionPdfPath}
                 </p>
               </div>
-              <a
+              <ActionButton
                 href={resolveUrl(`api/aplicativos/pdf/${app.id}`)}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn btn-ghost btn-xs gap-1"
-              >
-                <Icon
-                  name="boxicons:arrow-in-down-square-half-filled"
-                  size={14}
-                />
-                Descargar
-              </a>
+                icon="boxicons:arrow-in-down-square-half-filled"
+                label="Descargar"
+                variant="ghost"
+                size="xs"
+                newTab
+              />
             </div>
           )
         }
@@ -594,6 +643,8 @@ const isExternal = formUploadType
 
   radios.forEach((radio) => radio.addEventListener("change", syncGroups));
 
+  import { fetchRevealedCredential } from "@lib/credentialRevealClient";
+
   // Manejo de Metadatos Dinámicos
   const metadataRowsContainer = document.getElementById("metadata-rows");
   const btnAddMeta = document.getElementById("btn-add-meta");
@@ -602,28 +653,92 @@ const isExternal = formUploadType
     "input-metadata-json",
   ) as HTMLInputElement | null;
 
-  function createMetaRow(label = "", value = "") {
+  function createMetaRow(label = "", value = "", minRole = "", helpdesk = "", originalIndex?: number) {
     const row = document.createElement("div");
-    row.className = "flex items-center gap-2 app-meta-row";
+    row.className = "flex flex-wrap sm:flex-nowrap items-center gap-2 app-meta-row bg-base-100/50 p-2 rounded-lg border border-base-300";
+    if (originalIndex !== undefined) {
+      row.setAttribute("data-meta-index", String(originalIndex));
+    }
+
     row.innerHTML = `
       <input
         type="text"
         placeholder="Entorno / Clave (ej: Debian, MySQL)"
-        class="input input-sm flex-1 font-semibold"
+        class="input input-sm flex-1 font-semibold min-w-32"
         value="${label.replace(/"/g, "&quot;")}"
+        data-meta-key
         required
       />
+      <div class="flex items-center gap-1.5 flex-1 min-w-36">
+        <input
+          type="password"
+          placeholder="••••••••"
+          class="input input-sm w-full font-mono"
+          value="${value.replace(/"/g, "&quot;")}"
+          data-meta-val
+          required
+        />
+        ${
+          originalIndex !== undefined
+            ? `<button type="button" class="btn btn-sm btn-ghost btn-square text-base-content/60 btn-reveal-meta" title="Revelar valor actual guardado">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+              </button>`
+            : ""
+        }
+      </div>
+      <select class="select select-sm max-w-36 text-xs" data-meta-role title="Rol mínimo para revelar">
+        <option value="" ${!minRole ? "selected" : ""}>Todos</option>
+        <option value="agent" ${minRole === "agent" ? "selected" : ""}>Agente</option>
+        <option value="referent" ${minRole === "referent" ? "selected" : ""}>Referente</option>
+        <option value="team_leader" ${minRole === "team_leader" ? "selected" : ""}>Team Leader</option>
+        <option value="supervisor" ${minRole === "supervisor" ? "selected" : ""}>Supervisor</option>
+        <option value="admin" ${minRole === "admin" ? "selected" : ""}>Admin</option>
+      </select>
       <input
         type="text"
-        placeholder="Valor / Contraseña"
-        class="input input-sm flex-1 font-mono"
-        value="${value.replace(/"/g, "&quot;")}"
-        required
+        placeholder="Mesa (opc.)"
+        class="input input-sm w-24 text-xs"
+        value="${helpdesk ? helpdesk.replace(/"/g, "&quot;") : ""}"
+        data-meta-helpdesk
+        title="Restringir a mesa de ayuda específica"
       />
-      <button type="button" class="btn btn-sm btn-circle btn-ghost text-error btn-remove-meta" title="Eliminar">
+      <button type="button" class="btn btn-sm btn-circle btn-ghost text-error btn-remove-meta shrink-0" title="Eliminar">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M5 20a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8H5v12zM18 9v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h12zM9 5h6V4H9v1zM8 3h8v3H8V3z"/></svg>
       </button>
     `;
+
+    const valInput = row.querySelector<HTMLInputElement>("[data-meta-val]");
+    const btnReveal = row.querySelector<HTMLButtonElement>(".btn-reveal-meta");
+
+    if (btnReveal && valInput && originalIndex !== undefined) {
+      btnReveal.addEventListener("click", async () => {
+        if (valInput.type === "text") {
+          valInput.type = "password";
+          return;
+        }
+
+        if (valInput.value === "••••••••" || !valInput.value) {
+          const urlParts = window.location.pathname.split("/");
+          const appId = Number(urlParts[urlParts.length - 1]);
+          if (!appId) return;
+
+          btnReveal.setAttribute("disabled", "true");
+          const secret = await fetchRevealedCredential({
+            entityType: "application",
+            entityId: appId,
+            metaIndex: originalIndex,
+          });
+          btnReveal.removeAttribute("disabled");
+
+          if (secret !== null) {
+            valInput.value = secret;
+            valInput.type = "text";
+          }
+        } else {
+          valInput.type = "text";
+        }
+      });
+    }
 
     row.querySelector(".btn-remove-meta")?.addEventListener("click", () => {
       row.remove();
@@ -641,9 +756,10 @@ const isExternal = formUploadType
     try {
       const initialMetadata = JSON.parse(metadataJsonInput.value || "[]");
       if (Array.isArray(initialMetadata)) {
-        initialMetadata.forEach((meta: any) => {
+        initialMetadata.forEach((meta: any, idx: number) => {
           if (meta && typeof meta === "object" && meta.label) {
-            createMetaRow(meta.label, meta.value || "");
+            const origIdx = meta.originalIndex !== undefined ? meta.originalIndex : idx;
+            createMetaRow(meta.label, meta.value || "••••••••", meta.minRole || "", meta.helpdesk || "", origIdx);
           }
         });
       }
@@ -652,24 +768,27 @@ const isExternal = formUploadType
     }
   }
 
-  // Serializar credenciales en el evento nativo `formdata`, que se dispara
-  // cada vez que se construye `new FormData(form)` (p. ej. desde
-  // AsyncFormScript). Es independiente del orden de listeners `submit`.
+  // Serializar credenciales en el evento nativo `formdata`
   form?.addEventListener("formdata", (event) => {
     const formData = (event as FormDataEvent).formData;
     const rows = document.querySelectorAll(".app-meta-row");
-    const metaArray: Array<{ label: string; value: string }> = [];
+    const metaArray: Array<{ label: string; value: string; minRole?: string; helpdesk?: string | null; metaIndex?: number }> = [];
 
     rows.forEach((row) => {
-      const inputs = row.querySelectorAll("input");
-      const keyInput = inputs[0];
-      const valInput = inputs[1];
+      const keyInput = row.querySelector<HTMLInputElement>("[data-meta-key]");
+      const valInput = row.querySelector<HTMLInputElement>("[data-meta-val]");
+      const roleSelect = row.querySelector<HTMLSelectElement>("[data-meta-role]");
+      const helpdeskInput = row.querySelector<HTMLInputElement>("[data-meta-helpdesk]");
+      const metaIndexAttr = row.getAttribute("data-meta-index");
 
       if (keyInput && valInput) {
         const label = keyInput.value.trim();
         const value = valInput.value.trim();
+        const minRole = roleSelect?.value || undefined;
+        const helpdesk = helpdeskInput?.value.trim() || null;
+        const metaIndex = metaIndexAttr !== null ? Number(metaIndexAttr) : undefined;
         if (label || value) {
-          metaArray.push({ label, value });
+          metaArray.push({ label, value, minRole, helpdesk, metaIndex });
         }
       }
     });

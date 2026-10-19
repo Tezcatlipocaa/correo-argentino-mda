@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getResolvedSearchParams } from "@lib/navigation";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
@@ -10,12 +11,13 @@ import { Icon } from "astro-icon/components";
 import UbicacionRow from "./UbicacionRow.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import SelectField from "@components/ui/forms/SelectField.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 import { db } from "@db/index";
 import { provinces } from "@db/schema";
 import { officeTypeLabelByType } from "@lib/officeHelpers";
-import { getInternalFetchHeaders, getInternalOrigin } from "@lib/internalOrigin";
+import {
+  getInternalFetchHeaders,
+  getInternalOrigin,
+} from "@lib/internalOrigin";
 import { getCleanBase } from "@lib/baseUrl";
 
 const cleanBase = getCleanBase();
@@ -79,11 +81,7 @@ const rowGridClass =
   {
     apiError && (
       <div class="alert alert-error my-4 shadow-sm" role="alert">
-        <Icon
-          name="boxicons:x-circle-filled"
-          size={24}
-          aria-hidden="true"
-        />
+        <Icon name="boxicons:x-circle-filled" size={24} aria-hidden="true" />
         <div>
           <h3 class="font-bold">Error de sincronización</h3>
           <p class="text-sm">{apiError}</p>
@@ -106,17 +104,13 @@ const rowGridClass =
           Aún no se ha realizado la comparación de ubicaciones entre InvGate y
           la base de datos de MDA. Sincronice los datos para comenzar.
         </p>
-        <a
+        <ActionButton
           href={`${cleanBase}admin/invgate/ubicaciones?sync=true`}
-          class="btn btn-primary btn-md gap-2"
-        >
-          <Icon
-            name="boxicons:refresh-ccw-filled"
-            size={20}
-            aria-hidden="true"
-          />
-          Sincronizar ahora
-        </a>
+          color="btn-primary"
+          size="md"
+          icon="boxicons:refresh-ccw-filled"
+          label="Sincronizar ahora"
+        />
       </div>
     ) : (
       /* --- COMPARISON RUNS / CACHED CONTENT --- */
@@ -202,18 +196,14 @@ const rowGridClass =
 
           <div class="flex gap-2">
             {/* Trigger Sync */}
-            <a
+            <ActionButton
               href={`${cleanBase}admin/invgate/ubicaciones?sync=true`}
-              class="btn btn-outline btn-md gap-2"
+              variant="outline"
+              size="md"
               title="Volver a sincronizar"
-            >
-              <Icon
-                name="boxicons:refresh-ccw-filled"
-                size={18}
-                aria-hidden="true"
-              />
-              Sincronizar
-            </a>
+              icon="boxicons:refresh-ccw-filled"
+              label="Sincronizar"
+            />
 
             {/* Search Bar */}
             <div class="w-full md:w-80">
@@ -325,13 +315,12 @@ const rowGridClass =
         }
       </SelectField>
       <div class="modal-action mt-6 flex justify-end gap-2">
-        <ActionCancelButton
+        <ActionButton
           type="button"
           label="Cancelar"
-          variant="error"
           onclick="document.getElementById('create_office_modal').close()"
         />
-        <ActionConfirmButton
+        <ActionButton
           type="submit"
           color="btn-primary"
           label="Crear"

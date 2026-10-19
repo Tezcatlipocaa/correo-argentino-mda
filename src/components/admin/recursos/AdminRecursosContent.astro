@@ -1,4 +1,5 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
@@ -6,15 +7,11 @@ import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import { Icon } from "astro-icon/components";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
-import ActionDeleteButton from "@components/ui/ActionDeleteButton.astro";
 import { db } from "@db/index";
 import { resourceCategories, resourceLinks } from "@db/schema";
 import { eq, asc } from "drizzle-orm";
 import DeleteCategoryModal from "@components/ui/DeleteCategoryModal.astro";
 import { resolveUrl } from "@lib/url";
-import AddCategoryButton from "@components/ui/AddCategoryButton.astro";
-import AddEntityButton from "@components/ui/AddEntityButton.astro";
 import { iconExists } from "@lib/storage";
 
 const cleanBase = getCleanBase();
@@ -97,10 +94,16 @@ links.forEach((link) => {
       description="Refactorizá, reordená y organizá los accesos rápidos de soporte técnico."
     />
     <div class="flex shrink-0 gap-2">
-      <AddCategoryButton
+      <ActionButton
+        icon="boxicons:folder-plus-filled"
+        variant="outline"
+        color="btn-neutral"
+        label="Nueva categoría"
         href={resolveUrl("/admin/recursos/categoria/create")}
       />
-      <AddEntityButton
+      <ActionButton
+        icon="boxicons:plus-filled"
+        color="btn-primary"
         id="btn-add-link"
         href={resolveUrl("/admin/recursos/enlace/create")}
         label="Agregar sitio web"
@@ -191,7 +194,9 @@ links.forEach((link) => {
                     {cat.title.toLowerCase() !== "sin categoría" &&
                       cat.title.toLowerCase() !== "sin categoria" && (
                         <div class="hidden items-center gap-0.5 group-hover:flex">
-                          <ActionEditButton
+                          <ActionButton
+                            icon="boxicons:pencil-filled"
+                            color="btn-secondary"
                             href={resolveUrl(
                               `/admin/recursos/categoria/edit/${cat.id}`,
                             )}
@@ -200,7 +205,9 @@ links.forEach((link) => {
                             title="Editar"
                             onclick="event.stopPropagation();"
                           />
-                          <ActionDeleteButton
+                          <ActionButton
+                            icon="boxicons:trash-filled"
+                            color="btn-error"
                             type="button"
                             size="xs"
                             ariaLabel="Eliminar"
@@ -287,7 +294,6 @@ links.forEach((link) => {
               id="recursos-search"
               name="q"
               value={q}
-              label="Buscar enlace"
               placeholder="Buscar por título o URL..."
             />
           </div>
@@ -313,79 +319,84 @@ links.forEach((link) => {
           <div id="links-container" class="divide-base-200 divide-y">
             {
               links.map((link) => (
-                  <div
-                    class:list={[
-                      "group hover:bg-base-200/30 link-row grid items-center px-4 py-3 transition-colors",
-                      linksGridCols,
-                      link.deprecated && "opacity-50",
-                    ]}
-                    data-table-row
-                    data-link-row
-                    data-link-id={link.id}
-                    data-link-category={
-                      !link.categoryId || link.categoryId === uncategorizedDbId
-                        ? "uncategorized"
-                        : link.categoryId
-                    }
-                    data-link-search={`${link.title} ${link.subtitle || ""} ${link.url}`.toLowerCase()}
-                    draggable="true"
-                  >
-                    <div class="text-base-content/30 hover:text-base-content/70 drag-handle flex cursor-grab items-center justify-center transition-colors active:cursor-grabbing">
-                      <Icon name="boxicons:menu" size={20} />
-                    </div>
-
-                    <div class="border-base-300 bg-base-200 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5">
-                      {iconExists(link.iconPath) ? (
-                        <img
-                          src={`${cleanBase}api/icons/${link.iconPath}`}
-                          alt={`Ícono de ${link.title}`}
-                          class="h-full w-full object-contain"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <Icon
-                          name="boxicons:link"
-                          class="text-base-content/40 h-5 w-5"
-                        />
-                      )}
-                    </div>
-
-                    <div
-                      class="flex min-w-0 items-center gap-2 truncate font-semibold"
-                      title={link.title}
-                    >
-                      <span class="truncate" data-highlight-target>
-                        {link.title}
-                      </span>
-                      {link.deprecated && (
-                        <span class="badge badge-neutral badge-xs shrink-0 font-semibold uppercase">
-                          Obsoleto
-                        </span>
-                      )}
-                    </div>
-
-                    <div class="flex items-center justify-end gap-2">
-                      <ActionEditButton
-                        href={resolveUrl(
-                          `/admin/recursos/enlace/edit/${link.id}`,
-                        )}
-                        ariaLabel={`Editar enlace ${link.title}`}
-                      />
-                      <form
-                        method="POST"
-                        action={resolveUrl(
-                          `/admin/recursos/enlace/edit/${link.id}/eliminar`,
-                        )}
-                        class="inline"
-                        onsubmit="return confirm('¿Estás seguro de que deseas eliminar este enlace?');"
-                      >
-                        <ActionDeleteButton
-                          ariaLabel={`Eliminar enlace ${link.title}`}
-                        />
-                      </form>
-                    </div>
+                <div
+                  class:list={[
+                    "group hover:bg-base-200/30 link-row grid items-center px-4 py-3 transition-colors",
+                    linksGridCols,
+                    link.deprecated && "opacity-50",
+                  ]}
+                  data-table-row
+                  data-link-row
+                  data-link-id={link.id}
+                  data-link-category={
+                    !link.categoryId || link.categoryId === uncategorizedDbId
+                      ? "uncategorized"
+                      : link.categoryId
+                  }
+                  data-link-search={`${link.title} ${link.subtitle || ""} ${link.url}`.toLowerCase()}
+                  draggable="true"
+                >
+                  <div class="text-base-content/30 hover:text-base-content/70 drag-handle flex cursor-grab items-center justify-center transition-colors active:cursor-grabbing">
+                    <Icon name="boxicons:menu" size={20} />
                   </div>
+
+                  <div class="border-base-300 bg-base-200 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5">
+                    {iconExists(link.iconPath) ? (
+                      <img
+                        src={`${cleanBase}api/icons/${link.iconPath}`}
+                        alt={`Ícono de ${link.title}`}
+                        class="h-full w-full object-contain"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <Icon
+                        name="boxicons:link"
+                        class="text-base-content/40 h-5 w-5"
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    class="flex min-w-0 items-center gap-2 truncate font-semibold"
+                    title={link.title}
+                  >
+                    <span class="truncate" data-highlight-target>
+                      {link.title}
+                    </span>
+                    {link.deprecated && (
+                      <span class="badge badge-neutral badge-xs shrink-0 font-semibold uppercase">
+                        Obsoleto
+                      </span>
+                    )}
+                  </div>
+
+                  <div class="flex items-center justify-end gap-2">
+                    <ActionButton
+                      icon="boxicons:pencil-filled"
+                      color="btn-secondary"
+                      href={resolveUrl(
+                        `/admin/recursos/enlace/edit/${link.id}`,
+                      )}
+                      ariaLabel={`Editar enlace ${link.title}`}
+                    />
+                    <form
+                      method="POST"
+                      action={resolveUrl(
+                        `/admin/recursos/enlace/edit/${link.id}/eliminar`,
+                      )}
+                      class="inline"
+                      onsubmit="return confirm('¿Estás seguro de que deseas eliminar este enlace?');"
+                    >
+                      <ActionButton
+                        type="submit"
+                        icon="boxicons:trash-filled"
+                        color="btn-error"
+                        ariaLabel={`Eliminar enlace ${link.title}`}
+                      />
+                    </form>
+                  </div>
+                </div>
               ))
             }
           </div>
@@ -449,7 +460,7 @@ links.forEach((link) => {
   const btnAddLink = document.getElementById(
     "btn-add-link",
   ) as HTMLAnchorElement | null;
-    const categoryEmptyState = document.getElementById("category-empty-state");
+  const categoryEmptyState = document.getElementById("category-empty-state");
   const reorderSpinner = document.getElementById("reorder-spinner");
 
   // Selection Handler

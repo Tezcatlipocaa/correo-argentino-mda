@@ -48,9 +48,33 @@ test.describe("Métricas de /automatizaciones", () => {
     await expect(kpi.or(empty).first()).toBeVisible();
 
     if (await kpi.isVisible().catch(() => false)) {
+      await expect(page.getByText("Resumen ejecutivo")).toBeVisible();
       await expect(page.getByText("Casos por mes")).toBeVisible();
       await expect(page.getByText("Backlog por antigüedad")).toBeVisible();
+      await expect(page.getByText("Por mesa")).toHaveCount(0);
+      await expect(page.getByText("Cierre por el portal")).toHaveCount(0);
     }
+  });
+
+  test("renderiza los gráficos (líneas y donuts)", async ({ context, page }) => {
+    await setSessionCookie(context, agentUser.signedSessionId);
+    await page.goto("/automatizaciones/metricas");
+
+    const kpi = page.getByText("Total histórico");
+    test.skip((await kpi.count()) === 0, "Sin historial cargado.");
+
+    await expect(
+      page.getByRole("img", {
+        name: "Casos creados y finalizados por mes",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", {
+        name: "Tiempo de ciclo mediano por mes",
+        exact: true,
+      }),
+    ).toBeVisible();
   });
 
   test("sin sesión redirige a login", async ({ request }) => {

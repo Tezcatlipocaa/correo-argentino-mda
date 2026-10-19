@@ -170,6 +170,40 @@ Resolucion aplicada en codigo:
 4. `accent` se usa para apoyo visual y enfasis secundario (links destacados, iconografia o fondos de apoyo), nunca para reemplazar `primary` ni para estados.
 5. En componentes, se consumen tokens semanticos DaisyUI o variables de `@theme`; no se hardcodean HEX dentro del markup.
 
+## Doctrina de composicion de UI (component-first)
+
+Regla transversal: **si el proyecto ya tiene un componente para lo que necesitas, usalo; si no lo tiene, proponelo antes de escribir HTML suelto.** Nunca reimplementar un patron existente con clases sueltas de Tailwind/DaisyUI, ni escribir markup crudo para algo que deberia ser componente.
+
+Escalera de decision (parar en el primer escalon que resuelva):
+
+1. **Existe un componente del proyecto?** Usalo con sus props. Buscar en `src/components/ui/` y `src/components/<modulo>/` antes de escribir markup.
+2. **Es un elemento DaisyUI cubierto por un componente del proyecto?** Usar ese componente; si el patron se repite y no existe, crear el componente dentro del proyecto (no markup ad-hoc).
+3. **DaisyUI nativo sin componente propio** (`badge badge-success`, `alert`, etc.): usar las clases DaisyUI directas + utilidades Tailwind para disposicion. Nunca inventar estilos propios para emular algo que DaisyUI ya da.
+4. **No existe componente ni patron DaisyUI claro:** proponer el componente nuevo (nombre, props, ubicacion) **antes** de avanzar; recien implementar cuando se apruebe.
+
+Mapeo elemento -> componente canonico:
+
+| Necesidad                          | Componente canonico                                        |
+| ---------------------------------- | ---------------------------------------------------------- |
+| Boton (accion, link, submit, icono) | `ActionButton` (`@components/ui/ActionButton.astro`)      |
+| Cancelar / volver / confirmar      | `ActionButton` (`color="btn-secondary"` / `btn-primary" type="submit"`), o la barra automatica de `FormShell` |
+| Eliminar / editar / ver en filas   | `ActionButton` con `icon` + `color` (+ `tooltip`)          |
+| Exportar CSV / abrir recurso externo | `ActionButton` (`download` / `newTab`)                   |
+| Copiar al portapapeles             | `CopyButton`                                               |
+| Refrescar reporte                  | `RefreshReportButton`                                      |
+| Barra de filtros                   | `FilterButtonBar` / `FilterTabsBox`                        |
+| Inputs de formulario               | `FormField`, `SelectField`, `FormTextarea`, `PasswordField` (`@components/ui/forms/`) |
+| Formulario completo (edit/create)  | `FormShell`                                                |
+| Tabla de listado                   | `DataTable` + `DataTableHeaderCell`                        |
+| Tabla master-detail                | `MasterDetailTable`                                        |
+| Grafico                            | `ChartCard`                                                |
+| Tarjeta de KPI                     | `StatsCard`                                                |
+| Modal                              | `Modal`                                                    |
+| Estado vacio                       | `SearchEmptyState`                                         |
+| Skeleton de carga                  | `@components/ui/skeletons/*`                               |
+
+Regla de parada: si el unico motivo para escribir markup crudo es "es mas rapido", no lo hagas: usar o proponer el componente.
+
 ## Mini guia de implementacion de tokens (DaisyUI)
 
 ### Regla rapida para elegir token
@@ -182,26 +216,34 @@ Resolucion aplicada en codigo:
 
 ### 1) Boton (`btn`)
 
-Uso recomendado:
+Los botones se renderizan con el componente unico **`ActionButton`** (`@components/ui/ActionButton.astro`), que envuelve `btn` de DaisyUI y expone `variant`, `color`, `icon`, `size`, etc. No escribir `<button class="btn btn-*">` inline salvo un caso muy puntual sin componente.
 
-- Usar `btn btn-primary` para la accion principal: guardar, confirmar, crear.
-- Usar `btn btn-secondary` para acciones alternativas: volver, cancelar, cerrar.
-- Usar `btn btn-accent` para acciones de apoyo: ver detalle, abrir ayuda, acciones no prioritarias.
-- Reservar `btn-info`, `btn-success`, `btn-warning`, `btn-error` para acciones estrictamente ligadas a estado del sistema (casos puntuales).
+Eleccion de color (prop `color`):
+
+- `color="btn-primary"` para la accion principal: guardar, confirmar, crear.
+- `color="btn-secondary"` para acciones alternativas: volver, cancelar, cerrar.
+- `color="btn-accent"` para acciones de apoyo: ver detalle, abrir ayuda, acciones no prioritarias.
+- `color="btn-info|btn-success|btn-warning|btn-error"` solo para acciones estrictamente ligadas a estado del sistema (casos puntuales).
+
+Variantes (`variant`): `solid` (default del componente), `soft`, `outline`, `ghost`. El default es **solid**, alineado con esta guia.
 
 Snippet listo para copiar:
 
-```html
+```astro
+---
+import ActionButton from "@components/ui/ActionButton.astro";
+---
 <div class="flex flex-wrap gap-2">
-  <button class="btn btn-primary">Guardar cambios</button>
-  <button class="btn btn-secondary">Volver</button>
-  <button class="btn btn-accent">Ver ayuda</button>
+  <ActionButton color="btn-primary" label="Guardar cambios" type="submit" />
+  <ActionButton color="btn-secondary" label="Volver" href={volverHref} />
+  <ActionButton color="btn-accent" label="Ver ayuda" icon="boxicons:help-circle-filled" />
 </div>
 ```
 
 Anti-patron:
 
 - No usar `btn-error` o `btn-warning` como CTA principal de una pantalla sin relacion directa con un estado semantico.
+- No escribir markup de boton crudo cuando `ActionButton` cubre el caso.
 
 ### 2) Badge (`badge`)
 
@@ -327,6 +369,112 @@ Uso recomendado:
   de cada grupo; en vistas por tipo, el listado puede comportarse como tabla
   plana.
 
+## Graficos y estadisticas (Chart.js)
+
+Referencia: issue #183 (integracion de Chart.js y estadisticas visuales). Todo grafico del
+portal se renderiza con el componente `ChartCard` (`src/components/ui/ChartCard.astro`) y su
+skeleton `ChartCardSkeleton`. No se instancia `Chart` fuera de ese componente.
+
+### Como se usa
+
+```astro
+<ChartCard type="bar" title="Usuarios por rol" fetchUrl={endpoint} chartKey="porRol" />
+```
+
+- Tipos habilitados: `bar`, `line`, `doughnut`. Nada mas (nada pie, radar, area, scatter).
+- Dos modos, excluyentes entre si:
+  - **Declarativo**: `labels` + `series` (`{ label, data: number[] }`) directo en props. Para
+    datos que ya llegaron con el HTML.
+  - **Vivo**: `fetchUrl` + `chartKey`. El componente fetch-ea solo, escucha
+    `stats:filters-changed` (`detail.query`) y ademas hace una carga inicial con
+    `window.location.search` para no quedar vacio si el evento ya paso.
+- `chartName` activa el modo registry: expone `window.__chartCards[chartName].setData(...)` y
+  escucha `chart-card:update` / `chart-card:highlight`. Un click en un segmento emite
+  `chart-card:segment-click` con `{ index, label, color }` (burbujea, lo consume la pagina).
+- Paginas con varios graficos: usar el modo registry (`chartName`) y **un unico fetch** de la
+  pagina que empuja cada chart (`window.__chartCards[key].setData(labels, series)`; si la card
+  todavia no se inicializo, encolar en `window.__pendingChartUpdates[key]`). El modo vivo
+  (`fetchUrl` + `chartKey`) hace un request **por grafico** en cada interaccion: con 5 charts
+  son 6 por cambio de filtro y el rate limit `apiRead` (60 req/min por usuario y path) empieza
+  a devolver 429.
+- `variant="card"` (default) envuelve en tarjeta; `variant="bare"` para composicion custom.
+- KPIs numericos: `StatsCard` con `color` de los tokens semanticos (`primary`, `success`,
+  `warning`, `info`, `secondary`, `accent`, `error`). El valor va en `font-mono` grande.
+- Layout de una vista de estadisticas: filtros en una tarjeta `rounded-2xl border shadow-sm`,
+  KPIs en `grid gap-4 sm:grid-cols-2 lg:grid-cols-4`, graficos en
+  `grid gap-6 lg:grid-cols-3` usando `lg:col-span-2` para las barras anchas.
+- Paginas de estadisticas: `server:defer` + `ChartCardSkeleton` como fallback, igual que el
+  resto de las vistas de contenido.
+
+### Colores
+
+- Paleta = tokens DaisyUI v5 leidos en tiempo de ejecucion por `readChartTokens()`
+  (`src/lib/chartTokens.ts`), en este orden y ciclando con modulo:
+  `primary`, `secondary`, `accent`, `info`, `success`, `warning`, `error`, `neutral`.
+- Texto de ejes y leyendas: `base-content`. Grilla: `base-300`.
+- Fallback si una variable viene vacia: `#6b7280` (gris neutro, nunca rompe el render).
+- En `doughnut`, el color se asigna **por segmento** (indice), no por serie; el borde es
+  `base-300` con `borderWidth: 1.5`. En `bar`/`line`, el color es **por serie**.
+- **Nunca** hardcodear hex ni RGB en un grafico. Si hace un color nuevo, se agrega el token
+  en `global.css` y se lee via el helper.
+
+### Tipografia
+
+- Fuente global de graficos: `Chart.defaults.font.family = "'Geist Variable', system-ui, sans-serif"`
+  (la misma `--font-sans` del portal). Nunca la fuente default de Chart.js.
+- Tamanos: **12** para todo el texto del grafico (ticks de ambos ejes, leyenda, tooltip
+  title/body/footer). No bajar de 12; no usar `text-[10px]` estilo bracket.
+- Leyenda: `position: "bottom"`, visible solo en `doughnut` o cuando hay mas de una serie.
+
+### Dimensiones y forma
+
+- Contenedor del canvas: `relative h-55 w-full` (220px de alto, ancho completo).
+- `responsive: true` + `maintainAspectRatio: false` siempre (el alto lo manda el contenedor).
+- Barras: `borderRadius: 6`, `borderWidth: 1`. Eje X sin grilla (`grid: { display: false }`),
+  eje Y con `beginAtZero: true` y grilla en `base-300`.
+- Highlight (registry): el segmento activo sube a `borderWidth: 4` (bar/doughnut) o `3`
+  (line); el resto vuelve al borde `base-300`.
+
+### Accesibilidad (obligatoria)
+
+- `canvas` con `role="img"` y `aria-label="Grafico de ${type}: ${title}"`.
+- Toggle "Ver datos en tabla": alterna canvas y una `<table class="table table-sm">` generada
+  con `<caption class="sr-only">Datos del grafico: ${title}</caption>`, encabezados con
+  `scope="col"`/`scope="row"`. El boton refleja `aria-expanded` y su texto cambia a
+  "Ver grafico" / "Ver tabla".
+- Estado sin datos: mensaje centrado (`emptyMessage`, default
+  "Sin datos para los filtros seleccionados") ocupando el mismo alto; el canvas se destruye.
+
+### Ciclo de vida y tema
+
+- Antes de construir una instancia nueva: `chart.destroy()` (nunca acumular instancias).
+- Cambio de tema claro/oscuro: `MutationObserver` sobre `data-theme` en
+  `document.documentElement` que reconstruye el grafico para releer los tokens. Los graficos
+  **no** se colorean una sola vez.
+- `astro:before-swap`: destruir instancia, desconectar observers y limpiar
+  `window.__chartCards`. `astro:after-swap` y un `MutationObserver` de nodos inyectados
+  re-inicializan las cards nuevas (necesario porque los scripts de un server island viajan en
+  el HTML inyectado y el browser no los ejecuta).
+
+### API de datos de un grafico
+
+```
+GET /api/...  ->  { kpis: {...}, charts: { <chartKey>: { labels: string[], series: [{label, data}] } }, filtros: {... } }
+```
+
+- `requireReadAccess(locals, "<modulo>")` segun el modulo de la vista.
+- Respuesta `no-store` (cache-control) y validacion estricta de query params (400 con mensaje
+  en espanol si un parametro no es valido).
+- El contrato de cada grafico es `labels` + `series`, y la pagina solo rellena KPIs.
+
+### Prohibido
+
+- Cargar Chart.js por CDN (`<script src="https://cdn.jsdelivr.net/...">`): se instala local
+  en `package.json` y se importa en el componente. Hay tests que fallan si aparece un CDN.
+- Instanciar `new Chart(...)` fuera de `ChartCard.astro`.
+- Colores, fuentes o tamanos hardcodeados en vez de tokens + helper.
+- Dejar una instancia viva sin `destroy()` al cambiar de datos, tema o navegacion.
+
 ## Tipografia
 
 - UI principal: `Geist Variable` (Fontsource) como `--font-sans`.
@@ -412,7 +560,8 @@ Todas las zonas del Header estan implementadas y cerradas:
 - `MasterDetailTable` — tabla con fila maestra, detalle expandible y ordenamiento por bloques
 - `FilterTabsBox` — tabs de filtro por categoria
 - `FilterButtonBar` — barra de botones de filtro
-- `StatsCard` — tarjeta de metrica/estadistica con icono y valor
+- `StatsCard` — tarjeta de KPI: icono, label en mayusculas, valor grande y subtitulo
+- `ChartCard` — contenedor canonico de graficos Chart.js (ver seccion "Graficos y estadisticas")
 - `ViewSwitcher` — alternancia entre vistas (tarjetas/tabla)
 - `SearchBar` / `HeroSearchBar` — barras de busqueda con icono
 - `SearchEmptyState` — estado vacio con icono y mensaje
@@ -430,17 +579,13 @@ Todas las zonas del Header estan implementadas y cerradas:
 
 ### Action buttons
 
-Familia de botones de accion para CRUDs, todas con icono y tooltip:
-
-- `ActionButton` — generico
-- `ActionCancelButton` — cancelar/volver
-- `ActionConfirmButton` — confirmar/aceptar
-- `ActionDeleteButton` — eliminar
-- `ActionEditButton` — editar
-- `ActionNetUserButton` — consultar usuario de red
-- `ActionPasswordButton` — cambio de contrasena
-- `AddCategoryButton` — agregar categoria
-- `AddEntityButton` — agregar entidad generico
+- `ActionButton` (`@components/ui/ActionButton.astro`) — **unico boton de accion del portal**. Cubre todos los casos (accion primaria/secundaria, link, submit, boton-icono, tooltip, copiar/exportar/abrir externo) via props:
+  - `variant`: `solid` (default) | `soft` | `outline` | `ghost`
+  - `color`: clase DaisyUI `btn-primary` | `btn-secondary` | `btn-accent` | `btn-neutral` | `btn-info|success|warning|error`
+  - `icon`, `iconSize`, `label`, `shortLabel`, `ariaLabel`, `title`, `tooltip` + `tooltipPosition`
+  - `size` (`xs`|`sm`|`md`|`default`), `grow`, `newTab`, `download`, `disabled`
+  - `href` (renderiza `<a>`) o `type`/`formId` (renderiza `<button>`)
+- Se eliminaron los wrappers semanticos previos (`ActionCancelButton`, `ActionConfirmButton`, `ActionDeleteButton`, `ActionEditButton`, `ActionNetUserButton`, `ActionPasswordButton`, `AddCategoryButton`, `AddEntityButton`, `ActionInvGateButton`, `ActionAgentsTicketButton`, `ExportCsvButton`, `OpenExternalUrlButton`, `ActionExternalButton`, `OpenModalButton`). Su comportamiento se expresa ahora con `icon` + `color` (+ `tooltip`) en el call-site.
 
 ### Modals
 
@@ -456,9 +601,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
   - `value`: boton con texto visible que se copia, label estable para busquedas con highlight
   - `link`: icono + `Copiar`, con tooltip truncado para previsualizar el enlace
   - `icon`: solo icono de clipboard, sin tooltip, para tablas densas
-- `OpenExternalUrlButton` — abre recurso externo. **2 variantes:**
-  - `text`: "Abrir" + icono
-  - `icon`: solo icono (para tablas densas)
+- Abrir recurso externo: `ActionButton` con `icon="boxicons:arrow-up-right-square-filled"` + `newTab`. En tablas densas usar solo icono (`class="btn-square min-h-8 min-w-8"`, sin `label`).
 - `QuickAccessCard` — tarjeta de acceso rapido en dashboard
 - `SectionCard` — tarjeta de seccion agrupada
 - `AnnouncementBanner` — banner de anuncios
@@ -469,6 +612,7 @@ Familia de botones de accion para CRUDs, todas con icono y tooltip:
 - `SkeletonCard` — placeholder de tarjeta
 - `SkeletonMetric` — placeholder de metrica
 - `SkeletonTable` — placeholder de tabla con filas y columnas
+- `ChartCardSkeleton` — placeholder de grafico (`count` para repetir), misma altura que el canvas
 
 ### Domain components
 
@@ -586,8 +730,10 @@ Siempre `size` numerico. NUNCA `w-5 h-5 size-5`.
 - Colores hardcodeados en componentes (usar tokens semanticos)
 - `const base = import.meta.env.BASE_URL || "/"` inline
 - Dimensiones en iconos via clases (`w-5`, `h-5`, `size-5`)
+- Chart.js por CDN o `new Chart(...)` fuera de `ChartCard.astro`
 - Animaciones lentas o decorativas que afecten la velocidad de uso
 - Secciones no justificadas por el briefing funcional
+- Markup crudo de boton/input/tabla/modal/tarjeta cuando existe un componente del proyecto (`ActionButton`, `DataTable`, `Modal`, `FormField`, `StatsCard`, etc.). Ante la duda, usar o proponer el componente (ver "Doctrina de composicion de UI").
 
 ## Reglas de intervencion de UI
 
@@ -597,6 +743,10 @@ Siempre `size` numerico. NUNCA `w-5 h-5 size-5`.
 4. Toda pantalla CRUD debe invocar `logAdminAction()` / `logAdminFromAstro()`.
 5. En paginas con contenido diferido (`server:defer`), usar skeleton + helpers de `@lib/navigation.ts` para pathname/searchParams.
 6. Construir URLs internas con `getCleanBase()` + path relativo, nunca literales.
+7. Todo grafico se renderiza con `ChartCard` (tokens DaisyUI via `readChartTokens`, fuente
+   Geist Variable, textos en 12, alto `h-55`) y lleva tabla alternativa accesible. Nada de
+   Chart.js por CDN ni instancias sueltas.
+8. Component-first: antes de escribir markup, buscar el componente del proyecto (`src/components/ui/` y `src/components/<modulo>/`); si no existe, **proponerlo antes de continuar**. No reimplementar patrones con clases sueltas (ver "Doctrina de composicion de UI").
 
 ## Decisiones documentadas
 
@@ -611,6 +761,9 @@ Siempre `size` numerico. NUNCA `w-5 h-5 size-5`.
 - El portal mantiene sentence case en espanol para texto visible
 - Las rutas nuevas deben pasar por `@lib/navigation.ts`
 - Los iconos se usan con `size={24}` numerico, no clases de dimension
+- Los graficos usan Chart.js local dentro de `ChartCard`, con paleta DaisyUI via
+  `readChartTokens`, fuente Geist Variable y textos en 12; el redibujado por cambio de tema
+  claro/oscuro es obligatorio
 
 ## Estandarización del Sistema de Diseño
 

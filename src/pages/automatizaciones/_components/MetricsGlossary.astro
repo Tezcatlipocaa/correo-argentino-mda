@@ -1,55 +1,19 @@
 ---
-import { Icon } from "astro-icon/components";
+import MetricsLegend from "@components/ui/MetricsLegend.astro";
 import { METRIC_DEFINITIONS } from "@lib/workflow/metrics";
 
 const definitions = METRIC_DEFINITIONS;
 ---
 
-<details class="group card bg-base-100 border-base-300 border shadow-sm">
-  <summary
-    class="flex cursor-pointer list-none items-center gap-2 p-4 select-none [&::-webkit-details-marker]:hidden"
-  >
-    <Icon
-      name="boxicons:book-open"
-      size={18}
-      class="text-secondary shrink-0"
-      aria-hidden="true"
-    />
-    <h2 class="text-base-content text-sm font-semibold">
-      ¿Cómo se calcula cada métrica?
-    </h2>
-    <Icon
-      name="boxicons:chevron-down"
-      size={16}
-      class="text-base-content/40 ml-auto transition-transform group-open:rotate-180"
-      aria-hidden="true"
-    />
-  </summary>
-  <div class="border-base-300 border-t p-4">
-    <dl class="grid gap-4 sm:grid-cols-2">
-      {
-        definitions.map((definition) => (
-          <div class="flex flex-col gap-0.5">
-            <dt class="text-base-content text-sm font-semibold">
-              {definition.label}
-            </dt>
-            <dd class="text-base-content/70 text-sm">
-              {definition.description}
-            </dd>
-            {definition.formula && (
-              <dd class="text-base-content/50 font-mono text-xs">
-                {definition.formula}
-              </dd>
-            )}
-          </div>
-        ))
-      }
-    </dl>
-    <p class="text-base-content/50 mt-4 text-xs">
-      Los indicadores se calculan sobre el historial local del portal
-      (`automation_parents`). El progreso persistido sólo existe para casos
-      abiertos alguna vez y las fechas estimadas sólo para títulos con fecha
-      (workflow AUTSUC).
-    </p>
-  </div>
-</details>
+<MetricsLegend
+  title="¿Cómo se calcula cada métrica?"
+  items={definitions}
+  collapsible
+>
+  <p slot="extra" class="text-base-content/50 text-xs">
+    Los indicadores se calculan sobre el historial local del portal
+    (`automation_parents`). El progreso persistido sólo existe para casos
+    abiertos alguna vez y las fechas estimadas sólo para títulos con fecha
+    (workflow AUTSUC).
+  </p>
+</MetricsLegend>

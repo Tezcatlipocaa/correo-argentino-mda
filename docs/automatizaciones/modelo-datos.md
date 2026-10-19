@@ -47,6 +47,11 @@ locales. Motor **SQLite** (`database/mda.db`) + **Drizzle ORM** (`src/db/schema.
   KPIs (creados, finalizados, por portal, activos al cierre, mediana/p90 de lead
   time, on-time). Lo escribe `scripts/snapshot-automation-metrics.ts` (worker
   PM2 diario 04:05).
+- **`automation_activity_days`** (`automation_id`, `day` PK compuesta): un día
+  (`YYYY-MM-DD` local) por caso con movimiento. Alimenta "tiempo trabajado"
+  (días activos) y "días sin actividad". Lo pueblan el scan de discovery (cuando
+  cambia `updated_at`/estado) y `scripts/backfill-automation-activity.ts`. Nunca
+  poda.
 - **`automation_tracked_parents`** (`automation_id` PK): solo padres **activos**;
   recupera los reasignados a otra mesa. Se poda al finalizar.
 - **`automation_closures`** (`automation_id` PK): cierre local (`manual`/`auto`),
@@ -64,13 +69,19 @@ locales. Motor **SQLite** (`database/mda.db`) + **Drizzle ORM** (`src/db/schema.
 ## Métricas (`/automatizaciones/metricas`)
 
 - Se calculan **server-side sobre datos locales** (`src/lib/workflow/metrics.ts`),
-  sin consultar InvGate: leen `automation_parents` + `automation_closures`.
+  sin consultar InvGate: leen `automation_parents` + `automation_closures` +
+  `automation_activity_days`.
 - Definiciones: **en curso** = `statusId` 1-4 sin cierre local; **finalizada** =
   `statusId` 5-8 o cierre local; **resolución** = `closure.closed_at ?? closed_at`
   menos `created_at`.
-- Incluye KPIs (total, WIP, finalizadas, lead time mediano/p90/promedio, % cierre
-  por portal), throughput mensual (12 meses), backlog por antigüedad, ranking de
-  sucursales y desglose de cierres (motivo/usuario).
+- Incluye resumen ejecutivo, KPIs (total, WIP, finalizadas, lead time
+  mediano/p90/promedio, SLA), gráficos (líneas de throughput y lead time por mes;
+  donuts de región y SLA), throughput mensual desde el inicio del historial (sin
+  meses fantasma), tiempo trabajado (días activos) y sin actividad, ritmo de
+  cierre + ETA del backlog, backlog por antigüedad y ranking de sucursales.
+- **Post-automatización** (`src/lib/workflow/post-automation.ts`): errores Mosaic
+  de la sucursal en los días posteriores al cierre, matcheados por `location_id`
+  (`branch_code → offices → office_invgate_links`). Requiere `INVGATE_MOSAIC_VIEW_ID`.
 - Límites: el histórico arranca en la implantación del módulo (la tabla se
   puebla como side-effect del scan) y el `statusId` puede tener hasta el TTL del
   scan de desfase.

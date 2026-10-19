@@ -1,0 +1,54 @@
+---
+import ActionButton from "./ActionButton.astro";
+
+interface Props {
+  id: string;
+  /** Endpoint relativo; el cliente le antepone `BASE_URL`. */
+  endpoint: string;
+  label?: string;
+  title?: string;
+  successMsg?: string;
+  errorMsg?: string;
+  class?: string;
+  size?: "xs" | "sm" | "md" | "default";
+  variant?: "solid" | "soft" | "outline" | "ghost";
+  color?: string;
+}
+
+const {
+  id,
+  endpoint,
+  label = "Actualizar",
+  title = "Actualizar datos",
+  successMsg = "Datos actualizados con éxito",
+  errorMsg = "Error al actualizar los datos",
+  class: className = "",
+  size = "default",
+  variant = "soft",
+  color = "btn-secondary",
+} = Astro.props;
+---
+
+<ActionButton
+  id={id}
+  type="button"
+  variant={variant}
+  color={color}
+  size={size}
+  icon="boxicons:refresh-cw"
+  iconSize={18}
+  label={label}
+  title={title}
+  class={className}
+  data-report-refresh
+  data-refresh-endpoint={endpoint}
+  data-refresh-success={successMsg}
+  data-refresh-error={errorMsg}
+/>
+
+<script>
+  import { initReportRefresh } from "@lib/reportRefresh";
+
+  initReportRefresh();
+  document.addEventListener("astro:page-load", initReportRefresh);
+</script>

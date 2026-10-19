@@ -1,56 +1,48 @@
 ---
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 ---
 
-<PageContainer width="xl">
-  <div class="skeleton-debounced">
-    <PageHeader
-      description="Directorio operativo para ubicar teléfonos, correos y accesos clave sin salir del flujo de soporte."
-    />
+<div class="skeleton-debounced flex flex-col gap-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="skeleton h-10 w-full max-w-md rounded-box"></div>
+  </div>
 
-    <div class="w-full max-w-xl">
-      <div class="skeleton h-12 w-full rounded-lg"></div>
-    </div>
-
-    <section
-      class="mt-6 flex flex-col gap-5"
-      aria-label="Directorio de contactos (cargando)"
-    >
-      {
-        Array.from({ length: 3 }).map(() => (
-          <article class="card border-base-300 bg-base-100 overflow-hidden border border-t-4 shadow-md">
-            <header class="border-base-300 bg-base-200/20 flex items-center justify-between gap-3 border-b p-4">
-              <div class="flex min-w-0 items-center gap-3">
-                <div class="skeleton size-10 shrink-0 rounded-lg" />
-                <div class="min-w-0 space-y-2">
-                  <div class="skeleton h-4 w-32 rounded" />
-                  <div class="skeleton h-3 w-20 rounded" />
-                </div>
-              </div>
-            </header>
-
-            <div class="card-body p-0">
-              <div class="space-y-4 p-4">
-                <div class="flex gap-4">
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                </div>
-                <div class="flex gap-4">
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                  <div class="skeleton h-4 w-1/5 rounded" />
-                </div>
+  <section
+    class="flex flex-col gap-5"
+    aria-label="Directorio de contactos (cargando)"
+  >
+    {
+      Array.from({ length: 3 }).map(() => (
+        <article class="card rounded-box border-base-300 bg-base-100 overflow-hidden border border-t-4 shadow-xs">
+          <header class="border-base-300 bg-base-200/20 flex items-center justify-between gap-3 border-b p-4">
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="skeleton size-10 shrink-0 rounded-box" />
+              <div class="min-w-0 space-y-2">
+                <div class="skeleton h-4 w-32 rounded" />
+                <div class="skeleton h-3 w-20 rounded" />
               </div>
             </div>
-          </article>
-        ))
-      }
-    </section>
-  </div>
-</PageContainer>
+          </header>
+
+          <div class="card-body p-0">
+            <div class="space-y-4 p-4">
+              <div class="flex gap-4">
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+              </div>
+              <div class="flex gap-4">
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+                <div class="skeleton h-4 w-1/5 rounded" />
+              </div>
+            </div>
+          </div>
+        </article>
+      ))
+    }
+  </section>
+</div>

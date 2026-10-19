@@ -6,13 +6,14 @@ import { eq, sql } from "drizzle-orm";
 import { chromium } from "playwright";
 import "dotenv/config";
 import { fullInvgateSync } from "../src/lib/invgate/userSync";
+import { requireEnv } from "../src/lib/env";
 
 const MIDPOINT_URL = "https://cdc.correoargentino.com.ar";
 const LOGIN_URL = `${MIDPOINT_URL}/midpoint/login`;
 const USERS_TABLE_URL = `${MIDPOINT_URL}/midpoint/admin/users`;
 
-const MIDPOINT_USER = process.env.MIDPOINT_USER || "helpdesk";
-const MIDPOINT_PASS = process.env.MIDPOINT_PASS || "";
+const MIDPOINT_USER = requireEnv("MIDPOINT_USER");
+const MIDPOINT_PASS = requireEnv("MIDPOINT_PASS");
 
 const STATUS_PATH = resolve("src/data/last-sync-users-status.json");
 

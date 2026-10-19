@@ -1,0 +1,192 @@
+---
+import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
+import type { ChartData, MassEvent } from "@lib/officeStats";
+
+interface IncidenteJson {
+  id: number;
+  titulo: string;
+  categoria: string;
+  estado: string;
+  creado: string;
+}
+interface OficinaJson {
+  code: string;
+  name: string;
+  active: boolean;
+  locality: string | null;
+  enRed: boolean | null;
+  paqarAdmision: boolean | null;
+  paqarEntrega: boolean | null;
+  usuarios: number | null;
+  terminales: number;
+  personal: number;
+  assets: number;
+}
+
+interface Props {
+  oficina: OficinaJson;
+  incidentes: IncidenteJson[];
+  eventos: MassEvent[];
+  timeline: ChartData;
+  invgateOk: boolean;
+}
+
+const { oficina, incidentes, eventos, timeline, invgateOk } = Astro.props;
+
+const categoriaCounts = new Map<string, number>();
+for (const incidente of incidentes) {
+  categoriaCounts.set(
+    incidente.categoria,
+    (categoriaCounts.get(incidente.categoria) ?? 0) + 1,
+  );
+}
+const incidentesPorCategoria: ChartData = {
+  labels: [...categoriaCounts.keys()],
+  series: [{ label: "Incidentes", data: [...categoriaCounts.values()] }],
+};
+
+const incidentesGridClass =
+  "grid-cols-[minmax(130px,0.8fr)_minmax(220px,3fr)_minmax(110px,0.8fr)] gap-4";
+const incidentesRowGridClass = `grid ${incidentesGridClass} items-center`;
+---
+
+<div class="flex w-full flex-col gap-6 pb-24">
+  {!invgateOk && <span class="badge badge-warning badge-outline self-start">Sin datos en vivo de InvGate</span>}
+
+  <StatsGrid base={1} sm={2} lg={4} class="w-full">
+    <div data-kpi="usuarios">
+      <StatsCard
+        icon="group"
+        label="Usuarios"
+        value={oficina.usuarios ?? "—"}
+        subtitle="InvGate"
+        color="info"
+      />
+    </div>
+    <div data-kpi="terminales">
+      <StatsCard
+        icon="desktop"
+        label="Terminales"
+        value={oficina.terminales}
+        subtitle="Parque"
+        color="secondary"
+      />
+    </div>
+    <div data-kpi="personal">
+      <StatsCard
+        icon="user-circle"
+        label="Personal"
+        value={oficina.personal}
+        subtitle="Asignado a la sucursal"
+      />
+    </div>
+    <div data-kpi="incidentes">
+      <StatsCard
+        icon="bug-alt"
+        label="Incidentes abiertos"
+        value={invgateOk ? incidentes.length : "—"}
+        subtitle="En vivo"
+        color="warning"
+      />
+    </div>
+  </StatsGrid>
+
+  <div class="flex flex-wrap gap-2">
+    <span class:list={["badge badge-outline", oficina.active ? "badge-success" : "badge-error"]}>
+      {oficina.active ? "Activa" : "Cerrada"}
+    </span>
+    {oficina.enRed && <span class="badge badge-outline">En red</span>}
+    {oficina.paqarAdmision && <span class="badge badge-outline">Paq.AR admisión</span>}
+    {oficina.paqarEntrega && <span class="badge badge-outline">Paq.AR entrega</span>}
+    {oficina.locality && <span class="badge badge-outline">{oficina.locality}</span>}
+    <span class="badge badge-ghost">{oficina.assets} assets</span>
+  </div>
+
+  <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
+    <ChartCard
+      type="doughnut"
+      title="Incidentes abiertos por categoría"
+      labels={incidentesPorCategoria.labels}
+      series={incidentesPorCategoria.series}
+      emptyMessage={invgateOk ? "Sin incidentes abiertos" : "Sin datos en vivo de InvGate"}
+    />
+    <ChartCard
+      type="line"
+      title="Modernización (últimos 30 días)"
+      subtitle="Tickets padres por día"
+      labels={timeline.labels}
+      series={timeline.series}
+    />
+  </div>
+
+  <section class="flex flex-col gap-3">
+    <SectionHeader title="Incidentes abiertos" />
+    {
+      invgateOk && incidentes.length > 0 ? (
+        <DataTable
+          ariaLabel="Incidentes abiertos de la oficina"
+          minWidthClass="min-w-160"
+          headerGridClass={incidentesGridClass}
+          rowGridClass={incidentesRowGridClass}
+        >
+          <div slot="header">
+            <DataTableHeaderCell sortKey="categoria">Categoría</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell sortKey="titulo">Título</DataTableHeaderCell>
+          </div>
+          <div slot="header">
+            <DataTableHeaderCell sortKey="estado">Estado</DataTableHeaderCell>
+          </div>
+
+          {incidentes.slice(0, 20).map((incidente) => (
+            <div
+              data-table-row
+              data-sort-categoria={incidente.categoria.toLowerCase()}
+              data-sort-titulo={incidente.titulo.toLowerCase()}
+              data-sort-estado={incidente.estado.toLowerCase()}
+              class:list={[
+                incidentesRowGridClass,
+                "border-base-300 hover:bg-base-200/50 border-b px-4 py-3 transition-colors last:border-b-0",
+              ]}
+            >
+              <div class="min-w-0">
+                <span class="badge badge-secondary badge-sm">
+                  {incidente.categoria}
+                </span>
+              </div>
+              <div class="min-w-0 truncate text-sm" title={incidente.titulo}>
+                {incidente.titulo}
+              </div>
+              <div class="text-base-content/70 text-sm">{incidente.estado}</div>
+            </div>
+          ))}
+        </DataTable>
+      ) : (
+        <p class="text-base-content/60 text-sm">
+          {invgateOk ? "Sin incidentes abiertos para esta oficina." : "Sin datos en vivo de InvGate."}
+        </p>
+      )
+    }
+  </section>
+
+  {
+    eventos.length > 0 && (
+      <section class="flex flex-col gap-3">
+        <SectionHeader title="Eventos masivos en curso" />
+        {eventos.map((evento) => (
+          <div class="rounded-box border-base-300 bg-base-100 flex flex-wrap items-center gap-3 border px-3 py-2 shadow-sm">
+            <span class="badge badge-warning font-bold">{evento.oficinas} oficinas</span>
+            <span class="min-w-0 flex-1 truncate font-semibold">{evento.titulo}</span>
+            <span class="text-base-content/60 text-sm">{evento.tickets} tickets</span>
+          </div>
+        ))}
+      </section>
+    )
+  }
+</div>

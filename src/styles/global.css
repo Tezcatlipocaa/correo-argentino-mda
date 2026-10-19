@@ -6,9 +6,8 @@
     dark --prefersdark;
   exclude:
     breadcrumbs, calendar, carousel, chat, countdown, diff, dock, fab, filter,
-    footer, glass, hero, hover3d, hovergallery, indicator, list, mask, mockup,
-    radialprogress, rating, stack, stat, steps, textrotate, typography,
-    validator;
+    footer, glass, hero, hover3d, hovergallery, list, mask, mockup,
+    radialprogress, rating, stack, textrotate, typography, validator;
 }
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
@@ -216,6 +215,30 @@
   --color-status-error: var(--color-error);
 }
 
+/* Enlaces (/recursos): defaults siempre declarados para que ninguna regla con
+   var(--columns-effective)/var(--link-icon-*) quede invalida antes de que cargue
+   el island diferido (evita el flash de columnas y el icono a tamaño natural). */
+:root {
+  --columns-effective: 3;
+  --link-icon-size: 36px;
+  --link-icon-container: 44px;
+}
+
+[data-view-mode="compact"] {
+  --link-icon-size: 28px;
+  --link-icon-container: 36px;
+}
+
+[data-view-mode="normal"] {
+  --link-icon-size: 36px;
+  --link-icon-container: 44px;
+}
+
+[data-view-mode="large"] {
+  --link-icon-size: 44px;
+  --link-icon-container: 52px;
+}
+
 /* Lineas de negocio reservadas: institucional, postal, financiero y logistica */
 .linea-reservada-institucional {
   --linea-reservada-bg: var(--color-linea-institucional);
@@ -284,7 +307,6 @@
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--color-secondary) 40%, transparent)
     transparent;
-  overscroll-behavior: contain;
   &::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -435,4 +457,14 @@
 @utility acc-flat {
   --btn-shadow: 0 0 0 0 rgb(0 0 0 / 0);
   --btn-inset: 0 0 0 0 rgb(0 0 0 / 0);
+}
+
+@utility cv-auto-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+
+@utility cv-auto-timeline {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 88px;
 }

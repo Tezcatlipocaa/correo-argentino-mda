@@ -1,0 +1,120 @@
+---
+import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import type { HelpdesksReportData } from "@/types/helpdesks";
+
+interface Props {
+  data: HelpdesksReportData;
+}
+
+const { data } = Astro.props;
+const { overview, items } = data;
+
+const labels = items.map((item) => item.displayName || item.name);
+---
+
+<div class="space-y-6" aria-label="Métricas y estadísticas de mesas de ayuda">
+  <StatsGrid base={2} md={5}>
+    <StatsCard
+      icon="headphone-mic"
+      label="Mesas Monitoreadas"
+      value={overview.totalHelpdesks}
+      subtitle="Colas operativas activas"
+      color="secondary"
+      size="lg"
+    />
+    <StatsCard
+      icon="clock"
+      label="Tickets Activos"
+      value={overview.totalActiveTickets}
+      subtitle={`${overview.totalWaitingTickets} en espera`}
+      color="info"
+      size="lg"
+    />
+    <StatsCard
+      icon="check-circle"
+      label="Resueltos del Mes"
+      value={overview.totalResolvedMonth.toLocaleString("es-AR")}
+      subtitle={`Ratio E/S: ${overview.globalInOutRatio}`}
+      color="success"
+      size="lg"
+    />
+    <StatsCard
+      icon="shield-quarter"
+      label="Cumplimiento SLA"
+      value={`${overview.globalSlaCompliancePercent}%`}
+      subtitle="Meta corporativa: ≥90%"
+      color="info"
+      size="lg"
+    />
+    <StatsCard
+      icon="star"
+      label="CSAT Global"
+      value={`${overview.globalAvgCsat} / 5`}
+      subtitle="Satisfacción de usuario"
+      color="secondary"
+      size="lg"
+    />
+  </StatsGrid>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <ChartCard
+      type="bar"
+      title="Volumen Mensual: Ingresos vs Resoluciones"
+      subtitle="Comparativa de tickets ingresados y resueltos en el período"
+      labels={labels}
+      series={[
+        {
+          label: "Ingresados",
+          data: items.map((item) => item.incomingTicketsMonth),
+        },
+        {
+          label: "Resueltos",
+          data: items.map((item) => item.resolvedTicketsMonth),
+        },
+      ]}
+      class="lg:col-span-2"
+    />
+
+    <ChartCard
+      type="doughnut"
+      title="Distribución del Backlog Pendiente"
+      subtitle="Tickets pendientes acumulados (activos + en espera)"
+      labels={labels}
+      series={[
+        {
+          label: "Tickets Pendientes",
+          data: items.map((item) => item.backlog.active + item.backlog.waiting),
+        },
+      ]}
+    />
+
+    <ChartCard
+      type="bar"
+      title="Cumplimiento de SLA de Resolución (%)"
+      subtitle="Porcentaje de cumplimiento de SLA de resolución por mesa"
+      labels={labels}
+      series={[
+        {
+          label: "% Cumplimiento SLA",
+          data: items.map((item) => item.serviceTimes.slaResolutionCompliancePercent),
+        },
+      ]}
+      class="lg:col-span-2"
+    />
+
+    <ChartCard
+      type="bar"
+      title="Índice de Satisfacción (CSAT)"
+      subtitle="Calificación promedio de satisfacción del usuario (escala 1 a 5)"
+      labels={labels}
+      series={[
+        {
+          label: "Puntaje CSAT",
+          data: items.map((item) => item.csat.averageRating),
+        },
+      ]}
+    />
+  </div>
+</div>

@@ -20,11 +20,13 @@ test.describe("S3.4 Export endpoints auth", () => {
   test("offices: returns 401 without session", async ({ request }) => {
     const response = await request.get("/api/export/offices");
     expect(response.status()).toBe(401);
+    expect(response.headers()["cache-control"]).toBe("no-store");
   });
 
   test("terminals: returns 401 without session", async ({ request }) => {
     const response = await request.get("/api/export/terminals");
     expect(response.status()).toBe(401);
+    expect(response.headers()["cache-control"]).toBe("no-store");
   });
 
   test("offices: returns 200 with admin session", async ({ context }) => {

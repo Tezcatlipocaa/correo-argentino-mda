@@ -1,0 +1,165 @@
+---
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import type { HelpdeskMetricsItem } from "@/types/helpdesks";
+
+interface Props {
+  items: HelpdeskMetricsItem[];
+}
+
+const { items } = Astro.props;
+
+const headerGridClass =
+  "grid-cols-[minmax(180px,1.6fr)_84px_96px_96px_84px_104px_96px_80px_80px_72px] gap-3";
+const rowGridClass = `grid ${headerGridClass} items-center`;
+---
+
+<DataTable
+  id="table-helpdesks"
+  ariaLabel="Desempeño individual por mesa de ayuda"
+  headerGridClass={headerGridClass}
+  rowGridClass={rowGridClass}
+  minWidthClass="min-w-0 md:min-w-max"
+  headerVariant="subtle"
+  fullscreen
+  stackOnMobile
+>
+  <div slot="header">
+    <DataTableHeaderCell sortKey="nombre">Mesa de Ayuda</DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="operadores">
+      Operadores
+    </DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="ingresos">
+      Ingresos
+    </DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="resueltos">
+      Resueltos
+    </DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="ratio">
+      Ratio E/S
+    </DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="activos">
+      Activos
+    </DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="respuesta">
+      1ª Respuesta
+    </DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="mttr">MTTR</DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="sla">SLA</DataTableHeaderCell>
+  </div>
+  <div slot="header">
+    <DataTableHeaderCell align="right" sortKey="csat">CSAT</DataTableHeaderCell>
+  </div>
+
+  {
+    items.map((item) => {
+      const ratioBadgeClass =
+        item.inOutRatio >= 0.95
+          ? "badge-success"
+          : item.inOutRatio >= 0.9
+            ? "badge-info"
+            : "badge-warning";
+
+      const slaBadgeClass =
+        item.serviceTimes.slaResolutionCompliancePercent >= 90
+          ? "badge-success"
+          : "badge-error";
+
+      return (
+        <div
+          data-table-row
+          class={`${rowGridClass} hover:bg-base-200/50 transition-colors duration-200`}
+          data-helpdesk-name={item.name}
+          data-helpdesk-display-name={item.displayName}
+          data-sort-nombre={item.displayName}
+          data-sort-operadores={item.totalMembers}
+          data-sort-ingresos={item.incomingTicketsMonth}
+          data-sort-resueltos={item.resolvedTicketsMonth}
+          data-sort-ratio={item.inOutRatio.toFixed(2)}
+          data-sort-activos={item.backlog.active}
+          data-sort-respuesta={item.serviceTimes.firstReplyAvgMinutes}
+          data-sort-mttr={item.serviceTimes.mttrAvgHours}
+          data-sort-sla={item.serviceTimes.slaResolutionCompliancePercent}
+          data-sort-csat={item.csat.averageRating}
+        >
+          <div class="min-w-0" data-label="Mesa de Ayuda">
+            <div class="text-base-content truncate font-semibold">
+              {item.displayName}
+            </div>
+            {item.name !== item.displayName && (
+              <div class="text-base-content/60 truncate text-xs">
+                {item.name}
+              </div>
+            )}
+          </div>
+          <div class="text-right tabular-nums" data-label="Operadores">
+            {item.totalMembers}
+          </div>
+          <div
+            class="text-right font-mono tabular-nums"
+            data-label="Ingresos"
+          >
+            {item.incomingTicketsMonth.toLocaleString("es-AR")}
+          </div>
+          <div
+            class="text-right font-mono tabular-nums"
+            data-label="Resueltos"
+          >
+            {item.resolvedTicketsMonth.toLocaleString("es-AR")}
+          </div>
+          <div class="text-right" data-label="Ratio E/S">
+            <span
+              class:list={["badge badge-sm font-semibold", ratioBadgeClass]}
+            >
+              {item.inOutRatio.toFixed(2)}
+            </span>
+          </div>
+          <div class="text-right" data-label="Activos">
+            <span class="font-semibold tabular-nums">
+              {item.backlog.active}
+            </span>
+            <span class="text-base-content/60 text-xs">
+              {" "}({item.backlog.waiting} esp.)
+            </span>
+          </div>
+          <div
+            class="text-right font-mono tabular-nums"
+            data-label="1ª Respuesta"
+          >
+            {item.serviceTimes.firstReplyAvgMinutes} min
+          </div>
+          <div class="text-right font-mono tabular-nums" data-label="MTTR">
+            {item.serviceTimes.mttrAvgHours} h
+          </div>
+          <div class="text-right" data-label="SLA">
+            <span class:list={["badge badge-sm font-semibold", slaBadgeClass]}>
+              {item.serviceTimes.slaResolutionCompliancePercent}%
+            </span>
+          </div>
+          <div
+            class="text-right font-semibold tabular-nums"
+            data-label="CSAT"
+          >
+            {item.csat.averageRating}
+          </div>
+        </div>
+      );
+    })
+  }
+</DataTable>

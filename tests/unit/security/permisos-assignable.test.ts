@@ -20,6 +20,7 @@ const dbMock = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../src/db/index", () => ({
+  getSqliteDataVersion: () => 0,
   db: {
     select: () => ({
       from: () => ({

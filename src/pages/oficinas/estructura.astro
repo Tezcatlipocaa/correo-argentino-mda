@@ -1,0 +1,38 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import OfficeTreeCanvas from "@components/oficinas/estructura/OfficeTreeCanvas";
+import { getOfficeStructureTree } from "@lib/offices/structure-tree";
+import { getCleanBase } from "@lib/baseUrl";
+import ActionButton from "@components/ui/ActionButton.astro";
+
+const cleanBase = getCleanBase();
+const tree = await getOfficeStructureTree();
+---
+
+<BaseLayout title="Estructura de Red Postal | Oficinas">
+  <PageContainer width="xxl">
+    <MetricsHeader
+      backHref={`${cleanBase}oficinas`}
+      backLabel="Volver al directorio"
+      title="Estructura de Red Postal"
+      description="Visualización jerárquica de regiones, provincias, complejos edilicios y unidades operativas de Correo Argentino."
+    >
+      <Fragment slot="actions">
+        <ActionButton
+          href={`${cleanBase}oficinas/estadisticas`}
+          icon="boxicons:bar-chart-big"
+          label="Estadísticas"
+          variant="outline"
+          size="sm"
+          title="Ver estadísticas consolidadas de la red"
+        />
+      </Fragment>
+    </MetricsHeader>
+
+    <div class="mt-6">
+      <OfficeTreeCanvas client:load rootNode={tree} />
+    </div>
+  </PageContainer>
+</BaseLayout>

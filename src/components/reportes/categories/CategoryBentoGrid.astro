@@ -1,0 +1,127 @@
+---
+import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import type { TreeMetricsResult } from "@lib/categories/metrics-engine";
+
+interface Props {
+  metrics: TreeMetricsResult;
+}
+
+const { metrics } = Astro.props;
+
+const paretoLabels = ["Top 5", "Top 10", "Top 16", "Top 50", "Restantes"];
+const paretoValues = [
+  metrics.pareto.top5,
+  metrics.pareto.top10,
+  metrics.pareto.top16,
+  metrics.pareto.top50,
+  Math.max(0, Math.round((100 - metrics.pareto.top50) * 10) / 10),
+];
+
+const closureLabels = ["≤1 min", "1-5 min", "5-15 min", "15m-1h", ">1h"];
+const closureValues = [
+  metrics.closureDistribution.under1min,
+  metrics.closureDistribution.from1to5min,
+  metrics.closureDistribution.from5to15min,
+  metrics.closureDistribution.from15to60min,
+  metrics.closureDistribution.over60min,
+];
+
+const depthEntries = Object.entries(metrics.depthDistribution || {}).sort(
+  ([a], [b]) => Number(a) - Number(b),
+);
+const depthLabels = depthEntries.length > 0
+  ? depthEntries.map(([d]) => `Nivel ${d}`)
+  : ["Nivel 2", "Nivel 3", "Nivel 4", "Nivel 5", "Nivel 6-7"];
+const depthValues = depthEntries.length > 0
+  ? depthEntries.map(([, v]) => v)
+  : [5400, 4200, 1800, 600, 76]; // ponytail: fallback fixture (no live InvGate); wire real depth data when the metrics engine emits it
+
+// ponytail: hardcoded comparison fixture, not computed from InvGate. Replace with real model runs when available.
+const modelComparisonLabels = ["Actual", "Propuesta A", "Propuesta B", "Propuesta C"];
+const modelNodesSeries = [719, 455, 394, 404];
+const modelMaxClicksSeries = [7, 3, 2, 3];
+---
+
+<div class="space-y-6" aria-label="Métricas y estadísticas del catálogo de categorías">
+  <StatsGrid base={2} md={5}>
+    <StatsCard
+      icon="trash"
+      label="Desperdicio"
+      value={`${metrics.structuralWastePercent}%`}
+      subtitle={`${metrics.deadNodes} nodos sin uso`}
+      color="error"
+      size="lg"
+    />
+    <StatsCard
+      icon="sitemap"
+      label="Profundidad"
+      value={`${metrics.weightedAvgDepth}`}
+      subtitle="clics promedio"
+      color="secondary"
+      size="lg"
+    />
+    <StatsCard
+      icon="timer"
+      label="Cierre Inmediato"
+      value={`${metrics.closureDistribution.immediatePercent}%`}
+      subtitle="resueltos ≤15 min"
+      color="success"
+      size="lg"
+    />
+    <StatsCard
+      icon="pie-chart"
+      label="Concentración Top 50"
+      value={`${metrics.pareto.top50}%`}
+      subtitle="del volumen total"
+      color="info"
+      size="lg"
+    />
+    <StatsCard
+      icon="x-circle"
+      label="Anomalías"
+      value={`${metrics.anomalies.singleChildCount + metrics.anomalies.wildcardCount}`}
+      subtitle={`${metrics.anomalies.singleChildCount} hijos únicos, ${metrics.anomalies.wildcardCount} genéricos`}
+      color="info"
+      size="lg"
+    />
+  </StatsGrid>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <ChartCard
+      type="bar"
+      title="Concentración de Volumen (Pareto)"
+      subtitle="Acumulado porcentual por grupo de categorías principales"
+      labels={paretoLabels}
+      series={[{ label: "% Volumen", data: paretoValues }]}
+    />
+
+    <ChartCard
+      type="doughnut"
+      title="Distribución de Tiempos de Cierre"
+      subtitle="Proporción del volumen según tiempo de resolución"
+      labels={closureLabels}
+      series={[{ label: "% Tickets", data: closureValues }]}
+    />
+
+    <ChartCard
+      type="bar"
+      title="Distribución por Profundidad"
+      subtitle="Volumen de tickets según nivel de profundidad en el árbol"
+      labels={depthLabels}
+      series={[{ label: "Tickets", data: depthValues }]}
+    />
+
+    <ChartCard
+      type="bar"
+      title="Comparativa de Modelos de Taxonomía"
+      subtitle="Reducción de nodos totales frente a propuestas de optimización"
+      labels={modelComparisonLabels}
+      series={[
+        { label: "Nodos Totales", data: modelNodesSeries },
+        { label: "Máx Clics", data: modelMaxClicksSeries },
+      ]}
+    />
+  </div>
+</div>

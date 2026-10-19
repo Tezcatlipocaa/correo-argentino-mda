@@ -1,11 +1,10 @@
 ---
 import { Icon } from "astro-icon/components";
-import PageContainer from "@components/ui/PageContainer.astro";
-import PageHeader from "@components/ui/PageHeader.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import CatalogAppCard from "./CatalogAppCard.astro";
 import CatalogBundleBanner from "./CatalogBundleBanner.astro";
+import { getPackBaseStatus } from "@lib/packBaseService";
 import { db } from "@db/index";
 import { applications, applicationCategories } from "@db/schema";
 import { asc, eq } from "drizzle-orm";
@@ -26,8 +25,10 @@ interface AppRow {
 let allApps: AppRow[] = [];
 let categories: { id: number; title: string }[] = []; // Changed id to number
 let errorMsg = "";
+let packBaseStatus = { available: false, count: 0, totalSizeBytes: 0 };
 
 try {
+  packBaseStatus = await getPackBaseStatus();
   const rawApps = await db
     .select({
       id: applications.id,
@@ -94,10 +95,7 @@ for (const app of regularApps) {
 }
 ---
 
-<PageContainer width="xl">
-  <PageHeader
-    description="Descarga herramientas de operatoria diaria de mesa de ayuda en formato paquete .zip o por aplicativo individual según tu necesidad."
-  />
+<div class="flex flex-col gap-6">
 
   {
     errorMsg && (
@@ -109,23 +107,36 @@ for (const app of regularApps) {
   }
 
   {
-    bundle && (
-      <CatalogBundleBanner
-        title={bundle.title}
-        description={bundle.description ?? ""}
-        filePath={bundle.filePath}
-      />
+    !errorMsg && regularApps.length > 0 && (
+      <div class="flex items-center justify-between gap-4">
+        <SearchBar
+          id="catalog-search"
+          label="Buscar aplicativos"
+          placeholder="Buscar por nombre, descripción o categoría"
+          clearable={true}
+          class="max-w-md"
+        />
+      </div>
     )
   }
 
   {
-    !errorMsg && regularApps.length > 0 && (
-      <SearchBar
-        id="catalog-search"
-        label="Buscar aplicativos"
-        placeholder="Buscar por nombre, descripción o categoría"
-        class="max-w-md"
+    packBaseStatus.available ? (
+      <CatalogBundleBanner
+        title="Pack base de operatoria (.zip)"
+        description="Descargá las herramientas de mesa de ayuda seleccionadas en un único paquete para mantener la operatoria diaria."
+        filePath="api/aplicativos/pack-base"
+        count={packBaseStatus.count}
+        totalSizeBytes={packBaseStatus.totalSizeBytes}
       />
+    ) : (
+      bundle && (
+        <CatalogBundleBanner
+          title={bundle.title}
+          description={bundle.description ?? ""}
+          filePath={bundle.filePath}
+        />
+      )
     )
   }
 
@@ -133,6 +144,8 @@ for (const app of regularApps) {
     id="catalog-empty-state"
     title="Sin resultados"
     description="La búsqueda no coincidió con ningún aplicativo. Probá con otro nombre, descripción o categoría."
+    showClearButton={true}
+    clearButtonText="Limpiar búsqueda"
   />
 
   {
@@ -230,7 +243,7 @@ for (const app of regularApps) {
     !errorMsg && regularApps.length === 0 && !bundle && (
       <div class="card bg-base-100 border-base-300 border p-12 text-center">
         <Icon
-          name="boxicons:archive-in"
+          name="boxicons:archive-arrow-down-filled"
           size={48}
           class="text-base-content/30 mx-auto mb-3"
         />
@@ -240,7 +253,7 @@ for (const app of regularApps) {
       </div>
     )
   }
-</PageContainer>
+</div>
 
 <script>
   import {

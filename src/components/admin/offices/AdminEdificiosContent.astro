@@ -6,6 +6,7 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase, getBaseNoSlash } from "@lib/baseUrl";
 import { groupOfficesByBuilding } from "@lib/officeBuildingReconcile";
 
@@ -45,11 +46,11 @@ const baseNoSlash = getBaseNoSlash();
 
 <PageContainer width="xxl">
   <PageHeader
-    title="Edificios de oficinas"
+    title="Agrupación de oficinas"
     description="Oficinas que comparten un mismo edificio pero tienen la dirección escrita de forma distinta. Revisá los grupos, ajustá la dirección canónica si hace falta y unificá los seleccionados."
   />
 
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4">
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <span class="badge badge-ghost badge-lg text-base-content font-semibold">
         {groups.length}
@@ -73,7 +74,7 @@ const baseNoSlash = getBaseNoSlash();
   </div>
 
   <DataTable
-    ariaLabel="Edificios de oficinas"
+    ariaLabel="Agrupación de oficinas"
     headerGridClass={headerGridClass}
     rowGridClass={rowGridClass}
     emptyStateTitle="No hay edificios candidatos"
@@ -82,14 +83,14 @@ const baseNoSlash = getBaseNoSlash();
     defaultSortKey="oficinas"
     defaultSortDirection="descending"
   >
-    <div slot="header" class={headerGridClass}>
+    <Fragment slot="header">
       <span></span>
       <DataTableHeaderCell sortKey="id">Edificio</DataTableHeaderCell>
       <DataTableHeaderCell>Dirección canónica</DataTableHeaderCell>
       <DataTableHeaderCell sortKey="oficinas">Oficinas</DataTableHeaderCell>
       <DataTableHeaderCell>Variantes detectadas</DataTableHeaderCell>
       <DataTableHeaderCell align="right">Acciones</DataTableHeaderCell>
-    </div>
+    </Fragment>
 
     {
       groups.map((group) => {
@@ -119,7 +120,7 @@ const baseNoSlash = getBaseNoSlash();
               <span class="block truncate font-mono text-sm font-semibold">
                 {group.key}
               </span>
-              <span class="block text-xs text-base-content/60">
+              <span class="text-base-content/60 block text-xs">
                 {group.members[0]?.provinceCode || "—"}
               </span>
             </div>
@@ -136,21 +137,21 @@ const baseNoSlash = getBaseNoSlash();
             </span>
             <ul class="min-w-0 space-y-0.5 text-xs">
               {visibleVariants.map((variant) => (
-                <li class="truncate text-base-content/70">· {variant}</li>
+                <li class="text-base-content/70 truncate">· {variant}</li>
               ))}
               {hiddenVariants > 0 && (
-                <li class="truncate text-base-content/70">
+                <li class="text-base-content/70 truncate">
                   +{hiddenVariants} más
                 </li>
               )}
             </ul>
             <div class="text-right">
-              <a
+              <ActionButton
                 href={`${baseNoSlash}/oficinas?search=${encodeURIComponent(group.canonical)}`}
-                class="btn btn-ghost btn-xs"
-              >
-                Ver oficinas
-              </a>
+                variant="ghost"
+                size="xs"
+                label="Ver oficinas"
+              />
             </div>
           </div>
         );
@@ -172,8 +173,10 @@ const baseNoSlash = getBaseNoSlash();
     function selectedRows() {
       return [
         ...document.querySelectorAll<HTMLElement>("[data-edificio-row]"),
-      ].filter((row) =>
-        row.querySelector<HTMLInputElement>("[data-edificio-checkbox]")?.checked,
+      ].filter(
+        (row) =>
+          row.querySelector<HTMLInputElement>("[data-edificio-checkbox]")
+            ?.checked,
       );
     }
 

@@ -28,8 +28,10 @@ import Database from "better-sqlite3";
 import { execSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
+import { analyzeSchemaGuard, parseAlignCliArgs } from "../src/lib/deploy/schemaGuard";
 
-const dbPath = resolve(process.argv[2] ?? "./database/mda.db");
+const cliArgs = parseAlignCliArgs(process.argv.slice(2));
+const dbPath = resolve(cliArgs.dbPath);
 const workDir = join(process.cwd(), ".drizzle-canonical");
 const canonicalDbPath = join(workDir, "canonical.db");
 const configPath = join(workDir, "drizzle.canonical.config.ts");
@@ -37,7 +39,7 @@ const backupPath = dbPath.replace(/\.db$/, "") + `.bak-align-${new Date().toISOS
 
 const SCHEMA_REL = "./src/db/schema.ts";
 
-console.log(`DB objetivo: ${dbPath}`);
+console.log(`DB objetivo: ${dbPath} (strict=${cliArgs.strict}, allowDestructive=${cliArgs.allowDestructive})`);
 
 function tableNames(db: Database.Database): string[] {
   return db
@@ -132,6 +134,20 @@ try {
   );
   if (extra.length > 0) {
     console.log("  NOTA: tablas fuera del schema se dejan intactas (no se borran).");
+  }
+
+  if (cliArgs.strict) {
+    const guard = analyzeSchemaGuard(canonical, aligned);
+    if (!guard.ok) {
+      console.error("\n[align-db-to-schema] MODO STRICT: se detectaron cambios destructivos no permitidos:");
+      for (const v of guard.violations) {
+        console.error(`  - [${v.kind}] ${v.message}`);
+      }
+      console.error("\nDeploy abortado antes de modificar tablas. Corré la migración manual correspondiente o usá --allow-destructive si el cambio es intencional.");
+      canonical.close();
+      aligned.close();
+      process.exit(1);
+    }
   }
 
   // ── 4. Crear faltantes + reconstruir desalineadas ────────────────────────

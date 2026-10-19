@@ -20,7 +20,11 @@ export function jsonError(
   status = 400,
   cacheControl?: string,
 ) {
-  return jsonResponse({ error: message }, status, cacheControl);
+  // #307: los 401/403 nunca deben cachearse (proxy/intermediario). Default
+  // acá para no depender de que cada caller pase "no-store" a mano.
+  const cc =
+    cacheControl ?? (status === 401 || status === 403 ? "no-store" : undefined);
+  return jsonResponse({ error: message }, status, cc);
 }
 
 export function sanitizeError(

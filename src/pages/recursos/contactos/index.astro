@@ -1,0 +1,11 @@
+---
+import RecursosLayout from "@layouts/RecursosLayout.astro";
+import ContactosContent from "@components/contactos/ContactosContent.astro";
+import ContactosSkeleton from "@components/contactos/ContactosSkeleton.astro";
+---
+
+<RecursosLayout activeTab="contactos">
+  <ContactosContent server:defer>
+    <ContactosSkeleton slot="fallback" />
+  </ContactosContent>
+</RecursosLayout>

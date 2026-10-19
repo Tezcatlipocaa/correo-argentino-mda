@@ -41,6 +41,11 @@ export const navSections: NavSection[] = [
             icon: "boxicons:git-branch-filled",
           },
           {
+            href: "/supervision/autogestiones-metricas",
+            label: "Métricas de autogestiones",
+            icon: "boxicons:chart-line-filled",
+          },
+          {
             href: "/supervision/asistencia",
             label: "Control de asistencia",
             icon: "boxicons:clock-filled",
@@ -62,28 +67,35 @@ export const navSections: NavSection[] = [
         href: "/oficinas",
         label: "Oficinas",
         icon: "boxicons:building-house-filled",
+        children: [
+          {
+            href: "/oficinas/estadisticas",
+            label: "Estadísticas",
+            icon: "boxicons:bar-chart-big-filled",
+          },
+          {
+            href: "/oficinas/estructura",
+            label: "Estructura de red",
+            icon: "boxicons:network-chart-filled",
+          },
+        ],
       },
       {
         href: "/inventario-terminales",
         label: "Terminales",
         icon: "boxicons:desktop-filled",
-      },
-      {
-        href: "/recursos",
-        label: "Enlaces",
-        icon: "boxicons:link-filled",
         children: [
           {
-            href: "/recursos/aplicativos",
-            label: "Aplicativos",
-            icon: "boxicons:link-filled",
+            href: "/inventario-terminales/estadisticas",
+            label: "Estadísticas",
+            icon: "boxicons:pie-chart-alt-filled",
           },
         ],
       },
       {
-        href: "/contactos",
-        label: "Contactos",
-        icon: "boxicons:phone-filled",
+        href: "/recursos",
+        label: "Recursos",
+        icon: "boxicons:folder-filled",
       },
       {
         href: "/mesas-de-ayuda",
@@ -99,6 +111,33 @@ export const navSections: NavSection[] = [
         href: "/automatizaciones",
         label: "Automatizaciones",
         icon: "boxicons:rocket-filled",
+      },
+      {
+        href: "/reportes",
+        label: "Métricas",
+        icon: "boxicons:bar-chart-big-filled",
+        children: [
+          {
+            href: "/reportes",
+            label: "Dashboard General",
+            icon: "boxicons:grid-filled",
+          },
+          {
+            href: "/reportes/categorias",
+            label: "Árbol de Categorías",
+            icon: "boxicons:network-chart-filled",
+          },
+          {
+            href: "/reportes/mesas",
+            label: "Flujo de Mesas",
+            icon: "boxicons:dashboard-filled",
+          },
+          {
+            href: "/reportes/workflows",
+            label: "Workflows de Proceso",
+            icon: "boxicons:git-repo-forked-filled",
+          },
+        ],
       },
     ],
   },
@@ -141,6 +180,13 @@ export const navSections: NavSection[] = [
             href: "/admin/usuarios",
             label: "Usuarios",
             icon: "boxicons:group-filled",
+            children: [
+              {
+                href: "/admin/usuarios/estadisticas",
+                label: "Estadísticas",
+                icon: "boxicons:pie-chart-alt-filled",
+              },
+            ],
           },
           {
             href: "/admin/auditoria",

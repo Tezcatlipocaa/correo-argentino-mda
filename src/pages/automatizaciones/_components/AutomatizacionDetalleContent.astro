@@ -2,7 +2,7 @@
 import { Icon } from "astro-icon/components";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import AutomationProgress from "./AutomationProgress.astro";
 import AutomationTimeline from "./AutomationTimeline.astro";
 import AutomationLifecycleLabel from "./AutomationLifecycleLabel.astro";
@@ -17,6 +17,13 @@ import {
 } from "@lib/workflow/automation-status";
 import { canManualClose } from "@lib/workflow/closures";
 import type { AutomationClosure } from "@lib/workflow/closures";
+import { listActivityDays } from "@lib/workflow/activity-days";
+import {
+  findPostAutomationErrors,
+  postAutomationConfigured,
+  postAutomationWindowDays,
+} from "@lib/workflow/post-automation";
+import { formatDays } from "@lib/workflow/metricsFormat";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import { deriveInvGateUiUrl } from "@lib/invgate/automation/url";
 import type { AutomationDetail } from "@lib/workflow/resolver";
@@ -48,6 +55,41 @@ const canShowCloseButton =
   canManualClose(detail.progress.percent);
 const canReopen = canClose && hasClosure && closure?.kind === "manual";
 const canEditManualData = canClose && detail !== null;
+
+// Bloque de tiempo: días activos (log), sin actividad y ciclo.
+const SECONDS_PER_DAY = 86_400;
+const nowSec = Math.floor(Date.now() / 1000);
+const activeDays = detail ? listActivityDays(detail.id) : [];
+const activeDaysCount = activeDays.length;
+const timeEnd = detail?.closedAt ?? nowSec;
+const calendarDays = detail
+  ? Math.max(0, (timeEnd - detail.createdAt) / SECONDS_PER_DAY)
+  : 0;
+const idleDays = Math.max(0, calendarDays - activeDaysCount);
+const cycleDays =
+  detail?.closedAt !== null && detail?.closedAt !== undefined
+    ? Math.max(0, (detail.closedAt - detail.createdAt) / SECONDS_PER_DAY)
+    : null;
+const round1 = (value: number) => Math.round(value * 10) / 10;
+
+// Monitoreo post-automatización (errores Mosaic de la sucursal tras el cierre).
+const postConfigured = postAutomationConfigured();
+const postWindowDays = postAutomationWindowDays();
+const resolutionAt = detail ? (closure?.closedAt ?? detail.closedAt) : null;
+const postErrors =
+  detail && postConfigured && resolutionAt !== null
+    ? ((
+        await findPostAutomationErrors([
+          {
+            automationId: detail.id,
+            displayName: detail.displayName,
+            branchCode: detail.branchCode,
+            branchName: detail.branchName,
+            closedAt: resolutionAt,
+          },
+        ])
+      )[0]?.errors ?? [])
+    : [];
 ---
 
 <PageContainer width="xl" class="acc">
@@ -87,33 +129,25 @@ const canEditManualData = canClose && detail !== null;
           {(canShowCloseButton || canReopen) && (
             <div class="ml-auto flex items-center gap-2">
               {canShowCloseButton && (
-                <button
+                <ActionButton
                   type="button"
-                  class="btn btn-secondary btn-sm gap-1"
+                  color="btn-secondary"
+                  size="sm"
+                  icon="boxicons:check-circle"
+                  label="Cerrar caso"
                   data-open-close-automation
-                >
-                  <Icon
-                    name="boxicons:check-circle"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  Cerrar caso
-                </button>
+                />
               )}
               {canReopen && (
-                <button
+                <ActionButton
                   type="button"
-                  class="btn btn-ghost btn-sm gap-1"
+                  variant="ghost"
+                  size="sm"
+                  icon="boxicons:refresh-cw"
+                  label="Reabrir"
                   data-reopen-automation
                   data-automation-id={detail.id}
-                >
-                  <Icon
-                    name="boxicons:refresh-cw"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  Reabrir
-                </button>
+                />
               )}
             </div>
           )}
@@ -225,22 +259,23 @@ const canEditManualData = canClose && detail !== null;
               </div>
               <div class="flex items-center gap-2">
                 {canEditManualData && (
-                  <button
+                  <ActionButton
                     type="button"
-                    class="btn btn-ghost btn-sm gap-1"
+                    variant="ghost"
+                    size="sm"
+                    icon="boxicons:edit"
+                    label="Editar datos"
                     data-open-edit-automation
-                  >
-                    <Icon name="boxicons:edit" size={16} aria-hidden="true" />
-                    Editar datos
-                  </button>
+                  />
                 )}
                 {invgateUrl && (
-                  <OpenExternalUrlButton
+                  <ActionButton
                     href={invgateUrl}
+                    icon="boxicons:arrow-up-right-square-filled"
                     ariaLabel={`Abrir ticket ${detail.prettyId} en InvGate`}
-                    variant="text"
                     label="Abrir en InvGate"
                     size="sm"
+                    newTab
                   />
                 )}
               </div>
@@ -263,6 +298,117 @@ const canEditManualData = canClose && detail !== null;
         )}
 
         {detail.board && <AutomationStatusBoard board={detail.board} />}
+
+        <section class="flex flex-col gap-3 px-4">
+          <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+            Tiempo
+          </h2>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="bg-base-100 border-base-300 flex flex-col rounded-lg border p-3">
+              <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                Días trabajados
+              </span>
+              <span class="text-base-content text-xl font-bold tabular-nums">
+                {activeDaysCount}
+              </span>
+              <span class="text-base-content/50 text-xs">días con actividad</span>
+            </div>
+            <div class="bg-base-100 border-base-300 flex flex-col rounded-lg border p-3">
+              <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                Sin actividad
+              </span>
+              <span class="text-base-content text-xl font-bold tabular-nums">
+                {formatDays(round1(idleDays))}
+              </span>
+              <span class="text-base-content/50 text-xs">
+                de {formatDays(round1(calendarDays))} de calendario
+              </span>
+            </div>
+            <div class="bg-base-100 border-base-300 flex flex-col rounded-lg border p-3">
+              <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                Tiempo de ciclo
+              </span>
+              <span class="text-base-content text-xl font-bold tabular-nums">
+                {cycleDays === null ? "—" : formatDays(round1(cycleDays))}
+              </span>
+              <span class="text-base-content/50 text-xs">
+                {cycleDays === null ? "en curso" : "creación → resolución"}
+              </span>
+            </div>
+            <div class="bg-base-100 border-base-300 flex flex-col rounded-lg border p-3">
+              <span class="text-base-content/60 text-xs font-semibold tracking-wide uppercase">
+                Última actividad
+              </span>
+              <span class="text-base-content text-sm font-semibold">
+                {formatEpochDateTime(detail.updatedAt)}
+              </span>
+              <span class="text-base-content/50 text-xs">en InvGate</span>
+            </div>
+          </div>
+        </section>
+
+        {
+          postConfigured && resolutionAt !== null && (
+            <section class="flex flex-col gap-3 px-4">
+              <div class="flex flex-wrap items-baseline gap-x-2">
+                <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">
+                  Errores post-automatización (Mosaic)
+                </h2>
+                <span class="text-base-content/50 text-xs">
+                  primeros {postWindowDays} días desde el cierre
+                </span>
+              </div>
+              {postErrors.length === 0 ? (
+                <p class="text-base-content/50 text-sm italic">
+                  Sin tickets Mosaic reportados por la sucursal en la ventana
+                  posterior al cierre.
+                </p>
+              ) : (
+                <ul class="flex flex-col divide-y divide-base-300">
+                  {postErrors.map((error) => (
+                    <li>
+                      <a
+                        href={deriveInvGateUiUrl(error.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="group hover:bg-base-200 flex flex-wrap items-center gap-3 rounded-sm px-1 py-2.5 transition-colors"
+                        title={`Abrir ${error.prettyId} en InvGate`}
+                      >
+                        <span class="bg-base-200 text-base-content/70 group-hover:bg-secondary group-hover:text-secondary-content shrink-0 rounded-sm px-1.5 py-0.5 font-mono text-xs transition-colors">
+                          {error.prettyId}
+                        </span>
+                        <span
+                          class="text-base-content/80 min-w-0 flex-1 truncate text-sm"
+                          title={
+                            error.canonicalTitle
+                              ? `Original: ${error.title}`
+                              : error.title
+                          }
+                        >
+                          {error.canonicalTitle ?? error.title}
+                        </span>
+                        {error.helpdeskName && (
+                          <span class="badge badge-ghost shrink-0 text-xs">
+                            {error.helpdeskName}
+                          </span>
+                        )}
+                        <span class="text-base-content/50 shrink-0 text-xs">
+                          {formatEpochDateTime(error.createdAt)}
+                        </span>
+                        <Icon
+                          name="boxicons:arrow-up-right-square-filled"
+                          size={16}
+                          class="text-base-content/40 group-hover:text-secondary shrink-0 transition-colors"
+                          aria-hidden="true"
+                        />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )
+        }
 
         <section class="flex flex-col gap-4 px-4">
           <h2 class="text-base-content/60 text-sm font-semibold tracking-wide uppercase">

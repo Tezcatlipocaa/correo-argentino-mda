@@ -10,7 +10,7 @@ const EXPECTED_HEADERS = [
 
 const EXPECTED_CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "frame-ancestors 'none'",
 ];
@@ -30,6 +30,7 @@ test.describe("S1.3 Security headers", () => {
       for (const directive of EXPECTED_CSP_DIRECTIVES) {
         expect(csp).toContain(directive);
       }
+      expect(csp).not.toContain("cdn.jsdelivr.net");
     });
   }
 });

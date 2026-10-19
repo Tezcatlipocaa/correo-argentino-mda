@@ -164,8 +164,7 @@ test.describe("Base de conocimiento - listado", () => {
     await expect(view).toBeVisible();
 
     // Invariante de consistencia de la familia compartida: ambas acciones de
-    // fila deben compartir el tamaño de ícono. Antes del refactor "Ver" medía
-    // 24px y "Editar" (ActionEditButton xs) 14px.
+    // fila deben compartir el tamaño de ícono. Ambas usan ActionButton xs → 14px.
     const iconHeight = (locator: Locator) =>
       locator
         .locator("svg")

@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import SelectField from "@components/ui/forms/SelectField.astro";
 import FormField from "@components/ui/forms/FormField.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 
 interface Option {
   value: string;
@@ -62,19 +63,21 @@ const {
         <Icon
           name="boxicons:filter-filled"
           size={18}
+          is:inline
           class="acc-text shrink-0"
           aria-hidden="true"
         />
         Filtros
       </h2>
-      <button
+      <ActionButton
         type="button"
         data-close-filters
-        class="btn btn-ghost btn-sm btn-square"
-        aria-label="Cerrar filtros"
-      >
-        <Icon name="boxicons:x" size={18} aria-hidden="true" />
-      </button>
+        variant="ghost"
+        size="sm"
+        square
+        ariaLabel="Cerrar filtros"
+        icon="boxicons:x"
+      />
     </header>
 
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
@@ -139,13 +142,13 @@ const {
     <footer
       class="border-base-300 flex items-center justify-end gap-2 border-t px-4 py-3"
     >
-      <a href={clearHref} class="btn btn-ghost btn-sm">Limpiar</a>
+      <ActionButton href={clearHref} variant="ghost" size="sm" label="Limpiar" />
       <button
         type="submit"
         form={formId}
         class="btn btn-sm gap-1 acc-btn"
       >
-        <Icon name="boxicons:check-filled" size={16} aria-hidden="true" />
+        <Icon name="boxicons:check-filled" size={16} is:inline aria-hidden="true" />
         Aplicar filtros
       </button>
     </footer>

@@ -114,6 +114,7 @@ const {
         <button
           id={clearButtonId}
           type="button"
+          data-empty-state-clear
           class="btn btn-primary shadow-primary/20 hover:shadow-primary/30 rounded-full px-6 py-2 shadow-lg transition-all duration-300 hover:-translate-y-0.5"
         >
           <Icon name="boxicons:refresh-ccw-filled" class="mr-2 size-4" />
@@ -122,3 +123,28 @@ const {
       ))
   }
 </div>
+
+<script>
+  function setupEmptyStateClear() {
+    document.querySelectorAll<HTMLButtonElement>("[data-empty-state-clear]").forEach((btn) => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = "true";
+      btn.addEventListener("click", () => {
+        const root = btn.closest("[data-table-empty-state-root]");
+        const container = root?.parentElement;
+        const searchInput = container?.querySelector<HTMLInputElement>(
+          'input[type="search"], input[data-search-input]',
+        ) || document.querySelector<HTMLInputElement>('input[type="search"], input[data-search-input]');
+
+        if (searchInput) {
+          searchInput.value = "";
+          searchInput.focus();
+          searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+    });
+  }
+
+  setupEmptyStateClear();
+  document.addEventListener("astro:page-load", setupEmptyStateClear);
+</script>

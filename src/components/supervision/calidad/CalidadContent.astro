@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import StatsCard from "@components/ui/StatsCard.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
@@ -359,13 +360,15 @@ const cleanBase = getCleanBase();
     {/* Extremo Derecho: Selector de mes + Botones */}
     <div class="flex flex-wrap items-center justify-between sm:justify-end gap-1.5 sm:gap-2">
       <div class="flex items-center gap-1 bg-base-200/40 p-1 rounded-xl border border-base-200/60 shrink-0">
-        <button
+        <ActionButton
           id="btn-prev-month"
-          class="btn btn-xs btn-square btn-ghost"
+          variant="ghost"
+          size="xs"
+          square
           title="Mes anterior"
-        >
-          <Icon name="boxicons:chevron-left" size={18} />
-        </button>
+          ariaLabel="Mes anterior"
+          icon="boxicons:chevron-left"
+        />
         <select
           id="month-selector"
           class="select select-xs bg-base-100 text-base-content border-0 text-center font-bold w-36 sm:w-40 focus:outline-hidden"
@@ -378,13 +381,15 @@ const cleanBase = getCleanBase();
             ))
           }
         </select>
-        <button
+        <ActionButton
           id="btn-next-month"
-          class="btn btn-xs btn-square btn-ghost"
+          variant="ghost"
+          size="xs"
+          square
           title="Mes siguiente"
-        >
-          <Icon name="boxicons:chevron-right" size={18} />
-        </button>
+          ariaLabel="Mes siguiente"
+          icon="boxicons:chevron-right"
+        />
       </div>
 
       {

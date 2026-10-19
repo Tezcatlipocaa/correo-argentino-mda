@@ -18,8 +18,13 @@ import { normalizeSearchValue } from "@lib/clientSearch";
 import { getTerminalSnapshot } from "@lib/terminalCache";
 import type { TerminalMinimalRow } from "@lib/terminalSnapshot";
 
-import { type OsFamily, toOsFamily } from "@lib/terminalHelpers";
+import {
+  type OsFamily,
+  toOsFamily,
+  inferBrandFromManufacturer,
+} from "@lib/terminalHelpers";
 export type { OsFamily };
+export { inferBrandFromManufacturer };
 
 import {
   groupTTDevices,
@@ -31,7 +36,19 @@ import {
 
 export type { TTPairState };
 
+import type { TerminalStatsRow } from "@lib/terminalStats";
+
 import { selectActiveMember } from "@lib/duplicateGroups";
+import { createQueryCache } from "@lib/queryCache";
+
+const TERMINAL_META_TTL_MS = 30_000;
+const terminalMetaCache = createQueryCache<unknown>({
+  ttlMs: TERMINAL_META_TTL_MS,
+});
+
+export function invalidateTerminalCaches(): void {
+  terminalMetaCache.invalidateAll();
+}
 
 export type TerminalSortKey = "hostname" | "hardware" | "os" | "location";
 export type SortOrder = "asc" | "desc";
@@ -683,71 +700,83 @@ export interface StatusCounts {
 }
 
 export async function getTerminalStatusCounts(): Promise<StatusCounts> {
-  const threshold = statusThresholdDate();
-  const [online] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(gte(terminals.lastContact, threshold));
-  const [offline] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(
-      or(
-        lt(terminals.lastContact, threshold),
-        isNull(terminals.lastContact),
-        eq(terminals.lastContact, ""),
-      ),
-    );
-  return { online: online.c, offline: offline.c };
+  return (await terminalMetaCache.getOrCompute(
+    "terminalStatusCounts",
+    async () => {
+      const threshold = statusThresholdDate();
+      const [online] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(gte(terminals.lastContact, threshold));
+      const [offline] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(
+          or(
+            lt(terminals.lastContact, threshold),
+            isNull(terminals.lastContact),
+            eq(terminals.lastContact, ""),
+          ),
+        );
+      return { online: online.c, offline: offline.c };
+    },
+  )) as StatusCounts;
 }
 
 export async function getTTStatusCounts(): Promise<StatusCounts> {
-  const threshold = statusThresholdDate();
-  const base = and(...ttUnionConditions());
-  const [online] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(and(base, gte(terminals.lastContact, threshold)));
-  const [offline] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(
-      and(
-        base,
-        or(
-          lt(terminals.lastContact, threshold),
-          isNull(terminals.lastContact),
-          eq(terminals.lastContact, ""),
+  return (await terminalMetaCache.getOrCompute("ttStatusCounts", async () => {
+    const threshold = statusThresholdDate();
+    const base = and(...ttUnionConditions());
+    const [online] = await db
+      .select({ c: sql<number>`count(*)` })
+      .from(terminals)
+      .where(and(base, gte(terminals.lastContact, threshold)));
+    const [offline] = await db
+      .select({ c: sql<number>`count(*)` })
+      .from(terminals)
+      .where(
+        and(
+          base,
+          or(
+            lt(terminals.lastContact, threshold),
+            isNull(terminals.lastContact),
+            eq(terminals.lastContact, ""),
+          ),
         ),
-      ),
-    );
-  return { online: online.c, offline: offline.c };
+      );
+    return { online: online.c, offline: offline.c };
+  })) as StatusCounts;
 }
 
 export async function getMediterraneaStatusCounts(): Promise<StatusCounts> {
-  const threshold = statusThresholdDate();
-  const base = or(
-    like(terminals.hostname, "TMEDI%"),
-    like(terminals.hostname, "TVMEDI%"),
-  );
-  const [online] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(and(base, gte(terminals.lastContact, threshold)));
-  const [offline] = await db
-    .select({ c: sql<number>`count(*)` })
-    .from(terminals)
-    .where(
-      and(
-        base,
-        or(
-          lt(terminals.lastContact, threshold),
-          isNull(terminals.lastContact),
-          eq(terminals.lastContact, ""),
-        ),
-      ),
-    );
-  return { online: online.c, offline: offline.c };
+  return (await terminalMetaCache.getOrCompute(
+    "mediterraneaStatusCounts",
+    async () => {
+      const threshold = statusThresholdDate();
+      const base = or(
+        like(terminals.hostname, "TMEDI%"),
+        like(terminals.hostname, "TVMEDI%"),
+      );
+      const [online] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(and(base, gte(terminals.lastContact, threshold)));
+      const [offline] = await db
+        .select({ c: sql<number>`count(*)` })
+        .from(terminals)
+        .where(
+          and(
+            base,
+            or(
+              lt(terminals.lastContact, threshold),
+              isNull(terminals.lastContact),
+              eq(terminals.lastContact, ""),
+            ),
+          ),
+        );
+      return { online: online.c, offline: offline.c };
+    },
+  )) as StatusCounts;
 }
 
 export async function getTTGroups(
@@ -923,50 +952,79 @@ export interface ModelBrandEntry {
   brand: string;
 }
 
-function inferBrandFromManufacturer(
-  manufacturer: string | null,
-): string | null {
-  if (!manufacturer) return null;
-  const lower = manufacturer.toLowerCase();
-  if (lower.includes("dell")) return "dell";
-  if (lower.includes("lenovo")) return "lenovo";
-  if (lower.includes("hp") || lower.includes("hewlett")) return "hp";
-  if (lower.includes("bangho")) return "bangho";
-  if (lower.includes("coradir")) return "coradir";
-  return null;
+export async function getTerminalModelsByBrand(): Promise<ModelBrandEntry[]> {
+  return (await terminalMetaCache.getOrCompute(
+    "terminalModelsByBrand",
+    async () => {
+      const rows = await db
+        .select({
+          model: terminals.model,
+          manufacturer: terminals.manufacturer,
+        })
+        .from(terminals)
+        .where(
+          and(
+            sql`${terminals.model} IS NOT NULL AND ${terminals.model} != ''`,
+            knownBrandConditions,
+          ),
+        )
+        .groupBy(terminals.model, terminals.manufacturer)
+        .orderBy(asc(terminals.model));
+
+      const seen = new Set<string>();
+      const result: ModelBrandEntry[] = [];
+
+      for (const row of rows) {
+        if (!row.model) continue;
+        const model = row.model.trim();
+        const brand = inferBrandFromManufacturer(row.manufacturer);
+        if (!model || !brand) continue;
+        if (blockedModelPatterns.some((p) => p.test(model))) continue;
+        if (seen.has(model)) continue;
+        seen.add(model);
+        result.push({ model, brand });
+      }
+
+      return result;
+    },
+  )) as ModelBrandEntry[];
 }
 
-export async function getTerminalModelsByBrand(): Promise<ModelBrandEntry[]> {
-  const rows = await db
-    .select({ model: terminals.model, manufacturer: terminals.manufacturer })
-    .from(terminals)
-    .where(
-      and(
-        sql`${terminals.model} IS NOT NULL AND ${terminals.model} != ''`,
-        knownBrandConditions,
-      ),
-    )
-    .groupBy(terminals.model, terminals.manufacturer)
-    .orderBy(asc(terminals.model));
-
-  const seen = new Set<string>();
-  const result: ModelBrandEntry[] = [];
-
-  for (const row of rows) {
-    if (!row.model) continue;
-    const model = row.model.trim();
-    const brand = inferBrandFromManufacturer(row.manufacturer);
-    if (!model || !brand) continue;
-    if (blockedModelPatterns.some((p) => p.test(model))) continue;
-    if (seen.has(model)) continue;
-    seen.add(model);
-    result.push({ model, brand });
-  }
-
-  return result;
+export async function getCachedUniqueOperatingSystems(): Promise<
+  Array<{ os: string | null }>
+> {
+  return (await terminalMetaCache.getOrCompute("uniqueOperatingSystems", () =>
+    db
+      .select({ os: terminals.operatingSystem })
+      .from(terminals)
+      .groupBy(terminals.operatingSystem),
+  )) as Array<{ os: string | null }>;
 }
 
 export async function getDistinctTerminalModels(): Promise<string[]> {
   const entries = await getTerminalModelsByBrand();
   return entries.map((e) => e.model);
+}
+
+export async function getTerminalStatsRows(): Promise<TerminalStatsRow[]> {
+  // ponytail: agregación JS sobre ~8k filas por request (mismo criterio ya
+  // aceptado en getTTGroups: "miles, no millones"). Si el parque crece a
+  // decenas de miles, mover el bucketing a SQL GROUP BY manteniendo el
+  // contrato de computeTerminalStats.
+  return db
+    .select({
+      manufacturer: terminals.manufacturer,
+      operatingSystem: terminals.operatingSystem,
+      nis: terminals.nis,
+      officeName: offices.name,
+      provinceCode: offices.provinceCode,
+      provinceName: provinces.name,
+      regionId: regions.id,
+      regionName: regions.name,
+    })
+    .from(terminals)
+    .leftJoin(offices, eq(terminals.nis, offices.code))
+    .leftJoin(provinces, eq(offices.provinceCode, provinces.code))
+    .leftJoin(regions, eq(provinces.regionId, regions.id))
+    .all();
 }

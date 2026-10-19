@@ -35,4 +35,4 @@
   3. `sync-legacy-inventory`
   4. `sync-users`
   5. `sync-office-links`
-- **Automation Scripts:** `scripts/auto-deploy.bat` (pull, pm2 kill, install, schema align, backfill, build verification, restart).
+- **Automation Scripts:** `scripts/auto-deploy.bat` y `scripts/safe-deploy.mts` (despliegue transaccional con lockfile, pre-flight en copia de DB, guardia de schema estricta, smoke test HTTP y rollback automático); hook `scripts/git-hooks/pre-push` (`npm run prepare`).

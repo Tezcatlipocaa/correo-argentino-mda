@@ -1,0 +1,42 @@
+---
+import ActionButton from "./ActionButton.astro";
+import MonthSelect from "@components/ui/MonthSelect.astro";
+
+interface Props {
+  selectId: string;
+  prevId?: string;
+  nextId?: string;
+  class?: string;
+}
+
+const {
+  selectId,
+  prevId = `${selectId}-prev`,
+  nextId = `${selectId}-next`,
+  class: className = "",
+} = Astro.props;
+---
+
+<div class:list={["flex items-center gap-1", className]}>
+  <ActionButton
+    id={prevId}
+    variant="ghost"
+    size="sm"
+    square
+    data-month-nav="prev"
+    icon="boxicons:chevron-left-filled"
+    title="Mes anterior"
+    ariaLabel="Mes anterior"
+  />
+  <MonthSelect id={selectId} />
+  <ActionButton
+    id={nextId}
+    variant="ghost"
+    size="sm"
+    square
+    data-month-nav="next"
+    icon="boxicons:chevron-right-filled"
+    title="Mes siguiente"
+    ariaLabel="Mes siguiente"
+  />
+</div>

@@ -1,7 +1,6 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 interface Props {
   entityType: "aplicativos" | "contactos" | "recursos";
@@ -82,13 +81,13 @@ const config = {
         </label>
       </div>
       <div class="modal-action mt-6 flex-col gap-3 sm:flex-row">
-        <ActionCancelButton
-          type="button"
-          class="w-full sm:w-auto"
-          variant="error"
-          onclick="document.getElementById('delete-category-modal').close()"
-        />
-        <ActionConfirmButton
+        <ActionButton
+      type="button"
+      label="Cancelar"
+      class="w-full sm:w-auto"
+      onclick="document.getElementById('delete-category-modal').close()"
+    />
+        <ActionButton
           type="submit"
           color="btn-error"
           class="w-full sm:w-auto"

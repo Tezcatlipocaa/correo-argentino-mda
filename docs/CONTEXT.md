@@ -101,7 +101,7 @@ Copiar `.env.example` a `.env` y llenar valores. **Nunca committear `.env`.**
   - **Guard de página en el ABM de categorías:** `src/pages/base-conocimiento/categorias.astro` mantiene un `if (!perms.canWrite)` aunque el middleware ya deniega por rol antes de renderizar. Es defensa en profundidad a propósito: la whitelist de rutas (`src/lib/rbac.ts`) y el contrato de módulo (`getModulePermissions("base-conocimiento")`) viven en archivos distintos y pueden divergir; `create.astro` y `edit/[id].astro` tienen el mismo guard. Si se quisiera borrar, primero tiene que existir un E2E que congele la denegación vía middleware (`tests/kb-categories.spec.ts`).
   - **Auditoría de la KB sin estados fabricados:** el alta estructurada de un artículo registra una sola fila (`Creó el artículo`, `beforeState: null`, `afterState` con `title`, `helpdeskId`, `category`, `status`). Si el alta se hace directamente en `published`/`archived`, **no** se agrega una segunda fila de transición `Publicó`/`Archivó`: el artículo nunca existió como `draft`, así que un `beforeState: { status: "draft" }` sería un estado inventado. Es un desvío deliberado del Step 6 de `docs/superpowers/plans/2026-09-28-kb-v2-hardening.md` (que sí pedía esa fila). Las transiciones reales de estado se auditan en la edición (`src/pages/base-conocimiento/edit/[id].astro`), donde sí hay un estado previo. Congelado por `tests/kb-auditoria.spec.ts` (`el alta de un artículo publicado no fabrica una transición de estado`).
 - **Tabla descriptiva por rol:** `src/lib/rolesMatrix.ts` — `isAllowed(feature, role)` alimenta la tabla comparativa de `/admin/usuarios` y el gating de UI. **NO es la fuente de verdad**: la matriz real vive en `rbac.ts` (`getModulePermissions` + `routePermissions`) y `helpdeskAccess.ts` (por mesa). Solo modela la capa de rol. `tests/unit/roles-matrix-consistency.test.ts` cubre el anti-drift.
-- **API routes:** `requireWriteAccess(locals, module)` / `requireReadAccess(locals, module)` desde `src/lib/rbac-middleware.ts`.
+- **API routes:** `requireWriteAccess(locals, module)` / `requireReadAccess(locals, module)` desde `src/lib/rbac-middleware.ts` (`requireSession(locals)` exige solo sesión, cualquier rol — usarlo en endpoints de páginas `ALL_ROLES` sin módulo RBAC propio).
 - **Guards puntuales (mas alla del module-level):** `GET /api/usuarios/ad-groups-licenses` es admin-only; `PATCH /api/usuarios/[dni]` solo exige admin cuando el body trae `sucursal` (interno/telefono: cualquier usuario autenticado); el reorder de aplicativos/recursos/contactos (y sus categorias) exige `team_leader+` (`can(role, "team_leader")` dentro de `handleReorder`, porque `/api/admin` esta en la whitelist ALL_ROLES); `/api/profile/*` esta en la whitelist ALL_ROLES y cada endpoint se auto-guarda (401 sin sesion, p.ej. `change-password`).
 - **Template checks:** `can(user.role, "admin")` desde `@lib/roleConfig.ts` o `hasPermission(href, userRole)` desde `@lib/rbac.ts`
 
@@ -247,11 +247,20 @@ BaseLayout (flex flex-col min-h-screen)
 ### 13. API routes (endpoints en `src/pages/api/`)
 
 - Devolver siempre `jsonResponse(data, status?)` / `jsonError(msg, status?)` desde `@lib/apiResponse`. En produccion envolver errores internos con `sanitizeError(err)` para no filtrar detalles.
-- Control de acceso: invocar `requireWriteAccess(locals, "modulo")` / `requireReadAccess(locals, "modulo")` desde `@lib/rbac-middleware`. Retorna `null` si OK, o un `Response` 401/403 si denegado — hacer `return denied` temprano.
+- Control de acceso: invocar `requireWriteAccess(locals, "modulo")` / `requireReadAccess(locals, "modulo")` desde `@lib/rbac-middleware`. Retorna `null` si OK, o un `Response` 401/403 si denegado — hacer `return denied` temprano. Usar `requireSession(locals)` (solo sesión, cualquier rol) cuando el endpoint alimenta una página `ALL_ROLES` y no tiene módulo RBAC propio (p.ej. `search`/`status`/`net-user`/`invgate-user` de `/buscador-usuarios`); `ad-groups-licenses` sí usa el módulo `usuarios` (admin-only).
 - El nombre de modulo (`"cronograma"`, `"asistencia"`, `"usuarios"`, `"asignacion_ag"`, etc.) debe coincidir con `getModulePermissions` en `src/lib/rbac.ts`.
 - Toda mutacion debe auditar con `logAdminFromAstro(locals, msg)` (`@lib/auditLogger`).
 - Reordenamiento masivo: usar `handleReorder(request, locals, table, auditMsg)` desde `@lib/reorderHandler` (ya hace transaccion + auditoria).
 - Escrituras batch: envolver en `db.transaction(tx => { ... })` de Drizzle. Validar siempre el body antes de tocar la DB.
+
+### 14. Graficas — siempre `ChartCard`
+
+Todas las graficas del portal usan `src/components/ui/ChartCard.astro` (con `chart.js/auto` bundleado por Vite). Esta prohibido cargar Chart.js por CDN (`cdn.jsdelivr.net`) o instanciar `new Chart(...)` en cualquier otro archivo.
+
+- **Datos:** la card se alimenta de una API propia con la forma `{ charts: { <chartKey>: { labels: string[], series: { label: string, data: number[] }[] } } }` (`fetchUrl` + `chartKey`), o de `labels`/`series` inline para datos estaticos. La tabla accesible y el re-init tras server islands los resuelve el propio componente.
+- **Datos en vivo:** `server:defer` + `<ChartCardSkeleton slot="fallback" count={N} />`; el filtro publica `stats:filters-changed` (`CustomEvent` con `detail: { query }`) para que las cards refresquen.
+- **Guard test:** `tests/unit/ui/no-ad-hoc-chartjs.test.ts` falla si aparece un CDN de chart.js o `new Chart(` fuera de `ChartCard.astro`; ese archivo es el unico uso permitido.
+- **Interno:** el anillo de progreso del preview de horas extras del cronograma es CSS (`conic-gradient`), no Chart.js.
 
 ---
 
@@ -300,7 +309,7 @@ BaseLayout (flex flex-col min-h-screen)
 | 9   | `/oficinas`              | Directorio de oficinas, activos de red y datos tecnicos |
 | 10  | `/inventario-terminales` | Consulta y estado del parque de terminales              |
 | 11  | `/automatizaciones`      | Monitoreo de workflows de automatizacion de sucursales (InvGate). Lectura (listado y detalle) para todos los usuarios con sesion iniciada. Cierre/reapertura local (portal, no InvGate) y edicion de datos manuales para `supervisor`+ desde el detalle cuando el progreso supera `AUTOMATION_CLOSE_THRESHOLD` (80%); auto-finalizado al 100% sin etapas bloqueantes faltantes. Listado con busqueda y filtros (estado/region/antiguedad), orden (nuevas/antiguas/actualizadas), vista tarjetas/tabla y export CSV (`/api/automatizaciones/export.csv`) |
-| 11b | `/automatizaciones/metricas` | KPIs del flujo (total, WIP, finalizadas, lead time, % cierre por portal), throughput mensual, backlog por antiguedad, ranking de sucursales y desglose de cierres. Se calculan sobre el historial local (`automation_parents` + `automation_closures`), sin consultar InvGate. Lectura para todos los logueados |
+| 11b | `/automatizaciones/metricas` | KPIs del flujo (total, WIP, finalizadas, lead time, SLA, tiempo trabajado), resumen ejecutivo, gráficos (líneas de casos/tiempo de ciclo por mes, donuts de región y SLA), ritmo de cierre + ETA del backlog, backlog por antiguedad, ranking de sucursales y monitoreo post-automatización (errores Mosaic por sucursal). Se calculan sobre el historial local (`automation_parents` + `automation_closures` + `automation_activity_days`), sin consultar InvGate salvo la vista Mosaic. Lectura para todos los logueados |
 
 ### Supervision (sub-rutas)
 
@@ -408,6 +417,7 @@ BaseLayout (flex flex-col min-h-screen)
 | `warm-automations.ts`      | Pre-warm del cache de /automatizaciones (scan InvGate + snapshot persistido + reconciliacion de padres) |
 | `reconcile-automation-parents.ts` | Recupera padres de /automatizaciones reasignados a otras mesas (barrido por estado + categoría) |
 | `snapshot-automation-metrics.ts` | Snapshot mensual de KPIs de /automatizaciones (dry-run por defecto; `--apply` escribe) |
+| `backfill-automation-activity.ts` | Backfill de días con actividad por automatización (`automation_activity_days`; dry-run por defecto; `--apply` escribe) |
 
 ### Base de datos
 

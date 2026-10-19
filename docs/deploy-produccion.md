@@ -81,6 +81,11 @@ Completá las variables en `.env`. En producción prestá atención a:
 | `EXTERNAL_STORAGE_DIR` | `C:\data\mda-storage` (ruta absoluta fuera del proyecto)                   |
 | `SESSION_COOKIE_SECURE` | `true` en `ecosystem.config.cjs` (solo cuando HTTPS está activo) |
 
+> Los jobs de sincronización exigen además `MIDPOINT_USER`, `MIDPOINT_PASS`,
+> `LEGACY_INVENTORY_URL` y `INVGATE_API_KEY`/`INVGATE_BASE_URL` (o el par `_QA_`
+> de fallback). Sin ellos `sync-users` y `sync-legacy-inventory` mueren en
+> silencio (`autorestart:false`). `scripts/verify-env.mts` los valida en el deploy.
+
 > `SESSION_SECRET` y `ENCRYPTION_KEY` deben ser **distintas** a las del entorno local. Generalas de nuevo.
 
 Opcionales del módulo `/automatizaciones` (tienen default; no bloquean el arranque):
@@ -275,6 +280,26 @@ Si accedés por nombre de dominio local:
 C:\xampp\apache\bin\httpd.exe -k restart
 ```
 
+### Endurecimiento de Apache
+
+En `httpd.conf` (fuera del VirtualHost):
+
+```
+ServerTokens Prod
+ServerSignature Off
+```
+
+`ServerTokens Prod` reduce la cabecera `Server:` a `Apache` (sin versión ni módulos) y
+`ServerSignature Off` quita la firma en las páginas de error generadas por Apache.
+Aplicar y reiniciar Apache (XAMPP: `Net Stop Apache2.4` / `Net Start Apache2.4`).
+
+**Premisa de confianza (#235):** la app resuelve la IP del cliente confiando en
+`X-Forwarded-For` **sólo cuando la conexión directa es loopback** (ver
+`src/lib/clientIp.ts`). Esto asume que Apache es el **único** proxy confiable:
+no exponer el puerto `4321` directamente y no agregar otro proxy delante. Si otro
+salto intermedio no-loopback puede inyectar o reescribir `X-Forwarded-For`, el rate
+limit de login (y todo bucket `ip:`) se vuelve spoofeable.
+
 ---
 
 ## Paso 6: Verificar que funciona
@@ -290,25 +315,22 @@ Si ves la página de login, el deploy está completo.
 
 ---
 
-## Auto-deploy (actualizar el servidor)
+## Auto-deploy blindado (actualizar el servidor)
 
-El proyecto incluye `scripts\auto-deploy.bat` con los pasos para actualizar desde Git:
+El proyecto cuenta con una arquitectura de despliegue transaccional a prueba de fallos orquestada por `scripts/safe-deploy.mts` y envuelta por `scripts/auto-deploy.bat`:
 
-```batch
-@echo off
-cd C:\Projects\correo-argentino-mda
-git pull origin master
-call pm2 kill
-call npm install
-call npx tsx scripts/align-db-to-schema.mts
-call npx tsx scripts/backfill-asistencia.mts --apply
-call npm run build
-call pm2 start ecosystem.config.cjs
-```
+1. **Gate Pre-Push local (`scripts/git-hooks/pre-push`):** Se instala con `npm run prepare` (`core.hooksPath`). Impide pushear a `master` si fallan los tests de dominio o si se introducen cambios destructivos de schema en `src/db/schema.ts` (drops de columnas con datos, tipos incompatibles o filas huérfanas). Se puede omitir en emergencias con `MDA_SKIP_PRE_PUSH=1` o `git push --no-verify`.
+2. **Lockfile de proceso (`.deploy.lock`):** Evita dos ejecuciones simultáneas y limpia locks huérfanos si el proceso anterior murió.
+3. **No-op inteligente:** Hace `git fetch origin master` y compara `HEAD` con el remoto. Si no hay cambios nuevos, finaliza en segundos **sin detener PM2 ni recompilar** (a menos que se pase `--force`).
+4. **Snapshot de Rollback previo (`.deploy-rollback/`):** Antes de tocar nada, crea un backup WAL-safe de `database/mda.db`, copia la carpeta `dist/` funcional y registra el commit `HEAD` previo.
+5. **Pre-flight con PM2 activo:** Si `package.json`/`package-lock.json` no cambiaron, avanza con `git merge --ff-only origin/master` y ejecuta `verify-env.mts`, `npm run test:domain` y la simulación de migraciones en modo estricto sobre una copia temporal `mda.preflight.db` **mientras PM2 sigue atendiendo usuarios**. Si algo falla, revierte el código a `HEAD` previo sin tocar PM2 ni la DB real.
+6. **Ventana de corte segura:** Detiene PM2 (`pm2 kill`), ejecuta `npm install` (si cambiaron dependencias), aplica `align-db-to-schema.mts --strict` y backfills sobre la DB real, limpia `dist/` y ejecuta `npm run build` (con `verify-build.mjs`).
+7. **Smoke Test HTTP post-deploy:** Inicia PM2 y verifica durante 20s que `http://127.0.0.1:4321/login` responda HTTP 200 y que los assets referenciados `/_astro/*.css` devuelvan `200 text/css`.
+8. **Rollback automático integral:** Si cualquier paso de corte, build o smoke test falla, `safe-deploy` detiene PM2, ejecuta `git reset --hard <prevSha>`, restaura la base de datos desde el backup WAL-safe (limpiando `-wal`/`-shm`), restaura la carpeta `dist/` previa, inicia PM2 y verifica que `/login` responda correctamente, dejando el incidente registrado en `logs/auto-deploy-YYYY-MM-DD.log`.
 
-`pm2 kill` corre ANTES de `npm install`: con procesos Node/PM2 vivos, Windows no permite reemplazar binarios nativos (`.node`) y deja `node_modules` inconsistente → el build genera un manifest SSR sin `rootDir` → crash loop en runtime. `npm run build` incluye el guard `scripts/verify-build.mjs` que aborta si `rootDir` falta. Ver `docs/lessons.md` (2026-09-07).
-
-Entre `npm install` y el build el auto-deploy alinea la DB host (`align-db-to-schema.mts`, idempotente, con backup) y corre el backfill one-time de `agents.en_asistencia` (`backfill-asistencia.mts --apply`, dry-run revisable a mano). Si cualquiera falla, aborta sin reiniciar PM2.
+Flags de ejecución:
+- `--force`: Fuerza el despliegue aunque `HEAD` coincida con `origin/master`.
+- `--allow-destructive`: Pasa `--allow-destructive` a `align-db-to-schema.mts` para permitir drops de columnas o resoluciones manuales en migraciones planificadas.
 
 ### Tarea programada (Windows)
 
@@ -364,6 +386,36 @@ npx tsx scripts/snapshot-automation-metrics.ts   # dry-run
 > `scripts/auto-deploy.bat` ya corre `align-db-to-schema.mts` antes del build, así
 > que el deploy programado cubre la migración. El worker nuevo se levanta solo al
 > `pm2 start ecosystem.config.cjs`.
+
+---
+
+## Actualización: métricas v2 + monitoreo post-automatización (2026-10)
+
+- **Métricas**: gráficos (líneas y donuts), tiempo trabajado (días activos),
+  resumen ejecutivo, ritmo/ETA y lead time por mes; se quitaron "Por mesa" y
+  "cierre por el portal".
+- **Monitoreo post-automatización**: errores (Mosaic/hardware) de la sucursal en
+  los días posteriores al cierre, con título canónico del catálogo del portal.
+
+Checklist:
+
+```powershell
+git pull
+npx tsx scripts/align-db-to-schema.mts                    # crea automation_activity_days (idempotente, con backup)
+npx tsx scripts/backfill-automation-activity.ts           # dry-run
+npx tsx scripts/backfill-automation-activity.ts --apply   # una vez
+npm run build
+pm2 restart correo-argentino-mda
+```
+
+Env del server (opcional; sin `INVGATE_MOSAIC_VIEW_ID` la sección de monitoreo
+muestra el aviso de configuración):
+`INVGATE_MOSAIC_VIEW_ID=<vista de errores, acotada a ~30 días>`,
+`AUTOMATION_POST_WINDOW_DAYS=3`, `AUTOMATION_POST_CANDIDATE_DAYS=30`.
+
+> No agrega worker nuevo ni dependencias. El backfill es **one-time** (no va en
+> `auto-deploy.bat`): re-ejecutarlo sólo agrega días ya existentes (idempotente).
+> Detalle en `docs/automatizaciones/metricas.md`.
 
 ---
 

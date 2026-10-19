@@ -1,22 +1,34 @@
 import { defineMiddleware } from "astro:middleware";
 import { db } from "./db/index";
-import { users, sessions, mesas } from "./db/schema";
+import { sessions } from "./db/schema";
 import { eq } from "drizzle-orm";
 import { verifySessionId, deleteSessionCookie } from "./lib/session";
 import { hasPermission } from "./lib/rbac";
 import { getIslandEffectivePathname } from "./lib/navigation";
-import { isSectionVisibleSync, resolveSessionMesa } from "./lib/helpdeskAccess";
+import { isSectionVisibleSync } from "./lib/helpdeskAccess";
 import { resolveUrl } from "./lib/url";
 import { getCleanBase } from "./lib/baseUrl";
 import { jsonError } from "@lib/apiResponse";
-import { KB_CATEGORIAS_PATH } from "@lib/kbRedirects";
+import { KB_CATEGORIAS_PATH, isCategoryFormKbPath } from "@lib/kbRedirects";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
+import { resolveClientIp } from "@lib/clientIp";
 import {
-  isFingerprintValid,
-  computeFingerprint,
-} from "./lib/sessionFingerprint";
+  resolveSessionUser,
+  invalidateSessionCache,
+} from "./lib/sessionCache";
+import { assertServerEnv } from "./lib/env";
+assertServerEnv();
 
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+// Default-deny de sesión (#232): todo /api/**, /_actions/** y
+// /_server-islands/** exige sesión salvo la allowlist pública; toda página
+// exige sesión salvo /404 (/login ya retornó arriba). Un endpoint nuevo queda
+// protegido por defecto.
+const PUBLIC_API_PREFIXES = ["/api/icons/"];
+// `/generador-firmas` es pública por diseño (sección que debe funcionar sin
+// login) y `/404` se sirve sin sesión. Cualquier otra página exige sesión.
+const PUBLIC_PAGE_PATHS = new Set(["/404", "/generador-firmas"]);
 
 const KB_WRITE_THROTTLE_MESSAGE =
   "Demasiadas operaciones. Probá en unos minutos.";
@@ -44,11 +56,17 @@ function applyRateLimit(
   },
   relativePath: string,
 ): Response | null {
-  const { request, redirect, locals, clientAddress } = context;
+  const { request, redirect, locals } = context;
+  // #235: detrás de Apache el socket es loopback para todos; resolver la IP real
+  // (sólo desde loopback) para que el bucket de login sea por usuario/IP y no global.
+  const clientAddress = resolveClientIp(
+    context.clientAddress,
+    request.headers.get("x-forwarded-for"),
+  );
   const method = request.method.toUpperCase();
 
   if (relativePath === "/login" && method === "POST") {
-    const key = `login:ip:${clientAddress ?? "unknown"}`;
+    const key = `login:ip:${clientAddress}`;
     const result = checkRateLimit(key, RATE_LIMITS.login);
     if (!result.ok) {
       return redirect(
@@ -65,7 +83,7 @@ function applyRateLimit(
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
-        : `ip:${clientAddress ?? "unknown"}`;
+        : `ip:${clientAddress}`;
 
     if (isWrite && relativePath === "/api/cronograma/import") {
       const uploadKey = `upload:${identifier}:${relativePath}`;
@@ -108,7 +126,7 @@ function applyRateLimit(
     const identifier =
       locals.user.id > 0
         ? `u:${locals.user.id}`
-        : `ip:${clientAddress ?? "unknown"}`;
+        : `ip:${clientAddress}`;
     const result = checkRateLimit(
       `kb-write:${identifier}:${relativePath}`,
       RATE_LIMITS.kbCategoryWrite,
@@ -131,6 +149,28 @@ function applyRateLimit(
     }
   }
 
+  if (method === "POST" && isCategoryFormKbPath(relativePath)) {
+    const identifier =
+      locals.user.id > 0
+        ? `u:${locals.user.id}`
+        : `ip:${clientAddress ?? "unknown"}`;
+    const result = checkRateLimit(
+      `kb-article-write:${identifier}`,
+      RATE_LIMITS.kbArticleWrite,
+    );
+    if (!result.ok) {
+      const message = encodeURIComponent(KB_WRITE_THROTTLE_MESSAGE);
+      if (locals.user.id === 0) {
+        return redirect(
+          resolveUrl(`/login?toast_msg=${message}&toast_type=error`),
+        );
+      }
+      return redirect(
+        resolveUrl(`${relativePath}?toast_msg=${message}&toast_type=error`),
+      );
+    }
+  }
+
   return null;
 }
 
@@ -146,11 +186,13 @@ function setSecurityHeaders(response: Response): Response {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
+      // #241: el CDN de Chart.js fuera de script-src (ya vive bundleado en
+      // ChartCard.astro) y de connect-src (nadie lo fetchea).
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://wms.ign.gob.ar",
       "font-src 'self'",
-      "connect-src 'self' data: https://docs.google.com https://cdn.jsdelivr.net https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
+      "connect-src 'self' data: https://docs.google.com https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com",
       "media-src 'self' data: blob: https:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -200,82 +242,41 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (sessionId) {
-    const [session] = await db
-      .select({
-        id: sessions.id,
-        userId: sessions.userId,
-        expiresAt: sessions.expiresAt,
-        fingerprint: sessions.fingerprint,
-      })
-      .from(sessions)
-      .where(eq(sessions.id, sessionId));
+    const resolved = await resolveSessionUser(
+      sessionId,
+      context.request.headers.get("user-agent"),
+    );
 
-    if (session && session.expiresAt > Date.now()) {
-      const currentFingerprint = computeFingerprint(
-        context.request.headers.get("user-agent"),
-      );
-      if (!isFingerprintValid(session.fingerprint, currentFingerprint)) {
-        deleteSessionCookie(cookies);
-        await db.delete(sessions).where(eq(sessions.id, sessionId));
-        sessionId = null;
-        if (relativePath !== "/login") {
-          return redirect(
-            resolveUrl(
-              `/login?toast_msg=${encodeURIComponent("Sesión inválida")}&toast_type=error`,
-            ),
-          );
-        }
-      } else {
-        const [dbUser] = await db
-          .select({
-            id: users.id,
-            username: users.username,
-            role: users.role,
-            helpdeskId: users.helpdeskId,
-            helpdeskName: users.helpdeskName,
-            active: users.active,
-            mesaActive: mesas.active,
-            mesaName: mesas.name,
-          })
-          .from(users)
-          .leftJoin(mesas, eq(users.helpdeskId, mesas.invgateId))
-          .where(eq(users.id, session.userId));
-
-        if (dbUser && !dbUser.active) {
-          // Cuenta desactivada por un admin: se invalida la sesión y se expulsa.
-          deleteSessionCookie(cookies);
-          await db.delete(sessions).where(eq(sessions.id, sessionId));
-          sessionId = null;
-          if (relativePath !== "/login") {
-            return redirect(
-              resolveUrl(
-                `/login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
-              ),
-            );
-          }
-        } else if (dbUser) {
-          // Fail-closed: mesa desactivada, borrada o desconocida = usuario
-          // tratado como "sin mesa" (solo paginas comunes visibles) hasta que
-          // un admin le reasigne una mesa activa. resolveSessionMesa aplica
-          // la política; el nombre viene de la mesa real (join), no del
-          // campo denormalizado en users.
-          const mesa = resolveSessionMesa({
-            helpdeskId: dbUser.helpdeskId,
-            helpdeskName: dbUser.mesaName ?? null,
-            mesaActive: dbUser.mesaActive,
-          });
-          currentUser = {
-            id: dbUser.id,
-            username: dbUser.username,
-            role: dbUser.role,
-            helpdeskId: mesa.helpdeskId,
-            helpdeskName: mesa.helpdeskName,
-          };
-        }
+    if (resolved.status === "ok") {
+      currentUser = resolved.user;
+    } else if (resolved.status === "invalid_fingerprint") {
+      deleteSessionCookie(cookies);
+      invalidateSessionCache(sessionId);
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      sessionId = null;
+      if (relativePath !== "/login") {
+        return redirect(
+          resolveUrl(
+            `/login?toast_msg=${encodeURIComponent("Sesión inválida")}&toast_type=error`,
+          ),
+        );
+      }
+    } else if (resolved.status === "user_inactive") {
+      deleteSessionCookie(cookies);
+      invalidateSessionCache(sessionId);
+      await db.delete(sessions).where(eq(sessions.id, sessionId));
+      sessionId = null;
+      if (relativePath !== "/login") {
+        return redirect(
+          resolveUrl(
+            `/login?toast_msg=${encodeURIComponent("Tu cuenta fue desactivada")}&toast_type=warning`,
+          ),
+        );
       }
     } else {
       deleteSessionCookie(cookies);
-      if (session) {
+      invalidateSessionCache(sessionId);
+      if (resolved.hadRow) {
         await db.delete(sessions).where(eq(sessions.id, sessionId));
       }
       if (relativePath !== "/login") {
@@ -314,38 +315,32 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.request.headers.get("referer"),
   );
 
-  // Proteger endpoints de API para usuarios no autenticados
-  if (
-    lowerPath.startsWith("/api/cronograma") ||
-    lowerPath.startsWith("/api/disponibilidad") ||
-    lowerPath.startsWith("/api/asistencia") ||
-    lowerPath.startsWith("/api/calidad") ||
-    lowerPath.startsWith("/api/admin") ||
-    lowerPath.startsWith("/api/export") ||
-    lowerPath.startsWith("/api/profile")
-  ) {
-    if (currentUser.id === 0) {
-      return jsonError("Sesión no iniciada", 401);
-    }
-  }
-
-  // Redirigir si no está autenticado e intenta acceder a supervisión, admin o automatizaciones (insensible a mayúsculas/minúsculas)
-  if (
-    lowerPath === "/supervision" ||
-    lowerPath.startsWith("/supervision/") ||
-    lowerPath === "/admin" ||
-    lowerPath.startsWith("/admin/") ||
-    lowerPath === "/automatizaciones" ||
-    lowerPath.startsWith("/automatizaciones/")
-  ) {
-    if (currentUser.id === 0) {
-      return redirect(resolveUrl("/login"));
-    }
-  }
-
   if (relativePath === "/login") {
     const response = await next();
     return setSecurityHeaders(response);
+  }
+
+  // Default-deny de sesión (#232). Los endpoints (`/api/**`, `/_actions/**`,
+  // `/_server-islands/**`) exigen sesión salvo la allowlist pública; toda
+  // página exige sesión salvo /404 (/login ya retornó arriba). Un endpoint
+  // nuevo queda protegido por defecto.
+  if (currentUser.id === 0) {
+    const isApiLike =
+      lowerPath.startsWith("/api/") ||
+      lowerPath.startsWith("/_actions/") ||
+      lowerPath.startsWith("/_server-islands/");
+    if (isApiLike) {
+      const isPublicApi = PUBLIC_API_PREFIXES.some((prefix) =>
+        lowerPath.startsWith(prefix),
+      );
+      if (!isPublicApi) {
+        return jsonError("Sesión no iniciada", 401, "no-store");
+      }
+    } else if (!PUBLIC_PAGE_PATHS.has(relativePath)) {
+      // Páginas: match exacto case-sensitive contra `relativePath` (Astro
+      // routea case-sensitive); los endpoints usan `lowerPath` normalizado.
+      return redirect(resolveUrl("/login"));
+    }
   }
 
   const role = (currentUser.role || "").toLowerCase().trim();
@@ -369,7 +364,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   );
   if (!sectionVisible) {
     if (relativePath.startsWith("/api/")) {
-      return jsonError("Acceso no autorizado", 401);
+      return jsonError("Acceso no autorizado", 401, "no-store");
     }
     if (currentUser.id !== 0) {
       return redirect(

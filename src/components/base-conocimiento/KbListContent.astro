@@ -4,9 +4,7 @@ import DataTable from "@components/ui/DataTable.astro";
 import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
-import ActionEditButton from "@components/ui/ActionEditButton.astro";
 import ActionButton from "@components/ui/ActionButton.astro";
-import AddEntityButton from "@components/ui/AddEntityButton.astro";
 import { getModulePermissions } from "@lib/rbac";
 import { can } from "@lib/roleConfig";
 import { getBaseNoSlash } from "@lib/baseUrl";
@@ -86,10 +84,11 @@ const getSearchText = (article: KbArticleListItem) =>
     </div>
     {
       canWrite && (
-        <AddEntityButton
+        <ActionButton
+          icon="boxicons:plus-filled"
+          color="btn-primary"
           href={resolveUrl("/base-conocimiento/create", baseNoSlash)}
           label="Nuevo artículo"
-          size="responsive"
         />
       )
     }
@@ -263,7 +262,9 @@ const getSearchText = (article: KbArticleListItem) =>
 
                 <div class="flex items-center justify-end gap-2">
                   {canWrite && (
-                    <ActionEditButton
+                    <ActionButton
+                      icon="boxicons:pencil-filled"
+                      color="btn-secondary"
                       href={resolveUrl(
                         `/base-conocimiento/edit/${article.id}`,
                         baseNoSlash,

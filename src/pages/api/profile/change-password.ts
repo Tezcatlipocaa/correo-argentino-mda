@@ -46,12 +46,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const [dbUser] = await db
-      .select({ password: users.password })
+      .select({ password: users.password, authProvider: users.authProvider })
       .from(users)
       .where(eq(users.id, user.id));
 
     if (!dbUser) {
       return jsonError("Usuario no encontrado", 404);
+    }
+
+    if (dbUser.authProvider !== "local" || !dbUser.password) {
+      return jsonError("Las cuentas federadas o administradas externamente (Azure AD) deben gestionar su contraseña en el portal corporativo.", 403);
     }
 
     const isCurrentValid = await bcrypt.compare(

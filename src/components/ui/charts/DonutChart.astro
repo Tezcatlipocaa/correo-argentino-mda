@@ -1,0 +1,135 @@
+---
+/**
+ * Donut server-side (SVG, sin JS). Colores por clase Tailwind (`stroke-secondary`,
+ * etc.) para respetar el tema claro/oscuro.
+ */
+interface Slice {
+  label: string;
+  value: number;
+  /** Clase de color del trazo, p.ej. "stroke-secondary". */
+  colorClass: string;
+}
+
+interface Props {
+  slices: Slice[];
+  size?: number;
+  centerLabel?: string;
+  ariaLabel?: string;
+}
+
+const { slices, size = 160, centerLabel = "total", ariaLabel = "Distribución" } =
+  Astro.props;
+
+const thickness = 26;
+const r = (size - thickness) / 2;
+const cx = size / 2;
+const cy = size / 2;
+const circumference = 2 * Math.PI * r;
+const total = slices.reduce((sum, slice) => sum + Math.max(0, slice.value), 0);
+const hasData = total > 0;
+
+/** Mapa literal para que Tailwind genere las clases de la leyenda. */
+const SWATCH_BG: Record<string, string> = {
+  "stroke-secondary": "bg-secondary",
+  "stroke-success": "bg-success",
+  "stroke-accent": "bg-accent",
+  "stroke-info": "bg-info",
+  "stroke-warning": "bg-warning",
+  "stroke-error": "bg-error",
+  "stroke-primary": "bg-primary",
+};
+
+let offset = 0;
+const arcs = slices.map((slice) => {
+  const value = Math.max(0, slice.value);
+  const fraction = total > 0 ? value / total : 0;
+  const dash = fraction * circumference;
+  const arc = {
+    ...slice,
+    value,
+    percent: total > 0 ? Math.round(fraction * 100) : 0,
+    dash,
+    gap: circumference - dash,
+    offset,
+  };
+  offset += dash;
+  return arc;
+});
+---
+
+<div class="flex flex-wrap items-center gap-4">
+  <svg
+    viewBox={`0 0 ${size} ${size}`}
+    width={size}
+    height={size}
+    role="img"
+    aria-label={ariaLabel}
+    class="shrink-0"
+  >
+    {
+      !hasData ? (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          class="stroke-base-300"
+          stroke-width={thickness}
+        />
+      ) : (
+        arcs.map((arc) =>
+          arc.value > 0 ? (
+            <circle
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              class={arc.colorClass}
+              stroke-width={thickness}
+              stroke-dasharray={`${arc.dash} ${arc.gap}`}
+              stroke-dashoffset={-arc.offset}
+              transform={`rotate(-90 ${cx} ${cy})`}
+            />
+          ) : null,
+        )
+      )
+    }
+    <text
+      x={cx}
+      y={cy - 2}
+      text-anchor="middle"
+      class="fill-base-content"
+      font-size="22"
+      font-weight="700"
+    >
+      {total}
+    </text>
+    <text
+      x={cx}
+      y={cy + 16}
+      text-anchor="middle"
+      class="fill-base-content/50"
+      font-size="11"
+    >
+      {centerLabel}
+    </text>
+  </svg>
+
+  <ul class="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
+    {
+      arcs.map((arc) => (
+        <li class="flex items-center justify-between gap-3">
+          <span class="flex min-w-0 items-center gap-2">
+            <span
+              class={`inline-block size-2.5 shrink-0 rounded-sm ${SWATCH_BG[arc.colorClass] ?? "bg-current"}`}
+            />
+            <span class="text-base-content/80 min-w-0 truncate">{arc.label}</span>
+          </span>
+          <span class="text-base-content/60 shrink-0 tabular-nums">
+            {arc.value} ({arc.percent}%)
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</div>

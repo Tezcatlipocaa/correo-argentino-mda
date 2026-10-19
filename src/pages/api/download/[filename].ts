@@ -2,8 +2,11 @@ import type { APIRoute } from "astro";
 import fs from "node:fs";
 import path from "node:path";
 import { getAppsDir } from "@lib/storage";
+import { requireSession } from "@lib/rbac-middleware";
 
-export const GET: APIRoute = ({ params }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
+  const denied = await requireSession(locals);
+  if (denied) return denied;
   const { filename } = params;
   const appsDir = getAppsDir();
 

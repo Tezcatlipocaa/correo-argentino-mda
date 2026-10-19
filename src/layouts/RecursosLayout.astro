@@ -1,0 +1,37 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import RecursosTabs, { type TabKey } from "@components/recursos/RecursosTabs.astro";
+
+interface Props {
+  activeTab: TabKey;
+}
+
+const { activeTab } = Astro.props;
+
+const descriptions: Record<TabKey, string> = {
+  enlaces: "Accesos clave para resolver tareas operativas de soporte con menos fricción.",
+  aplicativos: "Descarga herramientas de operatoria diaria de mesa de ayuda en formato paquete .zip o por aplicativo individual según tu necesidad.",
+  contactos: "Directorio operativo para ubicar teléfonos, correos y accesos clave sin salir del flujo de soporte.",
+};
+---
+
+<BaseLayout>
+  <PageContainer width="xl" gap="md">
+    <div class="flex flex-col gap-3 border-b border-base-300/40 pb-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <PageHeader
+          title="Recursos"
+          class="shrink-0"
+        />
+        <RecursosTabs activeTab={activeTab} class="shrink-0" />
+      </div>
+      <p class="text-base-content/70 max-w-3xl text-sm sm:text-base">
+        {descriptions[activeTab]}
+      </p>
+    </div>
+
+    <slot />
+  </PageContainer>
+</BaseLayout>

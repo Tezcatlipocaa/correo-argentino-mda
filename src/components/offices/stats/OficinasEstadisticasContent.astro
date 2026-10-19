@@ -1,0 +1,570 @@
+---
+import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
+import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import DataTable from "@components/ui/DataTable.astro";
+import DataTableHeaderCell from "@components/ui/DataTableHeaderCell.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import FormField from "@components/ui/forms/FormField.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
+import { getCleanBase } from "@lib/baseUrl";
+
+const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
+const headerGridClass =
+  "grid-cols-[minmax(200px,1.6fr)_minmax(90px,1fr)_100px_100px_90px_110px_100px] gap-4";
+const rowGridClass = `grid ${headerGridClass} items-center`;
+---
+
+<div class="flex w-full flex-col gap-6 pb-24">
+  <div class="flex flex-wrap items-center gap-2">
+    <span data-invgate-badge class="badge badge-warning badge-outline hidden">
+      Sin datos en vivo de InvGate
+    </span>
+  </div>
+
+  <div
+    class="card bg-base-100 border border-base-300 flex flex-col gap-4 rounded-2xl p-4 shadow-xs md:flex-row md:items-end"
+  >
+    <SelectField
+      id="stats-provincia"
+      name="stats-provincia"
+      label="Provincia"
+      size="sm"
+      class="w-full md:w-52"
+    >
+      <option value="">Todas</option>
+    </SelectField>
+    <SelectField
+      id="stats-region"
+      name="stats-region"
+      label="Región"
+      size="sm"
+      class="w-full md:w-48"
+    >
+      <option value="">Todas</option>
+    </SelectField>
+    <SelectField
+      id="stats-tipo"
+      name="stats-tipo"
+      label="Tipo de oficina"
+      size="sm"
+      class="w-full md:w-52"
+    >
+      <option value="">Todos</option>
+    </SelectField>
+    <FormField
+      id="stats-q"
+      name="stats-q"
+      label="Buscar"
+      type="search"
+      placeholder="Nombre o NIS…"
+      size="sm"
+      icon="boxicons:search"
+      class="w-full flex-1"
+    />
+  </div>
+
+  <StatsGrid base={1} lg={5} class="w-full">
+    <div data-kpi="oficinas">
+      <StatsCard
+        icon="building-house"
+        label="Oficinas activas"
+        value="…"
+        subtitle="Activas / totales"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="usuarios">
+      <StatsCard
+        icon="group"
+        label="Usuarios"
+        value="…"
+        subtitle="InvGate"
+        color="info"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="terminales">
+      <StatsCard
+        icon="desktop"
+        label="Terminales"
+        value="…"
+        subtitle="Parque de oficinas activas"
+        color="secondary"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="incidentes">
+      <StatsCard
+        icon="bug-alt"
+        label="Incidentes abiertos"
+        value="…"
+        subtitle="En vivo, por oficina"
+        color="warning"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="eventos">
+      <StatsCard
+        icon="bell"
+        label="Eventos masivos"
+        value="…"
+        subtitle="Activos hoy"
+        color="warning"
+        size="lg"
+      />
+    </div>
+  </StatsGrid>
+
+  <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-2">
+    <ChartCard
+      type="bar"
+      title="Oficinas activas por provincia"
+      subtitle="Red actual"
+      fetchUrl={endpoint}
+      chartKey="porProvincia"
+    />
+    <ChartCard
+      type="bar"
+      title="Modernización por provincia"
+      subtitle="Cerrados últimos 30 días vs. en curso"
+      fetchUrl={endpoint}
+      chartKey="modernizacion"
+    />
+  </div>
+
+  <section
+    data-mass-events-card
+    class="card border border-warning/40 bg-base-100 hidden flex-col gap-3 rounded-2xl p-4 shadow-xs"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-base-200 pb-2">
+      <h2 class="card-title text-base text-base-content flex items-center gap-2">
+        <Icon name="boxicons:alert-circle-filled" class="text-warning" size={20} />
+        <span>Eventos masivos <span class="text-warning">(hoy)</span></span>
+      </h2>
+      <span class="text-base-content/60 text-xs font-mono" data-mass-events-hint></span>
+    </div>
+    <div class="flex flex-col gap-2" data-mass-events-list></div>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <SectionHeader title="Ranking de oficinas" />
+    <DataTable
+      id="ranking-table"
+      ariaLabel="Ranking de oficinas por métricas"
+      minWidthClass="min-w-240"
+      headerGridClass={headerGridClass}
+      rowGridClass={rowGridClass}
+      serverSideSort
+      whenEmpty
+      emptyStateTitle="Sin oficinas"
+      emptyStateDescription="No hay oficinas para los filtros seleccionados."
+    >
+      <div slot="header">
+        <DataTableHeaderCell sortKey="nombre">Oficina (NIS)</DataTableHeaderCell>
+      </div>
+      <div slot="header">
+        <DataTableHeaderCell>Provincia</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="usuarios">Usuarios</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="incidentes">Incidentes</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="eventos">Eventos</DataTableHeaderCell>
+      </div>
+      <div slot="header" class="text-right">
+        <DataTableHeaderCell align="right" sortKey="terminales">Terminales</DataTableHeaderCell>
+      </div>
+      <div slot="header">
+        <DataTableHeaderCell>Estado</DataTableHeaderCell>
+      </div>
+    </DataTable>
+
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="text-base-content/60 text-sm font-medium" data-ranking-total></span>
+      <div class="join border border-base-300 rounded-lg overflow-hidden bg-base-100">
+        <ActionButton
+          size="sm"
+          variant="ghost"
+          icon="boxicons:chevron-left"
+          ariaLabel="Página anterior"
+          class="join-item px-2.5"
+          buttonProps={{ "data-page-prev": "" }}
+          data-page-prev
+        />
+        <span class="btn btn-ghost join-item btn-sm pointer-events-none no-animation font-mono text-xs px-3" data-page-label>1</span>
+        <ActionButton
+          size="sm"
+          variant="ghost"
+          icon="boxicons:chevron-right"
+          ariaLabel="Página siguiente"
+          class="join-item px-2.5"
+          buttonProps={{ "data-page-next": "" }}
+          data-page-next
+        />
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  import { getCleanBase } from "@lib/baseUrl";
+
+  interface MassEventJson {
+    categoriaId: number | null;
+    titulo: string;
+    oficinas: number;
+    tickets: number;
+    desde: number;
+    officeCodes: string[];
+    provincias: string[];
+  }
+  interface RankingRowJson {
+    code: string;
+    name: string;
+    provincia: string | null;
+    region: string | null;
+    usuarios: number | null;
+    incidentes: number | null;
+    eventos: number | null;
+    terminales: number;
+    activa: boolean;
+  }
+  interface PanelBody {
+    kpis: {
+      oficinasActivas: number;
+      oficinasTotal: number;
+      usuarios: number | null;
+      terminales: number;
+      incidentesAbiertos: number | null;
+      eventosMasivosActivos: number | null;
+    };
+    eventosMasivos: MassEventJson[];
+    ranking: { rows: RankingRowJson[]; total: number; page: number; pageSize: number };
+    filtros: { provincias: string[]; regiones: string[]; tipos: string[] };
+    meta: { invgateOk: boolean; snapshotAt: string; massEventMinOffices: number };
+  }
+
+  const EMPTY_DESCRIPTION = "No hay oficinas para los filtros seleccionados.";
+
+  const endpoint = `${getCleanBase()}api/oficinas/estadisticas`;
+  const base = getCleanBase();
+
+  const select = (id: string) => document.getElementById(id) as HTMLSelectElement | null;
+  const input = (id: string) => document.getElementById(id) as HTMLInputElement | null;
+  const rankingRoot = () => document.getElementById("ranking-table");
+
+  let sortBy = "nombre";
+  let sortDir: "asc" | "desc" = "asc";
+  let currentPage = 1;
+  let totalPages = 1;
+
+  function buildQuery(): string {
+    const params = new URLSearchParams();
+    const provincia = select("stats-provincia")?.value;
+    const region = select("stats-region")?.value;
+    const tipo = select("stats-tipo")?.value;
+    const q = input("stats-q")?.value.trim();
+    if (provincia) params.set("provincia", provincia);
+    if (region) params.set("region", region);
+    if (tipo) params.set("tipo", tipo);
+    if (q) params.set("q", q);
+    params.set("orderBy", sortBy);
+    params.set("dir", sortDir);
+    params.set("page", String(currentPage));
+    return params.toString();
+  }
+
+  function setKpi(key: string, text: string): void {
+    const el = document.querySelector(`[data-kpi="${key}"] [data-kpi-value]`);
+    if (el) el.textContent = text;
+  }
+
+  function renderFiltros(filtros: PanelBody["filtros"]): void {
+    const fill = (id: string, values: string[]) => {
+      const el = select(id);
+      if (!el || el.dataset.filled) return;
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        el.appendChild(option);
+      }
+      el.dataset.filled = "1";
+    };
+    fill("stats-provincia", filtros.provincias);
+    fill("stats-region", filtros.regiones);
+    fill("stats-tipo", filtros.tipos);
+  }
+
+  function renderMassEvents(events: MassEventJson[], minOffices: number): void {
+    const card = document.querySelector<HTMLElement>("[data-mass-events-card]");
+    const list = document.querySelector<HTMLElement>("[data-mass-events-list]");
+    const hint = document.querySelector<HTMLElement>("[data-mass-events-hint]");
+    if (!card || !list) return;
+    list.innerHTML = "";
+    if (events.length === 0) {
+      card.classList.add("hidden");
+      if (hint) hint.textContent = "";
+      return;
+    }
+    if (hint) hint.textContent = `Detectados por categoría + día + ${minOffices} oficinas o más`;
+    for (const event of events) {
+      const row = document.createElement("div");
+      row.className =
+        "border-base-300 bg-base-200/40 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2";
+      const badge = document.createElement("span");
+      badge.className = "badge badge-warning font-bold";
+      badge.textContent = `${event.oficinas} oficinas`;
+      const info = document.createElement("div");
+      info.className = "min-w-0 flex-1";
+      const title = document.createElement("div");
+      title.className = "truncate font-semibold";
+      title.textContent = event.titulo;
+      const detail = document.createElement("div");
+      detail.className = "text-base-content/60 text-sm";
+      const since = new Date(event.desde).toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      detail.textContent = `desde ${since} · ${event.provincias.join(" + ")} · ${event.tickets} tickets`;
+      info.appendChild(title);
+      info.appendChild(detail);
+      row.appendChild(badge);
+      row.appendChild(info);
+      list.appendChild(row);
+    }
+    card.classList.remove("hidden");
+  }
+
+  function emptyStateDescription(): HTMLElement | null {
+    return document.getElementById("ranking-table-empty-state-desc");
+  }
+
+  function appendCell(
+    row: HTMLElement,
+    text: string,
+    className: string,
+  ): void {
+    const cell = document.createElement("div");
+    cell.className = className;
+    cell.textContent = text;
+    row.appendChild(cell);
+  }
+
+  function renderRanking(body: PanelBody): void {
+    const root = rankingRoot();
+    const tbody = root?.querySelector<HTMLElement>("[data-table-sort-body]");
+    const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
+    const label = document.querySelector<HTMLElement>("[data-page-label]");
+    const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
+    const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
+    if (!root || !tbody) return;
+
+    const desc = emptyStateDescription();
+    if (desc) desc.textContent = EMPTY_DESCRIPTION;
+
+    // El grid de fila lo define la DataTable: se reusa para no duplicar clases.
+    const rowGrid = root.dataset.tableRowGridClass ?? "";
+    tbody.innerHTML = "";
+    totalPages = Math.max(1, Math.ceil(body.ranking.total / body.ranking.pageSize));
+    if (totalEl) totalEl.textContent = `${body.ranking.total} oficinas`;
+    if (label) label.textContent = `${body.ranking.page} / ${totalPages}`;
+    if (prev) prev.disabled = body.ranking.page <= 1;
+    if (next) next.disabled = body.ranking.page >= totalPages;
+
+    for (const row of body.ranking.rows) {
+      const tr = document.createElement("div");
+      tr.setAttribute("data-table-row", "");
+      tr.setAttribute("data-sort-nombre", row.name.toLowerCase());
+      tr.setAttribute("data-sort-usuarios", String(row.usuarios ?? -1));
+      tr.setAttribute("data-sort-incidentes", String(row.incidentes ?? -1));
+      tr.setAttribute("data-sort-eventos", String(row.eventos ?? -1));
+      tr.setAttribute("data-sort-terminales", String(row.terminales ?? -1));
+      tr.className = `${rowGrid} border-base-300 hover:bg-base-200/50 cursor-pointer border-b px-4 py-3 transition-colors last:border-b-0`;
+
+      const nameCell = document.createElement("div");
+      nameCell.className = "min-w-0";
+      const link = document.createElement("a");
+      link.className =
+        "text-base-content hover:text-primary block truncate text-sm font-semibold transition-colors hover:underline";
+      link.href = `${base}oficinas/estadisticas/${encodeURIComponent(row.code)}`;
+      link.textContent = `${row.name} (${row.code})`;
+      nameCell.appendChild(link);
+      tr.appendChild(nameCell);
+
+      appendCell(tr, row.provincia ?? "—", "truncate text-sm text-base-content/80");
+      appendCell(
+        tr,
+        row.usuarios === null ? "—" : String(row.usuarios),
+        "text-right font-mono text-sm text-base-content/90",
+      );
+      appendCell(
+        tr,
+        row.incidentes === null ? "—" : String(row.incidentes),
+        "text-right font-mono text-sm text-base-content/90",
+      );
+      appendCell(
+        tr,
+        row.eventos === null ? "—" : String(row.eventos),
+        "text-right font-mono text-sm text-base-content/90",
+      );
+      appendCell(tr, String(row.terminales), "text-right font-mono text-sm text-base-content/90");
+      
+      const statusCell = document.createElement("div");
+      statusCell.className = "text-sm";
+      const statusBadge = document.createElement("span");
+      statusBadge.className = row.activa
+        ? "badge badge-xs font-semibold badge-soft badge-success"
+        : "badge badge-xs font-semibold badge-soft badge-error";
+      statusBadge.textContent = row.activa ? "Activa" : "Cerrada";
+      statusCell.appendChild(statusBadge);
+      tr.appendChild(statusCell);
+
+      tr.addEventListener("click", (event) => {
+        if ((event.target as HTMLElement).closest("a")) return;
+        window.location.href = link.href;
+      });
+      tbody.appendChild(tr);
+    }
+  }
+
+  function renderRankingFailure(): void {
+    const root = rankingRoot();
+    const tbody = root?.querySelector<HTMLElement>("[data-table-sort-body]");
+    const totalEl = document.querySelector<HTMLElement>("[data-ranking-total]");
+    const label = document.querySelector<HTMLElement>("[data-page-label]");
+    const prev = document.querySelector<HTMLButtonElement>("[data-page-prev]");
+    const next = document.querySelector<HTMLButtonElement>("[data-page-next]");
+    if (tbody) tbody.innerHTML = "";
+    const desc = emptyStateDescription();
+    if (desc) desc.textContent = "No se pudieron cargar las oficinas.";
+    if (totalEl) totalEl.textContent = "";
+    if (label) label.textContent = "1";
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
+  }
+
+  let fetchSeq = 0;
+
+  async function load(): Promise<void> {
+    const query = buildQuery();
+    const seq = ++fetchSeq;
+    try {
+      const response = await fetch(`${endpoint}?${query}`, {
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = (await response.json()) as PanelBody;
+      if (seq !== fetchSeq) return;
+
+      renderFiltros(body.filtros);
+      setKpi("oficinas", `${body.kpis.oficinasActivas} / ${body.kpis.oficinasTotal}`);
+      setKpi("usuarios", body.kpis.usuarios === null ? "—" : String(body.kpis.usuarios));
+      setKpi("terminales", String(body.kpis.terminales));
+      setKpi(
+        "incidentes",
+        body.kpis.incidentesAbiertos === null ? "—" : String(body.kpis.incidentesAbiertos),
+      );
+      setKpi(
+        "eventos",
+        body.kpis.eventosMasivosActivos === null
+          ? "—"
+          : String(body.kpis.eventosMasivosActivos),
+      );
+
+      const badge = document.querySelector<HTMLElement>("[data-invgate-badge]");
+      badge?.classList.toggle("hidden", body.meta.invgateOk);
+      renderMassEvents(
+        body.meta.invgateOk ? body.eventosMasivos : [],
+        body.meta.massEventMinOffices,
+      );
+      renderRanking(body);
+    } catch (error) {
+      if (seq !== fetchSeq) return;
+      console.error("[estadisticas oficinas] no se pudieron cargar:", error);
+      for (const key of ["oficinas", "usuarios", "terminales", "incidentes", "eventos"]) {
+        setKpi(key, "—");
+      }
+      renderRankingFailure();
+    } finally {
+      if (seq === fetchSeq) {
+        window.dispatchEvent(
+          new CustomEvent("stats:filters-changed", { detail: { query } }),
+        );
+      }
+    }
+  }
+
+  let bound = false;
+
+  function init(): void {
+    if (bound) return;
+    const root = rankingRoot();
+    if (!select("stats-provincia") || !root) return;
+    bound = true;
+
+    const initial = new URLSearchParams(window.location.search);
+    const q = input("stats-q");
+    if (q && initial.get("q")) q.value = initial.get("q") as string;
+
+    const refetch = () => {
+      currentPage = 1;
+      load();
+    };
+    select("stats-provincia")?.addEventListener("change", refetch);
+    select("stats-region")?.addEventListener("change", refetch);
+    select("stats-tipo")?.addEventListener("change", refetch);
+    let debounce: number | undefined;
+    q?.addEventListener("input", () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(refetch, 300);
+    });
+
+    // Ordenamiento server-side: la DataTable emite `table-sort-change` y la
+    // pagina lo traduce al orderBy/dir de la API (el ciclo es asc → desc → sin
+    // orden, que vuelve al default por nombre).
+    root.addEventListener("table-sort-change", (event) => {
+      const detail = (event as CustomEvent).detail as {
+        sortKey: string;
+        direction: "none" | "ascending" | "descending";
+      };
+      if (detail.direction === "none") {
+        sortBy = "nombre";
+        sortDir = "asc";
+      } else {
+        sortBy = detail.sortKey;
+        sortDir = detail.direction === "ascending" ? "asc" : "desc";
+      }
+      currentPage = 1;
+      load();
+    });
+
+    document.querySelector("[data-page-prev]")?.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        load();
+      }
+    });
+    document.querySelector("[data-page-next]")?.addEventListener("click", () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        load();
+      }
+    });
+
+    load();
+  }
+
+  init();
+
+  const injectedObserver = new MutationObserver((records) => {
+    if (records.some((record) => record.addedNodes.length)) init();
+  });
+  injectedObserver.observe(document.documentElement, { childList: true, subtree: true });
+</script>

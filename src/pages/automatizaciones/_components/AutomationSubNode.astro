@@ -2,7 +2,7 @@
 import type { PlannedCard } from "@lib/workflow/timeline-plan";
 import { NODE_LIFECYCLE_DOT_CLASSES } from "@lib/workflow/node-styles";
 import { formatEpochDateTime } from "@lib/format/datetime";
-import OpenExternalUrlButton from "@components/ui/OpenExternalUrlButton.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import WorkflowNodeBadge from "./WorkflowNodeBadge.astro";
 
 interface Props {
@@ -55,11 +55,13 @@ const blockedLabel =
     <WorkflowNodeBadge lifecycle={node.lifecycle} label={blockedLabel} />
     {
       node.invgateUrl && (
-        <OpenExternalUrlButton
+        <ActionButton
           href={node.invgateUrl}
+          icon="boxicons:arrow-up-right-square-filled"
           ariaLabel={`Abrir ticket ${node.prettyId ?? `T${node.refId}`} en InvGate`}
-          variant="icon"
           size="xs"
+          class="btn-square min-h-8 min-w-8"
+          newTab
         />
       )
     }

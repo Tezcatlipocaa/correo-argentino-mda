@@ -1,9 +1,8 @@
 ---
+import ActionButton from "@components/ui/ActionButton.astro";
 import Modal from "@components/ui/Modal.astro";
 import FormField from "@components/ui/forms/FormField.astro";
 import FormTextarea from "@components/ui/forms/FormTextarea.astro";
-import ActionCancelButton from "@components/ui/ActionCancelButton.astro";
-import ActionConfirmButton from "@components/ui/ActionConfirmButton.astro";
 
 interface Props {
   automationId: number;
@@ -98,13 +97,8 @@ const {
   </Fragment>
   <Fragment slot="actions">
     <div class="modal-action mt-6 flex justify-end gap-2">
-      <ActionCancelButton
-        type="button"
-        variant="error"
-        label="Cancelar"
-        data-close-edit-automation
-      />
-      <ActionConfirmButton
+      <ActionButton type="button" label="Cancelar" data-close-edit-automation />
+      <ActionButton
         type="button"
         id="btn-save-edit-automation"
         color="btn-secondary"

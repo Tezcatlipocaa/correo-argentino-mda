@@ -1,0 +1,63 @@
+---
+import ActionButton from "@components/ui/ActionButton.astro";
+import type { HTMLAttributes } from "astro/types";
+// Un solo componente para los selectores de mes de Mensual/Grupos/Pasiva: el
+// select y las flechas comparten altura (select-sm / btn-sm btn-square),
+// ícono 18 y estado deshabilitado nativo (`disabled`, sin clases inyectadas
+// por JS). El JS (`monthly-view.ts`) hidrata las opciones y el estado.
+interface Props extends HTMLAttributes<"select"> {
+  id: string;
+  class?: string;
+}
+
+const { id, class: className = "", ...rest } = Astro.props;
+
+const prevId = `${id}-prev`;
+const nextId = `${id}-next`;
+---
+
+<div class:list={["inline-flex items-center gap-1", className]}>
+  <ActionButton
+    id={prevId}
+    variant="ghost"
+    size="sm"
+    square
+    icon="boxicons:chevron-left-filled"
+    title="Mes anterior"
+    ariaLabel="Mes anterior"
+  />
+  <select id={id} class="select select-sm gap-2 bg-base-100" {...rest}></select>
+  <ActionButton
+    id={nextId}
+    variant="ghost"
+    size="sm"
+    square
+    icon="boxicons:chevron-right-filled"
+    title="Mes siguiente"
+    ariaLabel="Mes siguiente"
+  />
+</div>
+
+<style>
+  select,
+  select:focus,
+  select option,
+  select optgroup {
+    background-color: var(--color-base-100, #efefef) !important;
+    color: var(--color-base-content, #0c0c0c) !important;
+  }
+
+  select::-webkit-scrollbar {
+    width: 8px;
+    background-color: var(--color-base-100, #efefef);
+  }
+
+  select::-webkit-scrollbar-track {
+    background-color: var(--color-base-100, #efefef);
+  }
+
+  select::-webkit-scrollbar-thumb {
+    background-color: var(--color-base-300, #cacdce);
+    border-radius: 4px;
+  }
+</style>

@@ -1,0 +1,260 @@
+---
+import ActionButton from "@components/ui/ActionButton.astro";
+import StatsCard from "@components/ui/StatsCard.astro";
+import StatsGrid from "@components/ui/StatsGrid.astro";
+import ChartCard from "@components/ui/ChartCard.astro";
+import SelectField from "@components/ui/forms/SelectField.astro";
+import { db } from "@db/index";
+import { mesas } from "@db/schema";
+import { and, eq, or } from "drizzle-orm";
+import { CANONICAL_ROLES } from "@lib/rbac";
+import { getCleanBase } from "@lib/baseUrl";
+import { MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
+
+const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+const exportEndpoint = `${getCleanBase()}api/export/usuarios-estadisticas`;
+
+const mesaOptions = await db
+  .select({ id: mesas.invgateId, name: mesas.name })
+  .from(mesas)
+  .where(
+    and(
+      eq(mesas.active, true),
+      or(eq(mesas.assignable, true), eq(mesas.name, MDA_TI_HELPDESK)),
+    ),
+  )
+  .orderBy(mesas.name);
+
+const rolOptions = [
+  { value: "", label: "Todos" },
+  ...CANONICAL_ROLES.map((rol) => ({ value: rol, label: rol })),
+];
+
+const activoOptions = [
+  { value: "", label: "Todos" },
+  { value: "true", label: "Activos" },
+  { value: "false", label: "Inactivos" },
+];
+---
+
+<div class="flex w-full flex-col gap-6 pb-24">
+  <div
+    class="bg-base-200/50 flex flex-wrap items-center gap-4 rounded-lg px-3 py-1.5"
+  >
+    <SelectField
+      id="stats-rol"
+      name="rol"
+      label="Rol"
+      size="sm"
+      options={rolOptions}
+      class="w-40"
+    />
+    <SelectField
+      id="stats-mesa"
+      name="mesa"
+      label="Mesa"
+      size="sm"
+      options={[
+        { value: "", label: "Todas" },
+        ...mesaOptions.map((m) => ({ value: String(m.id), label: m.name })),
+      ]}
+      class="w-56"
+    />
+    <SelectField
+      id="stats-activo"
+      name="activo"
+      label="Estado"
+      size="sm"
+      options={activoOptions}
+      class="w-40"
+    />
+    <ActionButton
+      icon="boxicons:file-detail-filled"
+      color="btn-primary"
+      id="stats-export"
+      href={exportEndpoint}
+      ariaLabel="Exportar estadísticas a CSV"
+    />
+  </div>
+
+  <StatsGrid base={1} lg={4} class="w-full">
+    <div data-kpi="total">
+      <StatsCard
+        icon="group"
+        label="Usuarios totales"
+        value="…"
+        subtitle="Todos los roles"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="activos">
+      <StatsCard
+        icon="user-check"
+        label="Activos"
+        value="…"
+        subtitle="Con acceso habilitado"
+        color="success"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="inactivos">
+      <StatsCard
+        icon="user-x"
+        label="Inactivos"
+        value="…"
+        subtitle="Acceso deshabilitado"
+        color="warning"
+        size="lg"
+      />
+    </div>
+    <div data-kpi="asistencia">
+      <StatsCard
+        icon="calendar-check"
+        label="En asistencia"
+        value="…"
+        subtitle="Operadores controlados"
+        color="info"
+        size="lg"
+      />
+    </div>
+  </StatsGrid>
+
+  <div class="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
+    <ChartCard
+      type="doughnut"
+      title="Activos vs inactivos"
+      fetchUrl={endpoint}
+      chartKey="estado"
+    />
+    <div class="lg:col-span-2">
+      <ChartCard
+        type="bar"
+        title="Usuarios por rol"
+        fetchUrl={endpoint}
+        chartKey="porRol"
+      />
+    </div>
+    <div class="lg:col-span-3">
+      <ChartCard
+        type="bar"
+        title="Usuarios por mesa"
+        fetchUrl={endpoint}
+        chartKey="porMesa"
+      />
+    </div>
+  </div>
+</div>
+
+<script>
+  import { getCleanBase } from "@lib/baseUrl";
+
+  const endpoint = `${getCleanBase()}api/admin/usuarios/estadisticas`;
+  const exportEndpoint = `${getCleanBase()}api/export/usuarios-estadisticas`;
+
+  const getSelect = (id: string): HTMLSelectElement | null =>
+    document.getElementById(id) as HTMLSelectElement | null;
+
+  function buildQuery(): string {
+    const params = new URLSearchParams();
+    const rol = getSelect("stats-rol")?.value;
+    const mesa = getSelect("stats-mesa")?.value;
+    const activo = getSelect("stats-activo")?.value;
+    if (rol) params.set("rol", rol);
+    if (mesa) params.set("mesa", mesa);
+    if (activo) params.set("activo", activo);
+    return params.toString();
+  }
+
+  function syncUrl(): void {
+    const query = buildQuery();
+    const url = query ? `?${query}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }
+
+  function syncExportHref(): void {
+    const exportBtn = document.getElementById("stats-export");
+    if (!(exportBtn instanceof HTMLAnchorElement)) return;
+    const query = buildQuery();
+    exportBtn.href = query ? `${exportEndpoint}?${query}` : exportEndpoint;
+  }
+
+  function setKpi(key: string, value: string): void {
+    const el = document.querySelector(`[data-kpi="${key}"] [data-kpi-value]`);
+    if (el) el.textContent = value;
+  }
+
+  function clearKpis(): void {
+    setKpi("total", "—");
+    setKpi("activos", "—");
+    setKpi("inactivos", "—");
+    setKpi("asistencia", "—");
+  }
+
+  let fetchSeq = 0;
+
+  async function load(): Promise<void> {
+    const query = buildQuery();
+    syncUrl();
+    const seq = ++fetchSeq;
+    try {
+      const response = await fetch(`${endpoint}?${query}`, {
+        headers: { accept: "application/json" },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      if (seq !== fetchSeq) return;
+      setKpi("total", String(body.kpis.total));
+      setKpi("activos", String(body.kpis.activos));
+      setKpi("inactivos", String(body.kpis.inactivos));
+      setKpi("asistencia", String(body.kpis.enAsistencia));
+    } catch (error) {
+      if (seq !== fetchSeq) return;
+      console.error("[estadisticas usuarios] no se pudieron cargar:", error);
+      clearKpis();
+    } finally {
+      if (seq === fetchSeq) {
+        window.dispatchEvent(
+          new CustomEvent("stats:filters-changed", { detail: { query } }),
+        );
+      }
+      syncExportHref();
+    }
+  }
+
+  let bound = false;
+
+  function init(): void {
+    if (bound) return;
+    const rolSelect = getSelect("stats-rol");
+    const mesaSelect = getSelect("stats-mesa");
+    const activoSelect = getSelect("stats-activo");
+    // El HTML llega por server island: si el fetch gana la carrera al script,
+    // los selects todavía no están y hay que reintentar al inyectarse.
+    if (!rolSelect) return;
+    bound = true;
+
+    const initial = new URLSearchParams(window.location.search);
+    if (initial.get("rol")) rolSelect.value = initial.get("rol") as string;
+    if (initial.get("mesa")) mesaSelect!.value = initial.get("mesa") as string;
+    if (initial.get("activo")) {
+      activoSelect!.value = initial.get("activo") as string;
+    }
+
+    rolSelect.addEventListener("change", load);
+    mesaSelect?.addEventListener("change", load);
+    activoSelect?.addEventListener("change", load);
+
+    load();
+    syncExportHref();
+  }
+
+  init();
+
+  const injectedObserver = new MutationObserver((records) => {
+    if (records.some((record) => record.addedNodes.length)) init();
+  });
+  injectedObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+</script>

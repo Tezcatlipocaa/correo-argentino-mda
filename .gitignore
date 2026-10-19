@@ -36,6 +36,7 @@ desktop.ini
 # local tooling artifacts
 .playwright-mcp/
 tmp/
+.worktrees/
 
 # Base de datos
 /database/
@@ -118,9 +119,16 @@ scripts/backups
 # align-db-to-schema workdir (regenerada en cada corrida)
 .drizzle-canonical/
 
+# Safe deploy artifacts
+.deploy.lock
+.deploy-rollback/
+
 # Certificados (nunca versionar)
 *.cer
 *.crt
 *.key
 *.pem
 *.pfx
+
+# Proyectos de video local (Hyperframes) - no versionar
+videos/

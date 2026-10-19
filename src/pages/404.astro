@@ -1,6 +1,5 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { Icon } from "astro-icon/components";
 import { getCleanBase } from "@lib/baseUrl";
 
 const homeUrl = getCleanBase();
@@ -8,22 +7,35 @@ const homeUrl = getCleanBase();
 
 <BaseLayout title="Página no encontrada">
   <div
-    class="flex min-h-[80vh] flex-col items-center justify-center gap-6 px-4 text-center"
+    class="relative -m-4 md:-m-6 flex h-[calc(100%+2rem)] md:h-[calc(100%+3rem)] flex-col overflow-hidden bg-base-100"
   >
-    <Icon
-      name="boxicons:sad"
-      size={224}
-      class="text-base-content/20"
+    <div
+      class="absolute inset-0 flex flex-col items-center justify-center"
       aria-hidden="true"
-    />
-    <div>
-      <span class="text-base-content text-4xl font-black tracking-tight">
-        Página no encontrada
-      </span>
-      <p class="text-base-content/70 mt-2 max-w-xl text-xl">
-        La ruta solicitada no existe o fue movida.
-      </p>
+    >
+      {
+        Array.from({ length: 7 }).map((_, i) => (
+          <span
+            key={i}
+            class="text-base-content/5 text-[22vw] font-black leading-none tracking-tighter select-none"
+          >
+            404
+          </span>
+        ))
+      }
     </div>
-    <a href={homeUrl} class="btn btn-primary btn-lg"> Volver al inicio </a>
+    <div
+      class="relative z-10 flex flex-1 flex-col items-center justify-center gap-10 px-6 text-center"
+    >
+      <p class="text-base-content text-2xl md:text-4xl font-medium max-w-2xl">
+        Esta consulta no figura en ninguna mesa. Nadie la derivó.
+      </p>
+      <a
+        href={homeUrl}
+        class="text-base-content text-xl md:text-2xl font-semibold underline underline-offset-8 transition-opacity hover:opacity-70"
+      >
+        Volver al inicio
+      </a>
+    </div>
   </div>
 </BaseLayout>

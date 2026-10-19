@@ -1,6 +1,7 @@
 import { state } from "./state";
 import { formatToDDMMYY } from "./rotation-helper";
 import { escapeHtml } from "@lib/sanitize";
+import { currentMonthYM } from "./monthLabel";
 
 interface ShiftEntry {
   agentId: number;
@@ -29,7 +30,6 @@ interface PreviewResponse {
 
 let currentMonth = "";
 let currentData: PreviewResponse | null = null;
-let chartInstances: any[] = [];
 
 const MONTH_NAMES = [
   "Enero",
@@ -61,18 +61,6 @@ const MONTH_ABBR = [
 ];
 const MAX_WEEKEND_HOURS = 35;
 
-function waitForChartJs(): Promise<void> {
-  if ((window as any).Chart) return Promise.resolve();
-  return new Promise((resolve) => {
-    const check = setInterval(() => {
-      if ((window as any).Chart) {
-        clearInterval(check);
-        resolve();
-      }
-    }, 50);
-  });
-}
-
 function formatDateLabel(saturday: string, sunday: string): string {
   const sat = new Date(saturday + "T12:00:00");
   const sun = new Date(sunday + "T12:00:00");
@@ -101,10 +89,6 @@ function ensureModal(): HTMLDialogElement {
       <form method="dialog" class="modal-backdrop"><button>close</button></form>
     `;
     dialog.addEventListener("close", () => {
-      chartInstances.forEach((c) => {
-        if (c && typeof c.destroy === "function") c.destroy();
-      });
-      chartInstances = [];
       currentData = null;
     });
     document.body.appendChild(dialog);
@@ -113,10 +97,6 @@ function ensureModal(): HTMLDialogElement {
 }
 
 function closeModal(): void {
-  chartInstances.forEach((c) => {
-    if (c && typeof c.destroy === "function") c.destroy();
-  });
-  chartInstances = [];
   currentData = null;
   const dialog = document.getElementById(
     "overtime-preview-modal",
@@ -166,9 +146,14 @@ function renderCard(
   const dateLabel = formatDateLabel(saturdayDate, sundayDate);
   const cardId = `overtime-card-${saturdayDate}`;
 
+  // Anillo de progreso sin Chart.js: el donut previo solo mostraba la fraccion
+  // totalHours/MAX_WEEKEND_HOURS, asi que un conic-gradient hace lo mismo sin
+  // cargar ninguna libreria.
+  const ringPct = Math.min(totalHours / MAX_WEEKEND_HOURS, 1) * 100;
   const donutHtml = `
-    <div class="relative w-24 h-24 flex items-center justify-center">
-      <canvas class="overtime-preview-canvas" data-hours="${totalHours}" width="96" height="96"></canvas>
+    <div class="relative w-24 h-24">
+      <div class="absolute inset-0 rounded-full" style="background: conic-gradient(var(--color-warning) ${ringPct}%, color-mix(in oklab, var(--color-base-content) 10%, transparent) 0);"></div>
+      <div class="absolute inset-2 rounded-full bg-base-100"></div>
       <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span class="text-lg font-black text-base-content">${totalHours}</span>
         <span class="text-tiny font-bold text-base-content/50">hs</span>
@@ -306,49 +291,6 @@ export function renderPreview(data: PreviewResponse): void {
       selectWeekendFromCard(w.saturdayDate),
     );
   });
-
-  initCharts();
-}
-
-export function initCharts(): void {
-  chartInstances.forEach((c) => {
-    if (c && typeof c.destroy === "function") c.destroy();
-  });
-  chartInstances = [];
-
-  const canvases = document.querySelectorAll<HTMLCanvasElement>(
-    ".overtime-preview-canvas",
-  );
-  if (canvases.length === 0) return;
-  if (!(window as any).Chart) {
-    setTimeout(initCharts, 100);
-    return;
-  }
-
-  const Chart = (window as any).Chart;
-  canvases.forEach((canvas) => {
-    const totalHours = parseFloat(canvas.dataset.hours || "0");
-    const filled = Math.min(totalHours, MAX_WEEKEND_HOURS);
-    const remaining = MAX_WEEKEND_HOURS - filled;
-    const chart = new Chart(canvas, {
-      type: "doughnut",
-      data: {
-        datasets: [
-          {
-            data: [filled, remaining],
-            backgroundColor: ["#f59e0b", "rgba(0,0,0,0.05)"],
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        cutout: "78%",
-        responsive: false,
-        plugins: { tooltip: { enabled: false }, legend: { display: false } },
-      },
-    });
-    chartInstances.push(chart);
-  });
 }
 
 export function navigateMonth(delta: 1 | -1): void {
@@ -367,18 +309,13 @@ export async function selectWeekendFromCard(saturday: string): Promise<void> {
 }
 
 export async function openOvertimePreview(month?: string): Promise<void> {
-  chartInstances.forEach((c) => {
-    if (c && typeof c.destroy === "function") c.destroy();
-  });
-  chartInstances = [];
-
   if (month) {
     currentMonth = month;
   } else {
     if (state.overtimeSelectedWeekend) {
       currentMonth = state.overtimeSelectedWeekend.slice(0, 7);
     } else {
-      currentMonth = new Date().toISOString().slice(0, 7);
+      currentMonth = currentMonthYM();
     }
   }
 

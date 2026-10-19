@@ -13,9 +13,22 @@ interface Props {
   size?: "xs" | "sm" | "md" | "default";
   iconSize?: number;
   color?: string;
+  variant?: "solid" | "soft" | "outline" | "ghost";
   ghost?: boolean;
+  circle?: boolean;
+  square?: boolean;
+  block?: boolean;
+  active?: boolean;
   iconClass?: string;
-  type?: "button" | "submit";
+  type?: "button" | "submit" | "reset";
+  formId?: string;
+  grow?: boolean;
+  newTab?: boolean;
+  download?: boolean;
+  disabled?: boolean;
+  tooltip?: string;
+  tooltipPosition?: "top" | "right" | "bottom" | "left";
+  buttonProps?: Record<string, any>;
   class?: string;
   [key: string]: any;
 }
@@ -32,10 +45,23 @@ const {
   size = "default",
   iconSize,
   color = "btn-secondary",
+  variant,
   ghost = false,
+  circle = false,
+  square = false,
+  block = false,
+  active = false,
   iconClass,
   type = "button",
+  formId,
+  grow = false,
+  newTab = false,
+  download = false,
+  disabled = false,
+  tooltip,
+  tooltipPosition = "top",
   class: className = "",
+  buttonProps,
   ...attrs
 } = Astro.props;
 
@@ -45,54 +71,94 @@ const sizeMap: Record<string, string> = {
   md: "btn-sm md:btn-md",
   default: "btn-sm md:btn-md",
 };
-const variantClass = ghost ? "btn-ghost" : `btn-soft ${color}`;
-const btnClasses = `btn group ${sizeMap[size] || sizeMap.default} ${variantClass} gap-2`;
+
+const resolvedVariant = ghost ? "ghost" : (variant ?? "solid");
+const variantClass =
+  resolvedVariant === "ghost"
+    ? "btn-ghost"
+    : resolvedVariant === "soft"
+      ? `btn-soft ${color}`.trim()
+      : resolvedVariant === "outline"
+        ? `btn-outline ${color}`.trim()
+        : color;
+
+const tooltipClassMap: Record<string, string> = {
+  top: "tooltip-top",
+  right: "tooltip-right",
+  bottom: "tooltip-bottom",
+  left: "tooltip-left",
+};
+
+const btnClasses = [
+  "btn group",
+  sizeMap[size] || sizeMap.default,
+  variantClass,
+  circle && "btn-circle",
+  square && "btn-square",
+  block && "btn-block",
+  active && "btn-active",
+  grow && "grow",
+  "gap-2",
+  disabled && "btn-disabled",
+  tooltip && `tooltip tooltip-neutral ${tooltipClassMap[tooltipPosition]}`,
+  className,
+];
+
 const isXs = size === "xs";
 const resolvedIconSize = iconSize ?? (isXs ? 14 : 18);
+const canRenderAnchor = Boolean(href) && !disabled;
 ---
 
 {
-  href ? (
+  canRenderAnchor ? (
     <a
-      href={href}
       id={id}
-      title={title}
-      class:list={[btnClasses, className]}
+      href={href}
+      class:list={btnClasses}
+      data-tip={tooltip || undefined}
+      target={newTab ? "_blank" : undefined}
+      rel={newTab ? "noopener noreferrer" : undefined}
+      download={download || undefined}
       aria-label={ariaLabel}
+      title={title}
       {...attrs}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} is:inline />}
-      {shortLabel ? (
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} aria-hidden="true" is:inline />}
+      {shortLabel && (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
           <span id={labelId} class="hidden xl:inline">
             {label}
           </span>
         </>
-      ) : (
-        label && <span id={labelId}>{label}</span>
       )}
+      {!shortLabel && label && <span id={labelId}>{label}</span>}
+      <slot />
     </a>
   ) : (
     <button
-      type={type}
       id={id}
-      title={title}
-      class:list={[btnClasses, className]}
+      type={type}
+      form={formId}
+      class:list={btnClasses}
+      data-tip={tooltip || undefined}
+      disabled={disabled}
       aria-label={ariaLabel}
+      title={title}
       {...attrs}
+      {...buttonProps}
     >
-      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} is:inline />}
-      {shortLabel ? (
+      {icon && <Icon name={icon} size={resolvedIconSize} class={iconClass} aria-hidden="true" is:inline />}
+      {shortLabel && (
         <>
           <span class="inline xl:hidden">{shortLabel}</span>
           <span id={labelId} class="hidden xl:inline">
             {label}
           </span>
         </>
-      ) : (
-        label && <span id={labelId}>{label}</span>
       )}
+      {!shortLabel && label && <span id={labelId}>{label}</span>}
+      <slot />
     </button>
   )
 }

@@ -2,7 +2,7 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
-import { Icon } from "astro-icon/components";
+import ActionButton from "@components/ui/ActionButton.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import { db } from "@db/index";
 import { supportGuides, hiddenHelpdesks } from "@db/schema";
@@ -45,10 +45,13 @@ const helpdesks = allItems
 <BaseLayout>
   <PageContainer>
     <div>
-      <a href={`${cleanBase}mesas-de-ayuda`} class="btn btn-ghost btn-sm gap-2">
-        <Icon name="boxicons:arrow-left" size={16} />
-        Volver al listado
-      </a>
+      <ActionButton
+        href={`${cleanBase}mesas-de-ayuda`}
+        icon="boxicons:arrow-left"
+        label="Volver al listado"
+        variant="ghost"
+        size="sm"
+      />
     </div>
 
     <PageHeader
@@ -100,14 +103,14 @@ const helpdesks = allItems
                     <option value={hd.id}>{hd.name}</option>
                   ))}
                 </select>
-                <button
-                  class="btn btn-xs btn-primary"
+                <ActionButton
+                  color="btn-primary"
+                  size="xs"
+                  label="Asignar"
                   data-assign-btn
                   data-record-id={guide.id}
                   data-select-id={selectId}
-                >
-                  Asignar
-                </button>
+                />
               </div>
             </div>
           );

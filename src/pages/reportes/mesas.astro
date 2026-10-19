@@ -1,0 +1,148 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import MetricsHeader from "@components/ui/MetricsHeader.astro";
+import SectionHeader from "@components/ui/SectionHeader.astro";
+import MetricsLegend from "@components/ui/MetricsLegend.astro";
+import RefreshReportButton from "@components/ui/RefreshReportButton.astro";
+import HelpdeskBentoGrid from "@components/reportes/mesas/HelpdeskBentoGrid.astro";
+import HelpdeskTable from "@components/reportes/mesas/HelpdeskTable.astro";
+import ChartCardSkeleton from "@components/ui/ChartCardSkeleton.astro";
+import { getHelpdesksReport } from "@lib/helpdesks/service";
+import ActionButton from "@components/ui/ActionButton.astro";
+import { resolveUrl } from "@lib/url";
+import { Icon } from "astro-icon/components";
+
+const report = await getHelpdesksReport();
+
+const legendItems = [
+  { label: "Operadores", description: "Miembros asignados a la mesa de ayuda." },
+  { label: "Ingresos", description: "Tickets recibidos en el mes." },
+  { label: "Resueltos", description: "Tickets resueltos en el mes." },
+  {
+    label: "Ratio E/S",
+    description:
+      "Entradas sobre salidas (ingresos vs. resueltos). Valores cercanos a 1 indican mejor absorción de la demanda.",
+  },
+  {
+    label: "Activos",
+    description: "Backlog activo; entre paréntesis, los tickets en espera.",
+  },
+  {
+    label: "1ª Respuesta",
+    description: "Tiempo promedio hasta la primera respuesta.",
+  },
+  { label: "MTTR", description: "Tiempo medio de resolución." },
+  {
+    label: "SLA",
+    description: "Porcentaje de cumplimiento del tiempo de resolución.",
+  },
+  {
+    label: "CSAT",
+    description: "Satisfacción promedio del usuario (escala 1 a 5).",
+  },
+];
+---
+
+<BaseLayout title="Mesas de Ayuda | Reportes">
+  <PageContainer>
+    <MetricsHeader
+      title="Métricas de Mesas de Ayuda y Flujo Operativo"
+      description="Tablero consolidado de colas operativas, volumen mensual, cumplimiento de SLA y satisfacción de usuarios."
+    >
+      <Fragment slot="actions">
+        <ActionButton
+          href={resolveUrl("/reportes/categorias")}
+          variant="outline"
+          color=""
+          size="sm"
+          icon="boxicons:network-chart"
+          label="Árbol de Categorías"
+          title="Ver árbol de categorías"
+        />
+        <RefreshReportButton
+          id="btn-refresh-helpdesks"
+          endpoint="api/reportes/mesas/refresh"
+          title="Refrescar métricas de mesas de ayuda"
+          successMsg="Métricas de mesas actualizadas con éxito"
+          errorMsg="Error al refrescar mesas de ayuda"
+        />
+      </Fragment>
+    </MetricsHeader>
+
+    <section aria-label="Métricas de resumen de mesas de ayuda" class="mt-6">
+      <HelpdeskBentoGrid data={report} server:defer>
+        <div slot="fallback" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <ChartCardSkeleton count={4} />
+        </div>
+      </HelpdeskBentoGrid>
+    </section>
+
+    <section aria-label="Detalle por mesa de ayuda" class="mt-10 space-y-4">
+      <SectionHeader
+        title="Desempeño Individual por Mesa de Ayuda"
+        description="Detalle de operadores, volumen mensual, tiempos de respuesta y niveles de servicio por cola de atención."
+      />
+      <HelpdeskTable items={report.items} />
+
+      <MetricsLegend
+        title="Leyenda de columnas e indicadores"
+        headingLevel="h3"
+        items={legendItems}
+      >
+        <div slot="extra" class="space-y-2">
+          <p class="text-base-content text-sm font-semibold">
+            Código de colores
+          </p>
+          <ul class="text-base-content/70 grid gap-2 text-sm sm:grid-cols-2">
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-success shrink-0"></span>
+              Ratio E/S mayor o igual a 0,95 · SLA mayor o igual al 90%
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-info shrink-0"></span>
+              Ratio E/S entre 0,90 y 0,95
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-warning shrink-0"></span>
+              Ratio E/S menor a 0,90
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="badge badge-sm badge-error shrink-0"></span>
+              SLA menor al 90%
+            </li>
+          </ul>
+        </div>
+      </MetricsLegend>
+    </section>
+  </PageContainer>
+</BaseLayout>
+
+<script>
+  window.addEventListener("chart-card:segment-click", (e: Event) => {
+    const customEvent = e as CustomEvent<{ label?: string }>;
+    const label = customEvent.detail?.label;
+    if (!label) return;
+
+    const table = document.getElementById("table-helpdesks");
+    if (!table) return;
+
+    const row =
+      table.querySelector<HTMLElement>(`[data-helpdesk-name="${label}"]`) ||
+      table.querySelector<HTMLElement>(`[data-helpdesk-display-name="${label}"]`) ||
+      Array.from(table.querySelectorAll<HTMLElement>("[data-table-row]")).find((r) => {
+        const name = r.dataset.helpdeskName?.trim().toLowerCase();
+        const disp = r.dataset.helpdeskDisplayName?.trim().toLowerCase();
+        const target = label.trim().toLowerCase();
+        return name === target || disp === target;
+      });
+
+    if (row) {
+      row.classList.add("bg-primary/20");
+      setTimeout(() => {
+        row.classList.remove("bg-primary/20");
+      }, 2500);
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+</script>

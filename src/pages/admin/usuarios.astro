@@ -1,12 +1,13 @@
 ---
 import { db } from "@db/index";
-import { users, agents, mesas } from "@db/schema";
+import { users, agents, mesas, sessions } from "@db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { passwordSchema, hashPassword } from "@lib/security";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { logAdminFromAstro } from "@lib/auditLogger";
 import { isValidRole, normalizeRole } from "@lib/rbac";
 import { mesaHasParticipaciones, MDA_TI_HELPDESK } from "@lib/helpdeskAccess";
+import { invalidateUserSessionsCache } from "@lib/sessionCache";
 import AdminUsersContent from "@components/admin/users/AdminUsersContent.astro";
 import AdminUsersSkeleton from "@components/admin/users/AdminUsersSkeleton.astro";
 
@@ -21,11 +22,11 @@ if (Astro.request.method === "POST") {
   const action = formData.get("action")?.toString() ?? "create";
 
   // Politica: nadie edita su propio usuario (rol, mesa, nombre, username,
-  // participaciones). La única auto-modificación permitida es la contraseña,
+  // participaciones, ni blanqueo de contraseña). La única auto-modificación permitida es la contraseña,
   // que se hace desde /profile. El rol admin además no es editable por nadie
   // en el sistema de permisos (whitelist hardcoded, short-circuit en
   // isSectionVisibleSync).
-  const SELF_EDIT_BLOCKED_ACTIONS = new Set(["update-user"]);
+  const SELF_EDIT_BLOCKED_ACTIONS = new Set(["update-user", "reset-password"]);
   const selfEditBlocked =
     SELF_EDIT_BLOCKED_ACTIONS.has(action) &&
     Number(formData.get("userId")) === Astro.locals.user.id;
@@ -37,7 +38,11 @@ if (Astro.request.method === "POST") {
     const username = formData.get("username")?.toString().trim().toLowerCase();
     const password = formData.get("password")?.toString();
     const role = formData.get("role")?.toString();
-    const name = formData.get("name")?.toString().trim();
+    const name = formData
+      .get("name")
+      ?.toString()
+      .trim()
+      .replace(/\s+/g, " ");
     const rawHelpdesk = formData.get("helpdesk")?.toString() ?? "";
     const participaciones = {
       enCronograma: formData.get("enCronograma") === "on",
@@ -197,7 +202,11 @@ if (Astro.request.method === "POST") {
       ?.toString()
       .trim()
       .toLowerCase();
-    const newName = formData.get("name")?.toString().trim();
+    const newName = formData
+      .get("name")
+      ?.toString()
+      .trim()
+      .replace(/\s+/g, " ");
     const newRole = formData.get("newRole")?.toString();
     const rawHelpdesk = formData.get("helpdesk")?.toString() ?? "";
     const submitted = {
@@ -422,6 +431,7 @@ if (Astro.request.method === "POST") {
         });
 
         if (!errorMsg && audit) {
+          invalidateUserSessionsCache(userId);
           successMsg = "Usuario actualizado con éxito.";
           await logAdminFromAstro(Astro.locals, audit);
         }
@@ -503,10 +513,16 @@ if (Astro.request.method === "POST") {
             .where(eq(users.id, userId))
             .run();
 
+          // Revocar todas las sesiones activas en DB
+          tx.delete(sessions)
+            .where(eq(sessions.userId, userId))
+            .run();
+
           audit = `Desactivó al usuario "${target.username}"`;
         });
 
         if (!errorMsg) {
+          invalidateUserSessionsCache(userId);
           successMsg = "Usuario desactivado con éxito.";
           if (audit) await logAdminFromAstro(Astro.locals, audit);
         }
@@ -550,6 +566,7 @@ if (Astro.request.method === "POST") {
         });
 
         if (!errorMsg) {
+          invalidateUserSessionsCache(userId);
           successMsg = "Usuario reactivado con éxito.";
           if (audit) await logAdminFromAstro(Astro.locals, audit);
         }
@@ -574,10 +591,18 @@ if (Astro.request.method === "POST") {
           const targetUsername = targetUser?.username || "desconocido";
 
           const hashedPassword = await hashPassword(newPassword);
-          await db
-            .update(users)
-            .set({ password: hashedPassword })
-            .where(eq(users.id, userId));
+          db.transaction((tx) => {
+            tx.update(users)
+              .set({ password: hashedPassword })
+              .where(eq(users.id, userId))
+              .run();
+
+            tx.delete(sessions)
+              .where(eq(sessions.userId, userId))
+              .run();
+          });
+
+          invalidateUserSessionsCache(userId);
           successMsg = "Contraseña actualizada con éxito.";
           await logAdminFromAstro(
             Astro.locals,

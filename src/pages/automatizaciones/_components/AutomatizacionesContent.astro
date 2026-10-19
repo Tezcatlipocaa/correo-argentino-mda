@@ -4,6 +4,7 @@ import PageContainer from "@components/ui/PageContainer.astro";
 import PageHeader from "@components/ui/PageHeader.astro";
 import SearchBar from "@components/ui/SearchBar.astro";
 import Pagination from "@components/ui/Pagination.astro";
+import ActionButton from "@components/ui/ActionButton.astro";
 import AutomationCardList from "./AutomationCardList.astro";
 import AutomationRecentList from "./AutomationRecentList.astro";
 import AutomationParentsTable from "./AutomationParentsTable.astro";
@@ -35,10 +36,15 @@ import { buildStatusNameLookup } from "@lib/workflow/automation-status";
 import { formatEpochDateTime } from "@lib/format/datetime";
 import { getCleanBase } from "@lib/baseUrl";
 import { resolveUrl } from "@lib/url";
-import { isLoggedIn } from "@lib/rbac";
+import { isLoggedIn, hasPermission } from "@lib/rbac";
 
 const user = Astro.locals.user;
 const canQuery = isLoggedIn(user);
+// Misma fuente que el middleware y el sidebar: el CTA aparece solo donde la
+// ruta está permitida.
+const canViewReportesWorkflows = user
+  ? hasPermission("/reportes/workflows", user.role)
+  : false;
 
 const searchParams = Astro.url.searchParams;
 const parsedQuery = parseAutomationParentsQuery(searchParams);
@@ -323,17 +329,13 @@ const activeFilterCount =
                   )}
                 </form>
 
-                <a
+                <ActionButton
                   href={buildListHref({ refresh: true })}
-                  class="btn btn-ghost btn-sm gap-1"
-                >
-                  <Icon
-                    name="boxicons:refresh-cw"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  Actualizar
-                </a>
+                  variant="ghost"
+                  size="sm"
+                  icon="boxicons:refresh-cw"
+                  label="Actualizar"
+                />
 
                 {dataAsOf && (
                   <span class="text-base-content/60 text-xs">
@@ -343,31 +345,36 @@ const activeFilterCount =
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
-                <a
+                <ActionButton
                   href={resolveUrl("/automatizaciones/metricas")}
                   data-astro-prefetch="hover"
-                  class="btn btn-ghost btn-sm gap-1"
-                >
-                  <Icon
-                    name="boxicons:bar-chart-big-filled"
-                    size={16}
-                    aria-hidden="true"
-                  />
-                  Métricas
-                </a>
+                  variant="ghost"
+                  size="sm"
+                  icon="boxicons:bar-chart-big-filled"
+                  label="Métricas"
+                />
 
-                <a
-                  href={buildExportHref()}
-                  class="btn btn-ghost btn-sm gap-1"
-                  download
-                >
-                  <Icon
-                    name="boxicons:file-detail-filled"
-                    size={16}
-                    aria-hidden="true"
+                {canViewReportesWorkflows && (
+                  <ActionButton
+                    href={resolveUrl("/reportes/workflows")}
+                    data-astro-prefetch="hover"
+                    variant="ghost"
+                    size="sm"
+                    icon="boxicons:git-repo-forked-filled"
+                    label="Reportes"
+                    title="Reportes de workflows de proceso"
+                    data-cta-reportes-workflows
                   />
-                  Exportar CSV
-                </a>
+                )}
+
+                <ActionButton
+                  href={buildExportHref()}
+                  download
+                  variant="ghost"
+                  size="sm"
+                  icon="boxicons:file-detail-filled"
+                  label="Exportar CSV"
+                />
               </div>
             </div>
 
@@ -459,6 +466,7 @@ const activeFilterCount =
                       <Icon
                         name="boxicons:apps"
                         size={16}
+                        is:inline
                         aria-hidden="true"
                       />
                     </a>
@@ -475,22 +483,20 @@ const activeFilterCount =
                       <Icon
                         name="boxicons:table-filled"
                         size={16}
+                        is:inline
                         aria-hidden="true"
                       />
                     </a>
                   </div>
 
-                  <button
+                  <ActionButton
                     type="button"
                     data-open-filters
-                    class="btn btn-ghost btn-sm gap-1"
+                    variant="ghost"
+                    size="sm"
+                    icon="boxicons:filter-filled"
                     aria-haspopup="dialog"
                   >
-                    <Icon
-                      name="boxicons:filter-filled"
-                      size={16}
-                      aria-hidden="true"
-                    />
                     <span>
                       Filtros{status !== "all" ? ` · ${stateLabel}` : ""}
                     </span>
@@ -499,7 +505,7 @@ const activeFilterCount =
                         {activeFilterCount}
                       </span>
                     )}
-                  </button>
+                  </ActionButton>
                 </div>
               </article>
 
