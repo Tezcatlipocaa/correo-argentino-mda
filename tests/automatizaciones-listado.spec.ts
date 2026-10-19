@@ -12,13 +12,16 @@ import {
  */
 
 let agentUser: Awaited<ReturnType<typeof createTestUserAndSession>>;
+let adminUser: Awaited<ReturnType<typeof createTestUserAndSession>>;
 
 test.beforeAll(async () => {
   agentUser = await createTestUserAndSession("agent");
+  adminUser = await createTestUserAndSession("admin");
 });
 
 test.afterAll(async () => {
   await cleanupTestUser(agentUser.userId, agentUser.sessionId);
+  await cleanupTestUser(adminUser.userId, adminUser.sessionId);
 });
 
 test.describe("Listado de /automatizaciones", () => {
@@ -90,9 +93,12 @@ test.describe("Listado de /automatizaciones", () => {
     context,
     page,
   }) => {
-    await setSessionCookie(context, agentUser.signedSessionId);
+    await setSessionCookie(context, adminUser.signedSessionId);
     await page.goto("/automatizaciones");
 
+    await expect(
+      page.getByRole("heading", { name: "Automatizaciones", level: 1 }),
+    ).toBeVisible();
     await expect(page.locator("[data-cta-reportes-workflows]")).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Reportes", exact: true }),
