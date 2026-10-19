@@ -32,12 +32,20 @@ export const GET: APIRoute = async ({ url, locals }) => {
       }
     }
     if (provinciaParam !== null) {
-      const provinceCodes = (
-        await db.select({ code: provinces.code }).from(provinces)
-      ).map((p) => p.code);
-      if (!provinceCodes.includes(provinciaParam)) {
+      const provinceRows = await db
+        .select({ code: provinces.code, regionId: provinces.regionId })
+        .from(provinces);
+      const match = provinceRows.find((p) => p.code === provinciaParam);
+      if (!match) {
         return jsonError(
           `Provincia inválida: ${provinciaParam}`,
+          400,
+          "no-store",
+        );
+      }
+      if (regionParam !== null && match.regionId !== regionParam) {
+        return jsonError(
+          `La provincia ${provinciaParam} no pertenece a la región ${regionParam}`,
           400,
           "no-store",
         );

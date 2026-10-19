@@ -32,14 +32,14 @@ const regionOptions = [
       .orderBy(regions.name)
   ).map((r) => ({ value: r.id, label: r.name })),
 ];
+const allProvinces = await db
+  .select({ code: provinces.code, name: provinces.name, regionId: provinces.regionId })
+  .from(provinces)
+  .orderBy(provinces.name);
+
 const provinceOptions = [
   { value: "", label: "Todas" },
-  ...(
-    await db
-      .select({ code: provinces.code, name: provinces.name })
-      .from(provinces)
-      .orderBy(provinces.name)
-  ).map((p) => ({ value: p.code, label: p.name })),
+  ...allProvinces.map((p) => ({ value: p.code, label: p.name })),
 ];
 const marcaOptions = [
   { value: "", label: "Todas" },
@@ -108,16 +108,36 @@ const CHARTS: {
       options={osOptions}
       class="w-full md:w-44"
     />
-    <ActionButton
-      href={inventarioHref}
-      size="sm"
-      color="btn-secondary"
-      icon="boxicons:desktop-filled"
-      iconSize={16}
-      class="md:ml-auto"
-    >
-      Ver inventario completo
-    </ActionButton>
+    <div class="flex items-center gap-2 md:ml-auto">
+      <ActionButton
+        type="button"
+        id="clear-filters-btn"
+        size="sm"
+        variant="soft"
+        color="btn-error"
+        icon="boxicons:trash"
+        iconSize={16}
+        label="Limpiar filtros"
+        ariaLabel="Limpiar todos los filtros"
+        title="Limpiar todos los filtros"
+      />
+      <ActionButton
+        href={inventarioHref}
+        size="sm"
+        color="btn-secondary"
+        icon="boxicons:desktop-filled"
+        iconSize={16}
+      >
+        Ver inventario completo
+      </ActionButton>
+    </div>
+  </div>
+
+  <div
+    id="terminal-provinces-data"
+    data-provinces={JSON.stringify(allProvinces)}
+    class="hidden"
+  >
   </div>
 
   <StatsGrid base={1} lg={4} class="w-full">
@@ -290,9 +310,38 @@ const CHARTS: {
     if (!regionSelect) return;
     bound = true;
 
+    type ProvinceItem = { code: string; name: string; regionId: string | null };
+    const provincesEl = document.getElementById("terminal-provinces-data");
+    const allProvincesList: ProvinceItem[] = provincesEl?.dataset.provinces
+      ? JSON.parse(provincesEl.dataset.provinces)
+      : [];
+
+    function updateProvinceOptions(selectedRegion: string, preserveSelection = false) {
+      if (!provinciaSelect) return;
+      const currentVal = provinciaSelect.value;
+      const filtered = selectedRegion
+        ? allProvincesList.filter((p) => p.regionId === selectedRegion)
+        : allProvincesList;
+
+      provinciaSelect.innerHTML = '<option value="">Todas</option>';
+      filtered.forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = p.code;
+        opt.textContent = p.name;
+        provinciaSelect.appendChild(opt);
+      });
+
+      if (preserveSelection && filtered.some((p) => p.code === currentVal)) {
+        provinciaSelect.value = currentVal;
+      } else {
+        provinciaSelect.value = "";
+      }
+    }
+
     const initial = new URLSearchParams(window.location.search);
     if (initial.get("region")) regionSelect.value = initial.get("region") as string;
-    const provinciaSelect = getSelect("stats-provincia");
+    updateProvinceOptions(regionSelect.value, true);
+
     if (initial.get("provincia") && provinciaSelect) {
       provinciaSelect.value = initial.get("provincia") as string;
     }
@@ -305,10 +354,23 @@ const CHARTS: {
       osSelect.value = initial.get("os") as string;
     }
 
-    regionSelect.addEventListener("change", load);
+    regionSelect.addEventListener("change", () => {
+      updateProvinceOptions(regionSelect.value, false);
+      load();
+    });
     provinciaSelect?.addEventListener("change", load);
     marcaSelect?.addEventListener("change", load);
     osSelect?.addEventListener("change", load);
+
+    const clearBtn = document.getElementById("clear-filters-btn");
+    clearBtn?.addEventListener("click", () => {
+      regionSelect.value = "";
+      updateProvinceOptions("", false);
+      if (provinciaSelect) provinciaSelect.value = "";
+      if (marcaSelect) marcaSelect.value = "";
+      if (osSelect) osSelect.value = "";
+      load();
+    });
 
     load();
   }

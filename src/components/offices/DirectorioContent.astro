@@ -166,29 +166,6 @@ const mainTabs = [
     description="Visualización centralizada de la infraestructura, buscador de oficinas y mapa interactivo de cobertura nacional."
   />
 
-  {
-    canViewOfficeStats && (
-      <div class="mb-4 flex justify-end gap-2">
-        <a
-          href={resolveUrl("/oficinas/estructura")}
-          class="btn btn-soft btn-sm md:btn-md gap-2"
-          data-cta-estructura-oficinas
-        >
-          <Icon name="boxicons:network-chart-filled" size={18} />
-          Estructura
-        </a>
-        <a
-          href={resolveUrl("/oficinas/estadisticas")}
-          class="btn btn-soft btn-sm md:btn-md gap-2"
-          data-cta-estadisticas-oficinas
-        >
-          <Icon name="boxicons:bar-chart-big-filled" size={18} />
-          Estadísticas
-        </a>
-      </div>
-    )
-  }
-
   <ViewSwitcher
     tabs={mainTabs}
     activeValue="directory"
@@ -418,6 +395,9 @@ const mainTabs = [
               id="export-csv-btn"
               href={import.meta.env.BASE_URL + "api/export/offices"}
               ariaLabel="Exportar directorio a CSV"
+              label="Exportar CSV"
+              download="oficinas.csv"
+              class="font-semibold shadow-sm shrink-0"
             />
           )
         }
@@ -453,64 +433,48 @@ const mainTabs = [
     </form>
 
     {
-      canViewInvgateStats && (
-        <div
-          id="invgate-stats-bar"
-          class="rounded-box border-base-300 bg-base-100 border p-4 shadow-md"
-        >
-          <div id="stats-cards" class="flex flex-wrap items-center gap-4">
-            <div class="card bg-base-100 border-base-200 min-w-35 border p-3 shadow-sm">
-              <span class="text-xxs text-base-content/60 font-semibold tracking-wider uppercase">
-                Total MDA
-              </span>
-              <span
-                id="stat-totalMda"
-                class="text-base-content mt-0.5 text-xl font-bold"
-              >
-                —
-              </span>
-            </div>
-            <div class="card bg-base-100 border-base-200 min-w-35 border p-3 shadow-sm">
-              <span class="text-xxs text-base-content/60 font-semibold tracking-wider uppercase">
-                Matcheadas
-              </span>
-              <span
-                id="stat-matched"
-                class="text-success mt-0.5 text-xl font-bold"
-              >
-                —
-              </span>
-            </div>
-            <div class="card bg-base-100 border-base-200 min-w-35 border p-3 shadow-sm">
-              <span class="text-xxs text-base-content/60 font-semibold tracking-wider uppercase">
-                Solo en MDA
-              </span>
-              <span
-                id="stat-unmatchedMda"
-                class="text-warning mt-0.5 text-xl font-bold"
-              >
-                —
-              </span>
-            </div>
-            <div class="card bg-base-100 border-base-200 min-w-35 border p-3 shadow-sm">
-              <span class="text-xxs text-base-content/60 font-semibold tracking-wider uppercase">
-                Solo en InvGate
-              </span>
-              <span
-                id="stat-unmatchedInvgate"
-                class="text-error mt-0.5 text-xl font-bold"
-              >
-                —
-              </span>
-            </div>
-            <ActionButton
-              href={`${import.meta.env.BASE_URL}admin/invgate/ubicaciones?sync=true`}
-              color="btn-primary"
-              size="sm"
-              class="ml-auto shrink-0"
-              icon="boxicons:pie-chart-filled"
-              label="Ver comparativa"
-            />
+      (canViewOfficeStats || isAllowedAdmin) && (
+        <div class="rounded-box border-base-300 bg-base-100 flex flex-wrap items-center justify-between gap-3 border p-3.5 shadow-sm">
+          <div class="flex items-center gap-2">
+            <Icon name="boxicons:info-circle" size={18} class="text-secondary shrink-0" />
+            <span class="text-xs text-base-content/70">
+              Accesos rápidos a la red postal, visualizaciones y comparativas de infraestructura.
+            </span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            {canViewOfficeStats && (
+              <ActionButton
+                href={resolveUrl("/oficinas/estructura")}
+                variant="soft"
+                color="btn-secondary"
+                size="sm"
+                icon="boxicons:network-chart-filled"
+                label="Estructura"
+                data-cta-estructura-oficinas
+              />
+            )}
+            {canViewOfficeStats && (
+              <ActionButton
+                href={resolveUrl("/oficinas/estadisticas")}
+                variant="soft"
+                color="btn-secondary"
+                size="sm"
+                icon="boxicons:bar-chart-big-filled"
+                label="Estadísticas"
+                data-cta-estadisticas-oficinas
+              />
+            )}
+            {isAllowedAdmin && (
+              <ActionButton
+                href={`${import.meta.env.BASE_URL}admin/invgate/ubicaciones?sync=true`}
+                variant="soft"
+                color="btn-primary"
+                size="sm"
+                icon="boxicons:pie-chart-filled"
+                label="Ver comparativa"
+                data-cta-comparativa-oficinas
+              />
+            )}
           </div>
         </div>
       )
