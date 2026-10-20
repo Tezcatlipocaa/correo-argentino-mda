@@ -1,19 +1,18 @@
 # Plan de Implementación: Visor de Changelog y Novedades del Portal
 
 ## Phase 1: Configuración de Tests, Reuso de `@lib/markdown` y Servicio de Changelog
-- [ ] Task: Actualizar package.json y documentar arquitectura
-  - [ ] Agregar el glob `src/lib/changelog/*.test.ts` al script `test:domain` en `package.json`
-  - [ ] Documentar en `conductor/tech-stack.md` la decisión arquitectónica: reuso estricto de `renderMarkdown` de `@lib/markdown` (sin allowlists duplicadas, sin atributo `class` para blindar contra UI-redressing), carga desde `src/config/changelog/` con candidatos (`../../config/changelog`, `src/config/changelog`, `dist/config/changelog`), deploy del repo completo en prod, y cache indexado por directorio (`Map<string, ChangelogEntry[]>`) para evitar contaminación en tests
-- [ ] Task: Escribir tests de dominio aislados con fixtures temporales (TDD - Fase Roja)
-  - [ ] Crear `src/lib/changelog/changelogService.test.ts` parametrizando la lectura del directorio (`readChangelog(dir = resolveChangelogDir())`)
-  - [ ] Crear tests con fixtures en directorio temporal (`fs.mkdtemp`) conteniendo ≥3 entradas con fechas distintas y una con `draft: true` para validar: ordenamiento cronológico inverso, exclusión estricta de borradores (`draft: true`), y retorno seguro de lista vacía si el directorio no existe
-  - [ ] Incluir tests de seguridad estricta anti-XSS sobre el renderizado (cubriendo `src/lib/markdown.ts`), validando que `<script>`, eventos (`onerror`, `onload`), esquemas inseguros (`javascript:`, data URIs), iframes y atributos de layout como `class` sean rechazados o despojados, y que las imágenes se degraden de forma segura a `<span>` con su alt
-  - [ ] Ejecutar `npm run test:domain` y verificar que los nuevos tests corran explícitamente (nombre del test visible en consola) y fallen (Red)
+- [x] Task: Actualizar package.json y documentar arquitectura (9594b11)
+  - [x] Agregar `src/lib/markdown.test.ts` y `src/lib/changelog/*.test.ts` al script `test:domain` en `package.json`
+  - [x] Documentar en `conductor/tech-stack.md` la decisión arquitectónica: reuso estricto de `renderMarkdown` de `@lib/markdown` (sin allowlists duplicadas, sin atributo `class` para blindar contra UI-redressing), carga desde `src/config/changelog/` con candidatos (`../../config/changelog`, `src/config/changelog`, `dist/config/changelog`), deploy del repo completo en prod, y cache indexado por directorio (`Map<string, ChangelogEntry[]>`) para evitar contaminación en tests
+- [~] Task: Escribir tests de dominio aislados con fixtures temporales (TDD - Fase Roja)
+  - [ ] Crear `src/lib/markdown.test.ts` con tests de seguridad estricta anti-XSS sobre `renderMarkdown` (`<script>`, eventos `onerror`/`onload`, esquemas `javascript:`/data URIs, iframes, atributo `class` rechazado/despojado, y degradación segura de `<img>` a `<span>` con alt)
+  - [ ] Crear `src/lib/changelog/changelogService.test.ts` parametrizando la lectura del directorio (`getChangelogEntries(dir?)`) con fixtures temporales (`fs.mkdtemp`, ≥3 entradas con fechas distintas y una con `draft: true`), probando orden cronológico inverso, exclusión de `draft: true`, retorno de `[]` si el directorio no existe y cálculo de `getLatestChangelogDate(dir?)`
+  - [ ] Ejecutar `npm run test:domain` y verificar que los nuevos tests corran explícitamente (nombres visibles en consola) y fallen (Red)
 - [ ] Task: Implementar el servicio lector de changelog (TDD - Fase Verde)
   - [ ] Crear `src/lib/changelog/changelogService.ts` implementando `resolveChangelogDir()` con fallback resiliente a lista vacía `[]` si el directorio aún no existe o está vacío
-  - [ ] Implementar cache por directorio (`const changelogCacheByDir = new Map<string, ChangelogEntry[]>()`) para que requests de producción en navbar no lean disco repetidamente sin contaminar ejecuciones con múltiples rutas o tests
-  - [ ] Implementar parseo de frontmatter, exclusión de `draft: true`, ordenamiento por fecha descendente y renderizado de Markdown delegando en `renderMarkdown()` de `@lib/markdown` (estilizado con CSS scoped `<style is:global>` en la página)
-  - [ ] Exponer funciones `getChangelogEntries(dir?)` y `getLatestChangelogDate(dir?)`
+  - [ ] Implementar cache por directorio (`const changelogCacheByDir = new Map<string, ChangelogEntry[]>()`)
+  - [ ] Implementar parseo de frontmatter, exclusión de `draft: true`, ordenamiento por fecha descendente y renderizado delegando en `renderMarkdown()` de `@lib/markdown`
+  - [ ] Exponer funciones `getChangelogEntries(dir?: string): Promise<ChangelogEntry[]>` y `getLatestChangelogDate(dir?: string): Promise<string | null>` (o síncronas si se usa `fs`)
   - [ ] Ejecutar `npm run test:domain` y confirmar que pasan todas las pruebas (Green)
 - [ ] Task: Crear plantilla de ejemplo y guía de Prompt de Gemini Spark
   - [ ] Crear el directorio `src/config/changelog/`
