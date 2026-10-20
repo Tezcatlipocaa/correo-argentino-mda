@@ -50,10 +50,64 @@ export function buildAiEvaluationPayload(params: BuildAiPayloadParams) {
   };
 }
 
+export interface ValidateAiEvaluateRequestParams {
+  channel?: string | null;
+  ticketId?: string | null;
+  wiseCaseId?: string | null;
+  recordingUrl?: string | null;
+}
+
+export function validateAiEvaluateParams(params: ValidateAiEvaluateRequestParams): {
+  valid: boolean;
+  error?: string;
+  status?: number;
+  cleanTicketId?: string;
+  cleanWiseCaseId?: string;
+  cleanRecordingUrl?: string;
+} {
+  const channel = params.channel as ChannelType;
+  const ticketId = String(params.ticketId ?? "").replace("#", "").trim();
+  const recordingUrl = typeof params.recordingUrl === "string" ? params.recordingUrl.trim() : undefined;
+  const wiseCaseId = typeof params.wiseCaseId === "string" ? params.wiseCaseId.trim() : undefined;
+
+  if (!channel || !CHANNEL_TYPES.includes(channel)) {
+    return { valid: false, error: "Canal inválido o no especificado", status: 400 };
+  }
+
+  if (wiseCaseId && !/^[A-Za-z0-9_-]+$/.test(wiseCaseId)) {
+    return { valid: false, error: "Identificador Wise inválido", status: 400 };
+  }
+
+  if (ticketId && !/^\d+$/.test(ticketId)) {
+    return { valid: false, error: "Ingresá un número de ticket InvGate válido.", status: 400 };
+  }
+
+  if (!ticketId) {
+    if (channel !== "wise_call") {
+      return { valid: false, error: "Ingresá un número de ticket InvGate válido.", status: 400 };
+    }
+    if (!recordingUrl && !wiseCaseId) {
+      return {
+        valid: false,
+        error: "Para evaluar una llamada sin ticket, ingresá el identificador de caso Wise o la URL de grabación.",
+        status: 400,
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    cleanTicketId: ticketId || undefined,
+    cleanWiseCaseId: wiseCaseId || undefined,
+    cleanRecordingUrl: recordingUrl || undefined,
+  };
+}
+
 /**
  * Evalúa con IA (OpenCode + modelo free o Council multi-agente) los criterios de calidad que salen del
  * ticket InvGate y de la llamada telefónica (transcripción Groq Whisper si recordingUrl está presente)
  * o del hilo de correo electrónico de Wise CX.
+ * Admite también la evaluación individual de llamadas telefónicas (wise_call) sin ticket InvGate asociado.
  * Solo sugiere: el supervisor decide.
  */
 export const POST: APIRoute = async ({ locals, request }) => {
@@ -62,33 +116,88 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (perm) return perm;
 
     const body = await request.json().catch(() => null);
+
+    const validation = validateAiEvaluateParams({
+      channel: body?.channel,
+      ticketId: body?.ticketId,
+      wiseCaseId: body?.wiseCaseId,
+      recordingUrl: body?.recordingUrl,
+    });
+    if (!validation.valid) {
+      return jsonError(validation.error || "Petición inválida", validation.status || 400);
+    }
+
     const channel = body?.channel as ChannelType;
-    const ticketId = String(body?.ticketId ?? "").replace("#", "").trim();
+    const ticketId = validation.cleanTicketId;
+    const wiseCaseId = validation.cleanWiseCaseId;
+    let recordingUrl = validation.cleanRecordingUrl;
     const rawModel = typeof body?.model === "string" ? body.model.trim() : undefined;
-    const recordingUrl = typeof body?.recordingUrl === "string" ? body.recordingUrl.trim() : undefined;
-    const wiseCaseId = typeof body?.wiseCaseId === "string" ? body.wiseCaseId.trim() : undefined;
-
-    if (!channel || !CHANNEL_TYPES.includes(channel)) return jsonError("Canal inválido o no especificado", 400);
-    if (!/^\d+$/.test(ticketId)) return jsonError("Ingresá un número de ticket InvGate válido.", 400);
-    if (wiseCaseId && !/^[A-Za-z0-9_-]+$/.test(wiseCaseId)) return jsonError("Identificador Wise inválido", 400);
-
     const model = rawModel && ALLOWED_MODELS.has(rawModel) ? rawModel : undefined;
+    const hasTicket = Boolean(ticketId);
 
-    // Solo 1 consulta a InvGate: fetchInvgateTicketMetadata ya trae incident en meta.data.raw
-    const meta = await fetchInvgateTicketMetadata(ticketId);
-    if (!meta.ok || !meta.data) return jsonError(meta.error || "No se pudo obtener el ticket", meta.status || 404);
+    let meta: { ok: boolean; data?: any; error?: string; status?: number };
 
-    if (channel === "wise_email" && wiseCaseId) {
-      try {
-        const wiseRes = await fetchQualityCaseMetadata("wise_email", wiseCaseId);
-        if (wiseRes.ok && wiseRes.data?.emailThread) {
-          meta.data.emailThread = wiseRes.data.emailThread;
-        } else {
-          console.warn("[ai-evaluate] Sin hilo de correo Wise para caso:", wiseCaseId);
+    if (ticketId) {
+      // Solo 1 consulta a InvGate: fetchInvgateTicketMetadata ya trae incident en meta.data.raw
+      meta = await fetchInvgateTicketMetadata(ticketId);
+      if (!meta.ok || !meta.data) return jsonError(meta.error || "No se pudo obtener el ticket", meta.status || 404);
+
+      if (channel === "wise_email" && wiseCaseId) {
+        try {
+          const wiseRes = await fetchQualityCaseMetadata("wise_email", wiseCaseId);
+          if (wiseRes.ok && wiseRes.data?.emailThread) {
+            meta.data.emailThread = wiseRes.data.emailThread;
+          } else {
+            console.warn("[ai-evaluate] Sin hilo de correo Wise para caso:", wiseCaseId);
+          }
+        } catch (err) {
+          console.warn("[ai-evaluate] Error al consultar caso Wise:", wiseCaseId, err);
         }
-      } catch (err) {
-        console.warn("[ai-evaluate] Error al consultar caso Wise:", wiseCaseId, err);
       }
+    } else {
+      // Llamada sin ticket InvGate: se obtiene de Wise CX o se sintetizan metadatos básicos
+      if (wiseCaseId) {
+        const wiseRes = await fetchQualityCaseMetadata("wise_call", wiseCaseId);
+        if (wiseRes.ok && wiseRes.data) {
+          meta = wiseRes;
+          if (!recordingUrl && wiseRes.data.recordingUrl) {
+            recordingUrl = wiseRes.data.recordingUrl;
+          }
+        } else if (recordingUrl) {
+          meta = {
+            ok: true,
+            data: {
+              caseNumber: wiseCaseId,
+              operator: "",
+              date: new Date().toISOString().split("T")[0],
+              recordingUrl,
+              detectedChannel: "wise_call",
+            },
+          };
+        } else {
+          return jsonError(wiseRes.error || "No se pudo obtener el caso de Wise CX", wiseRes.status || 404);
+        }
+      } else if (recordingUrl) {
+        meta = {
+          ok: true,
+          data: {
+            caseNumber: "Llamada",
+            operator: "",
+            date: new Date().toISOString().split("T")[0],
+            recordingUrl,
+            detectedChannel: "wise_call",
+          },
+        };
+      } else {
+        return jsonError(
+          "Para evaluar una llamada sin ticket, ingresá el identificador de caso Wise o la URL de grabación.",
+          400,
+        );
+      }
+    }
+
+    if (!meta.ok || !meta.data) {
+      return jsonError(meta.error || "No se pudieron obtener los datos para evaluar", meta.status || 404);
     }
 
     let audioTranscript: string | undefined;
@@ -103,6 +212,17 @@ export const POST: APIRoute = async ({ locals, request }) => {
       } catch (err: any) {
         console.warn("[ai-evaluate] Fallback a solo texto (error transcripción audio Groq):", err?.message);
       }
+    }
+
+    // Si es una llamada sin ticket y no se obtuvo transcripción de audio, no hay evidencia que evaluar
+    if (!ticketId && !audioTranscript) {
+      if (!recordingUrl) {
+        return jsonError("No se encontró la URL de grabación para la llamada.", 400);
+      }
+      if (!groqKey) {
+        return jsonError("No se configuró la clave de Groq para transcribir el audio de la llamada.", 500);
+      }
+      return jsonError("No se pudo transcribir el audio de la llamada para realizar la evaluación.", 502);
     }
 
     // Extracción determinista de tickets mencionados en audio o hilo de correo
@@ -121,8 +241,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
         channel,
         meta.data,
         meta.data.raw,
-        undefined,
+        hasTicket ? undefined : [],
         audioTranscript,
+        { hasTicket },
       );
       return jsonResponse(
         buildAiEvaluationPayload({
@@ -144,7 +265,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       channel,
       meta.data,
       meta.data.raw,
-      { model, provider: "opencode", audioTranscript },
+      { model, provider: "opencode", audioTranscript, hasTicket },
+      hasTicket ? undefined : [],
     );
     return jsonResponse(
       buildAiEvaluationPayload({

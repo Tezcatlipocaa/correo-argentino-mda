@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ALLOWED_MODELS, buildAiEvaluationPayload } from "./ai-evaluate.js";
+import { ALLOWED_MODELS, buildAiEvaluationPayload, validateAiEvaluateParams } from "./ai-evaluate.js";
 
 describe("POST /api/calidad/ai-evaluate validaciones de modelos permitidos", () => {
   it("incluye 'council' como modelo válido de orquestación", () => {
@@ -64,4 +64,91 @@ describe("POST /api/calidad/ai-evaluate validaciones de modelos permitidos", () 
     assert.equal(payload.detectedTickets?.[0].ticketId, "90688");
   });
 });
+
+describe("POST /api/calidad/ai-evaluate validación de parámetros de petición (validateAiEvaluateParams)", () => {
+  it("rechaza peticiones con canal inválido o ausente", () => {
+    const r1 = validateAiEvaluateParams({ channel: null });
+    assert.equal(r1.valid, false);
+    assert.equal(r1.status, 400);
+
+    const r2 = validateAiEvaluateParams({ channel: "invalid_channel" as any });
+    assert.equal(r2.valid, false);
+    assert.equal(r2.status, 400);
+  });
+
+  it("rechaza tickets con caracteres inválidos (no numéricos)", () => {
+    const res = validateAiEvaluateParams({ channel: "invgate_ticket", ticketId: "abc-123" });
+    assert.equal(res.valid, false);
+    assert.equal(res.status, 400);
+    assert.match(res.error || "", /ticket InvGate válido/);
+  });
+
+  it("rechaza canales invgate_ticket o wise_email si no se provee ticketId", () => {
+    const r1 = validateAiEvaluateParams({ channel: "invgate_ticket" });
+    assert.equal(r1.valid, false);
+    assert.equal(r1.status, 400);
+
+    const r2 = validateAiEvaluateParams({ channel: "wise_email", wiseCaseId: "544637" });
+    assert.equal(r2.valid, false);
+    assert.equal(r2.status, 400);
+  });
+
+  it("rechaza wise_call sin ticket si tampoco se provee wiseCaseId ni recordingUrl", () => {
+    const res = validateAiEvaluateParams({ channel: "wise_call" });
+    assert.equal(res.valid, false);
+    assert.equal(res.status, 400);
+    assert.match(res.error || "", /identificador de caso Wise o la URL de grabación/);
+  });
+
+  it("rechaza wiseCaseId con caracteres inválidos o intentos de inyección", () => {
+    const res = validateAiEvaluateParams({
+      channel: "wise_call",
+      wiseCaseId: "544637; DROP TABLE",
+    });
+    assert.equal(res.valid, false);
+    assert.equal(res.status, 400);
+    assert.match(res.error || "", /Identificador Wise inválido/);
+  });
+
+  it("acepta wise_call con ticketId numérico aunque no tenga wiseCaseId", () => {
+    const res = validateAiEvaluateParams({
+      channel: "wise_call",
+      ticketId: "90688",
+    });
+    assert.equal(res.valid, true);
+    assert.equal(res.cleanTicketId, "90688");
+  });
+
+  it("acepta wise_call SIN ticket cuando se provee wiseCaseId", () => {
+    const res = validateAiEvaluateParams({
+      channel: "wise_call",
+      wiseCaseId: "544637",
+    });
+    assert.equal(res.valid, true);
+    assert.equal(res.cleanTicketId, undefined);
+    assert.equal(res.cleanWiseCaseId, "544637");
+  });
+
+  it("acepta wise_call SIN ticket cuando se provee recordingUrl", () => {
+    const res = validateAiEvaluateParams({
+      channel: "wise_call",
+      recordingUrl: "https://wisecx.telecom.com.ar/recordings/audio123.mp3",
+    });
+    assert.equal(res.valid, true);
+    assert.equal(res.cleanTicketId, undefined);
+    assert.equal(res.cleanRecordingUrl, "https://wisecx.telecom.com.ar/recordings/audio123.mp3");
+  });
+
+  it("acepta wise_call con formato ticketId con numeral # limpiando el prefijo", () => {
+    const res = validateAiEvaluateParams({
+      channel: "wise_call",
+      ticketId: "#90688",
+      wiseCaseId: "544637",
+    });
+    assert.equal(res.valid, true);
+    assert.equal(res.cleanTicketId, "90688");
+    assert.equal(res.cleanWiseCaseId, "544637");
+  });
+});
+
 

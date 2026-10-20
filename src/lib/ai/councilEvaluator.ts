@@ -224,10 +224,12 @@ export async function evaluateWithCouncil(
   rawIncident?: any,
   preloadedTimeline?: InvgateTimelineEntry[],
   audioTranscript?: string,
+  options?: { hasTicket?: boolean },
 ): Promise<CouncilEvaluationResult> {
   const hasAudio = Boolean(audioTranscript?.trim());
   const hasEmailThread = Boolean(meta.emailThread?.hasOperatorReply);
-  const criteria = getAiCriteria(channel, { hasAudio, hasEmailThread });
+  const hasTicket = options?.hasTicket !== false;
+  const criteria = getAiCriteria(channel, { hasAudio, hasEmailThread, hasTicket });
   if (criteria.length === 0) {
     return {
       model: "council",
@@ -242,7 +244,7 @@ export async function evaluateWithCouncil(
   try {
     const timeline =
       preloadedTimeline ??
-      (meta.caseNumber && /^\d+$/.test(String(meta.caseNumber).trim())
+      (hasTicket && meta.caseNumber && /^\d+$/.test(String(meta.caseNumber).trim())
         ? await fetchInvgateTicketTimeline(meta.caseNumber).catch((err) => {
             console.warn("[councilEvaluator] Fallback a comentarios API (falló scraping):", err?.message);
             return [] as InvgateTimelineEntry[];

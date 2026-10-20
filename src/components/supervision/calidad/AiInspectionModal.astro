@@ -34,7 +34,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
             >
               Asistente de Auditoría IA
             </h2>
-            <p class="text-base-content/70 truncate text-xs sm:text-sm">
+            <p id="ai-modal-subtitle" class="text-base-content/70 truncate text-xs sm:text-sm">
               Evaluación asistida del ticket e historial de cambios en InvGate
             </p>
           </div>
@@ -93,7 +93,7 @@ const { id = "modal-ai-inspection" } = Astro.props;
           <p class="text-base-content font-bold">
             ¿Qué analiza este asistente?
           </p>
-          <p class="text-base-content/75 leading-relaxed">
+          <p id="ai-modal-idle-desc" class="text-base-content/75 leading-relaxed">
             Extrae metadatos, campos personalizados, notas internas, solución e
             historial de cambios del ticket en InvGate, y contrasta cada ítem
             contra las rúbricas oficiales de calidad.

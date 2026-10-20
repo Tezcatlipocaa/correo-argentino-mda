@@ -42,9 +42,10 @@ export const EMAIL_AI_ITEMS = new Set([
 export interface IsTextEvaluableOptions {
   hasAudio?: boolean;
   hasEmailThread?: boolean;
+  hasTicket?: boolean;
 }
 
-/** Fase 1 (solo texto): se evalúa lo que sale del ticket InvGate. Si hasAudio es true, incluye los ítems de audio de la llamada. Si hasEmailThread es true, incluye los ítems de correo permitidos. */
+/** Fase 1 (solo texto): se evalúa lo que sale del ticket InvGate. Si hasAudio es true, incluye los ítems de audio de la llamada. Si hasEmailThread es true, incluye los ítems de correo permitidos. Si hasTicket es false, excluye la sección ticket. */
 function isTextEvaluable(
   channel: ChannelType,
   section: string,
@@ -53,15 +54,20 @@ function isTextEvaluable(
 ): boolean {
   if (NEVER_EVALUATE.has(code)) return false;
   if (RULE_BASED_SUFFIXES.some((s) => code.endsWith(`_${s}`))) return false;
-  if (channel === "wise_call") return section === "ticket" || (Boolean(options?.hasAudio) && section === "items");
+  const hasTicket = options?.hasTicket !== false;
+  if (channel === "wise_call") {
+    if (section === "ticket") return hasTicket;
+    if (section === "items") return Boolean(options?.hasAudio);
+    return false;
+  }
   if (channel === "wise_email") {
-    if (section === "mda") return true;
+    if (section === "mda") return hasTicket;
     if (section === "items" && Boolean(options?.hasEmailThread)) {
       return EMAIL_AI_ITEMS.has(code);
     }
     return false;
   }
-  return true; // invgate_ticket: items y mda salen del ticket
+  return hasTicket; // invgate_ticket: items y mda salen del ticket
 }
 
 export interface AiCriterion {
@@ -102,7 +108,7 @@ const HINTS: Array<[RegExp, string]> = [
 
 export function getAiCriteria(
   channel: ChannelType,
-  options?: { hasAudio?: boolean; hasEmailThread?: boolean },
+  options?: { hasAudio?: boolean; hasEmailThread?: boolean; hasTicket?: boolean },
 ): AiCriterion[] {
   return getChannelParameters(channel)
     .filter((p) => isTextEvaluable(channel, p.section, p.code, options))
@@ -128,78 +134,98 @@ export function buildTicketContext(
   timeline?: InvgateTimelineEntry[],
   audioTranscript?: string,
 ): string {
-  const lines: string[] = [
-    `Ticket #${meta.caseNumber}`,
-    `Título: ${meta.title || "-"}`,
-    `Descripción: ${meta.description || "-"}`,
-    `Categoría: ${meta.category || "-"}`,
-    `Prioridad: ${meta.priority || "-"}`,
-    `Tipo (type_id): ${rawIncident?.type_id ?? "sin dato"}`,
-    `Estado: ${meta.status || "-"}`,
-    `Origen: ${meta.source || "-"}`,
-    `Mesa: ${meta.helpdesk || "-"}`,
-    `Solicitante: ${meta.customer || "-"}`,
-    `Creado por: ${meta.createdBy || "-"}`,
-    `Operador: ${meta.operator || "-"}`,
-    `Creado: ${meta.creationTime || "-"}`,
-    `Tiempo hasta primera toma: ${meta.takeTime || "-"}`,
-    `SLA primera respuesta: ${meta.rawDetails?.slaIncidentFirstReply ?? "-"}`,
-    `SLA resolución: ${meta.rawDetails?.slaIncidentResolution ?? "-"}`,
-  ];
+  const isCallStandalone =
+    meta.detectedChannel === "wise_call" &&
+    !meta.title &&
+    !meta.description &&
+    !rawIncident &&
+    (!timeline || timeline.length === 0);
 
-  if (rawIncident?.custom_fields && typeof rawIncident.custom_fields === "object") {
-    const cfEntries = Object.entries(rawIncident.custom_fields).filter(
-      ([_, val]) => val !== null && val !== undefined && String(val).trim() !== "",
-    );
-    if (cfEntries.length > 0) {
-      const cfFormatted = cfEntries.map(([id, val]) => `campo_${id}: "${String(val).trim()}"`).join(", ");
-      lines.push(`Campos personalizados (API custom_fields): ${cfFormatted}`);
-    }
-  }
+  const lines: string[] = [];
 
-  if (Array.isArray(timeline) && timeline.length > 0) {
-    const relevantTimeline = timeline.filter(
-      (item) => item.kind !== "log" || isRelevantTimelineLog(item.text),
-    );
-    const trimmedTimeline = relevantTimeline.length > 25 ? relevantTimeline.slice(-25) : relevantTimeline;
-
+  if (isCallStandalone) {
     lines.push(
-      "",
-      `Línea de Tiempo e Historial de Cambios (${trimmedTimeline.length} eventos):`,
-      "Leyenda de etiquetas: [SOLUCIÓN] = respuesta final visible para el cliente marcada como solución (deja el ticket en espera de aprobación del cliente) | [INTERNO] = nota privada solo visible entre agentes (el cliente NO la ve) | [COMENTARIO] = mensaje público visible para el cliente | [CAMBIO] = evento de auditoría del sistema.",
+      `Llamada Wise CX: ${meta.caseNumber || "-"}`,
+      `Operador: ${meta.operator || "-"}`,
+      `Fecha: ${meta.date || "-"}`,
+      `Duración: ${meta.duration || "-"}`,
+      `Tiempo de espera (ring): ${meta.ringTime || "-"}`,
+      `Nota: No se asoció ticket InvGate. Se evalúa exclusivamente la interacción de la llamada telefónica.`,
     );
-    for (const item of trimmedTimeline) {
-      const dateLabel = item.dateStr || String(item.timestamp || "");
-      if (item.kind === "log") {
-        lines.push(`- [${dateLabel}] [CAMBIO] ${item.text}`);
-      } else {
-        const tag =
-          item.kind === "solution"
-            ? "SOLUCIÓN"
-            : item.kind === "private_note"
-              ? "INTERNO"
-              : "COMENTARIO";
-        lines.push(`- [${dateLabel}] [${tag}] ${item.author || "Usuario"}: ${item.text}`);
+  } else {
+    lines.push(
+      `Ticket #${meta.caseNumber}`,
+      `Título: ${meta.title || "-"}`,
+      `Descripción: ${meta.description || "-"}`,
+      `Categoría: ${meta.category || "-"}`,
+      `Prioridad: ${meta.priority || "-"}`,
+      `Tipo (type_id): ${rawIncident?.type_id ?? "sin dato"}`,
+      `Estado: ${meta.status || "-"}`,
+      `Origen: ${meta.source || "-"}`,
+      `Mesa: ${meta.helpdesk || "-"}`,
+      `Solicitante: ${meta.customer || "-"}`,
+      `Creado por: ${meta.createdBy || "-"}`,
+      `Operador: ${meta.operator || "-"}`,
+      `Creado: ${meta.creationTime || "-"}`,
+      `Tiempo hasta primera toma: ${meta.takeTime || "-"}`,
+      `SLA primera respuesta: ${meta.rawDetails?.slaIncidentFirstReply ?? "-"}`,
+      `SLA resolución: ${meta.rawDetails?.slaIncidentResolution ?? "-"}`,
+    );
+
+    if (rawIncident?.custom_fields && typeof rawIncident.custom_fields === "object") {
+      const cfEntries = Object.entries(rawIncident.custom_fields).filter(
+        ([_, val]) => val !== null && val !== undefined && String(val).trim() !== "",
+      );
+      if (cfEntries.length > 0) {
+        const cfFormatted = cfEntries.map(([id, val]) => `campo_${id}: "${String(val).trim()}"`).join(", ");
+        lines.push(`Campos personalizados (API custom_fields): ${cfFormatted}`);
       }
     }
-  } else {
-    const rawComments = Array.isArray(rawIncident?.comments)
-      ? rawIncident.comments
-      : rawIncident?.comments && typeof rawIncident.comments === "object"
-        ? Object.values(rawIncident.comments)
-        : [];
-    const comments = rawComments
-      .map((c: any) => ({
-        autor: c?.author?.name ?? c?.user?.name ?? (c?.user_id ? `usuario ${c.user_id}` : "?"),
-        fecha: c?.created_at ?? c?.date ?? "",
-        texto: pickCommentText(c),
-      }))
-      .filter((c: { texto: string }) => c.texto)
-      .slice(-40);
 
-    lines.push("", `Comentarios (${comments.length}):`);
-    for (const c of comments) lines.push(`- [${c.fecha}] ${c.autor}: ${c.texto}`);
-    if (comments.length === 0) lines.push("(sin comentarios)");
+    if (Array.isArray(timeline) && timeline.length > 0) {
+      const relevantTimeline = timeline.filter(
+        (item) => item.kind !== "log" || isRelevantTimelineLog(item.text),
+      );
+      const trimmedTimeline = relevantTimeline.length > 25 ? relevantTimeline.slice(-25) : relevantTimeline;
+
+      lines.push(
+        "",
+        `Línea de Tiempo e Historial de Cambios (${trimmedTimeline.length} eventos):`,
+        "Leyenda de etiquetas: [SOLUCIÓN] = respuesta final visible para el cliente marcada como solución (deja el ticket en espera de aprobación del cliente) | [INTERNO] = nota privada solo visible entre agentes (el cliente NO la ve) | [COMENTARIO] = mensaje público visible para el cliente | [CAMBIO] = evento de auditoría del sistema.",
+      );
+      for (const item of trimmedTimeline) {
+        const dateLabel = item.dateStr || String(item.timestamp || "");
+        if (item.kind === "log") {
+          lines.push(`- [${dateLabel}] [CAMBIO] ${item.text}`);
+        } else {
+          const tag =
+            item.kind === "solution"
+              ? "SOLUCIÓN"
+              : item.kind === "private_note"
+                ? "INTERNO"
+                : "COMENTARIO";
+          lines.push(`- [${dateLabel}] [${tag}] ${item.author || "Usuario"}: ${item.text}`);
+        }
+      }
+    } else {
+      const rawComments = Array.isArray(rawIncident?.comments)
+        ? rawIncident.comments
+        : rawIncident?.comments && typeof rawIncident.comments === "object"
+          ? Object.values(rawIncident.comments)
+          : [];
+      const comments = rawComments
+        .map((c: any) => ({
+          autor: c?.author?.name ?? c?.user?.name ?? (c?.user_id ? `usuario ${c.user_id}` : "?"),
+          fecha: c?.created_at ?? c?.date ?? "",
+          texto: pickCommentText(c),
+        }))
+        .filter((c: { texto: string }) => c.texto)
+        .slice(-40);
+
+      lines.push("", `Comentarios (${comments.length}):`);
+      for (const c of comments) lines.push(`- [${c.fecha}] ${c.autor}: ${c.texto}`);
+      if (comments.length === 0) lines.push("(sin comentarios)");
+    }
   }
 
   if (audioTranscript && audioTranscript.trim()) {
@@ -378,7 +404,7 @@ export async function evaluateWithAi(
   channel: ChannelType,
   meta: ExtractedQualityMetadata,
   rawIncident?: any,
-  options?: AiEvaluationOptions & { audioTranscript?: string },
+  options?: AiEvaluationOptions & { audioTranscript?: string; hasTicket?: boolean },
   preloadedTimeline?: InvgateTimelineEntry[],
 ): Promise<{
   model: string;
@@ -389,14 +415,15 @@ export async function evaluateWithAi(
 }> {
   const hasAudio = Boolean(options?.audioTranscript?.trim());
   const hasEmailThread = Boolean(meta.emailThread?.hasOperatorReply);
-  const criteria = getAiCriteria(channel, { hasAudio, hasEmailThread });
+  const hasTicket = options?.hasTicket !== false;
+  const criteria = getAiCriteria(channel, { hasAudio, hasEmailThread, hasTicket });
   if (criteria.length === 0) return { model: "", resumen: "", verdicts: [] };
   acquireAiSlot();
 
   try {
     const timeline =
       preloadedTimeline ??
-      (meta.caseNumber && /^\d+$/.test(String(meta.caseNumber).trim())
+      (hasTicket && meta.caseNumber && /^\d+$/.test(String(meta.caseNumber).trim())
         ? await fetchInvgateTicketTimeline(meta.caseNumber).catch((err) => {
             console.warn("[qualityAiEvaluator] Fallback a comentarios API (falló scraping timeline):", err?.message);
             return [] as InvgateTimelineEntry[];
