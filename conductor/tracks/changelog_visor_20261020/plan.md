@@ -8,13 +8,13 @@
   - [x] Crear `src/lib/markdown.test.ts` con tests de seguridad estricta anti-XSS sobre `renderMarkdown` (`<script>`, eventos `onerror`/`onload`, esquemas `javascript:`/data URIs, iframes, atributo `class` rechazado/despojado, y degradación segura de `<img>` a `<span>` con alt)
   - [x] Crear `src/lib/changelog/changelogService.test.ts` parametrizando la lectura del directorio (`getChangelogEntries(dir?)`) con fixtures temporales (`fs.mkdtemp`, ≥3 entradas con fechas distintas y una con `draft: true`), probando orden cronológico inverso, exclusión de `draft: true`, retorno de `[]` si el directorio no existe y cálculo de `getLatestChangelogDate(dir?)`
   - [x] Ejecutar `npm run test:domain` y verificar que los nuevos tests corran explícitamente (nombres visibles en consola) y fallen (Red)
-- [~] Task: Implementar el servicio lector de changelog (TDD - Fase Verde)
-  - [ ] Crear `src/lib/changelog/changelogService.ts` implementando `resolveChangelogDir()` con fallback resiliente a lista vacía `[]` si el directorio aún no existe o está vacío
-  - [ ] Implementar cache por directorio (`const changelogCacheByDir = new Map<string, ChangelogEntry[]>()`)
-  - [ ] Implementar parseo de frontmatter, exclusión de `draft: true`, ordenamiento por fecha descendente y renderizado delegando en `renderMarkdown()` de `@lib/markdown`
-  - [ ] Exponer funciones `getChangelogEntries(dir?: string): Promise<ChangelogEntry[]>` y `getLatestChangelogDate(dir?: string): Promise<string | null>` (o síncronas si se usa `fs`)
-  - [ ] Ejecutar `npm run test:domain` y confirmar que pasan todas las pruebas (Green)
-- [ ] Task: Crear plantilla de ejemplo y guía de Prompt de Gemini Spark
+- [x] Task: Implementar el servicio lector de changelog (TDD - Fase Verde) (47ef34e0)
+  - [x] Crear `src/lib/changelog/changelogService.ts` implementando `resolveChangelogDir()` con fallback resiliente a lista vacía `[]` si el directorio aún no existe o está vacío
+  - [x] Implementar cache por directorio (`const changelogCacheByDir = new Map<string, ChangelogEntry[]>()`)
+  - [x] Implementar parseo de frontmatter, exclusión de `draft: true`, ordenamiento por fecha descendente y renderizado delegando en `renderMarkdown()` de `@lib/markdown`
+  - [x] Exponer funciones `getChangelogEntries(dir?: string): Promise<ChangelogEntry[]>` y `getLatestChangelogDate(dir?: string): Promise<string | null>` (o síncronas si se usa `fs`)
+  - [x] Ejecutar `npm run test:domain` y confirmar que pasan todas las pruebas (Green)
+- [~] Task: Crear plantilla de ejemplo y guía de Prompt de Gemini Spark
   - [ ] Crear el directorio `src/config/changelog/`
   - [ ] Crear `src/config/changelog/example.md` con metadato `draft: true` y estructura por módulos
   - [ ] Crear `docs/PROMPT_GEMINI_SPARK.md` fuera de la carpeta de entries con el prompt exacto para Gemini Spark
