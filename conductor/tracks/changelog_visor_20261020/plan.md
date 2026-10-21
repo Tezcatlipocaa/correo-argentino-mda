@@ -28,26 +28,26 @@
   - [x] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 1' as complete`)
   - [x] Presentar plan de verificación manual detallado y esperar confirmación explícita del usuario
 
-## Phase 2: Permisos RBAC, Vista `/changelog` y Reutilización de Componentes UI
-- [ ] Task: Registrar permisos de ruta en RBAC y actualizar documentación
-  - [ ] Agregar `{ path: "/changelog", roles: ALL_ROLES }` en `routePermissions` dentro de `src/lib/rbac.ts`
-  - [ ] Actualizar el sitemap en `docs/CONTEXT.md` incorporando la ruta `/changelog`
-- [ ] Task: Crear página `/changelog` reutilizando componentes oficiales
-  - [ ] Crear `src/pages/changelog.astro` utilizando `BaseLayout.astro`, `PageContainer.astro` y `PageHeader.astro` con `title` y `description` (según convención 12 de `docs/CONTEXT.md`)
-  - [ ] Renderizar las versiones cronológicas reutilizando `SectionCard.astro` con badges temáticos de DaisyUI v5 y estilos tipográficos scoped (`<style is:global>`) para los tags permitidos de `@lib/markdown`
-  - [ ] Integrar `SearchEmptyState.astro` para cuando no existan entradas o la búsqueda no arroje resultados
-- [ ] Task: Interactividad de búsqueda, filtros y guardado de lectura
-  - [ ] Implementar filtrado dinámico en cliente por palabras clave y secciones
-  - [ ] Guardar la fecha del changelog más reciente en `localStorage` (`portal_mda_changelog_last_read`) al ingresar
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
-  - [ ] Ejecutar `npm run test:domain`
-  - [ ] Ejecutar `npm run test:unit`
-  - [ ] Ejecutar `npm run build`
-  - [ ] Commit del código de la fase
-  - [ ] Adjuntar resumen detallado con `git notes add` al commit de la fase
-  - [ ] Marcar tareas con `[x]` y registrar `[checkpoint: <sha>]` en plan.md
-  - [ ] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 2' as complete`)
-  - [ ] Presentar plan de verificación manual detallado y esperar confirmación explícita del usuario
+## Phase 2: Permisos RBAC, Vista `/changelog` y Reutilización de Componentes UI [checkpoint: 8e7b2a1d]
+- [x] Task: Registrar permisos de ruta en RBAC y actualizar documentación (8e7b2a1d)
+  - [x] Agregar `{ path: "/changelog", roles: ALL_ROLES }` en `routePermissions` dentro de `src/lib/rbac.ts`
+  - [x] Actualizar el sitemap en `docs/CONTEXT.md` incorporando la ruta `/changelog`
+- [x] Task: Crear página `/changelog` reutilizando componentes oficiales (8e7b2a1d)
+  - [x] Crear `src/pages/changelog.astro` utilizando `BaseLayout.astro`, `PageContainer.astro` y `PageHeader.astro` con `title` y `description` (según convención 12 de `docs/CONTEXT.md`)
+  - [x] Renderizar las versiones cronológicas reutilizando `SectionCard.astro` con badges temáticos de DaisyUI v5 y estilos tipográficos scoped (`<style is:global>`) para los tags permitidos de `@lib/markdown`
+  - [x] Integrar `SearchEmptyState.astro` para cuando no existan entradas o la búsqueda no arroje resultados
+- [x] Task: Interactividad de búsqueda, filtros y guardado de lectura (8e7b2a1d)
+  - [x] Implementar filtrado dinámico en cliente por palabras clave y secciones
+  - [x] Guardar la fecha del changelog más reciente en `localStorage` (`portal_mda_changelog_last_read`) al ingresar
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+  - [x] Ejecutar `npm run test:domain`
+  - [x] Ejecutar `npm run test:unit`
+  - [x] Ejecutar `npm run build`
+  - [x] Commit del código de la fase
+  - [x] Adjuntar resumen detallado con `git notes add` al commit de la fase
+  - [x] Marcar tareas con `[x]` y registrar `[checkpoint: <sha>]` en plan.md
+  - [x] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 2' as complete`)
+  - [x] Presentar plan de verificación manual detallado y esperar confirmación explícita del usuario
 
 ## Phase 3: Indicadores en Navbar/Drawer, Navegación y Pruebas E2E Playwright
 - [ ] Task: Inyectar fecha server-side e integrar indicador en `navbar.astro` y `drawerContent.astro`
