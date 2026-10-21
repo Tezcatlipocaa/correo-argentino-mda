@@ -1,6 +1,6 @@
 # Plan de Implementación: Visor de Changelog y Novedades del Portal
 
-## Phase 1: Configuración de Tests, Reuso de `@lib/markdown` y Servicio de Changelog [checkpoint: 068d3016]
+## Phase 1: Configuración de Tests, Reuso de `@lib/markdown` y Servicio de Changelog [checkpoint: 552b4e3d]
 - [x] Task: Actualizar package.json y documentar arquitectura (9594b11)
   - [x] Agregar `src/lib/markdown.test.ts` y `src/lib/changelog/*.test.ts` al script `test:domain` en `package.json`
   - [x] Documentar en `conductor/tech-stack.md` la decisión arquitectónica: reuso estricto de `renderMarkdown` de `@lib/markdown` (sin allowlists duplicadas, sin atributo `class` para blindar contra UI-redressing), carga desde `src/config/changelog/` con candidatos (`../../config/changelog`, `src/config/changelog`, `dist/config/changelog`), deploy del repo completo en prod, y cache indexado por directorio (`Map<string, ChangelogEntry[]>`) para evitar contaminación en tests
