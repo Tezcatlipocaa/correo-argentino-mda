@@ -1,21 +1,21 @@
 # Guía y Prompt para Gemini Spark: Resumen de Novedades del Portal MDA
 
-Esta guía proporciona el procedimiento estándar y el prompt exacto a utilizar en **Gemini Spark** (en navegador) para transformar un listado de commits técnicos de Git / GitHub en una nota de novedades clara, amigable y estructurada para supervisores, coordinadores y gerentes.
+Esta guía proporciona el procedimiento estándar y el prompt exacto a utilizar en **Gemini Spark** (en navegador) para que inspeccione directamente el repositorio de GitHub en la web, extraiga únicamente los commits nuevos (sin repetir los ya procesados) y genere la nota de novedades con los hashes/IDs de commit asociados.
 
 ---
 
-## 1. Procedimiento de Publicación
+## 1. Procedimiento de Publicación con Gemini Spark
 
-1. Obtener la lista de commits del período o release a resumir. Por ejemplo, en terminal:
-   ```bash
-   git log --oneline --no-merges v1.X.X..HEAD
-   # o copiar los commits de GitHub desde el pull request / branch
-   ```
-2. Abrir **Gemini Spark** en el navegador.
-3. Copiar el prompt de la sección 2, reemplazando el bloque final con el listado de commits y la fecha correspondiente.
-4. Guardar la respuesta generada en un nuevo archivo dentro de `src/config/changelog/` nombrado con la fecha del release (por ejemplo: `src/config/changelog/YYYY-MM-DD.md`).
-5. **Importante:** Asegurarse de que el nuevo archivo **NO** tenga `draft: true` en el frontmatter para que se publique en el portal (`draft: true` solo se usa en `example.md`).
-6. Crear el commit y pushear el cambio.
+1. Abre **Gemini Spark** en el navegador.
+2. Asegúrate de tener a mano el ID (SHA corto o completo) del último commit procesado en el changelog anterior (o deja que Gemini Spark revise los archivos existentes en el historial si tiene contexto del chat).
+3. Pega el **Prompt de la Sección 2** en la sesión de Gemini Spark.
+4. Gemini Spark accederá mediante su navegador a:
+   `https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/`
+5. Gemini Spark leerá la lista de commits, deteniéndose en el último commit ya conocido o filtrando los repetidos.
+6. Copia el archivo Markdown que genere Gemini Spark y guárdalo en:
+   `src/config/changelog/YYYY-MM-DD.md` (reemplazando `YYYY-MM-DD` por la fecha de hoy o del release).
+7. Verifica que el archivo generado tenga la lista de IDs de commit en el frontmatter (`commits: [...]`) y que **NO** tenga `draft: true`.
+8. Guarda y comitea el nuevo archivo en Git. Si accidentalmente un commit ya estaba presente en un changelog anterior, el sistema del portal descartará duplicados automáticamente.
 
 ---
 
@@ -24,21 +24,30 @@ Esta guía proporciona el procedimiento estándar y el prompt exacto a utilizar 
 Copiar y pegar lo siguiente en Gemini Spark:
 
 ```markdown
-Actúa como Technical Writer y Product Manager del "Portal MDA" (plataforma web de soporte y operaciones de Correo Argentino).
+Actúa como Technical Writer y Product Manager del "Portal MDA" (plataforma web interna de soporte y operaciones de Correo Argentino).
 
-Tu tarea es tomar el siguiente listado de commits técnicos de Git y convertirlos en un resumen amigable, profesional y comprensible para usuarios no técnicos (supervisores de mesa de ayuda, líderes operativos y gerentes).
+INSTRUCCIÓN DE NAVEGACIÓN Y EXTRACCIÓN:
+1. Abre tu navegador y accede a la página de commits del repositorio:
+   https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/
+2. Revisa los commits más recientes en la rama 'master'.
+3. CRÍTICO (EVITAR REPETIDOS): Si te indico un commit de corte previo (o revisando la última publicación), procesa ÚNICAMENTE los commits que estén por encima de dicho commit. Si no se indica corte, toma únicamente los commits de los últimos días/semana.
+4. Para cada commit considerado, anota su ID / Hash corto (7 caracteres, ej. "a1b2c3d").
 
 REGLAS DE FORMATO Y ESTILO:
 1. La salida DEBE ser un archivo Markdown válido con encabezado Frontmatter YAML al inicio.
-2. No inventes funcionalidades que no figuren en los commits.
-3. Traduce términos de programación a lenguaje de negocio (ej. "endpoint API" -> "conexión de datos", "fix css overflow" -> "ajuste visual de pantalla", "drizzle schema" -> "base de datos de usuarios").
+2. Debe incluir una lista YAML con los identificadores de todos los commits procesados en el campo `commits`:
+   commits:
+     - "a1b2c3d"
+     - "e4f5a6b"
+3. Traduce términos técnicos a lenguaje de negocio comprensible para supervisores y gerentes (ej. "endpoint API" -> "conexión de datos", "fix css overflow" -> "ajuste visual de pantalla", "drizzle schema" -> "base de datos de usuarios").
 4. Agrupa los cambios estrictamente en tres categorías si aplican:
    - ### ✨ Nuevas Funciones (cosas nuevas que ahora el usuario puede hacer)
    - ### 🚀 Mejoras (cosas que ahora funcionan más rápido, más fácil o con mejor diseño)
    - ### 🛠️ Correcciones (problemas o errores solucionados)
-5. Si un commit es puramente interno de CI/CD, configuración de linter o refactor invisible sin impacto operativo, puedes omitirlo o resumirlo como mantenimiento general.
-6. NO utilices clases HTML (class="...") ni etiquetas <iframe> o <script>.
-7. Prohibido incluir 'draft: true' a menos que explícitamente se solicite como borrador.
+5. En cada viñeta, añade al final el ID del commit correspondiente entre corchetes, por ejemplo: `[`a1b2c3d`]`.
+6. Si un commit es puramente interno de CI/CD, configuración de linter o refactor invisible sin impacto operativo, puedes omitirlo o resumirlo como mantenimiento general.
+7. NO utilices clases HTML (class="...") ni etiquetas <iframe> o <script>.
+8. Prohibido incluir 'draft: true' a menos que explícitamente se solicite como borrador.
 
 ESTRUCTURA EXACTA DE SALIDA ESPERADA:
 ---
@@ -46,18 +55,20 @@ title: "[Título claro y representativo del release, ej: Actualización Operativ
 date: "YYYY-MM-DD"
 version: "[Versión ej: v1.X.0 o dejar vacío]"
 highlights: "[Una o dos oraciones con el impacto principal de esta actualización]"
+commits:
+  - "[id_commit_1]"
+  - "[id_commit_2]"
 ---
 
 ### ✨ Nuevas Funciones
-- **[Módulo o Área]:** [Descripción clara en lenguaje no técnico]
+- **[Módulo o Área]:** [Descripción clara en lenguaje no técnico] [`[id_commit_1]`]
 
 ### 🚀 Mejoras
-- **[Módulo o Área]:** [Descripción de la mejora]
+- **[Módulo o Área]:** [Descripción de la mejora] [`[id_commit_2]`]
 
 ### 🛠️ Correcciones
-- **[Módulo o Área]:** [Descripción de la solución]
+- **[Módulo o Área]:** [Descripción de la solución] [`[id_commit_3]`]
 
 ---
-LISTADO DE COMMITS A RESUMIR:
-[PEGAR AQUÍ LOS COMMITS]
+(Nota: Si necesitas que me detenga en un commit anterior específico, dime el ID del último commit ya resumido).
 ```
