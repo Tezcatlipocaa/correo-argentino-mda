@@ -8,12 +8,16 @@ Esta guía proporciona el procedimiento estándar y el prompt exacto a utilizar 
 
 1. Abre **Gemini Spark** en el navegador.
 2. Pega el **Prompt de la Sección 2** en la sesión de Gemini Spark.
-   > **Nota:** No hace falta que intervengas: el prompt deriva el punto de corte solo desde los changelogs ya publicados en el repositorio.
+   > **Nota:** Puedes modificar los parámetros iniciales en la cabecera del prompt si deseas filtrar por una fecha específica o un commit particular:
+   > - `FECHA_PERSONALIZADA: false` (o `YYYY-MM-DD` para procesar únicamente ese día)
+   > - `COMMIT_ESPECIFICO: false` (o `"hash_o_id"` para generar el changelog de un único cambio puntual)
 3. Gemini Spark ejecutará el flujo de inspección de dos pasos:
-   - **Paso A:** Inspeccionará `src/config/changelog/` en GitHub para leer el changelog más reciente y extraer los commits ya publicados.
-   - **Paso B:** Ingresará a `https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/` y extraerá únicamente los commits que estén por encima de los ya procesados.
-4. Copia el archivo Markdown que genere Gemini Spark y guárdalo en:
-   `src/config/changelog/YYYY-MM-DD.md` (reemplazando `YYYY-MM-DD` por la fecha de hoy o del release).
+   - **Paso A:** Inspeccionará `src/config/changelog/` en GitHub para leer el changelog más reciente, su fecha (`YYYY-MM-DD`) y extraer los commits ya publicados.
+   - **Paso B:** Ingresará a `https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/`. En GitHub los commits ya vienen visualmente agrupados por fecha ("Commits on Oct 21, 2026", "Commits on Oct 20, 2026", etc.).
+     - Si `FECHA_PERSONALIZADA` o `COMMIT_ESPECIFICO` están activos, se enfoca únicamente en ese alcance.
+     - Si ambos están en `false`, solo toma commits posteriores a la fecha del último release.
+4. Si hay novedades nuevas, copia el archivo Markdown que genere Gemini Spark y guárdalo en:
+   `src/config/changelog/YYYY-MM-DD.md` (con la fecha real del día de los commits o la fecha personalizada indicada).
 5. Verifica que el archivo generado tenga la lista de IDs de commit en el frontmatter (`commits: [...]`) y que **NO** tenga `draft: true`.
 6. Guarda y comitea el nuevo archivo en Git. Si accidentalmente un commit ya estuviera presente en un changelog anterior, el sistema del portal descartará duplicados automáticamente.
 
@@ -28,21 +32,34 @@ Copiar y pegar lo siguiente en Gemini Spark:
 ```markdown
 Actúa como Technical Writer y Product Manager del "Portal MDA" (plataforma web interna de soporte y operaciones de Correo Argentino).
 
+PARÁMETROS DE CONFIGURACIÓN (modificar solo si se desea un análisis puntual):
+- FECHA_PERSONALIZADA: false  <!-- cambiar a "YYYY-MM-DD" para procesar solo los commits de ese día específico -->
+- COMMIT_ESPECIFICO: false    <!-- cambiar al hash/ID corto del commit (ej: "a1b2c3d") para generar un release de ese único commit -->
+
 INSTRUCCIONES DE NAVEGACIÓN Y EXTRACCIÓN EN DOS PASOS:
 
-PASO A — Determinar commits ya publicados:
+PASO A — Determinar fecha y commits ya publicados:
 1. Abre tu navegador y accede al directorio de changelogs del repositorio:
    https://github.com/ignaciorevainera/correo-argentino-mda/tree/master/src/config/changelog/
-2. Ubica el archivo .md más reciente (el que tenga la fecha más alta en el nombre, excluyendo 'example.md').
+2. Ubica el archivo .md más reciente (el que tenga la fecha más alta en el nombre, excluyendo 'example.md'). Anota esa fecha como "FECHA_ULTIMO_RELEASE" (ej: 2026-10-20).
 3. Abre ese archivo y extrae todos los IDs de commit listados en el campo `commits:` del frontmatter YAML, así como cualquier hash [`id`] entre corchetes en las viñetas. Ese es el conjunto de commits ya publicados ("COMMIT_IDS_PUBLICADOS").
-4. Si la carpeta no tiene archivos de release previos o solo contiene example.md, COMMIT_IDS_PUBLICADOS queda vacío y se procesarán todos los commits recientes.
+4. Si la carpeta no tiene archivos de release previos o solo contiene example.md, COMMIT_IDS_PUBLICADOS queda vacío y FECHA_ULTIMO_RELEASE no aplica restricción.
 
-PASO B — Recorrer la página de commits:
+PASO B — Recorrer la página de commits usando la separación por fecha de GitHub:
 1. Abre la página de commits de la rama principal:
    https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/
-2. Recorre la lista de commits de más reciente a más antiguo.
-3. Quédate únicamente con los commits cuyo ID corto (7 caracteres) NO esté en COMMIT_IDS_PUBLICADOS. CORTA y detén la lectura en el primer commit que sí esté publicado.
-4. Si por limitaciones de acceso no logras leer el changelog previo en el Paso A (ej. falta de sesión en repo privado), resume los commits visibles de los últimos días y deja que el sistema del portal descarte los duplicados.
+2. En la interfaz de GitHub, los commits están claramente agrupados y separados por encabezados de fecha (por ejemplo: "Commits on Oct 21, 2026", "Commits on Oct 20, 2026", etc.). USA ESTA SEPARACIÓN COMO GUÍA ESTRICTA.
+
+3. EVALUACIÓN DE PARÁMETROS Y ALCANCE:
+   - Si COMMIT_ESPECIFICO no es false: busca exclusivamente ese commit, extrae su mensaje/cambios y omite cualquier otro commit.
+   - Si FECHA_PERSONALIZADA no es false: busca en GitHub únicamente el bloque de fecha correspondiente a FECHA_PERSONALIZADA y procesa solo los commits de ese día que no figuren en COMMIT_IDS_PUBLICADOS. Si no hay commits ese día, responde que no hay commits para esa fecha.
+   - Si ambos son false (modo automático por defecto):
+     - SOLO procesa commits de bloques de fecha POSTERIORES a FECHA_ULTIMO_RELEASE.
+     - CRÍTICO: NUNCA tomes commits de fechas anteriores a FECHA_ULTIMO_RELEASE ni los agrupes bajo una fecha distinta.
+     - Si no hay commits nuevos para el día de hoy o posteriores a FECHA_ULTIMO_RELEASE, responde: "No se encontraron commits nuevos posteriores al último changelog publicado (FECHA_ULTIMO_RELEASE). No hay novedades para generar."
+
+4. Para los commits válidos encontrados: quédate únicamente con aquellos cuyo ID corto (7 caracteres) NO figure en COMMIT_IDS_PUBLICADOS.
+5. La fecha del changelog (`date: YYYY-MM-DD` y el nombre del archivo) DEBE ser la fecha personalizada si fue indicada, o la fecha real del bloque de commits en GitHub (nunca una fecha inventada).
 
 REGLAS DE FORMATO Y ESTILO:
 1. La salida DEBE ser un archivo Markdown válido con encabezado Frontmatter YAML al inicio.
@@ -51,10 +68,10 @@ REGLAS DE FORMATO Y ESTILO:
      - "a1b2c3d"
      - "e4f5a6b"
 3. Traduce términos técnicos a lenguaje de negocio comprensible para supervisores y gerentes (ej. "endpoint API" -> "conexión de datos", "fix css overflow" -> "ajuste visual de pantalla", "drizzle schema" -> "base de datos de usuarios").
-4. Agrupa los cambios estrictamente en tres categorías si aplican:
-   - ### ✨ Nuevas Funciones (cosas nuevas que ahora el usuario puede hacer)
-   - ### 🚀 Mejoras (cosas que ahora funcionan más rápido, más fácil o con mejor diseño)
-   - ### 🛠️ Correcciones (problemas o errores solucionados)
+4. Agrupa los cambios estrictamente en tres categorías si aplican (SIN usar emojis en los títulos):
+   - ### Nuevas Funciones (cosas nuevas que ahora el usuario puede hacer)
+   - ### Mejoras (cosas que ahora funcionan más rápido, más fácil o con mejor diseño)
+   - ### Correcciones (problemas o errores solucionados)
 5. En cada viñeta, añade al final el ID del commit correspondiente entre corchetes, por ejemplo: `[`a1b2c3d`]`.
 6. Si un commit es puramente interno de CI/CD, configuración de linter o refactor invisible sin impacto operativo, puedes omitirlo o resumirlo como mantenimiento general.
 7. NO utilices clases HTML (class="...") ni etiquetas <iframe> o <script>.
@@ -71,12 +88,12 @@ commits:
   - "[id_commit_2]"
 ---
 
-### ✨ Nuevas Funciones
+### Nuevas Funciones
 - **[Módulo o Área]:** [Descripción clara en lenguaje no técnico] [`[id_commit_1]`]
 
-### 🚀 Mejoras
+### Mejoras
 - **[Módulo o Área]:** [Descripción de la mejora] [`[id_commit_2]`]
 
-### 🛠️ Correcciones
+### Correcciones
 - **[Módulo o Área]:** [Descripción de la solución] [`[id_commit_3]`]
 ```

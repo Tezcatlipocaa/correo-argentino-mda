@@ -11,8 +11,8 @@ const entries = await getChangelogEntries();
 const latestDate = (await getLatestChangelogDate()) || "";
 
 const badgeClassBySectionKey: Record<ChangelogSectionKey, string> = {
-  funciones: "badge-primary text-primary-content",
-  mejoras: "badge-secondary text-secondary-content",
+  funciones: "badge-secondary text-secondary-content",
+  mejoras: "badge-info text-info-content",
   correcciones: "badge-accent text-accent-content",
   otras: "badge-neutral text-neutral-content",
 };
@@ -50,7 +50,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
             type="search"
             id="changelog-search"
             placeholder="Buscar en novedades..."
-            class="input input-sm input-bordered w-full pl-9 focus:outline-hidden focus:border-primary"
+            class="input input-sm input-bordered w-full pl-9 focus:outline-hidden focus:border-secondary"
             aria-label="Buscar en novedades"
           />
         </div>
@@ -59,7 +59,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
           <span class="text-base-content/70 text-xs font-semibold">Filtrar:</span>
           <button
             type="button"
-            class="btn btn-xs btn-primary filter-btn"
+            class="btn btn-xs btn-secondary filter-btn"
             data-filter="all"
             aria-pressed="true"
           >
@@ -71,7 +71,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
             data-filter="funciones"
             aria-pressed="false"
           >
-            ✨ Nuevas Funciones
+            Nuevas Funciones
           </button>
           <button
             type="button"
@@ -79,7 +79,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
             data-filter="mejoras"
             aria-pressed="false"
           >
-            🚀 Mejoras
+            Mejoras
           </button>
           <button
             type="button"
@@ -87,7 +87,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
             data-filter="correcciones"
             aria-pressed="false"
           >
-            🛠️ Correcciones
+            Correcciones
           </button>
         </div>
       </div>
@@ -115,7 +115,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
                 <!-- Cabecera de la versión / release -->
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-200 pb-4">
                   <div class="flex items-center gap-3">
-                    <div class="badge badge-primary badge-lg font-mono font-bold text-xs tracking-wide">
+                    <div class="badge badge-secondary badge-lg font-mono font-bold text-xs tracking-wide">
                       {entry.version ? entry.version : "Actualización"}
                     </div>
                     <h2 class="text-base-content text-lg font-bold">
@@ -135,7 +135,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
                 </div>
 
                 {entry.highlights && (
-                  <div class="bg-base-200/50 text-base-content/80 rounded-lg p-3 text-sm italic border-l-4 border-primary">
+                  <div class="bg-base-200/50 text-base-content/80 rounded-lg p-3 text-sm italic border-l-4 border-secondary">
                     {entry.highlights}
                   </div>
                 )}
@@ -286,12 +286,12 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
     filterBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
         filterBtns.forEach((b) => {
-          b.classList.remove("btn-primary");
+          b.classList.remove("btn-secondary");
           b.classList.add("btn-ghost");
           b.setAttribute("aria-pressed", "false");
         });
         btn.classList.remove("btn-ghost");
-        btn.classList.add("btn-primary");
+        btn.classList.add("btn-secondary");
         btn.setAttribute("aria-pressed", "true");
 
         activeFilter = btn.getAttribute("data-filter") || "all";
@@ -306,10 +306,10 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
       filterBtns.forEach((b) => {
         if (b.getAttribute("data-filter") === "all") {
           b.classList.remove("btn-ghost");
-          b.classList.add("btn-primary");
+          b.classList.add("btn-secondary");
           b.setAttribute("aria-pressed", "true");
         } else {
-          b.classList.remove("btn-primary");
+          b.classList.remove("btn-secondary");
           b.classList.add("btn-ghost");
           b.setAttribute("aria-pressed", "false");
         }

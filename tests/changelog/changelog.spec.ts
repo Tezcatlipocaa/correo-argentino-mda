@@ -30,13 +30,13 @@ commits:
   - "e2e0002"
 ---
 
-### ✨ Nuevas Funciones
+### Nuevas Funciones
 - **Buscador:** Nueva función de filtrado dinámico [\`e2e0001\`]
 
-### 🚀 Mejoras
+### Mejoras
 - **Rendimiento:** Optimización de velocidad en pantalla [\`e2e0002\`]
 
-### 🛠️ Correcciones
+### Correcciones
 - **Interfaz:** Ajuste de diseño en encabezados
 `
     );
