@@ -50,26 +50,26 @@
   - [x] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 2' as complete`)
   - [x] Presentar plan de verificación manual detallado y esperar confirmación explícita del usuario
 
-## Phase 3: Indicadores en Navbar/Drawer, Navegación y Pruebas E2E Playwright
-- [ ] Task: Inyectar fecha server-side e integrar indicador en `navbar.astro` y `drawerContent.astro`
-  - [ ] Obtener `latestDate` en servidor mediante `getLatestChangelogDate()` (con cache indexado) e inyectar `data-changelog-latest={latestDate}` en el markup del navbar
-  - [ ] Añadir ícono/enlace hacia `/changelog` con badge de notificación no leída en `src/layouts/_components/navbar.astro`
-  - [ ] Añadir enlace y badge correspondiente en `src/layouts/_components/drawerContent.astro`
-  - [ ] Implementar script cliente que lea `data-changelog-latest`, compare contra `localStorage.getItem("portal_mda_changelog_last_read")` y active/desactive el badge
-- [ ] Task: Registrar ruta en navegación global
-  - [ ] Registrar `/changelog` en `src/lib/navigation.ts` con sección apropiada y con ícono estándar con sufijo `-filled` (ej. `boxicons:news-filled` o `boxicons:bell-filled`) para autopropagación a Command Palette (`Ctrl+K`)
-- [ ] Task: Pruebas E2E autenticadas con Playwright y verificación de build
-  - [ ] Crear `tests/changelog/changelog.spec.ts` importando `dotenv/config` y reutilizando `tests/helpers/auth.ts` (`createTestUserAndSession("agent")` + `setSessionCookie(context, signedSessionId)` + `cleanupTestUser(userId)`)
-  - [ ] Usar rol NO-admin (`agent`) para verificar el acceso real bajo `ALL_ROLES` en `hasPermission`
-  - [ ] Configurar ejecución con puerto dedicado `$env:PLAYWRIGHT_BASE_URL="http://localhost:4323"` y resolver URLs mediante `test.info().project.use.baseURL` sin URLs hardcodeadas
-  - [ ] Validar navegación autenticada, visualización de entradas, filtrado en vivo, apagado del badge y redirección a login en sesión anónima
-  - [ ] Generar reporte reproducible con `npx playwright show-report`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
-  - [ ] Ejecutar `npm run test:domain`
-  - [ ] Ejecutar `npm run test:unit`
-  - [ ] Ejecutar `npm run build`
-  - [ ] Commit del código de la fase
-  - [ ] Adjuntar resumen detallado con `git notes add` al commit de la fase
-  - [ ] Marcar tareas con `[x]` y registrar `[checkpoint: <sha>]` en plan.md
-  - [ ] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 3' as complete`)
+## Phase 3: Indicadores en Navbar/Drawer, Navegación y Pruebas E2E Playwright [checkpoint: fa09be22]
+- [x] Task: Inyectar fecha server-side e integrar indicador en `navbar.astro` y `drawerContent.astro`
+  - [x] Obtener `latestDate` en servidor mediante `getLatestChangelogDate()` (con cache indexado) e inyectar `data-changelog-latest={latestDate}` en el markup del navbar
+  - [x] Añadir ícono/enlace hacia `/changelog` con badge de notificación no leída en `src/layouts/_components/navbar.astro`
+  - [x] Añadir enlace y badge correspondiente en `src/layouts/_components/drawerContent.astro`
+  - [x] Implementar script cliente que lea `data-changelog-latest`, compare contra `localStorage.getItem("portal_mda_changelog_last_read")` y active/desactive el badge
+- [x] Task: Registrar ruta en navegación global
+  - [x] Registrar `/changelog` en `src/lib/navigation.ts` con sección apropiada y con ícono estándar con sufijo `-filled` (ej. `boxicons:news-filled` o `boxicons:bell-filled`) para autopropagación a Command Palette (`Ctrl+K`)
+- [x] Task: Pruebas E2E autenticadas con Playwright y verificación de build
+  - [x] Crear `tests/changelog/changelog.spec.ts` importando `dotenv/config` y reutilizando `tests/helpers/auth.ts` (`createTestUserAndSession("agent")` + `setSessionCookie(context, signedSessionId)` + `cleanupTestUser(userId)`)
+  - [x] Usar rol NO-admin (`agent`) para verificar el acceso real bajo `ALL_ROLES` en `hasPermission`
+  - [x] Configurar ejecución con puerto dedicado `$env:PLAYWRIGHT_BASE_URL="http://localhost:4323"` y resolver URLs mediante `test.info().project.use.baseURL` sin URLs hardcodeadas
+  - [x] Validar navegación autenticada, visualización de entradas, filtrado en vivo, apagado del badge y redirección a login en sesión anónima
+  - [x] Generar reporte reproducible con `npx playwright show-report`
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+  - [x] Ejecutar `npm run test:domain`
+  - [x] Ejecutar `npm run test:unit`
+  - [x] Ejecutar `npm run build`
+  - [x] Commit del código de la fase
+  - [x] Adjuntar resumen detallado con `git notes add` al commit de la fase
+  - [x] Marcar tareas con `[x]` y registrar `[checkpoint: <sha>]` en plan.md
+  - [x] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 3' as complete`)
   - [ ] Presentar plan de verificación manual detallado y esperar confirmación explícita del usuario
