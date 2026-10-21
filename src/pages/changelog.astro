@@ -5,10 +5,24 @@ import PageHeader from "@components/ui/PageHeader.astro";
 import SectionCard from "@components/ui/SectionCard.astro";
 import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
 import { Icon } from "astro-icon/components";
-import { getChangelogEntries, getLatestChangelogDate } from "@lib/changelog/changelogService";
+import { getChangelogEntries, getLatestChangelogDate, type ChangelogSectionKey } from "@lib/changelog/changelogService";
 
 const entries = await getChangelogEntries();
-const latestDate = await getLatestChangelogDate() || "";
+const latestDate = (await getLatestChangelogDate()) || "";
+
+const badgeClassBySectionKey: Record<ChangelogSectionKey, string> = {
+  funciones: "badge-primary text-primary-content",
+  mejoras: "badge-secondary text-secondary-content",
+  correcciones: "badge-accent text-accent-content",
+  otras: "badge-neutral text-neutral-content",
+};
+
+const iconBySectionKey: Record<ChangelogSectionKey, string> = {
+  funciones: "boxicons:sparkles-filled",
+  mejoras: "boxicons:rocket-filled",
+  correcciones: "boxicons:wrench-filled",
+  otras: "boxicons:info-circle-filled",
+};
 ---
 
 <BaseLayout title="Novedades del Portal | MDA">
@@ -41,12 +55,13 @@ const latestDate = await getLatestChangelogDate() || "";
           />
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filtro de secciones">
           <span class="text-base-content/70 text-xs font-semibold">Filtrar:</span>
           <button
             type="button"
             class="btn btn-xs btn-primary filter-btn"
             data-filter="all"
+            aria-pressed="true"
           >
             Todos
           </button>
@@ -54,6 +69,7 @@ const latestDate = await getLatestChangelogDate() || "";
             type="button"
             class="btn btn-xs btn-ghost filter-btn"
             data-filter="funciones"
+            aria-pressed="false"
           >
             ✨ Nuevas Funciones
           </button>
@@ -61,6 +77,7 @@ const latestDate = await getLatestChangelogDate() || "";
             type="button"
             class="btn btn-xs btn-ghost filter-btn"
             data-filter="mejoras"
+            aria-pressed="false"
           >
             🚀 Mejoras
           </button>
@@ -68,6 +85,7 @@ const latestDate = await getLatestChangelogDate() || "";
             type="button"
             class="btn btn-xs btn-ghost filter-btn"
             data-filter="correcciones"
+            aria-pressed="false"
           >
             🛠️ Correcciones
           </button>
@@ -88,10 +106,6 @@ const latestDate = await getLatestChangelogDate() || "";
         {entries.map((entry) => (
           <article
             class="changelog-item transition-all duration-200"
-            data-title={entry.title.toLowerCase()}
-            data-date={entry.date}
-            data-version={entry.version?.toLowerCase() ?? ""}
-            data-content={entry.content.toLowerCase()}
           >
             <SectionCard
               id={`release-${entry.slug}`}
@@ -126,11 +140,26 @@ const latestDate = await getLatestChangelogDate() || "";
                   </div>
                 )}
 
-                <!-- Contenido sanitizado -->
-                <div
-                  class="changelog-prose text-base-content text-sm space-y-3"
-                  set:html={entry.html}
-                />
+                <!-- Bloques estructurados por sección -->
+                <div class="space-y-4">
+                  {entry.sections.map((section) => (
+                    <div
+                      class="changelog-section-block flex flex-col gap-1.5"
+                      data-section={section.key}
+                    >
+                      <div class="flex items-center gap-2">
+                        <span class:list={["badge badge-sm font-semibold gap-1", badgeClassBySectionKey[section.key]]}>
+                          <Icon name={iconBySectionKey[section.key]} size={14} is:inline />
+                          {section.title}
+                        </span>
+                      </div>
+                      <div
+                        class="changelog-prose text-base-content text-sm pl-1"
+                        set:html={section.html}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </SectionCard>
           </article>
@@ -152,20 +181,10 @@ const latestDate = await getLatestChangelogDate() || "";
 
 <style is:global>
   /* Tipografía scoped para el HTML proveniente de renderMarkdown */
-  .changelog-prose h3 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-    color: var(--color-base-content);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
   .changelog-prose ul {
     list-style-type: disc;
     padding-left: 1.5rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
   }
   .changelog-prose li {
     margin-bottom: 0.35rem;
@@ -193,7 +212,7 @@ const latestDate = await getLatestChangelogDate() || "";
     const clearBtn = document.getElementById("changelog-clear-search-btn");
     const filterBtns = document.querySelectorAll<HTMLButtonElement>(".filter-btn");
 
-    // 1. Guardar última fecha vista en localStorage al entrar
+    // Guardar última fecha vista en localStorage al entrar
     const latestDate = root?.getAttribute("data-changelog-latest");
     if (latestDate) {
       localStorage.setItem("portal_mda_changelog_last_read", latestDate);
@@ -205,38 +224,41 @@ const latestDate = await getLatestChangelogDate() || "";
     let searchQuery = "";
 
     function applyFilters() {
-      let visibleCount = 0;
+      let visibleArticlesCount = 0;
 
       items.forEach((item) => {
-        const title = item.getAttribute("data-title") || "";
-        const version = item.getAttribute("data-version") || "";
-        const content = item.getAttribute("data-content") || "";
+        const itemText = item.textContent?.toLowerCase() || "";
+        const matchesSearch = !searchQuery || itemText.includes(searchQuery);
 
-        const matchesSearch =
-          !searchQuery ||
-          title.includes(searchQuery) ||
-          version.includes(searchQuery) ||
-          content.includes(searchQuery);
-
-        let matchesFilter = true;
-        if (activeFilter === "funciones") {
-          matchesFilter = content.includes("nuevas funciones") || content.includes("funciones");
-        } else if (activeFilter === "mejoras") {
-          matchesFilter = content.includes("mejoras") || content.includes("mejora");
-        } else if (activeFilter === "correcciones") {
-          matchesFilter = content.includes("correcciones") || content.includes("corrección");
+        if (!matchesSearch) {
+          item.classList.add("hidden");
+          return;
         }
 
-        if (matchesSearch && matchesFilter) {
+        // Filtro por sección: evaluar cada bloque dentro del article
+        const sectionBlocks = item.querySelectorAll<HTMLElement>(".changelog-section-block");
+        let visibleSectionsCount = 0;
+
+        sectionBlocks.forEach((block) => {
+          const sectionKey = block.getAttribute("data-section");
+          if (activeFilter === "all" || sectionKey === activeFilter) {
+            block.classList.remove("hidden");
+            visibleSectionsCount++;
+          } else {
+            block.classList.add("hidden");
+          }
+        });
+
+        if (visibleSectionsCount > 0) {
           item.classList.remove("hidden");
-          visibleCount++;
+          visibleArticlesCount++;
         } else {
           item.classList.add("hidden");
         }
       });
 
       if (emptyState) {
-        if (visibleCount === 0) {
+        if (visibleArticlesCount === 0) {
           emptyState.classList.remove("hidden");
           emptyState.classList.add("flex");
         } else {
@@ -256,9 +278,11 @@ const latestDate = await getLatestChangelogDate() || "";
         filterBtns.forEach((b) => {
           b.classList.remove("btn-primary");
           b.classList.add("btn-ghost");
+          b.setAttribute("aria-pressed", "false");
         });
         btn.classList.remove("btn-ghost");
         btn.classList.add("btn-primary");
+        btn.setAttribute("aria-pressed", "true");
 
         activeFilter = btn.getAttribute("data-filter") || "all";
         applyFilters();
@@ -273,16 +297,17 @@ const latestDate = await getLatestChangelogDate() || "";
         if (b.getAttribute("data-filter") === "all") {
           b.classList.remove("btn-ghost");
           b.classList.add("btn-primary");
+          b.setAttribute("aria-pressed", "true");
         } else {
           b.classList.remove("btn-primary");
           b.classList.add("btn-ghost");
+          b.setAttribute("aria-pressed", "false");
         }
       });
       applyFilters();
     });
   }
 
-  // Inicializar al cargar el DOM o ante transiciones de página
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", setupChangelogClient);
   } else {

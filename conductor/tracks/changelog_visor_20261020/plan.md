@@ -34,6 +34,7 @@
   - [x] Actualizar el sitemap en `docs/CONTEXT.md` incorporando la ruta `/changelog`
 - [x] Task: Crear página `/changelog` reutilizando componentes oficiales (8e7b2a1d)
   - [x] Crear `src/pages/changelog.astro` utilizando `BaseLayout.astro`, `PageContainer.astro` y `PageHeader.astro` con `title` y `description` (según convención 12 de `docs/CONTEXT.md`)
+  - [x] Excepción arquitectónica documentada: no se aplica `server:defer` porque la fuente es local, sin I/O remoto y cacheada en memoria.
   - [x] Renderizar las versiones cronológicas reutilizando `SectionCard.astro` con badges temáticos de DaisyUI v5 y estilos tipográficos scoped (`<style is:global>`) para los tags permitidos de `@lib/markdown`
   - [x] Integrar `SearchEmptyState.astro` para cuando no existan entradas o la búsqueda no arroje resultados
 - [x] Task: Interactividad de búsqueda, filtros y guardado de lectura (8e7b2a1d)

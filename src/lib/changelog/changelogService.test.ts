@@ -301,4 +301,52 @@ commits:
     // La línea de Release 2 NO fue descartada porque 'abcdef1' no estaba en sus commits:
     assert.match(entries[0].html, /Enlace o mención con código/);
   });
+
+  await t.test("parseo de secciones estructuradas: clasifica funciones, mejoras, correcciones y otras", async () => {
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-30.md"),
+      `---
+title: "Release Multi-Sección"
+date: "2026-10-30"
+commits:
+  - "1111111"
+  - "2222222"
+  - "3333333"
+  - "4444444"
+---
+### ✨ Nuevas Funciones
+- Asistente inteligente [\`1111111\`]
+
+### 🚀 Mejoras
+- Carga acelerada [\`2222222\`]
+
+### 🛠️ Correcciones
+- Solución de desborde [\`3333333\`]
+
+### 📢 Aviso Especial
+- Mantenimiento programado de servidores [\`4444444\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    assert.equal(entries.length, 1);
+    const entry = entries[0];
+    assert.equal(entry.sections.length, 4);
+
+    assert.equal(entry.sections[0].key, "funciones");
+    assert.match(entry.sections[0].title, /Nuevas Funciones/);
+    assert.match(entry.sections[0].html, /Asistente inteligente/);
+
+    assert.equal(entry.sections[1].key, "mejoras");
+    assert.match(entry.sections[1].title, /Mejoras/);
+    assert.match(entry.sections[1].html, /Carga acelerada/);
+
+    assert.equal(entry.sections[2].key, "correcciones");
+    assert.match(entry.sections[2].title, /Correcciones/);
+    assert.match(entry.sections[2].html, /Solución de desborde/);
+
+    assert.equal(entry.sections[3].key, "otras");
+    assert.match(entry.sections[3].title, /Aviso Especial/);
+    assert.match(entry.sections[3].html, /Mantenimiento programado/);
+  });
 });

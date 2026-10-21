@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { renderMarkdown } from "../markdown.js";
 
+export type ChangelogSectionKey = "funciones" | "mejoras" | "correcciones" | "otras";
+
+export interface ChangelogSection {
+  key: ChangelogSectionKey;
+  title: string;
+  html: string;
+}
+
 export interface ChangelogFrontmatter {
   title: string;
   date: string;
@@ -17,6 +25,7 @@ export interface ChangelogEntry extends ChangelogFrontmatter {
   slug: string;
   content: string;
   html: string;
+  sections: ChangelogSection[];
 }
 
 const changelogCacheByDir = new Map<string, ChangelogEntry[]>();
@@ -133,8 +142,6 @@ function parseFrontmatterAndContent(fileContent: string): {
  * Solo descarta la línea si el hash detectado:
  * 1) pertenece a entryCommits (exclusivamente frontmatter `commits:`)
  * 2) y YA fue visto en un release previo (seenCommits).
- *
- * Siempre normaliza y valida que exista contenido sustancial más allá de encabezados vacíos.
  */
 function deduplicateContentLines(
   content: string,
@@ -146,11 +153,9 @@ function deduplicateContentLines(
 
   for (const line of lines) {
     if (seenCommits.size > 0) {
-      // Detectar si la viñeta referencia un commit [id] o [`id`]
       const commitMatch = line.match(/\[`?([a-f0-9]{7,40})`?\]/i);
       if (commitMatch) {
         const commitId = commitMatch[1].toLowerCase();
-        // Solo descartar si el commit pertenece explícitamente a este entry y ya fue publicado
         if (entryCommits.has(commitId) && seenCommits.has(commitId)) {
           continue;
         }
@@ -159,7 +164,6 @@ function deduplicateContentLines(
     filteredLines.push(line);
   }
 
-  // Limpiar y verificar si solo quedan encabezados vacíos o líneas en blanco
   const cleaned = filteredLines.join("\n").trim();
   const withoutHeadings = cleaned
     .replace(/^#{1,6}\s+.*$/gm, "")
@@ -170,6 +174,72 @@ function deduplicateContentLines(
   }
 
   return cleaned;
+}
+
+/**
+ * Determina la clave canónica de una sección a partir de su encabezado.
+ */
+export function classifySectionHeading(heading: string): { key: ChangelogSectionKey; title: string } {
+  const cleanTitle = heading.replace(/^#{1,6}\s*/, "").trim();
+  const lower = cleanTitle.toLowerCase();
+
+  if (lower.includes("funciones") || lower.includes("nueva") || lower.includes("nuevo")) {
+    return { key: "funciones", title: cleanTitle };
+  }
+  if (lower.includes("mejora") || lower.includes("optimiza")) {
+    return { key: "mejoras", title: cleanTitle };
+  }
+  if (lower.includes("correcci") || lower.includes("fix") || lower.includes("soluci")) {
+    return { key: "correcciones", title: cleanTitle };
+  }
+  return { key: "otras", title: cleanTitle };
+}
+
+/**
+ * Parsea el contenido markdown ya deduplicado en bloques de secciones.
+ */
+export function parseSectionsFromMarkdown(content: string): ChangelogSection[] {
+  if (!content.trim()) return [];
+
+  const lines = content.split("\n");
+  const sections: ChangelogSection[] = [];
+
+  let currentHeading = "";
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    if (/^#{2,4}\s+/.test(line)) {
+      if (currentHeading || currentLines.some((l) => l.trim().length > 0)) {
+        const body = currentLines.join("\n").trim();
+        if (body.length > 0) {
+          const { key, title } = classifySectionHeading(currentHeading || "General");
+          sections.push({
+            key,
+            title,
+            html: renderMarkdown(body),
+          });
+        }
+      }
+      currentHeading = line;
+      currentLines = [];
+    } else {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentHeading || currentLines.some((l) => l.trim().length > 0)) {
+    const body = currentLines.join("\n").trim();
+    if (body.length > 0) {
+      const { key, title } = classifySectionHeading(currentHeading || "General");
+      sections.push({
+        key,
+        title,
+        html: renderMarkdown(body),
+      });
+    }
+  }
+
+  return sections;
 }
 
 /**
@@ -234,24 +304,19 @@ export async function getChangelogEntries(
   const globalSeenCommits = new Set<string>();
 
   for (const item of rawEntries) {
-    // 1. entryCommits para decidir descarte de líneas: ÚNICAMENTE frontmatter `commits:`
     const entryCommits = new Set(item.frontmatter.commits || []);
-
-    // 2. combinedCommits para sembrar el set global de commits vistos: frontmatter + hashes extraídos
     const contentCommits = extractCommitsFromContent(item.content);
     const combinedCommits = new Set([
       ...entryCommits,
       ...contentCommits,
     ]);
 
-    // Filtrar líneas de contenido usando entryCommits estricto
     const cleanedContent = deduplicateContentLines(
       item.content,
       entryCommits,
       globalSeenCommits,
     );
 
-    // Calcular commits únicos para esta entrada que aún no se habían publicado
     const uniqueEntryCommits: string[] = [];
     for (const c of combinedCommits) {
       if (!globalSeenCommits.has(c)) {
@@ -260,8 +325,13 @@ export async function getChangelogEntries(
       }
     }
 
-    // Regla: si tras la deduplicación no queda contenido sustancial, descartar la release vacía
     if (!cleanedContent.trim()) {
+      continue;
+    }
+
+    const sections = parseSectionsFromMarkdown(cleanedContent);
+    // Si no quedaron secciones sustanciales, descartar
+    if (sections.length === 0) {
       continue;
     }
 
@@ -273,6 +343,7 @@ export async function getChangelogEntries(
       slug: item.slug,
       content: cleanedContent,
       html,
+      sections,
     });
   }
 
