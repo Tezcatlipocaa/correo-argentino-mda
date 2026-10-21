@@ -4,6 +4,7 @@ import { resolveUrl } from "@/lib/url";
 import { getResolvedPathname } from "@/lib/navigation";
 import { getBaseNoSlash } from "@/lib/baseUrl";
 import { getCsrfTokenForSession } from "@/lib/csrf";
+import { getLatestChangelogDate } from "@/lib/changelog/changelogService";
 
 const roleAvatarClasses: Record<string, string> = {
   admin: "bg-error text-error-content",
@@ -35,6 +36,7 @@ const userInitials = user.username.slice(0, 2).toUpperCase();
 const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
 const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 const csrfToken = Astro.locals.sessionId ? getCsrfTokenForSession(Astro.locals.sessionId) : "";
+const latestChangelogDate = (await getLatestChangelogDate()) || "";
 ---
 
 <header class="border-base-300 bg-base-100/95 z-150 min-h-20 border-b">
@@ -74,6 +76,28 @@ const csrfToken = Astro.locals.sessionId ? getCsrfTokenForSession(Astro.locals.s
       </button>
 
       <div class="flex items-center gap-1">
+        <!-- Changelog novedades trigger -->
+        <a
+          href={resolveUrl("/changelog")}
+          data-changelog-trigger
+          data-changelog-latest={latestChangelogDate}
+          title="Novedades del portal"
+          aria-label="Novedades del portal"
+          class="btn btn-ghost btn-circle group relative"
+        >
+          <Icon
+            name="boxicons:news-filled"
+            size={22}
+            class="transition-transform duration-200 ease-out group-hover:scale-110"
+            is:inline
+          />
+          <span
+            data-changelog-badge
+            class="badge badge-primary badge-xs absolute top-2 right-2 hidden size-2 p-0 rounded-full"
+            aria-hidden="true"
+          />
+        </a>
+
         <!-- About this project's modal trigger -->
         <button
           type="button"
@@ -245,3 +269,30 @@ const csrfToken = Astro.locals.sessionId ? getCsrfTokenForSession(Astro.locals.s
     opacity: 1;
   }
 </style>
+
+<script>
+  function setupNavbarChangelogBadge() {
+    const trigger = document.querySelector<HTMLElement>("[data-changelog-trigger]");
+    const badge = document.querySelector<HTMLElement>("[data-changelog-badge]");
+    if (!trigger || !badge) return;
+
+    const latest = trigger.getAttribute("data-changelog-latest") || "";
+    if (!latest) {
+      badge.classList.add("hidden");
+      return;
+    }
+
+    const lastRead = localStorage.getItem("portal_mda_changelog_last_read") || "";
+    if (!lastRead || lastRead < latest) {
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupNavbarChangelogBadge);
+  } else {
+    setupNavbarChangelogBadge();
+  }
+</script>
