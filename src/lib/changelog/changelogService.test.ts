@@ -313,6 +313,7 @@ commits:
   - "2222222"
   - "3333333"
   - "4444444"
+  - "5555555"
 ---
 ### ✨ Nuevas Funciones
 - Asistente inteligente [\`1111111\`]
@@ -320,18 +321,21 @@ commits:
 ### 🚀 Mejoras
 - Carga acelerada [\`2222222\`]
 
-### 🛠️ Correcciones
-- Solución de desborde [\`3333333\`]
+### 🛠️ Correcciones nuevas
+- Solución de desborde y fixes [\`3333333\`]
 
-### 📢 Aviso Especial
+### 📢 Novedades varias
 - Mantenimiento programado de servidores [\`4444444\`]
+
+### 🔧 Corrección de estabilidad
+- Patch operativo [\`5555555\`]
 `
     );
 
     const entries = await getChangelogEntries(tempDir);
     assert.equal(entries.length, 1);
     const entry = entries[0];
-    assert.equal(entry.sections.length, 4);
+    assert.equal(entry.sections.length, 5);
 
     assert.equal(entry.sections[0].key, "funciones");
     assert.match(entry.sections[0].title, /Nuevas Funciones/);
@@ -341,12 +345,19 @@ commits:
     assert.match(entry.sections[1].title, /Mejoras/);
     assert.match(entry.sections[1].html, /Carga acelerada/);
 
+    // "### 🛠️ Correcciones nuevas" debe clasificar como "correcciones", no como "funciones"
     assert.equal(entry.sections[2].key, "correcciones");
-    assert.match(entry.sections[2].title, /Correcciones/);
+    assert.match(entry.sections[2].title, /Correcciones nuevas/);
     assert.match(entry.sections[2].html, /Solución de desborde/);
 
+    // "### 📢 Novedades varias" debe clasificar como "otras"
     assert.equal(entry.sections[3].key, "otras");
-    assert.match(entry.sections[3].title, /Aviso Especial/);
+    assert.match(entry.sections[3].title, /Novedades varias/);
     assert.match(entry.sections[3].html, /Mantenimiento programado/);
+
+    // "### 🔧 Corrección de estabilidad" debe clasificar como "correcciones"
+    assert.equal(entry.sections[4].key, "correcciones");
+    assert.match(entry.sections[4].title, /Corrección de estabilidad/);
+    assert.match(entry.sections[4].html, /Patch operativo/);
   });
 });

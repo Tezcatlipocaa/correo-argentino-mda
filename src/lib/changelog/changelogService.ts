@@ -31,6 +31,20 @@ export interface ChangelogEntry extends ChangelogFrontmatter {
 const changelogCacheByDir = new Map<string, ChangelogEntry[]>();
 
 /**
+ * Resuelve la clave de cache para un directorio incluyendo su mtime.
+ * Esto asegura que si se agrega, modifica o elimina un archivo changelog en disco,
+ * el cache se invalida automáticamente tanto en desarrollo como en producción.
+ */
+function getCacheKeyForDir(dir: string): string {
+  try {
+    const stat = fs.statSync(dir);
+    return `${dir}:${stat.mtimeMs}`;
+  } catch {
+    return dir;
+  }
+}
+
+/**
  * Normaliza una fecha a formato estándar YYYY-MM-DD.
  */
 function normalizeDate(rawDate: unknown): string {
@@ -183,15 +197,21 @@ export function classifySectionHeading(heading: string): { key: ChangelogSection
   const cleanTitle = heading.replace(/^#{1,6}\s*/, "").trim();
   const lower = cleanTitle.toLowerCase();
 
-  if (lower.includes("funciones") || lower.includes("nueva") || lower.includes("nuevo")) {
-    return { key: "funciones", title: cleanTitle };
-  }
-  if (lower.includes("mejora") || lower.includes("optimiza")) {
-    return { key: "mejoras", title: cleanTitle };
-  }
-  if (lower.includes("correcci") || lower.includes("fix") || lower.includes("soluci")) {
+  // Matcheo ordenado y estricto por regex para evitar colisiones:
+  // 1. correcciones (ej: "### 🛠️ Correcciones nuevas")
+  if (/correcci[oó]n|correcciones/i.test(lower)) {
     return { key: "correcciones", title: cleanTitle };
   }
+  // 2. nuevas funciones / funciones
+  if (/nuevas?\s+funciones|funciones/i.test(lower)) {
+    return { key: "funciones", title: cleanTitle };
+  }
+  // 3. mejoras
+  if (/mejoras?/i.test(lower)) {
+    return { key: "mejoras", title: cleanTitle };
+  }
+
+  // 4. Fallback canónico: cualquier otro encabezado clasifica como "otras"
   return { key: "otras", title: cleanTitle };
 }
 
@@ -251,13 +271,14 @@ export async function getChangelogEntries(
   customDir?: string,
 ): Promise<ChangelogEntry[]> {
   const targetDir = customDir || resolveChangelogDir();
+  const cacheKey = getCacheKeyForDir(targetDir);
 
-  if (changelogCacheByDir.has(targetDir)) {
-    return changelogCacheByDir.get(targetDir)!;
+  if (changelogCacheByDir.has(cacheKey)) {
+    return changelogCacheByDir.get(cacheKey)!;
   }
 
   if (!fs.existsSync(targetDir)) {
-    changelogCacheByDir.set(targetDir, []);
+    changelogCacheByDir.set(cacheKey, []);
     return [];
   }
 
@@ -265,7 +286,7 @@ export async function getChangelogEntries(
   try {
     fileNames = await fs.promises.readdir(targetDir);
   } catch {
-    changelogCacheByDir.set(targetDir, []);
+    changelogCacheByDir.set(cacheKey, []);
     return [];
   }
 
@@ -350,7 +371,7 @@ export async function getChangelogEntries(
   // 2. ORDEN DESCENDENTE FINAL para la UI y consumidores (más reciente primero)
   processedAscending.sort((a, b) => b.date.localeCompare(a.date));
 
-  changelogCacheByDir.set(targetDir, processedAscending);
+  changelogCacheByDir.set(cacheKey, processedAscending);
   return processedAscending;
 }
 

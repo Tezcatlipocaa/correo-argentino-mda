@@ -279,14 +279,20 @@ const latestChangelogDate = (await getLatestChangelogDate()) || "";
     const latest = trigger.getAttribute("data-changelog-latest") || "";
     if (!latest) {
       badge.classList.add("hidden");
+      trigger.setAttribute("aria-label", "Novedades del portal");
+      trigger.setAttribute("title", "Novedades del portal");
       return;
     }
 
     const lastRead = localStorage.getItem("portal_mda_changelog_last_read") || "";
     if (!lastRead || lastRead < latest) {
       badge.classList.remove("hidden");
+      trigger.setAttribute("aria-label", "Novedades del portal — hay novedades sin leer");
+      trigger.setAttribute("title", "Novedades del portal — hay novedades sin leer");
     } else {
       badge.classList.add("hidden");
+      trigger.setAttribute("aria-label", "Novedades del portal");
+      trigger.setAttribute("title", "Novedades del portal");
     }
   }
 

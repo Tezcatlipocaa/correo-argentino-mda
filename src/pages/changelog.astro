@@ -216,6 +216,16 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
     const latestDate = root?.getAttribute("data-changelog-latest");
     if (latestDate) {
       localStorage.setItem("portal_mda_changelog_last_read", latestDate);
+      // Apagar de inmediato el badge del navbar si está presente en la misma página (F5)
+      const navbarBadge = document.querySelector<HTMLElement>("[data-changelog-badge]");
+      if (navbarBadge) {
+        navbarBadge.classList.add("hidden");
+      }
+      const navbarTrigger = document.querySelector<HTMLElement>("[data-changelog-trigger]");
+      if (navbarTrigger) {
+        navbarTrigger.setAttribute("aria-label", "Novedades del portal");
+        navbarTrigger.setAttribute("title", "Novedades del portal");
+      }
     }
 
     if (!items.length) return;

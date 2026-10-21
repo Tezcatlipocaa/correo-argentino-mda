@@ -11,17 +11,18 @@ import {
 
 test.describe("Changelog / Novedades del Portal", () => {
   let testUser: TestUser;
-  const fixturePath = path.resolve(process.cwd(), "src/config/changelog/2026-10-25.md");
+  const fixtureDate = "2099-12-31";
+  const fixturePath = path.resolve(process.cwd(), `src/config/changelog/_e2e-fixture-${fixtureDate}.md`);
 
   test.beforeAll(async () => {
     testUser = await createTestUserAndSession("agent");
 
-    // Crear un changelog de prueba activo (sin draft) para el spec
+    // Crear un changelog de prueba activo (sin draft) para el spec con fecha lejana
     await fs.promises.writeFile(
       fixturePath,
       `---
 title: "Actualización Operativa E2E"
-date: "2026-10-25"
+date: "${fixtureDate}"
 version: "v2.0.0"
 highlights: "Novedades probadas de forma automatizada con Playwright."
 commits:
@@ -43,7 +44,7 @@ commits:
 
   test.afterAll(async () => {
     if (testUser) {
-      await cleanupTestUser(testUser.userId, testUser.sessionId);
+      await cleanupTestUser(testUser.userId);
     }
     if (fs.existsSync(fixturePath)) {
       await fs.promises.unlink(fixturePath);
@@ -125,9 +126,9 @@ commits:
     await expect(page).toHaveURL(`${baseURL}/changelog`);
     await page.waitForLoadState("domcontentloaded");
 
-    // Al ingresar a /changelog, se actualiza el localStorage
+    // Al ingresar a /changelog, se actualiza el localStorage con la fecha del fixture lejano
     const storedDate = await page.evaluate(() => localStorage.getItem("portal_mda_changelog_last_read"));
-    expect(storedDate).toBe("2026-10-25");
+    expect(storedDate).toBe(fixtureDate);
 
     // Al volver al home, el badge debe estar oculto
     await page.goto(`${baseURL}/`);
