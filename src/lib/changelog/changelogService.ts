@@ -22,6 +22,19 @@ export interface ChangelogEntry extends ChangelogFrontmatter {
 const changelogCacheByDir = new Map<string, ChangelogEntry[]>();
 
 /**
+ * Normaliza una fecha a formato estándar YYYY-MM-DD.
+ */
+function normalizeDate(rawDate: unknown): string {
+  if (!rawDate) return "1970-01-01";
+  const str = String(rawDate).trim();
+  const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+  return str;
+}
+
+/**
  * Resuelve el directorio estándar donde residen los changelogs.
  */
 export function resolveChangelogDir(): string {
@@ -47,12 +60,26 @@ export function resolveChangelogDir(): string {
 function normalizeCommits(rawCommits: unknown): string[] {
   if (!rawCommits) return [];
   if (Array.isArray(rawCommits)) {
-    return rawCommits.map((c) => String(c).trim()).filter(Boolean);
+    return rawCommits.map((c) => String(c).trim().toLowerCase()).filter(Boolean);
   }
   if (typeof rawCommits === "string") {
-    return [rawCommits.trim()].filter(Boolean);
+    return [rawCommits.trim().toLowerCase()].filter(Boolean);
   }
   return [];
+}
+
+/**
+ * Extrae todos los hashes de commit referenciados en el contenido Markdown.
+ */
+function extractCommitsFromContent(content: string): string[] {
+  const matches = content.matchAll(/\[`?([a-f0-9]{7,40})`?\]/gi);
+  const found: string[] = [];
+  for (const m of matches) {
+    if (m[1]) {
+      found.push(m[1].toLowerCase());
+    }
+  }
+  return found;
 }
 
 /**
@@ -81,7 +108,7 @@ function parseFrontmatterAndContent(fileContent: string): {
     return {
       frontmatter: {
         title: parsedYaml.title || "Actualización",
-        date: String(parsedYaml.date || "1970-01-01"),
+        date: normalizeDate(parsedYaml.date),
         version: parsedYaml.version,
         draft: Boolean(parsedYaml.draft),
         highlights: parsedYaml.highlights,
@@ -102,10 +129,16 @@ function parseFrontmatterAndContent(fileContent: string): {
 }
 
 /**
- * Filtra líneas de commits duplicados dentro del contenido markdown si dichos
- * IDs ya fueron procesados en un changelog más reciente.
+ * Filtra líneas de commits duplicados dentro del contenido markdown.
+ * Solo descarta la línea si el hash detectado:
+ * 1) pertenece a entryCommits (commits declarados o descubiertos de esta entrada)
+ * 2) y YA fue visto en un release previo (seenCommits).
  */
-function deduplicateContentLines(content: string, seenCommits: Set<string>): string {
+function deduplicateContentLines(
+  content: string,
+  entryCommits: Set<string>,
+  seenCommits: Set<string>,
+): string {
   if (seenCommits.size === 0) return content;
 
   const lines = content.split("\n");
@@ -116,21 +149,31 @@ function deduplicateContentLines(content: string, seenCommits: Set<string>): str
     const commitMatch = line.match(/\[`?([a-f0-9]{7,40})`?\]/i);
     if (commitMatch) {
       const commitId = commitMatch[1].toLowerCase();
-      // Si el commit ya fue visto en un release más reciente, se descarta la línea repetida
-      if (seenCommits.has(commitId)) {
+      // Solo descartar si el commit pertenece a esta entrada y ya fue publicado en una release previa
+      if (entryCommits.has(commitId) && seenCommits.has(commitId)) {
         continue;
       }
     }
     filteredLines.push(line);
   }
 
-  return filteredLines.join("\n");
+  // Si tras descartar viñetas solo quedan encabezados vacíos o líneas en blanco, limpiar
+  const cleaned = filteredLines.join("\n").trim();
+  const withoutHeadings = cleaned
+    .replace(/^#{1,6}\s+.*$/gm, "")
+    .replace(/\s+/g, "");
+
+  if (withoutHeadings.length === 0) {
+    return "";
+  }
+
+  return cleaned;
 }
 
 /**
  * Obtiene todas las entradas del changelog de un directorio dado (o el directorio por defecto),
  * excluyendo borradores (draft: true), ordenadas por fecha descendente y descartando
- * commits repetidos entre releases.
+ * commits repetidos respecto a publicaciones previas (orden cronológico ascendente).
  */
 export async function getChangelogEntries(
   customDir?: string,
@@ -182,30 +225,44 @@ export async function getChangelogEntries(
     }
   }
 
-  // Ordenar de forma descendente por fecha (el más reciente primero)
-  rawEntries.sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date));
+  // 1. ORDEN ASCENDENTE (de más viejo a más nuevo) para procesar deduplicación cronológica
+  rawEntries.sort((a, b) => a.frontmatter.date.localeCompare(b.frontmatter.date));
 
-  const entries: ChangelogEntry[] = [];
+  const processedAscending: ChangelogEntry[] = [];
   const globalSeenCommits = new Set<string>();
 
   for (const item of rawEntries) {
-    const entryCommits = item.frontmatter.commits || [];
+    // Sembrar commits conocidos tanto de frontmatter como del contenido
+    const contentCommits = extractCommitsFromContent(item.content);
+    const combinedCommits = new Set([
+      ...(item.frontmatter.commits || []),
+      ...contentCommits,
+    ]);
 
-    // Primero filtramos el contenido con los commits ya vistos en releases más recientes
-    const cleanedContent = deduplicateContentLines(item.content, globalSeenCommits);
-    const html = renderMarkdown(cleanedContent);
+    // Filtrar líneas de contenido si contienen commits que YA fueron publicados previamente
+    const cleanedContent = deduplicateContentLines(
+      item.content,
+      combinedCommits,
+      globalSeenCommits,
+    );
 
-    // Luego determinamos cuáles commits de este entry son únicos y los incorporamos al Set
+    // Calcular commits únicos para esta entrada que aún no se habían publicado
     const uniqueEntryCommits: string[] = [];
-    for (const c of entryCommits) {
-      const normalized = c.toLowerCase();
-      if (!globalSeenCommits.has(normalized)) {
+    for (const c of combinedCommits) {
+      if (!globalSeenCommits.has(c)) {
         uniqueEntryCommits.push(c);
-        globalSeenCommits.add(normalized);
+        globalSeenCommits.add(c);
       }
     }
 
-    entries.push({
+    // Regla: si tras la deduplicación no queda contenido sustancial, descartar la release vacía
+    if (!cleanedContent.trim()) {
+      continue;
+    }
+
+    const html = renderMarkdown(cleanedContent);
+
+    processedAscending.push({
       ...item.frontmatter,
       commits: uniqueEntryCommits,
       slug: item.slug,
@@ -214,8 +271,11 @@ export async function getChangelogEntries(
     });
   }
 
-  changelogCacheByDir.set(targetDir, entries);
-  return entries;
+  // 2. ORDEN DESCENDENTE FINAL para la UI y consumidores (más reciente primero)
+  processedAscending.sort((a, b) => b.date.localeCompare(a.date));
+
+  changelogCacheByDir.set(targetDir, processedAscending);
+  return processedAscending;
 }
 
 /**

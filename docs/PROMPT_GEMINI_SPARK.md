@@ -7,15 +7,17 @@ Esta guía proporciona el procedimiento estándar y el prompt exacto a utilizar 
 ## 1. Procedimiento de Publicación con Gemini Spark
 
 1. Abre **Gemini Spark** en el navegador.
-2. Asegúrate de tener a mano el ID (SHA corto o completo) del último commit procesado en el changelog anterior (o deja que Gemini Spark revise los archivos existentes en el historial si tiene contexto del chat).
-3. Pega el **Prompt de la Sección 2** en la sesión de Gemini Spark.
-4. Gemini Spark accederá mediante su navegador a:
-   `https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/`
-5. Gemini Spark leerá la lista de commits, deteniéndose en el último commit ya conocido o filtrando los repetidos.
-6. Copia el archivo Markdown que genere Gemini Spark y guárdalo en:
+2. Pega el **Prompt de la Sección 2** en la sesión de Gemini Spark.
+   > **Nota:** No hace falta que intervengas: el prompt deriva el punto de corte solo desde los changelogs ya publicados en el repositorio.
+3. Gemini Spark ejecutará el flujo de inspección de dos pasos:
+   - **Paso A:** Inspeccionará `src/config/changelog/` en GitHub para leer el changelog más reciente y extraer los commits ya publicados.
+   - **Paso B:** Ingresará a `https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/` y extraerá únicamente los commits que estén por encima de los ya procesados.
+4. Copia el archivo Markdown que genere Gemini Spark y guárdalo en:
    `src/config/changelog/YYYY-MM-DD.md` (reemplazando `YYYY-MM-DD` por la fecha de hoy o del release).
-7. Verifica que el archivo generado tenga la lista de IDs de commit en el frontmatter (`commits: [...]`) y que **NO** tenga `draft: true`.
-8. Guarda y comitea el nuevo archivo en Git. Si accidentalmente un commit ya estaba presente en un changelog anterior, el sistema del portal descartará duplicados automáticamente.
+5. Verifica que el archivo generado tenga la lista de IDs de commit en el frontmatter (`commits: [...]`) y que **NO** tenga `draft: true`.
+6. Guarda y comitea el nuevo archivo en Git. Si accidentalmente un commit ya estuviera presente en un changelog anterior, el sistema del portal descartará duplicados automáticamente.
+
+> **NOTA OPERATIVA:** Si el repositorio es PRIVADO, la sesión del navegador de Gemini Spark tiene que estar autenticada en GitHub con una cuenta que tenga permisos de lectura sobre el repositorio, o los pasos A3/A4 no le devolverán nada. Verificarlo una vez antes de depender del flujo.
 
 ---
 
@@ -26,16 +28,25 @@ Copiar y pegar lo siguiente en Gemini Spark:
 ```markdown
 Actúa como Technical Writer y Product Manager del "Portal MDA" (plataforma web interna de soporte y operaciones de Correo Argentino).
 
-INSTRUCCIÓN DE NAVEGACIÓN Y EXTRACCIÓN:
-1. Abre tu navegador y accede a la página de commits del repositorio:
+INSTRUCCIONES DE NAVEGACIÓN Y EXTRACCIÓN EN DOS PASOS:
+
+PASO A — Determinar commits ya publicados:
+1. Abre tu navegador y accede al directorio de changelogs del repositorio:
+   https://github.com/ignaciorevainera/correo-argentino-mda/tree/master/src/config/changelog/
+2. Ubica el archivo .md más reciente (el que tenga la fecha más alta en el nombre, excluyendo 'example.md').
+3. Abre ese archivo y extrae todos los IDs de commit listados en el campo `commits:` del frontmatter YAML, así como cualquier hash [`id`] entre corchetes en las viñetas. Ese es el conjunto de commits ya publicados ("COMMIT_IDS_PUBLICADOS").
+4. Si la carpeta no tiene archivos de release previos o solo contiene example.md, COMMIT_IDS_PUBLICADOS queda vacío y se procesarán todos los commits recientes.
+
+PASO B — Recorrer la página de commits:
+1. Abre la página de commits de la rama principal:
    https://github.com/ignaciorevainera/correo-argentino-mda/commits/master/
-2. Revisa los commits más recientes en la rama 'master'.
-3. CRÍTICO (EVITAR REPETIDOS): Si te indico un commit de corte previo (o revisando la última publicación), procesa ÚNICAMENTE los commits que estén por encima de dicho commit. Si no se indica corte, toma únicamente los commits de los últimos días/semana.
-4. Para cada commit considerado, anota su ID / Hash corto (7 caracteres, ej. "a1b2c3d").
+2. Recorre la lista de commits de más reciente a más antiguo.
+3. Quédate únicamente con los commits cuyo ID corto (7 caracteres) NO esté en COMMIT_IDS_PUBLICADOS. CORTA y detén la lectura en el primer commit que sí esté publicado.
+4. Si por limitaciones de acceso no logras leer el changelog previo en el Paso A (ej. falta de sesión en repo privado), resume los commits visibles de los últimos días y deja que el sistema del portal descarte los duplicados.
 
 REGLAS DE FORMATO Y ESTILO:
 1. La salida DEBE ser un archivo Markdown válido con encabezado Frontmatter YAML al inicio.
-2. Debe incluir una lista YAML con los identificadores de todos los commits procesados en el campo `commits`:
+2. Debe incluir una lista YAML con los identificadores de todos los commits nuevos procesados en el campo `commits`:
    commits:
      - "a1b2c3d"
      - "e4f5a6b"
@@ -68,7 +79,4 @@ commits:
 
 ### 🛠️ Correcciones
 - **[Módulo o Área]:** [Descripción de la solución] [`[id_commit_3]`]
-
----
-(Nota: Si necesitas que me detenga en un commit anterior específico, dime el ID del último commit ya resumido).
 ```

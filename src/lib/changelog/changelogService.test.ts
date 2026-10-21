@@ -3,16 +3,22 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getChangelogEntries, getLatestChangelogDate } from "./changelogService.js";
+import {
+  getChangelogEntries,
+  getLatestChangelogDate,
+  clearChangelogCache,
+} from "./changelogService.js";
 
 test("changelogService - aislamiento y parsing con fixtures temporales", async (t) => {
   let tempDir: string;
 
   t.beforeEach(async () => {
+    clearChangelogCache();
     tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mda-changelog-test-"));
   });
 
   t.afterEach(async () => {
+    clearChangelogCache();
     if (tempDir && fs.existsSync(tempDir)) {
       await fs.promises.rm(tempDir, { recursive: true, force: true });
     }
@@ -26,13 +32,13 @@ test("changelogService - aislamiento y parsing con fixtures temporales", async (
     assert.equal(latestDate, null);
   });
 
-  await t.test("parsea, filtra borradores (draft: true) y ordena cronológicamente de forma descendente", async () => {
-    // Fixture 1: Release intermedio (2026-10-10)
+  await t.test("parsea, normaliza fechas ISO completas, filtra borradores (draft: true) y ordena cronológicamente de forma descendente", async () => {
+    // Fixture 1: Release intermedio (2026-10-10) con fecha ISO compleja
     await fs.promises.writeFile(
       path.join(tempDir, "2026-10-10.md"),
       `---
 title: "Actualización de Octubre 1"
-date: "2026-10-10"
+date: "2026-10-10T14:30:00Z"
 version: "v1.2.0"
 commits:
   - "1111aaa"
@@ -94,39 +100,25 @@ commits:
     assert.equal(entries[0].date, "2026-10-20");
     assert.equal(entries[0].title, "Actualización de Octubre 2");
     assert.deepEqual(entries[0].commits, ["2222bbb"]);
+
+    // Verificar normalización de fecha YYYY-MM-DD
     assert.equal(entries[1].date, "2026-10-10");
     assert.equal(entries[2].date, "2026-09-15");
 
     // Verificar que el contenido HTML haya sido procesado
     assert.match(entries[0].html, /Nuevo visor de novedades/);
 
-    // Verificar latest date
+    // Verificar latest date normalizado
     const latestDate = await getLatestChangelogDate(tempDir);
     assert.equal(latestDate, "2026-10-20");
   });
 
-  await t.test("descarta commits repetidos entre releases", async () => {
-    // Release más reciente (2026-10-22) incluye commit repetido 'aabbccd'
-    await fs.promises.writeFile(
-      path.join(tempDir, "2026-10-22.md"),
-      `---
-title: "Release 22"
-date: "2026-10-22"
-commits:
-  - "aabbccd"
-  - "1234567"
----
-### Funciones
-- Feature reciente [\`1234567\`]
-- Feature compartida previa [\`aabbccd\`]
-`
-    );
-
-    // Release anterior (2026-10-21) que ya tenía el commit 'aabbccd'
+  await t.test("deduplicación: preserva el release original anterior y descarta repeticiones en releases nuevos", async () => {
+    // Release ORIGINAL anterior (2026-10-21) que publicó originalmente 'aabbccd'
     await fs.promises.writeFile(
       path.join(tempDir, "2026-10-21.md"),
       `---
-title: "Release 21"
+title: "Release 21 Original"
 date: "2026-10-21"
 commits:
   - "aabbccd"
@@ -134,17 +126,109 @@ commits:
 ---
 ### Funciones
 - Feature original [\`aabbccd\`]
-- Feature única [\`8901234\`]
+- Feature única 21 [\`8901234\`]
+`
+    );
+
+    // Release NUEVO posterior (2026-10-22) que intenta repetir 'aabbccd' y trae una feature nueva '1234567'
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-22.md"),
+      `---
+title: "Release 22 Nuevo"
+date: "2026-10-22"
+commits:
+  - "aabbccd"
+  - "1234567"
+---
+### Funciones
+- Feature repetida que debe descartarse [\`aabbccd\`]
+- Feature nueva 22 [\`1234567\`]
 `
     );
 
     const entries = await getChangelogEntries(tempDir);
     assert.equal(entries.length, 2);
 
-    // En el release 22 (más reciente), 'aabbccd' fue consumido primero
-    assert.deepEqual(entries[0].commits, ["aabbccd", "1234567"]);
+    // En la salida (orden descendente por fecha):
+    // entries[0] es Release 22 (más reciente): debe conservar SOLO el commit nuevo '1234567'
+    assert.equal(entries[0].title, "Release 22 Nuevo");
+    assert.deepEqual(entries[0].commits, ["1234567"]);
+    assert.doesNotMatch(entries[0].html, /Feature repetida/);
+    assert.match(entries[0].html, /Feature nueva 22/);
 
-    // En el release 21 (anterior), 'aabbccd' es descartado por duplicación y sólo queda '8901234'
-    assert.deepEqual(entries[1].commits, ["8901234"]);
+    // entries[1] es Release 21 (original): debe conservar 'aabbccd' y '8901234' intactos
+    assert.equal(entries[1].title, "Release 21 Original");
+    assert.deepEqual(entries[1].commits, ["aabbccd", "8901234"]);
+    assert.match(entries[1].html, /Feature original/);
+    assert.match(entries[1].html, /Feature única 21/);
+  });
+
+  await t.test("descarta releases que queden vacías tras la deduplicación completa", async () => {
+    // Release previo (2026-10-15)
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-15.md"),
+      `---
+title: "Release Inicial"
+date: "2026-10-15"
+commits:
+  - "fedcba9"
+---
+### Funciones
+- Feature inicial [\`fedcba9\`]
+`
+    );
+
+    // Release posterior (2026-10-16) cuyos commits son 100% repetidos del anterior
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-16.md"),
+      `---
+title: "Release 100% Repetido"
+date: "2026-10-16"
+commits:
+  - "fedcba9"
+---
+### Funciones
+- Feature idéntica re-subida [\`fedcba9\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    // Debe descartar Release 100% Repetido y listar solo Release Inicial
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].title, "Release Inicial");
+  });
+
+  await t.test("deduplica hashes detectados en el contenido aunque no figuren en frontmatter commits:", async () => {
+    // Release anterior que solo tiene el hash en las viñetas, sin frontmatter commits:
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-01.md"),
+      `---
+title: "Release Sin Frontmatter Commits"
+date: "2026-10-01"
+---
+### Mejoras
+- Mejora con hash en viñeta [\`7778889\`]
+`
+    );
+
+    // Release nuevo que repite ese mismo hash
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-02.md"),
+      `---
+title: "Release Repetidor"
+date: "2026-10-02"
+---
+### Mejoras
+- Intento de duplicar mejora [\`7778889\`]
+- Mejora genuina nueva [\`9990001\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    assert.equal(entries.length, 2);
+    // En el release nuevo (entries[0]), el hash repetido se descartó
+    assert.doesNotMatch(entries[0].html, /Intento de duplicar/);
+    assert.match(entries[0].html, /Mejora genuina nueva/);
+    assert.deepEqual(entries[0].commits, ["9990001"]);
   });
 });
