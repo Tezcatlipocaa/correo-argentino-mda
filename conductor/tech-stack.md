@@ -39,7 +39,7 @@
 - **Changelog & Content Loading (2026-10-20):**
   - Almacenamiento de notas de cambios en archivos Markdown bajo `src/config/changelog/`.
   - Carga resiliente en servidor con resolución de candidatos (`../../config/changelog`, `src/config/changelog`, `dist/config/changelog`), tomando en cuenta que en producción el despliegue incluye el repositorio completo.
-  - Parseo de frontmatter YAML mediante la dependencia `yaml` (`yaml: ^2.3.0` ya presente en el proyecto).
+  - Parseo de frontmatter YAML mediante la dependencia `yaml` (`yaml: ^2.3.0`), declarada explícitamente en `dependencies` porque el servidor la importa directo en runtime (`src/lib/changelog/changelogService.ts`).
   - Deduplicación cronológica automática de commits (en orden histórico ascendente) descartando repeticiones en releases posteriores y filtrando releases que queden vacías.
   - Cache en memoria por directorio (`Map<string, ChangelogEntry[]>`) para evitar lecturas de disco redundantes en el renderizado global de navbar, sin acoplar o contaminar ejecuciones con directorios temporales en tests.
   - Procesamiento seguro reutilizando exclusivamente `renderMarkdown()` de `src/lib/markdown.ts` (marked + sanitize-html sin atributo `class` para evitar UI-redressing y con degradación segura de imágenes no autorizadas a `<span>`).

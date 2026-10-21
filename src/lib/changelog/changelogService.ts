@@ -131,33 +131,35 @@ function parseFrontmatterAndContent(fileContent: string): {
 /**
  * Filtra líneas de commits duplicados dentro del contenido markdown.
  * Solo descarta la línea si el hash detectado:
- * 1) pertenece a entryCommits (commits declarados o descubiertos de esta entrada)
+ * 1) pertenece a entryCommits (exclusivamente frontmatter `commits:`)
  * 2) y YA fue visto en un release previo (seenCommits).
+ *
+ * Siempre normaliza y valida que exista contenido sustancial más allá de encabezados vacíos.
  */
 function deduplicateContentLines(
   content: string,
   entryCommits: Set<string>,
   seenCommits: Set<string>,
 ): string {
-  if (seenCommits.size === 0) return content;
-
   const lines = content.split("\n");
   const filteredLines: string[] = [];
 
   for (const line of lines) {
-    // Detectar si la viñeta referencia un commit [id] o [`id`]
-    const commitMatch = line.match(/\[`?([a-f0-9]{7,40})`?\]/i);
-    if (commitMatch) {
-      const commitId = commitMatch[1].toLowerCase();
-      // Solo descartar si el commit pertenece a esta entrada y ya fue publicado en una release previa
-      if (entryCommits.has(commitId) && seenCommits.has(commitId)) {
-        continue;
+    if (seenCommits.size > 0) {
+      // Detectar si la viñeta referencia un commit [id] o [`id`]
+      const commitMatch = line.match(/\[`?([a-f0-9]{7,40})`?\]/i);
+      if (commitMatch) {
+        const commitId = commitMatch[1].toLowerCase();
+        // Solo descartar si el commit pertenece explícitamente a este entry y ya fue publicado
+        if (entryCommits.has(commitId) && seenCommits.has(commitId)) {
+          continue;
+        }
       }
     }
     filteredLines.push(line);
   }
 
-  // Si tras descartar viñetas solo quedan encabezados vacíos o líneas en blanco, limpiar
+  // Limpiar y verificar si solo quedan encabezados vacíos o líneas en blanco
   const cleaned = filteredLines.join("\n").trim();
   const withoutHeadings = cleaned
     .replace(/^#{1,6}\s+.*$/gm, "")
@@ -232,17 +234,20 @@ export async function getChangelogEntries(
   const globalSeenCommits = new Set<string>();
 
   for (const item of rawEntries) {
-    // Sembrar commits conocidos tanto de frontmatter como del contenido
+    // 1. entryCommits para decidir descarte de líneas: ÚNICAMENTE frontmatter `commits:`
+    const entryCommits = new Set(item.frontmatter.commits || []);
+
+    // 2. combinedCommits para sembrar el set global de commits vistos: frontmatter + hashes extraídos
     const contentCommits = extractCommitsFromContent(item.content);
     const combinedCommits = new Set([
-      ...(item.frontmatter.commits || []),
+      ...entryCommits,
       ...contentCommits,
     ]);
 
-    // Filtrar líneas de contenido si contienen commits que YA fueron publicados previamente
+    // Filtrar líneas de contenido usando entryCommits estricto
     const cleanedContent = deduplicateContentLines(
       item.content,
-      combinedCommits,
+      entryCommits,
       globalSeenCommits,
     );
 

@@ -198,8 +198,40 @@ commits:
     assert.equal(entries[0].title, "Release Inicial");
   });
 
+  await t.test("descarta entrada inicial más vieja si solo contiene encabezados sin viñetas ni texto sustancial", async () => {
+    // Release inicial que solo tiene encabezado vacío sin viñetas
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-01.md"),
+      `---
+title: "Release Vacío Inicial"
+date: "2026-10-01"
+---
+### ✨ Nuevas Funciones
+`
+    );
+
+    // Release posterior válido
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-05.md"),
+      `---
+title: "Release Válido"
+date: "2026-10-05"
+commits:
+  - "1122334"
+---
+### ✨ Nuevas Funciones
+- Feature real [\`1122334\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    // Debe descartar el release inicial vacío y retornar únicamente el válido
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].title, "Release Válido");
+  });
+
   await t.test("deduplica hashes detectados en el contenido aunque no figuren en frontmatter commits:", async () => {
-    // Release anterior que solo tiene el hash en las viñetas, sin frontmatter commits:
+    // Release anterior que tiene un commit declarado en frontmatter
     await fs.promises.writeFile(
       path.join(tempDir, "2026-10-01.md"),
       `---
@@ -211,12 +243,15 @@ date: "2026-10-01"
 `
     );
 
-    // Release nuevo que repite ese mismo hash
+    // Release nuevo que tiene declarado '7778889' en frontmatter pero intenta repetirlo
     await fs.promises.writeFile(
       path.join(tempDir, "2026-10-02.md"),
       `---
 title: "Release Repetidor"
 date: "2026-10-02"
+commits:
+  - "7778889"
+  - "9990001"
 ---
 ### Mejoras
 - Intento de duplicar mejora [\`7778889\`]
@@ -230,5 +265,40 @@ date: "2026-10-02"
     assert.doesNotMatch(entries[0].html, /Intento de duplicar/);
     assert.match(entries[0].html, /Mejora genuina nueva/);
     assert.deepEqual(entries[0].commits, ["9990001"]);
+  });
+
+  await t.test("un token hex entre corchetes que NO pertenece al frontmatter commits no causa descarte accidental de línea", async () => {
+    // Release 1 con hash de commit 'abcdef1'
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-01.md"),
+      `---
+title: "Release 1"
+date: "2026-10-01"
+commits:
+  - "abcdef1"
+---
+### Mejoras
+- Feature 1 [\`abcdef1\`]
+`
+    );
+
+    // Release 2 con un token hex fortuito entre corchetes pero que NO es commit declarado en este entry
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-02.md"),
+      `---
+title: "Release 2"
+date: "2026-10-02"
+commits:
+  - "9999999"
+---
+### Mejoras
+- Enlace o mención con código [abcdef1] sin ser commit de esta release [\`9999999\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    assert.equal(entries.length, 2);
+    // La línea de Release 2 NO fue descartada porque 'abcdef1' no estaba en sus commits:
+    assert.match(entries[0].html, /Enlace o mención con código/);
   });
 });
