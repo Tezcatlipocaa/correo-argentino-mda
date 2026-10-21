@@ -28,7 +28,7 @@
   - [x] Commit de actualización de plan.md (`conductor(plan): Mark phase 'Phase 1' as complete`)
   - [x] Presentar plan de verificación manual detallado y esperar confirmación explícita del usuario
 
-## Phase 2: Permisos RBAC, Vista `/changelog` y Reutilización de Componentes UI [checkpoint: 8e7b2a1d]
+## Phase 2: Permisos RBAC, Vista `/changelog` y Reutilización de Componentes UI [checkpoint: f40b0d63]
 - [x] Task: Registrar permisos de ruta en RBAC y actualizar documentación (8e7b2a1d)
   - [x] Agregar `{ path: "/changelog", roles: ALL_ROLES }` en `routePermissions` dentro de `src/lib/rbac.ts`
   - [x] Actualizar el sitemap en `docs/CONTEXT.md` incorporando la ruta `/changelog`
