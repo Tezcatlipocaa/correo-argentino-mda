@@ -1,0 +1,291 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PageContainer from "@components/ui/PageContainer.astro";
+import PageHeader from "@components/ui/PageHeader.astro";
+import SectionCard from "@components/ui/SectionCard.astro";
+import SearchEmptyState from "@components/ui/SearchEmptyState.astro";
+import { Icon } from "astro-icon/components";
+import { getChangelogEntries, getLatestChangelogDate } from "@lib/changelog/changelogService";
+
+const entries = await getChangelogEntries();
+const latestDate = await getLatestChangelogDate() || "";
+---
+
+<BaseLayout title="Novedades del Portal | MDA">
+  <PageContainer width="default" gap="md" class="py-6">
+    <PageHeader
+      title="Novedades del Portal"
+      description="Historial de actualizaciones, nuevas funcionalidades, mejoras operativas y correcciones del Portal MDA."
+    />
+
+    <!-- Controles de búsqueda y filtros -->
+    <div
+      class="card bg-base-100 border-base-300 border p-4 shadow-xs"
+      data-changelog-latest={latestDate}
+      id="changelog-root"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="relative flex-1">
+          <Icon
+            name="boxicons:search"
+            size={20}
+            class="text-base-content/50 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            is:inline
+          />
+          <input
+            type="search"
+            id="changelog-search"
+            placeholder="Buscar en novedades..."
+            class="input input-sm input-bordered w-full pl-9 focus:outline-hidden focus:border-primary"
+            aria-label="Buscar en novedades"
+          />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-base-content/70 text-xs font-semibold">Filtrar:</span>
+          <button
+            type="button"
+            class="btn btn-xs btn-primary filter-btn"
+            data-filter="all"
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            class="btn btn-xs btn-ghost filter-btn"
+            data-filter="funciones"
+          >
+            ✨ Nuevas Funciones
+          </button>
+          <button
+            type="button"
+            class="btn btn-xs btn-ghost filter-btn"
+            data-filter="mejoras"
+          >
+            🚀 Mejoras
+          </button>
+          <button
+            type="button"
+            class="btn btn-xs btn-ghost filter-btn"
+            data-filter="correcciones"
+          >
+            🛠️ Correcciones
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de releases / changelog -->
+    {entries.length === 0 ? (
+      <SearchEmptyState
+        class="flex"
+        title="Sin novedades registradas"
+        description="Aún no hay publicaciones de novedades o notas de versión disponibles en el portal."
+        icon="boxicons:news-filled"
+      />
+    ) : (
+      <div id="changelog-list" class="flex flex-col gap-6">
+        {entries.map((entry) => (
+          <article
+            class="changelog-item transition-all duration-200"
+            data-title={entry.title.toLowerCase()}
+            data-date={entry.date}
+            data-version={entry.version?.toLowerCase() ?? ""}
+            data-content={entry.content.toLowerCase()}
+          >
+            <SectionCard
+              id={`release-${entry.slug}`}
+              class="border-base-300 overflow-hidden shadow-xs hover:border-base-content/30"
+            >
+              <div slot="default" class="card-body p-6">
+                <!-- Cabecera de la versión / release -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-200 pb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="badge badge-primary badge-lg font-mono font-bold text-xs tracking-wide">
+                      {entry.version ? entry.version : "Actualización"}
+                    </div>
+                    <h2 class="text-base-content text-lg font-bold">
+                      {entry.title}
+                    </h2>
+                  </div>
+
+                  <div class="flex items-center gap-2 text-base-content/60 text-xs font-medium">
+                    <Icon name="boxicons:calendar-filled" size={16} is:inline class="text-base-content/50" />
+                    <time datetime={entry.date}>{entry.date}</time>
+                    {entry.commits && entry.commits.length > 0 && (
+                      <span class="badge badge-ghost badge-sm text-base-content/60 font-mono">
+                        {entry.commits.length} {entry.commits.length === 1 ? "commit" : "commits"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {entry.highlights && (
+                  <div class="bg-base-200/50 text-base-content/80 rounded-lg p-3 text-sm italic border-l-4 border-primary">
+                    {entry.highlights}
+                  </div>
+                )}
+
+                <!-- Contenido sanitizado -->
+                <div
+                  class="changelog-prose text-base-content text-sm space-y-3"
+                  set:html={entry.html}
+                />
+              </div>
+            </SectionCard>
+          </article>
+        ))}
+      </div>
+    )}
+
+    <!-- Empty state ante filtros de búsqueda sin resultados -->
+    <SearchEmptyState
+      id="changelog-search-empty"
+      title="Sin coincidencias"
+      description="No se encontraron novedades que coincidan con los filtros o término de búsqueda ingresado."
+      icon="boxicons:search"
+      showClearButton={true}
+      clearButtonId="changelog-clear-search-btn"
+    />
+  </PageContainer>
+</BaseLayout>
+
+<style is:global>
+  /* Tipografía scoped para el HTML proveniente de renderMarkdown */
+  .changelog-prose h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-base-content);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .changelog-prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .changelog-prose li {
+    margin-bottom: 0.35rem;
+    line-height: 1.5;
+  }
+  .changelog-prose strong {
+    color: var(--color-base-content);
+    font-weight: 600;
+  }
+  .changelog-prose code {
+    background-color: var(--color-base-200);
+    padding: 0.15rem 0.35rem;
+    border-radius: 0.25rem;
+    font-size: 0.8em;
+    font-family: var(--font-mono, monospace);
+  }
+</style>
+
+<script>
+  function setupChangelogClient() {
+    const root = document.getElementById("changelog-root");
+    const searchInput = document.getElementById("changelog-search") as HTMLInputElement | null;
+    const items = document.querySelectorAll<HTMLElement>(".changelog-item");
+    const emptyState = document.getElementById("changelog-search-empty");
+    const clearBtn = document.getElementById("changelog-clear-search-btn");
+    const filterBtns = document.querySelectorAll<HTMLButtonElement>(".filter-btn");
+
+    // 1. Guardar última fecha vista en localStorage al entrar
+    const latestDate = root?.getAttribute("data-changelog-latest");
+    if (latestDate) {
+      localStorage.setItem("portal_mda_changelog_last_read", latestDate);
+    }
+
+    if (!items.length) return;
+
+    let activeFilter = "all";
+    let searchQuery = "";
+
+    function applyFilters() {
+      let visibleCount = 0;
+
+      items.forEach((item) => {
+        const title = item.getAttribute("data-title") || "";
+        const version = item.getAttribute("data-version") || "";
+        const content = item.getAttribute("data-content") || "";
+
+        const matchesSearch =
+          !searchQuery ||
+          title.includes(searchQuery) ||
+          version.includes(searchQuery) ||
+          content.includes(searchQuery);
+
+        let matchesFilter = true;
+        if (activeFilter === "funciones") {
+          matchesFilter = content.includes("nuevas funciones") || content.includes("funciones");
+        } else if (activeFilter === "mejoras") {
+          matchesFilter = content.includes("mejoras") || content.includes("mejora");
+        } else if (activeFilter === "correcciones") {
+          matchesFilter = content.includes("correcciones") || content.includes("corrección");
+        }
+
+        if (matchesSearch && matchesFilter) {
+          item.classList.remove("hidden");
+          visibleCount++;
+        } else {
+          item.classList.add("hidden");
+        }
+      });
+
+      if (emptyState) {
+        if (visibleCount === 0) {
+          emptyState.classList.remove("hidden");
+          emptyState.classList.add("flex");
+        } else {
+          emptyState.classList.add("hidden");
+          emptyState.classList.remove("flex");
+        }
+      }
+    }
+
+    searchInput?.addEventListener("input", (e) => {
+      searchQuery = (e.target as HTMLInputElement).value.trim().toLowerCase();
+      applyFilters();
+    });
+
+    filterBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        filterBtns.forEach((b) => {
+          b.classList.remove("btn-primary");
+          b.classList.add("btn-ghost");
+        });
+        btn.classList.remove("btn-ghost");
+        btn.classList.add("btn-primary");
+
+        activeFilter = btn.getAttribute("data-filter") || "all";
+        applyFilters();
+      });
+    });
+
+    clearBtn?.addEventListener("click", () => {
+      if (searchInput) searchInput.value = "";
+      searchQuery = "";
+      activeFilter = "all";
+      filterBtns.forEach((b) => {
+        if (b.getAttribute("data-filter") === "all") {
+          b.classList.remove("btn-ghost");
+          b.classList.add("btn-primary");
+        } else {
+          b.classList.remove("btn-primary");
+          b.classList.add("btn-ghost");
+        }
+      });
+      applyFilters();
+    });
+  }
+
+  // Inicializar al cargar el DOM o ante transiciones de página
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupChangelogClient);
+  } else {
+    setupChangelogClient();
+  }
+</script>

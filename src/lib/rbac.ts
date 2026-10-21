@@ -155,6 +155,7 @@ export const routePermissions: RoutePermission[] = [
   // Astro Actions (/_actions/*): los checks de rol viven dentro de cada
   // action (context.locals.user); el middleware solo exige sesion valida.
   { path: "/_actions", roles: ALL_ROLES },
+  { path: "/changelog", roles: ALL_ROLES },
   { path: "/profile", roles: ALL_ROLES },
   { path: "/buscador-usuarios", roles: ALL_ROLES },
   { path: "/contactos", roles: ALL_ROLES },
