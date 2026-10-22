@@ -30,6 +30,47 @@ test.afterAll(async () => {
   await db.delete(users).where(eq(users.id, testUserId));
 });
 
+test.describe("Login shell", () => {
+  test("no renderiza sidebar ni header autenticado", async ({ page }) => {
+    await page.goto("/login");
+
+    await expect(page.locator("nav.navbar")).toHaveCount(0);
+    await expect(page.locator("#main-drawer")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Portal MDA" }),
+    ).toBeVisible();
+    const generatorLink = page.getByRole("link", {
+      name: /generador de firmas/i,
+    });
+    await expect(generatorLink).toHaveAttribute("href", /\/generador-firmas$/);
+    await expect
+      .poll(() =>
+        page
+          .locator("main img")
+          .first()
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBeGreaterThan(0);
+  });
+});
+
+test.describe("Generador de firmas público", () => {
+  test("usa chrome mínimo sin sidebar ni búsqueda", async ({ page }) => {
+    await page.goto("/generador-firmas");
+
+    await expect(page.locator("#main-drawer")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /búsqueda maestra/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: /iniciar sesión/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Generador de firmas" }),
+    ).toBeVisible();
+  });
+});
+
 test.describe("S3.2 Login message enumeration", () => {
   test("wrong password returns generic message", async ({ request }) => {
     const response = await request.post("/login", {
