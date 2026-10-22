@@ -140,5 +140,8 @@
 - [ ] **Track: Visor de Changelog y Novedades del Portal**
   *Link: [./tracks/changelog_visor_20261020/index.md](./tracks/changelog_visor_20261020/index.md)*
 ---
-- [ ] **Track: Skill de Generación de Changelog y Corrección del Servicio / Releases**
+- [x] **Track: Skill de Generación de Changelog y Corrección del Servicio / Releases**
   *Link: [./tracks/changelog_agent_skill_20261022/index.md](./tracks/changelog_agent_skill_20261022/index.md)*
+---
+- [ ] **Track: Métricas de Código (Líneas +/-) y Estimación de Horas en Changelog**
+  *Link: [./tracks/changelog_stats_metrics_20261022/index.md](./tracks/changelog_stats_metrics_20261022/index.md)*
