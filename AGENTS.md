@@ -42,10 +42,11 @@
 
 ## Testing
 
-- `npm run test:domain` — tests de dominio con `node:test` sobre los 7 archivos `*.test.ts` de `src/lib/` (52 tests). **No los cubre vitest**: `vitest.config.ts` incluye únicamente `tests/unit/**`.
-- `npm run test:unit` — vitest sobre `tests/unit/**` (48 archivos, 332 tests). Hay **1 fallo pre-existente** en `tests/unit/navigation/base-conocimiento.test.ts` (no relacionado con edificios); no scopear el glob, ya no hace falta.
-- `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por ese fallo pre-existente; el dominio corre primero para que una regresión real no quede enmascarada.
+- `npm run test:domain` — tests de dominio con `node:test` sobre los `*.test.ts` de `src/lib/` + `src/pages/api/calidad/*.test.ts` (268 tests). **No los cubre vitest**: `vitest.config.ts` incluye únicamente `tests/unit/**`.
+- `npm run test:unit` — vitest sobre `tests/unit/**` (699 tests). Hay **2 fallos pre-existentes** en `tests/unit/phase1-buttons-standardization.test.ts` y `tests/unit/challenger-remaining-empirical.test.ts` (assertions sobre clases de `DirectorioContent`/paginación, no relacionados con el home); no scopear el glob.
+- `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por esos fallos pre-existentes; el dominio corre primero para que una regresión real no quede enmascarada.
 - `npm run test:e2e` — Playwright completo (`tests/**/*.spec.ts`). Workers: 1 (serial). Requiere dev server; ver "Puertos de la suite E2E" abajo.
+- `npm run test:e2e:home` — solo el spec del home personalizado (26 tests: perfiles, calidad-only, simulador de vista, configurador de widgets y de accesos de abajo, vínculo de agente y CSRF).
 - `npm run test:e2e:reconcile` — solo el spec de reconciliación de edificios (7 tests).
 - `npx playwright show-report` — reporte HTML + trazas.
 - No hay CI: los tests corren a mano.
