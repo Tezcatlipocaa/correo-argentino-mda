@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { renderMarkdown } from "../markdown.js";
+import { calculateCommitsStats, type ChangelogStats } from "./changelogStats.js";
 
 export type ChangelogSectionKey = "funciones" | "mejoras" | "correcciones" | "otras";
 
@@ -26,19 +27,28 @@ export interface ChangelogEntry extends ChangelogFrontmatter {
   content: string;
   html: string;
   sections: ChangelogSection[];
+  stats: ChangelogStats;
 }
 
 const changelogCacheByDir = new Map<string, ChangelogEntry[]>();
 
 /**
- * Resuelve la clave de cache para un directorio incluyendo su mtime.
+ * Resuelve la clave de cache para un directorio incluyendo el mtime de cada archivo .md.
  * Esto asegura que si se agrega, modifica o elimina un archivo changelog en disco,
  * el cache se invalida automáticamente tanto en desarrollo como en producción.
  */
 function getCacheKeyForDir(dir: string): string {
   try {
-    const stat = fs.statSync(dir);
-    return `${dir}:${stat.mtimeMs}`;
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    const parts = files.map((f) => {
+      try {
+        const s = fs.statSync(path.join(dir, f));
+        return `${f}:${s.mtimeMs}`;
+      } catch {
+        return `${f}:0`;
+      }
+    });
+    return `${dir}|${parts.join(";")}`;
   } catch {
     return dir;
   }
@@ -46,15 +56,16 @@ function getCacheKeyForDir(dir: string): string {
 
 /**
  * Normaliza una fecha a formato estándar YYYY-MM-DD.
+ * Si no es válida o no existe, usa el fallback provisto o 1970-01-01.
  */
-function normalizeDate(rawDate: unknown): string {
-  if (!rawDate) return "1970-01-01";
+function normalizeDate(rawDate: unknown, fallbackDate = "1970-01-01"): string {
+  if (!rawDate) return fallbackDate;
   const str = String(rawDate).trim();
   const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
   if (match) {
     return match[1];
   }
-  return str;
+  return fallbackDate;
 }
 
 /**
@@ -78,28 +89,36 @@ export function resolveChangelogDir(): string {
 }
 
 /**
- * Normaliza una lista de commits proveniente de frontmatter YAML.
+ * Normaliza un hash de commit a su prefijo canónico de 7 caracteres.
+ */
+function normalizeCommitHash(rawHash: string): string {
+  return rawHash.trim().toLowerCase().slice(0, 7);
+}
+
+/**
+ * Normaliza una lista de commits proveniente de frontmatter YAML a prefijos de 7 caracteres.
  */
 function normalizeCommits(rawCommits: unknown): string[] {
   if (!rawCommits) return [];
   if (Array.isArray(rawCommits)) {
-    return rawCommits.map((c) => String(c).trim().toLowerCase()).filter(Boolean);
+    return rawCommits.map((c) => normalizeCommitHash(String(c))).filter((c) => c.length >= 7);
   }
   if (typeof rawCommits === "string") {
-    return [rawCommits.trim().toLowerCase()].filter(Boolean);
+    const h = normalizeCommitHash(rawCommits);
+    return h.length >= 7 ? [h] : [];
   }
   return [];
 }
 
 /**
- * Extrae todos los hashes de commit referenciados en el contenido Markdown.
+ * Extrae todos los hashes de commit referenciados en el contenido Markdown (normalizados a 7 chars).
  */
 function extractCommitsFromContent(content: string): string[] {
   const matches = content.matchAll(/\[`?([a-f0-9]{7,40})`?\]/gi);
   const found: string[] = [];
   for (const m of matches) {
     if (m[1]) {
-      found.push(m[1].toLowerCase());
+      found.push(normalizeCommitHash(m[1]));
     }
   }
   return found;
@@ -107,19 +126,21 @@ function extractCommitsFromContent(content: string): string[] {
 
 /**
  * Parsea el frontmatter de un documento Markdown delimitado por '---'.
+ * Tolera UTF-8 BOM y deriva la fecha del nombre de archivo como fallback.
  */
-function parseFrontmatterAndContent(fileContent: string): {
+function parseFrontmatterAndContent(fileContent: string, fallbackDate = "1970-01-01"): {
   frontmatter: ChangelogFrontmatter;
   content: string;
 } {
-  const normalized = fileContent.replace(/\r\n/g, "\n");
+  const cleanContent = fileContent.replace(/^\uFEFF/, "");
+  const normalized = cleanContent.replace(/\r\n/g, "\n");
   const match = normalized.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
 
   if (!match) {
     return {
       frontmatter: {
         title: "Actualización sin título",
-        date: "1970-01-01",
+        date: fallbackDate,
         commits: [],
       },
       content: normalized.trim(),
@@ -131,7 +152,7 @@ function parseFrontmatterAndContent(fileContent: string): {
     return {
       frontmatter: {
         title: parsedYaml.title || "Actualización",
-        date: normalizeDate(parsedYaml.date),
+        date: normalizeDate(parsedYaml.date, fallbackDate),
         version: parsedYaml.version,
         draft: Boolean(parsedYaml.draft),
         highlights: parsedYaml.highlights,
@@ -143,7 +164,7 @@ function parseFrontmatterAndContent(fileContent: string): {
     return {
       frontmatter: {
         title: "Actualización",
-        date: "1970-01-01",
+        date: fallbackDate,
         commits: [],
       },
       content: match[2].trim(),
@@ -169,7 +190,7 @@ function deduplicateContentLines(
     if (seenCommits.size > 0) {
       const commitMatch = line.match(/\[`?([a-f0-9]{7,40})`?\]/i);
       if (commitMatch) {
-        const commitId = commitMatch[1].toLowerCase();
+        const commitId = normalizeCommitHash(commitMatch[1]);
         if (entryCommits.has(commitId) && seenCommits.has(commitId)) {
           continue;
         }
@@ -301,13 +322,15 @@ export async function getChangelogEntries(
     try {
       const fullPath = path.join(targetDir, fileName);
       const raw = await fs.promises.readFile(fullPath, "utf-8");
-      const { frontmatter, content } = parseFrontmatterAndContent(raw);
+      const fileBaseName = path.basename(fileName, ".md");
+      const fallbackDate = normalizeDate(fileBaseName, "1970-01-01");
+      const { frontmatter, content } = parseFrontmatterAndContent(raw, fallbackDate);
 
       if (frontmatter.draft) {
         continue;
       }
 
-      const slug = path.basename(fileName, ".md");
+      const slug = fileBaseName;
       rawEntries.push({
         frontmatter,
         content,
@@ -338,14 +361,6 @@ export async function getChangelogEntries(
       globalSeenCommits,
     );
 
-    const uniqueEntryCommits: string[] = [];
-    for (const c of combinedCommits) {
-      if (!globalSeenCommits.has(c)) {
-        uniqueEntryCommits.push(c);
-        globalSeenCommits.add(c);
-      }
-    }
-
     if (!cleanedContent.trim()) {
       continue;
     }
@@ -356,7 +371,16 @@ export async function getChangelogEntries(
       continue;
     }
 
+    const uniqueEntryCommits: string[] = [];
+    for (const c of combinedCommits) {
+      if (!globalSeenCommits.has(c)) {
+        uniqueEntryCommits.push(c);
+        globalSeenCommits.add(c);
+      }
+    }
+
     const html = renderMarkdown(cleanedContent);
+    const stats = calculateCommitsStats(uniqueEntryCommits);
 
     processedAscending.push({
       ...item.frontmatter,
@@ -365,6 +389,7 @@ export async function getChangelogEntries(
       content: cleanedContent,
       html,
       sections,
+      stats,
     });
   }
 

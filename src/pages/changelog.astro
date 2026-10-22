@@ -123,12 +123,45 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
                     </h2>
                   </div>
 
-                  <div class="flex items-center gap-2 text-base-content/60 text-xs font-medium">
-                    <Icon name="boxicons:calendar-filled" size={16} is:inline class="text-base-content/50" />
-                    <time datetime={entry.date}>{entry.date}</time>
+                  <div class="flex flex-wrap items-center gap-2 text-base-content/60 text-xs font-medium">
+                    <div class="flex items-center gap-1.5">
+                      <Icon name="boxicons:calendar-filled" size={16} is:inline class="text-base-content/50" />
+                      <time datetime={entry.date}>{entry.date}</time>
+                    </div>
+
                     {entry.commits && entry.commits.length > 0 && (
                       <span class="badge badge-ghost badge-sm text-base-content/60 font-mono">
                         {entry.commits.length} {entry.commits.length === 1 ? "commit" : "commits"}
+                      </span>
+                    )}
+
+                    {entry.stats && (entry.stats.additions > 0 || entry.stats.deletions > 0) && (
+                      <div class="flex items-center gap-1 font-mono text-xs font-semibold" data-stats-lines>
+                        <span
+                          class="badge badge-sm badge-soft border-0 text-success bg-success/10 font-mono"
+                          title="Líneas agregadas"
+                          data-stats-additions
+                        >
+                          +{entry.stats.additions.toLocaleString("es-AR")}
+                        </span>
+                        <span
+                          class="badge badge-sm badge-soft border-0 text-error bg-error/10 font-mono"
+                          title="Líneas eliminadas"
+                          data-stats-deletions
+                        >
+                          -{entry.stats.deletions.toLocaleString("es-AR")}
+                        </span>
+                      </div>
+                    )}
+
+                    {entry.stats && entry.stats.estimatedHours > 0 && (
+                      <span
+                        class="badge badge-sm badge-ghost border-0 text-base-content/70 flex items-center gap-1 font-mono"
+                        title="Horas aproximadas de trabajo invertidas"
+                        data-stats-hours
+                      >
+                        <Icon name="boxicons:timer" size={13} is:inline class="text-base-content/50" />
+                        ~{entry.stats.formattedHours}
                       </span>
                     )}
                   </div>

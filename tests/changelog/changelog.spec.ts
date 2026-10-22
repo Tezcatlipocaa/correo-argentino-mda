@@ -74,6 +74,11 @@ commits:
     await expect(page.getByText("Actualización Operativa E2E")).toBeVisible();
     await expect(page.getByText("v2.0.0")).toBeVisible();
 
+    // 1b. Verificar presencia de badges de métricas (líneas agregadas/eliminadas y horas)
+    await expect(page.locator("[data-stats-additions]").first()).toBeVisible();
+    await expect(page.locator("[data-stats-deletions]").first()).toBeVisible();
+    await expect(page.locator("[data-stats-hours]").first()).toBeVisible();
+
     // 2. Probar filtro por sección
     const filterMejorasBtn = page.locator('button[data-filter="mejoras"]');
     await expect(filterMejorasBtn).toBeVisible();
@@ -81,10 +86,10 @@ commits:
     await expect(filterMejorasBtn).toHaveAttribute("aria-pressed", "true");
 
     // El bloque de mejoras debe ser visible
-    await expect(page.locator('.changelog-section-block[data-section="mejoras"]')).toBeVisible();
+    await expect(page.locator('.changelog-section-block[data-section="mejoras"]').first()).toBeVisible();
 
     // El bloque de funciones debe ocultarse
-    await expect(page.locator('.changelog-section-block[data-section="funciones"]')).toBeHidden();
+    await expect(page.locator('.changelog-section-block[data-section="funciones"]').first()).toBeHidden();
 
     // 3. Probar buscador de texto
     const searchInput = page.locator("#changelog-search");

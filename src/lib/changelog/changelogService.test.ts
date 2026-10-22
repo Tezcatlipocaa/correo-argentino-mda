@@ -360,4 +360,145 @@ commits:
     assert.match(entry.sections[4].title, /Corrección de estabilidad/);
     assert.match(entry.sections[4].html, /Patch operativo/);
   });
+
+  await t.test("invalidación reactiva de cache: detecta cambios en mtime de un archivo individual sin modificar la carpeta", async () => {
+    const filePath = path.join(tempDir, "2026-10-15.md");
+    await fs.promises.writeFile(
+      filePath,
+      `---
+title: "Versión Inicial"
+date: "2026-10-15"
+commits:
+  - "aaaa111"
+---
+### Mejoras
+- Primera versión [\`aaaa111\`]
+`
+    );
+
+    const initialEntries = await getChangelogEntries(tempDir);
+    assert.equal(initialEntries.length, 1);
+    assert.equal(initialEntries[0].title, "Versión Inicial");
+
+    // Modificamos el archivo y actualizamos artificialmente su mtime
+    await fs.promises.writeFile(
+      filePath,
+      `---
+title: "Versión Modificada"
+date: "2026-10-15"
+commits:
+  - "aaaa111"
+---
+### Mejoras
+- Texto modificado tras edición [\`aaaa111\`]
+`
+    );
+    const newTime = new Date(Date.now() + 2000);
+    fs.utimesSync(filePath, newTime, newTime);
+
+    // Debe invalidar automáticamente el cache sin invocar clearChangelogCache()
+    const updatedEntries = await getChangelogEntries(tempDir);
+    assert.equal(updatedEntries.length, 1);
+    assert.equal(updatedEntries[0].title, "Versión Modificada");
+    assert.match(updatedEntries[0].html, /Texto modificado tras edición/);
+  });
+
+  await t.test("deduplicación tolerante con prefijo de 7 caracteres entre hash largo y corto", async () => {
+    // Release 1 con hash largo de 40 caracteres en frontmatter y viñeta
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-14.md"),
+      `---
+title: "Release Base"
+date: "2026-10-14"
+commits:
+  - "f71cdc1234567890abcdef1234567890abcdef12"
+---
+### Nuevas Funciones
+- Feature inicial [\`f71cdc1234567890abcdef1234567890abcdef12\`]
+`
+    );
+
+    // Release 2 intenta publicar el mismo commit con hash corto de 7 caracteres
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-15.md"),
+      `---
+title: "Release Posterior"
+date: "2026-10-15"
+commits:
+  - "f71cdc1"
+---
+### Nuevas Funciones
+- Intento de duplicar feature inicial [\`f71cdc1\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    // Release Posterior debe descartarse porque su único commit es idéntico por prefijo de 7 caracteres
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].date, "2026-10-14");
+  });
+
+  await t.test("un release descartado por duplicación NO quema sus commits para releases posteriores", async () => {
+    // Release 1: publica commit 1111111
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-10.md"),
+      `---
+title: "Release 10"
+date: "2026-10-10"
+commits:
+  - "1111111"
+---
+### Mejoras
+- Mejora 10 [\`1111111\`]
+`
+    );
+
+    // Release 2 (duplicado total del commit 1111111): se descartará por vacío
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-11.md"),
+      `---
+title: "Release 11 (duplicado)"
+date: "2026-10-11"
+commits:
+  - "1111111"
+---
+### Mejoras
+- Copia de mejora 10 [\`1111111\`]
+`
+    );
+
+    // Release 3: publica commit legítimo 2222222
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-12.md"),
+      `---
+title: "Release 12"
+date: "2026-10-12"
+commits:
+  - "2222222"
+---
+### Nuevas Funciones
+- Función genuina 12 [\`2222222\`]
+`
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    assert.equal(entries.length, 2, "Deben quedar el release 10 y el release 12");
+    assert.equal(entries[0].date, "2026-10-12");
+    assert.equal(entries[1].date, "2026-10-10");
+  });
+
+  await t.test("tolerancia a UTF-8 BOM y fallback al nombre de archivo ante fecha ausente", async () => {
+    // Archivo con Byte Order Mark (BOM: \uFEFF) y sin fecha explícita en frontmatter
+    const bomContent = "\uFEFF---\ntitle: \"Release con BOM\"\nversion: \"v1.0\"\ncommits:\n  - \"9999999\"\n---\n### Mejoras\n- Fix de compatibilidad [\\`9999999\\`]\n";
+    await fs.promises.writeFile(
+      path.join(tempDir, "2026-10-18.md"),
+      bomContent,
+      "utf-8"
+    );
+
+    const entries = await getChangelogEntries(tempDir);
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].title, "Release con BOM");
+    assert.equal(entries[0].date, "2026-10-18", "Debe derivar la fecha 2026-10-18 del nombre del archivo");
+  });
 });
