@@ -47,6 +47,7 @@
 - `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por ese fallo pre-existente; el dominio corre primero para que una regresión real no quede enmascarada.
 - `npm run test:e2e` — Playwright completo (`tests/**/*.spec.ts`). Workers: 1 (serial). Requiere dev server; ver "Puertos de la suite E2E" abajo.
 - `npm run test:e2e:reconcile` — solo el spec de reconciliación de edificios (7 tests).
+- `npm run changelog:validate` — valida integridad de archivos Markdown en `src/config/changelog/` (fechas ISO, existencia de commits en git, ausencia de commits duplicados entre releases, ausencia de links markdown externos y parseo exitoso).
 - `npx playwright show-report` — reporte HTML + trazas.
 - No hay CI: los tests corren a mano.
 - La sección **Testing policy** (arriba) gobierna cómo se _escriben_ los tests; esta gobierna cómo se _ejecutan_.
