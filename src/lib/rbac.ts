@@ -107,11 +107,11 @@ export const routePermissions: RoutePermission[] = [
   },
   {
     path: "/supervision/autogestiones-metricas",
-    roles: ["admin", "supervisor", "team_leader"],
+    roles: ["admin", "supervisor", "team_leader", "referent"],
   },
   {
     path: "/supervision/asignacion-autogestiones",
-    roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
+    roles: ["admin", "supervisor", "team_leader", "referent"],
   },
   {
     path: "/supervision",
@@ -266,8 +266,8 @@ export function getModulePermissions(
       perm.canViewTotals = false;
     }
   } else if (moduleName === "asignacion_ag") {
-    // Todos leen
-    perm.canRead = true;
+    // Leen: referente, team_leader, supervisor, admin
+    perm.canRead = rank >= ROLE_HIERARCHY.referent;
     // Escriben: todos excepto agent
     perm.canWrite = rank >= ROLE_HIERARCHY.referent;
   } else if (moduleName === "calidad") {
