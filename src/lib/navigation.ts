@@ -108,11 +108,6 @@ export const navSections: NavSection[] = [
         icon: "boxicons:book-bookmark-filled",
       },
       {
-        href: "/changelog",
-        label: "Novedades del Portal",
-        icon: "boxicons:news-filled",
-      },
-      {
         href: "/automatizaciones",
         label: "Automatizaciones",
         icon: "boxicons:rocket-filled",

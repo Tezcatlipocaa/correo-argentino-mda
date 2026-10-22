@@ -77,7 +77,6 @@ commits:
     // 1b. Verificar presencia de badges de métricas (líneas agregadas/eliminadas y horas)
     await expect(page.locator("[data-stats-additions]").first()).toBeVisible();
     await expect(page.locator("[data-stats-deletions]").first()).toBeVisible();
-    await expect(page.locator("[data-stats-hours]").first()).toBeVisible();
 
     // 2. Probar filtro por sección
     const filterMejorasBtn = page.locator('button[data-filter="mejoras"]');

@@ -10,11 +10,11 @@ import { getChangelogEntries, getLatestChangelogDate, type ChangelogSectionKey }
 const entries = await getChangelogEntries();
 const latestDate = (await getLatestChangelogDate()) || "";
 
-const badgeClassBySectionKey: Record<ChangelogSectionKey, string> = {
-  funciones: "badge-secondary text-secondary-content",
-  mejoras: "badge-info text-info-content",
-  correcciones: "badge-accent text-accent-content",
-  otras: "badge-neutral text-neutral-content",
+const sectionColorConfig: Record<ChangelogSectionKey, { dot: string; icon: string }> = {
+  funciones: { dot: "bg-secondary", icon: "text-secondary" },
+  mejoras: { dot: "bg-info", icon: "text-info" },
+  correcciones: { dot: "bg-accent", icon: "text-accent" },
+  otras: { dot: "bg-base-content/40", icon: "text-base-content/60" },
 };
 
 const iconBySectionKey: Record<ChangelogSectionKey, string> = {
@@ -115,11 +115,13 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
                 <!-- Cabecera de la versión / release -->
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-200 pb-4">
                   <div class="flex items-center gap-3">
-                    <div class="badge badge-secondary badge-lg font-mono font-bold text-xs tracking-wide">
-                      {entry.version ? entry.version : "Actualización"}
-                    </div>
+                    {entry.version && (
+                      <div class="badge badge-secondary badge-lg font-mono font-bold text-xs tracking-wide">
+                        {entry.version}
+                      </div>
+                    )}
                     <h2 class="text-base-content text-lg font-bold">
-                      {entry.title}
+                      {entry.title.replace(/^Actualización\s+Operativa\s*[—\-]\s*/i, "")}
                     </h2>
                   </div>
 
@@ -154,21 +156,11 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
                       </div>
                     )}
 
-                    {entry.stats && entry.stats.estimatedHours > 0 && (
-                      <span
-                        class="badge badge-sm badge-ghost border-0 text-base-content/70 flex items-center gap-1 font-mono"
-                        title="Horas aproximadas de trabajo invertidas"
-                        data-stats-hours
-                      >
-                        <Icon name="boxicons:timer" size={13} is:inline class="text-base-content/50" />
-                        ~{entry.stats.formattedHours}
-                      </span>
-                    )}
                   </div>
                 </div>
 
                 {entry.highlights && (
-                  <div class="bg-base-200/50 text-base-content/80 rounded-lg p-3 text-sm italic border-l-4 border-secondary">
+                  <div class="bg-base-200/50 text-base-content/80 rounded-lg p-3 text-sm italic">
                     {entry.highlights}
                   </div>
                 )}
@@ -180,11 +172,11 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
                       class="changelog-section-block flex flex-col gap-1.5"
                       data-section={section.key}
                     >
-                      <div class="flex items-center gap-2">
-                        <span class:list={["badge badge-sm font-semibold gap-1", badgeClassBySectionKey[section.key]]}>
-                          <Icon name={iconBySectionKey[section.key]} size={14} is:inline />
+                      <div class="flex items-center gap-2 pt-1">
+                        <h3 class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-base-content/80">
+                          <Icon name={iconBySectionKey[section.key]} size={16} is:inline class={sectionColorConfig[section.key].icon} />
                           {section.title}
-                        </span>
+                        </h3>
                       </div>
                       <div
                         class="changelog-prose text-base-content text-sm pl-1"
@@ -215,8 +207,8 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
 <style is:global>
   /* Tipografía scoped para el HTML proveniente de renderMarkdown */
   .changelog-prose ul {
-    list-style-type: disc;
-    padding-left: 1.5rem;
+    list-style-type: none;
+    padding-left: 0;
     margin-bottom: 0.5rem;
   }
   .changelog-prose li {
@@ -225,7 +217,7 @@ const iconBySectionKey: Record<ChangelogSectionKey, string> = {
   }
   .changelog-prose strong {
     color: var(--color-base-content);
-    font-weight: 600;
+    font-weight: 500;
   }
   .changelog-prose code {
     background-color: var(--color-base-200);
