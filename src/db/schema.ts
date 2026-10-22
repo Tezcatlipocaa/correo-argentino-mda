@@ -17,6 +17,7 @@ export const users = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     username: text("username").notNull().unique(),
     password: text("password"),
+    passwordChangedAt: integer("password_changed_at", { mode: "timestamp" }),
     authProvider: text("auth_provider").notNull().default("local"),
     externalId: text("external_id"),
     email: text("email"),

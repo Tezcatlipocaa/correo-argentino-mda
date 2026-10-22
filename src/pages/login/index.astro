@@ -14,6 +14,8 @@ import FormField from "@components/ui/forms/FormField.astro";
 import PasswordField from "@components/ui/forms/PasswordField.astro";
 import { getCleanBase } from "@lib/baseUrl";
 import { computeFingerprint } from "@lib/sessionFingerprint";
+import ActionButton from "@components/ui/ActionButton.astro";
+import correoLogo from "@/assets/correo-argentino-logo-simple.svg?url";
 
 if (Astro.locals.user.id !== 0) {
   return Astro.redirect(getCleanBase());
@@ -92,22 +94,24 @@ if (Astro.request.method === "POST") {
 ---
 
 <BaseLayout title="Iniciar sesión">
-  <div class="flex min-h-[80vh] items-center justify-center px-4">
-    <div class="w-full max-w-sm">
-      <div class="card bg-base-100 border-base-300 border shadow-md">
+  <div class="w-full max-w-sm">
+    <div class="card bg-base-100 border-base-300 border shadow-md">
         <div class="card-body">
           <div class="text-center">
             <div
               class="bg-secondary text-secondary-content mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm"
             >
-              <Icon
-                name="boxicons:building-house"
-                size={28}
+              <img
+                src={correoLogo}
+                alt=""
+                width="32"
+                height="32"
+                class="h-8 w-8"
                 aria-hidden="true"
               />
             </div>
             <h1 class="text-base-content text-xl font-bold tracking-tight">
-              Mesa de Ayuda
+              Portal MDA
             </h1>
             <p class="text-base-content/60 mt-1 text-xs">
               Inicia sesión con tu usuario
@@ -160,9 +164,18 @@ if (Astro.request.method === "POST") {
         </div>
       </div>
 
+      <ActionButton
+        href={`${cleanBase}generador-firmas`}
+        variant="soft"
+        color="btn-neutral"
+        icon="boxicons:pencil-draw-filled"
+        label="Generador de firmas"
+        block
+        class="mt-4"
+      />
+
       <p class="text-base-content/40 mt-6 text-center text-xs">
         © {new Date().getFullYear()} Correo Argentino · Portal interno
       </p>
-    </div>
   </div>
 </BaseLayout>
