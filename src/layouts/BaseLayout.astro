@@ -91,9 +91,14 @@ const isActiveRoute = (href: string) =>
 
 const user = Astro.locals.user;
 const normalizedUserRole = normalizeRole(user.role);
+const viewAs = Astro.locals.viewAs;
+// Rol efectivo para la capa de presentación (sidebar/home/cards). La cookie
+// sólo la aplica el middleware si el rol real es admin.
+const effectiveRole = viewAs?.role ?? normalizedUserRole;
+const isRealAdmin = normalizedUserRole === "admin";
 
 let unassignedFeedbackCount = 0;
-if (normalizedUserRole === "admin") {
+if (effectiveRole === "admin") {
   unassignedFeedbackCount = await getUnassignedFeedbackCount();
 }
 
@@ -108,8 +113,8 @@ const isRouteLocked = (href: string): boolean => {
   ) {
     return true;
   }
-  if (!hasPermission(href, normalizedUserRole)) return true;
-  if (!isSectionVisibleSync(user.helpdeskName, user.role, href)) return true;
+  if (!hasPermission(href, effectiveRole)) return true;
+  if (!isSectionVisibleSync(user.helpdeskName, effectiveRole, href)) return true;
   return false;
 };
 
@@ -254,7 +259,37 @@ const globalFontFaceCss = `
         class="drawer-content flex h-screen max-w-full flex-col overflow-hidden"
       >
         <!-- Navbar -->
-        <Navbar user={user} normalizedUserRole={normalizedUserRole} />
+        <Navbar
+          user={user}
+          normalizedUserRole={effectiveRole}
+          isRealAdmin={isRealAdmin}
+          viewAs={viewAs}
+        />
+
+        {
+          viewAs && (
+            <div
+              data-view-as-banner
+              class="border-secondary/30 bg-secondary/10 text-secondary dark:border-accent/40 dark:bg-accent/10 dark:text-accent flex flex-wrap items-center justify-between gap-2 border-b px-4 py-1.5 text-xs"
+            >
+              <span>
+                Viendo como <strong>{viewAs.label}</strong> · vista previa (tus
+                permisos reales no cambian)
+              </span>
+              <form method="POST" action={`${cleanBase}api/admin/view-as`}>
+                <input type="hidden" name="csrf_token" value={csrfToken} />
+                <input type="hidden" name="profile" value="none" />
+                <button
+                  type="submit"
+                  class="btn btn-soft btn-secondary dark:btn-accent btn-xs"
+                  data-exit-view-as
+                >
+                  Salir
+                </button>
+              </form>
+            </div>
+          )
+        }
 
         <!-- Main content -->
         <main
@@ -271,7 +306,7 @@ const globalFontFaceCss = `
   <AboutProjectModal />
   <FeedbackModal />
   <ToastContainer />
-  {normalizedUserRole === "admin" && (
+  {effectiveRole === "admin" && (
     <div class="hidden md:block">
       <AdminChatbotWidget client:idle />
     </div>
