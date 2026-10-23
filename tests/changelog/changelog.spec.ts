@@ -42,6 +42,10 @@ commits:
     );
   });
 
+  test.beforeEach(async () => {
+    test.slow();
+  });
+
   test.afterAll(async () => {
     if (testUser) {
       await cleanupTestUser(testUser.userId);
@@ -57,6 +61,18 @@ commits:
     await page.goto(`${baseURL}/changelog`);
 
     await expect(page).toHaveURL(/.*\/login.*/);
+  });
+
+  test("usuario anónimo no visualiza el icono de novedades (changelog) en el navbar", async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+    const baseURL = test.info().project.use.baseURL;
+    await page.goto(`${baseURL}/login`);
+    await page.waitForLoadState("domcontentloaded");
+
+    await expect(page.locator("[data-changelog-trigger]")).toHaveCount(0);
   });
 
   test("usuario con rol 'agent' accede a /changelog, visualiza las novedades y funciona el filtro", async ({

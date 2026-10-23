@@ -5,6 +5,7 @@ import { getResolvedPathname } from "@/lib/navigation";
 import { getBaseNoSlash } from "@/lib/baseUrl";
 import { getCsrfTokenForSession } from "@/lib/csrf";
 import { getLatestChangelogDate } from "@/lib/changelog/changelogService";
+import { isLoggedIn } from "@/lib/rbac";
 
 const roleAvatarClasses: Record<string, string> = {
   admin: "bg-error text-error-content",
@@ -36,7 +37,8 @@ const userInitials = user.username.slice(0, 2).toUpperCase();
 const resolvedPath = getResolvedPathname(Astro.request, Astro.url);
 const isLoginPage = resolvedPath === `${getBaseNoSlash()}/login`;
 const csrfToken = Astro.locals.sessionId ? getCsrfTokenForSession(Astro.locals.sessionId) : "";
-const latestChangelogDate = (await getLatestChangelogDate()) || "";
+const userIsLoggedIn = isLoggedIn(user);
+const latestChangelogDate = userIsLoggedIn ? ((await getLatestChangelogDate()) || "") : "";
 ---
 
 <header class="border-base-300 bg-base-100/95 z-150 min-h-20 border-b">
@@ -77,26 +79,30 @@ const latestChangelogDate = (await getLatestChangelogDate()) || "";
 
       <div class="flex items-center gap-1">
         <!-- Changelog novedades trigger -->
-        <a
-          href={resolveUrl("/changelog")}
-          data-changelog-trigger
-          data-changelog-latest={latestChangelogDate}
-          title="Novedades del portal"
-          aria-label="Novedades del portal"
-          class="btn btn-ghost btn-circle group relative"
-        >
-          <Icon
-            name="boxicons:news-filled"
-            size={22}
-            class="transition-transform duration-200 ease-out group-hover:scale-110"
-            is:inline
-          />
-          <span
-            data-changelog-badge
-            class="badge badge-secondary badge-xs absolute top-2 right-2 hidden size-2 p-0 rounded-full"
-            aria-hidden="true"
-          />
-        </a>
+        {
+          userIsLoggedIn && (
+            <a
+              href={resolveUrl("/changelog")}
+              data-changelog-trigger
+              data-changelog-latest={latestChangelogDate}
+              title="Novedades del portal"
+              aria-label="Novedades del portal"
+              class="btn btn-ghost btn-circle group relative"
+            >
+              <Icon
+                name="boxicons:news-filled"
+                size={22}
+                class="transition-transform duration-200 ease-out group-hover:scale-110"
+                is:inline
+              />
+              <span
+                data-changelog-badge
+                class="badge badge-secondary badge-xs absolute top-2 right-2 hidden size-2 p-0 rounded-full"
+                aria-hidden="true"
+              />
+            </a>
+          )
+        }
 
         <!-- About this project's modal trigger -->
         <button
