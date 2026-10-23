@@ -1,5 +1,7 @@
 import type { AuditParameter, ChannelType, EvaluationParameter } from "@/types/quality";
 
+export const QUALITY_APPROVAL_THRESHOLD = 75;
+
 export interface MultiChannelScoreResult {
   section1Score: number;
   section2Score: number;

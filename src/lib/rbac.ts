@@ -107,11 +107,11 @@ export const routePermissions: RoutePermission[] = [
   },
   {
     path: "/supervision/autogestiones-metricas",
-    roles: ["admin", "supervisor", "team_leader"],
+    roles: ["admin", "supervisor", "team_leader", "referent"],
   },
   {
     path: "/supervision/asignacion-autogestiones",
-    roles: ["admin", "supervisor", "team_leader", "referent", "agent"],
+    roles: ["admin", "supervisor", "team_leader", "referent"],
   },
   {
     path: "/supervision",
@@ -155,6 +155,7 @@ export const routePermissions: RoutePermission[] = [
   // Astro Actions (/_actions/*): los checks de rol viven dentro de cada
   // action (context.locals.user); el middleware solo exige sesion valida.
   { path: "/_actions", roles: ALL_ROLES },
+  { path: "/changelog", roles: ALL_ROLES },
   { path: "/profile", roles: ALL_ROLES },
   { path: "/buscador-usuarios", roles: ALL_ROLES },
   { path: "/contactos", roles: ALL_ROLES },
@@ -267,8 +268,8 @@ export function getModulePermissions(
       perm.canViewTotals = false;
     }
   } else if (moduleName === "asignacion_ag") {
-    // Todos leen
-    perm.canRead = true;
+    // Leen: referente, team_leader, supervisor, admin
+    perm.canRead = rank >= ROLE_HIERARCHY.referent;
     // Escriben: todos excepto agent
     perm.canWrite = rank >= ROLE_HIERARCHY.referent;
   } else if (moduleName === "calidad") {

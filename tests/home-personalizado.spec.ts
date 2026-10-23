@@ -214,28 +214,6 @@ test.describe("Home personalizado", () => {
     context,
     page,
   }) => {
-    let agsNextName = "Ana Cola";
-    let agsCalls = 0;
-    await page.route("**/api/ags/next", async (route) => {
-      agsCalls++;
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          next: {
-            agentId: 999001,
-            name: agsNextName,
-            modality: "Home Office",
-            status: "Disponible",
-            available: true,
-            lastAssignedAt: null,
-          },
-          availableCount: 3,
-          generatedAt: new Date().toISOString(),
-        }),
-      });
-    });
-
     const user = await seedUser({
       role: "agent",
       mesa: MDA,
@@ -354,32 +332,11 @@ test.describe("Home personalizado", () => {
       /\/supervision\/cronograma$/,
     );
 
-    // Mini card AGS: tarjeta independiente arriba de "Mi calidad".
-    const agsCard = page.locator('[data-home-card="ags"]');
-    await expect(agsCard).toBeVisible();
-    await expect(agsCard).toContainText("Próximo en autogestiones");
-    // Hay una sola instancia de AGS: la card independiente.
-    await expect(page.locator("[data-ags-instance]")).toHaveCount(1);
-    await expect(page.locator("[data-ags-name]").first()).toHaveText("Ana Cola");
-    await expect(page.locator("[data-ags-meta]").first()).toContainText("Disponible");
-    // Avatar de iniciales (Ana Cola -> AC).
-    await expect(page.locator("[data-ags-initials]").first()).toHaveText("AC");
-    await expect.poll(() => agsCalls).toBeGreaterThan(0);
-    // "Ver más" a la sección de AGS.
-    await expect(page.locator('[data-home-more="ags"]')).toHaveAttribute(
-      "href",
-      /\/supervision\/asignacion-autogestiones$/,
-    );
-    // La card de AGS no vive dentro de "Mi calidad".
-    await expect(
-      page.locator('[data-home-card="quality"] [data-ags-instance]'),
-    ).toHaveCount(0);
-
-    agsNextName = "Beto Cola";
-    await page.evaluate(() => {
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-    await expect(page.locator("[data-ags-name]").first()).toHaveText("Beto Cola");
+    // AGS quedó restringido a referente+ (rbac + helpdeskAccess), así que el
+    // operador ya no ve la card; la cobertura de la card vive en el test del
+    // referente.
+    await expect(page.locator('[data-home-card="ags"]')).toHaveCount(0);
+    await expect(page.locator("[data-ags-instance]")).toHaveCount(0);
 
     // "Mi semana" tiene el mismo alto que la columna derecha (AGS + calidad).
     const weekBox = await weekCard.boundingBox();
@@ -395,7 +352,9 @@ test.describe("Home personalizado", () => {
     );
     expect(heights.length).toBe(6);
     expect(Math.min(...heights)).toBeGreaterThan(100);
-    expect(Math.max(...heights)).toBeLessThan(220);
+    // Cota relativa: cada celda entra holgada en el alto de la card (el alto
+    // absoluto depende de la composición de la columna).
+    expect(Math.max(...heights)).toBeLessThan(weekBox?.height ?? 0);
     expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(2);
 
     // La semana no deja espacio vacío al pie de la card.
@@ -700,7 +659,7 @@ test.describe("Home personalizado", () => {
     ).toHaveAttribute("data-week-status", "Home Office");
   });
 
-  test("agente fuera de cronograma y calidad: sin week/calidad, sólo la card de AGS", async ({
+  test("agente sin participaciones: no ve cards personales", async ({
     context,
     page,
   }) => {
@@ -720,16 +679,14 @@ test.describe("Home personalizado", () => {
 
     await login(context, user.sessionId);
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
 
     await expect(page.locator('[data-home-card="week"]')).toHaveCount(0);
     await expect(page.locator('[data-home-card="quality"]')).toHaveCount(0);
-    // AGS es un dato de mesa: sigue visible aunque el operador no tenga
-    // cronograma ni calidad.
-    await expect(page.locator('[data-home-card="ags"]')).toHaveCount(1);
-    // Con un solo widget disponible no hay configurador: el ítem del menú del
-    // avatar queda oculto (se espera la hidratación de AGS para descartar un
-    // falso negativo por timing).
-    await expect(page.locator("[data-ags-name]").first()).not.toHaveText("—");
+    // AGS quedó restringido a referente+ (módulo de autogestiones).
+    await expect(page.locator('[data-home-card="ags"]')).toHaveCount(0);
+    // Sin widgets disponibles no hay configurador: el ítem del menú del avatar
+    // queda oculto.
     await page.locator(".navbar .dropdown [role='button'].avatar").click();
     await expect(
       page.getByRole("button", { name: "Personalizar inicio" }),
@@ -800,16 +757,38 @@ test.describe("Home personalizado", () => {
       /\/supervision\/calidad-operadores$/,
     );
 
-    // AGS sigue siendo dato de mesa (card chica).
+    // AGS requiere referente+: el agente no lo ve aunque sea dato de mesa.
     await expect(
       page.locator('[data-home-widget="ags"] [data-home-card="ags"]'),
-    ).toHaveCount(1);
+    ).toHaveCount(0);
   });
 
   test("referente: semana grande + AGS + Calidad del equipo", async ({
     context,
     page,
   }) => {
+    let agsNextName = "Ana Cola";
+    let agsCalls = 0;
+    await page.route("**/api/ags/next", async (route) => {
+      agsCalls++;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          next: {
+            agentId: 999001,
+            name: agsNextName,
+            modality: "Home Office",
+            status: "Disponible",
+            available: true,
+            lastAssignedAt: null,
+          },
+          availableCount: 3,
+          generatedAt: new Date().toISOString(),
+        }),
+      });
+    });
+
     const user = await seedUser({
       role: "referent",
       mesa: MDA,
@@ -840,6 +819,29 @@ test.describe("Home personalizado", () => {
     await page.goto("/");
 
     await expect(page.locator('[data-home-big="week"]')).toHaveCount(1);
+
+    // AGS en formato compacto (columna): una sola fila, sin lista.
+    const agsCard = page.locator('[data-home-card="ags"]');
+    await expect(agsCard).toBeVisible();
+    await expect(agsCard).toContainText("Próximo en autogestiones");
+    await expect(page.locator("[data-ags-instance]")).toHaveCount(1);
+    await expect(page.locator("[data-ags-row]")).toHaveCount(0);
+    await expect(page.locator("[data-ags-name]").first()).toHaveText("Ana Cola");
+    await expect(page.locator("[data-ags-meta]").first()).toHaveText("Disponible");
+    await expect(page.locator("[data-ags-initials]").first()).toHaveText("AC");
+    await expect.poll(() => agsCalls).toBeGreaterThan(0);
+    await expect(page.locator('[data-home-more="ags"]')).toHaveAttribute(
+      "href",
+      /\/supervision\/asignacion-autogestiones$/,
+    );
+
+    // Refresca al volver a la pestaña.
+    agsNextName = "Beto Cola";
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(page.locator("[data-ags-name]").first()).toHaveText("Beto Cola");
+
     await expect(
       page.locator('[data-home-widget="ags"] [data-home-card="ags"]'),
     ).toHaveCount(1);
@@ -1312,6 +1314,39 @@ test.describe("Home personalizado", () => {
       invgateId: mdaInvgateId,
       tag: "layout_preview",
     });
+    // Con agente propio, la vista simulada de operador tiene semana y calidad
+    // disponibles (el configurador necesita al menos 3 widgets).
+    const agentId = await seedAgent({
+      userId: user.userId,
+      username: user.username,
+      name: "Ada Admin",
+      enCronograma: true,
+      incluidoCalidad: true,
+    });
+    const week = currentWeekDates();
+    await db.insert(schedules).values(
+      week.map((date) => ({
+        agentId,
+        date,
+        status: "Home Office",
+        comment: "",
+        horario: "08:00 - 17:00",
+        isOverride: true,
+      })),
+    );
+    await db.insert(qualityAudits).values({
+      agentId,
+      month: qualityMonthTag(),
+      channelType: "wise_call",
+      callId: "ADM-SIM",
+      ticketId: "",
+      duration: "02:00",
+      date: week[0],
+      totalScore: 88,
+      section1Score: 88,
+      section2Score: 88,
+    });
+
     const base = test.info().project.use.baseURL ?? "http://localhost:4321";
     await login(context, user.sessionId);
     await context.addCookies([
@@ -1327,11 +1362,11 @@ test.describe("Home personalizado", () => {
 
     // En vista previa el admin SÍ puede configurar la vista simulada.
     await openDashboardConfig(page);
-    await page.selectOption("#dashboard-big", "ags");
+    await page.selectOption("#dashboard-big", "quality");
     await page.getByRole("button", { name: "Guardar" }).click();
     await page.waitForURL(/toast_msg=/);
 
-    await expect(page.locator('[data-home-big="ags"]')).toHaveCount(1);
+    await expect(page.locator('[data-home-big="quality"]')).toHaveCount(1);
 
     // Al salir de la vista previa, su layout real (admin) no cambió.
     await context.clearCookies({ name: "view_as" });
@@ -1546,7 +1581,7 @@ test.describe("Home personalizado", () => {
     });
 
     const user = await seedUser({
-      role: "agent",
+      role: "referent",
       mesa: MDA,
       invgateId: mdaInvgateId,
       tag: "ags_big",

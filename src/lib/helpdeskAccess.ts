@@ -75,6 +75,7 @@ export function isSectionVisibleSync(
       lower.startsWith("/api/cronograma") ||
       lower.startsWith("/api/ags") ||
       lower.startsWith("/api/disponibilidad") ||
+      lower.startsWith("/api/autogestion") ||
       lower.startsWith("/api/asistencia") ||
       lower.startsWith("/api/calidad") ||
       lower.startsWith("/api/export") ||
@@ -92,14 +93,23 @@ export function isSectionVisibleSync(
     if (lower.startsWith("/supervision/asistencia")) {
       return isSuperiorRole(normalizedRole);
     }
-    if (lower.startsWith("/supervision/asignacion-autogestiones")) {
-      return true;
+    if (
+      lower.startsWith("/supervision/asignacion-autogestiones") ||
+      lower.startsWith("/supervision/autogestiones-metricas")
+    ) {
+      return normalizedRole !== "agent";
     }
     return isSuperiorRole(normalizedRole);
   }
 
   if (lower.startsWith("/api/asistencia")) return isSuperiorRole(normalizedRole);
   if (lower.startsWith("/api/export")) return isSuperiorRole(normalizedRole);
+  if (
+    lower.startsWith("/api/disponibilidad") ||
+    lower.startsWith("/api/autogestion")
+  ) {
+    return normalizedRole !== "agent";
+  }
 
   return true;
 }
