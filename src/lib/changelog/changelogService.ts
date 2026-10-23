@@ -3,7 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { renderMarkdown } from "../markdown.js";
-import { calculateCommitsStats, type ChangelogStats } from "./changelogStats.js";
+import {
+  calculateCommitsStats,
+  primeCommitStatsCache,
+  type ChangelogStats,
+} from "./changelogStats.js";
 
 export type ChangelogSectionKey = "funciones" | "mejoras" | "correcciones" | "otras";
 
@@ -347,6 +351,15 @@ export async function getChangelogEntries(
   const processedAscending: ChangelogEntry[] = [];
   const globalSeenCommits = new Set<string>();
 
+  // Un único par de procesos git para todo el render: la fecha del navbar nunca toca stats.
+  let allCommitHashes: string[] = [];
+  let statsPrimed = false;
+  const primeStatsOnce = () => {
+    if (statsPrimed) return;
+    statsPrimed = true;
+    primeCommitStatsCache(allCommitHashes);
+  };
+
   for (const item of rawEntries) {
     const entryCommits = new Set(item.frontmatter.commits || []);
     const contentCommits = extractCommitsFromContent(item.content);
@@ -391,10 +404,13 @@ export async function getChangelogEntries(
       html,
       sections,
       get stats(): ChangelogStats {
+        primeStatsOnce();
         return (statsMemo ??= calculateCommitsStats(uniqueEntryCommits));
       },
     });
   }
+
+  allCommitHashes = [...globalSeenCommits];
 
   // 2. ORDEN DESCENDENTE FINAL para la UI y consumidores (más reciente primero)
   processedAscending.sort((a, b) => b.date.localeCompare(a.date));
