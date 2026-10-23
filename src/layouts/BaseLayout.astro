@@ -266,9 +266,10 @@ const globalFontFaceCss = `
   >
     {
       isLoginRoute ? (
-        <main class="flex min-h-screen items-center justify-center p-4">
+        // El login define su propio layout (panel de marca + formulario).
+        <div class="min-h-screen">
           <slot />
-        </main>
+        </div>
       ) : isPublicGeneratorRoute ? (
         <div class="flex h-screen flex-col overflow-hidden">
           <Navbar
