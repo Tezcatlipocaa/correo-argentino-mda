@@ -380,7 +380,8 @@ export async function getChangelogEntries(
     }
 
     const html = renderMarkdown(cleanedContent);
-    const stats = calculateCommitsStats(uniqueEntryCommits);
+    // Lazy: el navbar solo necesita la fecha; calcular stats acá spawnea ~444 procesos git en cache frío.
+    let statsMemo: ChangelogStats | undefined;
 
     processedAscending.push({
       ...item.frontmatter,
@@ -389,7 +390,9 @@ export async function getChangelogEntries(
       content: cleanedContent,
       html,
       sections,
-      stats,
+      get stats(): ChangelogStats {
+        return (statsMemo ??= calculateCommitsStats(uniqueEntryCommits));
+      },
     });
   }
 

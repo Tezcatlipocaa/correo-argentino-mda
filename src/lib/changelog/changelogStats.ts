@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 export interface ChangelogStats {
   additions: number;
@@ -109,7 +109,7 @@ export function calculateCommitsStats(commits: string[]): ChangelogStats {
   for (const hash of validCommits) {
     try {
       // 1. Obtener timestamp del commit (%ct = committer timestamp unix)
-      const timeOut = execSync(`git log -1 --format=%ct ${hash}`, {
+      const timeOut = execFileSync("git", ["log", "-1", "--format=%ct", hash], {
         stdio: ["ignore", "pipe", "ignore"],
         encoding: "utf-8",
       }).trim();
@@ -120,7 +120,7 @@ export function calculateCommitsStats(commits: string[]): ChangelogStats {
       }
 
       // 2. Obtener numstat de adiciones y eliminaciones
-      const statOut = execSync(`git show --numstat --format="" ${hash}`, {
+      const statOut = execFileSync("git", ["show", "--numstat", "--format=", hash], {
         stdio: ["ignore", "pipe", "ignore"],
         encoding: "utf-8",
       });
