@@ -12,9 +12,10 @@ interface CommitStats {
 
 /**
  * Cache en memoria por hash (no por entrada): sobrevive a la invalidación del cache de
- * entradas, así que cada release solo resuelve los hashes que agrega.
+ * entradas, así que cada release solo resuelve los hashes que agrega. `null` marca un hash
+ * que no resuelve a commit (inexistente, ambiguo o de otro tipo) y no se vuelve a consultar.
  */
-const commitStatsCache = new Map<string, CommitStats>();
+const commitStatsCache = new Map<string, CommitStats | null>();
 
 function shortHash(rawHash: string): string {
   return rawHash.trim().toLowerCase().slice(0, 7);
@@ -31,8 +32,8 @@ function runGitWithStdin(args: string[], input: string): string {
 
 /**
  * Resuelve timestamp y numstat de los hashes pedidos en dos procesos git:
- * `cat-file --batch-check` (por stdin) descarta los inexistentes —`log --stdin`
- * aborta entero ante uno— y `log --no-walk --stdin` trae el resto.
+ * `cat-file --batch-check` (por stdin) filtra los que no resuelven a commit —un prefijo
+ * ambiguo aborta el lote entero de `log --stdin`— y `log --no-walk --stdin` trae el resto.
  */
 function loadCommitStats(hashes: string[]): void {
   const pending = [...new Set(hashes.map(shortHash))].filter(
@@ -40,16 +41,23 @@ function loadCommitStats(hashes: string[]): void {
   );
   if (pending.length === 0) return;
 
-  let existing: string[];
+  const shaToHash = new Map<string, string>();
   try {
-    existing = runGitWithStdin(["cat-file", "--batch-check"], pending.join("\n"))
-      .split("\n")
-      .filter((line) => line && !line.endsWith(" missing"))
-      .map((line) => line.slice(0, line.indexOf(" ")));
+    // ^{commit}: un prefijo ambiguo o de un no-commit sale como "missing" en vez de abortar el lote.
+    const lines = runGitWithStdin(
+      ["cat-file", "--batch-check=%(objectname) %(objecttype)"],
+      pending.map((h) => `${h}^{commit}`).join("\n") + "\n",
+    ).split("\n");
+    // cat-file responde exactamente una línea por línea de entrada.
+    pending.forEach((hash, i) => {
+      const [sha, type] = (lines[i] ?? "").split(" ");
+      if (type === "commit") shaToHash.set(sha, hash);
+      else commitStatsCache.set(hash, null);
+    });
   } catch {
     return;
   }
-  if (existing.length === 0) return;
+  if (shaToHash.size === 0) return;
 
   let out: string;
   try {
@@ -61,7 +69,7 @@ function loadCommitStats(hashes: string[]): void {
         "--numstat",
         `--format=${BLOCK_HEADER}%H %ct`,
       ],
-      existing.join("\n"),
+      [...shaToHash.keys()].join("\n") + "\n",
     );
   } catch {
     return;
