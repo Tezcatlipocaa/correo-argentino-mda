@@ -73,6 +73,7 @@ export function isSectionVisibleSync(
     const blocked =
       coordBlocked.some((s) => lower === s || lower.startsWith(`${s}/`)) ||
       lower.startsWith("/api/cronograma") ||
+      lower.startsWith("/api/ags") ||
       lower.startsWith("/api/disponibilidad") ||
       lower.startsWith("/api/autogestion") ||
       lower.startsWith("/api/asistencia") ||

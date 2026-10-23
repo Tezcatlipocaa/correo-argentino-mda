@@ -178,6 +178,8 @@ export const routePermissions: RoutePermission[] = [
   // Toggle de automatizaciones AGS: el gate real (referent+) vive en el endpoint
   // vía requireWriteAccess("asignacion_ag"), igual que /api/disponibilidad.
   { path: "/api/autogestion", roles: ALL_ROLES },
+  { path: "/api/ags", roles: ALL_ROLES },
+  { path: "/api/home", roles: ALL_ROLES },
   // El gate real de cada endpoint de calidad vive en requireRead/WriteAccess.
   { path: "/api/calidad", roles: ALL_ROLES },
   { path: "/api/credentials", roles: ALL_ROLES },
