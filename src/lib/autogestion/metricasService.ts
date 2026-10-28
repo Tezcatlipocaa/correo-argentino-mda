@@ -340,7 +340,7 @@ export function getMockMetricasData(preset?: string, from?: string, to?: string)
       agentId: op.id,
       agentName: op.name,
       ticketNumber: `#${ticketId}`,
-      assignedBy: type === "manual" ? "supervisor" : "Sistema MDA (AGS Bot)",
+      assignedBy: type === "manual" ? "supervisor" : "Sistema MDA (Agente Virtual)",
       assignedAt,
       type,
     });

@@ -81,7 +81,7 @@ export const AUTOGESTION_AUTOMATION_RULES: AutogestionRuleDoc[] = [
     priority: 2,
     name: "Asignación Cíclica de Nuevas Autogestiones",
     description:
-      "Actúa como regla comodín: reparte cualquier autogestión que quede sin asignar al operador disponible que encabeza la fila de espera cíclica (mayor tiempo sin recibir AGS o sin asignaciones previas hoy), incluida una 'Solicitud rechazada en revisión' que la regla de Devolución no pudo devolver a su creador.",
+      "Actúa como regla comodín: reparte cualquier autogestión que quede sin asignar al operador disponible que encabeza la fila de espera cíclica (mayor tiempo sin recibir autogestiones o sin asignaciones previas hoy), incluida una 'Solicitud rechazada en revisión' que la regla de Devolución no pudo devolver a su creador.",
     status: "inactive",
     intervalMinutes: 10,
     triggerEvent: "Sondeo automático cada 10 minutos (Prioridad 2, posterior a Solicitudes Rechazadas)",

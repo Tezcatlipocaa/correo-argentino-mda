@@ -742,6 +742,69 @@ function formatWiseMinutes(min: number | undefined | null): string {
         </div>
       </div>
     </div>
+
+    <!-- SLA por vencer: tickets que esperan a un agente con SLA corriendo -->
+    <div
+      id="sla-por-vencer"
+      data-read-only={isReadOnly ? "true" : "false"}
+      class="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-xs flex flex-col"
+    >
+      <div class="p-3.5 sm:p-4 border-b border-base-300 bg-base-200/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <Icon name="boxicons:calendar" size={22} class="text-secondary shrink-0" />
+          <div class="min-w-0">
+            <h3 class="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-base-content/80 truncate">
+              SLA por vencer
+            </h3>
+            <p class="text-xs text-base-content/60 font-medium">
+              Tickets esperando a un agente con SLA corriendo. Postergarlos los pausa hasta el próximo turno del agente.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            id="btn-sla-refresh"
+            class="btn btn-ghost btn-xs text-base-content/70 hover:text-secondary hover:bg-secondary/10 font-bold gap-1.5 px-2.5 py-1 h-7 min-h-0 text-xs rounded-lg"
+            title="Volver a calcular el preview"
+          >
+            <Icon name="boxicons:refresh-ccw" size={16} id="btn-sla-refresh-icon" class="shrink-0" />
+            <span>Actualizar</span>
+          </button>
+          <button
+            type="button"
+            id="btn-sla-postpone-all"
+            class="btn btn-secondary btn-xs font-bold gap-1.5 text-xs px-2.5 h-7 min-h-0"
+            title={isReadOnly ? "Tomá el control para postergar autogestiones" : "Postergar todos los tickets postergables"}
+            disabled={isReadOnly}
+          >
+            <Icon name="boxicons:calendar-check" size={14} class="shrink-0" />
+            <span>Postergar todos</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="table table-sm w-full text-sm">
+          <thead>
+            <tr class="bg-base-200/40 text-base-content/70 uppercase text-xs font-mono font-bold tracking-wider border-b border-base-300">
+              <th>Ticket</th>
+              <th class="w-44">Agente</th>
+              <th class="w-28">SLA resolución</th>
+              <th class="w-28">SLA 1ª respuesta</th>
+              <th class="w-36">Fecha propuesta</th>
+              <th>Motivo</th>
+              <th class="w-28 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="sla-rows" class="divide-y divide-base-200">
+            <tr>
+              <td colspan="7" class="text-sm text-base-content/40 italic py-8 text-center">Cargando…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- Pestaña 2: Monitoreo de Operadores -->
@@ -3954,6 +4017,169 @@ function formatWiseMinutes(min: number | undefined | null): string {
     if (idleTimer) clearTimeout(idleTimer);
     if (ticketsAbortController) ticketsAbortController.abort();
     if (disponibilidadAbortController) disponibilidadAbortController.abort();
+  });
+</script>
+
+<script>
+  import { showToast } from "@/lib/toastClient";
+  import { escapeHtml } from "@lib/sanitize";
+  import { getCleanBase } from "@lib/baseUrl";
+
+  type PlanRow = {
+    ticketId: number;
+    agentName: string;
+    action: "postpone" | "skip";
+    reason: string;
+    fechaPropuesta: string | null;
+    subject: string;
+    slaResolution: string | null;
+    slaFirstReply: string | null;
+  };
+
+  const SLA_API = `${getCleanBase()}api/ags/sla-postergar`;
+
+  // Token CSRF de la sesión (BaseLayout lo publica como meta).
+  const slaCsrfToken = (): string =>
+    document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || "";
+
+
+  let slaRows: PlanRow[] = [];
+  let slaTimer: ReturnType<typeof setInterval> | null = null;
+  let slaBusy = false;
+
+  const formatFecha = (fecha: string | null): string =>
+    fecha
+      ? new Date(fecha).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })
+      : "—";
+
+  const renderSlaRows = (block: HTMLElement) => {
+    const tbody = document.getElementById("sla-rows");
+    if (!tbody) return;
+
+    if (slaRows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-sm text-base-content/40 italic py-8 text-center">Sin tickets con SLA por vencer</td></tr>`;
+      return;
+    }
+
+    const readOnly = block.dataset.readOnly === "true";
+    tbody.innerHTML = slaRows
+      .map((r) => {
+        const accion =
+          r.action === "postpone"
+            ? `<button type="button" class="btn btn-secondary btn-xs font-bold text-xs px-2.5 h-7 min-h-0" data-sla-postpone="${r.ticketId}"${readOnly ? " disabled" : ""} title="Postergar hasta ${escapeHtml(formatFecha(r.fechaPropuesta))}">Postergar</button>`
+            : `<span class="badge badge-soft badge-neutral badge-sm font-semibold text-xs">Omitido</span>`;
+
+        return `<tr data-sla-ticket="${r.ticketId}" class="${r.action === "skip" ? "opacity-60" : ""}">
+          <td class="font-mono font-bold text-base-content/70">
+            #${r.ticketId}
+            <span class="block font-sans font-semibold text-xs text-base-content/80 truncate max-w-[280px]" title="${escapeHtml(r.subject)}">${escapeHtml(r.subject)}</span>
+          </td>
+          <td class="font-semibold text-xs text-base-content/85">${escapeHtml(r.agentName)}</td>
+          <td class="font-mono text-xs">${escapeHtml(r.slaResolution || "—")}</td>
+          <td class="font-mono text-xs">${escapeHtml(r.slaFirstReply || "—")}</td>
+          <td class="font-mono text-xs">${escapeHtml(formatFecha(r.fechaPropuesta))}</td>
+          <td class="text-xs text-base-content/70">${escapeHtml(r.reason)}</td>
+          <td class="text-right">${accion}</td>
+        </tr>`;
+      })
+      .join("");
+  };
+
+  const loadSlaPreview = async () => {
+    const block = document.getElementById("sla-por-vencer");
+    const refreshIcon = document.getElementById("btn-sla-refresh-icon");
+    if (!block) return;
+
+    refreshIcon?.classList.add("animate-spin");
+    try {
+      const res = await fetch(SLA_API, { headers: { Accept: "application/json" } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "No se pudo calcular el preview");
+      slaRows = Array.isArray(data.tickets) ? data.tickets : [];
+      renderSlaRows(block);
+    } catch (err: any) {
+      const tbody = document.getElementById("sla-rows");
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-xs text-error py-6 text-center">${escapeHtml(err?.message || "Error al consultar InvGate")}</td></tr>`;
+      }
+    } finally {
+      refreshIcon?.classList.remove("animate-spin");
+    }
+  };
+
+  const applySlaPostponements = async (ticketIds?: number[]) => {
+    if (slaBusy) return;
+    const block = document.getElementById("sla-por-vencer");
+    if (!block) return;
+
+    slaBusy = true;
+    const buttons = block.querySelectorAll<HTMLButtonElement>("button");
+    buttons.forEach((b) => (b.disabled = true));
+
+    try {
+      const res = await fetch(SLA_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": slaCsrfToken() },
+        body: JSON.stringify(ticketIds ? { ticketIds } : {}),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok && !data.applied) {
+        throw new Error(data.error || "No se pudieron postergar los tickets");
+      }
+
+      const applied = data.applied?.length ?? 0;
+      const errors = data.errors?.length ?? 0;
+      const skipped = data.skipped?.length ?? 0;
+      showToast(
+        `${applied} postergado(s)${skipped ? `, ${skipped} omitido(s)` : ""}${errors ? `, ${errors} con error` : ""}.`,
+        errors > 0 ? "alert-error" : "alert-success",
+      );
+      await loadSlaPreview();
+    } catch (err: any) {
+      showToast(err?.message || "Error al postergar los tickets.", "alert-error");
+    } finally {
+      slaBusy = false;
+      buttons.forEach((b) => (b.disabled = false));
+      // El refresh puede haber repintado: restaurar el estado de solo lectura.
+      const allBtn = document.getElementById("btn-sla-postpone-all") as HTMLButtonElement | null;
+      if (allBtn && block.dataset.readOnly === "true") allBtn.disabled = true;
+    }
+  };
+
+  const initSlaPanel = (): boolean => {
+    const block = document.getElementById("sla-por-vencer");
+    if (!block) return false;
+
+    document.getElementById("btn-sla-refresh")?.addEventListener("click", () => loadSlaPreview());
+    document
+      .getElementById("btn-sla-postpone-all")
+      ?.addEventListener("click", () => applySlaPostponements());
+    document.getElementById("sla-rows")?.addEventListener("click", (ev) => {
+      const btn = (ev.target as HTMLElement | null)?.closest?.("[data-sla-postpone]") as HTMLButtonElement | null;
+      if (!btn || btn.disabled) return;
+      const ticketId = Number(btn.getAttribute("data-sla-postpone"));
+      if (Number.isInteger(ticketId) && ticketId > 0) applySlaPostponements([ticketId]);
+    });
+
+    loadSlaPreview();
+    return true;
+  };
+
+  // El componente se monta como server island: esperar el HTML antes de cablear.
+  if (!initSlaPanel()) {
+    let attempts = 0;
+    slaTimer = setInterval(() => {
+      if (initSlaPanel() || ++attempts > 200) {
+        if (slaTimer) clearInterval(slaTimer);
+        slaTimer = null;
+      }
+    }, 50);
+  }
+
+  document.addEventListener("astro:before-swap", () => {
+    if (slaTimer) clearInterval(slaTimer);
+    slaTimer = null;
   });
 </script>
 

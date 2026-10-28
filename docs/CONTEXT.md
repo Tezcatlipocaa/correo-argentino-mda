@@ -53,6 +53,7 @@ INVGATE_API_USERNAME        — Usuario para autenticacion InvGate
 INVGATE_QA_API_KEY          — API key de InvGate QA (test environment)
 INVGATE_QA_BASE_URL         — URL base de InvGate QA (servidor separado)
 INVGATE_QA_API_USERNAME     — Usuario para autenticacion InvGate QA
+INVGATE_AGS_SLA_VIEW_ID     — Vista guardada de InvGate con tickets esperando agente y SLA corriendo (default 83)
 WISE_CX_API_KEY             — API key de Wise CX
 WISE_CX_BASE_URL            — URL base de Wise CX API
 WISE_CX_API_USER            — Usuario para autenticacion Wise CX

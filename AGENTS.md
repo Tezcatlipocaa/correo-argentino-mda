@@ -42,7 +42,7 @@
 
 ## Testing
 
-- `npm run test:domain` — tests de dominio con `node:test` sobre los `*.test.ts` de `src/lib/` + `src/pages/api/calidad/*.test.ts` (329 tests). **No los cubre vitest**: `vitest.config.ts` incluye únicamente `tests/unit/**`.
+- `npm run test:domain` — tests de dominio con `node:test` sobre los `*.test.ts` de `src/lib/` + `src/pages/api/calidad/*.test.ts` (336 tests). **No los cubre vitest**: `vitest.config.ts` incluye únicamente `tests/unit/**`.
 - `npm run test:unit` — vitest sobre `tests/unit/**` (701 tests). Hay **3 fallos pre-existentes**: dos en `tests/unit/phase1-buttons-standardization.test.ts` (el `Cancelar` de `src/pages/profile.astro` ya no es un `ActionButton` tras el cambio de blanqueo de contraseña, y la assertion de `DirectorioContent`) y uno en `tests/unit/challenger-remaining-empirical.test.ts` (paginación); no scopear el glob.
 - `npm test` — `test:domain` primero y después `test:unit`. Sale con código 1 hoy por esos fallos pre-existentes; el dominio corre primero para que una regresión real no quede enmascarada.
 - `npm run test:e2e` — Playwright completo (`tests/**/*.spec.ts`). Workers: 1 (serial). Requiere dev server; ver "Puertos de la suite E2E" abajo.

@@ -178,7 +178,7 @@ if (Astro.request.method === "POST") {
           successMsg = `Usuario "${username}" creado con éxito.`;
           await logAdminFromAstro(
             Astro.locals,
-            `Creó al usuario "${name}" (${username}) con rol ${role}. Participaciones: cronograma=${finalParticipaciones.enCronograma ? "sí" : "no"}, asistencia=${finalParticipaciones.enAsistencia ? "sí" : "no"}, cubic=${finalParticipaciones.asignableCubic ? "sí" : "no"}, calidad=${finalParticipaciones.incluidoCalidad ? "sí" : "no"}, AGS=${finalParticipaciones.asignableAgs ? "sí" : "no"}`,
+            `Creó al usuario "${name}" (${username}) con rol ${role}. Participaciones: cronograma=${finalParticipaciones.enCronograma ? "sí" : "no"}, asistencia=${finalParticipaciones.enAsistencia ? "sí" : "no"}, cubic=${finalParticipaciones.asignableCubic ? "sí" : "no"}, calidad=${finalParticipaciones.incluidoCalidad ? "sí" : "no"}, Agente Virtual=${finalParticipaciones.asignableAgs ? "sí" : "no"}`,
           );
         } catch (e) {
           console.error("[usuarios] Error al crear usuario:", e);
@@ -238,7 +238,7 @@ if (Astro.request.method === "POST") {
         enAsistencia: "asistencia",
         asignableCubic: "cubic",
         incluidoCalidad: "calidad",
-        asignableAgs: "AGS",
+        asignableAgs: "Agente Virtual",
       } as const;
       let audit: string | null = null;
 
